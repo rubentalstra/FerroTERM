@@ -13,6 +13,12 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- Release binaries ship for Linux only (`x86_64` gnu and musl, `aarch64` gnu):
+  the server runs in a container or on a Linux host. The macOS build is
+  dropped from the release; a developer on a Mac builds from source.
+
 ## [0.0.2] - 2026-09-02
 
 The first published release. It carries the 0.0.1 contents below plus the

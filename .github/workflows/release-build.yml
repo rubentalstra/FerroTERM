@@ -114,11 +114,7 @@ jobs:
           # only a corrupt or truncated download; only the Sigstore bundle
           # answers "who built this". Records the BARE filename so `-c` works in
           # whatever directory the two files landed in.
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum "$out" > "${out}.sha256sum"
-          else
-            shasum -a 256 "$out" > "${out}.sha256sum" # macOS runners
-          fi
+          sha256sum "$out" > "${out}.sha256sum"
           cat "${out}.sha256sum"
           echo "CHECKSUM=${out}.sha256sum" >> "$GITHUB_ENV"
 

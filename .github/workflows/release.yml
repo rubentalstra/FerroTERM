@@ -177,7 +177,8 @@ jobs:
   # the signing material to be out of reach of user-defined build steps, and a
   # job's steps all share one runner VM. A reusable-workflow call cannot carry
   # `steps:`, which makes that regression unrepresentable rather than merely
-  # discouraged. Native runner per arch — no cross toolchain, no QEMU.
+  # discouraged. Native Linux runner per arch (the server ships for Linux
+  # containers and hosts only): no cross toolchain, no QEMU.
   build-binaries:
     name: binaries (${{ matrix.target }})
     needs: [plan, github-release]
@@ -191,8 +192,6 @@ jobs:
             target: x86_64-unknown-linux-musl
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-          - runner: macos-latest
-            target: aarch64-apple-darwin
     # Declared on both sides: a reusable workflow receives the caller's token
     # permissions, and GitHub's L3 guide asks for the same set in both places.
     permissions:
@@ -230,8 +229,7 @@ jobs:
           for target in \
             x86_64-unknown-linux-gnu \
             x86_64-unknown-linux-musl \
-            aarch64-unknown-linux-gnu \
-            aarch64-apple-darwin; do
+            aarch64-unknown-linux-gnu; do
             for suffix in \
               ".tar.gz" \
               ".tar.gz.sha256sum" \
