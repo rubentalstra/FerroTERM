@@ -60,8 +60,15 @@ fn a_supplement_layers_designations_and_properties_over_the_system() {
             .display(cat, Some("de"))
             .expect("reads")
             .as_deref(),
+        Some("Katze"),
+        "a supplement designation in the requested language is the display \
+         (<https://hl7.org/fhir/R4B/codesystem.html#supplements>, \
+         <https://hl7.org/fhir/R4B/valueset-operation-expand.html> displayLanguage)"
+    );
+    assert_eq!(
+        supplemented.display(cat, None).expect("reads").as_deref(),
         Some("Cat"),
-        "the system's display wins"
+        "without a language the system's display wins"
     );
     assert!(
         supplemented

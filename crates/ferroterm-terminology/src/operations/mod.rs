@@ -112,7 +112,12 @@ impl From<ResolveError> for OperationError {
 
 impl From<ProviderError> for OperationError {
     fn from(error: ProviderError) -> Self {
-        Self::Provider(error)
+        match error {
+            ProviderError::IncompleteContent { .. } | ProviderError::NotEnumerable => {
+                Self::NotSupported(error.to_string())
+            }
+            other => Self::Provider(other),
+        }
     }
 }
 

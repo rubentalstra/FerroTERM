@@ -15,6 +15,20 @@ fresh link reference.
 
 ### Added
 
+- Any code system published as a FHIR `CodeSystem` resource is served:
+  `FERROTERM_CODESYSTEMS` names directories of resources (a FHIR package's
+  `package/` directory, such as HL7 Terminology 7.3.0, or plain JSON files) in
+  R4, R4B, R5, or R6. Nested concepts and `parent`/`subsumedBy` properties
+  form the hierarchy when `hierarchyMeaning` is `is-a`; `caseSensitive`,
+  `content` (`example` and `not-present` refuse code lookup and enumeration),
+  `versionNeeded`, the resource's own `property` and `filter` declarations,
+  and the standard `inactive`, `notSelectable`, `parent`, and `child`
+  properties are honoured. A `content = supplement` resource adds its
+  designations and properties to the system it supplements; a designation in
+  the requested language is the display when the system has none.
+- `CodeSystem` instance ids carry the system URL when the version does not,
+  so two systems at version `1` do not collide.
+
 - The generated FHIR layer covers R4: `hl7.fhir.r4.core` 4.0.1 is vendored with
   provenance and `ferroterm-fhir` gains the `r4` module (131 root-set types,
   the terminology operation contracts, the JSON codec, and the `Parameters`

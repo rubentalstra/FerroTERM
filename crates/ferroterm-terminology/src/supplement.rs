@@ -102,6 +102,19 @@ impl CodeSystemProvider for Supplemented {
         concept: Concept,
         language: Option<&str>,
     ) -> Result<Option<String>, ProviderError> {
+        // NOTE: a supplement adds designations the system lacks, so its term in
+        // the requested language beats the system's fallback display
+        // (<https://hl7.org/fhir/R4B/codesystem.html#supplements>).
+        if let Some(wanted) = language
+            && self.inner.designations(concept, Some(wanted))?.is_empty()
+            && let Some(added) = self
+                .additions(concept)?
+                .into_iter()
+                .flat_map(|additions| additions.designations.iter())
+                .find(|designation| designation.language.as_deref() == Some(wanted))
+        {
+            return Ok(Some(added.value.clone()));
+        }
         if let Some(display) = self.inner.display(concept, language)? {
             return Ok(Some(display));
         }

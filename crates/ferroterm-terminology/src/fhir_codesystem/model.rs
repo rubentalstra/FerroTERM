@@ -1,0 +1,193 @@
+//! The version-neutral picture of a `CodeSystem` resource.
+
+use std::collections::BTreeSet;
+
+use crate::provider::{
+    ContentMode, Designation, DesignationUse, FilterDefinition, HierarchyMeaning, Property,
+    PropertyDefinition, PropertyKind,
+};
+
+/// One concept, flattened out of the resource's nesting.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConceptEntry {
+    /// The code.
+    pub code: String,
+    /// `concept.display`.
+    pub display: Option<String>,
+    /// `concept.definition`.
+    pub definition: Option<String>,
+    /// `concept.designation`.
+    pub designations: Vec<Designation>,
+    /// `concept.property`, as declared.
+    pub properties: Vec<Property>,
+    /// The codes of the parents: the enclosing concept, plus every `parent`
+    /// and `subsumedBy` property value.
+    pub parents: Vec<String>,
+}
+
+/// A `CodeSystem` resource reduced to what the provider serves.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CodeSystemModel {
+    /// `CodeSystem.url`.
+    pub url: String,
+    /// `CodeSystem.version`, or an empty string when the resource has none.
+    pub version: String,
+    /// `CodeSystem.title`, else `name`.
+    pub title: Option<String>,
+    /// `CodeSystem.content`.
+    pub content: ContentMode,
+    /// `CodeSystem.caseSensitive` (absent means case-sensitive comparison).
+    pub case_sensitive: bool,
+    /// `CodeSystem.hierarchyMeaning`.
+    pub hierarchy_meaning: Option<HierarchyMeaning>,
+    /// `CodeSystem.compositional`.
+    pub compositional: bool,
+    /// `CodeSystem.versionNeeded`.
+    pub version_needed: bool,
+    /// `CodeSystem.supplements`: the system this resource adds to, when it is one.
+    pub supplements: Option<String>,
+    /// `CodeSystem.property`.
+    pub properties: Vec<PropertyDefinition>,
+    /// `CodeSystem.filter`.
+    pub filters: Vec<FilterDefinition>,
+    /// Every concept, in document order.
+    pub concepts: Vec<ConceptEntry>,
+}
+
+/// A failure to build a model.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ModelError {
+    /// The resource has no `url`.
+    #[error("the CodeSystem has no url")]
+    NoUrl,
+    /// `content` is not one of the code system content modes.
+    #[error("`{0}` is not a codesystem-content-mode")]
+    Content(String),
+    /// `hierarchyMeaning` is not one of the hierarchy meanings.
+    #[error("`{0}` is not a codesystem-hierarchy-meaning")]
+    HierarchyMeaning(String),
+    /// A property type is not one of the concept property types.
+    #[error("property `{code}` has type `{kind}`, not a concept-property-type")]
+    PropertyType {
+        /// The property.
+        code: String,
+        /// The declared type.
+        kind: String,
+    },
+    /// A filter names an operator outside `filter-operator`.
+    #[error("filter `{code}` names operator `{operator}`, not a filter-operator")]
+    FilterOperator {
+        /// The filter.
+        code: String,
+        /// The operator.
+        operator: String,
+    },
+    /// Two concepts share a code.
+    #[error("code `{0}` is defined twice")]
+    DuplicateCode(String),
+    /// A concept's `parent` or `subsumedBy` names a code the resource lacks.
+    #[error("concept `{code}` names parent `{parent}`, which the CodeSystem does not define")]
+    UnknownParent {
+        /// The concept.
+        code: String,
+        /// The parent named.
+        parent: String,
+    },
+}
+
+impl ContentMode {
+    /// The mode for a `codesystem-content-mode` code.
+    #[must_use]
+    pub fn parse(code: &str) -> Option<Self> {
+        match code {
+            "not-present" => Some(Self::NotPresent),
+            "example" => Some(Self::Example),
+            "fragment" => Some(Self::Fragment),
+            "complete" => Some(Self::Complete),
+            "supplement" => Some(Self::Supplement),
+            _ => None,
+        }
+    }
+}
+
+impl HierarchyMeaning {
+    /// The meaning for a `codesystem-hierarchy-meaning` code.
+    #[must_use]
+    pub fn parse(code: &str) -> Option<Self> {
+        match code {
+            "grouped-by" => Some(Self::GroupedBy),
+            "is-a" => Some(Self::IsA),
+            "part-of" => Some(Self::PartOf),
+            "classified-with" => Some(Self::ClassifiedWith),
+            _ => None,
+        }
+    }
+}
+
+impl PropertyKind {
+    /// The kind for a `concept-property-type` code.
+    #[must_use]
+    pub fn parse(code: &str) -> Option<Self> {
+        match code {
+            "code" => Some(Self::Code),
+            "Coding" => Some(Self::Coding),
+            "string" => Some(Self::String),
+            "integer" => Some(Self::Integer),
+            "boolean" => Some(Self::Boolean),
+            "dateTime" => Some(Self::DateTime),
+            "decimal" => Some(Self::Decimal),
+            _ => None,
+        }
+    }
+}
+
+impl CodeSystemModel {
+    /// Checks the model: distinct codes, known parents.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ModelError::DuplicateCode`] or [`ModelError::UnknownParent`].
+    pub fn validate(&self) -> Result<(), ModelError> {
+        let mut seen: BTreeSet<&str> = BTreeSet::new();
+        for concept in &self.concepts {
+            if !seen.insert(concept.code.as_str()) {
+                return Err(ModelError::DuplicateCode(concept.code.clone()));
+            }
+        }
+        for concept in &self.concepts {
+            for parent in &concept.parents {
+                if !seen.contains(parent.as_str()) {
+                    return Err(ModelError::UnknownParent {
+                        code: concept.code.clone(),
+                        parent: parent.clone(),
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// The standard designation use of a `concept.designation.use` coding.
+pub(crate) fn designation_use(
+    system: Option<&str>,
+    code: Option<&str>,
+    display: Option<&str>,
+) -> Option<DesignationUse> {
+    Some(DesignationUse {
+        system: system?.to_owned(),
+        code: code?.to_owned(),
+        display: display.map(str::to_owned),
+    })
+}
+
+/// The standard concept property names the provider derives status from
+/// (<https://hl7.org/fhir/R4B/codesystem-concept-properties.html>).
+pub(crate) const INACTIVE: &str = "inactive";
+pub(crate) const STATUS: &str = "status";
+pub(crate) const DEPRECATED: &str = "deprecated";
+pub(crate) const NOT_SELECTABLE: &str = "notSelectable";
+pub(crate) const PARENT: &str = "parent";
+pub(crate) const CHILD: &str = "child";
+/// HL7 Terminology's v3 systems express the hierarchy as `subsumedBy`.
+pub(crate) const SUBSUMED_BY: &str = "subsumedBy";

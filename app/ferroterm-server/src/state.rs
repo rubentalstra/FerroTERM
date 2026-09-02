@@ -2,12 +2,16 @@
 //! their `CodeSystem` instances answer on.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use ferroterm_terminology::provider::CodeSystemProvider;
+use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
+use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
+use ferroterm_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
+use ferroterm_terminology::provider::{CodeSystemProvider, ContentMode, ProviderError};
 use ferroterm_terminology::registry::{RegisterError, Registry, Resolved};
 use ferroterm_terminology::snomed::{OpenError, SnomedProvider};
+use ferroterm_terminology::supplement::{Additions, Supplement, Supplemented};
 
 use crate::config::Config;
 
@@ -23,7 +27,41 @@ pub enum LoadError {
         #[source]
         source: Box<OpenError>,
     },
-    /// Two artifacts serve the same system version.
+    /// A directory of `CodeSystem` resources does not load.
+    #[error("cannot load the CodeSystem resources at {path}")]
+    CodeSystems {
+        /// The directory.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: Box<ferroterm_terminology::fhir_codesystem::load::LoadError>,
+    },
+    /// A `CodeSystem` resource does not build into a provider.
+    #[error("cannot serve the CodeSystem `{url}` from {path}")]
+    Build {
+        /// The directory.
+        path: PathBuf,
+        /// The system.
+        url: String,
+        /// The cause.
+        #[source]
+        source: BuildError,
+    },
+    /// A supplement names a code system that is not loaded.
+    #[error("the supplement `{url}` supplements `{target}`, which is not loaded")]
+    SupplementTarget {
+        /// The supplement.
+        url: String,
+        /// `CodeSystem.supplements`.
+        target: String,
+    },
+    /// A supplement names no `supplements` canonical.
+    #[error("the supplement `{url}` names no code system to supplement")]
+    SupplementWithoutTarget {
+        /// The supplement.
+        url: String,
+    },
+    /// Two sources serve the same system version.
     #[error(transparent)]
     Register(#[from] RegisterError),
 }
@@ -37,11 +75,11 @@ pub struct InstanceSummary {
     pub url: String,
     /// The version.
     pub version: String,
-    /// The concept count.
-    pub concepts: u64,
+    /// The concept count, when the system enumerates its concepts.
+    pub concepts: Option<u64>,
     /// The designation languages.
     pub languages: Vec<String>,
-    /// The artifact directory, when loaded from one.
+    /// The directory the system was loaded from, when loaded from one.
     pub path: Option<PathBuf>,
 }
 
@@ -51,22 +89,29 @@ pub struct AppState {
     registry: Registry,
     /// `CodeSystem` instance id to (system, version).
     instances: BTreeMap<String, (String, String)>,
-    /// The artifact directory each version was loaded from.
+    /// The directory each version was loaded from.
     paths: BTreeMap<(String, String), PathBuf>,
     /// The software version reported in the capability statements.
     software_version: &'static str,
 }
 
+/// A provider before registration, with where it came from.
+struct Loaded {
+    path: PathBuf,
+    provider: Arc<dyn CodeSystemProvider>,
+}
+
 impl AppState {
-    /// Loads every artifact `config` names into a registry.
+    /// Loads every artifact and every `CodeSystem` directory `config` names
+    /// into a registry, supplements applied to the systems they name.
     ///
     /// # Errors
     ///
-    /// Returns [`LoadError`] when an artifact does not open or two artifacts
-    /// serve the same system version. A server never starts on a bad index.
+    /// Returns [`LoadError`] when a source does not load, a supplement names
+    /// a system that is not loaded, or two sources serve the same system
+    /// version. A server never starts on a bad index.
     pub fn load(config: &Config) -> Result<Self, LoadError> {
-        let mut registry = Registry::new();
-        let mut paths = BTreeMap::new();
+        let mut loaded = Vec::new();
         for path in &config.index {
             let provider =
                 SnomedProvider::open(path, &config.default_language).map_err(|source| {
@@ -75,12 +120,22 @@ impl AppState {
                         source: Box::new(source),
                     }
                 })?;
+            loaded.push(Loaded {
+                path: path.clone(),
+                provider: Arc::new(provider),
+            });
+        }
+        let mut supplements = Vec::new();
+        for path in &config.code_systems {
+            load_code_systems(path, &mut loaded, &mut supplements)?;
+        }
+        let loaded = apply_supplements(loaded, &supplements)?;
+        let mut registry = Registry::new();
+        let mut paths = BTreeMap::new();
+        for Loaded { path, provider } in loaded {
             let identity = provider.identity();
-            paths.insert(
-                (identity.url.clone(), identity.version.clone()),
-                path.clone(),
-            );
-            registry.register(Arc::new(provider))?;
+            paths.insert((identity.url.clone(), identity.version.clone()), path);
+            registry.register(provider)?;
         }
         let mut state = Self::from_registry(registry);
         state.paths = paths;
@@ -94,10 +149,8 @@ impl AppState {
         for url in registry.systems() {
             for provider in registry.versions(url) {
                 let identity = provider.identity();
-                instances.insert(
-                    instance_id(&identity.version),
-                    (identity.url.clone(), identity.version.clone()),
-                );
+                let id = unique_id(&instances, instance_id(&identity.url, &identity.version));
+                instances.insert(id, (identity.url.clone(), identity.version.clone()));
             }
         }
         Self {
@@ -113,15 +166,17 @@ impl AppState {
     /// # Errors
     ///
     /// Returns the provider's error when a concept count cannot be read.
-    pub fn summaries(
-        &self,
-    ) -> Result<Vec<InstanceSummary>, ferroterm_terminology::provider::ProviderError> {
+    pub fn summaries(&self) -> Result<Vec<InstanceSummary>, ProviderError> {
         let mut out = Vec::new();
         for (id, (url, version)) in &self.instances {
             let Ok(resolved) = self.registry.resolve(url, Some(version)) else {
                 continue;
             };
-            let concepts = resolved.provider.all()?.len();
+            let concepts = match resolved.provider.all() {
+                Ok(set) => Some(set.len()),
+                Err(ProviderError::NotEnumerable) => None,
+                Err(error) => return Err(error),
+            };
             out.push(InstanceSummary {
                 id: id.clone(),
                 url: url.clone(),
@@ -167,17 +222,151 @@ impl AppState {
     }
 }
 
-/// A FHIR resource id for a code system version: the version string reduced
-/// to the id alphabet (`[A-Za-z0-9.-]`, at most 64 characters,
-/// <https://hl7.org/fhir/R4B/datatypes.html#id>), scheme dropped.
+/// Loads the `CodeSystem` resources in `path`: complete systems become
+/// providers, supplements are collected for [`apply_supplements`].
 ///
-/// No spec governs how a server names its instances: our own design.
+/// The FHIR version is the one the directory's `package.json` declares;
+/// a plain directory of resources is read as R4B, the version the server
+/// serves.
+fn load_code_systems(
+    path: &Path,
+    loaded: &mut Vec<Loaded>,
+    supplements: &mut Vec<(String, Supplement)>,
+) -> Result<(), LoadError> {
+    let failed = |source| LoadError::CodeSystems {
+        path: path.to_path_buf(),
+        source: Box::new(source),
+    };
+    let version = package_version(path)
+        .map_err(failed)?
+        .unwrap_or(FhirVersion::R4B);
+    for model in load_dir(path, version).map_err(failed)? {
+        if model.content == ContentMode::Supplement {
+            let target =
+                model
+                    .supplements
+                    .clone()
+                    .ok_or_else(|| LoadError::SupplementWithoutTarget {
+                        url: model.url.clone(),
+                    })?;
+            supplements.push((target, supplement_of(&model)));
+            continue;
+        }
+        let url = model.url.clone();
+        let provider = FhirCodeSystem::new(model).map_err(|source| LoadError::Build {
+            path: path.to_path_buf(),
+            url,
+            source,
+        })?;
+        loaded.push(Loaded {
+            path: path.to_path_buf(),
+            provider: Arc::new(provider),
+        });
+    }
+    Ok(())
+}
+
+/// The additions a supplement resource carries, keyed by code.
+fn supplement_of(model: &CodeSystemModel) -> Supplement {
+    let mut concepts = BTreeMap::new();
+    for entry in &model.concepts {
+        concepts.insert(
+            entry.code.clone(),
+            Additions {
+                designations: entry.designations.clone(),
+                properties: entry.properties.clone(),
+            },
+        );
+    }
+    Supplement {
+        url: model.url.clone(),
+        version: Some(model.version.clone()).filter(|v| !v.is_empty()),
+        concepts,
+    }
+}
+
+/// Wraps each supplemented system in its supplements.
+///
+/// `CodeSystem.supplements` is a canonical, `url` or `url|version`
+/// (<https://hl7.org/fhir/R4B/codesystem-definitions.html#CodeSystem.supplements>);
+/// without a version the supplement applies to every loaded version of the
+/// system.
+fn apply_supplements(
+    loaded: Vec<Loaded>,
+    supplements: &[(String, Supplement)],
+) -> Result<Vec<Loaded>, LoadError> {
+    for (target, supplement) in supplements {
+        let (url, version) = split_canonical(target);
+        let served = loaded.iter().any(|l| {
+            let identity = l.provider.identity();
+            identity.url == url && version.is_none_or(|v| identity.version == v)
+        });
+        if !served {
+            return Err(LoadError::SupplementTarget {
+                url: supplement.url.clone(),
+                target: target.clone(),
+            });
+        }
+    }
+    Ok(loaded
+        .into_iter()
+        .map(|Loaded { path, provider }| {
+            let identity = provider.identity();
+            let mine: Vec<Supplement> = supplements
+                .iter()
+                .filter(|(target, _)| {
+                    let (url, version) = split_canonical(target);
+                    identity.url == url && version.is_none_or(|v| identity.version == v)
+                })
+                .map(|(_, supplement)| supplement.clone())
+                .collect();
+            let provider: Arc<dyn CodeSystemProvider> = if mine.is_empty() {
+                provider
+            } else {
+                Arc::new(Supplemented::new(provider, mine))
+            };
+            Loaded { path, provider }
+        })
+        .collect())
+}
+
+/// `url|version` split into its parts.
+fn split_canonical(canonical: &str) -> (&str, Option<&str>) {
+    match canonical.split_once('|') {
+        Some((url, version)) => (url, Some(version)),
+        None => (canonical, None),
+    }
+}
+
+/// `wanted`, or `wanted` with a numeric suffix when the reduced id is taken.
+fn unique_id(taken: &BTreeMap<String, (String, String)>, wanted: String) -> String {
+    if !taken.contains_key(&wanted) {
+        return wanted;
+    }
+    let stem: String = wanted.chars().take(60).collect();
+    (2..=taken.len().saturating_add(2))
+        .map(|n| format!("{stem}-{n}"))
+        .find(|candidate| !taken.contains_key(candidate))
+        .unwrap_or(wanted)
+}
+
+/// A FHIR resource id for a code system version.
+///
+/// The version URI when it carries the system (a SNOMED CT edition), otherwise
+/// the system URL and the version, reduced to the id alphabet (`[A-Za-z0-9.-]`,
+/// at most 64 characters, <https://hl7.org/fhir/R4B/datatypes.html#id>),
+/// scheme dropped. No spec governs how a server names its instances: our own design.
 #[must_use]
-pub fn instance_id(version: &str) -> String {
-    let stripped = version
+pub fn instance_id(url: &str, version: &str) -> String {
+    let text = if version.starts_with(url) {
+        version.to_owned()
+    } else {
+        format!("{url}-{version}")
+    };
+    let stripped = text
         .strip_prefix("https://")
-        .or_else(|| version.strip_prefix("http://"))
-        .unwrap_or(version);
+        .or_else(|| text.strip_prefix("http://"))
+        .unwrap_or(&text);
     let mut id = String::with_capacity(stripped.len());
     let mut dash = false;
     for c in stripped.chars() {
@@ -195,15 +384,33 @@ pub fn instance_id(version: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::instance_id;
+    use super::{instance_id, split_canonical};
 
     #[test]
     fn instance_ids_fit_the_fhir_id_alphabet() {
         assert_eq!(
-            instance_id("http://snomed.info/sct/11000146104/version/20260630"),
+            instance_id(
+                "http://snomed.info/sct",
+                "http://snomed.info/sct/11000146104/version/20260630"
+            ),
             "snomed.info-sct-11000146104-version-20260630"
         );
-        assert_eq!(instance_id("2.80"), "2.80");
-        assert!(instance_id(&"x".repeat(100)).len() <= 64);
+        assert_eq!(
+            instance_id("http://terminology.hl7.org/CodeSystem/v2-0001", "2.0.0"),
+            "terminology.hl7.org-CodeSystem-v2-0001-2.0.0"
+        );
+        assert!(instance_id("http://example.org/x", &"x".repeat(100)).len() <= 64);
+    }
+
+    #[test]
+    fn canonicals_split_on_the_version_bar() {
+        assert_eq!(
+            split_canonical("http://a.example/cs|2.0"),
+            ("http://a.example/cs", Some("2.0"))
+        );
+        assert_eq!(
+            split_canonical("http://a.example/cs"),
+            ("http://a.example/cs", None)
+        );
     }
 }

@@ -12,9 +12,11 @@
 
 pub mod capabilities;
 pub mod compose;
+pub mod fhir_codesystem;
 pub mod filter;
 pub mod operations;
 pub mod provider;
 pub mod registry;
 pub mod snomed;
 pub mod supplement;
+pub mod text_match;

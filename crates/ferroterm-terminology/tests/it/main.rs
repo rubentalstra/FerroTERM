@@ -12,6 +12,7 @@
 
 mod capabilities;
 mod compose;
+mod fhir_codesystem;
 mod filter;
 mod fixture;
 mod operations;
