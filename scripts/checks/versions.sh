@@ -32,6 +32,22 @@ else
   note "no app/ferroterm-server/Cargo.toml yet — skipped"
 fi
 
+# --- compose.yaml image tag default == root Cargo.toml workspace version --------
+echo "== quickstart image tag (compose.yaml <-> Cargo.toml)"
+if [ -f compose.yaml ] && [ -f Cargo.toml ]; then
+  compose_ver="$(grep -m1 'image: ghcr.io/rubentalstra/ferroterm:' compose.yaml | sed -E 's/.*:-([^}]*)\}.*/\1/' | tr -d '[:space:]' || true)"
+  cargo_ver_c="$(awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/[" ]/,""); sub(/^version=/,""); print; exit}' Cargo.toml || true)"
+  if [ -z "$compose_ver" ]; then
+    bad "compose.yaml has no ghcr.io/rubentalstra/ferroterm image tag default"
+  elif [ "$compose_ver" != "$cargo_ver_c" ]; then
+    bad "compose.yaml image tag default ($compose_ver) != Cargo.toml workspace version ($cargo_ver_c)"
+  else
+    note "OK: the quickstart pulls $compose_ver"
+  fi
+else
+  note "no compose.yaml yet — skipped"
+fi
+
 # --- CITATION.cff version == root Cargo.toml [workspace.package] version -------
 echo "== product version (CITATION.cff <-> Cargo.toml)"
 cff_ver=""

@@ -11,7 +11,7 @@
 # distroless static: ca-certificates, tzdata, /etc/passwd with the nonroot
 # user (uid 65532), a /tmp, no shell, no package manager, about 2 MiB. Pinned
 # by index digest; Dependabot (docker ecosystem) proposes the bumps.
-FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:1c2c046bc09ed40fad370b599a0b1ae7987f55b01e247cf27a7c27cd97e5bbc7
 
 # The platform of the manifest being built, set by buildx per platform.
 ARG TARGETOS
@@ -43,4 +43,4 @@ LABEL org.opencontainers.image.title="FerroTERM" \
       org.opencontainers.image.source="https://github.com/rubentalstra/FerroTERM" \
       org.opencontainers.image.vendor="FerroTERM" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.base.name="gcr.io/distroless/static-debian12:nonroot"
+      org.opencontainers.image.base.name="gcr.io/distroless/static-debian13:nonroot"

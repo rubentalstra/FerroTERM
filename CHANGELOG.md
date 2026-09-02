@@ -15,6 +15,12 @@ fresh link reference.
 
 ### Added
 
+- A `compose.yaml` quickstart at the repository root, attached to every
+  release: it pulls the released image, mounts a built index read-only, binds
+  the loopback interface, and runs with every capability dropped and a
+  read-only root filesystem. `docker compose up` beside an index is the whole
+  install.
+
 - Console logs an operator can read: a startup banner naming the version and
   the maintainer, one line per loaded
   code system version (id, system, version, concepts, languages, path), one
@@ -48,6 +54,8 @@ fresh link reference.
 
 ### Changed
 
+- The container image is based on `gcr.io/distroless/static-debian13:nonroot`
+  (Debian 13), the same generation as the toolchain image.
 - Release binaries ship for Linux only (`x86_64` and `aarch64`, gnu and musl):
   the server runs in a container or on a Linux host. The macOS build is
   dropped from the release; a developer on a Mac builds from source.

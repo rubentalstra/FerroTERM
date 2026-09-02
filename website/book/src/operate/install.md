@@ -31,6 +31,22 @@ one, and listens for FHIR requests on `127.0.0.1:8080`. The listen address, the
 index directories, and the default display language are environment variables
 described in [Configuration](configuration.md).
 
+## Run with Docker Compose
+
+Every release attaches a `compose.yaml`. Download it next to a built index and
+start:
+
+```console
+$ curl -LO https://github.com/rubentalstra/FerroTERM/releases/latest/download/compose.yaml
+$ FERROTERM_INDEX_DIR=/path/to/ferroterm-index docker compose up
+```
+
+The file pulls the image of the release it shipped with, mounts the index
+read-only at `/data/index`, publishes port 8080 on the loopback interface, and
+runs the container with every capability dropped and a read-only root
+filesystem. `FERROTERM_BIND_HOST`, `FERROTERM_PORT`, `FERROTERM_LOG_FORMAT`,
+and `RUST_LOG` are variables you can set on the command line.
+
 ## Run the container
 
 The image is `ghcr.io/rubentalstra/ferroterm`, published for `linux/amd64` and
