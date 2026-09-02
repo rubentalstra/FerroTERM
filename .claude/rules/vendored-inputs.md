@@ -23,7 +23,7 @@ The pinned FHIR packages are the codegen input (`codegen.md`). Every one is:
   version pin, the fetch date, and the upstream license (HL7 material under
   its own terms), with the upstream `LICENSE`/`package.json` alongside.
 
-| input | script (to create) | destination |
+| input | script | destination |
 |---|---|---|
 | `hl7.fhir.r4.core` 4.0.1 | `scripts/vendor/fhir-packages.sh` | `tools/notio-fhir-codegen/vendor/hl7.fhir.r4.core/` |
 | `hl7.fhir.r4b.core` 4.3.0 | `scripts/vendor/fhir-packages.sh` | `tools/notio-fhir-codegen/vendor/hl7.fhir.r4b.core/` |

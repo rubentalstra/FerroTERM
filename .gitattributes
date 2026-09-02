@@ -5,8 +5,12 @@
 * text=auto eol=lf
 
 # Vendored trees (machine-readable FHIR specs, test corpora) are exempt from
-# GitHub language stats and collapse in diffs. Uncomment and extend each path
-# when a vendored tree lands (see .claude/rules/vendored-inputs.md).
+# GitHub language stats and collapse in diffs. Extend the list when a new
+# vendored tree lands (see .claude/rules/vendored-inputs.md).
 # vendor/** linguist-vendored
 # crates/*/vendor/** linguist-vendored
-# tools/*/vendor/** linguist-vendored
+tools/*/vendor/** linguist-vendored
+
+# Vendored packages are stored byte for byte as HL7 publishes them: no line
+# ending normalization, so the tree matches the registry tarball exactly.
+tools/*/vendor/** -text
