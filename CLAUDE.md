@@ -66,6 +66,8 @@ system and every operation as machine-readable resources in versioned packages
 `hl7.fhir.r6.core` 6.0.0-ballot), plus `hl7.terminology` (THO). We vendor and
 pin those packages under `tools/notio-fhir-codegen/vendor/` with a
 `PROVENANCE.md` per package, and generate `crates/notio-fhir` from them.
+**R4B is the first generation implemented** (current stable R4-family release, a
+near-superset of R4); R5, R4, and R6 follow.
 
 - **Regenerate:** `cargo run -p notio-fhir-codegen -- emit` (types) and the
   operation-contract emit; a `codegen-drift` check regenerates in CI and fails

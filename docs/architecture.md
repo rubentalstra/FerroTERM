@@ -141,6 +141,12 @@ the generator is never hand-edited. Versions are selected by a runtime wrapper,
 so one server answers R4/R4B/R5/R6 callers at once. R6 is a ballot-tracking
 generation (publication expected around late 2026).
 
+**R4B is the first generation implemented.** It is the current stable release of
+the R4 line and a near-superset of R4, so an R4B-first build already serves the
+R4-family terminology surface; R5, R4, and R6 follow. (R4 4.0.1 remains the most
+widely deployed base and is a generation in its own right — R4B first is a
+sequencing choice, not a drop of R4.)
+
 ### 3. Persistence is a pure-Rust, memory-mapped embedded engine
 
 The built structures — the CSR adjacency, the roaring closure bitmaps, the

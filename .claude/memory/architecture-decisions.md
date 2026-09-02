@@ -27,6 +27,9 @@ streams, 2026-09-02).
   (StructureDefinition + OperationDefinition), a bespoke FerroEHR-style
   generator, per-version modules for **R4 + R4B + R5 + R6 (ballot)**, runtime
   version wrapper. Never hand-write FHIR types; never edit `// @generated`.
+  **Start with R4B first** (owner call: current stable R4-family release,
+  near-superset of R4 — an R4B-first build serves the R4 surface); then R5, R4,
+  R6.
 - **Pure Rust, single binary, no JVM / no Elasticsearch.** SNOMED CT content is
   licence-gated and NEVER committed (bring-your-own RF2); fixtures are
   shaped/synthetic.
@@ -35,7 +38,8 @@ Crate plan (see `docs/architecture.md`): `notio-fhir` (generated), `notio-rf2`,
 `notio-graph`, `notio-store`, `notio-text`, `notio-ecl`, `notio-terminology`,
 `app/notio-server`, `tools/notio-fhir-codegen`, `tools/notio-build`.
 
-Build sequence: (1) FHIR codegen → `notio-fhir`; (2) RF2 + offline build →
+Build sequence: (1) FHIR codegen → `notio-fhir`, R4B first then R5/R4/R6;
+(2) RF2 + offline build →
 redb artifacts; (3) read-only serving core ($lookup/$subsumes/$validate-code);
 (4) ECL + $expand + $translate; (5) hardening + packaging. Reference oracles:
 Snowstorm + Hermes; the ECL ANTLR grammar. See [[owner-work-style]].

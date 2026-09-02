@@ -76,11 +76,17 @@ profile**. That splits the system into two problems with different answers.
 
 ## The plan
 
+**FHIR R4B is the first version implemented** — the current stable release of
+the R4 line and a near-superset of R4, so an R4B-first build already serves the
+R4-family terminology surface; R5, R4, and R6 (ballot) follow as further
+generations.
+
 The first milestone is a read-only core over the International edition: an
 offline build that turns an RF2 release into the memory-mapped store, graph, and
-text index, then a server answering `$lookup`, `$subsumes`, and `$validate-code`.
-`$expand` over a first slice of ECL follows. Correctness is checked against
-Snowstorm as the reference server, because a terminology server that is subtly
+text index, then a server answering `$lookup`, `$subsumes`, and `$validate-code`
+on R4B. `$expand` over a first slice of ECL follows. Correctness is checked
+against Snowstorm as the reference server, because a terminology server that is
+subtly
 wrong is worse than none.
 
 ECL is the hard part and the main risk. A correct ECL evaluator (refinements,
