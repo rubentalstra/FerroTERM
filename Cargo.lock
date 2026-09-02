@@ -381,6 +381,11 @@ dependencies = [
 name = "ferroterm-terminology"
 version = "0.0.2"
 dependencies = [
+ "ferroterm-fhir",
+ "ferroterm-graph",
+ "regex",
+ "roaring",
+ "serde_json",
  "thiserror",
 ]
 
@@ -853,6 +858,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de6c3b63e007e90ce536ec2ae4690826136a20ec8dbbbb400daef1bb999d2e36"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "regex"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f020237b6c8eed93db2e2cb53c00c60a8e1bc73da7d073199a1180401450218d"
+dependencies = [
+ "aho-corasick",
+ "memchr",
+ "regex-automata",
+ "regex-syntax",
 ]
 
 [[package]]
