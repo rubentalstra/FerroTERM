@@ -159,6 +159,8 @@ pub struct OperationDefinition {
     pub name: String,
     /// `draft`, `active`, `retired`, or `unknown`.
     pub status: String,
+    /// What the operation does.
+    pub description: Option<String>,
     /// `operation` or `query`.
     pub kind: String,
     /// The name used to invoke the operation, without the `$`.
@@ -203,6 +205,9 @@ pub struct OperationParameter {
     pub search_type: Option<String>,
     /// The terminology binding for coded parameters.
     pub binding: Option<Binding>,
+    /// The invocation levels the parameter applies to (`instance`, `type`, `system`); R5.
+    #[serde(default)]
+    pub scope: Vec<String>,
     /// Nested parts of a multi-part parameter.
     #[serde(default)]
     pub part: Vec<OperationParameter>,

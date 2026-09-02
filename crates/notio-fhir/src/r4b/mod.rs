@@ -30,6 +30,7 @@ pub mod meta;
 pub mod money;
 pub mod narrative;
 pub mod operation_outcome;
+pub mod operations;
 pub mod parameter_definition;
 pub mod parameters;
 pub mod period;
