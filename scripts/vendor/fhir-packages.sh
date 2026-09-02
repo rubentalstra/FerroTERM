@@ -7,7 +7,7 @@
 # the FHIR table in docs/VERSIONS.md (the single source of truth), downloads
 # that exact version from the FHIR package registry, verifies the tarball
 # against the registry's recorded checksum, extracts it verbatim into
-# tools/notio-fhir-codegen/vendor/<package>/package/, and writes a
+# tools/ferroterm-fhir-codegen/vendor/<package>/package/, and writes a
 # PROVENANCE.md beside it. Re-running with unchanged pins reproduces the same
 # tree byte for byte (only the fetch date in PROVENANCE.md moves).
 #
@@ -23,7 +23,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 
 registry="https://packages.fhir.org"
-vendor_dir="tools/notio-fhir-codegen/vendor"
+vendor_dir="tools/ferroterm-fhir-codegen/vendor"
 pins="docs/VERSIONS.md"
 default_packages=(hl7.fhir.r4b.core hl7.terminology)
 
@@ -53,7 +53,7 @@ vendor_one() {
   dest="$vendor_dir/$pkg"
 
   echo "== $pkg $ver"
-  meta="$(curl -fsSL -A "notio-vendor (scripts/vendor/fhir-packages.sh)" "$registry/$pkg")" \
+  meta="$(curl -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" "$registry/$pkg")" \
     || die "cannot read registry metadata for $pkg"
   shasum="$(printf '%s' "$meta" | jq -r --arg v "$ver" '.versions[$v].dist.shasum // empty')"
   tarball_url="$(printf '%s' "$meta" | jq -r --arg v "$ver" '.versions[$v].dist.tarball // empty')"
@@ -61,7 +61,7 @@ vendor_one() {
 
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' RETURN
-  curl -fsSL -A "notio-vendor (scripts/vendor/fhir-packages.sh)" -o "$tmp/pkg.tgz" "$registry/$pkg/$ver" \
+  curl -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" -o "$tmp/pkg.tgz" "$registry/$pkg/$ver" \
     || die "download of $pkg $ver failed"
   got="$(shasum -a 1 "$tmp/pkg.tgz" | cut -d' ' -f1)"
   [ "$got" = "$shasum" ] || die "checksum mismatch for $pkg $ver: registry $shasum, downloaded $got"

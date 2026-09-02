@@ -34,6 +34,6 @@ The exact grammar is settled with the first build.
 ## What you do not configure
 
 You do not configure a database connection, a search cluster, or a JVM heap.
-Notio has none of these. The one input the server needs is the built index, and
+FerroTERM has none of these. The one input the server needs is the built index, and
 you build that offline with the release-loading tool described in
 [Loading a SNOMED CT edition](loading-snomed.md).

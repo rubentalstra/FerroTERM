@@ -9,7 +9,7 @@ version = "0.0.0"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
-repository = "https://github.com/rubentalstra/notio"
+repository = "https://github.com/rubentalstra/ferroterm"
 authors = ["Ruben Talstra"]
 publish = false
 
@@ -58,13 +58,13 @@ criterion = "0.8.2"
 divan = "0.1.21"
 tempfile = "3.27.0"
 # Workspace-internal crates (path dependencies, versioned with the workspace).
-notio-fhir = { path = "crates/notio-fhir", version = "0.0.0" }
-notio-rf2 = { path = "crates/notio-rf2", version = "0.0.0" }
-notio-graph = { path = "crates/notio-graph", version = "0.0.0" }
-notio-store = { path = "crates/notio-store", version = "0.0.0" }
-notio-text = { path = "crates/notio-text", version = "0.0.0" }
-notio-ecl = { path = "crates/notio-ecl", version = "0.0.0" }
-notio-terminology = { path = "crates/notio-terminology", version = "0.0.0" }
+ferroterm-fhir = { path = "crates/ferroterm-fhir", version = "0.0.0" }
+ferroterm-rf2 = { path = "crates/ferroterm-rf2", version = "0.0.0" }
+ferroterm-graph = { path = "crates/ferroterm-graph", version = "0.0.0" }
+ferroterm-store = { path = "crates/ferroterm-store", version = "0.0.0" }
+ferroterm-text = { path = "crates/ferroterm-text", version = "0.0.0" }
+ferroterm-ecl = { path = "crates/ferroterm-ecl", version = "0.0.0" }
+ferroterm-terminology = { path = "crates/ferroterm-terminology", version = "0.0.0" }
 
 # The reliability bar (.claude/rules/reliability.md). Groups sit at priority -1
 # so every named lint below overrides its group.

@@ -1,6 +1,6 @@
 # Code systems
 
-Notio serves more than one code system through one engine (`architecture.md`
+FerroTERM serves more than one code system through one engine (`architecture.md`
 §5). This file is the catalogue: for each code system, the identity FHIR gives
 it, how its content is distributed and licensed, what hierarchy it has, what the
 FHIR specification defines for it (filters, properties, implicit value sets),
@@ -29,8 +29,8 @@ engine. Each row is a tracker issue under the program issue.
 
 | Order | Code system | Why here | Provider shape |
 |---|---|---|---|
-| 1 | SNOMED CT | The hardest case: polyhierarchy, ECL, refsets, editions. Shapes the engine. Licensed data available for development. | `notio-rf2` loader, ECL, SNOMED implicit forms |
-| 2 | FHIR `CodeSystem` resources (HL7 Terminology, custom systems, supplements) | Passes the tx-ecosystem `general` mode on its own (667 of 1,174 tests use synthetic FHIR code systems); carries every code system published as a FHIR resource. | Generic provider over the package loader already in `notio-fhir-codegen` |
+| 1 | SNOMED CT | The hardest case: polyhierarchy, ECL, refsets, editions. Shapes the engine. Licensed data available for development. | `ferroterm-rf2` loader, ECL, SNOMED implicit forms |
+| 2 | FHIR `CodeSystem` resources (HL7 Terminology, custom systems, supplements) | Passes the tx-ecosystem `general` mode on its own (667 of 1,174 tests use synthetic FHIR code systems); carries every code system published as a FHIR resource. | Generic provider over the package loader already in `ferroterm-fhir-codegen` |
 | 3 | LOINC | Second most exercised system in the suite (2,152 references); the Dutch lab code set builds on it; the nl-NL linguistic variant exists. | CSV loader; parts hierarchy; the LOINC filters and `/vs/` implicit sets |
 | 4 | UCUM | 2,267 references in the suite; grammar-defined, so it proves the non-enumerable provider shape. | Expression parser over `ucum-essence.xml`; no store |
 | 5 | ICD-10 (WHO), ICD-10-NL, ICD-10-CM | The Dutch diagnosis classification; `classified-with` hierarchy proves the mono-hierarchy shape. | ClaML loader (WHO, NL), tab-delimited loader (CM) |
@@ -120,7 +120,7 @@ engine. Each row is a tracker issue under the program issue.
   `CodeSystem` definition (<https://loinc.org/kb/users-guide/loinc-database-structure/>).
 - **Hierarchy.** The Component Hierarchy by System: parts are branches, terms
   are leaves, and a term may sit under more than one path. THO treats it as the
-  basis for subsumption; tx.fhir.org's provider returns no is-a for LOINC. Notio
+  basis for subsumption; tx.fhir.org's provider returns no is-a for LOINC. FerroTERM
   materializes the part hierarchy as a closure and answers `parent` and
   `ancestor` filters from it; whether `$subsumes` between two LOINC terms is
   ever `subsumes` is decided against the LOINC CodeSystem's
@@ -188,7 +188,7 @@ engine. Each row is a tracker issue under the program issue.
 - **FHIR-defined behaviour.** No filters and no implicit value sets are
   defined ("No need ... identified yet"), so the provider offers the generic
   filters only, with `is-a` and `descendent-of` over the classification tree.
-- **Notio plan.** One ClaML loader serves WHO ICD-10, ICD-10-NL, and (ClaML
+- **FerroTERM plan.** One ClaML loader serves WHO ICD-10, ICD-10-NL, and (ClaML
   permitting) ICPC-2e; a tab-delimited loader serves ICD-10-CM. The Nictiz
   terminology server serves ICD-10 licence-free, which makes it the reference
   for the Dutch variant.
@@ -212,7 +212,7 @@ engine. Each row is a tracker issue under the program issue.
   over 100,000 index terms (<https://icd.who.int/en/docs/icd11factsheet_en.pdf>).
 - **FHIR-defined behaviour.** None beyond identity. The tx-ecosystem suite has
   an `icd-11` mode (50 tests) that a provider should pass.
-- **Notio plan.** A loader over the local-deployment API output or the
+- **FerroTERM plan.** A loader over the local-deployment API output or the
   spreadsheet export, once ICD-10 is served; the cluster syntax is a
   compositional grammar the provider must declare.
 
@@ -230,7 +230,7 @@ engine. Each row is a tracker issue under the program issue.
 - **Hierarchy.** Five levels under fourteen anatomical main groups
   (`A`, `A10`, `A10B`, `A10BA`, `A10BA02`), one parent each: `classified-with`
   (<https://atcddd.fhi.no/atc/structure_and_principles/>).
-- **Notio plan.** A small table loader over the purchased file or the
+- **FerroTERM plan.** A small table loader over the purchased file or the
   G-Standaard files; generic filters over the tree.
 
 ## ICPC-2 and ICPC-1 NL
@@ -247,7 +247,7 @@ engine. Each row is a tracker issue under the program issue.
   never committed.
 - **Hierarchy.** 17 chapters by 7 components, a biaxial structure; NL adds
   sub-rubrics.
-- **Notio plan.** The ClaML loader for ICPC-2e; a table loader for the NHG
+- **FerroTERM plan.** The ClaML loader for ICPC-2e; a table loader for the NHG
   source data when a licence holder deploys it. The Nictiz server serves
   NHG-24 and NHG-45 to licence holders.
 
@@ -270,7 +270,7 @@ engine. Each row is a tracker issue under the program issue.
   `has_dose_form`, `isa`, and the rest of Appendix 1) are the filter surface.
 - **FHIR-defined behaviour.** Filters `STY`, `SAB`, `TTY`, `[REL]`, `[RELA]`
   with `=` or `in`; no implicit value sets beyond `/vs` (all CUIs); lookup
-  properties "yet to be done" in the specification, so any Notio exposes are
+  properties "yet to be done" in the specification, so any FerroTERM exposes are
   our own design and marked so.
 
 ## BCP 47, BCP 13, ISO 3166
@@ -357,9 +357,9 @@ deployment needs them; none is on the near-term roadmap.
    record its section here: identity, distribution, licence and fixture policy,
    hierarchy, FHIR-defined filters, properties, and implicit value sets.
 2. File the tracker issue as a sub-issue of the program issue, in build order.
-3. Add a loader crate (`crates/notio-<system>`) that maps the release into the
+3. Add a loader crate (`crates/ferroterm-<system>`) that maps the release into the
    substrates, and a provider that declares the system's capabilities through
-   the FHIR `CodeSystem` metadata. Nothing in `notio-terminology` changes.
+   the FHIR `CodeSystem` metadata. Nothing in `ferroterm-terminology` changes.
 4. Add a rule file `.claude/rules/<system>-terminology.md` if the system has
    spec-facing behaviour beyond the generic provider.
 5. Run the tx-ecosystem suite in the system's mode where one exists.

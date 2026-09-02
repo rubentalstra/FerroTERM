@@ -1,11 +1,11 @@
 ---
 name: architecture-decisions
-description: Notio's locked, evidence-backed architecture (the OWL-EL two-problem split, the index-materialized graph store, the code-system-neutral provider seam with SNOMED CT first, machine-generated FHIR, and the pure-Rust stack)
+description: FerroTERM's locked, evidence-backed architecture (the OWL-EL two-problem split, the index-materialized graph store, the code-system-neutral provider seam with SNOMED CT first, machine-generated FHIR, and the pure-Rust stack)
 metadata:
   type: project
 ---
 
-Notio is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other
+FerroTERM is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other
 clinical code systems, SNOMED CT first (owner decision 2026-09-02: build the
 engine around a code system provider seam from the first line of engine code;
 the substrates never know one system's identifiers; `docs/architecture.md` §5,
@@ -52,11 +52,11 @@ streams, 2026-09-02).
   licence-gated and NEVER committed (bring-your-own RF2); fixtures are
   shaped/synthetic.
 
-Crate plan (see `docs/architecture.md`): `notio-fhir` (generated), `notio-rf2`,
-`notio-graph`, `notio-store`, `notio-text`, `notio-ecl`, `notio-terminology`,
-`app/notio-server`, `tools/notio-fhir-codegen`, `tools/notio-build`.
+Crate plan (see `docs/architecture.md`): `ferroterm-fhir` (generated), `ferroterm-rf2`,
+`ferroterm-graph`, `ferroterm-store`, `ferroterm-text`, `ferroterm-ecl`, `ferroterm-terminology`,
+`app/ferroterm-server`, `tools/ferroterm-fhir-codegen`, `tools/ferroterm-build`.
 
-Build sequence: (1) FHIR codegen → `notio-fhir`, R4B first then R5/R4/R6;
+Build sequence: (1) FHIR codegen → `ferroterm-fhir`, R4B first then R5/R4/R6;
 (2) RF2 + offline build →
 redb artifacts; (3) read-only serving core ($lookup/$subsumes/$validate-code);
 (4) ECL + $expand + $translate; (5) hardening + packaging. Reference oracles:

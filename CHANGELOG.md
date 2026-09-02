@@ -15,6 +15,11 @@ fresh link reference.
 
 ### Changed
 
+- The project has its official name, FerroTERM (Ferro for the Rust family it
+  shares with FerroEHR, TERM for terminology), with the site at
+  <https://ferroterm.eu>. The repository, every crate (`ferroterm-*`), binary,
+  environment variable (`FERROTERM_LISTEN`), and document carry the name; the
+  Notio codename is retired.
 - The engine is code-system-neutral by design: the FHIR terminology operations
   talk to a code system provider seam, SNOMED CT is the first provider, and
   LOINC, UCUM, ICD-10, and the other systems in `docs/terminologies.md` follow
@@ -22,7 +27,7 @@ fresh link reference.
 
 ### Added
 
-- The Cargo workspace: the seven engine crates, the `notio-server` binary
+- The Cargo workspace: the seven engine crates, the `ferroterm-server` binary
   (with a `GET /health` route), and the two tools, with the pinned dependency
   set, the workspace lint table, and the Rust CI lanes active.
 - Project foundation: architecture, `.claude/` project configuration (rules,

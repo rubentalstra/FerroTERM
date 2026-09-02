@@ -26,7 +26,7 @@ der2_*
 # The local, licensed RF2 release used for development lives under data/ and
 # never leaves the machine.
 /data/
-# Built serving artifacts (tools/notio-build output): redb store + fst/roaring indexes.
+# Built serving artifacts (tools/ferroterm-build output): redb store + fst/roaring indexes.
 /artifacts/
 *.redb
 *.fst

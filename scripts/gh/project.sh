@@ -14,12 +14,12 @@
 # else. Policy: .claude/rules/project-board.md.
 #
 # OWNER SETUP REQUIRED: the board is not created by this script. The repository
-# owner must first create a GitHub Project (v2) titled "Notio Roadmap" under
+# owner must first create a GitHub Project (v2) titled "FerroTERM Roadmap" under
 # the `rubentalstra` account, with a single-select "Status" field carrying the
 # options Todo / In Progress / Done (and, for the roadmap view, a Date field
 # named "Target date"), then grant this clone the `project` token scope
 # (`gh auth refresh -s project`). Until that project exists, every command here
-# fails loud with "no project titled 'Notio Roadmap'".
+# fails loud with "no project titled 'FerroTERM Roadmap'".
 #
 # Official docs (durable references — the ONLY citations allowed for this):
 #   gh project commands .. https://cli.github.com/manual/gh_project
@@ -43,12 +43,12 @@
 #                                                                 # milestone's due date (the Roadmap view places
 #                                                                 # items by this field; milestones only draw markers)
 #
-# The project is found by title (NOTIO_PROJECT_TITLE overrides; default
-# "Notio Roadmap") under the repository owner.
+# The project is found by title (FERROTERM_PROJECT_TITLE overrides; default
+# "FerroTERM Roadmap") under the repository owner.
 
 set -euo pipefail
 
-TITLE="${NOTIO_PROJECT_TITLE:-Notio Roadmap}"
+TITLE="${FERROTERM_PROJECT_TITLE:-FerroTERM Roadmap}"
 
 die() {
   echo "gh-project: $*" >&2

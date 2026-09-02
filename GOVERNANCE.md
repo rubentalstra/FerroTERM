@@ -2,7 +2,7 @@
 
 # Governance
 
-How decisions get made in Notio, who makes them, and how that changes.
+How decisions get made in FerroTERM, who makes them, and how that changes.
 
 This document describes the project as it actually operates. Where the honest
 description is "one person decides", it says so. A governance document that
@@ -11,7 +11,7 @@ a reviewer to rely on a control that is not there.
 
 ## Current structure: benevolent dictator, one maintainer
 
-Notio has a single maintainer ([MAINTAINERS.md](MAINTAINERS.md)) who holds
+FerroTERM has a single maintainer ([MAINTAINERS.md](MAINTAINERS.md)) who holds
 final say on every decision: what gets built, what gets merged, what gets
 released, and what the project refuses to do. There is no steering committee,
 no technical oversight body, no foundation, and no vote.
@@ -32,7 +32,7 @@ places that cannot drift out of sync with the tree
 
 | Kind of decision                   | Where it lives                                                                                              |
 |------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| What to work on next               | a [GitHub issue](https://github.com/rubentalstra/notio/issues); the open list is the worklist             |
+| What to work on next               | a [GitHub issue](https://github.com/rubentalstra/ferroterm/issues); the open list is the worklist             |
 | Direction and status, publicly     | the roadmap project board, a view over the tracker (`.claude/rules/project-board.md`)                      |
 | Why a change looks the way it does | the pull request description that landed it, and the issue's closing comment                               |
 | What a release contains            | [`CHANGELOG.md`](CHANGELOG.md) and the `vX.Y.Z` milestone                                                  |

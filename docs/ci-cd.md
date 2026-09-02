@@ -37,8 +37,8 @@ the build+attest into a normal job; that is only L2.
 Consumers verify provenance against the signer workflow:
 
 ```
-gh attestation verify notio-<tag>-<target>.tar.gz -R rubentalstra/notio \
-  --signer-workflow rubentalstra/notio/.github/workflows/release-build.yml
+gh attestation verify ferroterm-<tag>-<target>.tar.gz -R rubentalstra/ferroterm \
+  --signer-workflow rubentalstra/ferroterm/.github/workflows/release-build.yml
 ```
 
 We claim L3 by GitHub's builder isolation; we do not (yet) claim reproducible or
@@ -100,7 +100,7 @@ publish; recover with a new patch version, never a retag).
 - Register the project at bestpractices.dev; add the returned badge to the
   README.
 - Run `scripts/gh/labels.sh` once to create the label taxonomy; create the
-  "Notio Roadmap" Project if the board is wanted.
+  "FerroTERM Roadmap" Project if the board is wanted.
 
 ## Sources
 

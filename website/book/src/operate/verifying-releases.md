@@ -1,6 +1,6 @@
 # Verifying releases
 
-Every Notio release artifact carries a signed provenance attestation. Verify it
+Every FerroTERM release artifact carries a signed provenance attestation. Verify it
 before you run a binary, so you know the artifact was built by the project's own
 release workflow and not tampered with.
 
@@ -8,7 +8,7 @@ release workflow and not tampered with.
 > The release pipeline is stood up and activates on the first tag. Until a
 > release exists, the recipe below is the interface you will use, not a check you
 > can run yet. The design and rationale are in
-> [`docs/ci-cd.md`](https://github.com/rubentalstra/notio/blob/main/docs/ci-cd.md).
+> [`docs/ci-cd.md`](https://github.com/rubentalstra/ferroterm/blob/main/docs/ci-cd.md).
 
 <!-- toc -->
 
@@ -32,13 +32,13 @@ Use the GitHub CLI to verify an artifact against the workflow that is allowed to
 sign it. Replace `<tag>` and `<target>` with the release you downloaded:
 
 ```console
-$ gh attestation verify notio-<tag>-<target>.tar.gz -R rubentalstra/notio \
-    --signer-workflow rubentalstra/notio/.github/workflows/release-build.yml
+$ gh attestation verify ferroterm-<tag>-<target>.tar.gz -R rubentalstra/ferroterm \
+    --signer-workflow rubentalstra/ferroterm/.github/workflows/release-build.yml
 ```
 
 The `--signer-workflow` flag is the point of the check. It requires that the
 attestation was produced by that exact reusable workflow in this repository, so a
-signature from any other workflow or repository fails. Notio builds its releases
+signature from any other workflow or repository fails. FerroTERM builds its releases
 in a reusable workflow to reach SLSA Build Level 3, where the signing identity is
 not reachable by user build steps.
 
@@ -47,7 +47,7 @@ not reachable by user build steps.
 Confirm the download matches its published checksum:
 
 ```console
-$ sha256sum -c notio-<tag>-<target>.tar.gz.sha256
+$ sha256sum -c ferroterm-<tag>-<target>.tar.gz.sha256
 ```
 
 Run both checks. The checksum tells you the bytes are intact, and the attestation

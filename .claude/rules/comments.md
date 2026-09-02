@@ -61,8 +61,8 @@ carries it. A comment describes the code as it IS.
 - Doc comments state the CURRENT contract only, with no history and no
   adjudication trail. Citations follow `spec-adherence.md` (the FHIR /
   SNOMED CT / ECL specs + official external docs only).
-- The generated `notio-fhir` crate gets its docs FROM THE EMITTER: a doc
-  defect in a `// @generated` file is a `notio-fhir-codegen` fix +
+- The generated `ferroterm-fhir` crate gets its docs FROM THE EMITTER: a doc
+  defect in a `// @generated` file is a `ferroterm-fhir-codegen` fix +
   regeneration, never a hand-edit.
 
 ## Annotation vocabulary (the only sanctioned markers)

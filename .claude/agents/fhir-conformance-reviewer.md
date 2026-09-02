@@ -20,7 +20,7 @@ named crates/modules) against two authorities, in order:
 1. **The FHIR + SNOMED CT / ECL specifications.** For a FHIR terminology
    operation, the parameter set and semantics are exactly what the version's
    `OperationDefinition` (in the vendored package
-   `tools/notio-fhir-codegen/vendor/`) and operation page define: check
+   `tools/ferroterm-fhir-codegen/vendor/`) and operation page define: check
    per-version differences (R4 / R4B / R5 / R6). For ECL, the published ANTLR
    grammar defines what parses and the ECL specification defines what it
    computes. For SNOMED semantics (RF2, subsumption, the concept model, URIs),
@@ -29,7 +29,7 @@ named crates/modules) against two authorities, in order:
    server is a finding only when the SPEC backs it.
 2. **The repo discipline** (`CLAUDE.md`, `.claude/rules/*`): never hand-edit
    `// @generated` files and never shadow a generated FHIR shape in a consumer
-   (`codegen.md`); the engine consumes `notio-fhir` types directly; no SNOMED
+   (`codegen.md`); the engine consumes `ferroterm-fhir` types directly; no SNOMED
    content in the repo or in fixtures (`vendored-inputs.md`); `thiserror` libs
    / `anyhow` binary; no `unwrap`/`expect` outside tests; no panicking
    indexing on request paths; tests never weakened; strictness is exact:

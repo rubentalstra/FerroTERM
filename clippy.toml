@@ -23,3 +23,6 @@ disallowed-types = [
   { path = "chrono::NaiveDateTime", reason = "jiff is the one time library" },
   { path = "chrono::NaiveTime", reason = "jiff is the one time library" },
 ]
+
+# Product and family names are words, not code, in documentation.
+doc-valid-idents = ["FerroTERM", "FerroEHR", ".."]

@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
 
 [book]
-title = "Notio"
-authors = ["Notio contributors"]
-description = "Documentation for Notio, a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems."
+title = "FerroTERM"
+authors = ["FerroTERM contributors"]
+description = "Documentation for FerroTERM, a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems."
 language = "en"
 src = "src"
 
@@ -17,8 +17,8 @@ build-dir = "book"
 site-url = "/docs/"
 default-theme = "rust"
 preferred-dark-theme = "coal"
-git-repository-url = "https://github.com/rubentalstra/notio"
-edit-url-template = "https://github.com/rubentalstra/notio/edit/main/website/book/src/{path}"
+git-repository-url = "https://github.com/rubentalstra/ferroterm"
+edit-url-template = "https://github.com/rubentalstra/ferroterm/edit/main/website/book/src/{path}"
 mathjax-support = true
 additional-js = ["mermaid.min.js", "mermaid-init.js"]
 

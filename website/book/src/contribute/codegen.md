@@ -1,6 +1,6 @@
 # The codegen model
 
-The FHIR layer of Notio is generated, not hand-written. This page explains the
+The FHIR layer of FerroTERM is generated, not hand-written. This page explains the
 model at the level a contributor needs. The mechanics live in the generator crate
 and its rules in the repository.
 
@@ -10,7 +10,7 @@ and its rules in the repository.
 
 HL7 publishes the whole FHIR type system and every operation as machine-readable
 `StructureDefinition` and `OperationDefinition` resources, in versioned packages.
-Rather than transcribe those by hand for four versions, Notio vendors the
+Rather than transcribe those by hand for four versions, FerroTERM vendors the
 packages and generates per-version Rust modules from them. Each version's
 operation surface is then correct by construction: a parameter that R5 adds
 appears in the R5 module because the R5 package declares it.
@@ -27,14 +27,14 @@ The generator reads vendored, pinned FHIR packages:
 | `hl7.fhir.r6.core` | 6.0.0-ballot |
 | `hl7.terminology` | THO |
 
-The packages are vendored verbatim under `tools/notio-fhir-codegen/vendor/`, each
+The packages are vendored verbatim under `tools/ferroterm-fhir-codegen/vendor/`, each
 with a `PROVENANCE.md`, and fetched by a script. You never hand-edit a vendored
 package. Change the fetcher and re-run it.
 
 ## The rules
 
 - **Never hand-edit a `// @generated` file.** To change the output, change the
-  generator (`tools/notio-fhir-codegen`) or its override map, then regenerate.
+  generator (`tools/ferroterm-fhir-codegen`) or its override map, then regenerate.
 - **The generator emits the complete model within its declared closure.** A
   terminology server touches a small root set of resources, so the generator's
   root set is the terminology surface (`CodeSystem`, `ValueSet`, `ConceptMap`,
@@ -49,7 +49,7 @@ package. Change the fetcher and re-run it.
 ## Regenerate
 
 ```console
-$ cargo run -p notio-fhir-codegen -- emit
+$ cargo run -p ferroterm-fhir-codegen -- emit
 ```
 
 Then run the drift check. If consuming code needs a shape the generated crate

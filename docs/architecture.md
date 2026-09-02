@@ -1,6 +1,6 @@
 # Architecture
 
-Notio (codename) is a pure-Rust FHIR terminology server for SNOMED CT, LOINC,
+FerroTERM is a pure-Rust FHIR terminology server for SNOMED CT, LOINC,
 and other clinical code systems, SNOMED CT first. It serves the HL7 FHIR
 terminology API across R4, R4B, R5, and R6 from one running server, backed by a
 memory-mapped, precomputed concept index per loaded code system, with no JVM,
@@ -12,7 +12,7 @@ convention.
 
 ## First principles: what SNOMED CT actually is
 
-SNOMED CT is the first code system Notio serves and the one that shapes the
+SNOMED CT is the first code system FerroTERM serves and the one that shapes the
 engine, because it is the hardest case: a polyhierarchy, a formal ontology, and
 the only system with its own query language (ECL). A design that serves SNOMED
 well serves the simpler systems (LOINC, ICD-10, UCUM) with capabilities turned
@@ -49,7 +49,7 @@ problem. Everything below follows from keeping them apart.
 
 ### Offline: classification, once per release
 
-The hierarchy Notio serves is a reasoner output, computed once per SNOMED
+The hierarchy FerroTERM serves is a reasoner output, computed once per SNOMED
 release, never at query time. The default:
 
 - **Compute the transitive closure from the shipped inferred Relationship file**
@@ -70,7 +70,7 @@ release, never at query time. The default:
   relationships).
 
 The build pipeline turns the release into the materialized serving structures
-below. It runs offline (in a tool, `tools/notio-build`), so the running server
+below. It runs offline (in a tool, `tools/ferroterm-build`), so the running server
 never classifies and never re-derives inference.
 
 ### Online: serving, from precomputed structures
@@ -144,9 +144,9 @@ HL7 publishes the whole type system and every operation as machine-readable
 `StructureDefinition` and `OperationDefinition` resources, in versioned packages
 (`hl7.fhir.r4.core` 4.0.1, `hl7.fhir.r4b.core` 4.3.0, `hl7.fhir.r5.core` 5.0.0,
 `hl7.fhir.r6.core` 6.0.0 ballot), plus `hl7.terminology`
-(<https://www.hl7.org/fhir/packages.html>). Notio vendors and pins those
+(<https://www.hl7.org/fhir/packages.html>). FerroTERM vendors and pins those
 packages and generates per-version Rust modules from them
-(`tools/notio-fhir-codegen`), so R5's extra `$expand` parameters
+(`tools/ferroterm-fhir-codegen`), so R5's extra `$expand` parameters
 (`useSupplement`, `property`, `displayLanguage`) appear where the spec has them
 and are absent where it does not
 (<http://hl7.org/fhir/R5/valueset-operation-expand.html>). This mirrors how the
@@ -209,7 +209,7 @@ Serving concurrency: point reads against hot mmap pages and resident-bitmap
 subsumption run inline in the async handler. A heavy `$expand` that materializes
 a 100k-member set, and any cold read that page-faults from disk, run on a
 blocking pool (`tokio::task::spawn_blocking`) so they never stall the runtime.
-The blocking seam sits at the `notio-terminology` engine boundary and is
+The blocking seam sits at the `ferroterm-terminology` engine boundary and is
 designed in from the start, not retrofitted.
 
 ### 4. The SNOMED semantics are hand-written and owned
@@ -217,7 +217,7 @@ designed in from the start, not retrofitted.
 RF2 loading, the materialized ontology, ECL evaluation, and `$expand` paging are
 the product. Two Rust projects cover parts of the ground (`snomed-rust` parses
 RF2 and evaluates simple ECL; `fhir-sdk` generates FHIR models), and neither
-is a terminology server; Notio designs its own engine and reads them as prior
+is a terminology server; FerroTERM designs its own engine and reads them as prior
 art. ECL is the hard part and
 the main risk: every expression constraint returns a *set of codes* (SNOMED ECL
 specification,
@@ -250,14 +250,14 @@ interface), so this is our own design; the FHIR `CodeSystem` metadata
 provider returns (<https://hl7.org/fhir/R4B/codesystem.html>,
 <https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
 
-The substrates are neutral by construction. `notio-store` holds one code system
+The substrates are neutral by construction. `ferroterm-store` holds one code system
 version's concepts, displays, designations by language, and typed property
 values, keyed by dense ordinal, with the system's native code as the string
-key. `notio-graph` holds typed edges and closure bitmaps over ordinals; a system
-without a hierarchy has no closure. `notio-text` indexes designation words. None
-of them knows an SCTID, a LOINC part, or an ICD chapter. A loader (`notio-rf2`
+key. `ferroterm-graph` holds typed edges and closure bitmaps over ordinals; a system
+without a hierarchy has no closure. `ferroterm-text` indexes designation words. None
+of them knows an SCTID, a LOINC part, or an ICD chapter. A loader (`ferroterm-rf2`
 for SNOMED CT, then one crate per system) maps its release into ordinals, edge
-types, and a property vocabulary. `tools/notio-build` runs whichever loader the
+types, and a property vocabulary. `tools/ferroterm-build` runs whichever loader the
 release needs.
 
 What every provider supplies, and what is optional, follows the seam that the
@@ -272,7 +272,7 @@ both hide storage behind an opaque concept handle and keep compose, exclude,
 dedup, and paging in one shared layer above the providers. HAPI FHIR and
 Snowstorm instead push every system into one concept table with a precomputed
 ancestor list and grow per-system special cases in the filter code (HAPI's
-`handleFilterLoinc*` family, Snowstorm's `isSnomed()` fork). Notio takes the
+`handleFilterLoinc*` family, Snowstorm's `isSnomed()` fork). FerroTERM takes the
 first shape.
 
 | Capability | Every provider | Declared per system |
@@ -292,8 +292,8 @@ first shape.
 | Concept maps carried by the release | | SNOMED map and association refsets |
 
 The compose layer (include, exclude, dedup, `offset`, `count`, `expansion.total`)
-lives once, in `notio-terminology`, above every provider. ECL is the one
-SNOMED-only filter language and stays in `notio-ecl`, reached through the
+lives once, in `ferroterm-terminology`, above every provider. ECL is the one
+SNOMED-only filter language and stays in `ferroterm-ecl`, reached through the
 SNOMED provider's `constraint` filter. The build order and the per-system facts
 (URI, release format, licence, hierarchy, FHIR-defined filters) are in
 `docs/terminologies.md`.
@@ -316,23 +316,23 @@ memory-mapped, built once per edition.
 
 ## Workspace layout
 
-A single Cargo workspace. `notio-fhir` is generated; the rest is hand-written;
-`notio-fhir-codegen` and `notio-build` are tooling. The substrate crates
-(`notio-store`, `notio-graph`, `notio-text`) are code-system-neutral; each
-code system adds a loader crate (`notio-rf2` is the first) that feeds them.
+A single Cargo workspace. `ferroterm-fhir` is generated; the rest is hand-written;
+`ferroterm-fhir-codegen` and `ferroterm-build` are tooling. The substrate crates
+(`ferroterm-store`, `ferroterm-graph`, `ferroterm-text`) are code-system-neutral; each
+code system adds a loader crate (`ferroterm-rf2` is the first) that feeds them.
 
 | Crate | Role | Kind |
 |---|---|---|
-| `crates/notio-fhir` | Generated per-version FHIR types + terminology operation contracts (R4/R4B/R5/R6) | generated |
-| `crates/notio-rf2` | SNOMED CT RF2 loader (inferred relationships, descriptions, refsets, transitive-closure file) + typed component model; the first code system loader | hand-written |
-| `crates/notio-graph` | The materialized hierarchy of a loaded code system: CSR adjacency (is-a + per-relationship-type) and roaring transitive-closure bitmaps; subsumption + ECL set algebra | hand-written |
-| `crates/notio-store` | The memory-mapped (`redb`) columnar concept and designation store, one per code system version: point reads for `$lookup`/`$validate-code` | hand-written |
-| `crates/notio-text` | The `fst` + roaring designation search index (prefix, language and use filter, term-length sort) | hand-written |
-| `crates/notio-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `notio-graph`) | hand-written |
-| `crates/notio-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
-| `app/notio-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
-| `tools/notio-fhir-codegen` | The generator: vendored FHIR packages → `notio-fhir` | tooling |
-| `tools/notio-build` | The offline build: a code system release (RF2 first) → the memory-mapped graph/store/text artifacts, once per release | tooling |
+| `crates/ferroterm-fhir` | Generated per-version FHIR types + terminology operation contracts (R4/R4B/R5/R6) | generated |
+| `crates/ferroterm-rf2` | SNOMED CT RF2 loader (inferred relationships, descriptions, refsets, transitive-closure file) + typed component model; the first code system loader | hand-written |
+| `crates/ferroterm-graph` | The materialized hierarchy of a loaded code system: CSR adjacency (is-a + per-relationship-type) and roaring transitive-closure bitmaps; subsumption + ECL set algebra | hand-written |
+| `crates/ferroterm-store` | The memory-mapped (`redb`) columnar concept and designation store, one per code system version: point reads for `$lookup`/`$validate-code` | hand-written |
+| `crates/ferroterm-text` | The `fst` + roaring designation search index (prefix, language and use filter, term-length sort) | hand-written |
+| `crates/ferroterm-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `ferroterm-graph`) | hand-written |
+| `crates/ferroterm-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
+| `app/ferroterm-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
+| `tools/ferroterm-fhir-codegen` | The generator: vendored FHIR packages → `ferroterm-fhir` | tooling |
+| `tools/ferroterm-build` | The offline build: a code system release (RF2 first) → the memory-mapped graph/store/text artifacts, once per release | tooling |
 
 Dependencies point one way (app/tools → crates); nothing depends upward into the
 server.
@@ -398,6 +398,6 @@ vendored verbatim with provenance as codegen input.
   code.
 
 No existing Rust project is a complete, standards-generated, multi-version FHIR
-terminology server. Notio fills that gap, built the way the evidence supports: a
+terminology server. FerroTERM fills that gap, built the way the evidence supports: a
 graph model, an offline classification pass, and a memory-mapped
 index-materialized store, not a graph database and not live traversal.

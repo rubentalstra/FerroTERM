@@ -1,6 +1,6 @@
 # Implementation checklist
 
-Notio implements the whole FHIR terminology surface for SNOMED CT, LOINC, and
+FerroTERM implements the whole FHIR terminology surface for SNOMED CT, LOINC, and
 the other clinical code systems in `docs/terminologies.md`, SNOMED CT first.
 This is the master list of what the server must do. Check items off as they land. There is
 no fixed scope cut and no "version 1" boundary: what a given release contains is
@@ -136,7 +136,7 @@ sequence, not a scope limit; the server serves every version.
 
 ## Engine and storage
 
-- [ ] `notio-fhir` generated per version from the vendored packages; drift check
+- [ ] `ferroterm-fhir` generated per version from the vendored packages; drift check
 - [ ] CSR adjacency (is-a and per-attribute) and roaring transitive-closure
   bitmaps; resident at query time
 - [ ] `redb` persistence of the built artifacts

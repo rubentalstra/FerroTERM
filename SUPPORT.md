@@ -10,15 +10,15 @@ the difference between an answer and a thread nobody is paged for.
 Read first, because the answer is often already written and is more precise
 than a reply:
 
-- **[The documentation site](https://rubentalstra.github.io/notio/):** the
-  landing page, and the [handbook](https://rubentalstra.github.io/notio/docs/)
-  covering what Notio is, how to evaluate it, how to integrate a FHIR client,
+- **[The documentation site](https://ferroterm.eu/docs/):** the
+  landing page, and the [handbook](https://ferroterm.eu/docs/docs/)
+  covering what FerroTERM is, how to evaluate it, how to integrate a FHIR client,
   and how to operate the server.
 - **[`docs/architecture.md`](docs/architecture.md):** the design, in one file,
   with the citations behind each decision.
 
 If the documentation does not answer it, **open a GitHub issue** through the
-[issue chooser](https://github.com/rubentalstra/notio/issues/new/choose): how
+[issue chooser](https://github.com/rubentalstra/ferroterm/issues/new/choose): how
 to configure something, whether an approach fits, what a FHIR terminology
 operation or an ECL construct means in this implementation, or why a design is
 the way it is.
@@ -29,7 +29,7 @@ paid tier. Answers come when the maintainer is at a keyboard
 
 ## I found a defect
 
-**[Open an issue](https://github.com/rubentalstra/notio/issues/new/choose)**
+**[Open an issue](https://github.com/rubentalstra/ferroterm/issues/new/choose)**
 when something is wrong, missing, or contradicts the FHIR or SNOMED CT
 specifications.
 
@@ -53,14 +53,14 @@ does it differently" is not by itself a defect; a spec citation is.
 
 **Do not open a public issue.** Follow [SECURITY.md](SECURITY.md): report
 privately through
-[GitHub private vulnerability reporting](https://github.com/rubentalstra/notio/security/advisories/new).
+[GitHub private vulnerability reporting](https://github.com/rubentalstra/ferroterm/security/advisories/new).
 
 That document also carries what you can expect in return: an acknowledgement
 window, an assessment window, and coordinated disclosure with credit by
 default.
 
 **A vulnerability in a dependency, or in a service you deployed alongside
-Notio, goes to that project**, not here, unless it has a Notio-specific impact.
+FerroTERM, goes to that project**, not here, unless it has a FerroTERM-specific impact.
 SECURITY.md § *Scope* has the routing.
 
 ## I want to change something
@@ -71,7 +71,7 @@ is how the decision gets made and how someone becomes a maintainer.
 
 ## What you are entitled to
 
-Nothing, and that is worth saying plainly. Notio is MIT-licensed software
+Nothing, and that is worth saying plainly. FerroTERM is MIT-licensed software
 provided as-is, with no warranty. Read the [LICENSE](LICENSE), which says
 exactly that in the language that binds. Everything above describes what the
 project *intends* to do, and the intent is sincere; none of it is a

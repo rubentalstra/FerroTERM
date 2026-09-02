@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# scripts/gh/labels.sh — bootstrap the Notio issue-label taxonomy.
+# scripts/gh/labels.sh — bootstrap the FerroTERM issue-label taxonomy.
 #
 # Creates (idempotently) the labels the tracker workflow assumes:
 #   * exactly one TYPE label per issue, mapped to the conventional-commit types
@@ -54,8 +54,8 @@ echo "== domain / area labels =="
 label spec:FHIR    5319e7 "FHIR terminology wire (operations, versioning, OperationOutcome)."
 label spec:SNOMED  1d76db "SNOMED CT and RF2 semantics."
 label spec:ECL     006b75 "Expression Constraint Language: parser and evaluator."
-label codegen      c5def5 "The notio-fhir generator (tools/notio-fhir-codegen)."
-label server       bfd4f2 "The axum HTTP server (app/notio-server)."
+label codegen      c5def5 "The ferroterm-fhir generator (tools/ferroterm-fhir-codegen)."
+label server       bfd4f2 "The axum HTTP server (app/ferroterm-server)."
 label storage      d4c5f9 "The store, graph, text index, and redb persistence."
 label infra        bfdadc "CI/CD, supply chain, and deployment."
 label website      f9d0c4 "The docs site (website/book) and landing page."

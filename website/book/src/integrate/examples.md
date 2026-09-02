@@ -4,7 +4,7 @@ This page shows request and response shapes for the common operations. The FHIR
 shapes are fixed by the specification. The values are illustrative.
 
 > [!WARNING]
-> These examples are planned. Notio has no running server yet, so you cannot send
+> These examples are planned. FerroTERM has no running server yet, so you cannot send
 > these requests today. The request and response shapes follow the FHIR
 > terminology specification, and the concrete codes and displays are placeholders.
 

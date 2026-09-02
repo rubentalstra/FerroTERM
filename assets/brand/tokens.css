@@ -1,25 +1,24 @@
 /* SPDX-License-Identifier: MIT */
-/* Notio brand tokens. Notio is a working codename; the palette travels with it
-   until the official name is set. Import this, or copy the values. */
+/* FerroTERM brand tokens. Import this, or copy the values. */
 :root {
   /* Core palette */
-  --notio-teal: #0d9488;        /* primary mark and accents */
-  --notio-teal-deep: #0f766e;   /* nodes, hover, pressed */
-  --notio-cyan: #22d3ee;        /* highlight node and the diagonal edge */
-  --notio-ink: #0f172a;         /* text on light */
-  --notio-mist: #f1f5f9;        /* text on dark, light surface tint */
-  --notio-tile: #0b1220;        /* dark tile background */
-  --notio-surface: #f8fafc;     /* light surface background */
+  --ferroterm-teal: #0d9488;        /* primary mark and accents */
+  --ferroterm-teal-deep: #0f766e;   /* nodes, hover, pressed */
+  --ferroterm-cyan: #22d3ee;        /* highlight node and the diagonal edge */
+  --ferroterm-ink: #0f172a;         /* text on light */
+  --ferroterm-mist: #f1f5f9;        /* text on dark, light surface tint */
+  --ferroterm-tile: #0b1220;        /* dark tile background */
+  --ferroterm-surface: #f8fafc;     /* light surface background */
 
   /* Roles */
-  --notio-brand: var(--notio-teal);
-  --notio-brand-2: var(--notio-cyan);
-  --notio-fg: var(--notio-ink);
-  --notio-bg: var(--notio-surface);
+  --ferroterm-brand: var(--ferroterm-teal);
+  --ferroterm-brand-2: var(--ferroterm-cyan);
+  --ferroterm-fg: var(--ferroterm-ink);
+  --ferroterm-bg: var(--ferroterm-surface);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --notio-fg: var(--notio-mist);
-    --notio-bg: var(--notio-tile);
+    --ferroterm-fg: var(--ferroterm-mist);
+    --ferroterm-bg: var(--ferroterm-tile);
   }
 }

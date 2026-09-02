@@ -98,7 +98,7 @@ nextest still runs each test as its own process, so isolation is unchanged.
 Shared helpers live in a plain module under `tests/it/`.
 
 **A binary-only crate is untestable by construction** (Book ch11.3): its
-`main.rs` cannot be imported from `tests/`. The server (`app/notio-server`)
+`main.rs` cannot be imported from `tests/`. The server (`app/ferroterm-server`)
 therefore keeps a thin `main.rs` over a testable `lib.rs` run path (Book
 ch12.3), and its integration tests import the lib.
 
@@ -125,7 +125,7 @@ ch12.3), and its integration tests import the lib.
   tail or hidden `fn main`, never `unwrap` (C-QUESTION-MARK; enforced by
   `#![doc(test(attr(deny(warnings))))]` on library roots). `no_run` for
   examples that would open a `redb` store or touch HTTP, `text` for non-code,
-  never `ignore`. The generated `notio-fhir` crate keeps `doctest = false`
+  never `ignore`. The generated `ferroterm-fhir` crate keeps `doctest = false`
   deliberately (generated doc text is not curated examples).
 
 ## Coverage is a mandate, not just pass rate

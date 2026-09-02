@@ -1,15 +1,14 @@
 # Introduction
 
-Notio is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other
+FerroTERM is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other
 clinical code systems, SNOMED CT first. It serves the HL7 FHIR terminology API
 from a single binary, backed by a memory-mapped index built once per code
 system release. There is no JVM, no Elasticsearch, and no external
 database.
 
 > [!NOTE]
-> Notio is a codename. The project's official name is not set yet. "Notio" is
-> Latin for "concept", which is what a terminology service works with: what each
-> concept means and how the concepts relate.
+> The name: Ferro for the Rust family FerroTERM shares with FerroEHR, TERM for
+> terminology. The site is <https://ferroterm.eu>.
 
 ## Status: early design
 
@@ -18,14 +17,14 @@ product code, so this book describes intended behaviour, marked as planned where
 the server does not exist yet. Read a sentence in the future tense ("the server
 returns", "you run") as a design commitment, not a claim that you can run it
 today. The design authority, with citations, is
-[`docs/architecture.md`](https://github.com/rubentalstra/notio/blob/main/docs/architecture.md)
+[`docs/architecture.md`](https://github.com/rubentalstra/ferroterm/blob/main/docs/architecture.md)
 in the repository.
 
 ## Who each part of this book is for
 
 The book is organized by what you want to do.
 
-- **[Evaluate](evaluate/what-notio-is.md)** is for anyone deciding whether Notio
+- **[Evaluate](evaluate/what-ferroterm-is.md)** is for anyone deciding whether FerroTERM
   fits. It covers what the server is, why it exists, the architecture at a
   glance, and how it compares to Snowstorm, Ontoserver, and Hermes.
 - **[Operate](operate/install.md)** is for operators and deployers. It covers

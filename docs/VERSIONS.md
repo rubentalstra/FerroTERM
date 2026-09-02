@@ -1,6 +1,6 @@
 # Pinned version matrix
 
-The single source of truth for every version pin in Notio. If this file and a
+The single source of truth for every version pin in FerroTERM. If this file and a
 config file (`Cargo.toml`, `rust-toolchain.toml`, a vendored package's
 `PROVENANCE.md`, `CITATION.cff`) disagree, that is drift: fix it, do not let
 either silently win. `scripts/checks/versions.sh` enforces the cross-file
@@ -25,12 +25,12 @@ discovery-phase repo.
 
 ## openEHR: n/a
 
-Notio is a FHIR/SNOMED project; it has no openEHR pins.
+FerroTERM is a FHIR/SNOMED project; it has no openEHR pins.
 
 ## FHIR
 
 Machine-generated per version from the vendored, pinned HL7 FHIR packages
-(`tools/notio-fhir-codegen/vendor/`, once vendored, see
+(`tools/ferroterm-fhir-codegen/vendor/`, once vendored, see
 `.claude/rules/vendored-inputs.md`). Each vendored package carries a
 `PROVENANCE.md`; the guard checks it against this table.
 

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 name: Bug report
-description: Report a defect in Notio.
+description: Report a defect in FerroTERM.
 labels: [bug]
 body:
   - type: markdown
@@ -11,7 +11,7 @@ body:
 
         Do not use this form for a security vulnerability. Report those
         privately through the Security tab. See
-        [SECURITY.md](https://github.com/rubentalstra/notio/blob/main/SECURITY.md).
+        [SECURITY.md](https://github.com/rubentalstra/ferroterm/blob/main/SECURITY.md).
   - type: textarea
     id: summary
     attributes:
@@ -56,6 +56,6 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Your OS and architecture, and how you run Notio (binary, container, or source).
+      description: Your OS and architecture, and how you run FerroTERM (binary, container, or source).
     validations:
       required: false

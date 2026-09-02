@@ -1,19 +1,18 @@
-# Notio
+# FerroTERM
 
-[![CI](https://github.com/rubentalstra/notio/actions/workflows/ci.yml/badge.svg)](https://github.com/rubentalstra/notio/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/rubentalstra/notio/actions/workflows/codeql.yml/badge.svg)](https://github.com/rubentalstra/notio/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/rubentalstra/notio/badge)](https://scorecard.dev/viewer/?uri=github.com/rubentalstra/notio)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_notio&metric=alert_status)](https://sonarcloud.io/summary/overall?id=rubentalstra_notio)
+[![CI](https://github.com/rubentalstra/ferroterm/actions/workflows/ci.yml/badge.svg)](https://github.com/rubentalstra/ferroterm/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/rubentalstra/ferroterm/actions/workflows/codeql.yml/badge.svg)](https://github.com/rubentalstra/ferroterm/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/rubentalstra/ferroterm/badge)](https://scorecard.dev/viewer/?uri=github.com/rubentalstra/ferroterm)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_ferroterm&metric=alert_status)](https://sonarcloud.io/summary/overall?id=rubentalstra_ferroterm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical
 code systems, SNOMED CT first. Machine-generated FHIR support across R4, R4B,
 R5, and R6. No JVM, no Elasticsearch.
 
-> **Notio** is a codename. The project's official name is not set yet, so it
-> carries a working name until then. Notio is Latin for "concept". A
-> terminology service is, at heart, a service that knows what each concept means
-> and how the concepts relate.
+> **FerroTERM** is the official name: Ferro for the Rust family it shares with
+> [FerroEHR](https://github.com/rubentalstra/FerroEHR), TERM for terminology.
+> The site is <https://ferroterm.eu>.
 
 > Status: early design. This repository is being scoped before implementation.
 > The README describes the intended architecture and the decisions already
@@ -30,7 +29,7 @@ The data does not need that. The International edition is about 360,000
 concepts, 1.2 million descriptions, and 1.5 million relationships. SNOMED
 International's own lightweight server, Snowstorm Lite, drops Elasticsearch for
 a single Lucene index and runs the full International edition in about 500 MB.
-Notio takes that further: a single Rust binary, a memory-mapped index built once
+FerroTERM takes that further: a single Rust binary, a memory-mapped index built once
 per edition, and a footprint small enough to run beside other services on a
 modest box.
 
@@ -150,17 +149,17 @@ Two separate things, and they must not be confused:
 - **The software** in this repository is open source under the MIT license.
   Use it, embed it, run it.
 - **SNOMED CT content** is licensed by SNOMED International and is not
-  distributed here. Running Notio against the International edition requires a
+  distributed here. Running FerroTERM against the International edition requires a
   valid SNOMED CT licence, which is free within member countries (the
   Netherlands among them) and available under the affiliate licence elsewhere.
   You bring your own RF2 release and the server loads it.
 
 ## Why it exists
 
-Notio is a standalone project with a simple motivation: run a clinical
+FerroTERM is a standalone project with a simple motivation: run a clinical
 terminology server on ordinary hardware. The reference servers are Java on
 Elasticsearch and want 16 to 32 GB of RAM to serve the International edition,
-more than a laptop or a small box has. Notio is a pure-Rust server built to
+more than a laptop or a small box has. FerroTERM is a pure-Rust server built to
 serve the same edition in a few hundred megabytes, so it runs on a personal
 computer.
 
@@ -168,7 +167,7 @@ It speaks the FHIR terminology API, so it is useful to any FHIR client.
 [FerroEHR](https://github.com/rubentalstra/FerroEHR), a pure-Rust openEHR
 clinical data repository by the same author, is one such client (openEHR
 resolves archetype value-set bindings against an external FHIR terminology
-server), but Notio is independent of it and was not derived from it.
+server), but FerroTERM is independent of it and was not derived from it.
 
 ## Contributing
 

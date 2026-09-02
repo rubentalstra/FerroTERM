@@ -17,7 +17,7 @@ to grow into.
 | Ruben Talstra | [@rubentalstra](https://github.com/rubentalstra) | Maintainer (sole) | 2026-08-01 |
 
 **The bus factor of this project is one.** There is exactly one person with
-write access to the repository (`GET /repos/rubentalstra/notio/collaborators`
+write access to the repository (`GET /repos/rubentalstra/ferroterm/collaborators`
 returns one login), one person who can publish a release, and one person who
 can accept a pull request. No second maintainer exists, no organisation stands
 behind the project, and no legal entity is a party to it.
