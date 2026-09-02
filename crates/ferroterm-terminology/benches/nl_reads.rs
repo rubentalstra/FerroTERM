@@ -45,20 +45,20 @@ fn reads(c: &mut Criterion) {
     let hierarchy = provider.hierarchy().expect("snomed has a hierarchy");
     let mut group = c.benchmark_group("provider");
     group.bench_function("locate", |b| {
-        b.iter(|| provider.locate(FINDING).expect("reads"))
+        b.iter(|| provider.locate(FINDING).expect("reads"));
     });
     group.bench_function("display_nl", |b| {
-        b.iter(|| provider.display(finding, Some("nl")).expect("reads"))
+        b.iter(|| provider.display(finding, Some("nl")).expect("reads"));
     });
     group.bench_function("designations", |b| {
-        b.iter(|| provider.designations(finding, None).expect("reads"))
+        b.iter(|| provider.designations(finding, None).expect("reads"));
     });
     group.bench_function("properties", |b| {
-        b.iter(|| provider.properties(finding).expect("reads"))
+        b.iter(|| provider.properties(finding).expect("reads"));
     });
     group.bench_function("subsumes", |b| b.iter(|| hierarchy.subsumes(root, finding)));
     group.bench_function("search_hart_nl", |b| {
-        b.iter(|| provider.search("hart", Some("nl")).expect("reads"))
+        b.iter(|| provider.search("hart", Some("nl")).expect("reads"));
     });
     group.finish();
 
@@ -72,7 +72,7 @@ fn reads(c: &mut Criterion) {
         ..Default::default()
     };
     group.bench_function("lookup", |b| {
-        b.iter(|| lookup::lookup(&registry, &Invocation::Type, &lookup_request).expect("looks up"))
+        b.iter(|| lookup::lookup(&registry, &Invocation::Type, &lookup_request).expect("looks up"));
     });
     let validate_request = CodeSystemValidateCodeRequest {
         url: Some(SCT.into()),
@@ -84,7 +84,7 @@ fn reads(c: &mut Criterion) {
         b.iter(|| {
             validate_code::validate_code(&registry, &Invocation::Type, &validate_request)
                 .expect("validates")
-        })
+        });
     });
     let subsumes_request = CodeSystemSubsumesRequest {
         system: Some(SCT.into()),
@@ -95,7 +95,7 @@ fn reads(c: &mut Criterion) {
     group.bench_function("subsumes", |b| {
         b.iter(|| {
             subsumes::subsumes(&registry, &Invocation::Type, &subsumes_request).expect("subsumes")
-        })
+        });
     });
     group.finish();
 }
