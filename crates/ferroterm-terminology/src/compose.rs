@@ -305,9 +305,8 @@ impl<'a> Expander<'a> {
             }
             items = Some(selected);
         }
-        // NOTE: several value sets in one include intersect; R4B's element text
-        // says union but both versions' composition rules say "in all the
-        // referenced value sets" (<https://hl7.org/fhir/R4B/valueset.html#compositions>,
+        // NOTE: several value sets in one include intersect, "in all the referenced
+        // value sets" (<https://hl7.org/fhir/R4B/valueset.html#compositions>,
         // <https://hl7.org/fhir/R5/valueset.html#union-intersection>).
         for url in &include.value_sets {
             let resolver = self

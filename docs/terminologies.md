@@ -92,6 +92,9 @@ engine. Each row is a tracker issue under the program issue.
   `versionNeeded`, `compositional` honoured; supplements add designations and
   properties only. This provider alone passes the tx-ecosystem `general` mode
   (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/testcases.html>).
+- **Loading.** `FERROTERM_CODESYSTEMS` names the directories; every
+  `CodeSystem` in them is served, the version from the package manifest,
+  and a supplement is layered over the system it names.
 
 ## LOINC
 

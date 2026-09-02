@@ -328,6 +328,15 @@ pub enum ProviderError {
     /// The storage behind the provider failed; the cause is the substrate's error.
     #[error("the code system storage failed")]
     Storage(#[source] Box<dyn std::error::Error + Send + Sync + 'static>),
+    /// The code system's content is not present or is an example, so a code
+    /// cannot be validated or enumerated against it.
+    #[error("code system `{system}` has content `{content}`; its codes cannot be checked")]
+    IncompleteContent {
+        /// The system.
+        system: String,
+        /// The `content` mode.
+        content: &'static str,
+    },
     /// An implicit value set URI of this system is malformed.
     #[error("implicit value set `{url}` is malformed: {reason}")]
     MalformedImplicitValueSet {

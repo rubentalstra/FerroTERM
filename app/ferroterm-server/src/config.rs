@@ -11,6 +11,11 @@ pub const LISTEN_ENV: &str = "FERROTERM_LISTEN";
 pub const INDEX_ENV: &str = "FERROTERM_INDEX";
 /// The environment variable naming the default display language (BCP 47).
 pub const LANGUAGE_ENV: &str = "FERROTERM_DEFAULT_LANGUAGE";
+/// The environment variable listing the `CodeSystem` resource directories.
+///
+/// Each is a FHIR package's `package/` directory or a directory of JSON files;
+/// the platform's path separator separates them.
+pub const CODESYSTEMS_ENV: &str = "FERROTERM_CODESYSTEMS";
 
 /// What the server needs to start.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,6 +24,8 @@ pub struct Config {
     pub listen: String,
     /// The artifact directories to load, each one code system version.
     pub index: Vec<PathBuf>,
+    /// The directories of FHIR `CodeSystem` resources to load.
+    pub code_systems: Vec<PathBuf>,
     /// The display language used when a request names none.
     pub default_language: String,
     /// The console log format.
@@ -40,6 +47,7 @@ impl Default for Config {
         Self {
             listen: String::from("127.0.0.1:8080"),
             index: Vec::new(),
+            code_systems: Vec::new(),
             default_language: String::from("en"),
             log_format: LogFormat::Auto,
             log_filter: String::from(crate::telemetry::DEFAULT_FILTER),
@@ -59,6 +67,9 @@ impl Config {
         Ok(Self {
             listen: std::env::var(LISTEN_ENV).unwrap_or(defaults.listen),
             index: std::env::var_os(INDEX_ENV)
+                .map(|value| std::env::split_paths(&value).collect())
+                .unwrap_or_default(),
+            code_systems: std::env::var_os(CODESYSTEMS_ENV)
                 .map(|value| std::env::split_paths(&value).collect())
                 .unwrap_or_default(),
             default_language: std::env::var(LANGUAGE_ENV).unwrap_or(defaults.default_language),
