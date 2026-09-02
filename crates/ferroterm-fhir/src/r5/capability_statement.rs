@@ -8,7 +8,7 @@
 /// Server or Client for a particular version of FHIR that may be used as a
 /// statement of actual server functionality or a statement of required or
 /// desired server implementation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatement {
     /// Logical id of this artifact
     ///
@@ -1172,7 +1172,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatement {
 /// Document definition
 ///
 /// A document definition.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementDocument {
     /// Unique id for inter-element referencing
     ///
@@ -1394,7 +1394,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementDocument {
 /// Identifies a specific implementation instance that is described by the
 /// capability statement - i.e. a particular installation, rather than the
 /// capabilities of a software program.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementImplementation {
     /// Unique id for inter-element referencing
     ///
@@ -1625,7 +1625,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementImplementation {
 /// If messaging is supported
 ///
 /// A description of the messaging capabilities of the solution.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementMessaging {
     /// Unique id for inter-element referencing
     ///
@@ -1904,7 +1904,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementMessaging {
 ///
 /// An endpoint (network accessible address) to which messages and/or replies
 /// are to be sent.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementMessagingEndpoint {
     /// Unique id for inter-element referencing
     ///
@@ -2104,7 +2104,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementMessagingEndpoint {
 ///
 /// References to message definitions for messages this system can send or
 /// receive.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementMessagingSupportedMessage {
     /// Unique id for inter-element referencing
     ///
@@ -2304,7 +2304,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementMessagingSupportedMessa
 /// If the endpoint is a RESTful one
 ///
 /// A definition of the restful capabilities of the solution, if any.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementRest {
     /// Unique id for inter-element referencing
     ///
@@ -2697,7 +2697,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementRest {
 /// What operations are supported?
 ///
 /// A specification of restful operations supported by the system.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementRestInteraction {
     /// Unique id for inter-element referencing
     ///
@@ -2898,7 +2898,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementRestInteraction {
 ///
 /// A specification of the restful capabilities of the solution for a specific
 /// resource type.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementRestResource {
     /// Unique id for inter-element referencing
     ///
@@ -3544,7 +3544,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementRestResource {
 /// What operations are supported?
 ///
 /// Identifies a restful operation supported by the solution.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementRestResourceInteraction {
     /// Unique id for inter-element referencing
     ///
@@ -3748,7 +3748,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementRestResourceInteraction
 /// Definition of an operation or a named query together with its parameters and
 /// their meaning and type. Consult the definition of the operation for details
 /// about how to invoke the operation, and the parameters.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementRestResourceOperation {
     /// Unique id for inter-element referencing
     ///
@@ -3984,7 +3984,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementRestResourceOperation {
 /// Search parameters for implementations to support and/or make use of - either
 /// references to ones defined in the specification, or additional ones defined
 /// for/by the implementation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementRestResourceSearchParam {
     /// Unique id for inter-element referencing
     ///
@@ -4239,7 +4239,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementRestResourceSearchParam
 ///
 /// Information about security implementation from an interface perspective -
 /// what a client needs to know.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementRestSecurity {
     /// Unique id for inter-element referencing
     ///
@@ -4476,7 +4476,7 @@ impl<'de> serde::Deserialize<'de> for CapabilityStatementRestSecurity {
 /// Software that is covered by this capability statement. It is used when the
 /// capability statement describes the capabilities of a particular software
 /// version, independent of an installation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CapabilityStatementSoftware {
     /// Unique id for inter-element referencing
     ///

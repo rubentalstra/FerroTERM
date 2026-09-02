@@ -3,7 +3,7 @@
 //! A reference from one resource to another
 
 /// A reference from one resource to another.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Reference {
     /// Unique id for inter-element referencing
     ///

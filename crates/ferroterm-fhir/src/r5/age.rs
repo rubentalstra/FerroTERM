@@ -3,7 +3,7 @@
 //! A duration of time during which an organism (or a process) has existed
 
 /// A duration of time during which an organism (or a process) has existed.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Age {
     /// Unique id for inter-element referencing
     ///

@@ -5,7 +5,7 @@
 /// Content in a format defined elsewhere
 ///
 /// For referring to data content defined in other formats.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Attachment {
     /// Unique id for inter-element referencing
     ///

@@ -6,7 +6,7 @@
 ///
 /// An identifier - identifies some entity uniquely and unambiguously. Typically
 /// this is used for business identifiers.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Identifier {
     /// Unique id for inter-element referencing
     ///

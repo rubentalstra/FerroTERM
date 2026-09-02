@@ -8,7 +8,7 @@
 /// The CodeSystem resource is used to declare the existence of and describe a
 /// code system or code system supplement and its key properties, and optionally
 /// define a part or all of its content.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystem {
     /// Logical id of this artifact
     ///
@@ -1021,7 +1021,7 @@ impl<'de> serde::Deserialize<'de> for CodeSystem {
 /// Concepts that are in the code system. The concept definitions are inherently
 /// hierarchical, but the definitions must be consulted to determine what the
 /// meanings of the hierarchical relationships are.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemConcept {
     /// Unique id for inter-element referencing
     ///
@@ -1350,7 +1350,7 @@ impl<'de> serde::Deserialize<'de> for CodeSystemConcept {
 ///
 /// Additional representations for the concept - other languages, aliases,
 /// specialized purposes, used for particular purposes, etc.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemConceptDesignation {
     /// Unique id for inter-element referencing
     ///
@@ -1945,7 +1945,7 @@ impl CodeSystemConceptPropertyValue {
 ///
 /// A filter that can be used in a value set compose statement when selecting
 /// concepts using a filter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemFilter {
     /// Unique id for inter-element referencing
     ///
@@ -2190,7 +2190,7 @@ impl<'de> serde::Deserialize<'de> for CodeSystemFilter {
 ///
 /// A property defines an additional slot through which additional information
 /// can be provided about a concept.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemProperty {
     /// Unique id for inter-element referencing
     ///

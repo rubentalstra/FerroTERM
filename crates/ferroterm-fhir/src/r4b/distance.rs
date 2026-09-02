@@ -3,7 +3,7 @@
 //! A length - a value with a unit that is a physical distance
 
 /// A length - a value with a unit that is a physical distance.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Distance {
     /// Unique id for inter-element referencing
     ///

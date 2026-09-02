@@ -7,7 +7,7 @@
 /// This resource is a non-persisted resource used to pass information into and
 /// back from an \[operation\](operations.html). It has no other use, and there
 /// is no RESTful endpoint associated with it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Parameters {
     /// Logical id of this artifact
     ///
@@ -197,7 +197,7 @@ impl<'de> serde::Deserialize<'de> for Parameters {
 /// Operation Parameter
 ///
 /// A parameter passed to or received from the operation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ParametersParameter {
     /// Unique id for inter-element referencing
     ///

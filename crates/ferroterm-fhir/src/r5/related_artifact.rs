@@ -6,7 +6,7 @@
 ///
 /// Related artifacts such as additional documentation, justification, or
 /// bibliographic references.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RelatedArtifact {
     /// Unique id for inter-element referencing
     ///

@@ -6,7 +6,7 @@
 ///
 /// Describes a required data item for evaluation in terms of the type of data,
 /// and optional code or date-based filters of the data.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DataRequirement {
     /// Unique id for inter-element referencing
     ///
@@ -400,7 +400,7 @@ impl<'de> serde::Deserialize<'de> for DataRequirement {
 /// value set of interest for a particular element of the data. Each code filter
 /// defines an additional constraint on the data, i.e. code filters are AND'ed,
 /// not OR'ed.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DataRequirementCodeFilter {
     /// Unique id for inter-element referencing
     ///
@@ -629,7 +629,7 @@ impl<'de> serde::Deserialize<'de> for DataRequirementCodeFilter {
 /// Date filters specify additional constraints on the data in terms of the
 /// applicable date range for specific elements. Each date filter specifies an
 /// additional constraint on the data, i.e. date filters are AND'ed, not OR'ed.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DataRequirementDateFilter {
     /// Unique id for inter-element referencing
     ///
@@ -955,7 +955,7 @@ impl DataRequirementDateFilterValue {
 /// Order of the results
 ///
 /// Specifies the order of the results to be returned.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DataRequirementSort {
     /// Unique id for inter-element referencing
     ///
@@ -1209,7 +1209,7 @@ impl DataRequirementSubject {
 /// Value filters specify additional constraints on the data for elements other
 /// than code-valued or date-valued. Each value filter specifies an additional
 /// constraint on the data (i.e. valueFilters are AND'ed, not OR'ed).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DataRequirementValueFilter {
     /// Unique id for inter-element referencing
     ///

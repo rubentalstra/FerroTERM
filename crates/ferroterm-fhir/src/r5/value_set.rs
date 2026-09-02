@@ -8,7 +8,7 @@
 /// code systems, intended for use in a particular context. Value sets link
 /// between \[CodeSystem\](codesystem.html) definitions and their use in \[coded
 /// elements\](terminologies.html).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSet {
     /// Logical id of this artifact
     ///
@@ -1186,7 +1186,7 @@ impl<'de> serde::Deserialize<'de> for ValueSet {
 /// A set of criteria that define the contents of the value set by including or
 /// excluding codes selected from the specified code system(s) that the value
 /// set draws from. This is also known as the Content Logical Definition (CLD).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetCompose {
     /// Unique id for inter-element referencing
     ///
@@ -1488,7 +1488,7 @@ impl<'de> serde::Deserialize<'de> for ValueSetCompose {
 }
 
 /// Include one or more codes from a code system or other value set(s).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetComposeInclude {
     /// Unique id for inter-element referencing
     ///
@@ -1818,7 +1818,7 @@ impl<'de> serde::Deserialize<'de> for ValueSetComposeInclude {
 /// A concept defined in the system
 ///
 /// Specifies a concept to be included or excluded.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetComposeIncludeConcept {
     /// Unique id for inter-element referencing
     ///
@@ -2055,7 +2055,7 @@ impl<'de> serde::Deserialize<'de> for ValueSetComposeIncludeConcept {
 /// Additional representations for this concept when used in this value set -
 /// other languages, aliases, specialized purposes, used for particular
 /// purposes, etc.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetComposeIncludeConceptDesignation {
     /// Unique id for inter-element referencing
     ///
@@ -2314,7 +2314,7 @@ impl<'de> serde::Deserialize<'de> for ValueSetComposeIncludeConceptDesignation {
 /// (including relationships) defined by the system, or on filters defined by
 /// the system. If multiple filters are specified within the include, they SHALL
 /// all be true.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetComposeIncludeFilter {
     /// Unique id for inter-element referencing
     ///
@@ -2537,7 +2537,7 @@ impl<'de> serde::Deserialize<'de> for ValueSetComposeIncludeFilter {
 /// A value set can also be "expanded", where the value set is turned into a
 /// simple collection of enumerated codes. This element holds the expansion, if
 /// it has been performed.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetExpansion {
     /// Unique id for inter-element referencing
     ///
@@ -2920,7 +2920,7 @@ impl<'de> serde::Deserialize<'de> for ValueSetExpansion {
 /// Codes in the value set
 ///
 /// The codes that are contained in the value set expansion.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetExpansionContains {
     /// Unique id for inter-element referencing
     ///
@@ -4110,7 +4110,7 @@ impl ValueSetExpansionContainsPropertyValue {
 /// A parameter that controlled the expansion process. These parameters may be
 /// used by users of expanded value sets to check whether the expansion is
 /// suitable for a particular purpose, or to pick the correct expansion.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetExpansionParameter {
     /// Unique id for inter-element referencing
     ///
@@ -4470,7 +4470,7 @@ impl ValueSetExpansionParameterValue {
 ///
 /// A property defines an additional slot through which additional information
 /// can be provided about a concept.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetExpansionProperty {
     /// Unique id for inter-element referencing
     ///
@@ -4670,7 +4670,7 @@ impl<'de> serde::Deserialize<'de> for ValueSetExpansionProperty {
 
 /// Description of the semantic space the Value Set Expansion is intended to
 /// cover and should further clarify the text in ValueSet.description.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetScope {
     /// Unique id for inter-element referencing
     ///

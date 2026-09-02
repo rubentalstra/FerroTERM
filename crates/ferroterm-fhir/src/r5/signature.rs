@@ -9,7 +9,7 @@
 /// acceptable to the domain. This other signature may be as simple as a
 /// graphical image representing a hand-written signature, or a signature
 /// ceremony Different signature approaches have different utilities.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Signature {
     /// Unique id for inter-element referencing
     ///

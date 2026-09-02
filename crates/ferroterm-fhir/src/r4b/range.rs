@@ -5,7 +5,7 @@
 /// Set of values bounded by low and high
 ///
 /// A set of ordered Quantities defined by a low and high limit.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Range {
     /// Unique id for inter-element referencing
     ///

@@ -3,7 +3,7 @@
 //! An amount of economic utility in some recognized currency
 
 /// An amount of economic utility in some recognized currency.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Money {
     /// Unique id for inter-element referencing
     ///

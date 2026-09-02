@@ -120,3 +120,45 @@ fn the_committed_crate_is_in_sync() {
     emit(&all_versions(&crate_dir, true))
         .expect("the committed ferroterm-fhir crate matches the emitter");
 }
+
+#[test]
+fn defaults_and_value_constructors_follow_the_definitions() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    emit(&r4b_only(dir.path(), false)).expect("emit");
+    let read =
+        |file: &str| fs::read_to_string(dir.path().join("src/r4b").join(file)).expect("file");
+    let capabilities = read("terminology_capabilities.rs");
+    assert!(
+        capabilities.contains(
+            "#[derive(Debug, Clone, Default, PartialEq, Eq)]\npub struct TerminologyCapabilities {"
+        ),
+        "every required element of TerminologyCapabilities is a primitive, so it derives Default"
+    );
+    let code_system = read("code_system.rs");
+    assert!(
+        code_system.contains(
+            "#[derive(Debug, Clone, PartialEq, Eq)]\npub struct CodeSystemConceptProperty {"
+        ),
+        "CodeSystem.concept.property.value[x] is a required choice, so no Default"
+    );
+    assert!(
+        code_system
+            .contains("#[derive(Debug, Clone, Default, PartialEq, Eq)]\npub struct CodeSystem {")
+    );
+    let primitives = read("primitives.rs");
+    for (name, scalar) in [
+        ("Code", "std::string::String"),
+        ("Boolean", "bool"),
+        ("Integer", "i32"),
+        ("PositiveInt", "u32"),
+        ("UnsignedInt", "u32"),
+        ("Xhtml", "std::string::String"),
+    ] {
+        assert!(
+            primitives.contains(&format!("impl From<{scalar}> for {name} {{")),
+            "{name} from {scalar}"
+        );
+    }
+    assert!(primitives.contains("impl From<&str> for Code {"));
+    assert!(!primitives.contains("impl From<&str> for Boolean {"));
+}

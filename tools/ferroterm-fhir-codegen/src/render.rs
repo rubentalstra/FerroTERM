@@ -4,6 +4,7 @@
 //! reference each other by `super::<module>::<Name>` paths, so no module
 //! re-exports anything.
 
+use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
 use crate::lower::{
@@ -103,24 +104,76 @@ pub fn render_module(
             ),
     };
     writeln!(out, "//! {heading}\n")?;
+    let defaultable = defaultable(model);
     for ty in types {
-        render_type(model, &mut out, module, ty)?;
+        render_type(model, &mut out, module, ty, &defaultable)?;
         crate::render_codec::render_codec(model, &mut out, ty)?;
         out.push('\n');
     }
     Ok(out)
 }
 
-fn render_type(model: &VersionModule, out: &mut String, module: &str, ty: &TypeDef) -> fmt::Result {
+/// The types that derive `Default`, as a fixpoint.
+///
+/// A struct qualifies when every required element is a scalar or a defaultable
+/// type. A choice enum and the resource enum never do, so a struct with a
+/// required choice element is built explicitly. No FHIR spec governs the Rust
+/// surface: our own design.
+#[must_use]
+pub fn defaultable(model: &VersionModule) -> BTreeSet<String> {
+    let mut set: BTreeSet<String> = model
+        .types
+        .values()
+        .filter(|ty| matches!(ty.kind, TypeKind::UnknownResource))
+        .map(|ty| ty.name.clone())
+        .collect();
+    loop {
+        let before = set.len();
+        for ty in model.types.values() {
+            if set.contains(&ty.name) {
+                continue;
+            }
+            if let TypeKind::Struct { fields } = &ty.kind
+                && fields.iter().all(|field| {
+                    field.ty.card != Cardinality::One
+                        || match &field.ty.target {
+                            Target::Inline(_) => true,
+                            Target::Named(name) => set.contains(name),
+                        }
+                })
+            {
+                set.insert(ty.name.clone());
+            }
+        }
+        if set.len() == before {
+            return set;
+        }
+    }
+}
+
+fn render_type(
+    model: &VersionModule,
+    out: &mut String,
+    module: &str,
+    ty: &TypeDef,
+    defaultable: &BTreeSet<String>,
+) -> fmt::Result {
     render_docs(out, &ty.docs, "")?;
     match &ty.kind {
         TypeKind::Struct { fields } => {
-            out.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
+            if defaultable.contains(&ty.name) {
+                out.push_str("#[derive(Debug, Clone, Default, PartialEq, Eq)]\n");
+            } else {
+                out.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
+            }
             writeln!(out, "pub struct {} {{", ty.name)?;
             for field in fields {
                 render_field(model, out, module, field)?;
             }
             out.push_str("}\n");
+            if ty.is_primitive && defaultable.contains(&ty.name) {
+                render_value_constructors(out, ty, fields)?;
+            }
         }
         TypeKind::Choice { variants, .. } => {
             out.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
@@ -146,7 +199,7 @@ fn render_type(model: &VersionModule, out: &mut String, module: &str, ty: &TypeD
             out.push_str("}\n");
         }
         TypeKind::UnknownResource => {
-            out.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
+            out.push_str("#[derive(Debug, Clone, Default, PartialEq, Eq)]\n");
             writeln!(out, "pub struct {} {{", ty.name)?;
             out.push_str("    /// The `resourceType` of the carried resource.\n");
             out.push_str("    pub resource_type: std::string::String,\n");
@@ -154,6 +207,40 @@ fn render_type(model: &VersionModule, out: &mut String, module: &str, ty: &TypeD
             out.push_str("    pub body: serde_json::Value,\n");
             out.push_str("}\n");
         }
+    }
+    Ok(())
+}
+
+/// `From<value>` for a primitive: the string-valued ones from both `&str` and
+/// `String`, the others from their scalar (C-CONV).
+fn render_value_constructors(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Result {
+    let Some(value) = fields.iter().find(|field| field.name == "value") else {
+        return Ok(());
+    };
+    let Target::Inline(scalar) = &value.ty.target else {
+        return Ok(());
+    };
+    let scalar_type = match scalar {
+        Scalar::Bool => "bool",
+        Scalar::I32 => "i32",
+        Scalar::U32 => "u32",
+        Scalar::I64 => "i64",
+        Scalar::Str => "std::string::String",
+    };
+    let stored = match value.ty.card {
+        Cardinality::One => "value",
+        Cardinality::Optional => "value: Some(value)",
+        Cardinality::Many => return Ok(()),
+    };
+    writeln!(out, "impl From<{scalar_type}> for {} {{", ty.name)?;
+    writeln!(out, "    fn from(value: {scalar_type}) -> Self {{")?;
+    writeln!(out, "        Self {{ {stored}, ..Self::default() }}")?;
+    out.push_str("    }\n}\n");
+    if *scalar == Scalar::Str {
+        writeln!(out, "impl From<&str> for {} {{", ty.name)?;
+        out.push_str("    fn from(value: &str) -> Self {\n");
+        out.push_str("        Self::from(std::string::String::from(value))\n");
+        out.push_str("    }\n}\n");
     }
     Ok(())
 }

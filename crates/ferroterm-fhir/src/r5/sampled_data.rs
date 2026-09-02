@@ -6,7 +6,7 @@
 ///
 /// A series of measurements taken by a device, with upper and lower limits.
 /// There may be more than one dimension in the data.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SampledData {
     /// Unique id for inter-element referencing
     ///

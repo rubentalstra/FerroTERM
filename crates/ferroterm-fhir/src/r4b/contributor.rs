@@ -6,7 +6,7 @@
 ///
 /// A contributor to the content of a knowledge asset, including authors,
 /// editors, reviewers, and endorsers.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Contributor {
     /// Unique id for inter-element referencing
     ///

@@ -6,7 +6,7 @@
 ///
 /// A collection of error, warning, or information messages that result from a
 /// system action.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct OperationOutcome {
     /// Logical id of this artifact
     ///
@@ -350,7 +350,7 @@ impl<'de> serde::Deserialize<'de> for OperationOutcome {
 /// A single issue associated with the action
 ///
 /// An error, warning, or information message that results from a system action.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct OperationOutcomeIssue {
     /// Unique id for inter-element referencing
     ///

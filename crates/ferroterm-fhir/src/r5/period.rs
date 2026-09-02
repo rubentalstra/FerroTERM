@@ -5,7 +5,7 @@
 /// Time range defined by start and end date/time
 ///
 /// A time period defined by a start and end date and optionally time.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Period {
     /// Unique id for inter-element referencing
     ///

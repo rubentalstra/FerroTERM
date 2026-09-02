@@ -111,7 +111,7 @@ impl<'de> serde::Deserialize<'de> for Resource {
 /// Carries the resourceType and the complete JSON object so a Bundle or a
 /// contained resource of a type the terminology surface does not model
 /// round-trips unchanged.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct UnknownResource {
     /// The `resourceType` of the carried resource.
     pub resource_type: std::string::String,

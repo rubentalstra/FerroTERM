@@ -9,7 +9,7 @@
 /// common usage is in dosage instructions for medications. They are also used
 /// when planning care of various kinds, and may be used for reporting the
 /// schedule to which past regular activities were carried out.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Timing {
     /// Unique id for inter-element referencing
     ///
@@ -250,7 +250,7 @@ impl<'de> serde::Deserialize<'de> for Timing {
 /// When the event is to occur
 ///
 /// A set of rules that describe when the event is scheduled.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TimingRepeat {
     /// Unique id for inter-element referencing
     ///

@@ -6,7 +6,7 @@
 ///
 /// A relationship of two Quantity values - expressed as a numerator and a
 /// denominator.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Ratio {
     /// Unique id for inter-element referencing
     ///

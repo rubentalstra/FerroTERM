@@ -5,7 +5,7 @@
 /// How the medication is/was taken or should be taken
 ///
 /// Indicates how the medication is/was taken or should be taken by the patient.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Dosage {
     /// Unique id for inter-element referencing
     ///
@@ -546,7 +546,7 @@ impl<'de> serde::Deserialize<'de> for Dosage {
 ///
 /// Depending on the resource,this is the amount of medication administered, to
 /// be administered or typical amount to be administered.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DosageDoseAndRate {
     /// Unique id for inter-element referencing
     ///

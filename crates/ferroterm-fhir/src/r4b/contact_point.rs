@@ -6,7 +6,7 @@
 ///
 /// Details for all kinds of technology mediated contact points for a person or
 /// organization, including telephone, email, etc.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ContactPoint {
     /// Unique id for inter-element referencing
     ///

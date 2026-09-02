@@ -7,7 +7,7 @@
 /// A statement of relationships from one set of concepts to one or more other
 /// concepts - either concepts in code systems, or data element/data element
 /// concepts, or classes in class models.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMap {
     /// Logical id of this artifact
     ///
@@ -833,7 +833,7 @@ impl<'de> serde::Deserialize<'de> for ConceptMap {
 /// Same source and target systems
 ///
 /// A group of mappings that all have the same source and target system.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapGroup {
     /// Unique id for inter-element referencing
     ///
@@ -1149,7 +1149,7 @@ impl<'de> serde::Deserialize<'de> for ConceptMapGroup {
 ///
 /// Mappings for an individual concept in the source to one or more concepts in
 /// the target.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapGroupElement {
     /// Unique id for inter-element referencing
     ///
@@ -1386,7 +1386,7 @@ impl<'de> serde::Deserialize<'de> for ConceptMapGroupElement {
 /// Concept in target system for element
 ///
 /// A concept from the target value set that this concept maps to.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapGroupElementTarget {
     /// Unique id for inter-element referencing
     ///
@@ -1713,7 +1713,7 @@ impl<'de> serde::Deserialize<'de> for ConceptMapGroupElementTarget {
 /// A set of additional dependencies for this mapping to hold. This mapping is
 /// only applicable if the specified element can be resolved, and it has the
 /// specified value.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapGroupElementTargetDependsOn {
     /// Unique id for inter-element referencing
     ///
@@ -1963,7 +1963,7 @@ impl<'de> serde::Deserialize<'de> for ConceptMapGroupElementTargetDependsOn {
 /// What to do when there is no mapping for the source concept. "Unmapped" does
 /// not include codes that are unmatched, and the unmapped element is ignored in
 /// a code is specified to have equivalence = unmatched.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapGroupUnmapped {
     /// Unique id for inter-element referencing
     ///

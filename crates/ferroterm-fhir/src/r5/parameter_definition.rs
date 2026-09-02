@@ -8,7 +8,7 @@
 /// output parameters. Input parameters are provided by the caller as part of
 /// the $evaluate operation. Output parameters are included in the
 /// GuidanceResponse.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ParameterDefinition {
     /// Unique id for inter-element referencing
     ///

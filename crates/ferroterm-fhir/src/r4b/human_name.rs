@@ -5,7 +5,7 @@
 /// Name of a human - parts and usage
 ///
 /// A human's name with the ability to identify parts and usage.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct HumanName {
     /// Unique id for inter-element referencing
     ///

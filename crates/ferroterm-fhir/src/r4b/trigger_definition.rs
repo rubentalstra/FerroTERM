@@ -6,7 +6,7 @@
 ///
 /// A description of a triggering event. Triggering events can be named events,
 /// data events, or periodic, as determined by the type element.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TriggerDefinition {
     /// Unique id for inter-element referencing
     ///
