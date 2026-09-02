@@ -69,6 +69,7 @@ ferroterm-store = { path = "crates/ferroterm-store", version = "0.0.2" }
 ferroterm-text = { path = "crates/ferroterm-text", version = "0.0.2" }
 ferroterm-ecl = { path = "crates/ferroterm-ecl", version = "0.0.2" }
 ferroterm-terminology = { path = "crates/ferroterm-terminology", version = "0.0.2" }
+ferroterm-testkit = { path = "tools/ferroterm-testkit", version = "0.0.2" }
 
 # The reliability bar (.claude/rules/reliability.md). Groups sit at priority -1
 # so every named lint below overrides its group.

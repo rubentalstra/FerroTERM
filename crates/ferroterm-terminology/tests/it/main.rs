@@ -10,7 +10,6 @@
     reason = "test assertions"
 )]
 
-mod artifact;
 mod capabilities;
 mod compose;
 mod filter;

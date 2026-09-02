@@ -1,11 +1,12 @@
-//! The `ferroterm-server` binary: configuration in, [`ferroterm_server::serve`] out.
+//! The `ferroterm` binary: configuration in, [`ferroterm_server::serve`] out.
+
+use std::sync::Arc;
 
 use anyhow::Context;
+use ferroterm_server::config::{Config, INDEX_ENV, LISTEN_ENV};
+use ferroterm_server::state::AppState;
 use tokio::net::TcpListener;
 use tracing_subscriber::EnvFilter;
-
-/// The environment variable naming the socket address to listen on.
-const LISTEN_ENV: &str = "FERROTERM_LISTEN";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -13,13 +14,18 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    let listen = std::env::var(LISTEN_ENV).unwrap_or_else(|_| String::from("127.0.0.1:8080"));
-    let listener = TcpListener::bind(&listen)
+    let config = Config::from_env();
+    let state = AppState::load(&config)
+        .with_context(|| format!("loading the artifacts named by {INDEX_ENV}"))?;
+    for (id, url, version) in state.instances() {
+        tracing::info!(id, url, version, "serving code system");
+    }
+    let listener = TcpListener::bind(&config.listen)
         .await
-        .with_context(|| format!("binding {listen} (set {LISTEN_ENV} to change it)"))?;
-    tracing::info!(%listen, "ferroterm-server listening");
+        .with_context(|| format!("binding {} (set {LISTEN_ENV} to change it)", config.listen))?;
+    tracing::info!(listen = %config.listen, "ferroterm listening");
 
-    ferroterm_server::serve(listener)
+    ferroterm_server::serve(listener, Arc::new(state))
         .await
         .context("serving HTTP")
 }

@@ -15,6 +15,15 @@ fresh link reference.
 
 ### Added
 
+- The first served operations on FHIR R4B: `CodeSystem/$lookup`,
+  `CodeSystem/$validate-code`, and `CodeSystem/$subsumes` under `/r4b`, by `GET`
+  with query parameters or `POST` with a `Parameters` resource, at the type
+  level and (for the latter two) on a `CodeSystem` instance; every client input
+  error is an `OperationOutcome`. `GET /r4b/metadata` returns the
+  `CapabilityStatement` and `?mode=terminology` the `TerminologyCapabilities`
+  describing the loaded editions. The server loads the artifact directories
+  named by `FERROTERM_INDEX` at start and refuses a missing or damaged one.
+
 - `ferroterm-build --rf2 <release> --out <dir>`: the offline build from a SNOMED
   CT RF2 Snapshot to the served artifacts. One `redb` store per edition version
   with the concepts, designations, language-reference-set acceptabilities, and
