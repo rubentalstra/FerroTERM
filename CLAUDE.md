@@ -58,6 +58,10 @@ crate-local discipline.
   `ferroterm-fhir`.
 - `tools/ferroterm-build`: the offline build, from an RF2 release to the
   memory-mapped graph/store/text artifacts, once per edition.
+- `tools/ferroterm-testkit`: synthetic fixtures for the test suites (a
+  shaped SNOMED edition written the way the build writes it). A
+  dev-dependency of any crate's tests, never a runtime dependency, never
+  published: the one sanctioned edge from a crate's tests into `tools/`.
 
 Dependencies point one way (app/tools depend on crates); nothing depends upward
 into the server. A code system is a graph MODEL served from an

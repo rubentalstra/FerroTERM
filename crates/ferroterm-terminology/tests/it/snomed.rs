@@ -9,13 +9,14 @@ use ferroterm_terminology::provider::{Capability, CodeSystemProvider, Concept, P
 use ferroterm_terminology::registry::Registry;
 use ferroterm_terminology::snomed::{OpenError, SYSTEM, SnomedProvider};
 
-use crate::artifact::{
-    self, ANIMAL, CAT, COVERING, DOG, EDITION, FISH, FUR, LEGS, TOP, VERSION, item, sctid,
+use ferroterm_testkit::snomed;
+use ferroterm_testkit::snomed::{
+    ANIMAL, CAT, COVERING, DOG, EDITION, FISH, FUR, LEGS, TOP, VERSION, item, sctid,
 };
 
 fn provider() -> (tempfile::TempDir, SnomedProvider) {
     let dir = tempfile::tempdir().expect("tempdir");
-    artifact::write(dir.path());
+    snomed::write(dir.path()).expect("writes the fixture");
     let provider = SnomedProvider::open(dir.path(), "en").expect("opens");
     (dir, provider)
 }
@@ -48,10 +49,7 @@ fn identity_and_declaration_follow_the_manifest() {
     );
     assert!(codes.contains(&sctid(item(COVERING)).as_str()));
     assert!(codes.contains(&sctid(item(LEGS)).as_str()));
-    assert_eq!(
-        p.language_refsets(),
-        [artifact::GB_REFSET, artifact::NL_REFSET]
-    );
+    assert_eq!(p.language_refsets(), [snomed::GB_REFSET, snomed::NL_REFSET]);
     assert_eq!(p.all().expect("all").len(), 8);
 }
 
@@ -272,7 +270,7 @@ fn a_foreign_or_broken_artifact_is_refused() {
         SnomedProvider::open(dir.path(), "en"),
         Err(OpenError::Io { .. })
     ));
-    artifact::write(dir.path());
+    snomed::write(dir.path()).expect("writes the fixture");
     std::fs::write(
         dir.path().join("manifest.json"),
         r#"{"system":"http://loinc.org","edition":"x","version":"2.80"}"#,

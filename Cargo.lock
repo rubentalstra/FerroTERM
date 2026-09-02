@@ -391,6 +391,7 @@ dependencies = [
  "ferroterm-graph",
  "ferroterm-rf2",
  "ferroterm-store",
+ "ferroterm-testkit",
  "ferroterm-text",
  "http",
  "regex",
@@ -399,6 +400,17 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
+]
+
+[[package]]
+name = "ferroterm-testkit"
+version = "0.0.2"
+dependencies = [
+ "ferroterm-graph",
+ "ferroterm-rf2",
+ "ferroterm-store",
+ "ferroterm-text",
+ "serde_json",
 ]
 
 [[package]]
