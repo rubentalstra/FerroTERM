@@ -2,14 +2,13 @@
 //!
 //! A release assembles modules; each module dependency member says that its
 //! module, at `sourceEffectiveTime`, depends on the referenced module at
-//! `targetEffectiveTime`. The edition is identified by its most dependent
-//! module, the one no other module in the release depends on, and its version
-//! URI is `http://snomed.info/sct/[moduleId]/version/[YYYYMMDD]`
+//! `targetEffectiveTime`. The edition is identified by a module, and its
+//! version URI is `http://snomed.info/sct/[moduleId]/version/[YYYYMMDD]`
 //! (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-uri-standard>).
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::id::ModuleId;
+use crate::id::{ConceptId, ModuleId};
 use crate::refset::ModuleDependencyMember;
 use crate::time::EffectiveTime;
 
@@ -19,9 +18,17 @@ pub enum EditionError {
     /// No active module dependency member was given.
     #[error("no active module dependency members")]
     NoDependencies,
+    /// A member names a target module that is not a concept identifier.
+    #[error("module dependency member {member} names {target}, which is not a concept identifier")]
+    MalformedTarget {
+        /// The member.
+        member: String,
+        /// The offending target.
+        target: String,
+    },
     /// Several modules depend on others without being depended on, and none
     /// of them carries the release date.
-    #[error("several root modules and none carries the release date {release:?}: {roots:?}")]
+    #[error("several root modules and none carries the release date {release}: {roots:?}")]
     AmbiguousRoot {
         /// The release date.
         release: String,
@@ -33,8 +40,11 @@ pub enum EditionError {
 /// The identified edition of a release.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Edition {
-    /// The most dependent module: the edition's module.
+    /// The edition's module: the root module carrying the release date.
     pub module: ModuleId,
+    /// Other root modules the release ships beside the edition module (a
+    /// sibling such as a mapping module), which the edition URI does not cover.
+    pub sibling_roots: Vec<ModuleId>,
     /// The edition's version.
     pub effective_time: EffectiveTime,
     /// Every module in the release with the version it is at.
@@ -46,11 +56,20 @@ impl Edition {
     ///
     /// The root modules are those that depend on others and are depended on
     /// by none. With one root it is the edition; with several, the one whose
-    /// `sourceEffectiveTime` equals `release` is.
+    /// `sourceEffectiveTime` equals `release` is, and the others are reported
+    /// as `sibling_roots`.
+    ///
+    /// The specifications define an edition by its focus module, the module
+    /// dependent on every other module
+    /// (<https://docs.snomed.org/snomed-ct-practical-guides/snomed-ct-extension-guide/4-logical-design/4.4-editions>),
+    /// and give no consumer-side rule for a release with several roots; the
+    /// date rule is our own design for packages such as the NL edition, which
+    /// ships the ICD-10 mapping module as a sibling root.
     ///
     /// # Errors
     ///
-    /// Returns [`EditionError`] when no members are given or the root is ambiguous.
+    /// Returns [`EditionError`] when no members are given, a target is not a
+    /// concept identifier, or the root is ambiguous.
     pub fn identify(
         members: &[ModuleDependencyMember],
         release: EffectiveTime,
@@ -68,16 +87,17 @@ impl Edition {
                 .entry(source)
                 .and_modify(|t| *t = (*t).max(member.source_effective_time))
                 .or_insert(member.source_effective_time);
-            if let Ok(target) =
-                crate::id::ConceptId::try_from(member.member.referenced_component_id)
-            {
-                let target = ModuleId::from(target);
-                depended_on.insert(target);
-                modules
-                    .entry(target)
-                    .and_modify(|t| *t = (*t).max(member.target_effective_time))
-                    .or_insert(member.target_effective_time);
-            }
+            let target = ConceptId::try_from(member.member.referenced_component_id)
+                .map(ModuleId::from)
+                .map_err(|_| EditionError::MalformedTarget {
+                    member: member.member.id.to_string(),
+                    target: member.member.referenced_component_id.to_string(),
+                })?;
+            depended_on.insert(target);
+            modules
+                .entry(target)
+                .and_modify(|t| *t = (*t).max(member.target_effective_time))
+                .or_insert(member.target_effective_time);
         }
         let roots: Vec<ModuleId> = modules
             .keys()
@@ -95,8 +115,10 @@ impl Edition {
                 })?,
         };
         let effective_time = modules.get(&module).copied().unwrap_or(release);
+        let sibling_roots = roots.into_iter().filter(|m| *m != module).collect();
         Ok(Self {
             module,
+            sibling_roots,
             effective_time,
             modules,
         })

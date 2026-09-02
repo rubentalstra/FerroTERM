@@ -259,6 +259,9 @@ impl<R: Read> Rf2Reader<R> {
         read: R,
         check: impl FnOnce(&[String]) -> Result<(), Rf2Error>,
     ) -> Result<Self, Rf2Error> {
+        // NOTE: the release file specification defines escaping only inside the
+        // concrete-value grammar (https://docs.snomed.org/snomed-ct-specifications/snomed-ct-release-file-specification/release-types-packages-and-files/3.1-common-features-of-all-release-files/3.1.1-general-structure-of-release-files),
+        // so a double quote is ordinary text and quoting stays off: our own design.
         let mut inner = csv::ReaderBuilder::new()
             .delimiter(b'\t')
             .quoting(false)

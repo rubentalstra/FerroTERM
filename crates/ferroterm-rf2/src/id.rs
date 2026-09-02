@@ -18,6 +18,8 @@ pub enum Partition {
     Description,
     /// A relationship (`02` or `12`).
     Relationship,
+    /// A postcoordinated expression (`16`, long format only).
+    Expression,
 }
 
 /// A malformed identifier.
@@ -35,8 +37,11 @@ pub enum IdError {
         /// The parsed value.
         value: u64,
     },
-    /// The partition identifier is not one the release file specification defines.
-    #[error("{value} has partition identifier {partition:02}, which is not defined")]
+    /// The partition identifier is not one the release file specification defines
+    /// (00, 01, 02, 10, 11, 12, 16; <https://docs.snomed.org/snomed-ct-specifications/snomed-ct-release-file-specification/snomed-ct-identifiers/6.5-partition-identifier>).
+    #[error(
+        "{value} has partition identifier {partition:02}, which the release file specification does not define"
+    )]
     Partition {
         /// The parsed value.
         value: u64,
@@ -118,6 +123,7 @@ impl Sctid {
             0 | 10 => Ok(Partition::Concept),
             1 | 11 => Ok(Partition::Description),
             2 | 12 => Ok(Partition::Relationship),
+            16 => Ok(Partition::Expression),
             partition => Err(IdError::Partition {
                 value: self.0,
                 partition,
@@ -434,6 +440,14 @@ mod tests {
         let extension = Sctid::parse("11000146104").expect("valid");
         assert_eq!(extension.namespace(), Some(1_000_146));
         assert_eq!(extension.partition(), Ok(Partition::Concept));
+        // A long-format postcoordinated expression identifier (partition 16) in the
+        // synthetic namespace 1234567.
+        let expression = Sctid::parse(&with_check_digit("42123456716")).expect("valid");
+        assert_eq!(expression.partition(), Ok(Partition::Expression));
+        assert!(matches!(
+            Sctid::parse(&with_check_digit("42123456713")),
+            Err(IdError::Partition { partition: 13, .. })
+        ));
     }
 
     #[test]
