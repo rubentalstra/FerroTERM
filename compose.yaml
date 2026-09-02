@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: MIT
+# FerroTERM quickstart, a standalone file: download it next to a built index
+# and run
+#
+#   docker compose up
+#   curl 'http://localhost:8080/r4b/metadata?mode=terminology'
+#
+# It pulls the published image (ghcr.io/rubentalstra/ferroterm, pinned to the
+# release this file shipped with) and needs no repository checkout. The one
+# thing you provide is the index: the directory ferroterm-build wrote
+# (store.redb and manifest.json), mounted read-only at /data/index. Point
+# FERROTERM_INDEX_DIR at it, or place it at ./index beside this file.
+#
+#   FERROTERM_INDEX_DIR=/srv/ferroterm/nl-20260630 docker compose up
+#
+# The image tag below is bumped at every release cut; scripts/checks/versions.sh
+# keeps it equal to the workspace version.
+#
+# Ports bind the loopback interface by default: a published port is DNAT'd
+# ahead of the host firewall's own chains, so a port on 0.0.0.0 is reachable
+# even when the firewall says otherwise
+# (https://docs.docker.com/engine/network/packet-filtering-firewalls/). To
+# serve another machine, name the interface, or put a reverse proxy in front:
+#
+#   FERROTERM_BIND_HOST=0.0.0.0 docker compose up
+#   FERROTERM_PORT=8081 docker compose up
+#
+# Hardening: the container drops every capability, refuses privilege
+# escalation, and runs a read-only root filesystem; the server writes nothing.
+# The image runs as uid 65532 and has no shell, so there is no HEALTHCHECK
+# here: probe GET /health from outside.
+
+services:
+  ferroterm:
+    image: ghcr.io/rubentalstra/ferroterm:${FERROTERM_VERSION:-0.0.2}
+    container_name: ferroterm
+    restart: unless-stopped
+    ports:
+      - "${FERROTERM_BIND_HOST:-127.0.0.1}:${FERROTERM_PORT:-8080}:8080"
+    environment:
+      FERROTERM_INDEX: /data/index
+      # `pretty` for a person watching `docker compose up`; a log pipeline
+      # sets `json` (one object per line). `RUST_LOG` filters.
+      FERROTERM_LOG_FORMAT: ${FERROTERM_LOG_FORMAT:-pretty}
+      FERROTERM_DEFAULT_LANGUAGE: ${FERROTERM_DEFAULT_LANGUAGE:-en}
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - type: bind
+        source: ${FERROTERM_INDEX_DIR:-./index}
+        target: /data/index
+        read_only: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

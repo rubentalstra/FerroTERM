@@ -61,7 +61,7 @@ artifact digest and signed by the pinnable workflow identity, verifiable with
 
 `ghcr.io/rubentalstra/ferroterm` (`linux/amd64` and `linux/arm64`) is
 `docker/Dockerfile`: the static musl binary copied root-owned onto
-`gcr.io/distroless/static-debian12:nonroot`, pinned by index digest and bumped
+`gcr.io/distroless/static-debian13:nonroot`, pinned by index digest and bumped
 by Dependabot. Distroless static brings `/etc/passwd`, `/tmp`, tzdata, and
 ca-certificates for about 2 MiB and is itself keyless-signed; there is no shell
 and no package manager. The user is the numeric `65532:65532` (the kubelet
