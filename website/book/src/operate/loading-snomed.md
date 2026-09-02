@@ -34,7 +34,7 @@ server opens that index read-only.
 graph LR
     RF2["Licensed RF2 release<br/>(you provide)"] --> BUILD["ferroterm-build<br/>(offline)"]
     BUILD --> IDX["ferroterm-index<br/>(graph + store + text)"]
-    IDX --> SRV["ferroterm-server<br/>(read-only)"]
+    IDX --> SRV["ferroterm<br/>(read-only)"]
 ```
 
 The planned command takes the unpacked RF2 release and writes the index:

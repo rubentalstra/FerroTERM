@@ -19,6 +19,19 @@ fail=0
 note() { printf '  %s\n' "$*"; }
 bad() { printf '  DRIFT: %s\n' "$*" >&2; fail=1; }
 
+# --- the server bin is named `ferroterm`, as release-build.yml packages it -------
+echo "== server binary name (app/ferroterm-server/Cargo.toml <-> release-build.yml)"
+if [ -f app/ferroterm-server/Cargo.toml ]; then
+  bin_name="$(awk '/^\[\[bin\]\]/{f=1;next} /^\[/{f=0} f && /^name[[:space:]]*=/{gsub(/[" ]/,""); sub(/^name=/,""); print; exit}' app/ferroterm-server/Cargo.toml || true)"
+  if [ "$bin_name" != "ferroterm" ]; then
+    bad "app/ferroterm-server/Cargo.toml [[bin]] name is '${bin_name:-unset}', release-build.yml packages 'ferroterm'"
+  else
+    note "OK: the bin is ferroterm"
+  fi
+else
+  note "no app/ferroterm-server/Cargo.toml yet — skipped"
+fi
+
 # --- CITATION.cff version == root Cargo.toml [workspace.package] version -------
 echo "== product version (CITATION.cff <-> Cargo.toml)"
 cff_ver=""
