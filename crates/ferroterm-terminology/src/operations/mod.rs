@@ -9,6 +9,7 @@
 pub mod expand;
 pub mod lookup;
 pub mod subsumes;
+pub mod translate;
 pub mod validate_code;
 pub mod value_set_validate_code;
 
@@ -68,6 +69,9 @@ pub enum OperationError {
     /// The value set is not known.
     #[error("value set `{0}` is not known")]
     UnknownValueSet(String),
+    /// The concept map is not known.
+    #[error("concept map `{0}` is not known")]
+    UnknownConceptMap(String),
     /// The value set cannot be expanded as defined.
     #[error("{0}")]
     ValueSetInvalid(String),
@@ -87,7 +91,8 @@ impl OperationError {
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
             | Self::UnknownCode { .. }
-            | Self::UnknownValueSet(_) => "not-found",
+            | Self::UnknownValueSet(_)
+            | Self::UnknownConceptMap(_) => "not-found",
             Self::Provider(_) => "exception",
         }
     }
@@ -104,9 +109,10 @@ impl OperationError {
             | Self::Invalid(_)
             | Self::UnknownCode { .. }
             | Self::NotSupported(_) => StatusCode::BAD_REQUEST,
-            Self::UnknownSystem(_) | Self::UnknownVersion { .. } | Self::UnknownValueSet(_) => {
-                StatusCode::NOT_FOUND
-            }
+            Self::UnknownSystem(_)
+            | Self::UnknownVersion { .. }
+            | Self::UnknownValueSet(_)
+            | Self::UnknownConceptMap(_) => StatusCode::NOT_FOUND,
             // NOTE: 422 is the status for a resource that breaks the server's
             // rules (<https://hl7.org/fhir/R4B/http.html#status-codes>); a compose
             // the layer cannot evaluate is that resource.
@@ -252,6 +258,8 @@ pub struct Sources<'a> {
     pub registry: &'a Registry,
     /// The value sets.
     pub value_sets: &'a crate::valueset::store::ValueSetStore,
+    /// The concept maps.
+    pub concept_maps: &'a crate::conceptmap::store::ConceptMapStore,
 }
 
 impl Sources<'_> {

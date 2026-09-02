@@ -12,6 +12,7 @@
 
 pub mod capabilities;
 pub mod compose;
+pub mod conceptmap;
 pub mod fhir_codesystem;
 pub mod filter;
 pub mod operations;
@@ -21,3 +22,4 @@ pub mod snomed;
 pub mod supplement;
 pub mod text_match;
 pub mod valueset;
+pub mod versioned;

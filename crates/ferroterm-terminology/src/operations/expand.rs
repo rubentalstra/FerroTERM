@@ -23,6 +23,7 @@ use crate::provider::Designation;
 use crate::valueset::model::ValueSetModel;
 use crate::valueset::store::Resolver;
 use crate::valueset::{convert, render};
+use crate::versioned::Versioned;
 
 /// Runs `$expand`.
 ///

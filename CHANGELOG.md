@@ -15,6 +15,18 @@ fresh link reference.
 
 ### Added
 
+- `ConceptMap/$translate` on R4B, type level. A map is inline (`conceptMap`),
+  loaded from a `FERROTERM_CODESYSTEMS` directory (`url` and
+  `conceptMapVersion`), or chosen by `source` and `target` scope and
+  `targetsystem`; the input is `code` with `system`, a `coding`, or a
+  `codeableConcept`; `reverse` reads the groups the other way. R4's
+  `equivalence` and R5's `relationship` vocabularies reduce to one model, an
+  element without a target or with `noMap` answers `unmatched`, and
+  `unmapped` rules (`provided`, `fixed`, `other-map`) apply. Each `match`
+  also carries `originMap`, `sourceConcept`, `sourceComment`, and `noMap`, as
+  the terminology ecosystem expects. `ConceptMap` resources travel in
+  `tx-resource` like the others.
+
 - Request-scoped resources: `tx-resource` parameters on every operation carry
   `CodeSystem` and `ValueSet` resources served for that request only (a
   supplement applies to the system it names; another resource type is

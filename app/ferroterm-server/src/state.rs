@@ -5,6 +5,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use ferroterm_terminology::conceptmap;
+use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
 use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
 use ferroterm_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
@@ -15,7 +17,8 @@ use ferroterm_terminology::snomed::{OpenError, SnomedProvider};
 use ferroterm_terminology::supplement::{Additions, Supplement, Supplemented};
 use ferroterm_terminology::valueset;
 use ferroterm_terminology::valueset::model::ValueSetModel;
-use ferroterm_terminology::valueset::store::{DuplicateValueSet, ValueSetStore};
+use ferroterm_terminology::valueset::store::ValueSetStore;
+use ferroterm_terminology::versioned::Duplicate;
 
 use crate::config::Config;
 use crate::scope::Caches;
@@ -69,9 +72,9 @@ pub enum LoadError {
     /// Two sources serve the same system version.
     #[error(transparent)]
     Register(#[from] RegisterError),
-    /// Two sources carry the same value set version.
+    /// Two sources carry the same value set or concept map version.
     #[error(transparent)]
-    ValueSet(#[from] DuplicateValueSet),
+    Duplicate(#[from] Duplicate),
 }
 
 /// One loaded code system version, for the startup summary.
@@ -96,6 +99,7 @@ pub struct InstanceSummary {
 pub struct AppState {
     registry: Registry,
     value_sets: ValueSetStore,
+    concept_maps: ConceptMapStore,
     /// `ValueSet` instance id to (url, version).
     value_set_instances: BTreeMap<String, (String, Option<String>)>,
     caches: Caches,
@@ -139,8 +143,15 @@ impl AppState {
         }
         let mut supplements = Vec::new();
         let mut value_sets = ValueSetStore::new();
+        let mut concept_maps = ConceptMapStore::new();
         for path in &config.code_systems {
-            load_code_systems(path, &mut loaded, &mut supplements, &mut value_sets)?;
+            load_code_systems(
+                path,
+                &mut loaded,
+                &mut supplements,
+                &mut value_sets,
+                &mut concept_maps,
+            )?;
         }
         let loaded = apply_supplements(loaded, &supplements)?;
         let mut registry = Registry::new();
@@ -162,6 +173,7 @@ impl AppState {
                 .insert(id, (model.url.clone(), model.version.clone()));
         }
         state.value_sets = value_sets;
+        state.concept_maps = concept_maps;
         Ok(state)
     }
 
@@ -179,6 +191,7 @@ impl AppState {
         Self {
             registry,
             value_sets: ValueSetStore::new(),
+            concept_maps: ConceptMapStore::new(),
             value_set_instances: BTreeMap::new(),
             caches: Caches::default(),
             instances,
@@ -227,6 +240,12 @@ impl AppState {
         &self.value_sets
     }
 
+    /// The loaded concept maps.
+    #[must_use]
+    pub fn concept_maps(&self) -> &ConceptMapStore {
+        &self.concept_maps
+    }
+
     /// The caches `$cache-control` started.
     #[must_use]
     pub fn caches(&self) -> &Caches {
@@ -253,6 +272,7 @@ impl AppState {
         Sources {
             registry: &self.registry,
             value_sets: &self.value_sets,
+            concept_maps: &self.concept_maps,
         }
     }
 
@@ -283,9 +303,9 @@ impl AppState {
     }
 }
 
-/// Loads the `CodeSystem` and `ValueSet` resources in `path`: complete
-/// systems become providers, supplements are collected for
-/// [`apply_supplements`], value sets go to the store.
+/// Loads the `CodeSystem`, `ValueSet`, and `ConceptMap` resources in `path`:
+/// complete systems become providers, supplements are collected for
+/// [`apply_supplements`], value sets and concept maps go to their stores.
 ///
 /// The FHIR version is the one the directory's `package.json` declares;
 /// a plain directory of resources is read as R4B, the version the server
@@ -295,6 +315,7 @@ fn load_code_systems(
     loaded: &mut Vec<Loaded>,
     supplements: &mut Vec<(String, Supplement)>,
     value_sets: &mut ValueSetStore,
+    concept_maps: &mut ConceptMapStore,
 ) -> Result<(), LoadError> {
     let failed = |source| LoadError::CodeSystems {
         path: path.to_path_buf(),
@@ -328,6 +349,9 @@ fn load_code_systems(
     }
     for model in valueset::load::load_dir(path, version).map_err(failed)? {
         value_sets.insert(model)?;
+    }
+    for model in conceptmap::load::load_dir(path, version).map_err(failed)? {
+        concept_maps.insert(model)?;
     }
     Ok(())
 }

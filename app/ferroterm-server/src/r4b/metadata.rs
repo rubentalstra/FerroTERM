@@ -19,6 +19,7 @@ use ferroterm_fhir::r4b::extension::{Extension, ExtensionValue};
 use ferroterm_fhir::r4b::operations::code_system_lookup::CODE_SYSTEM_LOOKUP;
 use ferroterm_fhir::r4b::operations::code_system_subsumes::CODE_SYSTEM_SUBSUMES;
 use ferroterm_fhir::r4b::operations::code_system_validate_code::CODE_SYSTEM_VALIDATE_CODE;
+use ferroterm_fhir::r4b::operations::concept_map_translate::CONCEPT_MAP_TRANSLATE;
 use ferroterm_fhir::r4b::operations::value_set_expand::VALUE_SET_EXPAND;
 use ferroterm_fhir::r4b::operations::value_set_validate_code::VALUE_SET_VALIDATE_CODE;
 use ferroterm_fhir::r4b::terminology_capabilities::{
@@ -167,6 +168,14 @@ pub fn capability_statement(state: &AppState) -> CapabilityStatement {
                         operation(VALUE_SET_EXPAND.code, VALUE_SET_EXPAND.url),
                         operation(VALUE_SET_VALIDATE_CODE.code, VALUE_SET_VALIDATE_CODE.url),
                     ],
+                    ..Default::default()
+                },
+                CapabilityStatementRestResource {
+                    r#type: "ConceptMap".into(),
+                    operation: vec![operation(
+                        CONCEPT_MAP_TRANSLATE.code,
+                        CONCEPT_MAP_TRANSLATE.url,
+                    )],
                     ..Default::default()
                 },
             ],

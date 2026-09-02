@@ -2,135 +2,14 @@
 //! that answers `include.valueSet` references over them.
 
 use std::cell::RefCell;
-use std::cmp::Ordering;
-use std::collections::BTreeMap;
-use std::sync::Arc;
 
 use super::model::ValueSetModel;
 use crate::compose::{Compose, ComposeError, Expander, Expansion, Options, ValueSetResolver};
 use crate::registry::Registry;
+use crate::versioned::VersionedStore;
 
-/// Two value sets with the same `url` and `version`.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("value set `{canonical}` is already stored")]
-pub struct DuplicateValueSet {
-    /// The `url|version`.
-    pub canonical: String,
-}
-
-/// The value sets by `url`, then `version` (`""` for none).
-#[derive(Debug, Default, Clone)]
-pub struct ValueSetStore {
-    by_url: BTreeMap<String, BTreeMap<String, Arc<ValueSetModel>>>,
-}
-
-impl ValueSetStore {
-    /// An empty store.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Stores `model`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`DuplicateValueSet`] when the same `url` and `version` is stored.
-    pub fn insert(&mut self, model: ValueSetModel) -> Result<(), DuplicateValueSet> {
-        let versions = self.by_url.entry(model.url.clone()).or_default();
-        let key = model.version.clone().unwrap_or_default();
-        if versions.contains_key(&key) {
-            return Err(DuplicateValueSet {
-                canonical: model.canonical(),
-            });
-        }
-        versions.insert(key, Arc::new(model));
-        Ok(())
-    }
-
-    /// Stores `model`, replacing the one with the same `url` and `version`.
-    pub fn replace(&mut self, model: ValueSetModel) {
-        let key = model.version.clone().unwrap_or_default();
-        self.by_url
-            .entry(model.url.clone())
-            .or_default()
-            .insert(key, Arc::new(model));
-    }
-
-    /// The value set at `url`, at `version` or the default version.
-    ///
-    /// `url` may carry its version as `url|version`. No FHIR version fixes
-    /// which version is the default: the greatest, by numeric-aware
-    /// comparison of dot-separated segments, is our own design.
-    #[must_use]
-    pub fn resolve(&self, url: &str, version: Option<&str>) -> Option<Arc<ValueSetModel>> {
-        let (url, embedded) = match url.split_once('|') {
-            Some((url, version)) => (url, Some(version)),
-            None => (url, None),
-        };
-        let versions = self.by_url.get(url)?;
-        match version.or(embedded) {
-            Some(version) => versions.get(version).cloned(),
-            None => versions
-                .iter()
-                .max_by(|(a, _), (b, _)| version_order(a, b))
-                .map(|(_, model)| Arc::clone(model)),
-        }
-    }
-
-    /// This store with `overlay`'s value sets on top; an overlay version wins.
-    #[must_use]
-    pub fn layered(&self, overlay: &Self) -> Self {
-        let mut merged = self.clone();
-        for (url, versions) in &overlay.by_url {
-            let target = merged.by_url.entry(url.clone()).or_default();
-            for (version, model) in versions {
-                target.insert(version.clone(), Arc::clone(model));
-            }
-        }
-        merged
-    }
-
-    /// Every stored value set, by `url` then `version`.
-    pub fn iter(&self) -> impl Iterator<Item = &Arc<ValueSetModel>> {
-        self.by_url.values().flat_map(|versions| versions.values())
-    }
-
-    /// The number of stored value sets.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.by_url.values().map(BTreeMap::len).sum()
-    }
-
-    /// Whether nothing is stored.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.by_url.is_empty()
-    }
-}
-
-/// Orders version strings segment by segment, numerically where both
-/// segments are numbers, else lexically.
-fn version_order(a: &str, b: &str) -> Ordering {
-    let mut left = a.split('.');
-    let mut right = b.split('.');
-    loop {
-        match (left.next(), right.next()) {
-            (None, None) => return Ordering::Equal,
-            (None, Some(_)) => return Ordering::Less,
-            (Some(_), None) => return Ordering::Greater,
-            (Some(x), Some(y)) => {
-                let order = match (x.parse::<u64>(), y.parse::<u64>()) {
-                    (Ok(x), Ok(y)) => x.cmp(&y),
-                    _ => x.cmp(y),
-                };
-                if order != Ordering::Equal {
-                    return order;
-                }
-            }
-        }
-    }
-}
+/// The value sets by `url`, then `version`.
+pub type ValueSetStore = VersionedStore<ValueSetModel>;
 
 /// Resolves `include.valueSet` references from a store and the providers'
 /// implicit value sets, refusing a cycle.
@@ -208,21 +87,5 @@ impl<'a> Resolver<'a> {
 impl ValueSetResolver for Resolver<'_> {
     fn expand(&self, url: &str) -> Result<Expansion, ComposeError> {
         self.expand_with(url, &Options::default())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::cmp::Ordering;
-
-    use super::version_order;
-
-    #[test]
-    fn versions_order_numerically_by_segment() {
-        assert_eq!(version_order("1.10.0", "1.9.0"), Ordering::Greater);
-        assert_eq!(version_order("2.0", "2.0.1"), Ordering::Less);
-        assert_eq!(version_order("2024", "2025"), Ordering::Less);
-        assert_eq!(version_order("b", "a"), Ordering::Greater);
-        assert_eq!(version_order("", "1"), Ordering::Less);
     }
 }

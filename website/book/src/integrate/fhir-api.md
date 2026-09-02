@@ -41,8 +41,8 @@ equivalent, or is unrelated.
 
 ## Request-scoped resources
 
-A client can bring its own `CodeSystem` and `ValueSet` resources for one
-request: each `tx-resource` parameter of a `POST` carries one, and the
+A client can bring its own `CodeSystem`, `ValueSet`, and `ConceptMap`
+resources for one request: each `tx-resource` parameter of a `POST` carries one, and the
 operation sees them layered over the loaded resources (a resource with the
 same `url` and `version` as a loaded one shadows it for that request). A
 supplement in a `tx-resource` applies to the system it names. Any other

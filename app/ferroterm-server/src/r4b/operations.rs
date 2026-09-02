@@ -1,4 +1,4 @@
-//! The `CodeSystem` and `ValueSet` operation handlers on R4B.
+//! The `CodeSystem`, `ValueSet`, and `ConceptMap` operation handlers on R4B.
 //!
 //! Each handler turns the wire form into the generated request type, runs the
 //! operation in the request's [`Scope`], and writes the generated response.
@@ -21,12 +21,16 @@ use ferroterm_fhir::r4b::operations::code_system_subsumes::{
 use ferroterm_fhir::r4b::operations::code_system_validate_code::{
     CODE_SYSTEM_VALIDATE_CODE, CodeSystemValidateCodeRequest,
 };
+use ferroterm_fhir::r4b::operations::concept_map_translate::{
+    CONCEPT_MAP_TRANSLATE, ConceptMapTranslateRequest,
+};
 use ferroterm_fhir::r4b::operations::value_set_expand::{VALUE_SET_EXPAND, ValueSetExpandRequest};
 use ferroterm_fhir::r4b::operations::value_set_validate_code::{
     VALUE_SET_VALIDATE_CODE, ValueSetValidateCodeRequest,
 };
 use ferroterm_fhir::r4b::parameters::{Parameters, ParametersParameter, ParametersParameterValue};
 use ferroterm_fhir::r4b::resource::Resource;
+use ferroterm_terminology::operations::translate::{self, Translation};
 use ferroterm_terminology::operations::value_set_validate_code::{Validation, tx_issue_coding};
 use ferroterm_terminology::operations::{
     Invocation, expand, lookup, subsumes, validate_code, value_set_validate_code,
@@ -167,6 +171,55 @@ fn validation_parameters(validation: &Validation) -> Parameters {
             }))),
             ..Default::default()
         });
+    }
+    parameters
+}
+
+fn run_translate(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
+    let request = ConceptMapTranslateRequest::from_parameters(parameters)
+        .map_err(|e| wire::parameters_failure(&e))?;
+    let translation = translate::translate(&scope.sources(), &request)?;
+    wire::respond(&translation_parameters(&translation))
+}
+
+/// The R4B response with, per `match`, the parts a general-purpose
+/// terminology server adds: `originMap`, `sourceConcept`, `sourceComment`,
+/// and `noMap`. Ecosystem outputs beside the declared ones, appended
+/// deliberately (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+fn translation_parameters(translation: &Translation) -> Parameters {
+    let mut parameters = translation.response.to_parameters();
+    let mut origins = translation.origins.iter();
+    for parameter in &mut parameters.parameter {
+        if parameter.name.value.as_deref() != Some("match") {
+            continue;
+        }
+        let Some(origin) = origins.next() else { break };
+        let mut part = |name: &str, value: ParametersParameterValue| {
+            parameter.part.push(ParametersParameter {
+                name: name.into(),
+                value: Some(value),
+                ..Default::default()
+            });
+        };
+        part(
+            "originMap",
+            ParametersParameterValue::Canonical(origin.origin_map.as_str().into()),
+        );
+        if let Some(concept) = &origin.source_concept {
+            part(
+                "sourceConcept",
+                ParametersParameterValue::Coding(concept.clone()),
+            );
+        }
+        if let Some(comment) = &origin.source_comment {
+            part(
+                "sourceComment",
+                ParametersParameterValue::String(comment.as_str().into()),
+            );
+        }
+        if origin.no_map {
+            part("noMap", ParametersParameterValue::Boolean(true.into()));
+        }
     }
     parameters
 }
@@ -345,4 +398,25 @@ pub async fn value_set_validate_code_post(
         from_body(&state, &headers, &body)
             .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)),
     )
+}
+
+/// `GET /ConceptMap/$translate`.
+pub async fn translate_get(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(query): Query<Vec<(String, String)>>,
+) -> Response {
+    finish(
+        from_query(&state, &CONCEPT_MAP_TRANSLATE, &headers, &query)
+            .and_then(|(scope, p)| run_translate(&scope, &p)),
+    )
+}
+
+/// `POST /ConceptMap/$translate`.
+pub async fn translate_post(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    finish(from_body(&state, &headers, &body).and_then(|(scope, p)| run_translate(&scope, &p)))
 }

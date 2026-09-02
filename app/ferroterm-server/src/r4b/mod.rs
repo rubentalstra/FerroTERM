@@ -14,7 +14,7 @@ use crate::state::AppState;
 
 /// The R4B routes: the capability statements, the `CodeSystem` operations at
 /// the levels the R4B `OperationDefinition`s declare, and the type-level
-/// `ValueSet` operations.
+/// `ValueSet` and `ConceptMap` operations.
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/metadata", get(metadata::metadata))
@@ -46,6 +46,10 @@ pub fn router() -> Router<Arc<AppState>> {
             "/ValueSet/$validate-code",
             get(operations::value_set_validate_code_get)
                 .post(operations::value_set_validate_code_post),
+        )
+        .route(
+            "/ConceptMap/$translate",
+            get(operations::translate_get).post(operations::translate_post),
         )
         .route(
             "/CodeSystem/$subsumes",

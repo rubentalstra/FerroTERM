@@ -89,6 +89,15 @@ pub enum LoadError {
         #[source]
         source: crate::valueset::model::ModelError,
     },
+    /// A `ConceptMap` cannot be modelled.
+    #[error("{path}: cannot model the ConceptMap")]
+    ConceptMap {
+        /// The path.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: crate::conceptmap::model::ModelError,
+    },
 }
 
 /// Loads a `CodeSystem` JSON file.

@@ -19,4 +19,5 @@ mod operations;
 mod scope;
 mod shutdown;
 mod telemetry;
+mod translate;
 mod value_set;

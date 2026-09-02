@@ -23,6 +23,13 @@ pub const VS_PETS_REF: &str = "http://example.org/fhir/ValueSet/pets-ref";
 pub const VS_LOOP_A: &str = "http://example.org/fhir/ValueSet/loop-a";
 /// The other half of the loop.
 pub const VS_LOOP_B: &str = "http://example.org/fhir/ValueSet/loop-b";
+/// Every colour.
+pub const VS_COLOURS: &str = "http://example.org/fhir/ValueSet/colours-all";
+/// Animals to colours: `cat` equivalent to `RED`, `dog` broader than
+/// `Green`, `fish` explicitly unmapped, anything else fixed to `blue`.
+pub const CM_ANIMALS_COLOURS: &str = "http://example.org/fhir/ConceptMap/animals-colours";
+/// A map with one element whose `unmapped` defers to the animals map.
+pub const CM_FALLBACK: &str = "http://example.org/fhir/ConceptMap/fallback";
 
 /// The animal system: nesting for the hierarchy, `subsumedBy` for one extra
 /// parent, `status`, `notSelectable`, and `inactive` properties, designations
@@ -173,11 +180,20 @@ fn value_sets() -> Vec<(&'static str, serde_json::Value)> {
                 serde_json::json!({"include": [{"valueSet": [VS_LOOP_A]}]}),
             ),
         ),
+        (
+            "ValueSet-colours-all.json",
+            vs(
+                VS_COLOURS,
+                "1.0",
+                "ColoursAll",
+                serde_json::json!({"include": [{"system": COLOURS}]}),
+            ),
+        ),
     ]
 }
 
-/// Writes the code systems, the value sets, and a non-resource JSON file to
-/// be skipped into `dir`, as a FHIR package's `package/` directory would
+/// Writes the code systems, value sets, concept maps, and a non-resource JSON
+/// file to be skipped into `dir`, as a FHIR package's `package/` directory would
 /// hold them.
 ///
 /// # Errors
@@ -196,8 +212,45 @@ pub fn write_code_systems(dir: &Path) -> std::io::Result<()> {
     ]
     .into_iter()
     .chain(value_sets())
+    .chain(concept_maps())
     {
         std::fs::write(dir.join(name), serde_json::to_string_pretty(&value)?)?;
     }
     Ok(())
+}
+
+/// The concept maps over the animal and colour systems, in R5 form.
+fn concept_maps() -> Vec<(&'static str, serde_json::Value)> {
+    vec![
+        (
+            "ConceptMap-animals-colours.json",
+            serde_json::json!({
+              "resourceType": "ConceptMap", "url": CM_ANIMALS_COLOURS, "version": "1.0",
+              "name": "AnimalsToColours", "status": "active",
+              "sourceScopeUri": VS_ALL, "targetScopeUri": VS_COLOURS,
+              "group": [{
+                "source": ANIMALS, "target": COLOURS,
+                "element": [
+                  {"code": "cat", "target": [{"code": "RED", "display": "Red", "relationship": "equivalent"}]},
+                  {"code": "dog", "target": [{"code": "Green", "relationship": "source-is-broader-than-target", "comment": "roughly"}]},
+                  {"code": "fish", "noMap": true,
+                   "extension": [{"url": "http://hl7.org/fhir/6.0/StructureDefinition/extension-ConceptMap.group.element.comment", "valueString": "fish have no colour"}]}
+                ],
+                "unmapped": {"mode": "fixed", "code": "blue", "display": "Blue", "relationship": "related-to"}
+              }]
+            }),
+        ),
+        (
+            "ConceptMap-fallback.json",
+            serde_json::json!({
+              "resourceType": "ConceptMap", "url": CM_FALLBACK, "version": "1.0",
+              "name": "Fallback", "status": "active",
+              "group": [{
+                "source": ANIMALS, "target": COLOURS,
+                "element": [{"code": "plant", "target": [{"code": "Green", "relationship": "related-to"}]}],
+                "unmapped": {"mode": "other-map", "otherMap": CM_ANIMALS_COLOURS}
+              }]
+            }),
+        ),
+    ]
 }
