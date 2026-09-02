@@ -9,7 +9,7 @@
 //! an OperationOutcome with an error message.
 
 /// The `in` parameters of `ValueSet/$expand`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetExpandRequest {
     /// A canonical reference to a value set. The server must know the value set
     /// (e.g. it is defined explicitly in the server's value sets, or it is
@@ -159,7 +159,7 @@ pub struct ValueSetExpandRequest {
 }
 
 /// The `out` parameters of `ValueSet/$expand`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetExpandResponse {
     /// The result of the expansion. Servers generating expansions SHOULD ensure
     /// that all the parameters that affect the contents of the expansion are

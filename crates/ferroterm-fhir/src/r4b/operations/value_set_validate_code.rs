@@ -10,7 +10,7 @@
 //! recommended display for the code
 
 /// The `in` parameters of `ValueSet/$validate-code`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetValidateCodeRequest {
     /// Value set Canonical URL. The server must know the value set (e.g. it is
     /// defined explicitly in the server's value sets, or it is defined
@@ -86,7 +86,7 @@ pub struct ValueSetValidateCodeRequest {
 }
 
 /// The `out` parameters of `ValueSet/$validate-code`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueSetValidateCodeResponse {
     /// True if the concept details supplied are valid
     pub result: super::super::primitives::Boolean,

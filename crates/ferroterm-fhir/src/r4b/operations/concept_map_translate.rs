@@ -13,7 +13,7 @@
 //! to check the match.equivalence for each match
 
 /// The `in` parameters of `ConceptMap/$translate`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapTranslateRequest {
     /// A canonical URL for a concept map. The server must know the concept map
     /// (e.g. it is defined explicitly in the server's concept maps, or it is
@@ -72,7 +72,7 @@ pub struct ConceptMapTranslateRequest {
 }
 
 /// The parts of the `dependency` parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapTranslateRequestDependency {
     /// The element for this dependency
     pub element: Option<super::super::primitives::Uri>,
@@ -81,7 +81,7 @@ pub struct ConceptMapTranslateRequestDependency {
 }
 
 /// The `out` parameters of `ConceptMap/$translate`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapTranslateResponse {
     /// True if the concept could be translated successfully. The value can only
     /// be true if at least one returned match has an equivalence which is not
@@ -98,7 +98,7 @@ pub struct ConceptMapTranslateResponse {
 }
 
 /// The parts of the `match` parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapTranslateResponseMatch {
     /// A code indicating the equivalence of the translation, using values from
     /// \[ConceptMapEquivalence\](valueset-concept-map-equivalence.html)
@@ -115,7 +115,7 @@ pub struct ConceptMapTranslateResponseMatch {
 }
 
 /// The parts of the `product` parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapTranslateResponseMatchProduct {
     /// The element for this product
     pub element: Option<super::super::primitives::Uri>,

@@ -10,7 +10,7 @@
 //! parameters, or in the coding parameter. Other parameters are optional
 
 /// The `in` parameters of `CodeSystem/$lookup`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemLookupRequest {
     /// The code that is to be located. If a code is provided, a system must be
     /// provided
@@ -53,7 +53,7 @@ pub struct CodeSystemLookupRequest {
 }
 
 /// The `out` parameters of `CodeSystem/$lookup`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemLookupResponse {
     /// A display name for the code system
     pub name: super::super::primitives::String,
@@ -72,7 +72,7 @@ pub struct CodeSystemLookupResponse {
 }
 
 /// The parts of the `designation` parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemLookupResponseDesignation {
     /// The language this designation is defined for
     pub language: Option<super::super::primitives::Code>,
@@ -86,7 +86,7 @@ pub struct CodeSystemLookupResponseDesignation {
 }
 
 /// The parts of the `property` parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemLookupResponseProperty {
     /// Identifies the property returned
     pub code: super::super::primitives::Code,

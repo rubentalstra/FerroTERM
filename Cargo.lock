@@ -392,6 +392,7 @@ dependencies = [
  "ferroterm-rf2",
  "ferroterm-store",
  "ferroterm-text",
+ "http",
  "regex",
  "roaring",
  "serde",

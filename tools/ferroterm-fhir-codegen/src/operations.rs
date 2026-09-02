@@ -98,6 +98,9 @@ pub struct ContractField {
     pub part_struct: Option<String>,
     /// How the value travels on the wire.
     pub kind: FieldKind,
+    /// Whether the field's type derives `Default` (so a required field of it
+    /// does not stop the owning struct from deriving `Default`).
+    pub defaultable: bool,
 }
 
 /// One operation's contract.
@@ -148,12 +151,13 @@ impl OperationContract {
         let response = format!("{stem}Response");
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
+        let defaultable = crate::render::defaultable(module);
         for parameter in &definition.parameter {
             let owner = match parameter.usage {
                 ParameterUse::In => &request,
                 ParameterUse::Out => &response,
             };
-            let field = lower_field(parameter, owner, &definition.code, module)?;
+            let field = lower_field(parameter, owner, &definition.code, module, &defaultable)?;
             match parameter.usage {
                 ParameterUse::In => inputs.push(field),
                 ParameterUse::Out => outputs.push(field),
@@ -182,6 +186,7 @@ fn lower_field(
     owner: &str,
     operation: &str,
     module: &VersionModule,
+    defaultable_types: &std::collections::BTreeSet<String>,
 ) -> Result<ContractField, OperationError> {
     let max = parse_max(&parameter.max).ok_or_else(|| OperationError::InvalidMax {
         operation: operation.to_owned(),
@@ -224,9 +229,20 @@ fn lower_field(
     let mut parts = Vec::new();
     if let Some(nested) = &part_struct {
         for part in &parameter.part {
-            parts.push(lower_field(part, nested, operation, module)?);
+            parts.push(lower_field(
+                part,
+                nested,
+                operation,
+                module,
+                defaultable_types,
+            )?);
         }
     }
+    let defaultable = match &kind {
+        FieldKind::Value(name) | FieldKind::Resource(name) => defaultable_types.contains(name),
+        FieldKind::OpenType => false,
+        FieldKind::Parts => derives_default(&parts),
+    };
     Ok(ContractField {
         name: field_name(&parameter.name),
         fhir_name: parameter.name.clone(),
@@ -240,7 +256,16 @@ fn lower_field(
         parts,
         part_struct,
         kind,
+        defaultable,
     })
+}
+
+/// Whether a struct of `fields` derives `Default`: every required field's
+/// type does (the rule `render::defaultable` applies to the model types).
+fn derives_default(fields: &[ContractField]) -> bool {
+    fields
+        .iter()
+        .all(|field| cardinality(field.min, field.max) != Cardinality::One || field.defaultable)
 }
 
 fn parse_max(max: &str) -> Option<Max> {
@@ -776,7 +801,11 @@ fn render_build(field: &ContractField, value: &str) -> String {
 
 fn render_struct(out: &mut String, name: &str, doc: &str, fields: &[ContractField]) -> fmt::Result {
     writeln!(out, "/// {doc}")?;
-    out.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
+    if derives_default(fields) {
+        out.push_str("#[derive(Debug, Clone, Default, PartialEq, Eq)]\n");
+    } else {
+        out.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
+    }
     writeln!(out, "pub struct {name} {{")?;
     for field in fields {
         let doc = field.documentation.as_deref().map_or_else(

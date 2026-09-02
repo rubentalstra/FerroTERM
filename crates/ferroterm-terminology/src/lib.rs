@@ -13,6 +13,7 @@
 pub mod capabilities;
 pub mod compose;
 pub mod filter;
+pub mod operations;
 pub mod provider;
 pub mod registry;
 pub mod snomed;
