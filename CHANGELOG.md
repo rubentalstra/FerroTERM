@@ -15,8 +15,6 @@ fresh link reference.
 
 ### Added
 
-### Added
-
 - `ferroterm-build --rf2 <release> --out <dir>`: the offline build from a SNOMED
   CT RF2 Snapshot to the served artifacts. One `redb` store per edition version
   with the concepts, designations, language-reference-set acceptabilities, and
@@ -29,12 +27,6 @@ fresh link reference.
   listening on `0.0.0.0:8080`), built from the attested static binaries with
   SLSA Build L3 provenance on the index and each platform manifest and an SPDX
   SBOM per platform, all verifiable with `gh attestation verify oci://…`.
-
-### Changed
-
-- Release binaries ship for Linux only (`x86_64` and `aarch64`, gnu and musl):
-  the server runs in a container or on a Linux host. The macOS build is
-  dropped from the release; a developer on a Mac builds from source.
 
 ### Changed
 
