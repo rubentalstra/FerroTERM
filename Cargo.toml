@@ -5,7 +5,7 @@ resolver = "3"
 members = ["crates/*", "app/*", "tools/*"]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
@@ -60,13 +60,13 @@ criterion = "0.8.2"
 divan = "0.1.21"
 tempfile = "3.27.0"
 # Workspace-internal crates (path dependencies, versioned with the workspace).
-ferroterm-fhir = { path = "crates/ferroterm-fhir", version = "0.0.1" }
-ferroterm-rf2 = { path = "crates/ferroterm-rf2", version = "0.0.1" }
-ferroterm-graph = { path = "crates/ferroterm-graph", version = "0.0.1" }
-ferroterm-store = { path = "crates/ferroterm-store", version = "0.0.1" }
-ferroterm-text = { path = "crates/ferroterm-text", version = "0.0.1" }
-ferroterm-ecl = { path = "crates/ferroterm-ecl", version = "0.0.1" }
-ferroterm-terminology = { path = "crates/ferroterm-terminology", version = "0.0.1" }
+ferroterm-fhir = { path = "crates/ferroterm-fhir", version = "0.0.2" }
+ferroterm-rf2 = { path = "crates/ferroterm-rf2", version = "0.0.2" }
+ferroterm-graph = { path = "crates/ferroterm-graph", version = "0.0.2" }
+ferroterm-store = { path = "crates/ferroterm-store", version = "0.0.2" }
+ferroterm-text = { path = "crates/ferroterm-text", version = "0.0.2" }
+ferroterm-ecl = { path = "crates/ferroterm-ecl", version = "0.0.2" }
+ferroterm-terminology = { path = "crates/ferroterm-terminology", version = "0.0.2" }
 
 # The reliability bar (.claude/rules/reliability.md). Groups sit at priority -1
 # so every named lint below overrides its group.

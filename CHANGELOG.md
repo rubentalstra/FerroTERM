@@ -13,6 +13,12 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-09-02
+
+The first published release. It carries the 0.0.1 contents below plus the
+release-build fix; the 0.0.1 tag exists but never published (its build jobs
+failed at the packaging step) and stays as an unpublished draft.
+
 ### Fixed
 
 - The release build packages the server binary again: the binary is named
@@ -68,5 +74,6 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.2
 [0.0.1]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.1
