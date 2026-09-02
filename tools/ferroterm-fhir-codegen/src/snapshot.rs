@@ -97,14 +97,17 @@ pub struct TypeRef {
 }
 
 impl TypeRef {
-    fn from_element_type(raw: &ElementType) -> Self {
-        let system = raw.code.strip_prefix(FHIRPATH_SYSTEM_PREFIX);
+    /// The type reference, or `None` for a type without a code (the three R4
+    /// extension definitions whose value types carry only `_code` extensions).
+    fn from_element_type(raw: &ElementType) -> Option<Self> {
+        let code = raw.code.as_deref()?;
+        let system = code.strip_prefix(FHIRPATH_SYSTEM_PREFIX);
         let fhir_type = raw
             .extension
             .iter()
             .find(|extension| extension.url == FHIR_TYPE_EXTENSION)
             .and_then(|extension| extension.value_url.clone());
-        match (system, fhir_type) {
+        Some(match (system, fhir_type) {
             (Some(system), Some(fhir_type)) => Self {
                 code: fhir_type,
                 fhirpath_type: Some(system.to_owned()),
@@ -114,18 +117,18 @@ impl TypeRef {
             // NOTE: no spec names a FHIR type for a bare System.* value type; keep the
             // `FHIRPath` name as the code so the emitter sees exactly what the package says.
             (Some(system), None) => Self {
-                code: raw.code.clone(),
+                code: code.to_owned(),
                 fhirpath_type: Some(system.to_owned()),
                 profiles: raw.profile.clone(),
                 target_profiles: raw.target_profile.clone(),
             },
             (None, _) => Self {
-                code: raw.code.clone(),
+                code: code.to_owned(),
                 fhirpath_type: None,
                 profiles: raw.profile.clone(),
                 target_profiles: raw.target_profile.clone(),
             },
-        }
+        })
     }
 }
 
@@ -303,7 +306,7 @@ fn resolve_element(
     let types: Vec<TypeRef> = element
         .types
         .iter()
-        .map(TypeRef::from_element_type)
+        .filter_map(TypeRef::from_element_type)
         .collect();
     let shape = match (&element.content_reference, types.is_empty(), is_root) {
         (_, _, true) => ElementShape::Root,

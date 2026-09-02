@@ -13,6 +13,13 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- The generated FHIR layer covers R4: `hl7.fhir.r4.core` 4.0.1 is vendored with
+  provenance and `ferroterm-fhir` gains the `r4` module (131 root-set types,
+  the terminology operation contracts, the JSON codec, and the `Parameters`
+  conversions), with every terminology resource of the package round-tripping.
+
 ## [0.0.3] - 2026-09-02
 
 The first release that serves: a built SNOMED CT edition answers `$lookup`,

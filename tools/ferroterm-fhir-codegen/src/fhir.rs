@@ -111,7 +111,11 @@ pub struct ElementDefinition {
 #[serde(rename_all = "camelCase")]
 pub struct ElementType {
     /// The type code: a FHIR type name or a `FHIRPath` system type URL.
-    pub code: String,
+    ///
+    /// Absent in three R4 4.0.1 extension definitions (`structuredefinition-json-type`,
+    /// `-xml-type`, `-rdf-type`), whose value types carry only the `_code`
+    /// primitive extensions; a type without a code has no Rust shape.
+    pub code: Option<String>,
     /// Profiles the value must conform to.
     #[serde(default)]
     pub profile: Vec<String>,

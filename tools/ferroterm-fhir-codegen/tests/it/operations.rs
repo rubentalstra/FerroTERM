@@ -5,7 +5,7 @@ use ferroterm_fhir_codegen::operations::OperationContract;
 use ferroterm_fhir_codegen::package::Package;
 use ferroterm_fhir_codegen::roots::RootSet;
 
-use crate::{R4B, R5};
+use crate::{R4, R4B, R5};
 
 fn contracts(package: &Package, module: &str) -> Vec<OperationContract> {
     let roots = RootSet::select(package).expect("root set selects");
@@ -37,7 +37,7 @@ fn find<'a>(
 
 #[test]
 fn every_terminology_operation_gets_a_contract_in_both_versions() {
-    for (package, module) in [(&*R4B, "r4b"), (&*R5, "r5")] {
+    for (package, module) in [(&*R4, "r4"), (&*R4B, "r4b"), (&*R5, "r5")] {
         let contracts = contracts(package, module);
         let modules: Vec<&str> = contracts.iter().map(|c| c.module.as_str()).collect();
         assert_eq!(

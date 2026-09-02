@@ -35,6 +35,12 @@ fn r4b_dir() -> PathBuf {
     vendor_dir().join("hl7.fhir.r4b.core")
 }
 
+/// The vendored R4 core package, loaded once for every test.
+static R4: LazyLock<Package> = LazyLock::new(|| {
+    Package::open(vendor_dir().join("hl7.fhir.r4.core"))
+        .expect("the vendored hl7.fhir.r4.core package should load")
+});
+
 /// The vendored R5 core package, loaded once for every test.
 static R5: LazyLock<Package> = LazyLock::new(|| {
     Package::open(vendor_dir().join("hl7.fhir.r5.core"))

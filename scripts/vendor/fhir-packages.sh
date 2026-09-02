@@ -25,7 +25,7 @@ cd "$root"
 registry="https://packages.fhir.org"
 vendor_dir="tools/ferroterm-fhir-codegen/vendor"
 pins="docs/VERSIONS.md"
-default_packages=(hl7.fhir.r4b.core hl7.fhir.r5.core hl7.terminology)
+default_packages=(hl7.fhir.r4.core hl7.fhir.r4b.core hl7.fhir.r5.core hl7.terminology)
 
 die() { printf 'fhir-packages: %s\n' "$*" >&2; exit 1; }
 

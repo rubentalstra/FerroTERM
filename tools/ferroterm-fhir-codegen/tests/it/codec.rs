@@ -95,11 +95,21 @@ fn round_trip_all<T: Json>(package: &str) {
     );
     assert!(
         failures.is_empty(),
-        "{package}: {} of {} files failed; first: {}",
+        "{package}: {} of {} files failed:\n{}",
         failures.len(),
         files.len(),
-        failures.first().map_or("", String::as_str)
+        failures
+            .iter()
+            .take(8)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n")
     );
+}
+
+#[test]
+fn every_r4_root_set_resource_round_trips() {
+    round_trip_all::<ferroterm_fhir::r4::resource::Resource>("hl7.fhir.r4.core");
 }
 
 #[test]
