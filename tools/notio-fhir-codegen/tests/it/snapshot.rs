@@ -1,4 +1,4 @@
-use notio_fhir_codegen::model::StructureKind;
+use notio_fhir_codegen::fhir::StructureKind;
 use notio_fhir_codegen::snapshot::{
     ElementShape, Max, ResolveError, ResolvedElement, ResolvedStructure,
 };

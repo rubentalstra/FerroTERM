@@ -22,3 +22,14 @@ resources are the authority for what it emits (`.claude/rules/codegen.md`).
   through the library.
 - This crate is a tool, so it may write to stdout and stderr; every such site
   carries a scoped `#[expect]` with a reason.
+
+## Naming
+
+Names say what a thing is in its domain, never which language or pipeline
+stage produced it. The FHIR side keeps FHIR's names verbatim
+(`fhir::StructureDefinition`, `fhir::ElementDefinition`,
+`snapshot::ResolvedStructure`); the generated side names the artefact
+(`lower::VersionModule` is the generated module for one FHIR version,
+`lower::TypeDef` one type definition, `lower::Cardinality` a cardinality). A
+`Rust`, `Fhir`, or `Gen` prefix on a type name is a smell: if two views of one
+thing collide, the module path disambiguates (`fhir::` versus `lower::`).

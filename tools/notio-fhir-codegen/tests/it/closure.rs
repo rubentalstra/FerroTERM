@@ -1,17 +1,17 @@
 use notio_fhir_codegen::closure::TypeClosure;
-use notio_fhir_codegen::lower::{Card, RustModel, Target, TypeKind};
-use notio_fhir_codegen::model::StructureKind;
+use notio_fhir_codegen::fhir::StructureKind;
+use notio_fhir_codegen::lower::{Cardinality, Target, TypeKind, VersionModule};
 use notio_fhir_codegen::roots::RootSet;
 
-use crate::R4B;
+use crate::{R4B, R5};
 
 fn closure() -> TypeClosure {
     let roots = RootSet::select(&R4B).expect("root set selects");
     TypeClosure::compute(&R4B, &roots).expect("closure computes")
 }
 
-fn model() -> RustModel {
-    RustModel::lower(&closure(), "r4b", "hl7.fhir.r4b.core", "4.3.0").expect("model lowers")
+fn model() -> VersionModule {
+    VersionModule::lower(&closure(), "r4b", "hl7.fhir.r4b.core", "4.3.0").expect("model lowers")
 }
 
 #[test]
@@ -98,7 +98,7 @@ fn cardinality_maps_to_option_vec_and_direct() {
         .iter()
         .find(|f| f.name == "code")
         .expect("Coding.code");
-    assert_eq!(code.ty.card, Card::Optional);
+    assert_eq!(code.ty.card, Cardinality::Optional);
     assert_eq!(code.ty.target, Target::Named("Code".to_owned()));
     let TypeKind::Struct { fields } = &model
         .types
@@ -112,7 +112,7 @@ fn cardinality_maps_to_option_vec_and_direct() {
         .iter()
         .find(|f| f.name == "concept")
         .expect("include.concept");
-    assert_eq!(concept.ty.card, Card::Many);
+    assert_eq!(concept.ty.card, Cardinality::Many);
     let TypeKind::Struct { fields } = &model
         .types
         .get("ValueSetComposeIncludeFilter")
@@ -122,7 +122,7 @@ fn cardinality_maps_to_option_vec_and_direct() {
         panic!("filter is a struct");
     };
     let op = fields.iter().find(|f| f.name == "op").expect("filter.op");
-    assert_eq!(op.ty.card, Card::One);
+    assert_eq!(op.ty.card, Cardinality::One);
 }
 
 #[test]
@@ -257,4 +257,65 @@ fn the_resource_enum_covers_the_root_set() {
         .find(|f| f.name == "resource")
         .expect("entry.resource");
     assert_eq!(resource.ty.target, Target::Named("Resource".to_owned()));
+}
+
+fn r5_model() -> VersionModule {
+    let roots = RootSet::select(&R5).expect("R5 root set selects");
+    let closure = TypeClosure::compute(&R5, &roots).expect("R5 closure computes");
+    VersionModule::lower(&closure, "r5", "hl7.fhir.r5.core", "5.0.0").expect("R5 model lowers")
+}
+
+#[test]
+fn r5_closes_over_its_own_datatypes() {
+    let roots = RootSet::select(&R5).expect("R5 root set selects");
+    let closure = TypeClosure::compute(&R5, &roots).expect("R5 closure computes");
+    assert_eq!(closure.roots().len(), 8);
+    // R5 adds integer64 and new datatypes to the open type set
+    // (https://hl7.org/fhir/R5/datatypes.html#open).
+    for name in ["integer64", "Availability", "ExtendedContactDetail"] {
+        assert!(
+            closure.structures().contains_key(name),
+            "{name} is in the R5 closure"
+        );
+    }
+    for name in ["Contributor", "MonetaryComponent", "VirtualServiceDetail"] {
+        assert!(
+            !closure.structures().contains_key(name),
+            "{name} is outside the R5 open types and the root set"
+        );
+    }
+    assert_eq!(closure.structures().len(), 65);
+}
+
+#[test]
+fn r5_integer64_is_an_i64_and_expansion_carries_properties() {
+    let model = r5_model();
+    let TypeKind::Struct { fields } = &model.types.get("Integer64").expect("Integer64").kind else {
+        panic!("Integer64 is a struct");
+    };
+    assert_eq!(
+        fields
+            .iter()
+            .find(|f| f.name == "value")
+            .map(|f| &f.ty.target),
+        Some(&Target::Inline(notio_fhir_codegen::lower::Scalar::I64))
+    );
+    // ValueSet.expansion.property and contains.property are new in R5
+    // (https://hl7.org/fhir/R5/valueset.html).
+    assert!(model.types.contains_key("ValueSetExpansionProperty"));
+    assert!(
+        model
+            .types
+            .contains_key("ValueSetExpansionContainsProperty")
+    );
+    let TypeKind::Struct { fields } = &model
+        .types
+        .get("ValueSetExpansionContainsProperty")
+        .expect("property")
+        .kind
+    else {
+        panic!("property is a struct");
+    };
+    let value = fields.iter().find(|f| f.name == "value").expect("value[x]");
+    assert_eq!(value.ty.card, Cardinality::One);
 }

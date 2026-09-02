@@ -7,7 +7,7 @@
 //! in `[x]`, <https://hl7.org/fhir/R4B/formats.html#choice>), and content
 //! references pointed at the element they name.
 
-use crate::model::{Binding, ElementDefinition, ElementType, StructureDefinition, StructureKind};
+use crate::fhir::{Binding, ElementDefinition, ElementType, StructureDefinition, StructureKind};
 
 /// The prefix of the `FHIRPath` system types primitives carry as their value type.
 const FHIRPATH_SYSTEM_PREFIX: &str = "http://hl7.org/fhirpath/System.";

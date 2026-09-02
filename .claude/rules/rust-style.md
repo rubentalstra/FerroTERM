@@ -177,6 +177,18 @@ standing bar for hand-written code.
   rename.
 - The `unsafe_*` 2024 items are all moot under `unsafe_code = "forbid"`.
 
+## Naming
+
+A name says what the thing is in its domain, never which language, layer, or
+pipeline stage produced it (`VersionModule`, `TypeDef`, `ConceptId`, not
+`RustModel`, `GenType`, `SctidValue`). Spec-defined things keep the
+specification's names verbatim (`StructureDefinition`, `OperationDefinition`,
+`ValueSet`), FHIR camelCase becoming Rust snake_case for fields. When two views
+of one thing would collide, the module path disambiguates (`fhir::` versus
+`lower::`), never a prefix. Modules are named for their contents (`fhir`,
+`snapshot`, `closure`), verbs only for a stage that is genuinely a
+transformation (`lower`, `render`, `emit`).
+
 ## No Python, anywhere
 
 The tooling languages are **bash and Rust**. Python is banned across the

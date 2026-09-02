@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use notio_fhir_codegen::model::{Derivation, StructureKind};
+use notio_fhir_codegen::fhir::{Derivation, StructureKind};
 use notio_fhir_codegen::package::{LoadError, Package};
 
 use crate::{R4B, r4b_dir};

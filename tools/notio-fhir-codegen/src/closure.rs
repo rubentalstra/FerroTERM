@@ -8,7 +8,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::model::{Derivation, StructureKind};
+use crate::fhir::{Derivation, StructureKind};
 use crate::package::Package;
 use crate::roots::RootSet;
 use crate::snapshot::{ElementShape, ResolveError, ResolvedStructure};

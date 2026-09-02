@@ -6,23 +6,31 @@
 //! byte-deterministic so the CI drift check can regenerate and compare.
 //!
 //! The pipeline is [`package::Package`] (read a package), then
-//! [`snapshot::ResolvedStructure`] (resolve each structure's snapshot) and
-//! [`roots::RootSet`] (select what to emit).
+//! [`snapshot::ResolvedStructure`] (resolve each structure's snapshot),
+//! [`roots::RootSet`] (select what to emit), [`closure::TypeClosure`] (the
+//! root-set closure), [`lower::VersionModule`] (the generated module), [`render`]
+//! (source text), and [`emit`] (write or check).
 #![doc(test(attr(deny(warnings))))]
 
 pub mod closure;
 pub mod emit;
+pub mod fhir;
 pub mod lower;
-pub mod model;
 pub mod naming;
 pub mod package;
 pub mod render;
 pub mod roots;
 pub mod snapshot;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
+
+/// The FHIR versions the generator emits: module name and vendored package.
+///
+/// Every entry is emitted on each run so the generated crate always carries
+/// the whole set (`codegen.md`).
+pub const VERSIONS: [(&str, &str); 2] = [("r4b", "hl7.fhir.r4b.core"), ("r5", "hl7.fhir.r5.core")];
 
 /// The command line of `notio-fhir-codegen`.
 #[derive(Debug, Parser)]
@@ -41,9 +49,9 @@ pub enum Command {
         /// Compare the generated crate with what the emitter produces and fail on any difference.
         #[arg(long)]
         check: bool,
-        /// The vendored package directory.
-        #[arg(long, value_name = "DIR", default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/vendor/hl7.fhir.r4b.core"))]
-        package: PathBuf,
+        /// The directory holding the vendored packages.
+        #[arg(long, value_name = "DIR", default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/vendor"))]
+        vendor: PathBuf,
         /// The generated crate directory.
         #[arg(long, value_name = "DIR", default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/notio-fhir"))]
         out: PathBuf,
@@ -58,6 +66,18 @@ pub enum Error {
     Emit(#[from] emit::EmitError),
 }
 
+/// The emit inputs for every entry of [`VERSIONS`] under `vendor`.
+#[must_use]
+pub fn version_inputs(vendor: &Path) -> Vec<emit::VersionInput> {
+    VERSIONS
+        .iter()
+        .map(|(module, package)| emit::VersionInput {
+            module: (*module).to_owned(),
+            package_dir: vendor.join(package),
+        })
+        .collect()
+}
+
 /// Runs the command the CLI selected.
 ///
 /// # Errors
@@ -66,14 +86,9 @@ pub enum Error {
 /// generated crate differs from what the emitter produces.
 pub fn run(cli: &Cli) -> Result<emit::EmitReport, Error> {
     match &cli.command {
-        Command::Emit {
-            check,
-            package,
-            out,
-        } => Ok(emit::emit(&emit::EmitOptions {
-            package_dir: package.clone(),
+        Command::Emit { check, vendor, out } => Ok(emit::emit(&emit::EmitOptions {
+            versions: version_inputs(vendor),
             crate_dir: out.clone(),
-            version_module: String::from("r4b"),
             check: *check,
         })?),
     }
