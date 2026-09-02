@@ -11,7 +11,15 @@ authors.workspace = true
 publish.workspace = true
 
 [dependencies]
+ferroterm-graph.workspace = true
+fst.workspace = true
+roaring.workspace = true
 thiserror.workspace = true
+unicode-normalization.workspace = true
+
+[dev-dependencies]
+ferroterm-rf2.workspace = true
+proptest.workspace = true
 
 [lints]
 workspace = true
