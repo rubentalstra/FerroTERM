@@ -5,4 +5,12 @@
 //! bitmaps. Subsumption is a bitmap membership test, and the ECL evaluator
 //! compiles constraints to set algebra over these bitmaps. The graph is built
 //! offline by a loader and served read-only; no request traverses edges live.
+//! No FHIR or SNOMED specification governs the layout: our own design
+//! (`docs/architecture.md` decisions 1 and 3).
 #![doc(test(attr(deny(warnings))))]
+
+pub mod closure;
+pub mod csr;
+pub mod ordinal;
+pub mod persist;
+pub mod subsumption;
