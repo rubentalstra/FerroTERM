@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-server/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-server/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-ecl/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-fhir/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-graph/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rf2/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-store/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-terminology/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-text/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-build/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-fhir-codegen/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-fhir-codegen/tests" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/data" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
