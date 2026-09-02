@@ -1,11 +1,15 @@
 ---
 name: architecture-decisions
-description: Notio's locked, evidence-backed architecture (the OWL-EL two-problem split, the index-materialized graph store, machine-generated FHIR, and the pure-Rust stack)
+description: Notio's locked, evidence-backed architecture (the OWL-EL two-problem split, the index-materialized graph store, the code-system-neutral provider seam with SNOMED CT first, machine-generated FHIR, and the pure-Rust stack)
 metadata:
   type: project
 ---
 
-Notio is a pure-Rust FHIR terminology server for SNOMED CT. The full design +
+Notio is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other
+clinical code systems, SNOMED CT first (owner decision 2026-09-02: build the
+engine around a code system provider seam from the first line of engine code;
+the substrates never know one system's identifiers; `docs/architecture.md` §5,
+`docs/terminologies.md`). The full design +
 citations live in `docs/architecture.md`; these are the load-bearing decisions,
 each owner-confirmed and adjudicated from cited research (two deep-research
 streams, 2026-09-02).

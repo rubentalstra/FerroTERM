@@ -13,6 +13,13 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- The engine is code-system-neutral by design: the FHIR terminology operations
+  talk to a code system provider seam, SNOMED CT is the first provider, and
+  LOINC, UCUM, ICD-10, and the other systems in `docs/terminologies.md` follow
+  through the same seam.
+
 ### Added
 
 - The Cargo workspace: the seven engine crates, the `notio-server` binary

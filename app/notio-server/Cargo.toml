@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 [package]
 name = "notio-server"
-description = "The Notio FHIR terminology server for SNOMED CT"
+description = "The Notio FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -1,11 +1,12 @@
 # Notio
 
-> Notio (codename) is a pure-Rust FHIR terminology server for SNOMED CT and other code systems such as LOINC. It serves the HL7 FHIR terminology API (`$lookup`, `$subsumes`, `$validate-code`, `$expand`, `$translate`) across R4, R4B, R5, and R6 from one running server, backed by a memory-mapped, index-materialized SNOMED store, with no JVM and no Elasticsearch. The FHIR layer is generated from the vendored machine-readable FHIR packages; the SNOMED engine (RF2 loading, the materialized ontology, ECL evaluation) is hand-written. Notio ships no AI: no model is trained, embedded, or called at request time. AI coding assistance is used to build it, under human review.
+> Notio (codename) is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems, SNOMED CT first. It serves the HL7 FHIR terminology API (`$lookup`, `$subsumes`, `$validate-code`, `$expand`, `$translate`) across R4, R4B, R5, and R6 from one running server, backed by a memory-mapped, index-materialized concept store, with no JVM and no Elasticsearch. The FHIR layer is generated from the vendored machine-readable FHIR packages; the engine (a code-system-neutral store, hierarchy, and search substrate, with per-system loaders such as SNOMED RF2 and ECL evaluation) is hand-written. Notio ships no AI: no model is trained, embedded, or called at request time. AI coding assistance is used to build it, under human review.
 
 ## Start here
 
 - [README](README.md): what Notio is, why it exists, and the architecture in brief.
-- [Architecture](docs/architecture.md): the design authority, with the four defining decisions and their citations.
+- [Architecture](docs/architecture.md): the design authority, with the five defining decisions and their citations.
+- [Code systems](docs/terminologies.md): the catalogue of code systems Notio serves or plans to serve (identity, distribution, licence, hierarchy, FHIR-defined filters) and the build order, SNOMED CT first.
 - [Working discipline](CLAUDE.md): the engineering rules for changing the code, and the repo map.
 
 ## Design and scope

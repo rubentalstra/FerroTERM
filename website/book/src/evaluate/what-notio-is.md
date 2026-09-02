@@ -1,8 +1,11 @@
 # What Notio is
 
-Notio is a read-oriented FHIR terminology server for SNOMED CT. It answers the
-HL7 FHIR terminology operations over a SNOMED CT edition you load, and it serves
-those operations across FHIR R4, R4B, R5, and R6 from one running server.
+Notio is a read-oriented FHIR terminology server for clinical code systems.
+It answers the HL7 FHIR terminology operations over the code systems you load,
+SNOMED CT first, and it serves those operations across FHIR R4, R4B, R5, and R6
+from one running server. Every code system reaches the operations through the
+same engine seam, so LOINC, ICD-10, and the other systems on the roadmap are
+loaders, never special cases.
 
 <!-- toc -->
 
@@ -53,8 +56,8 @@ independent of FerroEHR and was not derived from it.
 
 ## What is not built yet
 
-Notio implements the whole FHIR terminology surface for SNOMED CT as a read-only
-server over the International edition. Some capabilities come later in the build
+Notio implements the whole FHIR terminology surface as a read-only server,
+starting with the SNOMED CT International edition. Some capabilities come later in the build
 order, so a given release may not have them yet:
 
 - Full MRCM validation of post-coordinated expressions comes later. Today
@@ -64,3 +67,5 @@ order, so a given release may not have them yet:
 - CodeSystem supplements beyond echoing the parameter come later.
 - Implementation starts with R4B, and the rest of the R4/R4B/R5/R6 matrix
   follows.
+- SNOMED CT is the first code system; LOINC and the other systems recorded in
+  the repository's `docs/terminologies.md` follow in that build order.
