@@ -1,8 +1,9 @@
 //! Identifiers the SNOMED CT specifications publish, as typed constants.
 //!
 //! Every value here is a published SCTID from the release file specification,
-//! the concept model, or the metadata hierarchy; a test checks each one's
-//! check digit and partition, and nothing in this module is invented.
+//! the concept model, or the metadata hierarchy; tests check each one's
+//! check digit and partition and pin the descriptor attribute types to the
+//! specification's metadata tree. Nothing in this module is invented.
 
 use crate::id::{ConceptId, RefsetId, Sctid};
 
@@ -50,6 +51,9 @@ pub const GB_ENGLISH_LANGUAGE_REFSET: RefsetId = RefsetId::published(900_000_000
 pub const US_ENGLISH_LANGUAGE_REFSET: RefsetId = RefsetId::published(900_000_000_000_509_007);
 
 /// The reference set descriptor attribute types.
+///
+/// From the metadata tree of the descriptor specification
+/// (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-release-file-specification/reference-set-release-file-specification/5.2-reference-set-types/5.2.4-metadata-reference-sets/5.2.4.1-reference-set-descriptor>).
 pub mod attribute_type {
     use crate::id::ConceptId;
 
@@ -63,16 +67,22 @@ pub mod attribute_type {
     pub const RELATIONSHIP: ConceptId = ConceptId::published(900_000_000_000_463_007);
     /// `900000000000464001 |Reference set member type component|`.
     pub const MEMBER: ConceptId = ConceptId::published(900_000_000_000_464_001);
-    /// `900000000000465000 |String|`.
+    /// `900000000000465000 |String|`; `Text`, `URL`, `UUID`, and `Time` are its descendants.
     pub const STRING: ConceptId = ConceptId::published(900_000_000_000_465_000);
-    /// `900000000000466004 |Time|`.
-    pub const TIME: ConceptId = ConceptId::published(900_000_000_000_466_004);
-    /// `900000000000467008 |Integer|`.
-    pub const INTEGER: ConceptId = ConceptId::published(900_000_000_000_467_008);
-    /// `900000000000468003 |Unsigned integer|`.
-    pub const UNSIGNED_INTEGER: ConceptId = ConceptId::published(900_000_000_000_468_003);
-    /// `900000000000469006 |Signed integer|`.
-    pub const SIGNED_INTEGER: ConceptId = ConceptId::published(900_000_000_000_469_006);
+    /// `900000000000466004 |Text|`.
+    pub const TEXT: ConceptId = ConceptId::published(900_000_000_000_466_004);
+    /// `900000000000469006 |URL|`.
+    pub const URL: ConceptId = ConceptId::published(900_000_000_000_469_006);
+    /// `900000000000474003 |UUID|`.
+    pub const UUID: ConceptId = ConceptId::published(900_000_000_000_474_003);
+    /// `900000000000475002 |Time|`.
+    pub const TIME: ConceptId = ConceptId::published(900_000_000_000_475_002);
+    /// `900000000000476001 |Integer|`; `Signed integer` and `Unsigned integer` are its descendants.
+    pub const INTEGER: ConceptId = ConceptId::published(900_000_000_000_476_001);
+    /// `900000000000477005 |Signed integer|`.
+    pub const SIGNED_INTEGER: ConceptId = ConceptId::published(900_000_000_000_477_005);
+    /// `900000000000478000 |Unsigned integer|`.
+    pub const UNSIGNED_INTEGER: ConceptId = ConceptId::published(900_000_000_000_478_000);
 }
 
 /// Every constant, for the validation test.
@@ -103,15 +113,19 @@ pub fn all() -> Vec<Sctid> {
         attribute_type::RELATIONSHIP.sctid(),
         attribute_type::MEMBER.sctid(),
         attribute_type::STRING.sctid(),
+        attribute_type::TEXT.sctid(),
+        attribute_type::URL.sctid(),
+        attribute_type::UUID.sctid(),
         attribute_type::TIME.sctid(),
         attribute_type::INTEGER.sctid(),
-        attribute_type::UNSIGNED_INTEGER.sctid(),
         attribute_type::SIGNED_INTEGER.sctid(),
+        attribute_type::UNSIGNED_INTEGER.sctid(),
     ]
 }
 
 #[cfg(test)]
 mod tests {
+    use super::attribute_type;
     use crate::id::{Partition, Sctid};
 
     #[test]
@@ -121,5 +135,26 @@ mod tests {
             assert_eq!(parsed, id);
             assert_eq!(parsed.partition(), Ok(Partition::Concept));
         }
+    }
+
+    /// The values of the descriptor metadata tree, as the specification lists
+    /// them; a check-digit-valid wrong value would pass the test above alone.
+    #[test]
+    fn the_attribute_types_are_the_published_values() {
+        assert_eq!(attribute_type::CONCEPT.value(), 900_000_000_000_461_009);
+        assert_eq!(attribute_type::STRING.value(), 900_000_000_000_465_000);
+        assert_eq!(attribute_type::TEXT.value(), 900_000_000_000_466_004);
+        assert_eq!(attribute_type::URL.value(), 900_000_000_000_469_006);
+        assert_eq!(attribute_type::UUID.value(), 900_000_000_000_474_003);
+        assert_eq!(attribute_type::TIME.value(), 900_000_000_000_475_002);
+        assert_eq!(attribute_type::INTEGER.value(), 900_000_000_000_476_001);
+        assert_eq!(
+            attribute_type::SIGNED_INTEGER.value(),
+            900_000_000_000_477_005
+        );
+        assert_eq!(
+            attribute_type::UNSIGNED_INTEGER.value(),
+            900_000_000_000_478_000
+        );
     }
 }

@@ -236,3 +236,82 @@ fn a_directory_without_matching_files_is_refused() {
         Err(ReleaseError::NoFiles { .. })
     ));
 }
+
+#[test]
+fn a_sibling_root_module_is_reported_and_the_release_date_picks_the_edition() {
+    use ferroterm_rf2::id::{MemberId, ModuleId, RefsetId, Sctid};
+    use ferroterm_rf2::refset::{FieldValue, Member};
+    use ferroterm_rf2::time::EffectiveTime;
+
+    let module = |text: &str| ModuleId::parse(text).expect("module");
+    let time = |text: &str| EffectiveTime::parse(text).expect("time");
+    let dependency =
+        |item: u32, source: &str, target: &str, source_time: &str, target_time: &str| {
+            ModuleDependencyMember::try_from(Member {
+                id: MemberId::parse(&fixture::member(item)).expect("uuid"),
+                effective_time: time(source_time),
+                active: true,
+                module_id: module(source),
+                refset_id: RefsetId::parse(fixture::MODULE_DEPENDENCY_REFSET).expect("refset"),
+                referenced_component_id: Sctid::parse(target).expect("sctid"),
+                fields: vec![
+                    (
+                        String::from("sourceEffectiveTime"),
+                        FieldValue::String(source_time.to_owned()),
+                    ),
+                    (
+                        String::from("targetEffectiveTime"),
+                        FieldValue::String(target_time.to_owned()),
+                    ),
+                ],
+            })
+            .expect("dependency view")
+        };
+    // The extension module and a mapping module both depend on core and model; only the
+    // extension carries the release date, as the NL edition ships it.
+    let extension = fixture::extension_module();
+    let mapping = fixture::concept(5);
+    let members = vec![
+        dependency(
+            1,
+            &extension,
+            fixture::CORE_MODULE,
+            fixture::DATE,
+            "20251201",
+        ),
+        dependency(
+            2,
+            &extension,
+            fixture::MODEL_MODULE,
+            fixture::DATE,
+            "20251201",
+        ),
+        dependency(3, &mapping, fixture::CORE_MODULE, "20251201", "20251201"),
+        dependency(4, &mapping, fixture::MODEL_MODULE, "20251201", "20251201"),
+        dependency(
+            5,
+            fixture::CORE_MODULE,
+            fixture::MODEL_MODULE,
+            "20251201",
+            "20251201",
+        ),
+    ];
+    let edition = Edition::identify(&members, time(fixture::DATE)).expect("identifies");
+    assert_eq!(edition.module.to_string(), extension);
+    assert_eq!(edition.sibling_roots, vec![module(&mapping)]);
+    // Without a root at the release date the edition is ambiguous.
+    assert!(matches!(
+        Edition::identify(&members, time("20250101")),
+        Err(ferroterm_rf2::edition::EditionError::AmbiguousRoot { .. })
+    ));
+    // A target that is not a concept identifier is a typed error, never dropped.
+    let mut malformed = members;
+    if let Some(first) = malformed.first_mut() {
+        first.member.referenced_component_id =
+            Sctid::parse(&fixture::description(1)).expect("sctid");
+    }
+    assert!(matches!(
+        Edition::identify(&malformed, time(fixture::DATE)),
+        Err(ferroterm_rf2::edition::EditionError::MalformedTarget { .. })
+    ));
+}
