@@ -1,5 +1,19 @@
 //! The one integration-test binary for `ferroterm-server`; one module per topic.
-#![allow(clippy::panic_in_result_fn, reason = "test assertions")]
+//!
+//! The FHIR tests drive the router with `tower::ServiceExt::oneshot` over a
+//! synthetic SNOMED edition written by `ferroterm-testkit`; no socket, no
+//! SNOMED content.
+#![allow(
+    clippy::panic_in_result_fn,
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::panic,
+    reason = "test assertions"
+)]
 
+mod config;
+mod fixture;
 mod health;
+mod metadata;
+mod operations;
 mod shutdown;

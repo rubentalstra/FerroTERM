@@ -1,24 +1,42 @@
 //! The FerroTERM FHIR terminology server.
 //!
 //! The library holds the whole run path so integration tests can drive it:
-//! [`router`] builds the `axum` application, [`serve`] runs it on a bound
-//! listener until the process is asked to stop, and [`serve_until`] runs it
-//! until any future completes. `main.rs` only parses configuration and calls in.
+//! [`config::Config`] names the artifacts, [`state::AppState`] loads them into
+//! a registry, [`router`] builds the `axum` application over that state, and
+//! [`serve`] runs it on a bound listener until the process is asked to stop.
+//! `main.rs` only reads the environment and calls in.
+//!
+//! Every served FHIR version has its own path prefix (`/r4b`), and within it
+//! the resource and operation URLs the FHIR REST API defines
+//! (<https://hl7.org/fhir/R4B/http.html>, <https://hl7.org/fhir/R4B/operations.html>).
 #![doc(test(attr(deny(warnings))))]
 
+pub mod config;
+pub mod outcome;
+pub mod r4b;
+pub mod state;
+
 use std::future::Future;
+use std::sync::Arc;
 
 use axum::Router;
 use axum::routing::get;
 use http::StatusCode;
 use tokio::net::TcpListener;
 
-/// Builds the HTTP application.
+use crate::state::AppState;
+
+/// Builds the HTTP application over `state`.
 ///
-/// Serves `GET /health`, which answers `200 OK` while the process is up. The
-/// FHIR endpoints mount here as the terminology engine lands.
-pub fn router() -> Router {
-    Router::new().route("/health", get(health))
+/// `GET /health` answers `200 OK` while the process is up; every FHIR route
+/// lives under its version prefix. Any other path is an `OperationOutcome`
+/// `not-found`.
+pub fn router(state: Arc<AppState>) -> Router {
+    Router::new()
+        .route("/health", get(health))
+        .nest("/r4b", r4b::router())
+        .fallback(outcome::not_found)
+        .with_state(state)
 }
 
 /// Serves [`router`] on an already-bound listener until the process receives
@@ -31,8 +49,8 @@ pub fn router() -> Router {
 /// # Errors
 ///
 /// Returns the I/O error from accepting connections or serving them.
-pub async fn serve(listener: TcpListener) -> std::io::Result<()> {
-    serve_until(listener, shutdown_signal()).await
+pub async fn serve(listener: TcpListener, state: Arc<AppState>) -> std::io::Result<()> {
+    serve_until(listener, state, shutdown_signal()).await
 }
 
 /// Serves [`router`] on an already-bound listener until `shutdown` completes,
@@ -41,11 +59,15 @@ pub async fn serve(listener: TcpListener) -> std::io::Result<()> {
 /// # Errors
 ///
 /// Returns the I/O error from accepting connections or serving them.
-pub async fn serve_until<F>(listener: TcpListener, shutdown: F) -> std::io::Result<()>
+pub async fn serve_until<F>(
+    listener: TcpListener,
+    state: Arc<AppState>,
+    shutdown: F,
+) -> std::io::Result<()>
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    axum::serve(listener, router())
+    axum::serve(listener, router(state))
         .with_graceful_shutdown(shutdown)
         .await
 }

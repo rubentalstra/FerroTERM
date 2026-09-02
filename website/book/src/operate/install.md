@@ -23,12 +23,13 @@ Download the binary for your platform and its attestation, verify the
 attestation (see [Verifying releases](verifying-releases.md)), then run it:
 
 ```console
-$ ferroterm --index /path/to/ferroterm-index
+$ FERROTERM_INDEX=/path/to/ferroterm-index ferroterm
 ```
 
-The server starts, opens the index read-only, and listens for FHIR requests. You
-configure the listen address, the index path, and the served FHIR versions
-through the settings described in [Configuration](configuration.md).
+The server opens the index read-only, refuses to start on a missing or damaged
+one, and listens for FHIR requests on `127.0.0.1:8080`. The listen address, the
+index directories, and the default display language are environment variables
+described in [Configuration](configuration.md).
 
 ## Run the container
 
@@ -40,8 +41,8 @@ distroless base: no shell, no package manager, a numeric non-root user
 ```console
 $ docker run --rm -p 8080:8080 \
     -v /path/to/ferroterm-index:/data/index:ro \
-    ghcr.io/rubentalstra/ferroterm:<version> \
-    --index /data/index
+    -e FERROTERM_INDEX=/data/index \
+    ghcr.io/rubentalstra/ferroterm:<version>
 ```
 
 Mount the index read-only. The server needs no writable volume for serving,
