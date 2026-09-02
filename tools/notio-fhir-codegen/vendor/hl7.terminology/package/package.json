@@ -1,0 +1,23 @@
+{
+  "name" : "hl7.terminology",
+  "version" : "7.3.0",
+  "tools-version" : 3,
+  "type" : "IG",
+  "date" : "20260727092731",
+  "license" : "CC0-1.0",
+  "canonical" : "http://terminology.hl7.org",
+  "url" : "http://terminology.hl7.org/7.3.0",
+  "title" : "HL7 Terminology (THO)",
+  "description" : "Defines and exposes all HL7 terminologies managed through the unified terminology governance process (built Mon, Jul 27, 2026 09:27+1000+10:00)",
+  "fhirVersions" : ["5.0.0"],
+  "dependencies" : {
+    "hl7.fhir.uv.extensions.r5" : "5.3.0",
+    "hl7.fhir.r5.core" : "5.0.0"
+  },
+  "author" : "HL7 International - Vocabulary Work Group",
+  "directories" : {
+    "lib" : "package",
+    "example" : "example"
+  },
+  "jurisdiction" : "http://unstats.un.org/unsd/methods/m49/m49.htm#001"
+}

@@ -23,7 +23,7 @@ The pinned FHIR packages are the codegen input (`codegen.md`). Every one is:
   version pin, the fetch date, and the upstream license (HL7 material under
   its own terms), with the upstream `LICENSE`/`package.json` alongside.
 
-| input | script (to create) | destination |
+| input | script | destination |
 |---|---|---|
 | `hl7.fhir.r4.core` 4.0.1 | `scripts/vendor/fhir-packages.sh` | `tools/notio-fhir-codegen/vendor/hl7.fhir.r4.core/` |
 | `hl7.fhir.r4b.core` 4.3.0 | `scripts/vendor/fhir-packages.sh` | `tools/notio-fhir-codegen/vendor/hl7.fhir.r4b.core/` |
@@ -44,6 +44,9 @@ derived edition data:** no concepts, no descriptions, no relationships, no
 transitive-closure file, no built `redb`/`fst`/roaring artifacts derived from a
 release. A deployment brings its own licensed RF2 release; `tools/notio-build`
 turns it into the served artifacts offline, outside version control.
+A developer with a licence keeps a release under `data/` (the whole directory
+is gitignored), for example `data/snomed/<release>/Snapshot/`; that is the
+local input for `notio-build` and the reference-server comparison.
 
 - **Test fixtures use shaped, synthetic content only:** a small, hand-built
   hierarchy invented for the test (synthetic SCTIDs, invented terms) that

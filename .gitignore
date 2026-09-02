@@ -16,13 +16,16 @@ target
 # SNOMED CT content is licence-gated and NEVER committed (.claude/rules/vendored-inputs.md).
 # A licensed RF2 release brought into a working tree must not be committable by
 # accident; widen this list in the same change if a genuinely new shape appears.
-SnomedCT_*/
+SnomedCT_*
 Snapshot/
 Full/
 Delta/
 *.rf2
 sct2_*
 der2_*
+# The local, licensed RF2 release used for development lives under data/ and
+# never leaves the machine.
+/data/
 # Built serving artifacts (tools/notio-build output): redb store + fst/roaring indexes.
 /artifacts/
 *.redb

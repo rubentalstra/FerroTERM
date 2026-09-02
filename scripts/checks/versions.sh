@@ -51,9 +51,30 @@ fi
 # --- Vendored FHIR package pins == docs/VERSIONS.md table ----------------------
 echo "== vendored FHIR package pins (PROVENANCE.md <-> docs/VERSIONS.md)"
 if [ -d tools/notio-fhir-codegen/vendor ]; then
-  # TODO: when packages are vendored, parse each PROVENANCE.md version and compare
-  # to the docs/VERSIONS.md FHIR table. Not yet vendored.
-  note "vendor/ present — per-package PROVENANCE checks activate when packages land"
+  found=0
+  for prov in tools/notio-fhir-codegen/vendor/*/PROVENANCE.md; do
+    [ -f "$prov" ] || continue
+    found=1
+    pkg="$(basename "$(dirname "$prov")")"
+    prov_ver="$(sed -nE 's/^- Version:[[:space:]]*//p' "$prov" | head -n1 | tr -d '[:space:]')"
+    # The second cell of the package's row in the docs/VERSIONS.md FHIR table.
+    pin_ver="$(awk -F'|' -v pkg="$pkg" '$2 ~ "^[[:space:]]*`" pkg "`" { v = $3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); print v; exit }' docs/VERSIONS.md)"
+    pkg_json="tools/notio-fhir-codegen/vendor/$pkg/package/package.json"
+    json_ver=""
+    [ -f "$pkg_json" ] && json_ver="$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$pkg_json" | head -n1)"
+    if [ -z "$prov_ver" ]; then
+      bad "$prov has no '- Version:' line"
+    elif [ -z "$pin_ver" ]; then
+      bad "$pkg is vendored ($prov_ver) but has no row in the docs/VERSIONS.md FHIR table"
+    elif [ "$prov_ver" != "$pin_ver" ]; then
+      bad "$pkg: PROVENANCE.md says $prov_ver, docs/VERSIONS.md pins $pin_ver"
+    elif [ -n "$json_ver" ] && [ "$json_ver" != "$prov_ver" ]; then
+      bad "$pkg: package.json says $json_ver, PROVENANCE.md says $prov_ver"
+    else
+      note "OK: $pkg $prov_ver (PROVENANCE.md, package.json, and the pin table agree)"
+    fi
+  done
+  [ "$found" -eq 1 ] || note "vendor/ present but holds no PROVENANCE.md yet — skipped"
 else
   note "no vendored FHIR packages yet — skipped"
 fi
