@@ -79,6 +79,664 @@ pub struct CodeSystemValidateCodeResponse {
     pub display: Option<super::super::primitives::String>,
 }
 
+impl CodeSystemValidateCodeRequest {
+    /// Reads the parameters from a `Parameters` resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameters(
+        parameters: &super::super::parameters::Parameters,
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        Self::from_parameter_list(&parameters.parameter)
+    }
+    /// Writes the parameters as a `Parameters` resource.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        super::super::parameters::Parameters {
+            parameter: self.to_parameter_list(),
+            ..Default::default()
+        }
+    }
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "CodeSystem/$validate-code";
+        const PREFIX: &str = "";
+        let mut field_url: Option<super::super::primitives::Uri> = None;
+        let mut field_code_system: Option<super::super::code_system::CodeSystem> = None;
+        let mut field_code: Option<super::super::primitives::Code> = None;
+        let mut field_version: Option<super::super::primitives::String> = None;
+        let mut field_display: Option<super::super::primitives::String> = None;
+        let mut field_coding: Option<super::super::coding::Coding> = None;
+        let mut field_codeable_concept: Option<super::super::codeable_concept::CodeableConcept> =
+            None;
+        let mut field_date: Option<super::super::primitives::DateTime> = None;
+        let mut field_abstract: Option<super::super::primitives::Boolean> = None;
+        let mut field_display_language: Option<super::super::primitives::Code> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "url" => {
+                    if field_url.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "url",
+                        });
+                    }
+                    field_url = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "url",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "url",
+                                },
+                            );
+                        }
+                    });
+                }
+                "codeSystem" => {
+                    if field_code_system.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "codeSystem",
+                        });
+                    }
+                    field_code_system = Some(match &parameter.resource {
+                        Some(super::super::resource::Resource::CodeSystem(value)) => {
+                            (**value).clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "codeSystem",
+                                    expected: "CodeSystem",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "codeSystem",
+                                },
+                            );
+                        }
+                    });
+                }
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "version" => {
+                    if field_version.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "version",
+                        });
+                    }
+                    field_version = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "version",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "display" => {
+                    if field_display.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "display",
+                        });
+                    }
+                    field_display = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "display",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "display",
+                                },
+                            );
+                        }
+                    });
+                }
+                "coding" => {
+                    if field_coding.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "coding",
+                        });
+                    }
+                    field_coding = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "coding",
+                                    expected: "Coding",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "coding",
+                                },
+                            );
+                        }
+                    });
+                }
+                "codeableConcept" => {
+                    if field_codeable_concept.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "codeableConcept",
+                        });
+                    }
+                    field_codeable_concept = Some(match &parameter.value {
+                        Some(
+                            super::super::parameters::ParametersParameterValue::CodeableConcept(
+                                value,
+                            ),
+                        ) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "codeableConcept",
+                                    expected: "CodeableConcept",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "codeableConcept",
+                                },
+                            );
+                        }
+                    });
+                }
+                "date" => {
+                    if field_date.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "date",
+                        });
+                    }
+                    field_date = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::DateTime(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "date",
+                                    expected: "DateTime",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "date",
+                                },
+                            );
+                        }
+                    });
+                }
+                "abstract" => {
+                    if field_abstract.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "abstract",
+                        });
+                    }
+                    field_abstract = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "abstract",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "abstract",
+                                },
+                            );
+                        }
+                    });
+                }
+                "displayLanguage" => {
+                    if field_display_language.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "displayLanguage",
+                        });
+                    }
+                    field_display_language = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "displayLanguage",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "displayLanguage",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            url: field_url,
+            code_system: field_code_system,
+            code: field_code,
+            version: field_version,
+            display: field_display,
+            coding: field_coding,
+            codeable_concept: field_codeable_concept,
+            date: field_date,
+            r#abstract: field_abstract,
+            display_language: field_display_language,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        if let Some(value) = &self.url {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "url".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.code_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "codeSystem".into(),
+                resource: Some(super::super::resource::Resource::CodeSystem(Box::new(
+                    value.clone(),
+                ))),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.code {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "version".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.display {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "display".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.coding {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "coding".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Coding(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.codeable_concept {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "codeableConcept".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(
+                        value.clone(),
+                    ),
+                ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.date {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "date".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::DateTime(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.r#abstract {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "abstract".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.display_language {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "displayLanguage".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl CodeSystemValidateCodeResponse {
+    /// Reads the parameters from a `Parameters` resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameters(
+        parameters: &super::super::parameters::Parameters,
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        Self::from_parameter_list(&parameters.parameter)
+    }
+    /// Writes the parameters as a `Parameters` resource.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        super::super::parameters::Parameters {
+            parameter: self.to_parameter_list(),
+            ..Default::default()
+        }
+    }
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "CodeSystem/$validate-code";
+        const PREFIX: &str = "";
+        let mut field_result: Option<super::super::primitives::Boolean> = None;
+        let mut field_message: Option<super::super::primitives::String> = None;
+        let mut field_display: Option<super::super::primitives::String> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "result" => {
+                    if field_result.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "result",
+                        });
+                    }
+                    field_result = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "result",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "result",
+                                },
+                            );
+                        }
+                    });
+                }
+                "message" => {
+                    if field_message.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "message",
+                        });
+                    }
+                    field_message = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "message",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "message",
+                                },
+                            );
+                        }
+                    });
+                }
+                "display" => {
+                    if field_display.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "display",
+                        });
+                    }
+                    field_display = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "display",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "display",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            result: field_result.ok_or(
+                super::super::super::operation::ParametersError::Missing {
+                    operation: OPERATION,
+                    name: "result",
+                },
+            )?,
+            message: field_message,
+            display: field_display,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        {
+            let value = &self.result;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "result".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.message {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "message".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.display {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "display".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
 /// The declared parameter set of `CodeSystem/$validate-code`.
 pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
     super::super::super::operation::Operation {

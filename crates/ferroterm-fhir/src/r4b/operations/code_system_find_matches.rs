@@ -109,6 +109,931 @@ pub struct CodeSystemFindMatchesResponseMatchUnmatchedProperty {
     pub value: super::super::parameters::ParametersParameterValue,
 }
 
+impl CodeSystemFindMatchesRequest {
+    /// Reads the parameters from a `Parameters` resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameters(
+        parameters: &super::super::parameters::Parameters,
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        Self::from_parameter_list(&parameters.parameter)
+    }
+    /// Writes the parameters as a `Parameters` resource.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        super::super::parameters::Parameters {
+            parameter: self.to_parameter_list(),
+            ..Default::default()
+        }
+    }
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "CodeSystem/$find-matches";
+        const PREFIX: &str = "";
+        let mut field_system: Option<super::super::primitives::Uri> = None;
+        let mut field_version: Option<super::super::primitives::String> = None;
+        let mut field_property: Vec<CodeSystemFindMatchesRequestProperty> = Vec::new();
+        let mut field_exact: Option<super::super::primitives::Boolean> = None;
+        let mut field_compositional: Option<super::super::primitives::Boolean> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "system" => {
+                    if field_system.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "system",
+                        });
+                    }
+                    field_system = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "system",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "system",
+                                },
+                            );
+                        }
+                    });
+                }
+                "version" => {
+                    if field_version.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "version",
+                        });
+                    }
+                    field_version = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "version",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "property" => {
+                    field_property.push(CodeSystemFindMatchesRequestProperty::from_parameter_list(
+                        &parameter.part,
+                    )?);
+                }
+                "exact" => {
+                    if field_exact.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "exact",
+                        });
+                    }
+                    field_exact = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "exact",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "exact",
+                                },
+                            );
+                        }
+                    });
+                }
+                "compositional" => {
+                    if field_compositional.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "compositional",
+                        });
+                    }
+                    field_compositional = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "compositional",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "compositional",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            system: field_system,
+            version: field_version,
+            property: field_property,
+            exact: field_exact.ok_or(super::super::super::operation::ParametersError::Missing {
+                operation: OPERATION,
+                name: "exact",
+            })?,
+            compositional: field_compositional,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        if let Some(value) = &self.system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "system".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "version".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.property {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "property".into(),
+                part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        {
+            let value = &self.exact;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "exact".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.compositional {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "compositional".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl CodeSystemFindMatchesRequestProperty {
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "CodeSystem/$find-matches";
+        const PREFIX: &str = "property.";
+        let mut field_code: Option<super::super::primitives::Code> = None;
+        let mut field_value: Option<super::super::parameters::ParametersParameterValue> = None;
+        let mut field_subproperty: Vec<CodeSystemFindMatchesRequestPropertySubproperty> =
+            Vec::new();
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "property.code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "property.code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "property.code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "value" => {
+                    if field_value.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "property.value",
+                        });
+                    }
+                    field_value = Some(parameter.value.clone().ok_or(
+                        super::super::super::operation::ParametersError::MissingValue {
+                            operation: OPERATION,
+                            name: "property.value",
+                        },
+                    )?);
+                }
+                "subproperty" => {
+                    field_subproperty.push(
+                        CodeSystemFindMatchesRequestPropertySubproperty::from_parameter_list(
+                            &parameter.part,
+                        )?,
+                    );
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            code: field_code.ok_or(super::super::super::operation::ParametersError::Missing {
+                operation: OPERATION,
+                name: "property.code",
+            })?,
+            value: field_value,
+            subproperty: field_subproperty,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        {
+            let value = &self.code;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.value {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "value".into(),
+                value: Some(value.clone()),
+                ..Default::default()
+            });
+        }
+        for value in &self.subproperty {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "subproperty".into(),
+                part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl CodeSystemFindMatchesRequestPropertySubproperty {
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "CodeSystem/$find-matches";
+        const PREFIX: &str = "property.subproperty.";
+        let mut field_code: Option<super::super::primitives::Code> = None;
+        let mut field_value: Option<super::super::parameters::ParametersParameterValue> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "property.subproperty.code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "property.subproperty.code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "property.subproperty.code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "value" => {
+                    if field_value.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "property.subproperty.value",
+                        });
+                    }
+                    field_value = Some(parameter.value.clone().ok_or(
+                        super::super::super::operation::ParametersError::MissingValue {
+                            operation: OPERATION,
+                            name: "property.subproperty.value",
+                        },
+                    )?);
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            code: field_code.ok_or(super::super::super::operation::ParametersError::Missing {
+                operation: OPERATION,
+                name: "property.subproperty.code",
+            })?,
+            value: field_value.ok_or(super::super::super::operation::ParametersError::Missing {
+                operation: OPERATION,
+                name: "property.subproperty.value",
+            })?,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        {
+            let value = &self.code;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        {
+            let value = &self.value;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "value".into(),
+                value: Some(value.clone()),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl CodeSystemFindMatchesResponse {
+    /// Reads the parameters from a `Parameters` resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameters(
+        parameters: &super::super::parameters::Parameters,
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        Self::from_parameter_list(&parameters.parameter)
+    }
+    /// Writes the parameters as a `Parameters` resource.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        super::super::parameters::Parameters {
+            parameter: self.to_parameter_list(),
+            ..Default::default()
+        }
+    }
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "CodeSystem/$find-matches";
+        const PREFIX: &str = "";
+        let mut field_match: Vec<CodeSystemFindMatchesResponseMatch> = Vec::new();
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "match" => {
+                    field_match.push(CodeSystemFindMatchesResponseMatch::from_parameter_list(
+                        &parameter.part,
+                    )?);
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            r#match: field_match,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        for value in &self.r#match {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "match".into(),
+                part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl CodeSystemFindMatchesResponseMatch {
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "CodeSystem/$find-matches";
+        const PREFIX: &str = "match.";
+        let mut field_code: Option<super::super::coding::Coding> = None;
+        let mut field_unmatched: Vec<CodeSystemFindMatchesResponseMatchUnmatched> = Vec::new();
+        let mut field_comment: Option<super::super::primitives::String> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.code",
+                                    expected: "Coding",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "unmatched" => {
+                    field_unmatched.push(
+                        CodeSystemFindMatchesResponseMatchUnmatched::from_parameter_list(
+                            &parameter.part,
+                        )?,
+                    );
+                }
+                "comment" => {
+                    if field_comment.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.comment",
+                        });
+                    }
+                    field_comment = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.comment",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.comment",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            code: field_code.ok_or(super::super::super::operation::ParametersError::Missing {
+                operation: OPERATION,
+                name: "match.code",
+            })?,
+            unmatched: field_unmatched,
+            comment: field_comment,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        {
+            let value = &self.code;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Coding(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.unmatched {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "unmatched".into(),
+                part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.comment {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "comment".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl CodeSystemFindMatchesResponseMatchUnmatched {
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "CodeSystem/$find-matches";
+        const PREFIX: &str = "match.unmatched.";
+        let mut field_code: Option<super::super::primitives::Code> = None;
+        let mut field_value: Option<super::super::parameters::ParametersParameterValue> = None;
+        let mut field_property: Vec<CodeSystemFindMatchesResponseMatchUnmatchedProperty> =
+            Vec::new();
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.unmatched.code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.unmatched.code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.unmatched.code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "value" => {
+                    if field_value.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.unmatched.value",
+                        });
+                    }
+                    field_value = Some(parameter.value.clone().ok_or(
+                        super::super::super::operation::ParametersError::MissingValue {
+                            operation: OPERATION,
+                            name: "match.unmatched.value",
+                        },
+                    )?);
+                }
+                "property" => {
+                    field_property.push(
+                        CodeSystemFindMatchesResponseMatchUnmatchedProperty::from_parameter_list(
+                            &parameter.part,
+                        )?,
+                    );
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            code: field_code.ok_or(super::super::super::operation::ParametersError::Missing {
+                operation: OPERATION,
+                name: "match.unmatched.code",
+            })?,
+            value: field_value.ok_or(super::super::super::operation::ParametersError::Missing {
+                operation: OPERATION,
+                name: "match.unmatched.value",
+            })?,
+            property: field_property,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        {
+            let value = &self.code;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        {
+            let value = &self.value;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "value".into(),
+                value: Some(value.clone()),
+                ..Default::default()
+            });
+        }
+        for value in &self.property {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "property".into(),
+                part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl CodeSystemFindMatchesResponseMatchUnmatchedProperty {
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "CodeSystem/$find-matches";
+        const PREFIX: &str = "match.unmatched.property.";
+        let mut field_code: Option<super::super::primitives::Code> = None;
+        let mut field_value: Option<super::super::parameters::ParametersParameterValue> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.unmatched.property.code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.unmatched.property.code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.unmatched.property.code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "value" => {
+                    if field_value.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.unmatched.property.value",
+                        });
+                    }
+                    field_value = Some(parameter.value.clone().ok_or(
+                        super::super::super::operation::ParametersError::MissingValue {
+                            operation: OPERATION,
+                            name: "match.unmatched.property.value",
+                        },
+                    )?);
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            code: field_code.ok_or(super::super::super::operation::ParametersError::Missing {
+                operation: OPERATION,
+                name: "match.unmatched.property.code",
+            })?,
+            value: field_value.ok_or(super::super::super::operation::ParametersError::Missing {
+                operation: OPERATION,
+                name: "match.unmatched.property.value",
+            })?,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        {
+            let value = &self.code;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        {
+            let value = &self.value;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "value".into(),
+                value: Some(value.clone()),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
 /// The declared parameter set of `CodeSystem/$find-matches`.
 pub const CODE_SYSTEM_FIND_MATCHES: super::super::super::operation::Operation =
     super::super::super::operation::Operation {
