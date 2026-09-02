@@ -394,6 +394,7 @@ dependencies = [
  "ferroterm-text",
  "regex",
  "roaring",
+ "serde",
  "serde_json",
  "tempfile",
  "thiserror",

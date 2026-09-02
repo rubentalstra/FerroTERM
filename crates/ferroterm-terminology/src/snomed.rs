@@ -1,0 +1,639 @@
+//! The SNOMED CT provider: one built edition version read from its artifact
+//! directory (`store.redb` with the hierarchy and text blobs, `manifest.json`).
+//!
+//! Identity is the SNOMED CT URI standard: the system `http://snomed.info/sct`
+//! and the edition version URI as `version`
+//! (<https://hl7.org/fhir/R4B/snomedct.html>). Display is the preferred term of
+//! a language reference set for the requested language; the FHIR-defined
+//! properties `inactive`, `sufficientlyDefined`, `moduleId`, `parent`, `child`,
+//! and every concept-model attribute keyed by its concept id come from the
+//! store. Reads are point reads and bitmap lookups; nothing walks the graph
+//! per request.
+
+use std::collections::BTreeSet;
+use std::io;
+use std::path::{Path, PathBuf};
+
+use ferroterm_graph::csr::{Csr, CsrError};
+use ferroterm_graph::ordinal::Ordinal;
+use ferroterm_graph::persist::Hierarchy as GraphHierarchy;
+use ferroterm_rf2::constants;
+use ferroterm_rf2::id::ConceptId;
+use ferroterm_store::record;
+use ferroterm_store::store::{Store, StoreError, Vocabulary};
+use ferroterm_store::tables;
+use ferroterm_text::index::{Query, TextIndex};
+use serde::Deserialize;
+
+use crate::provider::{
+    Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
+    DesignationUse, Hierarchy, HierarchyMeaning, Identity, Located, Property, PropertyDefinition,
+    PropertyKind, PropertyValue, ProviderError, Status,
+};
+
+/// The SNOMED CT system URI.
+pub const SYSTEM: &str = "http://snomed.info/sct";
+/// The manifest file inside an artifact directory.
+pub const MANIFEST_FILE: &str = "manifest.json";
+
+/// The FHIR-defined SNOMED properties this provider serves, in output order
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, the properties section).
+pub const FHIR_PROPERTIES: [(&str, PropertyKind); 6] = [
+    ("inactive", PropertyKind::Boolean),
+    ("sufficientlyDefined", PropertyKind::Boolean),
+    ("moduleId", PropertyKind::Code),
+    ("effectiveTime", PropertyKind::String),
+    ("parent", PropertyKind::Code),
+    ("child", PropertyKind::Code),
+];
+
+/// A failure to open an artifact directory.
+#[derive(Debug, thiserror::Error)]
+pub enum OpenError {
+    /// The manifest cannot be read.
+    #[error("cannot read {path}")]
+    Io {
+        /// The file.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: io::Error,
+    },
+    /// The manifest is not the JSON this provider reads.
+    #[error("cannot parse {path}")]
+    Manifest {
+        /// The file.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: serde_json::Error,
+    },
+    /// The manifest names another system.
+    #[error("the artifact is for `{0}`, not SNOMED CT")]
+    NotSnomed(String),
+    /// The store cannot be opened or read.
+    #[error(transparent)]
+    Store(#[from] StoreError),
+    /// A blob slot the provider needs is empty.
+    #[error("the store has no `{0}` blob")]
+    MissingBlob(&'static str),
+    /// The hierarchy blob does not read.
+    #[error("cannot read the hierarchy blob")]
+    Hierarchy(#[from] ferroterm_graph::persist::PersistError),
+    /// The text blob does not read.
+    #[error("cannot read the designation index blob")]
+    Text(#[from] ferroterm_text::persist::PersistError),
+    /// The child adjacency cannot be derived.
+    #[error("cannot transpose the hierarchy")]
+    Transpose(#[from] CsrError),
+    /// A vocabulary entry the provider relies on is missing.
+    #[error("the store's {vocabulary} vocabulary has no `{name}`")]
+    MissingVocabulary {
+        /// Which vocabulary.
+        vocabulary: &'static str,
+        /// The missing entry.
+        name: String,
+    },
+    /// The store's metadata is incomplete.
+    #[error("the store's metadata has no `{0}`")]
+    MissingMeta(&'static str),
+    /// The concept count does not parse.
+    #[error("the store's concept count `{0}` is not a number")]
+    ConceptCount(String),
+}
+
+#[derive(Debug, Deserialize)]
+struct Manifest {
+    system: String,
+    edition: String,
+    version: String,
+    #[serde(default)]
+    languages: Vec<String>,
+}
+
+/// The vocabulary ordinals the provider resolves once at open.
+#[derive(Debug, Clone)]
+struct Keys {
+    definition_status: u32,
+    module: u32,
+    /// Attribute type properties: (key ordinal, SCTID as text), sorted by ordinal.
+    attributes: Vec<(u32, String)>,
+    fsn: u32,
+    synonym: u32,
+    definition: u32,
+    /// Language reference sets: (ordinal, SCTID as text), sorted by ordinal.
+    refsets: Vec<(u32, String)>,
+}
+
+/// The hierarchy of the edition, in the seam's vocabulary.
+#[derive(Debug)]
+struct SnomedHierarchy {
+    graph: GraphHierarchy,
+    children: Csr,
+}
+
+impl Hierarchy for SnomedHierarchy {
+    fn parents(&self, concept: Concept) -> ConceptSet {
+        self.graph
+            .is_a
+            .neighbours(Ordinal::new(concept.index()))
+            .iter()
+            .copied()
+            .collect()
+    }
+
+    fn children(&self, concept: Concept) -> ConceptSet {
+        self.children
+            .neighbours(Ordinal::new(concept.index()))
+            .iter()
+            .copied()
+            .collect()
+    }
+
+    fn ancestors(&self, concept: Concept) -> ConceptSet {
+        self.graph
+            .closure
+            .ancestors(Ordinal::new(concept.index()))
+            .clone()
+    }
+
+    fn descendants(&self, concept: Concept) -> ConceptSet {
+        self.graph
+            .closure
+            .descendants(Ordinal::new(concept.index()))
+            .clone()
+    }
+}
+
+/// One SNOMED CT edition version behind the seam.
+pub struct SnomedProvider {
+    store: Store,
+    hierarchy: SnomedHierarchy,
+    text: TextIndex,
+    identity: Identity,
+    declaration: Declaration,
+    keys: Keys,
+    edition: String,
+    default_language: String,
+    concepts: u32,
+}
+
+impl std::fmt::Debug for SnomedProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SnomedProvider")
+            .field("version", &self.identity.version)
+            .field("concepts", &self.concepts)
+            .field("default_language", &self.default_language)
+            .finish_non_exhaustive()
+    }
+}
+
+fn storage(error: StoreError) -> ProviderError {
+    ProviderError::Storage(Box::new(error))
+}
+
+/// The primary language subtag of a BCP 47 tag (`en-GB` is `en`), lowercased.
+fn primary_subtag(language: &str) -> String {
+    language
+        .split(['-', '_'])
+        .next()
+        .unwrap_or(language)
+        .to_ascii_lowercase()
+}
+
+impl SnomedProvider {
+    /// Opens the artifact directory `dir`; `default_language` is the BCP 47
+    /// tag used when a request names none.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OpenError`] when the manifest, the store, or a blob does not
+    /// read, or the artifact is not a SNOMED CT edition.
+    pub fn open(dir: &Path, default_language: &str) -> Result<Self, OpenError> {
+        let manifest_path = dir.join(MANIFEST_FILE);
+        let text = std::fs::read_to_string(&manifest_path).map_err(|source| OpenError::Io {
+            path: manifest_path.clone(),
+            source,
+        })?;
+        let manifest: Manifest =
+            serde_json::from_str(&text).map_err(|source| OpenError::Manifest {
+                path: manifest_path,
+                source,
+            })?;
+        if manifest.system != SYSTEM {
+            return Err(OpenError::NotSnomed(manifest.system));
+        }
+        let store = Store::open(&dir.join("store.redb"))?;
+        let graph_bytes = store
+            .blob(tables::BLOB_HIERARCHY)?
+            .ok_or(OpenError::MissingBlob(tables::BLOB_HIERARCHY))?;
+        let graph = GraphHierarchy::read_from(&mut graph_bytes.as_slice())?;
+        let children = graph.is_a.transpose()?;
+        let text_bytes = store
+            .blob(tables::BLOB_TEXT)?
+            .ok_or(OpenError::MissingBlob(tables::BLOB_TEXT))?;
+        let text = ferroterm_text::persist::read_from(&mut text_bytes.as_slice())?;
+        let concepts = store
+            .meta(tables::META_CONCEPTS)?
+            .ok_or(OpenError::MissingMeta(tables::META_CONCEPTS))?;
+        let concepts: u32 = concepts
+            .parse()
+            .map_err(|_| OpenError::ConceptCount(concepts.clone()))?;
+        let keys = Self::resolve_keys(&store)?;
+        let mut properties: Vec<PropertyDefinition> = FHIR_PROPERTIES
+            .iter()
+            .map(|(code, kind)| PropertyDefinition {
+                code: (*code).to_owned(),
+                uri: None,
+                description: None,
+                kind: *kind,
+            })
+            .collect();
+        properties.extend(keys.attributes.iter().map(|(_, sctid)| PropertyDefinition {
+            code: sctid.clone(),
+            uri: Some(format!("http://snomed.info/id/{sctid}")),
+            description: None,
+            kind: PropertyKind::Code,
+        }));
+        Ok(Self {
+            store,
+            hierarchy: SnomedHierarchy { graph, children },
+            text,
+            identity: Identity {
+                url: SYSTEM.to_owned(),
+                version: manifest.version,
+                title: Some(String::from("SNOMED CT")),
+                // NOTE: the canonical R4B CodeSystem for SNOMED CT declares
+                // versionNeeded = false (<https://hl7.org/fhir/R4B/snomedct.html>).
+                version_needed: false,
+            },
+            declaration: Declaration {
+                content: ContentMode::NotPresent,
+                // NOTE: caseSensitive = false per the canonical R4B CodeSystem;
+                // SNOMED codes are digits, so the flag never changes a lookup.
+                case_sensitive: false,
+                hierarchy_meaning: Some(HierarchyMeaning::IsA),
+                compositional: true,
+                languages: manifest.languages,
+                properties,
+                filters: Vec::new(),
+                capabilities: BTreeSet::from([Capability::Subsumption, Capability::Enumeration]),
+            },
+            keys,
+            edition: manifest.edition,
+            default_language: primary_subtag(default_language),
+            concepts,
+        })
+    }
+
+    /// The edition URI (`http://snomed.info/sct/{module}`), the version URI
+    /// without its date.
+    #[must_use]
+    pub fn edition_uri(&self) -> &str {
+        &self.edition
+    }
+
+    fn resolve_keys(store: &Store) -> Result<Keys, OpenError> {
+        let key = |vocabulary: Vocabulary, what: &'static str, name: &str| {
+            store.vocabulary_ordinal(vocabulary, name)?.ok_or_else(|| {
+                OpenError::MissingVocabulary {
+                    vocabulary: what,
+                    name: name.to_owned(),
+                }
+            })
+        };
+        // The fixed keys the build writes before the attribute types; `parent`
+        // is answered from the hierarchy, not the stored property.
+        let fixed = ["parent", "definitionStatus", "module"];
+        let definition_status = key(Vocabulary::PropertyKeys, "property key", "definitionStatus")?;
+        let module = key(Vocabulary::PropertyKeys, "property key", "module")?;
+        let mut attributes = Vec::new();
+        let mut ordinal = 0_u32;
+        while let Some(name) = store.vocabulary(Vocabulary::PropertyKeys, ordinal)? {
+            if !fixed.contains(&name.as_str()) {
+                attributes.push((ordinal, name));
+            }
+            ordinal = ordinal.saturating_add(1);
+        }
+        let fsn = key(
+            Vocabulary::DesignationUses,
+            "designation use",
+            &constants::FULLY_SPECIFIED_NAME.to_string(),
+        )?;
+        let synonym = key(
+            Vocabulary::DesignationUses,
+            "designation use",
+            &constants::SYNONYM.to_string(),
+        )?;
+        let definition = key(
+            Vocabulary::DesignationUses,
+            "designation use",
+            &constants::DEFINITION.to_string(),
+        )?;
+        let mut refsets = Vec::new();
+        let mut ordinal = 0_u32;
+        while let Some(name) = store.vocabulary(Vocabulary::LanguageRefsets, ordinal)? {
+            refsets.push((ordinal, name));
+            ordinal = ordinal.saturating_add(1);
+        }
+        Ok(Keys {
+            definition_status,
+            module,
+            attributes,
+            fsn,
+            synonym,
+            definition,
+            refsets,
+        })
+    }
+
+    /// The language reference sets of the edition, as SCTIDs.
+    #[must_use]
+    pub fn language_refsets(&self) -> Vec<&str> {
+        self.keys.refsets.iter().map(|(_, s)| s.as_str()).collect()
+    }
+
+    fn ordinal(concept: Concept) -> Ordinal {
+        Ordinal::new(concept.index())
+    }
+
+    fn use_coding(&self, use_ordinal: u32) -> DesignationUse {
+        let (code, display) = if use_ordinal == self.keys.fsn {
+            (constants::FULLY_SPECIFIED_NAME, "Fully specified name")
+        } else if use_ordinal == self.keys.definition {
+            (constants::DEFINITION, "Definition")
+        } else {
+            (constants::SYNONYM, "Synonym")
+        };
+        DesignationUse {
+            system: SYSTEM.to_owned(),
+            code: code.to_string(),
+            display: Some(display.to_owned()),
+        }
+    }
+
+    /// The preferred synonym of `concept` in `language`, by the first language
+    /// reference set (in store order) whose preferred synonym is in that
+    /// language.
+    fn preferred_in(
+        &self,
+        ordinal: Ordinal,
+        language: &str,
+    ) -> Result<Option<record::Designation>, ProviderError> {
+        for (refset, _) in &self.keys.refsets {
+            if let Some(designation) = self
+                .store
+                .preferred(ordinal, *refset, self.keys.synonym)
+                .map_err(storage)?
+                && primary_subtag(&designation.language) == language
+            {
+                return Ok(Some(designation));
+            }
+        }
+        Ok(None)
+    }
+
+    /// The display for `language` (or the default), by the SNOMED rule: the
+    /// preferred term of the language reference set; then, our own fallback
+    /// order (no spec governs it): an active synonym in the language, the
+    /// preferred term in the default language, the FSN, any designation.
+    fn choose_display(
+        &self,
+        ordinal: Ordinal,
+        language: Option<&str>,
+    ) -> Result<Option<String>, ProviderError> {
+        let wanted = language.map_or_else(|| self.default_language.clone(), primary_subtag);
+        if let Some(preferred) = self.preferred_in(ordinal, &wanted)? {
+            return Ok(Some(preferred.term));
+        }
+        let designations = self.store.designations(ordinal).map_err(storage)?;
+        if let Some(synonym) = designations.iter().find(|d| {
+            d.active && d.use_ordinal == self.keys.synonym && primary_subtag(&d.language) == wanted
+        }) {
+            return Ok(Some(synonym.term.clone()));
+        }
+        if wanted != self.default_language
+            && let Some(preferred) = self.preferred_in(ordinal, &self.default_language)?
+        {
+            return Ok(Some(preferred.term));
+        }
+        if let Some(fsn) = designations
+            .iter()
+            .find(|d| d.active && d.use_ordinal == self.keys.fsn)
+        {
+            return Ok(Some(fsn.term.clone()));
+        }
+        Ok(designations.first().map(|d| d.term.clone()))
+    }
+
+    fn codes(
+        &self,
+        set: impl IntoIterator<Item = u32>,
+    ) -> Result<Vec<PropertyValue>, ProviderError> {
+        let mut out = Vec::new();
+        for index in set {
+            if let Some(concept) = self.store.concept(Ordinal::new(index)).map_err(storage)? {
+                out.push(PropertyValue::Code(concept.code));
+            }
+        }
+        Ok(out)
+    }
+}
+
+impl CodeSystemProvider for SnomedProvider {
+    fn identity(&self) -> &Identity {
+        &self.identity
+    }
+
+    fn declaration(&self) -> &Declaration {
+        &self.declaration
+    }
+
+    fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
+        // NOTE: a string that is not a well-formed SCTID (check digit,
+        // partition) is not a code of this system; that is "absent", not an
+        // error (<https://hl7.org/fhir/R4B/snomedct.html>, valid code values).
+        if ConceptId::parse(code).is_err() {
+            return Ok(None);
+        }
+        Ok(self
+            .store
+            .ordinal(code)
+            .map_err(storage)?
+            .map(|ordinal| Located {
+                concept: Concept::new(ordinal.index()),
+                code: code.to_owned(),
+            }))
+    }
+
+    fn code(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
+        Ok(self
+            .store
+            .concept(Self::ordinal(concept))
+            .map_err(storage)?
+            .map(|c| c.code))
+    }
+
+    fn display(
+        &self,
+        concept: Concept,
+        language: Option<&str>,
+    ) -> Result<Option<String>, ProviderError> {
+        self.choose_display(Self::ordinal(concept), language)
+    }
+
+    fn definition(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
+        Ok(self
+            .store
+            .designations(Self::ordinal(concept))
+            .map_err(storage)?
+            .into_iter()
+            .find(|d| d.active && d.use_ordinal == self.keys.definition)
+            .map(|d| d.term))
+    }
+
+    fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
+        let record = self
+            .store
+            .concept(Self::ordinal(concept))
+            .map_err(storage)?;
+        Ok(Status {
+            active: record.is_some_and(|c| c.active),
+            inactive_reason: None,
+            abstract_concept: false,
+        })
+    }
+
+    fn designations(
+        &self,
+        concept: Concept,
+        language: Option<&str>,
+    ) -> Result<Vec<Designation>, ProviderError> {
+        let wanted = language.map(primary_subtag);
+        Ok(self
+            .store
+            .designations(Self::ordinal(concept))
+            .map_err(storage)?
+            .into_iter()
+            .filter(|d| {
+                wanted
+                    .as_deref()
+                    .is_none_or(|wanted| primary_subtag(&d.language) == wanted)
+            })
+            .map(|d| Designation {
+                language: Some(d.language.clone()),
+                use_: Some(self.use_coding(d.use_ordinal)),
+                value: d.term,
+            })
+            .collect())
+    }
+
+    fn properties(&self, concept: Concept) -> Result<Vec<Property>, ProviderError> {
+        let ordinal = Self::ordinal(concept);
+        let Some(record) = self.store.concept(ordinal).map_err(storage)? else {
+            return Ok(Vec::new());
+        };
+        let stored = self.store.properties(ordinal).map_err(storage)?;
+        let of = |key: u32| stored.iter().find(|(k, _)| *k == key).map(|(_, v)| v);
+        let mut out = vec![Property {
+            code: String::from("inactive"),
+            value: PropertyValue::Boolean(!record.active),
+        }];
+        let defined = of(self.keys.definition_status).is_some_and(|values| {
+            values
+                .iter()
+                .any(|v| matches!(v, record::PropertyValue::Code(c) if *c == constants::DEFINED.to_string()))
+        });
+        out.push(Property {
+            code: String::from("sufficientlyDefined"),
+            value: PropertyValue::Boolean(defined),
+        });
+        if let Some(values) = of(self.keys.module)
+            && let Some(record::PropertyValue::Code(module)) = values.first()
+        {
+            out.push(Property {
+                code: String::from("moduleId"),
+                value: PropertyValue::Code(module.clone()),
+            });
+        }
+        if let Some(time) = record.effective_time {
+            out.push(Property {
+                code: String::from("effectiveTime"),
+                value: PropertyValue::String(time),
+            });
+        }
+        for value in self.codes(self.hierarchy.parents(concept))? {
+            out.push(Property {
+                code: String::from("parent"),
+                value,
+            });
+        }
+        for value in self.codes(self.hierarchy.children(concept))? {
+            out.push(Property {
+                code: String::from("child"),
+                value,
+            });
+        }
+        for (key, sctid) in &self.keys.attributes {
+            let Some(values) = of(*key) else {
+                continue;
+            };
+            for value in values {
+                let value = match value {
+                    record::PropertyValue::Concept(target) => {
+                        match self.store.concept(*target).map_err(storage)? {
+                            Some(target) => PropertyValue::Code(target.code),
+                            None => continue,
+                        }
+                    }
+                    record::PropertyValue::Code(c) => PropertyValue::Code(c.clone()),
+                    record::PropertyValue::String(s) => PropertyValue::String(s.clone()),
+                    record::PropertyValue::Integer(i) => PropertyValue::Integer(*i),
+                    record::PropertyValue::Boolean(b) => PropertyValue::Boolean(*b),
+                    record::PropertyValue::Decimal(d) => PropertyValue::Decimal(d.clone()),
+                    record::PropertyValue::DateTime(d) => PropertyValue::DateTime(d.clone()),
+                };
+                out.push(Property {
+                    code: sctid.clone(),
+                    value,
+                });
+            }
+        }
+        Ok(out)
+    }
+
+    fn hierarchy(&self) -> Option<&dyn Hierarchy> {
+        Some(&self.hierarchy)
+    }
+
+    fn all(&self) -> Result<ConceptSet, ProviderError> {
+        Ok((0..self.concepts).collect())
+    }
+
+    fn search(&self, text: &str, language: Option<&str>) -> Result<ConceptSet, ProviderError> {
+        let query = Query {
+            text: text.to_owned(),
+            language: language.map(primary_subtag),
+            ..Query::default()
+        };
+        let mut concepts = ConceptSet::new();
+        for designation in self.text.matches(&query) {
+            if let Some(entry) = self.text.entry(designation) {
+                concepts.insert(entry.concept.index());
+            }
+        }
+        Ok(concepts)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::primary_subtag;
+
+    #[test]
+    fn the_primary_subtag_is_the_language() {
+        assert_eq!(primary_subtag("en-GB"), "en");
+        assert_eq!(primary_subtag("nl"), "nl");
+        assert_eq!(primary_subtag("EN_us"), "en");
+    }
+}

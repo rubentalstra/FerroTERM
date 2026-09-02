@@ -15,4 +15,5 @@ pub mod compose;
 pub mod filter;
 pub mod provider;
 pub mod registry;
+pub mod snomed;
 pub mod supplement;
