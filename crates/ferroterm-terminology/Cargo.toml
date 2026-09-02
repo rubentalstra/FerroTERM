@@ -24,8 +24,13 @@ roaring.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+criterion.workspace = true
 ferroterm-testkit.workspace = true
 tempfile.workspace = true
+
+[[bench]]
+name = "nl_reads"
+harness = false
 
 [lints]
 workspace = true
