@@ -40,3 +40,6 @@ der2_*
 
 # Claude Code personal/local overrides (never committed)
 .claude/settings.local.json
+
+# The image build context: binaries staged by the release lane, never committed.
+/dist/

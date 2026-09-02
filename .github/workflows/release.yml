@@ -192,6 +192,8 @@ jobs:
             target: x86_64-unknown-linux-musl
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
     # Declared on both sides: a reusable workflow receives the caller's token
     # permissions, and GitHub's L3 guide asks for the same set in both places.
     permissions:
@@ -205,10 +207,25 @@ jobs:
       target: ${{ matrix.target }}
       runner: ${{ matrix.runner }}
 
+  # ── build-image: the container image from the attested musl binaries ────────
+  # A call and nothing else, for the same L3 reason as build-binaries.
+  build-image:
+    name: image (linux/amd64, linux/arm64)
+    needs: [plan, build-binaries]
+    permissions:
+      contents: read
+      packages: write # push the image and its attestations to GHCR
+      id-token: write # Sigstore
+      attestations: write
+    uses: ./.github/workflows/release-image.yml
+    with:
+      tag: ${{ needs.plan.outputs.tag }}
+      sha: ${{ github.sha }}
+
   # ── finalize-release: verify the asset set, then PUBLISH (freeze) ───────────
   finalize-release:
     name: github release (publish)
-    needs: [plan, build-binaries]
+    needs: [plan, build-binaries, build-image]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -229,7 +246,8 @@ jobs:
           for target in \
             x86_64-unknown-linux-gnu \
             x86_64-unknown-linux-musl \
-            aarch64-unknown-linux-gnu; do
+            aarch64-unknown-linux-gnu \
+            aarch64-unknown-linux-musl; do
             for suffix in \
               ".tar.gz" \
               ".tar.gz.sha256sum" \

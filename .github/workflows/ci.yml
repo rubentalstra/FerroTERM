@@ -126,6 +126,24 @@ jobs:
           } | { grep -zc . >/dev/null && xargs -0 -r shellcheck --severity=style; } \
             || echo "no shell files to check"
 
+  # dockerfile-lint — hadolint over the container recipe. The image copies a
+  # prebuilt binary onto a digest-pinned base, so the rules that matter are
+  # the pinned FROM, the numeric non-root USER, and the exec-form ENTRYPOINT.
+  dockerfile-lint:
+    name: hadolint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: docker/Dockerfile
+          failure-threshold: warning
+
   # versions — the version-drift guard. Runs NOW, before any Rust exists:
   # scripts/checks/versions.sh compares every present config file against
   # docs/VERSIONS.md and skips loudly for files that have not landed yet.
@@ -336,6 +354,7 @@ jobs:
       - workflow-audit
       - workflow-lint
       - shellcheck
+      - dockerfile-lint
       - versions
       - detect
       - fmt

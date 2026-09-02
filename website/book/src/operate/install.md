@@ -30,17 +30,38 @@ The server starts, opens the index read-only, and listens for FHIR requests. You
 configure the listen address, the index path, and the served FHIR versions
 through the settings described in [Configuration](configuration.md).
 
-## Run the container (planned)
+## Run the container
+
+The image is `ghcr.io/rubentalstra/ferroterm`, published for `linux/amd64` and
+`linux/arm64` with every release. It holds the static server binary on a
+distroless base: no shell, no package manager, a numeric non-root user
+(`65532`), and the listen address preset to `0.0.0.0:8080`.
 
 ```console
 $ docker run --rm -p 8080:8080 \
     -v /path/to/ferroterm-index:/data/index:ro \
-    ghcr.io/rubentalstra/FerroTERM:<tag> \
+    ghcr.io/rubentalstra/ferroterm:<version> \
     --index /data/index
 ```
 
 Mount the index read-only. The server needs no writable volume for serving,
-because the index is built offline by a separate tool.
+because the index is built offline by a separate tool, so the container runs
+with a read-only root filesystem.
+
+Tags are `<version>`, `<major.minor>`, and `latest`. A tag can move; a digest
+cannot, so a deployment pins the digest and verifies its provenance and SBOM
+before the first pull (see [Verifying releases](verifying-releases.md)):
+
+```console
+$ gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:<version> \
+    -R rubentalstra/FerroTERM \
+    --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-image.yml
+```
+
+The image carries no `HEALTHCHECK`; in Kubernetes, point the readiness and
+liveness probes at `GET /health`, set `runAsNonRoot: true`,
+`readOnlyRootFilesystem: true`, and drop every capability. The server stops
+cleanly on `SIGTERM`.
 
 ## Check that it is serving
 

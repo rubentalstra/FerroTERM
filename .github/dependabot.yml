@@ -5,8 +5,8 @@
 # Two ecosystems for now: the GitHub Actions the workflows in this directory
 # pin, and Cargo. The Cargo entry is harmless before any code lands (there is
 # no Cargo.toml to resolve yet) and activates by itself the moment the
-# workspace exists — no workflow edit needed when it does. Docker/OCI base
-# images get their own entry once an image ships.
+# workspace exists — no workflow edit needed when it does. The docker entry
+# bumps the digest-pinned base image of docker/Dockerfile.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -25,9 +25,10 @@ updates:
     # SECURITY updates are exempt by design — Dependabot applies no cooldown to
     # advisory-driven bumps, so an advisory still arrives immediately. That is
     # what makes a cooldown safe rather than a delay on getting fixes.
+    # `semver-major-days` is not accepted for this ecosystem (Dependabot
+    # rejected the file with it); the 3-day default covers every bump.
     cooldown:
       default-days: 3
-      semver-major-days: 14
     groups:
       # ONE weekly PR for every minor/patch action bump (one codeql-action
       # release alone opens three PRs, one per sub-action). MAJORS stay
@@ -61,3 +62,16 @@ updates:
         update-types: ["minor", "patch"]
     commit-message:
       prefix: "deps"
+
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    labels:
+      - "dependencies"
+    schedule:
+      interval: "weekly"
+    # The base image is pinned by index digest; a bump is a reviewed change of
+    # digest, like an action. Security bumps are exempt from the cooldown.
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: "build"

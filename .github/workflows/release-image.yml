@@ -1,0 +1,253 @@
+# SPDX-License-Identifier: MIT
+# Release image (reusable): the container image from the attested static
+# binaries, pushed to GHCR with SLSA provenance and SBOM attestations.
+#
+# A reusable workflow for the same reason release-build.yml is one: SLSA Build
+# L3 needs the signing identity out of reach of caller-defined steps, and a
+# `workflow_call` job runs on its own VM the caller cannot add steps to
+# (https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-and-reusable-workflows-to-achieve-slsa-v1-build-level-3).
+# The inputs are the musl tarballs release-build.yml built in this run; each
+# is verified against release-build.yml's signer identity before its binary
+# is staged, so the image provenance chains to attested inputs.
+#
+# What lands in the registry for one release:
+#   - the image index (linux/amd64, linux/arm64) tagged <version>, <major.minor>,
+#     and latest, with OCI annotations on the index and both manifests;
+#   - BuildKit's own SLSA provenance (mode=max) as attestation manifests in
+#     the index (the unknown/unknown entries GHCR shows);
+#   - GitHub attestations, pushed as OCI referrers: SLSA provenance for the
+#     index and for each platform manifest, and an SPDX SBOM per platform.
+#
+# Verify a published image (the tag resolves to the index):
+#   gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:<version> \
+#     -R rubentalstra/FerroTERM \
+#     --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-image.yml
+# and the SBOM of one platform manifest:
+#   gh attestation verify oci://ghcr.io/rubentalstra/ferroterm@<manifest digest> \
+#     -R rubentalstra/FerroTERM --predicate-type https://spdx.dev/Document/v2.3
+name: Release image (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The vX.Y.Z tag being released.
+        required: true
+        type: string
+      sha:
+        description: The commit the tag points at.
+        required: true
+        type: string
+    outputs:
+      digest:
+        description: The digest of the pushed image index.
+        value: ${{ jobs.image.outputs.digest }}
+
+permissions: {}
+
+env:
+  # Lowercase by GHCR's rule; the owner segment is derived, not typed.
+  IMAGE: ghcr.io/${{ github.repository_owner }}/ferroterm
+  # Annotate the index as well as the manifests: GHCR reads the package
+  # description from the index (https://docs.docker.com/build/ci/github-actions/annotations/).
+  DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read # the attestations API, for verifying the inputs
+      packages: write # push the image and its attestations to GHCR
+      id-token: write # Sigstore, for the provenance + SBOM attestations
+      attestations: write # store them against this repository
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.sha }}
+
+      # The musl tarballs are static; they are the ones that run on distroless static.
+      - name: Download the linux/amd64 tarball
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ferroterm-${{ inputs.tag }}-x86_64-unknown-linux-musl
+          path: tarballs/amd64
+      - name: Download the linux/arm64 tarball
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ferroterm-${{ inputs.tag }}-aarch64-unknown-linux-musl
+          path: tarballs/arm64
+
+      # Refuse any input the build lane did not attest: the image's provenance
+      # is only as good as the binaries it copies.
+      - name: Verify the tarballs against the build lane's identity and stage the binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          for arch in amd64 arm64; do
+            case "$arch" in
+              amd64) target=x86_64-unknown-linux-musl ;;
+              arm64) target=aarch64-unknown-linux-musl ;;
+            esac
+            tarball="tarballs/${arch}/ferroterm-${TAG}-${target}.tar.gz"
+            gh attestation verify "$tarball" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "${GITHUB_REPOSITORY}/.github/workflows/release-build.yml"
+            mkdir -p "dist/linux/${arch}"
+            tar -C "dist/linux/${arch}" -xzf "$tarball" ferroterm
+            test -x "dist/linux/${arch}/ferroterm"
+          done
+
+      # The docker-container driver builds both platforms; no QEMU, because
+      # the Dockerfile only copies (nothing executes at build time).
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # Tags: the version, its major.minor, and latest (skipped for a
+      # pre-release by the action's own rule). Tags are mutable on GHCR;
+      # consumers pin the digest this job prints.
+      - name: Image tags, labels, and annotations
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          labels: |
+            org.opencontainers.image.title=FerroTERM
+            org.opencontainers.image.description=A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems
+            org.opencontainers.image.url=https://ferroterm.eu
+            org.opencontainers.image.documentation=https://ferroterm.eu/docs/
+            org.opencontainers.image.vendor=FerroTERM
+            org.opencontainers.image.licenses=MIT
+
+      # Cold by construction, like the binary lane: no cache may influence a
+      # published artifact. BuildKit's SBOM scanner is off: it sees a
+      # two-file filesystem; the syft scan below reads the cargo-auditable
+      # dependency list inside the binary instead. BuildKit provenance stays
+      # on (mode=max is the default for a public repository anyway).
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          no-cache: true
+          provenance: mode=max
+          sbom: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+
+      # The per-platform manifest digests, for the per-platform attestations.
+      - name: Resolve the platform manifests
+        id: manifests
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          index="$(docker buildx imagetools inspect "${IMAGE}@${DIGEST}" --raw)"
+          amd64="$(jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest' <<<"$index")"
+          arm64="$(jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64") | .digest' <<<"$index")"
+          case "$amd64" in sha256:*) ;; *) echo "::error::no linux/amd64 manifest in ${DIGEST}"; exit 1 ;; esac
+          case "$arm64" in sha256:*) ;; *) echo "::error::no linux/arm64 manifest in ${DIGEST}"; exit 1 ;; esac
+          {
+            echo "amd64=${amd64}"
+            echo "arm64=${arm64}"
+          } >> "$GITHUB_OUTPUT"
+
+      # syft reads the dependency list cargo-auditable embedded in the binary,
+      # so the SBOM names the crates, not only the two files in the image.
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+      - name: Generate one SBOM per platform
+        env:
+          TAG: ${{ inputs.tag }}
+          AMD64: ${{ steps.manifests.outputs.amd64 }}
+          ARM64: ${{ steps.manifests.outputs.arm64 }}
+        run: |
+          set -euo pipefail
+          syft scan "registry:${IMAGE}@${AMD64}" --platform linux/amd64 -o "spdx-json=ferroterm-${TAG}-image-amd64.spdx.json"
+          syft scan "registry:${IMAGE}@${ARM64}" --platform linux/arm64 -o "spdx-json=ferroterm-${TAG}-image-arm64.spdx.json"
+          for f in ferroterm-"${TAG}"-image-*.spdx.json; do
+            jq -e '.packages | length > 2' "$f" >/dev/null || {
+              echo "::error::${f} lists no crate dependencies; is the binary built with cargo auditable?"
+              exit 1
+            }
+          done
+
+      # `actions/attest` is the one attestation action: no sbom-path =
+      # provenance mode; with sbom-path = SBOM mode. `push-to-registry` stores
+      # each bundle as an OCI referrer of its subject, so registry-side policy
+      # engines and `gh attestation verify --bundle-from-oci` both find it.
+      # The index carries provenance; each platform manifest carries
+      # provenance and its SBOM, so a consumer that resolved a platform digest
+      # verifies too.
+      - name: Attest the index provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - name: Attest the linux/amd64 provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.manifests.outputs.amd64 }}
+          push-to-registry: true
+      - name: Attest the linux/amd64 SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.manifests.outputs.amd64 }}
+          sbom-path: ferroterm-${{ inputs.tag }}-image-amd64.spdx.json
+          push-to-registry: true
+      - name: Attest the linux/arm64 provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.manifests.outputs.arm64 }}
+          push-to-registry: true
+      - name: Attest the linux/arm64 SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.manifests.outputs.arm64 }}
+          sbom-path: ferroterm-${{ inputs.tag }}-image-arm64.spdx.json
+          push-to-registry: true
+
+      # The lane checks its own output the way a consumer would, so a broken
+      # attestation fails the release instead of the first deployment.
+      - name: Verify the published image as a consumer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          AMD64: ${{ steps.manifests.outputs.amd64 }}
+          ARM64: ${{ steps.manifests.outputs.arm64 }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          signer="${GITHUB_REPOSITORY}/.github/workflows/release-image.yml"
+          gh attestation verify "oci://${IMAGE}:${VERSION}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$signer"
+          gh attestation verify "oci://${IMAGE}@${DIGEST}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$signer"
+          for manifest in "$AMD64" "$ARM64"; do
+            gh attestation verify "oci://${IMAGE}@${manifest}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$signer"
+            gh attestation verify "oci://${IMAGE}@${manifest}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$signer" \
+              --predicate-type https://spdx.dev/Document/v2.3
+          done
+          echo "image ${IMAGE}:${VERSION}"
+          echo "index  ${DIGEST}"
+          echo "amd64  ${AMD64}"
+          echo "arm64  ${ARM64}"
