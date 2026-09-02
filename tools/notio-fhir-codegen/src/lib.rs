@@ -10,10 +10,17 @@
 //! [`roots::RootSet`] (select what to emit).
 #![doc(test(attr(deny(warnings))))]
 
+pub mod closure;
+pub mod emit;
+pub mod lower;
 pub mod model;
+pub mod naming;
 pub mod package;
+pub mod render;
 pub mod roots;
 pub mod snapshot;
+
+use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
@@ -30,25 +37,44 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Regenerates `crates/notio-fhir` from the vendored packages.
-    Emit,
+    Emit {
+        /// Compare the generated crate with what the emitter produces and fail on any difference.
+        #[arg(long)]
+        check: bool,
+        /// The vendored package directory.
+        #[arg(long, value_name = "DIR", default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/vendor/hl7.fhir.r4b.core"))]
+        package: PathBuf,
+        /// The generated crate directory.
+        #[arg(long, value_name = "DIR", default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/notio-fhir"))]
+        out: PathBuf,
+    },
 }
 
 /// A generator failure.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// The emitter is not part of the generator yet.
-    #[error("the `emit` command has no emitter yet (tracked in rubentalstra/notio#4)")]
-    EmitterMissing,
+    /// The emit pipeline failed.
+    #[error(transparent)]
+    Emit(#[from] emit::EmitError),
 }
 
 /// Runs the command the CLI selected.
 ///
 /// # Errors
 ///
-/// Returns [`Error::EmitterMissing`] for `emit` until the emitter exists.
-pub fn run(cli: &Cli) -> Result<(), Error> {
-    // TODO(#4): load the vendored R4B package and emit the root-set types.
-    match cli.command {
-        Command::Emit => Err(Error::EmitterMissing),
+/// Returns [`Error::Emit`] when the pipeline fails or, in check mode, when the
+/// generated crate differs from what the emitter produces.
+pub fn run(cli: &Cli) -> Result<emit::EmitReport, Error> {
+    match &cli.command {
+        Command::Emit {
+            check,
+            package,
+            out,
+        } => Ok(emit::emit(&emit::EmitOptions {
+            package_dir: package.clone(),
+            crate_dir: out.clone(),
+            version_module: String::from("r4b"),
+            check: *check,
+        })?),
     }
 }

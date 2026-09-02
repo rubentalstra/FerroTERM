@@ -261,6 +261,25 @@ jobs:
       # yanked/licenses/bans/sources, so no separate cargo-audit job exists.
       - run: cargo deny check
 
+  codegen-drift:
+    name: codegen-drift
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: rustfmt
+      # Regenerates crates/notio-fhir from the vendored packages in check mode and
+      # fails on any difference (.claude/rules/codegen.md).
+      - run: cargo run --locked -p notio-fhir-codegen -- emit --check
+
   msrv:
     name: msrv (cargo-hack)
     needs: detect
@@ -324,6 +343,7 @@ jobs:
       - test
       - doc
       - cargo-deny
+      - codegen-drift
       - msrv
       - dependency-review
     if: always()
