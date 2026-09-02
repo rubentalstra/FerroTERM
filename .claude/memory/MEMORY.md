@@ -5,3 +5,4 @@
 - [Official name FerroTERM](official-name-ferroterm.md), FerroTERM (ferroterm.eu) is the official name since 2026-09-02, Notio was the codename; FerroTERM in prose, `ferroterm` in identifiers
 - [Local SNOMED release](local-snomed-release.md), the owner's licensed NL edition RF2 lives at data/snomed/ (gitignored), for local development and testing only; fixtures stay synthetic
 - [Repo merge gates](repo-merge-gates.md), main needs one approving + code-owner review, signed commits, and the `conclusion` check; Claude stacks PRs and the owner merges; the Roadmap board did not exist as of 2026-09-02
+- [Release cut cadence](release-cut-cadence.md), cut the release PR the moment a milestone hits zero open issues, then push the signed tag; the owner flagged v0.0.1 sitting uncut while v0.0.2 work merged
