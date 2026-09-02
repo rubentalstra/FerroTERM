@@ -19,3 +19,4 @@ mod operations;
 mod registry;
 mod snomed;
 mod supplement;
+mod value_set;

@@ -6,9 +6,11 @@
 //! generated from it. Every client input error is an [`OperationError`] the
 //! server maps to an `OperationOutcome` issue and an HTTP status.
 
+pub mod expand;
 pub mod lookup;
 pub mod subsumes;
 pub mod validate_code;
+pub mod value_set_validate_code;
 
 use std::sync::Arc;
 
@@ -63,6 +65,12 @@ pub enum OperationError {
         /// The code.
         code: String,
     },
+    /// The value set is not known.
+    #[error("value set `{0}` is not known")]
+    UnknownValueSet(String),
+    /// The value set cannot be expanded as defined.
+    #[error("{0}")]
+    ValueSetInvalid(String),
     /// The provider failed.
     #[error("the code system provider failed")]
     Provider(#[source] ProviderError),
@@ -74,11 +82,12 @@ impl OperationError {
     pub const fn issue_code(&self) -> &'static str {
         match self {
             Self::Required(_) => "required",
-            Self::Invalid(_) => "invalid",
+            Self::Invalid(_) | Self::ValueSetInvalid(_) => "invalid",
             Self::NotSupported(_) => "not-supported",
-            Self::UnknownSystem(_) | Self::UnknownVersion { .. } | Self::UnknownCode { .. } => {
-                "not-found"
-            }
+            Self::UnknownSystem(_)
+            | Self::UnknownVersion { .. }
+            | Self::UnknownCode { .. }
+            | Self::UnknownValueSet(_) => "not-found",
             Self::Provider(_) => "exception",
         }
     }
@@ -95,7 +104,13 @@ impl OperationError {
             | Self::Invalid(_)
             | Self::UnknownCode { .. }
             | Self::NotSupported(_) => StatusCode::BAD_REQUEST,
-            Self::UnknownSystem(_) | Self::UnknownVersion { .. } => StatusCode::NOT_FOUND,
+            Self::UnknownSystem(_) | Self::UnknownVersion { .. } | Self::UnknownValueSet(_) => {
+                StatusCode::NOT_FOUND
+            }
+            // NOTE: 422 is the status for a resource that breaks the server's
+            // rules (<https://hl7.org/fhir/R4B/http.html#status-codes>); a compose
+            // the layer cannot evaluate is that resource.
+            Self::ValueSetInvalid(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Provider(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -211,4 +226,88 @@ pub(crate) fn coding_parts(
         code_text(coding.code.as_ref()),
         string_text(coding.display.as_ref()),
     )
+}
+
+impl From<crate::compose::ComposeError> for OperationError {
+    fn from(error: crate::compose::ComposeError) -> Self {
+        use crate::compose::ComposeError;
+        match error {
+            ComposeError::Resolve(error) => error.into(),
+            ComposeError::Provider { source, .. } => source.into(),
+            ComposeError::UnknownValueSet(url) => Self::UnknownValueSet(url),
+            ComposeError::UnknownCode { .. }
+            | ComposeError::NoSystemOrValueSet
+            | ComposeError::CriteriaWithoutSystem
+            | ComposeError::ConceptsAndFilters
+            | ComposeError::Cycle(_) => Self::ValueSetInvalid(error.to_string()),
+            ComposeError::NoResolver(_) => Self::NotSupported(error.to_string()),
+        }
+    }
+}
+
+/// Where an operation finds its code systems and value sets.
+#[derive(Debug, Clone, Copy)]
+pub struct Sources<'a> {
+    /// The code systems.
+    pub registry: &'a Registry,
+    /// The value sets.
+    pub value_sets: &'a crate::valueset::store::ValueSetStore,
+}
+
+impl Sources<'_> {
+    /// The value set an operation names: inline, stored by `url` (and
+    /// `version`), or a provider's implicit form.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OperationError::Invalid`] for both an inline and a `url`,
+    /// [`OperationError::Required`] for neither, and
+    /// [`OperationError::UnknownValueSet`] when nothing answers the `url`.
+    pub fn value_set(
+        &self,
+        inline: Option<
+            Result<crate::valueset::model::ValueSetModel, crate::valueset::model::ModelError>,
+        >,
+        url: Option<&str>,
+        version: Option<&str>,
+    ) -> Result<Arc<crate::valueset::model::ValueSetModel>, OperationError> {
+        match (inline, url) {
+            (Some(_), Some(_)) => Err(OperationError::Invalid(String::from(
+                "provide either `url` or an inline `valueSet`, not both",
+            ))),
+            (Some(model), None) => {
+                Ok(Arc::new(model.map_err(|e| {
+                    OperationError::ValueSetInvalid(e.to_string())
+                })?))
+            }
+            (None, Some(url)) => {
+                if let Some(model) = self.value_sets.resolve(url, version) {
+                    return Ok(model);
+                }
+                match self.registry.implicit_value_set(url) {
+                    Some(Ok(compose)) => Ok(Arc::new(crate::valueset::model::ValueSetModel {
+                        url: url.to_owned(),
+                        version: None,
+                        name: None,
+                        title: None,
+                        status: String::from("active"),
+                        experimental: None,
+                        date: None,
+                        publisher: None,
+                        description: None,
+                        immutable: None,
+                        compose,
+                    })),
+                    Some(Err(source)) => Err(source.into()),
+                    None => Err(OperationError::UnknownValueSet(match version {
+                        Some(version) => format!("{url}|{version}"),
+                        None => url.to_owned(),
+                    })),
+                }
+            }
+            (None, None) => Err(OperationError::Required(String::from(
+                "a value set is required: the `url` parameter or an inline `valueSet`",
+            ))),
+        }
+    }
 }

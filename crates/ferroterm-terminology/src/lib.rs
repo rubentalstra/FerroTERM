@@ -20,3 +20,4 @@ pub mod registry;
 pub mod snomed;
 pub mod supplement;
 pub mod text_match;
+pub mod valueset;

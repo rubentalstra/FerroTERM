@@ -11,6 +11,18 @@ pub const COLOURS: &str = "http://example.org/fhir/CodeSystem/colours";
 pub const SKETCH: &str = "http://example.org/fhir/CodeSystem/sketch";
 /// The URL of the supplement to the animal system.
 pub const ANIMALS_NL: &str = "http://example.org/fhir/CodeSystem/animals-nl";
+/// Every animal, in two versions (`1.0` all of them, `2.0` without `dodo`).
+pub const VS_ALL: &str = "http://example.org/fhir/ValueSet/animals-all";
+/// The descendants of `pet`, by an `is-a` filter.
+pub const VS_PETS: &str = "http://example.org/fhir/ValueSet/pets";
+/// Enumerated concepts from two systems, one with its own display.
+pub const VS_ENUMERATED: &str = "http://example.org/fhir/ValueSet/enumerated";
+/// `include.valueSet` over the pets value set.
+pub const VS_PETS_REF: &str = "http://example.org/fhir/ValueSet/pets-ref";
+/// Two value sets that reference each other.
+pub const VS_LOOP_A: &str = "http://example.org/fhir/ValueSet/loop-a";
+/// The other half of the loop.
+pub const VS_LOOP_B: &str = "http://example.org/fhir/ValueSet/loop-b";
 
 /// The animal system: nesting for the hierarchy, `subsumedBy` for one extra
 /// parent, `status`, `notSelectable`, and `inactive` properties, designations
@@ -85,8 +97,88 @@ fn animals_nl() -> serde_json::Value {
     })
 }
 
-/// Writes the four resources (and a non-resource JSON file to be skipped)
-/// into `dir`, as a FHIR package's `package/` directory would hold them.
+/// The value sets over the animal and colour systems.
+fn value_sets() -> Vec<(&'static str, serde_json::Value)> {
+    let vs = |url: &str, version: &str, name: &str, compose: serde_json::Value| {
+        serde_json::json!({
+          "resourceType": "ValueSet", "url": url, "version": version, "name": name,
+          "title": format!("{name} (synthetic)"), "status": "active", "experimental": false,
+          "publisher": "FerroTERM tests", "compose": compose
+        })
+    };
+    vec![
+        (
+            "ValueSet-animals-all-1.json",
+            vs(
+                VS_ALL,
+                "1.0",
+                "AnimalsAll",
+                serde_json::json!({"include": [{"system": ANIMALS}]}),
+            ),
+        ),
+        (
+            "ValueSet-animals-all-2.json",
+            vs(
+                VS_ALL,
+                "2.0",
+                "AnimalsAll",
+                serde_json::json!({"include": [{"system": ANIMALS}], "exclude": [{"system": ANIMALS, "concept": [{"code": "dodo"}]}]}),
+            ),
+        ),
+        (
+            "ValueSet-pets.json",
+            vs(
+                VS_PETS,
+                "1.0",
+                "Pets",
+                serde_json::json!({"include": [{"system": ANIMALS, "filter": [{"property": "concept", "op": "is-a", "value": "pet"}]}]}),
+            ),
+        ),
+        (
+            "ValueSet-enumerated.json",
+            vs(
+                VS_ENUMERATED,
+                "1.0",
+                "Enumerated",
+                serde_json::json!({"include": [
+                    {"system": ANIMALS, "concept": [{"code": "cat", "display": "Kitty"}, {"code": "dog"}]},
+                    {"system": COLOURS, "concept": [{"code": "RED"}]}
+                ]}),
+            ),
+        ),
+        (
+            "ValueSet-pets-ref.json",
+            vs(
+                VS_PETS_REF,
+                "1.0",
+                "PetsRef",
+                serde_json::json!({"include": [{"valueSet": [VS_PETS]}]}),
+            ),
+        ),
+        (
+            "ValueSet-loop-a.json",
+            vs(
+                VS_LOOP_A,
+                "1.0",
+                "LoopA",
+                serde_json::json!({"include": [{"valueSet": [VS_LOOP_B]}]}),
+            ),
+        ),
+        (
+            "ValueSet-loop-b.json",
+            vs(
+                VS_LOOP_B,
+                "1.0",
+                "LoopB",
+                serde_json::json!({"include": [{"valueSet": [VS_LOOP_A]}]}),
+            ),
+        ),
+    ]
+}
+
+/// Writes the code systems, the value sets, and a non-resource JSON file to
+/// be skipped into `dir`, as a FHIR package's `package/` directory would
+/// hold them.
 ///
 /// # Errors
 ///
@@ -98,14 +190,13 @@ pub fn write_code_systems(dir: &Path) -> std::io::Result<()> {
         ("CodeSystem-sketch.json", sketch()),
         ("CodeSystem-animals-nl.json", animals_nl()),
         (
-            "ValueSet-unrelated.json",
-            serde_json::json!({"resourceType": "ValueSet", "status": "active"}),
-        ),
-        (
             "package.json",
             serde_json::json!({"name": "example.fixture", "version": "1.0.0", "fhirVersions": ["5.0.0"]}),
         ),
-    ] {
+    ]
+    .into_iter()
+    .chain(value_sets())
+    {
         std::fs::write(dir.join(name), serde_json::to_string_pretty(&value)?)?;
     }
     Ok(())

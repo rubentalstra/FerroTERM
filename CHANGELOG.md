@@ -15,6 +15,22 @@ fresh link reference.
 
 ### Added
 
+- `ValueSet/$expand` and `ValueSet/$validate-code` on R4B, type level, over the
+  compose layer. A value set is inline (`valueSet`), loaded from a
+  `FERROTERM_CODESYSTEMS` directory (`url` and `valueSetVersion`; the greatest
+  version is the default), or a provider's implicit form; `include.valueSet`
+  resolves through the same store and a cycle is refused. The expansion is
+  flat, pages with `offset` and `count`, honours `activeOnly`, `filter`,
+  `displayLanguage`, `includeDesignations` with `designation`,
+  `includeDefinition`, `system-version`, `check-system-version`,
+  `force-system-version`, and `exclude-system`, and echoes every effective
+  parameter plus one `used-codesystem` per code system version used.
+  Validation answers `result`, `message`, and `display`, infers the system
+  when the value set draws on one, checks the display against the
+  designations, marks inactive codes with a warning, and appends the
+  `system`, `version`, and `code` echo and an `issues` `OperationOutcome` with
+  `tx-issue-type` codings, as the terminology ecosystem expects.
+
 - Any code system published as a FHIR `CodeSystem` resource is served:
   `FERROTERM_CODESYSTEMS` names directories of resources (a FHIR package's
   `package/` directory, such as HL7 Terminology 7.3.0, or plain JSON files) in
