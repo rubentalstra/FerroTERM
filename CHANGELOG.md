@@ -13,6 +13,40 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-09-02
+
+The first cut: the project foundation, the generated FHIR layer for R4B and
+R5, and the first three SNOMED CT engine substrates (RF2 loading, the
+subsumption graph, the concept store). Nothing is served yet; the server
+binary answers `GET /health` only.
+
+### Added
+
+- The Cargo workspace: the seven engine crates, the `ferroterm-server` binary
+  (with a `GET /health` route), and the two tools, with the pinned dependency
+  set, the workspace lint table, and the Rust CI lanes active.
+- Project foundation: architecture, `.claude/` project configuration (rules,
+  agents, hooks, skills, memory), CI/CD + supply-chain scaffolding, the tracker
+  work-style, and citation/funding metadata.
+- `ferroterm-fhir-codegen` and the generated `ferroterm-fhir` crate: the
+  vendored, pinned `hl7.fhir.r4b.core` 4.3.0 and `hl7.fhir.r5.core` 5.0.0
+  packages (with provenance), the terminology root-set types per version (133
+  for R4B, 154 for R5), the operation contracts (`$lookup`, `$validate-code`,
+  `$subsumes`, `$expand`, `$translate`, `$find-matches`, `$closure`) as the
+  version's `OperationDefinition` declares them, and a JSON codec that
+  round-trips every terminology resource in both packages. A CI drift check
+  regenerates and fails on any diff.
+- `ferroterm-rf2`: the SNOMED CT RF2 Snapshot loader and typed component model
+  (SCTID check digits and partitions, file-name grammar, concepts,
+  descriptions, relationships, concrete values, reference sets with typed
+  views, module dependencies resolved to an edition URI).
+- `ferroterm-graph`: integer-keyed CSR adjacency and roaring transitive-closure
+  bitmaps over the inferred is-a hierarchy, the `$subsumes` outcome over them,
+  and a versioned artifact layout.
+- `ferroterm-store`: the read-only `redb` concept and designation store with
+  point reads, precomputed preferred designations per language reference set,
+  typed properties, and blob slots for the graph and text artifacts.
+
 ### Changed
 
 - The project has its official name, FerroTERM (Ferro for the Rust family it
@@ -24,12 +58,8 @@ fresh link reference.
   talk to a code system provider seam, SNOMED CT is the first provider, and
   LOINC, UCUM, ICD-10, and the other systems in `docs/terminologies.md` follow
   through the same seam.
+- No existing Rust terminology or FHIR crate is a dependency; the README
+  records the evaluation and the reasons.
 
-### Added
-
-- The Cargo workspace: the seven engine crates, the `ferroterm-server` binary
-  (with a `GET /health` route), and the two tools, with the pinned dependency
-  set, the workspace lint table, and the Rust CI lanes active.
-- Project foundation: architecture, `.claude/` project configuration (rules,
-  agents, hooks, skills, memory), CI/CD + supply-chain scaffolding, the tracker
-  work-style, and citation/funding metadata.
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.1
