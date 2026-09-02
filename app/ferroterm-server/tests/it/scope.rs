@@ -271,7 +271,7 @@ async fn value_sets_read_and_search_by_url() {
     assert_eq!(body["total"], 1);
     let (status, body) = server.get("/r4b/ValueSet").await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body["total"], 7);
+    assert_eq!(body["total"], 8);
     let (status, _) = server.get("/r4b/ValueSet/nowhere").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     let (status, _) = server.get("/r4b/ValueSet?name=pets").await;

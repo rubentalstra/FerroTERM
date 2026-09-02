@@ -21,6 +21,7 @@ use crate::provider::CodeSystemProvider;
 use crate::valueset::convert;
 use crate::valueset::model::ValueSetModel;
 use crate::valueset::store::Resolver;
+use crate::versioned::Versioned;
 
 /// The `tx-issue-type` code system
 /// (<https://build.fhir.org/ig/FHIR/fhir-tools-ig/CodeSystem-tx-issue-type.html>).

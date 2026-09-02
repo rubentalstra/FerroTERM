@@ -8,6 +8,7 @@ use ferroterm_fhir::r4b::coding::Coding;
 use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
 use ferroterm_fhir::r4b::operations::value_set_validate_code::ValueSetValidateCodeRequest;
 use ferroterm_fhir::r4b::value_set::{ValueSet, ValueSetCompose, ValueSetComposeInclude};
+use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir};
 use ferroterm_terminology::fhir_codesystem::provider::FhirCodeSystem;
 use ferroterm_terminology::operations::{OperationError, Sources, expand, value_set_validate_code};
@@ -18,14 +19,15 @@ use ferroterm_testkit::fhir::{
     ANIMALS, COLOURS, VS_ALL, VS_ENUMERATED, VS_LOOP_A, VS_PETS, VS_PETS_REF, write_code_systems,
 };
 
-struct World {
+pub(crate) struct World {
     _dir: tempfile::TempDir,
     registry: Registry,
     value_sets: ValueSetStore,
+    concept_maps: ConceptMapStore,
 }
 
 impl World {
-    fn load() -> Self {
+    pub(crate) fn load() -> Self {
         let dir = tempfile::tempdir().expect("tempdir");
         write_code_systems(dir.path()).expect("writes");
         let mut registry = Registry::new();
@@ -40,17 +42,29 @@ impl World {
         for model in valueset::load::load_dir(dir.path(), FhirVersion::R5).expect("loads") {
             value_sets.insert(model).expect("stores");
         }
+        let mut concept_maps = ConceptMapStore::new();
+        for model in ferroterm_terminology::conceptmap::load::load_dir(dir.path(), FhirVersion::R5)
+            .expect("loads")
+        {
+            concept_maps.insert(model).expect("stores");
+        }
         Self {
             _dir: dir,
             registry,
             value_sets,
+            concept_maps,
         }
     }
 
-    fn sources(&self) -> Sources<'_> {
+    pub(crate) fn concept_maps(&self) -> &ConceptMapStore {
+        &self.concept_maps
+    }
+
+    pub(crate) fn sources(&self) -> Sources<'_> {
         Sources {
             registry: &self.registry,
             value_sets: &self.value_sets,
+            concept_maps: &self.concept_maps,
         }
     }
 }
@@ -81,7 +95,7 @@ fn parameter(value_set: &ValueSet, name: &str) -> Vec<String> {
 #[test]
 fn the_store_loads_every_value_set_and_defaults_to_the_greatest_version() {
     let world = World::load();
-    assert_eq!(world.value_sets.len(), 7);
+    assert_eq!(world.value_sets.len(), 8);
     let default = world.value_sets.resolve(VS_ALL, None).expect("default");
     assert_eq!(default.version.as_deref(), Some("2.0"));
     let pinned = world

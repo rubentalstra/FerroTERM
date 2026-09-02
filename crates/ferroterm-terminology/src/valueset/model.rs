@@ -30,14 +30,13 @@ pub struct ValueSetModel {
     pub compose: Compose,
 }
 
-impl ValueSetModel {
-    /// The canonical `url|version`, or `url` alone.
-    #[must_use]
-    pub fn canonical(&self) -> String {
-        match &self.version {
-            Some(version) => format!("{}|{version}", self.url),
-            None => self.url.clone(),
-        }
+impl crate::versioned::Versioned for ValueSetModel {
+    fn url(&self) -> &str {
+        &self.url
+    }
+
+    fn version(&self) -> Option<&str> {
+        self.version.as_deref()
     }
 }
 

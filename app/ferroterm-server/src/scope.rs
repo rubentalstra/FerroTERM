@@ -15,6 +15,8 @@ use std::time::{Duration, Instant};
 
 use ferroterm_fhir::r4b::parameters::Parameters;
 use ferroterm_fhir::r4b::resource::Resource;
+use ferroterm_terminology::conceptmap;
+use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::fhir_codesystem::convert;
 use ferroterm_terminology::fhir_codesystem::provider::FhirCodeSystem;
 use ferroterm_terminology::operations::Sources;
@@ -40,6 +42,7 @@ pub const CACHE_IDLE: Duration = Duration::from_mins(30);
 pub struct Scope<'a> {
     registry: Cow<'a, Registry>,
     value_sets: Cow<'a, ValueSetStore>,
+    concept_maps: Cow<'a, ConceptMapStore>,
 }
 
 impl<'a> Scope<'a> {
@@ -49,6 +52,7 @@ impl<'a> Scope<'a> {
         Self {
             registry: Cow::Borrowed(state.registry()),
             value_sets: Cow::Borrowed(state.value_sets()),
+            concept_maps: Cow::Borrowed(state.concept_maps()),
         }
     }
 
@@ -57,8 +61,8 @@ impl<'a> Scope<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a `400` failure for a resource that is not a `CodeSystem` or a
-    /// `ValueSet`, or one the model cannot represent, and a `404` for a
+    /// Returns a `400` failure for a resource that is not a `CodeSystem`, a
+    /// `ValueSet`, or a `ConceptMap`, or one the model cannot represent, and a `404` for a
     /// supplement whose system is not served.
     pub fn layered(state: &'a AppState, resources: &[Resource]) -> Result<Self, Failure> {
         if resources.is_empty() {
@@ -66,6 +70,7 @@ impl<'a> Scope<'a> {
         }
         let mut registry = state.registry().clone();
         let mut value_sets = state.value_sets().clone();
+        let mut concept_maps = state.concept_maps().clone();
         let mut supplements = Vec::new();
         for resource in resources {
             match resource {
@@ -82,12 +87,16 @@ impl<'a> Scope<'a> {
                     let model = valueset::convert::r4b::convert(value_set).map_err(invalid)?;
                     value_sets.replace(model);
                 }
+                Resource::ConceptMap(concept_map) => {
+                    let model = conceptmap::convert::r4b::convert(concept_map).map_err(invalid)?;
+                    concept_maps.replace(model);
+                }
                 other => {
                     return Err(Failure::new(
                         StatusCode::BAD_REQUEST,
                         "not-supported",
                         format!(
-                            "`{TX_RESOURCE}` carries a {}; only CodeSystem and ValueSet resources are accepted",
+                            "`{TX_RESOURCE}` carries a {}; only CodeSystem, ValueSet, and ConceptMap resources are accepted",
                             resource_type(other)
                         ),
                     ));
@@ -124,6 +133,7 @@ impl<'a> Scope<'a> {
         Ok(Self {
             registry: Cow::Owned(registry),
             value_sets: Cow::Owned(value_sets),
+            concept_maps: Cow::Owned(concept_maps),
         })
     }
 
@@ -145,6 +155,7 @@ impl<'a> Scope<'a> {
         Sources {
             registry: &self.registry,
             value_sets: &self.value_sets,
+            concept_maps: &self.concept_maps,
         }
     }
 }
