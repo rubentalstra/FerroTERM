@@ -1,19 +1,22 @@
 # notio-fhir
 
-The generated FHIR layer. Every file marked `// @generated` is produced by
+The generated FHIR layer. Every `.rs` file here is produced by
 `tools/notio-fhir-codegen` from the vendored FHIR packages and is off-limits
-to hand edits. Full discipline: `.claude/rules/codegen.md`.
+to hand edits; the only hand-maintained files are `Cargo.toml` and this
+`CLAUDE.md`. Full discipline: `.claude/rules/codegen.md`.
 
-- To change anything here, change the emitter or its override map, then run
+- To change anything under `src/`, change the emitter or its inputs, then run
   `cargo run -p notio-fhir-codegen -- emit` and commit the regenerated tree.
-  The CI drift check regenerates and fails on any diff.
-- The emission scope is the declared terminology root set (CodeSystem,
-  ValueSet, ConceptMap, Parameters, OperationOutcome, CapabilityStatement,
-  TerminologyCapabilities, Bundle, and the terminology OperationDefinitions)
-  and the complete closure of every type those roots reference, per version.
-  Never trim inside that closure.
+  `cargo run -p notio-fhir-codegen -- emit --check` is the CI drift check and
+  fails on any difference.
+- The emission scope is the declared terminology root set (Bundle,
+  CapabilityStatement, CodeSystem, ConceptMap, OperationOutcome, Parameters,
+  TerminologyCapabilities, ValueSet, and the terminology OperationDefinitions)
+  and the complete closure of every type those roots reference, per version,
+  one module per version (`r4b` first). Never trim inside that closure.
+- `Resource`-typed elements (`Bundle.entry.resource`, `contained`) hold the
+  `Resource` enum over the root set plus `UnknownResource`, which keeps any
+  other resource's JSON body so a Bundle round-trips.
 - `doctest = false` is deliberate: generated doc text is not a curated
-  example set.
-- The only hand-written file is this `CLAUDE.md`. `src/lib.rs` is the
-  generator's output root; before the first emit it is a placeholder carrying
-  the tracker TODO.
+  example set. The crate-level `#![allow]` list in the generated `lib.rs`
+  names the pedantic lints the specification's own text and shapes trip.

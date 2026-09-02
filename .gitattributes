@@ -10,6 +10,8 @@
 # vendor/** linguist-vendored
 # crates/*/vendor/** linguist-vendored
 tools/*/vendor/** linguist-vendored
+# The FHIR layer is emitted by notio-fhir-codegen; every file under src/ is .
+crates/notio-fhir/src/** linguist-generated
 
 # Vendored packages are stored byte for byte as HL7 publishes them: no line
 # ending normalization, so the tree matches the registry tarball exactly.

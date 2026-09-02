@@ -1,0 +1,619 @@
+//! Lowering resolved structures to the Rust model the renderer emits.
+//!
+//! Every structure in the closure becomes a struct; a backbone element
+//! becomes a struct named by its path; a choice element (`value[x]`,
+//! <https://hl7.org/fhir/R4B/formats.html#choice>) becomes an enum with one
+//! variant per allowed type; a content reference points at the struct of the
+//! element it names. Cardinality maps to `T`, `Option<T>`, and `Vec<T>`
+//! (<https://hl7.org/fhir/R4B/conformance-rules.html#cardinality>), and an
+//! `Option` or direct field that closes a type cycle is boxed.
+
+use std::collections::{BTreeMap, BTreeSet};
+
+use crate::closure::{STRUCTURAL_TYPES, TypeClosure};
+use crate::model::StructureKind;
+use crate::naming::{backbone_name, field_name, module_name, type_name};
+use crate::snapshot::{ElementShape, Max, ResolvedElement, ResolvedStructure, TypeRef};
+
+/// The module holding every primitive type.
+pub const PRIMITIVES_MODULE: &str = "primitives";
+/// The module holding the `Resource` enum.
+pub const RESOURCE_MODULE: &str = "resource";
+/// The name of the enum over the root-set resources.
+pub const RESOURCE_ENUM: &str = "Resource";
+/// The name of the struct carrying a resource outside the root set.
+pub const UNKNOWN_RESOURCE: &str = "UnknownResource";
+
+/// A failure while lowering.
+#[derive(Debug, thiserror::Error)]
+pub enum LowerError {
+    /// A non-choice element lists more than one type code.
+    #[error("{path} lists {count} types but is not a choice element")]
+    MultiTyped {
+        /// The element path.
+        path: String,
+        /// The number of type codes.
+        count: usize,
+    },
+    /// A choice element lists no types.
+    #[error("{path} is a choice element with no types")]
+    EmptyChoice {
+        /// The element path.
+        path: String,
+    },
+    /// Two structures lower to the same Rust type name.
+    #[error("two types lower to the Rust name {name}: {first} and {second}")]
+    NameCollision {
+        /// The colliding name.
+        name: String,
+        /// The first origin.
+        first: String,
+        /// The second origin.
+        second: String,
+    },
+}
+
+/// How many values a field holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Card {
+    /// Exactly one (`T`).
+    One,
+    /// Zero or one (`Option<T>`).
+    Optional,
+    /// Any number (`Vec<T>`).
+    Many,
+}
+
+/// A value that is not a FHIR type: the `FHIRPath` system types primitives
+/// carry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scalar {
+    /// `bool`.
+    Bool,
+    /// `i32`.
+    I32,
+    /// `u32`.
+    U32,
+    /// `String`; decimals and dates keep their lexical form.
+    Str,
+}
+
+/// What a field or variant points at.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Target {
+    /// A type in this model, by Rust name.
+    Named(String),
+    /// A scalar value.
+    Inline(Scalar),
+}
+
+/// A field's type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FieldType {
+    /// The cardinality.
+    pub card: Card,
+    /// The target.
+    pub target: Target,
+    /// Whether the value is boxed to break a type cycle.
+    pub boxed: bool,
+}
+
+/// Documentation carried from the definition.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Docs {
+    /// The one-line summary.
+    pub short: Option<String>,
+    /// The formal definition.
+    pub definition: Option<String>,
+}
+
+/// A struct field.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Field {
+    /// The Rust field name.
+    pub name: String,
+    /// The FHIR element name (the last path segment, with `[x]` kept).
+    pub fhir_name: String,
+    /// The element path.
+    pub path: String,
+    /// Documentation.
+    pub docs: Docs,
+    /// The type.
+    pub ty: FieldType,
+}
+
+/// A choice enum variant.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Variant {
+    /// The Rust variant name.
+    pub name: String,
+    /// The FHIR type code.
+    pub code: String,
+    /// The type held.
+    pub target: Target,
+    /// Whether the value is boxed to break a type cycle.
+    pub boxed: bool,
+}
+
+/// The shape of a Rust type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TypeKind {
+    /// A struct.
+    Struct {
+        /// The fields, in snapshot order.
+        fields: Vec<Field>,
+    },
+    /// A choice enum.
+    Choice {
+        /// The FHIR element the choice belongs to.
+        element_path: String,
+        /// The variants, in the order the definition lists the types.
+        variants: Vec<Variant>,
+    },
+    /// The enum over the root-set resources.
+    ResourceEnum {
+        /// The resource type names, in name order.
+        resources: Vec<String>,
+    },
+    /// The struct carrying a resource outside the root set.
+    UnknownResource,
+}
+
+/// One Rust type to emit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RustType {
+    /// The Rust name.
+    pub name: String,
+    /// The module (file) the type lives in.
+    pub module: String,
+    /// Documentation.
+    pub docs: Docs,
+    /// The shape.
+    pub kind: TypeKind,
+    /// Whether the type is a FHIR primitive.
+    pub is_primitive: bool,
+    /// Whether the type is a root-set resource.
+    pub is_resource: bool,
+}
+
+/// The whole model for one FHIR version.
+#[derive(Debug)]
+pub struct RustModel {
+    /// The FHIR version module name, for example `r4b`.
+    pub version_module: String,
+    /// The package the model was lowered from.
+    pub package_name: String,
+    /// The package version.
+    pub package_version: String,
+    /// Every type, keyed by Rust name.
+    pub types: BTreeMap<String, RustType>,
+}
+
+impl RustModel {
+    /// Lowers `closure` into a model.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LowerError`] for a non-choice element with several types, a
+    /// choice with none, or two structures lowering to one Rust name.
+    pub fn lower(
+        closure: &TypeClosure,
+        version_module: &str,
+        package_name: &str,
+        package_version: &str,
+    ) -> Result<Self, LowerError> {
+        let mut model = Self {
+            version_module: version_module.to_owned(),
+            package_name: package_name.to_owned(),
+            package_version: package_version.to_owned(),
+            types: BTreeMap::new(),
+        };
+        for structure in closure.structures().values() {
+            let is_primitive = structure.kind == StructureKind::PrimitiveType;
+            let name = type_name(&structure.name);
+            let module = if is_primitive {
+                PRIMITIVES_MODULE.to_owned()
+            } else {
+                module_name(&name)
+            };
+            let is_resource = closure.roots().contains(&structure.name);
+            let root_path = structure
+                .elements
+                .first()
+                .map_or_else(|| structure.name.clone(), |e| e.path.clone());
+            lower_struct(
+                &mut model,
+                structure,
+                &root_path,
+                &name,
+                &module,
+                is_primitive,
+                is_resource,
+            )?;
+        }
+        let resources: Vec<String> = closure.roots().iter().map(|name| type_name(name)).collect();
+        model.insert(RustType {
+            name: RESOURCE_ENUM.to_owned(),
+            module: RESOURCE_MODULE.to_owned(),
+            docs: Docs {
+                short: Some(String::from("A resource of the terminology root set, or an unknown resource carried as JSON.")),
+                definition: Some(String::from(
+                    "The abstract Resource type (https://hl7.org/fhir/R4B/resource.html) as the root set closes over it: one variant per root-set resource, and UnknownResource for any other resource type met inside a Bundle entry or a contained list.",
+                )),
+            },
+            kind: TypeKind::ResourceEnum { resources },
+            is_primitive: false,
+            is_resource: false,
+        }, "the Resource enum")?;
+        model.insert(RustType {
+            name: UNKNOWN_RESOURCE.to_owned(),
+            module: RESOURCE_MODULE.to_owned(),
+            docs: Docs {
+                short: Some(String::from("A resource outside the root set, kept as its JSON body.")),
+                definition: Some(String::from(
+                    "Carries the resourceType and the complete JSON object so a Bundle or a contained resource of a type the terminology surface does not model round-trips unchanged.",
+                )),
+            },
+            kind: TypeKind::UnknownResource,
+            is_primitive: false,
+            is_resource: false,
+        }, "the UnknownResource struct")?;
+        model.box_cycles();
+        Ok(model)
+    }
+
+    fn insert(&mut self, ty: RustType, origin: &str) -> Result<(), LowerError> {
+        if let Some(existing) = self.types.get(&ty.name) {
+            return Err(LowerError::NameCollision {
+                name: ty.name.clone(),
+                first: existing.module.clone(),
+                second: origin.to_owned(),
+            });
+        }
+        self.types.insert(ty.name.clone(), ty);
+        Ok(())
+    }
+
+    /// The modules of the model, in name order, each with its types in name order.
+    #[must_use]
+    pub fn modules(&self) -> BTreeMap<&str, Vec<&RustType>> {
+        let mut modules: BTreeMap<&str, Vec<&RustType>> = BTreeMap::new();
+        for ty in self.types.values() {
+            modules.entry(ty.module.as_str()).or_default().push(ty);
+        }
+        modules
+    }
+
+    /// Boxes every direct or optional edge that lies inside a type cycle.
+    fn box_cycles(&mut self) {
+        let sccs = strongly_connected_components(&self.edges());
+        let component_of: BTreeMap<String, usize> = sccs
+            .iter()
+            .enumerate()
+            .flat_map(|(index, component)| component.iter().map(move |name| (name.clone(), index)))
+            .collect();
+        for ty in self.types.values_mut() {
+            let own = component_of.get(&ty.name).copied();
+            match &mut ty.kind {
+                TypeKind::Struct { fields } => {
+                    for field in fields.iter_mut() {
+                        if field.ty.card == Card::Many {
+                            continue;
+                        }
+                        if let Target::Named(target) = &field.ty.target
+                            && own.is_some()
+                            && component_of.get(target).copied() == own
+                        {
+                            field.ty.boxed = true;
+                        }
+                    }
+                }
+                TypeKind::Choice { variants, .. } => {
+                    for variant in variants.iter_mut() {
+                        if let Target::Named(target) = &variant.target
+                            && own.is_some()
+                            && component_of.get(target).copied() == own
+                        {
+                            variant.boxed = true;
+                        }
+                    }
+                }
+                TypeKind::ResourceEnum { .. } | TypeKind::UnknownResource => {}
+            }
+        }
+    }
+
+    /// The direct-containment graph: edges for `T` and `Option<T>` fields and
+    /// for enum variants; `Vec<T>` already breaks recursion.
+    fn edges(&self) -> BTreeMap<String, BTreeSet<String>> {
+        let mut edges: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        for ty in self.types.values() {
+            let out = edges.entry(ty.name.clone()).or_default();
+            match &ty.kind {
+                TypeKind::Struct { fields } => {
+                    for field in fields {
+                        if field.ty.card != Card::Many
+                            && let Target::Named(target) = &field.ty.target
+                        {
+                            out.insert(target.clone());
+                        }
+                    }
+                }
+                TypeKind::Choice { variants, .. } => {
+                    for variant in variants {
+                        if let Target::Named(target) = &variant.target {
+                            out.insert(target.clone());
+                        }
+                    }
+                }
+                TypeKind::ResourceEnum { resources } => {
+                    out.extend(resources.iter().cloned());
+                }
+                TypeKind::UnknownResource => {}
+            }
+        }
+        edges
+    }
+}
+
+fn lower_struct(
+    model: &mut RustModel,
+    structure: &ResolvedStructure,
+    path: &str,
+    name: &str,
+    module: &str,
+    is_primitive: bool,
+    is_resource: bool,
+) -> Result<(), LowerError> {
+    let root_docs = structure.element(path).map(docs_of).unwrap_or_default();
+    let mut fields = Vec::new();
+    for element in structure.children_of(path).cloned().collect::<Vec<_>>() {
+        let card = card_of(&element);
+        let target = match &element.shape {
+            ElementShape::Root => continue,
+            ElementShape::ContentReference {
+                structure: _,
+                path: target_path,
+            } => Target::Named(backbone_name(target_path)),
+            ElementShape::Choice(types) => {
+                let enum_name = format!(
+                    "{name}{}",
+                    type_name(element.choice_stem().unwrap_or(element.name()))
+                );
+                let variants = choice_variants(types, &element.path)?;
+                model.insert(
+                    RustType {
+                        name: enum_name.clone(),
+                        module: module.to_owned(),
+                        docs: Docs {
+                            short: Some(format!("The `{}` choice of `{name}`.", element.name())),
+                            definition: element.definition.clone(),
+                        },
+                        kind: TypeKind::Choice {
+                            element_path: element.path.clone(),
+                            variants,
+                        },
+                        is_primitive: false,
+                        is_resource: false,
+                    },
+                    &element.path,
+                )?;
+                Target::Named(enum_name)
+            }
+            ElementShape::Typed(types) => {
+                let Some(only) = types.first() else {
+                    return Err(LowerError::EmptyChoice {
+                        path: element.path.clone(),
+                    });
+                };
+                if types.len() > 1 && types.iter().any(|t| t.code != only.code) {
+                    return Err(LowerError::MultiTyped {
+                        path: element.path.clone(),
+                        count: types.len(),
+                    });
+                }
+                if only.fhirpath_type.is_some() {
+                    Target::Inline(scalar_for(&only.code))
+                } else if only.code == "BackboneElement" || only.code == "Element" {
+                    let nested = backbone_name(&element.path);
+                    lower_struct(
+                        model,
+                        structure,
+                        &element.path,
+                        &nested,
+                        module,
+                        false,
+                        false,
+                    )?;
+                    Target::Named(nested)
+                } else if only.code == "Resource" {
+                    Target::Named(RESOURCE_ENUM.to_owned())
+                } else {
+                    Target::Named(type_name(&only.code))
+                }
+            }
+        };
+        fields.push(Field {
+            name: field_name(element.name()),
+            fhir_name: element.name().to_owned(),
+            path: element.path.clone(),
+            docs: docs_of(&element),
+            ty: FieldType {
+                card,
+                target,
+                boxed: false,
+            },
+        });
+    }
+    model.insert(
+        RustType {
+            name: name.to_owned(),
+            module: module.to_owned(),
+            docs: root_docs,
+            kind: TypeKind::Struct { fields },
+            is_primitive,
+            is_resource,
+        },
+        path,
+    )
+}
+
+fn choice_variants(types: &[TypeRef], path: &str) -> Result<Vec<Variant>, LowerError> {
+    if types.is_empty() {
+        return Err(LowerError::EmptyChoice {
+            path: path.to_owned(),
+        });
+    }
+    Ok(types
+        .iter()
+        .map(|type_ref| {
+            let target = if STRUCTURAL_TYPES.contains(&type_ref.code.as_str()) {
+                Target::Named(RESOURCE_ENUM.to_owned())
+            } else {
+                Target::Named(type_name(&type_ref.code))
+            };
+            Variant {
+                name: type_name(&type_ref.code),
+                code: type_ref.code.clone(),
+                target,
+                boxed: false,
+            }
+        })
+        .collect())
+}
+
+fn card_of(element: &ResolvedElement) -> Card {
+    match (element.min, element.max) {
+        (_, Max::Unbounded) => Card::Many,
+        (_, Max::Bounded(n)) if n > 1 => Card::Many,
+        (0, _) => Card::Optional,
+        (_, _) => Card::One,
+    }
+}
+
+fn docs_of(element: &ResolvedElement) -> Docs {
+    Docs {
+        short: element.short.clone(),
+        definition: element.definition.clone(),
+    }
+}
+
+/// The Rust scalar for a FHIR primitive's value, by primitive name.
+///
+/// The package types positiveInt and unsignedInt values as System.String;
+/// the FHIR JSON representation carries them as numbers, so the scalar follows
+/// the primitive's definition (<https://hl7.org/fhir/R4B/datatypes.html#primitive>).
+/// Decimals and the date and time primitives keep their lexical form so
+/// precision and partial dates survive.
+fn scalar_for(code: &str) -> Scalar {
+    match code {
+        "boolean" => Scalar::Bool,
+        "integer" => Scalar::I32,
+        "positiveInt" | "unsignedInt" => Scalar::U32,
+        _ => Scalar::Str,
+    }
+}
+
+/// Tarjan's algorithm over the containment graph; components in a stable order.
+fn strongly_connected_components(edges: &BTreeMap<String, BTreeSet<String>>) -> Vec<Vec<String>> {
+    struct State<'a> {
+        edges: &'a BTreeMap<String, BTreeSet<String>>,
+        index: BTreeMap<String, usize>,
+        low: BTreeMap<String, usize>,
+        on_stack: BTreeSet<String>,
+        stack: Vec<String>,
+        next: usize,
+        components: Vec<Vec<String>>,
+    }
+
+    fn visit(state: &mut State<'_>, node: &str) {
+        state.index.insert(node.to_owned(), state.next);
+        state.low.insert(node.to_owned(), state.next);
+        state.next += 1;
+        state.stack.push(node.to_owned());
+        state.on_stack.insert(node.to_owned());
+        let successors: Vec<String> = state
+            .edges
+            .get(node)
+            .map(|set| set.iter().cloned().collect())
+            .unwrap_or_default();
+        for next in successors {
+            if !state.index.contains_key(&next) {
+                visit(state, &next);
+                let next_low = state.low.get(&next).copied().unwrap_or(usize::MAX);
+                let own = state.low.get(node).copied().unwrap_or(usize::MAX);
+                state.low.insert(node.to_owned(), own.min(next_low));
+            } else if state.on_stack.contains(&next) {
+                let next_index = state.index.get(&next).copied().unwrap_or(usize::MAX);
+                let own = state.low.get(node).copied().unwrap_or(usize::MAX);
+                state.low.insert(node.to_owned(), own.min(next_index));
+            }
+        }
+        if state.low.get(node) == state.index.get(node) {
+            let mut component = Vec::new();
+            while let Some(top) = state.stack.pop() {
+                state.on_stack.remove(&top);
+                let done = top == node;
+                component.push(top);
+                if done {
+                    break;
+                }
+            }
+            component.sort();
+            state.components.push(component);
+        }
+    }
+
+    let mut state = State {
+        edges,
+        index: BTreeMap::new(),
+        low: BTreeMap::new(),
+        on_stack: BTreeSet::new(),
+        stack: Vec::new(),
+        next: 0,
+        components: Vec::new(),
+    };
+    for node in edges.keys() {
+        if !state.index.contains_key(node) {
+            visit(&mut state, node);
+        }
+    }
+    state.components
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::{BTreeMap, BTreeSet};
+
+    use super::strongly_connected_components;
+
+    fn graph(pairs: &[(&str, &str)]) -> BTreeMap<String, BTreeSet<String>> {
+        let mut edges: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        for (from, to) in pairs {
+            edges
+                .entry((*from).to_owned())
+                .or_default()
+                .insert((*to).to_owned());
+            edges.entry((*to).to_owned()).or_default();
+        }
+        edges
+    }
+
+    #[test]
+    fn a_two_cycle_is_one_component() {
+        let components = strongly_connected_components(&graph(&[
+            ("Identifier", "Reference"),
+            ("Reference", "Identifier"),
+            ("Coding", "Identifier"),
+        ]));
+        assert!(components.contains(&vec!["Identifier".to_owned(), "Reference".to_owned()]));
+        assert!(components.contains(&vec!["Coding".to_owned()]));
+    }
+
+    #[test]
+    fn a_dag_has_singleton_components() {
+        let components = strongly_connected_components(&graph(&[("A", "B"), ("B", "C")]));
+        assert_eq!(components.len(), 3);
+        assert!(components.iter().all(|c| c.len() == 1));
+    }
+}

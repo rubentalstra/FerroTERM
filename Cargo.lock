@@ -437,6 +437,9 @@ dependencies = [
 [[package]]
 name = "notio-fhir"
 version = "0.0.0"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "notio-fhir-codegen"

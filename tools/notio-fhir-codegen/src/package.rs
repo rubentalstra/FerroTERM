@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::model::{
-    CodeSystem, OperationDefinition, ResourceHeader, StructureDefinition, ValueSet,
+    CodeSystem, Derivation, OperationDefinition, ResourceHeader, StructureDefinition, ValueSet,
 };
 
 /// A failure while reading a package.
@@ -214,16 +214,16 @@ impl Package {
             .map(PathBuf::as_path)
     }
 
-    /// The `StructureDefinition` whose `name` is `name`, for example `ValueSet`.
+    /// The type definition named `name`, for example `ValueSet`.
     ///
-    /// Core packages name each type's defining structure after the type, so
-    /// this is the lookup the root set uses. Profiles share a `type` with
-    /// their base and are not matched by this method.
+    /// Core packages name each type's defining structure after the type. A
+    /// constraint profile may share the name (the `rendering-xhtml` extension
+    /// is named `xhtml`), so only specializations and base definitions match.
     #[must_use]
     pub fn structure_definition_named(&self, name: &str) -> Option<&StructureDefinition> {
-        self.structure_definitions
-            .values()
-            .find(|definition| definition.name == name)
+        self.structure_definitions.values().find(|definition| {
+            definition.name == name && definition.derivation != Some(Derivation::Constraint)
+        })
     }
 }
 

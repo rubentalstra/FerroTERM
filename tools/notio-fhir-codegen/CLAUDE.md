@@ -7,12 +7,18 @@ resources are the authority for what it emits (`.claude/rules/codegen.md`).
 - Inputs live under `vendor/<package>/`, fetched only by
   `scripts/vendor/fhir-packages.sh`, verbatim, with a `PROVENANCE.md` each
   (`.claude/rules/vendored-inputs.md`). Never hand-edit a vendored file.
-- The emission scope is the declared terminology root set and the complete
-  closure of the types it references, per version. A shape the consumer lacks
-  is fixed here, never shadowed downstream.
+- The pipeline is `package` (read), `snapshot` (resolve), `roots` (select),
+  `closure` (the root-set closure), `lower` (the Rust model: structs per
+  type and backbone element, enums per choice, boxed cycle edges), `render`
+  (source text), `emit` (write or `--check`). The emission scope is the
+  declared root set and the complete closure of the types it references, per
+  version. A shape the consumer lacks is fixed here, never shadowed downstream.
 - Output is byte-deterministic: iterate `BTreeMap` and sorted vectors, never
-  a hash map (`.claude/rules/reliability.md`).
-- `main.rs` is thin over `lib.rs` so the loader and emitter are unit-tested
+  a hash map (`.claude/rules/reliability.md`); `rustfmt` from the pinned
+  toolchain formats the output so `cargo fmt --check` and the emitter agree.
+- `cargo run -p notio-fhir-codegen -- emit` regenerates; `-- emit --check`
+  is the drift check CI runs.
+- `main.rs` is thin over `lib.rs` so the loader and emitter are tested
   through the library.
 - This crate is a tool, so it may write to stdout and stderr; every such site
   carries a scoped `#[expect]` with a reason.
