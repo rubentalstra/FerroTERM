@@ -163,6 +163,32 @@ check. Conformance is measured against Snowstorm as the reference server (see
 - **Build compiling, tested increments** — do not defer compilation; keep every
   crate you touch green.
 
+## Working discipline (`.claude/`)
+
+Path-scoped rules load on demand when files in their scope are read; the rest
+apply always. Read the relevant one before working in that area.
+
+- `.claude/rules/rust-style.md`, `reliability.md`, `comments.md`, `testing.md` —
+  the Rust engineering discipline (idiomatic style, safety posture, comment
+  budgets, test discipline; oracles = Snowstorm/Hermes + the ECL grammar).
+- `.claude/rules/spec-adherence.md` — the FHIR + SNOMED/ECL specs are the oracle;
+  strictness; cite the spec.
+- `.claude/rules/fhir-terminology.md` — FHIR wire conformance (operations,
+  versioning, `$expand` paging, `OperationOutcome`, language) — scoped to the
+  wire crates.
+- `.claude/rules/snomed-terminology.md` — the SNOMED URI standard, implicit value
+  sets / concept maps, ECL 2.2, RF2 handling — scoped to the SNOMED crates.
+- `.claude/rules/codegen.md`, `vendored-inputs.md` — the `notio-fhir` generation
+  discipline and the vendored-input / SNOMED-content-never-committed rules.
+- Skills: `/spec-lookup` (find the authoritative spec answer in oracle order),
+  `/regen-codegen` (regenerate `notio-fhir` + drift check).
+- Agents: `spec-researcher`, `fhir-conformance-reviewer`, `implementer`.
+
+**Spec-oracle precedence:** (1) the FHIR normative spec for the served wire
+version, (2) the SNOMED CT URI + ECL specifications, (3) the SNOMED-on-FHIR IG,
+(4) the HL7 `fhir-tx-ecosystem-ig`. Reference servers (Snowstorm, Ontoserver,
+tx.fhir.org) are behavioural oracles for spec-silent edge cases only.
+
 ## References
 
 - @docs/architecture.md — the design authority (the four decisions + citations).

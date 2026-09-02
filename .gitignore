@@ -13,9 +13,27 @@ target
 # Contains mutation testing data
 **/mutants.out*/
 
+# SNOMED CT content is licence-gated and NEVER committed (.claude/rules/vendored-inputs.md).
+# A licensed RF2 release brought into a working tree must not be committable by
+# accident; widen this list in the same change if a genuinely new shape appears.
+SnomedCT_*/
+Snapshot/
+Full/
+Delta/
+*.rf2
+sct2_*
+der2_*
+# Built serving artifacts (tools/notio-build output): redb store + fst/roaring indexes.
+/artifacts/
+*.redb
+*.fst
+
 # RustRover
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# Claude Code personal/local overrides (never committed)
+.claude/settings.local.json
