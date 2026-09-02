@@ -130,6 +130,16 @@ jobs:
             org.opencontainers.image.documentation=https://ferroterm.eu/docs/
             org.opencontainers.image.vendor=FerroTERM
             org.opencontainers.image.licenses=MIT
+          # The action derives its annotations from its own default labels, so
+          # the custom lines above never reach the index; GHCR reads the package
+          # description from the index annotation, hence the repeat here.
+          annotations: |
+            org.opencontainers.image.title=FerroTERM
+            org.opencontainers.image.description=A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems
+            org.opencontainers.image.url=https://ferroterm.eu
+            org.opencontainers.image.documentation=https://ferroterm.eu/docs/
+            org.opencontainers.image.vendor=FerroTERM
+            org.opencontainers.image.licenses=MIT
 
       # Cold by construction, like the binary lane: no cache may influence a
       # published artifact. BuildKit's SBOM scanner is off: it sees a
