@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+[package]
+name = "notio-ecl"
+description = "The SNOMED CT Expression Constraint Language lexer, parser, and evaluator"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+
+[lints]
+workspace = true

@@ -10,7 +10,7 @@ discovery-phase repo.
 ## Product and citation version
 
 - The product version is the workspace `version` in the root `Cargo.toml`
-  (inherited by the crates), currently **0.0.0** (pre-release, no code yet).
+  (inherited by the crates), currently **0.0.0** (pre-release).
 - `CITATION.cff` `version` tracks it exactly. The version guard fails if they
   disagree once `Cargo.toml` exists.
 
@@ -18,10 +18,10 @@ discovery-phase repo.
 
 | Item | Pin |
 |---|---|
-| Rust toolchain | stable (pinned in `rust-toolchain.toml` when the workspace lands) |
+| Rust toolchain | 1.98.0 (stable, pinned in `rust-toolchain.toml`) |
 | Edition | 2024 |
 | Cargo resolver | 3 |
-| MSRV | tracked once a crate is published; the deliverable is a binary/service, so MSRV may track current stable |
+| MSRV | 1.98 (`rust-version` in the root `Cargo.toml`, checked by `cargo hack check --rust-version`); the deliverable is a binary, so MSRV tracks the pinned stable |
 
 ## openEHR: n/a
 
@@ -52,7 +52,7 @@ Machine-generated per version from the vendored, pinned HL7 FHIR packages
 ## Rust dependency pins
 
 The authoritative, fully-pinned third-party crate set lives in the root
-`Cargo.toml` `[workspace.dependencies]` (once the workspace exists). This file
+`Cargo.toml` `[workspace.dependencies]`. This file
 does not duplicate crate versions; on any discrepancy, the manifest wins. Add a
 dependency to a crate with `dep.workspace = true`.
 
