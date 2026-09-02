@@ -15,6 +15,19 @@ fresh link reference.
 
 ### Added
 
+- Request-scoped resources: `tx-resource` parameters on every operation carry
+  `CodeSystem` and `ValueSet` resources served for that request only (a
+  supplement applies to the system it names; another resource type is
+  refused), `POST $cache-control?mode=start` front-loads them under a
+  `cache-id` that the `X-Cache-Id` header names on later requests
+  (`mode=end` releases it; an idle cache expires after 30 minutes), and
+  `GET $versions` answers the FHIR version of the base. Loaded value sets are
+  readable (`GET ValueSet/{id}`) and searchable by `url` and `version`. The
+  capability statement gains its canonical, `instantiates` the terminology
+  server statement, the `ValueSet` interactions and operations, `versions`
+  and `cache-control`, and the ecosystem feature extensions; the terminology
+  capabilities list the `$expand` parameters the server evaluates.
+
 - `ValueSet/$expand` and `ValueSet/$validate-code` on R4B, type level, over the
   compose layer. A value set is inline (`valueSet`), loaded from a
   `FERROTERM_CODESYSTEMS` directory (`url` and `valueSetVersion`; the greatest

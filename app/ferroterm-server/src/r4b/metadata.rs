@@ -12,9 +12,10 @@ use axum::response::{IntoResponse, Response};
 use ferroterm_fhir::codec::Json;
 use ferroterm_fhir::r4b::capability_statement::{
     CapabilityStatement, CapabilityStatementImplementation, CapabilityStatementRest,
-    CapabilityStatementRestResource, CapabilityStatementRestResourceOperation,
-    CapabilityStatementSoftware,
+    CapabilityStatementRestResource, CapabilityStatementRestResourceInteraction,
+    CapabilityStatementRestResourceOperation, CapabilityStatementSoftware,
 };
+use ferroterm_fhir::r4b::extension::{Extension, ExtensionValue};
 use ferroterm_fhir::r4b::operations::code_system_lookup::CODE_SYSTEM_LOOKUP;
 use ferroterm_fhir::r4b::operations::code_system_subsumes::CODE_SYSTEM_SUBSUMES;
 use ferroterm_fhir::r4b::operations::code_system_validate_code::CODE_SYSTEM_VALIDATE_CODE;
@@ -31,6 +32,32 @@ use crate::state::AppState;
 
 /// The FHIR version this surface serves.
 pub const FHIR_VERSION: &str = "4.3.0";
+/// The canonical of this server's R4B capability statement (our own).
+pub const CAPABILITY_URL: &str = "https://ferroterm.eu/fhir/CapabilityStatement/ferroterm-r4b";
+/// The terminology server capability statement this one instantiates.
+pub const TERMINOLOGY_SERVER: &str = "http://hl7.org/fhir/CapabilityStatement/terminology-server";
+/// The application-feature extension (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>).
+const FEATURE: &str = "http://hl7.org/fhir/uv/application-feature/StructureDefinition/feature";
+
+/// One application feature: its definition and value.
+fn feature(definition: &str, value: ExtensionValue) -> Extension {
+    Extension {
+        url: FEATURE.to_owned(),
+        extension: vec![
+            Extension {
+                url: String::from("definition"),
+                value: Some(ExtensionValue::Canonical(definition.into())),
+                ..Default::default()
+            },
+            Extension {
+                url: String::from("value"),
+                value: Some(value),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
 
 /// The current time as a FHIR `dateTime` (RFC 3339, UTC).
 fn now() -> String {
@@ -81,10 +108,32 @@ pub fn capability_statement(state: &AppState) -> CapabilityStatement {
         documentation: None,
         ..Default::default()
     };
+    let interaction = |code: &str| CapabilityStatementRestResourceInteraction {
+        code: code.into(),
+        ..Default::default()
+    };
+    // NOTE: the ecosystem runner reads these features to know what a server
+    // accepts (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+    let features = vec![
+        feature(
+            "http://hl7.org/fhir/uv/tx-tests/FeatureDefinition/test-version",
+            ExtensionValue::Code(state.software_version().into()),
+        ),
+        feature(
+            "http://hl7.org/fhir/uv/tx-ecosystem/FeatureDefinition/CodeSystemAsParameter",
+            ExtensionValue::Boolean(true.into()),
+        ),
+    ];
     CapabilityStatement {
+        extension: features,
+        url: Some(CAPABILITY_URL.into()),
+        version: Some(state.software_version().into()),
+        name: Some("FerroTERM".into()),
+        title: Some("FerroTERM terminology server (R4B)".into()),
         status: "active".into(),
         date: now().as_str().into(),
         kind: "instance".into(),
+        instantiates: vec![TERMINOLOGY_SERVER.into()],
         fhir_version: FHIR_VERSION.into(),
         format: vec!["application/fhir+json".into(), "json".into()],
         software: Some(CapabilityStatementSoftware {
@@ -113,12 +162,17 @@ pub fn capability_statement(state: &AppState) -> CapabilityStatement {
                 },
                 CapabilityStatementRestResource {
                     r#type: "ValueSet".into(),
+                    interaction: vec![interaction("read"), interaction("search-type")],
                     operation: vec![
                         operation(VALUE_SET_EXPAND.code, VALUE_SET_EXPAND.url),
                         operation(VALUE_SET_VALIDATE_CODE.code, VALUE_SET_VALIDATE_CODE.url),
                     ],
                     ..Default::default()
                 },
+            ],
+            operation: vec![
+                operation("versions", crate::r4b::system::VERSIONS_URL),
+                operation("cache-control", crate::r4b::system::CACHE_CONTROL_URL),
             ],
             ..Default::default()
         }],
@@ -130,6 +184,9 @@ pub fn capability_statement(state: &AppState) -> CapabilityStatement {
 #[must_use]
 pub fn terminology_capabilities(state: &AppState) -> TerminologyCapabilities {
     let mut capabilities = Summary::of(state.registry()).to_r4b(&now());
+    capabilities.version = Some(state.software_version().into());
+    capabilities.name = Some("FerroTERM".into());
+    capabilities.title = Some("FerroTERM terminology capabilities (R4B)".into());
     capabilities.software = Some(TerminologyCapabilitiesSoftware {
         name: "FerroTERM".into(),
         version: Some(state.software_version().into()),

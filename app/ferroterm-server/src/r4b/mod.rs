@@ -2,6 +2,7 @@
 
 pub mod metadata;
 pub mod operations;
+pub mod system;
 pub mod wire;
 
 use std::sync::Arc;
@@ -17,6 +18,13 @@ use crate::state::AppState;
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/metadata", get(metadata::metadata))
+        .route("/$versions", get(system::versions))
+        .route(
+            "/$cache-control",
+            axum::routing::post(system::cache_control),
+        )
+        .route("/ValueSet", get(system::value_set_search))
+        .route("/ValueSet/{id}", get(system::value_set_read))
         .route(
             "/CodeSystem/$lookup",
             get(operations::lookup_get).post(operations::lookup_post),

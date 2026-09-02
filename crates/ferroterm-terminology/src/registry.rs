@@ -81,6 +81,20 @@ impl Registry {
         Ok(())
     }
 
+    /// Adds a provider, replacing the one already registered for that system
+    /// version (a request-scoped resource shadows a loaded one).
+    pub fn register_or_replace(&mut self, provider: Arc<dyn CodeSystemProvider>) {
+        let (url, version) = {
+            let identity = provider.identity();
+            (identity.url.clone(), identity.version.clone())
+        };
+        self.systems
+            .entry(url)
+            .or_default()
+            .versions
+            .insert(version, provider);
+    }
+
     /// Configures the version a request without one resolves to.
     ///
     /// # Errors

@@ -13,17 +13,16 @@ use ferroterm_fhir::r4b::operations::value_set_expand::{
 };
 use ferroterm_fhir::r4b::primitives::{Canonical, Integer};
 use ferroterm_fhir::r4b::value_set::{
-    ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeConcept,
-    ValueSetComposeIncludeConceptDesignation, ValueSetComposeIncludeFilter, ValueSetExpansion,
+    ValueSet, ValueSetComposeIncludeConceptDesignation, ValueSetExpansion,
     ValueSetExpansionContains, ValueSetExpansionParameter, ValueSetExpansionParameterValue,
 };
 
 use super::{OperationError, Sources, code_text, string_text, uri_text};
 use crate::compose::{Compose, Expansion, Include, Item, Options};
 use crate::provider::Designation;
-use crate::valueset::convert;
 use crate::valueset::model::ValueSetModel;
 use crate::valueset::store::Resolver;
+use crate::valueset::{convert, render};
 
 /// Runs `$expand`.
 ///
@@ -59,30 +58,18 @@ pub fn expand(
         .as_ref()
         .and_then(|b| b.value)
         .unwrap_or(false);
+    let mut value_set = render::to_r4b(&model, include_definition);
+    value_set.expansion = Some(ValueSetExpansion {
+        identifier: Some(format!("urn:uuid:{}", uuid::Uuid::new_v4()).as_str().into()),
+        timestamp: jiff::Timestamp::now().to_string().as_str().into(),
+        total: Some(Integer::from(total)),
+        offset: Some(Integer::from(offset)),
+        parameter: parameters(request, &expansion),
+        contains,
+        ..Default::default()
+    });
     Ok(ValueSetExpandResponse {
-        r#return: ValueSet {
-            url: Some(model.url.as_str().into()),
-            version: model.version.as_deref().map(Into::into),
-            name: model.name.as_deref().map(Into::into),
-            title: model.title.as_deref().map(Into::into),
-            status: model.status.as_str().into(),
-            experimental: model.experimental.map(Into::into),
-            date: model.date.as_deref().map(Into::into),
-            publisher: model.publisher.as_deref().map(Into::into),
-            description: model.description.as_deref().map(Into::into),
-            immutable: model.immutable.map(Into::into),
-            compose: include_definition.then(|| render_compose(&model.compose)),
-            expansion: Some(ValueSetExpansion {
-                identifier: Some(format!("urn:uuid:{}", uuid::Uuid::new_v4()).as_str().into()),
-                timestamp: jiff::Timestamp::now().to_string().as_str().into(),
-                total: Some(Integer::from(total)),
-                offset: Some(Integer::from(offset)),
-                parameter: parameters(request, &expansion),
-                contains,
-                ..Default::default()
-            }),
-            ..Default::default()
-        },
+        r#return: value_set,
     })
 }
 
@@ -354,49 +341,6 @@ fn designations_of(
             ..Default::default()
         })
         .collect())
-}
-
-/// `compose` as the R4B element, for `includeDefinition`.
-fn render_compose(compose: &Compose) -> ValueSetCompose {
-    let render = |include: &Include| ValueSetComposeInclude {
-        system: include.system.as_ref().map(|s| s.url.as_str().into()),
-        version: include
-            .system
-            .as_ref()
-            .and_then(|s| s.version.as_deref())
-            .map(Into::into),
-        concept: include
-            .concepts
-            .iter()
-            .map(|c| ValueSetComposeIncludeConcept {
-                code: c.code.as_str().into(),
-                display: c.display.as_deref().map(Into::into),
-                ..Default::default()
-            })
-            .collect(),
-        filter: include
-            .filters
-            .iter()
-            .map(|f| ValueSetComposeIncludeFilter {
-                property: f.property.as_str().into(),
-                op: f.op.code().into(),
-                value: f.value.as_str().into(),
-                ..Default::default()
-            })
-            .collect(),
-        value_set: include
-            .value_sets
-            .iter()
-            .map(|v| v.as_str().into())
-            .collect(),
-        ..Default::default()
-    };
-    ValueSetCompose {
-        inactive: compose.inactive.map(Into::into),
-        include: compose.include.iter().map(render).collect(),
-        exclude: compose.exclude.iter().map(render).collect(),
-        ..Default::default()
-    }
 }
 
 /// The model of an inline R4B `ValueSet`, for callers outside this module.

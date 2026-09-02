@@ -1,7 +1,9 @@
 //! The `CodeSystem` and `ValueSet` operation handlers on R4B.
 //!
 //! Each handler turns the wire form into the generated request type, runs the
-//! operation, and writes the generated response as `Parameters`.
+//! operation in the request's [`Scope`], and writes the generated response.
+//! `tx-resource` parameters and the `X-Cache-Id` header are peeled off before
+//! the generated request refuses what the operation does not declare.
 
 use std::sync::Arc;
 
@@ -33,6 +35,7 @@ use http::{HeaderMap, StatusCode};
 
 use crate::outcome::Failure;
 use crate::r4b::wire;
+use crate::scope::{Scope, scope_of, split_resources};
 use crate::state::AppState;
 
 type Handled = Result<Response, Failure>;
@@ -47,168 +50,64 @@ fn instance(state: &AppState, id: &str) -> Result<Invocation, Failure> {
     })
 }
 
-fn run_lookup(state: &AppState, invocation: &Invocation, parameters: &Parameters) -> Handled {
+/// A `GET` invocation: the query parameters, in the scope the headers name.
+fn from_query<'a>(
+    state: &'a AppState,
+    operation: &ferroterm_fhir::operation::Operation,
+    headers: &HeaderMap,
+    query: &[(String, String)],
+) -> Result<(Scope<'a>, Parameters), Failure> {
+    let parameters = wire::parameters_from_query(operation, query)?;
+    Ok((scope_of(state, headers, Vec::new())?, parameters))
+}
+
+/// A `POST` invocation: the body's `Parameters` less its `tx-resource`s, in
+/// the scope those resources and the headers form.
+fn from_body<'a>(
+    state: &'a AppState,
+    headers: &HeaderMap,
+    body: &Bytes,
+) -> Result<(Scope<'a>, Parameters), Failure> {
+    let (parameters, resources) = split_resources(wire::parameters_from_body(headers, body)?)?;
+    Ok((scope_of(state, headers, resources)?, parameters))
+}
+
+fn run_lookup(scope: &Scope<'_>, invocation: &Invocation, parameters: &Parameters) -> Handled {
     let request = CodeSystemLookupRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let response = lookup::lookup(state.registry(), invocation, &request)?;
+    let response = lookup::lookup(scope.registry(), invocation, &request)?;
     wire::respond(&response.to_parameters())
 }
 
 fn run_validate_code(
-    state: &AppState,
+    scope: &Scope<'_>,
     invocation: &Invocation,
     parameters: &Parameters,
 ) -> Handled {
     let request = CodeSystemValidateCodeRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let response = validate_code::validate_code(state.registry(), invocation, &request)?;
+    let response = validate_code::validate_code(scope.registry(), invocation, &request)?;
     wire::respond(&response.to_parameters())
 }
 
-fn run_subsumes(state: &AppState, invocation: &Invocation, parameters: &Parameters) -> Handled {
+fn run_subsumes(scope: &Scope<'_>, invocation: &Invocation, parameters: &Parameters) -> Handled {
     let request = CodeSystemSubsumesRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let response = subsumes::subsumes(state.registry(), invocation, &request)?;
+    let response = subsumes::subsumes(scope.registry(), invocation, &request)?;
     wire::respond(&response.to_parameters())
 }
 
-fn finish(handled: Handled) -> Response {
-    match handled {
-        Ok(response) => response,
-        Err(failure) => failure.into_response(),
-    }
-}
-
-/// `GET /CodeSystem/$lookup`.
-pub async fn lookup_get(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<Vec<(String, String)>>,
-) -> Response {
-    finish(
-        wire::parameters_from_query(&CODE_SYSTEM_LOOKUP, &query)
-            .and_then(|p| run_lookup(&state, &Invocation::Type, &p)),
-    )
-}
-
-/// `POST /CodeSystem/$lookup`.
-pub async fn lookup_post(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> Response {
-    finish(
-        wire::parameters_from_body(&headers, &body)
-            .and_then(|p| run_lookup(&state, &Invocation::Type, &p)),
-    )
-}
-
-/// `GET /CodeSystem/$validate-code`.
-pub async fn validate_code_get(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<Vec<(String, String)>>,
-) -> Response {
-    finish(
-        wire::parameters_from_query(&CODE_SYSTEM_VALIDATE_CODE, &query)
-            .and_then(|p| run_validate_code(&state, &Invocation::Type, &p)),
-    )
-}
-
-/// `POST /CodeSystem/$validate-code`.
-pub async fn validate_code_post(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> Response {
-    finish(
-        wire::parameters_from_body(&headers, &body)
-            .and_then(|p| run_validate_code(&state, &Invocation::Type, &p)),
-    )
-}
-
-/// `GET /CodeSystem/{id}/$validate-code`.
-pub async fn validate_code_instance_get(
-    State(state): State<Arc<AppState>>,
-    UrlPath(id): UrlPath<String>,
-    Query(query): Query<Vec<(String, String)>>,
-) -> Response {
-    finish(instance(&state, &id).and_then(|invocation| {
-        wire::parameters_from_query(&CODE_SYSTEM_VALIDATE_CODE, &query)
-            .and_then(|p| run_validate_code(&state, &invocation, &p))
-    }))
-}
-
-/// `POST /CodeSystem/{id}/$validate-code`.
-pub async fn validate_code_instance_post(
-    State(state): State<Arc<AppState>>,
-    UrlPath(id): UrlPath<String>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> Response {
-    finish(instance(&state, &id).and_then(|invocation| {
-        wire::parameters_from_body(&headers, &body)
-            .and_then(|p| run_validate_code(&state, &invocation, &p))
-    }))
-}
-
-/// `GET /CodeSystem/$subsumes`.
-pub async fn subsumes_get(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<Vec<(String, String)>>,
-) -> Response {
-    finish(
-        wire::parameters_from_query(&CODE_SYSTEM_SUBSUMES, &query)
-            .and_then(|p| run_subsumes(&state, &Invocation::Type, &p)),
-    )
-}
-
-/// `POST /CodeSystem/$subsumes`.
-pub async fn subsumes_post(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> Response {
-    finish(
-        wire::parameters_from_body(&headers, &body)
-            .and_then(|p| run_subsumes(&state, &Invocation::Type, &p)),
-    )
-}
-
-/// `GET /CodeSystem/{id}/$subsumes`.
-pub async fn subsumes_instance_get(
-    State(state): State<Arc<AppState>>,
-    UrlPath(id): UrlPath<String>,
-    Query(query): Query<Vec<(String, String)>>,
-) -> Response {
-    finish(instance(&state, &id).and_then(|invocation| {
-        wire::parameters_from_query(&CODE_SYSTEM_SUBSUMES, &query)
-            .and_then(|p| run_subsumes(&state, &invocation, &p))
-    }))
-}
-
-/// `POST /CodeSystem/{id}/$subsumes`.
-pub async fn subsumes_instance_post(
-    State(state): State<Arc<AppState>>,
-    UrlPath(id): UrlPath<String>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> Response {
-    finish(instance(&state, &id).and_then(|invocation| {
-        wire::parameters_from_body(&headers, &body)
-            .and_then(|p| run_subsumes(&state, &invocation, &p))
-    }))
-}
-
-fn run_expand(state: &AppState, parameters: &Parameters) -> Handled {
+fn run_expand(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
     let request = ValueSetExpandRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let response = expand::expand(&state.sources(), &request)?;
+    let response = expand::expand(&scope.sources(), &request)?;
     wire::respond_resource(&response.r#return)
 }
 
-fn run_value_set_validate_code(state: &AppState, parameters: &Parameters) -> Handled {
+fn run_value_set_validate_code(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
     let request = ValueSetValidateCodeRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let validation = value_set_validate_code::validate_code(&state.sources(), &request)?;
+    let validation = value_set_validate_code::validate_code(&scope.sources(), &request)?;
     wire::respond(&validation_parameters(&validation))
 }
 
@@ -272,13 +171,146 @@ fn validation_parameters(validation: &Validation) -> Parameters {
     parameters
 }
 
-/// `GET /ValueSet/$expand`.
-pub async fn expand_get(
+fn finish(handled: Handled) -> Response {
+    match handled {
+        Ok(response) => response,
+        Err(failure) => failure.into_response(),
+    }
+}
+
+/// `GET /CodeSystem/$lookup`.
+pub async fn lookup_get(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Query(query): Query<Vec<(String, String)>>,
 ) -> Response {
     finish(
-        wire::parameters_from_query(&VALUE_SET_EXPAND, &query).and_then(|p| run_expand(&state, &p)),
+        from_query(&state, &CODE_SYSTEM_LOOKUP, &headers, &query)
+            .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p)),
+    )
+}
+
+/// `POST /CodeSystem/$lookup`.
+pub async fn lookup_post(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    finish(
+        from_body(&state, &headers, &body)
+            .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p)),
+    )
+}
+
+/// `GET /CodeSystem/$validate-code`.
+pub async fn validate_code_get(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(query): Query<Vec<(String, String)>>,
+) -> Response {
+    finish(
+        from_query(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &query)
+            .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p)),
+    )
+}
+
+/// `POST /CodeSystem/$validate-code`.
+pub async fn validate_code_post(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    finish(
+        from_body(&state, &headers, &body)
+            .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p)),
+    )
+}
+
+/// `GET /CodeSystem/{id}/$validate-code`.
+pub async fn validate_code_instance_get(
+    State(state): State<Arc<AppState>>,
+    UrlPath(id): UrlPath<String>,
+    headers: HeaderMap,
+    Query(query): Query<Vec<(String, String)>>,
+) -> Response {
+    finish(instance(&state, &id).and_then(|invocation| {
+        from_query(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &query)
+            .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p))
+    }))
+}
+
+/// `POST /CodeSystem/{id}/$validate-code`.
+pub async fn validate_code_instance_post(
+    State(state): State<Arc<AppState>>,
+    UrlPath(id): UrlPath<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    finish(instance(&state, &id).and_then(|invocation| {
+        from_body(&state, &headers, &body)
+            .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p))
+    }))
+}
+
+/// `GET /CodeSystem/$subsumes`.
+pub async fn subsumes_get(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(query): Query<Vec<(String, String)>>,
+) -> Response {
+    finish(
+        from_query(&state, &CODE_SYSTEM_SUBSUMES, &headers, &query)
+            .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p)),
+    )
+}
+
+/// `POST /CodeSystem/$subsumes`.
+pub async fn subsumes_post(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    finish(
+        from_body(&state, &headers, &body)
+            .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p)),
+    )
+}
+
+/// `GET /CodeSystem/{id}/$subsumes`.
+pub async fn subsumes_instance_get(
+    State(state): State<Arc<AppState>>,
+    UrlPath(id): UrlPath<String>,
+    headers: HeaderMap,
+    Query(query): Query<Vec<(String, String)>>,
+) -> Response {
+    finish(instance(&state, &id).and_then(|invocation| {
+        from_query(&state, &CODE_SYSTEM_SUBSUMES, &headers, &query)
+            .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p))
+    }))
+}
+
+/// `POST /CodeSystem/{id}/$subsumes`.
+pub async fn subsumes_instance_post(
+    State(state): State<Arc<AppState>>,
+    UrlPath(id): UrlPath<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    finish(instance(&state, &id).and_then(|invocation| {
+        from_body(&state, &headers, &body)
+            .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p))
+    }))
+}
+
+/// `GET /ValueSet/$expand`.
+pub async fn expand_get(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(query): Query<Vec<(String, String)>>,
+) -> Response {
+    finish(
+        from_query(&state, &VALUE_SET_EXPAND, &headers, &query)
+            .and_then(|(scope, p)| run_expand(&scope, &p)),
     )
 }
 
@@ -288,17 +320,18 @@ pub async fn expand_post(
     headers: HeaderMap,
     body: Bytes,
 ) -> Response {
-    finish(wire::parameters_from_body(&headers, &body).and_then(|p| run_expand(&state, &p)))
+    finish(from_body(&state, &headers, &body).and_then(|(scope, p)| run_expand(&scope, &p)))
 }
 
 /// `GET /ValueSet/$validate-code`.
 pub async fn value_set_validate_code_get(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Query(query): Query<Vec<(String, String)>>,
 ) -> Response {
     finish(
-        wire::parameters_from_query(&VALUE_SET_VALIDATE_CODE, &query)
-            .and_then(|p| run_value_set_validate_code(&state, &p)),
+        from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query)
+            .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)),
     )
 }
 
@@ -309,7 +342,7 @@ pub async fn value_set_validate_code_post(
     body: Bytes,
 ) -> Response {
     finish(
-        wire::parameters_from_body(&headers, &body)
-            .and_then(|p| run_value_set_validate_code(&state, &p)),
+        from_body(&state, &headers, &body)
+            .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)),
     )
 }
