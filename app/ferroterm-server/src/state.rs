@@ -28,12 +28,31 @@ pub enum LoadError {
     Register(#[from] RegisterError),
 }
 
+/// One loaded code system version, for the startup summary.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InstanceSummary {
+    /// The `CodeSystem` instance id.
+    pub id: String,
+    /// The system URI.
+    pub url: String,
+    /// The version.
+    pub version: String,
+    /// The concept count.
+    pub concepts: u64,
+    /// The designation languages.
+    pub languages: Vec<String>,
+    /// The artifact directory, when loaded from one.
+    pub path: Option<PathBuf>,
+}
+
 /// What the handlers share.
 #[derive(Debug)]
 pub struct AppState {
     registry: Registry,
     /// `CodeSystem` instance id to (system, version).
     instances: BTreeMap<String, (String, String)>,
+    /// The artifact directory each version was loaded from.
+    paths: BTreeMap<(String, String), PathBuf>,
     /// The software version reported in the capability statements.
     software_version: &'static str,
 }
@@ -47,6 +66,7 @@ impl AppState {
     /// serve the same system version. A server never starts on a bad index.
     pub fn load(config: &Config) -> Result<Self, LoadError> {
         let mut registry = Registry::new();
+        let mut paths = BTreeMap::new();
         for path in &config.index {
             let provider =
                 SnomedProvider::open(path, &config.default_language).map_err(|source| {
@@ -55,9 +75,16 @@ impl AppState {
                         source: Box::new(source),
                     }
                 })?;
+            let identity = provider.identity();
+            paths.insert(
+                (identity.url.clone(), identity.version.clone()),
+                path.clone(),
+            );
             registry.register(Arc::new(provider))?;
         }
-        Ok(Self::from_registry(registry))
+        let mut state = Self::from_registry(registry);
+        state.paths = paths;
+        Ok(state)
     }
 
     /// Wraps an already-built registry (tests and embedders).
@@ -76,8 +103,35 @@ impl AppState {
         Self {
             registry,
             instances,
+            paths: BTreeMap::new(),
             software_version: env!("CARGO_PKG_VERSION"),
         }
+    }
+
+    /// What is loaded, one entry per code system version, sorted by id.
+    ///
+    /// # Errors
+    ///
+    /// Returns the provider's error when a concept count cannot be read.
+    pub fn summaries(
+        &self,
+    ) -> Result<Vec<InstanceSummary>, ferroterm_terminology::provider::ProviderError> {
+        let mut out = Vec::new();
+        for (id, (url, version)) in &self.instances {
+            let Ok(resolved) = self.registry.resolve(url, Some(version)) else {
+                continue;
+            };
+            let concepts = resolved.provider.all()?.len();
+            out.push(InstanceSummary {
+                id: id.clone(),
+                url: url.clone(),
+                version: version.clone(),
+                concepts,
+                languages: resolved.provider.declaration().languages.clone(),
+                path: self.paths.get(&(url.clone(), version.clone())).cloned(),
+            });
+        }
+        Ok(out)
     }
 
     /// The registry.
