@@ -160,5 +160,14 @@ fn defaults_and_value_constructors_follow_the_definitions() {
         );
     }
     assert!(primitives.contains("impl From<&str> for Code {"));
+    // Operation structs follow the same rule: a request of optional parameters
+    // derives Default; a part struct with a required open-type value does not.
+    let lookup = read("operations/code_system_lookup.rs");
+    assert!(lookup.contains(
+        "#[derive(Debug, Clone, Default, PartialEq, Eq)]\npub struct CodeSystemLookupRequest {"
+    ));
+    assert!(lookup.contains(
+        "#[derive(Debug, Clone, PartialEq, Eq)]\npub struct CodeSystemLookupResponsePropertySubproperty {"
+    ));
     assert!(!primitives.contains("impl From<&str> for Boolean {"));
 }

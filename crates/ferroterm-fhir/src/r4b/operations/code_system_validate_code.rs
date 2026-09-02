@@ -11,7 +11,7 @@
 //! parameters (including version and display) are optional
 
 /// The `in` parameters of `CodeSystem/$validate-code`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemValidateCodeRequest {
     /// CodeSystem URL. The server must know the code system (e.g. it is defined
     /// explicitly in the server'scode systems, or it is known implicitly by the
@@ -67,7 +67,7 @@ pub struct CodeSystemValidateCodeRequest {
 }
 
 /// The `out` parameters of `CodeSystem/$validate-code`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemValidateCodeResponse {
     /// True if the concept details supplied are valid
     pub result: super::super::primitives::Boolean,

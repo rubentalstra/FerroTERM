@@ -7,3 +7,4 @@
 - [Repo merge gates](repo-merge-gates.md), main needs one approving + code-owner review, signed commits, and the `conclusion` check; Claude stacks PRs and the owner merges; the Roadmap board did not exist as of 2026-09-02
 - [Release cut cadence](release-cut-cadence.md), cut the release PR the moment a milestone hits zero open issues, then push the signed tag; the owner flagged v0.0.1 sitting uncut while v0.0.2 work merged
 - [Container image decisions](container-image-decisions.md), distroless static base pinned by digest, numeric user 65532, docker/Dockerfile with a root .dockerignore, reusable L3 image lane with syft SBOMs per platform and actions/attest, Linux-only release targets, GHCR quirks
+- [Post-release verification pause](post-release-verification-pause.md), after the v0.0.3 cut, stop and verify binaries, image, L3 provenance, SBOMs, signatures as a consumer before new work; the owner wants the supply chain proven

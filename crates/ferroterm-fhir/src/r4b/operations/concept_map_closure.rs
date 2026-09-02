@@ -10,7 +10,7 @@
 //! Table\](terminology-service.html\#closure)
 
 /// The `in` parameters of `ConceptMap/$closure`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapClosureRequest {
     /// The name that defines the particular context for the subsumption based
     /// closure table
@@ -23,7 +23,7 @@ pub struct ConceptMapClosureRequest {
 }
 
 /// The `out` parameters of `ConceptMap/$closure`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapClosureResponse {
     /// A list of new entries (code / system --\> code/system) that the client
     /// should add to its closure table. The only kind of entry mapping

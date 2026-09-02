@@ -27,7 +27,7 @@
 //! is gained from implementations.
 
 /// The `in` parameters of `CodeSystem/$find-matches`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemFindMatchesRequest {
     /// The system in which composition is to be performed. This must be
     /// provided unless the operation is invoked on a code system instance
@@ -49,7 +49,7 @@ pub struct CodeSystemFindMatchesRequest {
 }
 
 /// The parts of the `property` parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemFindMatchesRequestProperty {
     /// Identifies the property provided
     pub code: super::super::primitives::Code,
@@ -70,14 +70,14 @@ pub struct CodeSystemFindMatchesRequestPropertySubproperty {
 }
 
 /// The `out` parameters of `CodeSystem/$find-matches`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemFindMatchesResponse {
     /// Concepts returned by the server as a result of the inferencing operation
     pub r#match: Vec<CodeSystemFindMatchesResponseMatch>,
 }
 
 /// The parts of the `match` parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemFindMatchesResponseMatch {
     /// A code that matches the properties provided
     pub code: super::super::coding::Coding,

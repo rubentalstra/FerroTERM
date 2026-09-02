@@ -11,7 +11,7 @@
 //! resource. Other parameters are optional
 
 /// The `in` parameters of `CodeSystem/$subsumes`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemSubsumesRequest {
     /// The "A" code that is to be tested. If a code is provided, a system must
     /// be provided
@@ -36,7 +36,7 @@ pub struct CodeSystemSubsumesRequest {
 }
 
 /// The `out` parameters of `CodeSystem/$subsumes`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeSystemSubsumesResponse {
     /// The subsumption relationship between code/Coding "A" and code/Coding
     /// "B". There are 4 possible codes to be returned (equivalent, subsumes,

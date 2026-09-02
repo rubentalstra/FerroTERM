@@ -29,7 +29,7 @@
 //! the entire code system in the concept map, or by manual intervention.
 
 /// The `in` parameters of `ConceptMap/$translate`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapTranslateRequest {
     /// A canonical URL for a concept map. The server must know the concept map
     /// (e.g. it is defined explicitly in the server's concept maps, or it is
@@ -83,7 +83,7 @@ pub struct ConceptMapTranslateRequest {
 }
 
 /// The parts of the `dependency` parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapTranslateRequestDependency {
     /// The attribute for this dependency
     pub attribute: Option<super::super::primitives::Uri>,
@@ -92,7 +92,7 @@ pub struct ConceptMapTranslateRequestDependency {
 }
 
 /// The `out` parameters of `ConceptMap/$translate`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapTranslateResponse {
     /// True if the concept could be translated successfully. The value can only
     /// be true if at least one returned match has a relationship other than
@@ -110,7 +110,7 @@ pub struct ConceptMapTranslateResponse {
 }
 
 /// The parts of the `match` parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ConceptMapTranslateResponseMatch {
     /// A code indicating the relationship (e.g., equivalent) of the
     /// translation, using values from

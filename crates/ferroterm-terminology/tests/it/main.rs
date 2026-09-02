@@ -15,6 +15,7 @@ mod capabilities;
 mod compose;
 mod filter;
 mod fixture;
+mod operations;
 mod registry;
 mod snomed;
 mod supplement;
