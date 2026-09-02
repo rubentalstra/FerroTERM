@@ -37,6 +37,9 @@ pub enum BuildError {
     /// The commit failed.
     #[error("commit failed")]
     Commit(#[from] redb::CommitError),
+    /// Reclaiming the unused pages after the commit failed.
+    #[error("compaction failed")]
+    Compaction(#[from] redb::CompactionError),
     /// A vocabulary name was registered twice with different ordinals.
     #[error("{kind} {name:?} is already ordinal {existing}, not {requested}")]
     Vocabulary {
@@ -321,7 +324,12 @@ impl StoreBuilder {
             }
         }
         txn.commit()?;
-        drop(self.db);
+        // redb grows the file in regions ahead of use; compaction returns the
+        // unused pages so the artifact is the size of its data. Repeated until
+        // redb reports nothing further to reclaim.
+        let mut db = self.db;
+        while db.compact()? {}
+        drop(db);
         Ok(self.path)
     }
 }
