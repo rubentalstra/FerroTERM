@@ -1,6 +1,11 @@
 //! Read-path latency over the local NL edition artifact (`artifacts/nl`),
 //! when present; the bar is one millisecond per read
 //! (`docs/architecture.md`). Skips silently without the artifact.
+#![allow(
+    clippy::expect_used,
+    clippy::print_stderr,
+    reason = "a benchmark harness fails loud and reports to stderr, like a test binary"
+)]
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -32,17 +37,25 @@ fn reads(c: &mut Criterion) {
     };
     let provider = SnomedProvider::open(&dir, "en").expect("the NL artifact opens");
     let root = provider.locate(ROOT).expect("reads").expect("root").concept;
-    let finding = provider.locate(FINDING).expect("reads").expect("finding").concept;
+    let finding = provider
+        .locate(FINDING)
+        .expect("reads")
+        .expect("finding")
+        .concept;
     let hierarchy = provider.hierarchy().expect("snomed has a hierarchy");
     let mut group = c.benchmark_group("provider");
-    group.bench_function("locate", |b| b.iter(|| provider.locate(FINDING).expect("reads")));
+    group.bench_function("locate", |b| {
+        b.iter(|| provider.locate(FINDING).expect("reads"))
+    });
     group.bench_function("display_nl", |b| {
         b.iter(|| provider.display(finding, Some("nl")).expect("reads"))
     });
     group.bench_function("designations", |b| {
         b.iter(|| provider.designations(finding, None).expect("reads"))
     });
-    group.bench_function("properties", |b| b.iter(|| provider.properties(finding).expect("reads")));
+    group.bench_function("properties", |b| {
+        b.iter(|| provider.properties(finding).expect("reads"))
+    });
     group.bench_function("subsumes", |b| b.iter(|| hierarchy.subsumes(root, finding)));
     group.bench_function("search_hart_nl", |b| {
         b.iter(|| provider.search("hart", Some("nl")).expect("reads"))
@@ -80,7 +93,9 @@ fn reads(c: &mut Criterion) {
         ..Default::default()
     };
     group.bench_function("subsumes", |b| {
-        b.iter(|| subsumes::subsumes(&registry, &Invocation::Type, &subsumes_request).expect("subsumes"))
+        b.iter(|| {
+            subsumes::subsumes(&registry, &Invocation::Type, &subsumes_request).expect("subsumes")
+        })
     });
     group.finish();
 }
