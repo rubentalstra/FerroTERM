@@ -380,8 +380,22 @@ vendored verbatim with provenance as codegen input.
   for the generated type shapes and the JSON codec.
 - **`snomed-rust`** (Rust, <https://github.com/snomed-rust/snomed-rust>): the
   `snomed-rf2` and `snomed-ecl` crates, an RF2 parser and an evaluator for
-  simple expression constraints; prior art for the RF2 loader, read, not
-  ported.
+  simple expression constraints over in-memory hash maps; prior art for the
+  RF2 loader, read, not ported.
+- **Helios `hfs` and `hts`** (Rust, <https://github.com/HeliosSoftware/hfs>): a
+  FHIR server and terminology service over SQL with generated R4, R4B, R5, and
+  R6 models, JSON and XML; the closest Rust competitor and a behavioural oracle
+  beside Snowstorm for spec-silent edge cases. Not a dependency: `unsafe`
+  without `forbid`, build-time downloads, and SQL recursive-query subsumption.
+- **`rh-codegen`** (Rust, <https://github.com/reason-healthcare/rh>): FHIR
+  models generated from the same `hl7.fhir.*.core` packages this project
+  vendors; a second emitter to compare decisions against.
+- **`octofhir-ucum`** (Rust, Apache-2.0): a UCUM parser tested against the
+  official suite; the one crate shortlisted as a dependency, for the UCUM
+  provider.
+- **`sct-rs`** (Rust, AGPL-3.0): RF2 to SQLite and Parquet with an ECL and FHIR
+  R4 server mode; licence-incompatible with MIT distribution, not read for
+  code.
 
 No existing Rust project is a complete, standards-generated, multi-version FHIR
 terminology server. Notio fills that gap, built the way the evidence supports: a

@@ -88,6 +88,41 @@ profile**. That splits the system into two problems with different answers.
   The generated FHIR layer gives standards-correct shapes and signatures by
   construction; the engine beneath it implements the meaning.
 
+## Why not reuse an existing crate
+
+Rust already has pieces of this: the `snomed-rust` crates (`snomed-rf2`,
+`snomed-ecl`), the `fhir-sdk` generated models (`fhir-model`), the Helios
+`hfs`/`hts` server, the `rh-*` package-generated models, and `sct-rs`. Each
+was read at source level on 2026-09-02, and none is a dependency here. The
+reasons are specific, not a preference for writing everything ourselves:
+
+- **`snomed-rf2` and `snomed-ecl`** parse RF2 by hard-coded header signatures
+  rather than the refset descriptor, evaluate ECL by breadth-first search over
+  in-memory hash maps and return hash sets, cite a grammar subset with
+  deliberate leniencies the official grammar forbids, and have no persistence
+  or index. FerroTERM compiles ECL to set algebra over a memory-mapped closure
+  (`docs/architecture.md` decisions 1 and 4), so the evaluator cannot be
+  shared. Their unimplemented-construct list is a useful checklist and is read
+  as such.
+- **`fhir-sdk`** generates STU3, R4B, and R5 only (no R4 4.0.1, no R6), types
+  `decimal` as `f64` where FHIR requires precision to be preserved, accepts
+  unknown JSON members silently, and generates from hand-edited definition
+  files without provenance. The four-version, strict, provenance-stamped
+  generation this project promises is not reachable from it. Its primitive
+  extension pairing and its round-trip test harness over the official examples
+  are borrowed as ideas.
+- **Helios `hfs`/`hts`** is the closest competitor (four versions, JSON and
+  XML, every terminology operation) and is read as a behavioural oracle beside
+  Snowstorm. It uses `unsafe` in several crates, downloads specification
+  content at build time, and answers subsumption with SQL recursive queries,
+  each of which this project rules out.
+- **`sct-rs`** is AGPL-3.0 and cannot be distributed under MIT.
+- **`octofhir-ucum`** (Apache-2.0, tested against the UCUM suite) is the one
+  candidate dependency, shortlisted for the UCUM provider when that lands.
+
+The full evaluation and its sources are recorded on the tracker; the
+architecture names each project in its prior-art section.
+
 ## The plan
 
 **FHIR R4B is the first version implemented:** the current stable release of

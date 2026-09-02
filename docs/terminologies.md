@@ -147,7 +147,9 @@ engine. Each row is a tracker issue under the program issue.
 - **Hierarchy.** None. Validation is a grammar and dimensional-analysis
   problem: the expression syntax "generates an infinite number of codes"
   (<https://ucum.org/ucum>), so the provider parses, canonicalizes, and refuses
-  enumeration.
+  enumeration. `octofhir-ucum` (Apache-2.0, tested against the official
+  UCUM suite) is the shortlisted dependency for the parser; the choice is made
+  when the provider is built.
 - **FHIR-defined behaviour.** Filters `property =` (base-unit property of the
   canonical form) and `canonical = | in` (comparable expressions). Implicit
   value sets `http://unitsofmeasure.org/vs` and
