@@ -1,0 +1,19 @@
+{
+  "name" : "hl7.fhir.r6.core",
+  "version" : "6.0.0-ballot5",
+  "tools-version" : 3,
+  "type" : "Core",
+  "date" : "20260717172254",
+  "license" : "CC0-1.0",
+  "canonical" : "http://hl7.org/fhir",
+  "url" : "file:/Users/grahame/work/r6/publish/",
+  "title" : "FHIR Core package",
+  "description" : "FHIR Core package - the NPM package that contains all the definitions for the base FHIR specification (built Fri, Jul 17, 2026 17:22+1000+10:00)",
+  "fhirVersions" : ["6.0.0-ballot5"],
+  "author" : "HL7 Inc",
+  "homepage" : "file:/Users/grahame/work/r6/publish/",
+  "directories" : {
+    "lib" : "package",
+    "example" : "example"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "devicealert-presence",
+  "meta" : {
+    "lastUpdated" : "2026-06-18T22:45:45.053-05:00"
+  },
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: CodeSystem devicealert-presence</b></p><a name=\"devicealert-presence\"> </a><a name=\"hcdevicealert-presence\"> </a><p>This case-sensitive code system <code>http://hl7.org/fhir/devicealert-presence</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td style=\"white-space:nowrap\">on<a name=\"devicealert-presence-on\"> </a></td><td>On</td><td>The signal is annunciated due to the presence of the alert condition</td></tr><tr><td style=\"white-space:nowrap\">latched<a name=\"devicealert-presence-latched\"> </a></td><td>Latched</td><td>The signal is annunciated after the alert condition is no longer present, until it is stopped by deliberate operator action</td></tr><tr><td style=\"white-space:nowrap\">off<a name=\"devicealert-presence-off\"> </a></td><td>Off</td><td>The signal is not being annunciated and the alert condition is no longer present</td></tr><tr><td style=\"white-space:nowrap\">ack<a name=\"devicealert-presence-ack\"> </a></td><td>Acknowledged</td><td>The signal is no longer annunciated having been stopped by deliberate operator action although the alert condition is still present</td></tr></table></div>"
+  },
+  "extension" : [{
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+    "valueCode" : "dev"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+    "valueCode" : "normative"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
+    "valueInteger" : 2
+  }],
+  "url" : "http://hl7.org/fhir/devicealert-presence",
+  "version" : "6.0.0-ballot4",
+  "name" : "DeviceAlertPresence",
+  "title" : "Device Alert Presence",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-12-10T10:01:24+11:00",
+  "publisher" : "HL7 International / Devices",
+  "contact" : [{
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://www.hl7.org/Special/committees/healthcaredevices"
+    },
+    {
+      "system" : "email",
+      "value" : "fhir@lists.hl7.org"
+    }]
+  }],
+  "description" : "Describes the Presence of a DeviceAlert.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code" : "001",
+      "display" : "World"
+    }]
+  }],
+  "caseSensitive" : true,
+  "valueSet" : "http://hl7.org/fhir/ValueSet/devicealert-presence",
+  "content" : "complete",
+  "concept" : [{
+    "code" : "on",
+    "display" : "On",
+    "definition" : "The signal is annunciated due to the presence of the alert condition"
+  },
+  {
+    "code" : "latched",
+    "display" : "Latched",
+    "definition" : "The signal is annunciated after the alert condition is no longer present, until it is stopped by deliberate operator action"
+  },
+  {
+    "code" : "off",
+    "display" : "Off",
+    "definition" : "The signal is not being annunciated and the alert condition is no longer present"
+  },
+  {
+    "code" : "ack",
+    "display" : "Acknowledged",
+    "definition" : "The signal is no longer annunciated having been stopped by deliberate operator action although the alert condition is still present"
+  }]
+}

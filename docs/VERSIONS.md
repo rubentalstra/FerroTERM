@@ -39,7 +39,7 @@ Machine-generated per version from the vendored, pinned HL7 FHIR packages
 | `hl7.fhir.r4b.core` | 4.3.0 | **first generation implemented** |
 | `hl7.fhir.r5.core` | 5.0.0 | |
 | `hl7.fhir.r4.core` | 4.0.1 | |
-| `hl7.fhir.r6.core` | 6.0.0-ballot | ballot-tracking generation (not GA) |
+| `hl7.fhir.r6.core` | 6.0.0-ballot5 | ballot-tracking generation (not GA); published on packages2.fhir.org |
 | `hl7.terminology` (THO) | 7.3.0 | terminology content moves here in R5/R6 |
 
 ## SNOMED CT / ECL

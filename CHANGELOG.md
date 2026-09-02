@@ -19,6 +19,12 @@ fresh link reference.
   provenance and `ferroterm-fhir` gains the `r4` module (131 root-set types,
   the terminology operation contracts, the JSON codec, and the `Parameters`
   conversions), with every terminology resource of the package round-tripping.
+- The generated FHIR layer tracks the R6 ballot: `hl7.fhir.r6.core`
+  6.0.0-ballot5 (published on packages2.fhir.org) is vendored with provenance
+  and `ferroterm-fhir` gains the `r6` module (161 root-set types, the
+  operation contracts including the new `tx-resource` parameters, the codec,
+  and the `Parameters` conversions). Ballot content: every R6-only behaviour
+  is re-verified when R6 publishes.
 
 ## [0.0.3] - 2026-09-02
 

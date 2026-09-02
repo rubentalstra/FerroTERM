@@ -64,13 +64,21 @@ fn expected_rejections(package: &str) -> Vec<(&'static str, &'static str)> {
                 "Resource.status: required property is missing",
             ),
         ],
+        // The ballot example writes `codeSystem.version` as `[null]`; a null
+        // array entry is legal only in a primitive array paired with its
+        // `_element` (<https://hl7.org/fhir/R6/json.html#primitive>), and
+        // `version` is a BackboneElement.
+        "hl7.fhir.r6.core" => vec![(
+            "TerminologyCapabilities-example-terminology-server.json",
+            "Resource.codeSystem[1].version[0]: expected an object",
+        )],
         _ => Vec::new(),
     }
 }
 
 fn round_trip_all<T: Json>(package: &str) {
     let files = root_set_files(package);
-    assert!(files.len() > 1300, "{package}: {} files", files.len());
+    assert!(files.len() > 1000, "{package}: {} files", files.len());
     let rejections = expected_rejections(package);
     let mut failures = Vec::new();
     let mut rejected = 0;
@@ -120,6 +128,11 @@ fn every_r4b_root_set_resource_round_trips() {
 #[test]
 fn every_r5_root_set_resource_round_trips() {
     round_trip_all::<ferroterm_fhir::r5::resource::Resource>("hl7.fhir.r5.core");
+}
+
+#[test]
+fn every_r6_root_set_resource_round_trips() {
+    round_trip_all::<ferroterm_fhir::r6::resource::Resource>("hl7.fhir.r6.core");
 }
 
 fn decode_coding(

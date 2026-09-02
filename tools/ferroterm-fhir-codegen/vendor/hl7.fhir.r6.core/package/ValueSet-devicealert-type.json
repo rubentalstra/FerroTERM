@@ -1,0 +1,49 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "devicealert-type",
+  "meta" : {
+    "lastUpdated" : "2026-06-18T22:45:45.053-05:00"
+  },
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ValueSet devicealert-type</b></p><a name=\"devicealert-type\"> </a><a name=\"hcdevicealert-type\"> </a><ul><li>Include all codes defined in <a href=\"codesystem-devicealert-type.html\"><code>http://hl7.org/fhir/devicealert-type</code></a><span title=\"Version is not explicitly stated, which means it is fixed to the version provided in this specification\"> version &#x1F4E6;6.0.0-ballot4</span></li></ul></div>"
+  },
+  "extension" : [{
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+    "valueCode" : "dev"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+    "valueCode" : "normative"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
+    "valueInteger" : 2
+  }],
+  "url" : "http://hl7.org/fhir/ValueSet/devicealert-type",
+  "version" : "6.0.0-ballot4",
+  "name" : "DeviceAlertTypeCodes",
+  "title" : "DeviceAlert Type Codes",
+  "status" : "active",
+  "experimental" : false,
+  "publisher" : "FHIR Project team",
+  "contact" : [{
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7.org/fhir"
+    }]
+  }],
+  "description" : "DeviceAlert Type Codes",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code" : "001",
+      "display" : "World"
+    }]
+  }],
+  "compose" : {
+    "include" : [{
+      "system" : "http://hl7.org/fhir/devicealert-type"
+    }]
+  }
+}

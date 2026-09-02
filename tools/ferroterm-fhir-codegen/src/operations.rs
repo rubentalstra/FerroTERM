@@ -64,6 +64,8 @@ pub enum FieldKind {
     Value(String),
     /// A resource: `parameter.resource`, one variant of the resource enum.
     Resource(String),
+    /// `Resource` itself: `parameter.resource`, any variant.
+    AnyResource,
     /// `Element`: any value of the open-type enum.
     OpenType,
     /// A multi-part parameter: `parameter.part`.
@@ -163,6 +165,8 @@ impl OperationContract {
                 ParameterUse::Out => outputs.push(field),
             }
         }
+        disambiguate(&mut inputs);
+        disambiguate(&mut outputs);
         Ok(Self {
             resource: resource.to_owned(),
             code: definition.code.clone(),
@@ -214,6 +218,8 @@ fn lower_field(
                 })?;
             kind = if ty.is_resource {
                 FieldKind::Resource(name.clone())
+            } else if code == "Resource" {
+                FieldKind::AnyResource
             } else {
                 FieldKind::Value(name.clone())
             };
@@ -240,7 +246,7 @@ fn lower_field(
     }
     let defaultable = match &kind {
         FieldKind::Value(name) | FieldKind::Resource(name) => defaultable_types.contains(name),
-        FieldKind::OpenType => false,
+        FieldKind::OpenType | FieldKind::AnyResource => false,
         FieldKind::Parts => derives_default(&parts),
     };
     Ok(ContractField {
@@ -266,6 +272,27 @@ fn derives_default(fields: &[ContractField]) -> bool {
     fields
         .iter()
         .all(|field| cardinality(field.min, field.max) != Cardinality::One || field.defaultable)
+}
+
+/// Keeps field names unique within one struct: when two parameters reduce to
+/// the same Rust name (R6's `ValueSet/$validate-code` declares both
+/// `systemVersion` and `system-version`), the hyphenated one gets its type
+/// code as a suffix (`system_version_canonical`). No spec governs the Rust
+/// names: our own rule.
+fn disambiguate(fields: &mut [ContractField]) {
+    let mut seen: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+    for field in fields.iter() {
+        *seen.entry(field.name.clone()).or_insert(0) += 1;
+    }
+    for field in fields.iter_mut() {
+        if seen.get(&field.name).copied().unwrap_or(0) > 1
+            && field.fhir_name.contains('-')
+            && let Some(code) = &field.type_code
+        {
+            field.name = format!("{}_{}", field.name, field_name(code));
+        }
+        disambiguate(&mut field.parts);
+    }
 }
 
 fn parse_max(max: &str) -> Option<Max> {
@@ -775,6 +802,9 @@ fn render_extract(field: &ContractField, path: &str) -> String {
         FieldKind::OpenType => format!(
             "parameter.value.clone().ok_or({e}::MissingValue {{ operation: OPERATION, name: {path:?} }})?"
         ),
+        FieldKind::AnyResource => format!(
+            "parameter.resource.clone().ok_or({e}::MissingValue {{ operation: OPERATION, name: {path:?} }})?"
+        ),
         FieldKind::Parts => format!("{}::from_parameter_list(&parameter.part)?", field.rust_type),
     }
 }
@@ -792,6 +822,9 @@ fn render_build(field: &ContractField, value: &str) -> String {
         ),
         FieldKind::OpenType => format!(
             "{p}::ParametersParameter {{ name: {name}, value: Some({value}.clone()), ..Default::default() }}"
+        ),
+        FieldKind::AnyResource => format!(
+            "{p}::ParametersParameter {{ name: {name}, resource: Some({value}.clone()), ..Default::default() }}"
         ),
         FieldKind::Parts => format!(
             "{p}::ParametersParameter {{ name: {name}, part: {value}.to_parameter_list(), ..Default::default() }}"
