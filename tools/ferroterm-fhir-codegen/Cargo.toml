@@ -25,5 +25,8 @@ serde_json.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 
+[dev-dependencies]
+ferroterm-fhir.workspace = true
+
 [lints]
 workspace = true

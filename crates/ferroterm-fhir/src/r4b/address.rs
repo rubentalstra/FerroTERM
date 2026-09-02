@@ -72,3 +72,287 @@ pub struct Address {
     /// Time period when address was/is in use.
     pub period: Option<super::period::Period>,
 }
+
+impl super::super::codec::Json for Address {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.r#use {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("use"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_use"), e);
+            }
+        }
+        if let Some(item) = &self.r#type {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("type"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_type"), e);
+            }
+        }
+        if let Some(item) = &self.text {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("text"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_text"), e);
+            }
+        }
+        if !self.line.is_empty() {
+            let (values, elements) = super::super::codec::primitive_arrays(&self.line)?;
+            object.insert(std::string::String::from("line"), values);
+            if let Some(elements) = elements {
+                object.insert(std::string::String::from("_line"), elements);
+            }
+        }
+        if let Some(item) = &self.city {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("city"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_city"), e);
+            }
+        }
+        if let Some(item) = &self.district {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("district"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_district"), e);
+            }
+        }
+        if let Some(item) = &self.state {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("state"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_state"), e);
+            }
+        }
+        if let Some(item) = &self.postal_code {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("postalCode"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_postalCode"), e);
+            }
+        }
+        if let Some(item) = &self.country {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("country"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_country"), e);
+            }
+        }
+        if let Some(item) = &self.period {
+            object.insert(
+                std::string::String::from("period"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_use: Option<&serde_json::Value> = None;
+        let mut raw_use_element: Option<&serde_json::Value> = None;
+        let mut raw_type: Option<&serde_json::Value> = None;
+        let mut raw_type_element: Option<&serde_json::Value> = None;
+        let mut raw_text: Option<&serde_json::Value> = None;
+        let mut raw_text_element: Option<&serde_json::Value> = None;
+        let mut raw_line: Option<&serde_json::Value> = None;
+        let mut raw_line_element: Option<&serde_json::Value> = None;
+        let mut raw_city: Option<&serde_json::Value> = None;
+        let mut raw_city_element: Option<&serde_json::Value> = None;
+        let mut raw_district: Option<&serde_json::Value> = None;
+        let mut raw_district_element: Option<&serde_json::Value> = None;
+        let mut raw_state: Option<&serde_json::Value> = None;
+        let mut raw_state_element: Option<&serde_json::Value> = None;
+        let mut raw_postal_code: Option<&serde_json::Value> = None;
+        let mut raw_postal_code_element: Option<&serde_json::Value> = None;
+        let mut raw_country: Option<&serde_json::Value> = None;
+        let mut raw_country_element: Option<&serde_json::Value> = None;
+        let mut raw_period: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "use" => raw_use = Some(value),
+                "_use" => raw_use_element = Some(value),
+                "type" => raw_type = Some(value),
+                "_type" => raw_type_element = Some(value),
+                "text" => raw_text = Some(value),
+                "_text" => raw_text_element = Some(value),
+                "line" => raw_line = Some(value),
+                "_line" => raw_line_element = Some(value),
+                "city" => raw_city = Some(value),
+                "_city" => raw_city_element = Some(value),
+                "district" => raw_district = Some(value),
+                "_district" => raw_district_element = Some(value),
+                "state" => raw_state = Some(value),
+                "_state" => raw_state_element = Some(value),
+                "postalCode" => raw_postal_code = Some(value),
+                "_postalCode" => raw_postal_code_element = Some(value),
+                "country" => raw_country = Some(value),
+                "_country" => raw_country_element = Some(value),
+                "period" => raw_period = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_use = match (raw_use, raw_use_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("use", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_type = match (raw_type, raw_type_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("type", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_text = match (raw_text, raw_text_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("text", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let mut field_line = Vec::new();
+        for (index, (value, element)) in
+            super::super::codec::pair_arrays(raw_line, raw_line_element, path)?
+                .into_iter()
+                .enumerate()
+        {
+            field_line.push(path.with_index("line", index, |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?);
+        }
+        let field_city = match (raw_city, raw_city_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("city", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_district = match (raw_district, raw_district_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("district", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_state = match (raw_state, raw_state_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("state", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_postal_code = match (raw_postal_code, raw_postal_code_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("postalCode", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_country = match (raw_country, raw_country_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("country", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_period = raw_period
+            .map(|value| {
+                path.with("period", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            r#use: field_use,
+            r#type: field_type,
+            text: field_text,
+            line: field_line,
+            city: field_city,
+            district: field_district,
+            state: field_state,
+            postal_code: field_postal_code,
+            country: field_country,
+            period: field_period,
+        })
+    }
+}
+
+impl serde::Serialize for Address {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Address {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("Address");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}

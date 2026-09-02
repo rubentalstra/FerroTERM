@@ -10,9 +10,12 @@
     clippy::large_enum_variant,
     clippy::module_name_repetitions,
     clippy::struct_field_names,
-    reason = "generated from the FHIR specification: the documentation is the specification's own text, choice enums hold every allowed type, and modules mirror FHIR type names"
+    clippy::too_many_lines,
+    clippy::similar_names,
+    reason = "generated from the FHIR specification: the documentation is the specification's own text, choice enums hold every allowed type, modules mirror FHIR type names, and the codec of a large resource is one long function over FHIR-named locals"
 )]
 
+pub mod codec;
 pub mod operation;
 pub mod r4b;
 pub mod r5;

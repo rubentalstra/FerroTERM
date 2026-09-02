@@ -78,3 +78,338 @@ pub struct Attachment {
     /// The number of pages when printed.
     pub pages: Option<super::primitives::PositiveInt>,
 }
+
+impl super::super::codec::Json for Attachment {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.content_type {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("contentType"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_contentType"), e);
+            }
+        }
+        if let Some(item) = &self.language {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("language"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_language"), e);
+            }
+        }
+        if let Some(item) = &self.data {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("data"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_data"), e);
+            }
+        }
+        if let Some(item) = &self.url {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("url"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_url"), e);
+            }
+        }
+        if let Some(item) = &self.size {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("size"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_size"), e);
+            }
+        }
+        if let Some(item) = &self.hash {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("hash"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_hash"), e);
+            }
+        }
+        if let Some(item) = &self.title {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("title"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_title"), e);
+            }
+        }
+        if let Some(item) = &self.creation {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("creation"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_creation"), e);
+            }
+        }
+        if let Some(item) = &self.height {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("height"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_height"), e);
+            }
+        }
+        if let Some(item) = &self.width {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("width"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_width"), e);
+            }
+        }
+        if let Some(item) = &self.frames {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("frames"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_frames"), e);
+            }
+        }
+        if let Some(item) = &self.duration {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("duration"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_duration"), e);
+            }
+        }
+        if let Some(item) = &self.pages {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("pages"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_pages"), e);
+            }
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_content_type: Option<&serde_json::Value> = None;
+        let mut raw_content_type_element: Option<&serde_json::Value> = None;
+        let mut raw_language: Option<&serde_json::Value> = None;
+        let mut raw_language_element: Option<&serde_json::Value> = None;
+        let mut raw_data: Option<&serde_json::Value> = None;
+        let mut raw_data_element: Option<&serde_json::Value> = None;
+        let mut raw_url: Option<&serde_json::Value> = None;
+        let mut raw_url_element: Option<&serde_json::Value> = None;
+        let mut raw_size: Option<&serde_json::Value> = None;
+        let mut raw_size_element: Option<&serde_json::Value> = None;
+        let mut raw_hash: Option<&serde_json::Value> = None;
+        let mut raw_hash_element: Option<&serde_json::Value> = None;
+        let mut raw_title: Option<&serde_json::Value> = None;
+        let mut raw_title_element: Option<&serde_json::Value> = None;
+        let mut raw_creation: Option<&serde_json::Value> = None;
+        let mut raw_creation_element: Option<&serde_json::Value> = None;
+        let mut raw_height: Option<&serde_json::Value> = None;
+        let mut raw_height_element: Option<&serde_json::Value> = None;
+        let mut raw_width: Option<&serde_json::Value> = None;
+        let mut raw_width_element: Option<&serde_json::Value> = None;
+        let mut raw_frames: Option<&serde_json::Value> = None;
+        let mut raw_frames_element: Option<&serde_json::Value> = None;
+        let mut raw_duration: Option<&serde_json::Value> = None;
+        let mut raw_duration_element: Option<&serde_json::Value> = None;
+        let mut raw_pages: Option<&serde_json::Value> = None;
+        let mut raw_pages_element: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "contentType" => raw_content_type = Some(value),
+                "_contentType" => raw_content_type_element = Some(value),
+                "language" => raw_language = Some(value),
+                "_language" => raw_language_element = Some(value),
+                "data" => raw_data = Some(value),
+                "_data" => raw_data_element = Some(value),
+                "url" => raw_url = Some(value),
+                "_url" => raw_url_element = Some(value),
+                "size" => raw_size = Some(value),
+                "_size" => raw_size_element = Some(value),
+                "hash" => raw_hash = Some(value),
+                "_hash" => raw_hash_element = Some(value),
+                "title" => raw_title = Some(value),
+                "_title" => raw_title_element = Some(value),
+                "creation" => raw_creation = Some(value),
+                "_creation" => raw_creation_element = Some(value),
+                "height" => raw_height = Some(value),
+                "_height" => raw_height_element = Some(value),
+                "width" => raw_width = Some(value),
+                "_width" => raw_width_element = Some(value),
+                "frames" => raw_frames = Some(value),
+                "_frames" => raw_frames_element = Some(value),
+                "duration" => raw_duration = Some(value),
+                "_duration" => raw_duration_element = Some(value),
+                "pages" => raw_pages = Some(value),
+                "_pages" => raw_pages_element = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_content_type = match (raw_content_type, raw_content_type_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("contentType", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_language = match (raw_language, raw_language_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("language", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_data = match (raw_data, raw_data_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("data", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_url = match (raw_url, raw_url_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("url", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_size = match (raw_size, raw_size_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("size", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_hash = match (raw_hash, raw_hash_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("hash", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_title = match (raw_title, raw_title_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("title", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_creation = match (raw_creation, raw_creation_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("creation", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_height = match (raw_height, raw_height_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("height", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_width = match (raw_width, raw_width_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("width", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_frames = match (raw_frames, raw_frames_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("frames", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_duration = match (raw_duration, raw_duration_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("duration", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_pages = match (raw_pages, raw_pages_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("pages", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            content_type: field_content_type,
+            language: field_language,
+            data: field_data,
+            url: field_url,
+            size: field_size,
+            hash: field_hash,
+            title: field_title,
+            creation: field_creation,
+            height: field_height,
+            width: field_width,
+            frames: field_frames,
+            duration: field_duration,
+            pages: field_pages,
+        })
+    }
+}
+
+impl serde::Serialize for Attachment {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Attachment {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("Attachment");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}

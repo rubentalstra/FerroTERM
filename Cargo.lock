@@ -225,6 +225,7 @@ dependencies = [
 name = "ferroterm-fhir"
 version = "0.0.0"
 dependencies = [
+ "serde",
  "serde_json",
 ]
 
@@ -234,6 +235,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "clap",
+ "ferroterm-fhir",
  "serde",
  "serde_json",
  "tempfile",

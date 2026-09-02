@@ -38,7 +38,7 @@ ariadne = "0.6.0"
 csv = "1.4.0"
 # Serde and formats.
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
+serde_json = { version = "1.0.151", features = ["arbitrary_precision"] }
 # Errors.
 thiserror = "2.0.20"
 anyhow = "1.0.104"

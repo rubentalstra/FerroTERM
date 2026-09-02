@@ -49,7 +49,7 @@ fn emitting_twice_is_byte_identical_and_check_passes() {
     let report = emit(&r4b_only(first.path(), false)).expect("first emit");
     emit(&r4b_only(second.path(), false)).expect("second emit");
     assert_eq!(report.types.get("r4b"), Some(&133));
-    assert_eq!(report.files.len(), 57);
+    assert_eq!(report.files.len(), 58);
     let a: Vec<String> = tree(&first.path().join("src"))
         .into_iter()
         .map(|(_, c)| c)

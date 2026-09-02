@@ -139,6 +139,14 @@ pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
         String::from("operation.rs"),
         render_descriptor_module(&crate::render::crate_banner(&models)),
     );
+    files.insert(
+        String::from("codec.rs"),
+        format!(
+            "{}{}",
+            crate::render::crate_banner(&models),
+            include_str!("templates/codec.rs")
+        ),
+    );
     for model in &models {
         files.insert(format!("{}/mod.rs", model.name), render_version_mod(model)?);
         for (module, types) in model.modules() {

@@ -26,6 +26,96 @@ pub struct Base64Binary {
     pub value: Option<std::string::String>,
 }
 
+impl super::super::codec::Primitive for Base64Binary {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type boolean
 ///
 /// Value of "true" or "false"
@@ -50,6 +140,93 @@ pub struct Boolean {
     pub value: Option<bool>,
 }
 
+impl super::super::codec::Primitive for Boolean {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self.value.as_ref().map(|v| serde_json::Value::Bool(*v)))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_bool(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type canonical
 ///
 /// A URI that is a reference to a canonical URL on a FHIR resource
@@ -70,6 +247,96 @@ pub struct Canonical {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for canonical
     pub value: Option<std::string::String>,
+}
+
+impl super::super::codec::Primitive for Canonical {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
 }
 
 /// Primitive Type code
@@ -96,6 +363,96 @@ pub struct Code {
     pub value: Option<std::string::String>,
 }
 
+impl super::super::codec::Primitive for Code {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type date
 ///
 /// A date or partial date (e.g. just year or year + month). There is no time
@@ -120,6 +477,96 @@ pub struct Date {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+
+impl super::super::codec::Primitive for Date {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
 }
 
 /// Primitive Type dateTime
@@ -150,6 +597,96 @@ pub struct DateTime {
     pub value: Option<std::string::String>,
 }
 
+impl super::super::codec::Primitive for DateTime {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type decimal
 ///
 /// A rational number with implicit precision
@@ -172,6 +709,102 @@ pub struct Decimal {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+
+impl super::super::codec::Primitive for Decimal {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        self.value
+            .as_ref()
+            .map(|text| {
+                text.parse::<serde_json::Number>()
+                    .map(serde_json::Value::Number)
+                    .map_err(|_| super::super::codec::EncodeError::BadDecimal {
+                        text: text.clone(),
+                    })
+            })
+            .transpose()
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_decimal(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
 }
 
 /// Primitive Type id
@@ -198,6 +831,96 @@ pub struct Id {
     pub value: Option<std::string::String>,
 }
 
+impl super::super::codec::Primitive for Id {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type instant
 ///
 /// An instant in time - known at least to the second
@@ -220,6 +943,96 @@ pub struct Instant {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+
+impl super::super::codec::Primitive for Instant {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
 }
 
 /// Primitive Type integer
@@ -246,6 +1059,93 @@ pub struct Integer {
     pub value: Option<i32>,
 }
 
+impl super::super::codec::Primitive for Integer {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self.value.as_ref().map(|v| serde_json::Value::from(*v)))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_i32(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type markdown
 ///
 /// A string that may contain Github Flavored Markdown syntax for optional
@@ -267,6 +1167,96 @@ pub struct Markdown {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for markdown
     pub value: Option<std::string::String>,
+}
+
+impl super::super::codec::Primitive for Markdown {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
 }
 
 /// Primitive Type oid
@@ -291,6 +1281,96 @@ pub struct Oid {
     pub value: Option<std::string::String>,
 }
 
+impl super::super::codec::Primitive for Oid {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type positiveInt
 ///
 /// An integer with a value that is positive (e.g. \>0)
@@ -311,6 +1391,93 @@ pub struct PositiveInt {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for positiveInt
     pub value: Option<u32>,
+}
+
+impl super::super::codec::Primitive for PositiveInt {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self.value.as_ref().map(|v| serde_json::Value::from(*v)))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_u32(value, 1, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
 }
 
 /// Primitive Type string
@@ -337,6 +1504,96 @@ pub struct String {
     pub value: Option<std::string::String>,
 }
 
+impl super::super::codec::Primitive for String {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type time
 ///
 /// A time during the day, with no date specified
@@ -361,6 +1618,96 @@ pub struct Time {
     pub value: Option<std::string::String>,
 }
 
+impl super::super::codec::Primitive for Time {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type unsignedInt
 ///
 /// An integer with a value that is not negative (e.g. \>= 0)
@@ -381,6 +1728,93 @@ pub struct UnsignedInt {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for unsignedInt
     pub value: Option<u32>,
+}
+
+impl super::super::codec::Primitive for UnsignedInt {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self.value.as_ref().map(|v| serde_json::Value::from(*v)))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_u32(value, 0, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
 }
 
 /// Primitive Type uri
@@ -407,6 +1841,96 @@ pub struct Uri {
     pub value: Option<std::string::String>,
 }
 
+impl super::super::codec::Primitive for Uri {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type url
 ///
 /// A URI that is a literal reference
@@ -427,6 +1951,96 @@ pub struct Url {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for url
     pub value: Option<std::string::String>,
+}
+
+impl super::super::codec::Primitive for Url {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
 }
 
 /// Primitive Type uuid
@@ -451,6 +2065,96 @@ pub struct Uuid {
     pub value: Option<std::string::String>,
 }
 
+impl super::super::codec::Primitive for Uuid {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let mut id = None;
+        let mut extension = Vec::new();
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    "extension" => {
+                        for (index, entry) in super::super::codec::expect_array(item, path)?
+                            .iter()
+                            .enumerate()
+                        {
+                            extension.push(path.with_index("extension", index, |path| {
+                                super::super::codec::Json::from_json(
+                                    super::super::codec::expect_object(entry, path)?,
+                                    path,
+                                )
+                            })?);
+                        }
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            id,
+            extension,
+            value,
+        })
+    }
+}
+
 /// Primitive Type xhtml
 ///
 /// XHTML
@@ -460,15 +2164,65 @@ pub struct Xhtml {
     ///
     /// unique id for the element within a resource (for internal references)
     pub id: Option<std::string::String>,
-    /// Additional content defined by implementations
-    ///
-    /// May be used to represent additional information that is not part of the
-    /// basic definition of the resource. To make the use of extensions safe and
-    /// manageable, there is a strict set of governance applied to the definition
-    /// and use of extensions. Though any implementer can define an extension, there
-    /// is a set of requirements that SHALL be met as part of the definition of the
-    /// extension.
-    pub extension: Option<super::extension::Extension>,
     /// Actual xhtml
     pub value: std::string::String,
+}
+
+impl super::super::codec::Primitive for Xhtml {
+    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        Ok(Some(&self.value).map(|v| serde_json::Value::String(v.clone())))
+    }
+
+    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+        if self.id.is_none() {
+            return Ok(None);
+        }
+        let mut object = super::super::codec::Object::new();
+        if let Some(id) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(id.clone()),
+            );
+        }
+        Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn from_json_parts(
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        if value.is_none() && element.is_none() {
+            return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
+        }
+        let value = match value {
+            Some(value) => {
+                let value = super::super::codec::expect_single(value, path)?;
+                Some(super::super::codec::expect_string(value, path)?)
+            }
+            None => None,
+        };
+        let value = value
+            .ok_or_else(|| path.error(super::super::codec::DecodeErrorKind::MissingProperty))?;
+        let mut id = None;
+        if let Some(element) = element {
+            let object = super::super::codec::expect_object(element, path)?;
+            for (key, item) in object {
+                match key.as_str() {
+                    "id" => {
+                        id =
+                            Some(path.with("id", |path| {
+                                super::super::codec::expect_string(item, path)
+                            })?);
+                    }
+                    _ => {
+                        return path.with(key, |path| {
+                            Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                        });
+                    }
+                }
+            }
+        }
+        Ok(Self { id, value })
+    }
 }
