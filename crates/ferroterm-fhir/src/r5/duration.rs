@@ -3,7 +3,7 @@
 //! A length of time
 
 /// A length of time.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Duration {
     /// Unique id for inter-element referencing
     ///

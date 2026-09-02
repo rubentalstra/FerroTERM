@@ -10,7 +10,7 @@
 /// for use in delivering mail as well as for visiting locations which might not
 /// be valid for mail delivery. There are a variety of postal address formats
 /// defined around the world.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Address {
     /// Unique id for inter-element referencing
     ///

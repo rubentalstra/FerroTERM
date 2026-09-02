@@ -6,7 +6,7 @@
 ///
 /// Specifies contact information for a specific purpose over a period of time,
 /// might be handled/monitored by a specific named person or organization.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ExtendedContactDetail {
     /// Unique id for inter-element referencing
     ///

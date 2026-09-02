@@ -5,7 +5,7 @@
 /// Range of ratio values
 ///
 /// A range of ratios expressed as a low and high numerator and a denominator.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RatioRange {
     /// Unique id for inter-element referencing
     ///

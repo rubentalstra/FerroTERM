@@ -8,7 +8,7 @@
 /// (behaviors) of a FHIR Terminology Server that may be used as a statement of
 /// actual server functionality or a statement of required or desired server
 /// implementation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilities {
     /// Logical id of this artifact
     ///
@@ -955,7 +955,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilities {
 /// \[ConceptMap/$closure\](conceptmap-operation-closure.html) operation
 ///
 /// Whether the $closure operation is supported.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesClosure {
     /// Unique id for inter-element referencing
     ///
@@ -1135,7 +1135,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesClosure {
 /// Identifies a code system that is supported by the server. If there is a no
 /// code system URL, then this declares the general assumptions a client can
 /// make about support for any CodeSystem resource.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesCodeSystem {
     /// Unique id for inter-element referencing
     ///
@@ -1369,7 +1369,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesCodeSystem {
 /// Version of Code System supported
 ///
 /// For the code system, a list of versions that are supported by the server.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesCodeSystemVersion {
     /// Unique id for inter-element referencing
     ///
@@ -1671,7 +1671,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesCodeSystemVersion {
 }
 
 /// Filter Properties supported.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesCodeSystemVersionFilter {
     /// Unique id for inter-element referencing
     ///
@@ -1868,7 +1868,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesCodeSystemVersionFi
 
 /// Information about the \[ValueSet/$expand\](valueset-operation-expand.html)
 /// operation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesExpansion {
     /// Unique id for inter-element referencing
     ///
@@ -2138,7 +2138,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesExpansion {
 }
 
 /// Supported expansion parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesExpansionParameter {
     /// Unique id for inter-element referencing
     ///
@@ -2334,7 +2334,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesExpansionParameter 
 /// Identifies a specific implementation instance that is described by the
 /// terminology capability statement - i.e. a particular installation, rather
 /// than the capabilities of a software program.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesImplementation {
     /// Unique id for inter-element referencing
     ///
@@ -2539,7 +2539,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesImplementation {
 /// Software that is covered by this terminology capability statement. It is
 /// used when the statement describes the capabilities of a particular software
 /// version, independent of an installation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesSoftware {
     /// Unique id for inter-element referencing
     ///
@@ -2736,7 +2736,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesSoftware {
 
 /// Information about the
 /// \[ConceptMap/$translate\](conceptmap-operation-translate.html) operation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesTranslation {
     /// Unique id for inter-element referencing
     ///
@@ -2913,7 +2913,7 @@ impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesTranslation {
 /// Information about the
 /// \[ValueSet/$validate-code\](valueset-operation-validate-code.html)
 /// operation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TerminologyCapabilitiesValidateCode {
     /// Unique id for inter-element referencing
     ///

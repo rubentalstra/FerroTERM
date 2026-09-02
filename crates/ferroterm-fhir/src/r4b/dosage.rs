@@ -5,7 +5,7 @@
 /// How the medication is/was taken or should be taken
 ///
 /// Indicates how the medication is/was taken or should be taken by the patient.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Dosage {
     /// Unique id for inter-element referencing
     ///
@@ -596,7 +596,7 @@ impl DosageAsNeeded {
 /// Amount of medication administered
 ///
 /// The amount of medication administered.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DosageDoseAndRate {
     /// Unique id for inter-element referencing
     ///

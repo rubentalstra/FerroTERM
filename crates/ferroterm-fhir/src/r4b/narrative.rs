@@ -7,7 +7,7 @@
 ///
 /// A human-readable summary of the resource conveying the essential clinical
 /// and business information for the resource.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Narrative {
     /// Unique id for inter-element referencing
     ///

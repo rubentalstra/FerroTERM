@@ -7,7 +7,7 @@
 /// A name, normally of a human, that can be used for other living entities
 /// (e.g. animals but not organizations) that have been assigned names by a
 /// human and may need the use of name parts or the need for usage information.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct HumanName {
     /// Unique id for inter-element referencing
     ///

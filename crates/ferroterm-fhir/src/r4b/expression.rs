@@ -7,7 +7,7 @@
 /// A expression that is evaluated in a specified context and returns a value.
 /// The context of use of the expression must specify the context in which the
 /// expression is evaluated, and how the result of the expression is used.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Expression {
     /// Unique id for inter-element referencing
     ///

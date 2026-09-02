@@ -7,7 +7,7 @@
 /// This resource is used to pass information into and back from an operation
 /// (whether invoked directly from REST or within a messaging environment). It
 /// is not persisted or allowed to be referenced by other resources.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Parameters {
     /// Logical id of this artifact
     ///
@@ -197,7 +197,7 @@ impl<'de> serde::Deserialize<'de> for Parameters {
 /// Operation Parameter
 ///
 /// A parameter passed to or received from the operation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ParametersParameter {
     /// Unique id for inter-element referencing
     ///

@@ -6,7 +6,7 @@
 ///
 /// A reference to a resource (by instance), or instead, a reference to a
 /// concept defined in a terminology or ontology (by class).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CodeableReference {
     /// Unique id for inter-element referencing
     ///

@@ -11,7 +11,7 @@
 /// be valid for mail delivery. There are a variety of postal address formats
 /// defined around the world. The ISO21090-codedString may be used to provide a
 /// coded representation of the contents of strings in an Address.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Address {
     /// Unique id for inter-element referencing
     ///

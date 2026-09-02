@@ -3,7 +3,7 @@
 //! A reference to a code defined by a terminology system
 
 /// A reference to a code defined by a terminology system.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Coding {
     /// Unique id for inter-element referencing
     ///

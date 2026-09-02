@@ -5,7 +5,7 @@
 /// Primitive Type base64Binary
 ///
 /// A stream of bytes
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Base64Binary {
     /// xml:id (or equivalent in JSON)
     ///
@@ -24,6 +24,19 @@ pub struct Base64Binary {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Base64Binary {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Base64Binary {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Base64Binary {
@@ -119,7 +132,7 @@ impl super::super::codec::Primitive for Base64Binary {
 /// Primitive Type boolean
 ///
 /// Value of "true" or "false"
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Boolean {
     /// xml:id (or equivalent in JSON)
     ///
@@ -138,6 +151,14 @@ pub struct Boolean {
     ///
     /// The actual value
     pub value: Option<bool>,
+}
+impl From<bool> for Boolean {
+    fn from(value: bool) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
 }
 
 impl super::super::codec::Primitive for Boolean {
@@ -230,7 +251,7 @@ impl super::super::codec::Primitive for Boolean {
 /// Primitive Type canonical
 ///
 /// A URI that is a reference to a canonical URL on a FHIR resource
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Canonical {
     /// xml:id (or equivalent in JSON)
     ///
@@ -247,6 +268,19 @@ pub struct Canonical {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for canonical
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Canonical {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Canonical {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Canonical {
@@ -344,7 +378,7 @@ impl super::super::codec::Primitive for Canonical {
 /// A string which has at least one character and no leading or trailing
 /// whitespace and where there is no whitespace other than single spaces in the
 /// contents
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Code {
     /// xml:id (or equivalent in JSON)
     ///
@@ -361,6 +395,19 @@ pub struct Code {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for code
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Code {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Code {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Code {
@@ -458,7 +505,7 @@ impl super::super::codec::Primitive for Code {
 /// A date or partial date (e.g. just year or year + month). There is no time
 /// zone. The format is a union of the schema types gYear, gYearMonth and date.
 /// Dates SHALL be valid dates.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Date {
     /// xml:id (or equivalent in JSON)
     ///
@@ -477,6 +524,19 @@ pub struct Date {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Date {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Date {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Date {
@@ -576,7 +636,7 @@ impl super::super::codec::Primitive for Date {
 /// union of the schema types gYear, gYearMonth, date and dateTime. Seconds must
 /// be provided due to schema type constraints but may be zero-filled and may be
 /// ignored. Dates SHALL be valid dates.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DateTime {
     /// xml:id (or equivalent in JSON)
     ///
@@ -595,6 +655,19 @@ pub struct DateTime {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for DateTime {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for DateTime {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for DateTime {
@@ -690,7 +763,7 @@ impl super::super::codec::Primitive for DateTime {
 /// Primitive Type decimal
 ///
 /// A rational number with implicit precision
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Decimal {
     /// xml:id (or equivalent in JSON)
     ///
@@ -709,6 +782,19 @@ pub struct Decimal {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Decimal {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Decimal {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Decimal {
@@ -812,7 +898,7 @@ impl super::super::codec::Primitive for Decimal {
 /// Any combination of letters, numerals, "-" and ".", with a length limit of 64
 /// characters. (This might be an integer, an unprefixed OID, UUID or any other
 /// identifier pattern that meets these constraints.) Ids are case-insensitive.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Id {
     /// xml:id (or equivalent in JSON)
     ///
@@ -829,6 +915,19 @@ pub struct Id {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for id
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Id {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Id {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Id {
@@ -924,7 +1023,7 @@ impl super::super::codec::Primitive for Id {
 /// Primitive Type instant
 ///
 /// An instant in time - known at least to the second
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Instant {
     /// xml:id (or equivalent in JSON)
     ///
@@ -943,6 +1042,19 @@ pub struct Instant {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Instant {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Instant {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Instant {
@@ -1038,7 +1150,7 @@ impl super::super::codec::Primitive for Instant {
 /// Primitive Type integer
 ///
 /// A whole number
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Integer {
     /// xml:id (or equivalent in JSON)
     ///
@@ -1057,6 +1169,14 @@ pub struct Integer {
     ///
     /// The actual value
     pub value: Option<i32>,
+}
+impl From<i32> for Integer {
+    fn from(value: i32) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
 }
 
 impl super::super::codec::Primitive for Integer {
@@ -1150,7 +1270,7 @@ impl super::super::codec::Primitive for Integer {
 ///
 /// A string that may contain Github Flavored Markdown syntax for optional
 /// processing by a mark down presentation engine
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Markdown {
     /// xml:id (or equivalent in JSON)
     ///
@@ -1167,6 +1287,19 @@ pub struct Markdown {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for markdown
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Markdown {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Markdown {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Markdown {
@@ -1262,7 +1395,7 @@ impl super::super::codec::Primitive for Markdown {
 /// Primitive Type oid
 ///
 /// An OID represented as a URI
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Oid {
     /// xml:id (or equivalent in JSON)
     ///
@@ -1279,6 +1412,19 @@ pub struct Oid {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for oid
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Oid {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Oid {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Oid {
@@ -1374,7 +1520,7 @@ impl super::super::codec::Primitive for Oid {
 /// Primitive Type positiveInt
 ///
 /// An integer with a value that is positive (e.g. \>0)
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PositiveInt {
     /// xml:id (or equivalent in JSON)
     ///
@@ -1391,6 +1537,14 @@ pub struct PositiveInt {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for positiveInt
     pub value: Option<u32>,
+}
+impl From<u32> for PositiveInt {
+    fn from(value: u32) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
 }
 
 impl super::super::codec::Primitive for PositiveInt {
@@ -1483,7 +1637,7 @@ impl super::super::codec::Primitive for PositiveInt {
 /// Primitive Type string
 ///
 /// A sequence of Unicode characters
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct String {
     /// xml:id (or equivalent in JSON)
     ///
@@ -1502,6 +1656,19 @@ pub struct String {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for String {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for String {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for String {
@@ -1597,7 +1764,7 @@ impl super::super::codec::Primitive for String {
 /// Primitive Type time
 ///
 /// A time during the day, with no date specified
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Time {
     /// xml:id (or equivalent in JSON)
     ///
@@ -1616,6 +1783,19 @@ pub struct Time {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Time {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Time {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Time {
@@ -1711,7 +1891,7 @@ impl super::super::codec::Primitive for Time {
 /// Primitive Type unsignedInt
 ///
 /// An integer with a value that is not negative (e.g. \>= 0)
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct UnsignedInt {
     /// xml:id (or equivalent in JSON)
     ///
@@ -1728,6 +1908,14 @@ pub struct UnsignedInt {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for unsignedInt
     pub value: Option<u32>,
+}
+impl From<u32> for UnsignedInt {
+    fn from(value: u32) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
 }
 
 impl super::super::codec::Primitive for UnsignedInt {
@@ -1820,7 +2008,7 @@ impl super::super::codec::Primitive for UnsignedInt {
 /// Primitive Type uri
 ///
 /// String of characters used to identify a name or a resource
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Uri {
     /// xml:id (or equivalent in JSON)
     ///
@@ -1839,6 +2027,19 @@ pub struct Uri {
     ///
     /// The actual value
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Uri {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Uri {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Uri {
@@ -1934,7 +2135,7 @@ impl super::super::codec::Primitive for Uri {
 /// Primitive Type url
 ///
 /// A URI that is a literal reference
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Url {
     /// xml:id (or equivalent in JSON)
     ///
@@ -1951,6 +2152,19 @@ pub struct Url {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for url
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Url {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Url {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Url {
@@ -2046,7 +2260,7 @@ impl super::super::codec::Primitive for Url {
 /// Primitive Type uuid
 ///
 /// A UUID, represented as a URI
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Uuid {
     /// xml:id (or equivalent in JSON)
     ///
@@ -2063,6 +2277,19 @@ pub struct Uuid {
     pub extension: Vec<super::extension::Extension>,
     /// Primitive value for uuid
     pub value: Option<std::string::String>,
+}
+impl From<std::string::String> for Uuid {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value: Some(value),
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Uuid {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Uuid {
@@ -2158,7 +2385,7 @@ impl super::super::codec::Primitive for Uuid {
 /// Primitive Type xhtml
 ///
 /// XHTML
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Xhtml {
     /// xml:id (or equivalent in JSON)
     ///
@@ -2166,6 +2393,19 @@ pub struct Xhtml {
     pub id: Option<std::string::String>,
     /// Actual xhtml
     pub value: std::string::String,
+}
+impl From<std::string::String> for Xhtml {
+    fn from(value: std::string::String) -> Self {
+        Self {
+            value,
+            ..Self::default()
+        }
+    }
+}
+impl From<&str> for Xhtml {
+    fn from(value: &str) -> Self {
+        Self::from(std::string::String::from(value))
+    }
 }
 
 impl super::super::codec::Primitive for Xhtml {

@@ -6,7 +6,7 @@
 ///
 /// A text note which also contains information about who made the statement and
 /// when.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Annotation {
     /// Unique id for inter-element referencing
     ///

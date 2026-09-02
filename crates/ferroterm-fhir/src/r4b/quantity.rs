@@ -7,7 +7,7 @@
 /// A measured amount (or an amount that can potentially be measured). Note that
 /// measured amounts include amounts that are not precisely quantified,
 /// including amounts involving arbitrary units and floating currencies.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Quantity {
     /// Unique id for inter-element referencing
     ///

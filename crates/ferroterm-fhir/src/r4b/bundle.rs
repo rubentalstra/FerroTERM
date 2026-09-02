@@ -5,7 +5,7 @@
 /// Contains a collection of resources
 ///
 /// A container for a collection of resources.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Bundle {
     /// Logical id of this artifact
     ///
@@ -352,7 +352,7 @@ impl<'de> serde::Deserialize<'de> for Bundle {
 ///
 /// An entry in a bundle resource - will either contain a resource or
 /// information about a resource (transactions and history only).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BundleEntry {
     /// Unique id for inter-element referencing
     ///
@@ -683,7 +683,7 @@ impl<'de> serde::Deserialize<'de> for BundleEntry {
 /// Additional information about how this entry should be processed as part of a
 /// transaction or batch. For history, it shows how the entry was processed to
 /// create the version contained in the entry.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BundleEntryRequest {
     /// Unique id for inter-element referencing
     ///
@@ -979,7 +979,7 @@ impl<'de> serde::Deserialize<'de> for BundleEntryRequest {
 /// Indicates the results of processing the corresponding 'request' entry in the
 /// batch or transaction being responded to or what the results of an operation
 /// where when returning history.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BundleEntryResponse {
     /// Unique id for inter-element referencing
     ///
@@ -1257,7 +1257,7 @@ impl<'de> serde::Deserialize<'de> for BundleEntryResponse {
 ///
 /// Information about the search process that lead to the creation of this
 /// entry.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BundleEntrySearch {
     /// Unique id for inter-element referencing
     ///
@@ -1462,7 +1462,7 @@ impl<'de> serde::Deserialize<'de> for BundleEntrySearch {
 /// Links related to this Bundle
 ///
 /// A series of links that provide context to this bundle.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BundleLink {
     /// Unique id for inter-element referencing
     ///

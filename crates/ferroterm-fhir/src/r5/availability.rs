@@ -3,7 +3,7 @@
 //! Availability data for an {item}
 
 /// Availability data for an {item}.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Availability {
     /// Unique id for inter-element referencing
     ///
@@ -176,7 +176,7 @@ impl<'de> serde::Deserialize<'de> for Availability {
 }
 
 /// Times the {item} is available.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AvailabilityAvailableTime {
     /// Unique id for inter-element referencing
     ///
@@ -372,7 +372,7 @@ impl<'de> serde::Deserialize<'de> for AvailabilityAvailableTime {
 }
 
 /// Not available during this time due to provided reason.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AvailabilityNotAvailableTime {
     /// Unique id for inter-element referencing
     ///
