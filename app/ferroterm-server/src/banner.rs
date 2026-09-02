@@ -13,13 +13,15 @@ const WORDMARK: &str = r"
 
 /// The project site printed under the wordmark.
 pub const SITE: &str = "https://ferroterm.eu";
+/// The maintainer named under the wordmark (`MAINTAINERS.md`).
+pub const MAINTAINER: &str = "Ruben Talstra";
 
 /// Renders the banner for `version`.
 #[must_use]
 pub fn render(version: &str) -> String {
     let wordmark = WORDMARK.trim_start_matches('\n');
     format!(
-        "{wordmark}\n  FHIR terminology server for SNOMED CT and other code systems · v{version}\n  {SITE}\n"
+        "{wordmark}\n  FHIR terminology server for SNOMED CT and other code systems · v{version}\n  Maintained by {MAINTAINER} · {SITE}\n"
     )
 }
 
@@ -40,7 +42,7 @@ mod tests {
     fn the_banner_names_the_version_and_fits_a_terminal() {
         let banner = render("1.2.3");
         assert!(banner.contains("v1.2.3"));
-        assert!(banner.contains("https://ferroterm.eu"));
+        assert!(banner.contains("Maintained by Ruben Talstra · https://ferroterm.eu"));
         assert!(banner.lines().all(|line| line.chars().count() <= 100));
         assert_eq!(banner.lines().count(), 8);
     }

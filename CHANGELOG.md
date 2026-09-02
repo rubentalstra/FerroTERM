@@ -15,7 +15,8 @@ fresh link reference.
 
 ### Added
 
-- Console logs an operator can read: a startup banner, one line per loaded
+- Console logs an operator can read: a startup banner naming the version and
+  the maintainer, one line per loaded
   code system version (id, system, version, concepts, languages, path), one
   line per request (method, route, status, latency, the system and code named),
   and one line on stop. `FERROTERM_LOG_FORMAT` chooses `pretty` (colour on a
