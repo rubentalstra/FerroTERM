@@ -16,6 +16,11 @@
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-fhir-codegen/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rf2/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-graph/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-store/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-terminology/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-text/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-build/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-testkit/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
