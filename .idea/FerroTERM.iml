@@ -14,6 +14,8 @@
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-build/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-fhir-codegen/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-fhir-codegen/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rf2/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-graph/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>

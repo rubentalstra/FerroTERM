@@ -370,6 +370,10 @@ dependencies = [
 name = "ferroterm-store"
 version = "0.0.0"
 dependencies = [
+ "ferroterm-graph",
+ "ferroterm-rf2",
+ "redb",
+ "tempfile",
  "thiserror",
 ]
 
@@ -828,6 +832,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "513962919efc330f829edb2535844d1b912b0fbe2ca165d613e4e8788bb05a5a"
 dependencies = [
  "rand_core",
+]
+
+[[package]]
+name = "redb"
+version = "4.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de6c3b63e007e90ce536ec2ae4690826136a20ec8dbbbb400daef1bb999d2e36"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
