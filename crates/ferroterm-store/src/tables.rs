@@ -46,3 +46,5 @@ pub const META_VERSION: &str = "version";
 pub const META_CONCEPTS: &str = "concepts";
 /// The `BLOBS` key of the hierarchy artifact.
 pub const BLOB_HIERARCHY: &str = "is-a";
+/// The blob slot holding the designation search index (`ferroterm-text`).
+pub const BLOB_TEXT: &str = "text";

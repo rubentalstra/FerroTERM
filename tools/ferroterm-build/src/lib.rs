@@ -1,10 +1,15 @@
 //! The offline build: an RF2 release in, the served artifacts out.
 //!
 //! Runs once per SNOMED CT edition, outside the server process. It reads the
-//! RF2 Snapshot through `ferroterm-rf2` and writes the memory-mapped store, the
-//! materialized graph, and the description index that `ferroterm-server` opens
-//! read-only.
+//! RF2 Snapshot through `ferroterm-rf2` and writes one `redb` store holding the
+//! concepts, designations, acceptabilities, and properties, with the hierarchy
+//! (`ferroterm-graph`) and the designation index (`ferroterm-text`) in its blob
+//! slots, plus a manifest naming the edition the store was built from. Two runs
+//! over the same release write byte-identical files: every collection is
+//! sorted by identifier before it is numbered, and nothing records a clock.
 #![doc(test(attr(deny(warnings))))]
+
+pub mod pipeline;
 
 use std::path::PathBuf;
 
@@ -22,21 +27,12 @@ pub struct Cli {
     pub out: PathBuf,
 }
 
-/// A build failure.
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    /// The pipeline is not part of the tool yet.
-    #[error("the build pipeline is not implemented yet (tracked in rubentalstra/FerroTERM#6)")]
-    PipelineMissing,
-}
-
 /// Runs the build the CLI describes.
 ///
 /// # Errors
 ///
-/// Returns [`Error::PipelineMissing`] until the pipeline exists.
-pub fn run(cli: &Cli) -> Result<(), Error> {
-    // TODO(#6): stream the RF2 release and write the store, graph, and text artifacts.
-    let Cli { rf2: _, out: _ } = cli;
-    Err(Error::PipelineMissing)
+/// Returns [`pipeline::Error`] when the release does not read, the edition
+/// cannot be identified, or an artifact cannot be written.
+pub fn run(cli: &Cli) -> Result<pipeline::Report, pipeline::Error> {
+    pipeline::build(&cli.rf2, &cli.out)
 }

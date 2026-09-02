@@ -20,7 +20,15 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+ferroterm-graph.workspace = true
+ferroterm-rf2.workspace = true
+ferroterm-store.workspace = true
+ferroterm-text.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

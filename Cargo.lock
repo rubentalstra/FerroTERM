@@ -302,6 +302,12 @@ version = "0.0.2"
 dependencies = [
  "anyhow",
  "clap",
+ "ferroterm-graph",
+ "ferroterm-rf2",
+ "ferroterm-store",
+ "ferroterm-text",
+ "serde_json",
+ "tempfile",
  "thiserror",
 ]
 
