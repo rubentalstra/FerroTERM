@@ -47,9 +47,9 @@ behavioural oracles for spec-silent edge cases only.
 
 - **[S-ECL-1]** Target **ECL 2.2** (superset-compatible with 2.0/2.1); build the
   parser faithful to the official ANTLR `ECL.g4` for that version — never a
-  hand-rolled divergent grammar. Port it in pure Rust (`logos` + `chumsky`/
-  `winnow`) mirroring the grammar, and test against the official valid/invalid
-  example corpus.
+  hand-rolled divergent grammar. Port it in pure Rust (`logos` + `winnow` —
+  preferred over the pre-1.0 `chumsky`) mirroring the grammar, and test against
+  the official valid/invalid example corpus.
 - **[S-ECL-2]** Support the full operator set: `<` / `<<` / `>` / `>>` / `*`,
   refinement (`:` with attribute groups, cardinality, reverse `R`, dotted `.`
   attribute values), `AND` / `OR` / `MINUS`, concrete values + comparisons,

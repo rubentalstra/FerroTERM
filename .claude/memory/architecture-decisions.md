@@ -21,15 +21,26 @@ streams, 2026-09-02).
   production server (Snowstorm, Ontoserver, Hermes) uses a materialized index;
   graph DBs lose on ECL's deep-reachability queries. This honors the owner's
   (correct) graph intuition while implementing it the fast way.
-- **Persistence = `redb`** (pure-Rust, memory-mapped, ACID). Disk-backed and a
-  real engine — not everything-in-RAM, not a hand-rolled format.
+- **Persistence = `redb`** (pure-Rust, memory-mapped, ACID) — the persistence
+  FORMAT, not the query-time path. The hot closure is loaded RESIDENT at startup
+  (ordinal-indexed `Vec<RoaringBitmap>` / zero-copy layout), never
+  redb-get-and-deserialize per `$subsumes` (that would forfeit the µs goal). The
+  columnar store stays on mmap for point reads. Closure ~100–300 MB resident.
+- **Offline classification default = COMPUTE the transitive closure from the
+  inferred Relationship file** (SNOMED ships NO transitive-closure file for the
+  International edition, only a script); consume a shipped TC file only where an
+  edition includes one. A reasoner (ELK-style) is a later capability.
 - **FHIR is machine-generated** from the vendored official FHIR packages
   (StructureDefinition + OperationDefinition), a bespoke FerroEHR-style
   generator, per-version modules for **R4 + R4B + R5 + R6 (ballot)**, runtime
   version wrapper. Never hand-write FHIR types; never edit `// @generated`.
   **Start with R4B first** (owner call: current stable R4-family release,
   near-superset of R4 — an R4B-first build serves the R4 surface); then R5, R4,
-  R6.
+  R6. Codegen SCOPE = a declared terminology root-set closure (CodeSystem,
+  ValueSet, ConceptMap, Parameters, OperationOutcome, CapabilityStatement,
+  TerminologyCapabilities, Bundle + the terminology OperationDefinitions + their
+  datatype/primitive closure), NOT all ~150 FHIR resources. ECL parser = `winnow`
+  (not the pre-1.0 chumsky).
 - **Pure Rust, single binary, no JVM / no Elasticsearch.** SNOMED CT content is
   licence-gated and NEVER committed (bring-your-own RF2); fixtures are
   shaped/synthetic.

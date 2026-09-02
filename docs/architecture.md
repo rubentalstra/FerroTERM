@@ -22,9 +22,12 @@ architectures make.
    53(1), 2014, <https://link.springer.com/article/10.1007/s10817-013-9296-3>;
    SNOMED OWL Reference Set,
    <https://docs.snomed.org/snomed-ct-specifications/snomed-ct-owl-reference-set-specification>).
-   ELK classifies all of SNOMED in about five seconds into roughly five million
-   subsumptions — under 0.01% of all possible concept pairs, an extremely sparse
-   relation.
+   ELK classifies all of SNOMED in about five seconds. Its output is the
+   inferred DIRECT is-a relation (a few million edges); the TRANSITIVE closure
+   over it — every ancestor/descendant pair, which is what serving needs — is
+   several-fold larger, on the order of tens of millions of pairs (see the
+   footprint note in decision 1). Still an extremely sparse fraction of all
+   possible concept pairs.
 2. **It is a polyhierarchical graph** — a concept has many parents; edges are
    typed (is-a, finding site, associated morphology, and the rest) (SNOMED
    Concept Model,
@@ -40,19 +43,24 @@ problem. Everything below follows from keeping them apart.
 ### Offline: classification, once per release
 
 The hierarchy Notio serves is a reasoner output, computed once per SNOMED
-release, never at query time. Two valid ways to obtain it:
+release, never at query time. The default:
 
-- **Consume SNOMED's shipped files** — the inferred relationship file plus the
-  distributed transitive-closure file
-  (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-release-file-specification/component-release-file-specification/4.2-file-format-specifications/4.2.5-transitive-closure-files>).
-  This is the default for the first server: SNOMED already publishes the
-  classification result, and its own guidance calls a precomputed transitive
-  closure "one of the most efficient ways to test for subsumption"
+- **Compute the transitive closure from the shipped inferred Relationship file**
+  (`typeId = 116680003` is-a) — a topological-order bitset-propagation sweep
+  over the ~1.5M is-a edges, a matter of seconds offline, then persisted.
+  SNOMED does NOT distribute a transitive-closure file in the International
+  Release — it ships only a script to generate one
+  (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-release-file-specification/component-release-file-specification/4.2-file-format-specifications/4.2.5-transitive-closure-files>)
+  — so computing it is the baseline, not consuming a file. Where a distributed
+  edition does include a transitive-closure file, use it as an opportunistic
+  fast path. SNOMED's own guidance calls a precomputed transitive closure "one
+  of the most efficient ways to test for subsumption"
   (<https://docs.snomed.org/snomed-ct-practical-guides/snomed-ct-data-analytics-guide/6-snomed-ct-analytic-techniques/6.2-subsumption>).
 - **Run a reasoner** — an ELK-style consequence-based classifier over the OWL
   axiom refset. Needed only when the input is stated axioms or post-coordinated
   expressions that must be classified locally. This is a later capability, not a
-  requirement to serve a released edition.
+  requirement to serve a released edition (which already ships inferred
+  relationships).
 
 The build pipeline turns the release into the materialized serving structures
 below. It runs offline (in a tool, `tools/notio-build`), so the running server
@@ -141,23 +149,61 @@ the generator is never hand-edited. Versions are selected by a runtime wrapper,
 so one server answers R4/R4B/R5/R6 callers at once. R6 is a ballot-tracking
 generation (publication expected around late 2026).
 
+**The emission scope is a declared root-set closure, not the whole FHIR model.**
+A terminology server touches a handful of resources; generating all ~150
+resources of each core package across four versions would be dead weight
+(compile time, binary size) with no consumer. The generator's root set is the
+terminology surface — `CodeSystem`, `ValueSet`, `ConceptMap`, `Parameters`,
+`OperationOutcome`, `CapabilityStatement`, `TerminologyCapabilities`, `Bundle`,
+plus the terminology `OperationDefinition`s — and it emits the COMPLETE
+transitive closure of datatypes and primitives those roots reference. That is
+"complete within a declared closure", the sanctioned form of the
+emit-the-whole-model rule (`codegen.md`) — never trimming inside the closure to
+quiet a diff, and never a hand-written shape outside it.
+
 **R4B is the first generation implemented.** It is the current stable release of
 the R4 line and a near-superset of R4, so an R4B-first build already serves the
 R4-family terminology surface; R5, R4, and R6 follow. (R4 4.0.1 remains the most
 widely deployed base and is a generation in its own right — R4B first is a
 sequencing choice, not a drop of R4.)
 
-### 3. Persistence is a pure-Rust, memory-mapped embedded engine
+### 3. Persistence is a pure-Rust embedded engine; the hot closure is resident
 
 The built structures — the CSR adjacency, the roaring closure bitmaps, the
 columnar concept/description store — are persisted in **`redb`**, a pure-Rust,
 memory-mapped, ACID embedded key-value engine. This is deliberate: it is
-disk-backed and a real storage engine, so it is neither everything-in-RAM nor a
-hand-rolled file format, while staying pure Rust and a single self-contained
-binary with no external service. The memory-mapped design gives millisecond
-startup and an elastic resident set — the shape Hermes runs in production
-(memory-mapped store), realized in pure Rust. The build tool writes these
-artifacts once per edition; the server opens them read-only.
+disk-backed and a real storage engine, so it is neither a hand-rolled file
+format nor a service, while staying pure Rust and a single self-contained
+binary. The build tool writes these artifacts once per edition; the server
+opens them read-only.
+
+**`redb` is the persistence FORMAT, not the query-time path for the hot
+structures.** `redb.get()` yields the value *bytes*, and a `roaring` bitmap has
+no query-over-serialized-bytes API — deserializing an ancestor bitmap on every
+`$subsumes` would be O(bitmap size) per call and would forfeit the
+microsecond-subsumption goal. So at startup the server loads the closure into a
+**resident, ordinal-indexed structure** (an SCTID→ordinal map plus
+`Vec<RoaringBitmap>` for the ancestor and descendant closures, or an equivalent
+zero-copy mmap layout that answers membership without materializing), and
+subsumption is then a membership test against the resident bitmap. The columnar
+concept/description store stays on the mmap for point reads (`$lookup`); only
+the reachability closure and the CSR adjacency need to be resident. This is how
+Hermes reaches tens-of-microseconds subsumption, realized in pure Rust.
+
+Footprint: the transitive closure is tens of millions of ancestor/descendant
+pairs (both directions are stored — subsumption needs one, ECL returns each set
+directly, a deliberate ~2× space cost). Roaring compresses SNOMED-shaped sets
+heavily (dense high-level sets to bitmap containers, sparse leaves to array
+containers), so the resident closure lands at roughly 100–300 MB, plus tens of
+MB for CSR adjacency and the `fst` index and an mmap'd columnar text store —
+near the ~500 MB the reference Snowstorm Lite needs, and far under a 2–4 GB box.
+
+Serving concurrency: point reads against hot mmap pages and resident-bitmap
+subsumption run inline in the async handler. A heavy `$expand` that materializes
+a 100k-member set, and any cold read that page-faults from disk, run on a
+blocking pool (`tokio::task::spawn_blocking`) so they never stall the runtime —
+the blocking seam sits at the `notio-terminology` engine boundary and is
+designed in from the start, not retrofitted.
 
 ### 4. The SNOMED semantics are hand-written and owned
 
@@ -186,10 +232,30 @@ Description search is a separate concern from the graph, kept in its own index.
 SNOMED search is per-word prefix matching in any order, filtered by language
 reference set and active status, ranked by matched-term length — not relevance
 scoring (Snowstorm search docs,
-<https://github.com/IHTSDO/snowstorm/blob/master/docs/search.md>). A finite-state
-transducer (`fst`) holds the term dictionary for prefix and fuzzy lookup;
-roaring bitmaps carry the refset and status filters, intersected in one pass.
-Pure Rust, memory-mapped, built once per edition.
+<https://github.com/IHTSDO/snowstorm/blob/master/docs/search.md>). The structure
+is a **word inverted index**: each word token maps to a roaring-bitmap postings
+list of the descriptions containing it. A finite-state transducer (`fst`) holds
+the word dictionary and answers per-word prefix (and Levenshtein-fuzzy) lookup,
+expanding a typed prefix to its matching word ids; the query intersects those
+words' postings, ANDs the language-refset and active-status filter bitmaps, and
+sorts the surviving descriptions by matched-term length. The `fst` alone is not
+the index — it is the prefix front end over the inverted postings. Pure Rust,
+memory-mapped, built once per edition.
+
+## Scope: v1 and deliberate deferrals
+
+The v1 target is a read-only R4B server over the International edition:
+`$lookup`, `$subsumes`, `$validate-code`, `$expand` (with ECL), and `$translate`,
+plus the metadata/capability statements. These are named as deferrals, not
+silent omissions:
+
+- **MRCM validation** of post-coordinated expressions is a large sub-project;
+  v1 `$validate-code` validates pre-coordinated codes, displays, and value-set
+  membership. Post-coordination and MRCM come later.
+- **`ConceptMap/$closure`** (client-side closure maintenance) is out of v1.
+- **CodeSystem supplements / `useSupplement`** beyond echoing the parameter.
+- **The full R4/R4B/R5/R6 test matrix** is the north star; v1 gates R4B, with
+  the other generations added as they are implemented.
 
 ## Workspace layout
 

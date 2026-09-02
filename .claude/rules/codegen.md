@@ -33,15 +33,22 @@ emitter) → `crates/notio-fhir`, one module per version (R4 / R4B / R5 / R6).
   (or its override map), then regenerate — never the output. A doc defect, a
   wrong field type, a missing variant in a generated file is a
   `notio-fhir-codegen` fix + regeneration.
-- **Emit the COMPLETE model from the vendored inputs — never trim, scope
-  down, or suppress output.** Completeness is the whole point of code
-  generation: if the vendored packages (or a legitimate emission closure over
-  them) yield types or operations, they are ALL emitted, in full, at their
-  version-mirrored location — even ones nothing consumes yet. Never narrow a
-  schema merge, prune a closure, or suppress a "missing" generated file to
-  quiet a diff, shrink scope, or dodge a build error — that is HIDING code
-  that should exist, not fixing anything. A generation-side defect discovered
-  en route is FIXED in the generator in the same change, not worked around.
+- **The emission scope is a DECLARED root-set closure, and it is emitted
+  COMPLETE — never trimmed inside that closure.** Notio is a terminology
+  server, not a full FHIR server, so the generator does NOT emit all ~150
+  resources of each core package. The declared root set is the terminology
+  surface — `CodeSystem`, `ValueSet`, `ConceptMap`, `Parameters`,
+  `OperationOutcome`, `CapabilityStatement`, `TerminologyCapabilities`,
+  `Bundle`, plus the terminology `OperationDefinition`s — and the generator
+  emits the COMPLETE transitive closure of every datatype and primitive those
+  roots reference, per version, at its version-mirrored location. Within that
+  closure, completeness is absolute: never narrow a schema merge, prune a
+  referenced type, or suppress a "missing" generated file to quiet a diff or
+  dodge a build error — that is HIDING code that should exist. Widening or
+  narrowing the root SET is a deliberate, recorded decision (a new operation
+  or resource the server serves), never an ad-hoc per-file omission. A
+  generation-side defect discovered en route is FIXED in the generator in the
+  same change, not worked around.
 - **Fix the emitter, never the consumer.** When engine code hits a shape in
   `notio-fhir` that is wrong or insufficient versus the vendored package (a
   missing field, a type too narrow, a per-version parameter absent), the fix

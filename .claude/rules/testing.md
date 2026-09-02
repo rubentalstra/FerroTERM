@@ -42,12 +42,20 @@ applies to every crate — generated and hand-written alike.
 The acceptance oracles for this project are the FHIR terminology conformance
 expectations and the reference servers — NOT a bespoke conformance runner.
 
-- **Snowstorm and Hermes are the reference servers.** `$lookup`,
-  `$subsumes`, `$validate-code`, `$expand`, and `$translate` results are
-  checked against the reference servers over the SAME SNOMED edition. Where a
-  reference server and the spec disagree, the spec wins and the divergence is
-  recorded (the reference server is prior art, never the oracle — a bug in
-  Snowstorm is not a requirement).
+- **The HL7 `fhir-tx-ecosystem-ig` test cases are the per-version conformance
+  gate**, run by the FHIR Validator's `txTests` mode against a running server.
+  Note: the Validator is a Java tool, so this gate runs a JVM IN CI only —
+  never in the server runtime (the "no JVM" property is a runtime property).
+  <https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>
+- **Snowstorm and Hermes are the reference servers** for differential testing.
+  `$lookup`, `$subsumes`, `$validate-code`, `$expand`, and `$translate` results
+  are compared against them over the SAME SNOMED edition. Where a reference
+  server and the spec disagree, the spec wins and the divergence is recorded
+  (the reference server is prior art, never the oracle — a bug in Snowstorm is
+  not a requirement). This is a PERIODIC/manual gate, not per-PR: it needs a
+  licensed SNOMED edition (uncommittable) and a heavy reference stack, so it
+  runs on a schedule or before a release, with the edition + oracle versions
+  pinned in the test artifacts.
   - Snowstorm: <https://github.com/IHTSDO/snowstorm>
   - Hermes: <https://github.com/wardle/hermes>
 - **ECL is tested against its published grammar** (the ECL ANTLR grammar,

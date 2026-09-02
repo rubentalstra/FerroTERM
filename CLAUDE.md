@@ -92,7 +92,9 @@ true`. The menu:
   for the offline build). Pure Rust, memory-mapped, disk-backed. Not
   Elasticsearch, not a graph database, not a C storage/search library.
 - **HTTP/async:** `axum`, `tower`, `tower-http`, `hyper`, `tokio`.
-- **Parsing (ECL):** `logos` (lexer) + `chumsky` or `winnow` (parser),
+- **Parsing (ECL):** `logos` (lexer) + `winnow` (parser — preferred over
+  `chumsky`, which is still pre-1.0 with churn; the ECL grammar must stay
+  faithful to the official ANTLR `.g4`),
   diagnostics via `miette`/`ariadne`.
 - **RF2:** `csv` (RF2 is tab-delimited), streamed.
 - **Serde/formats:** `serde`, `serde_json`; FHIR JSON (and XML where a version
