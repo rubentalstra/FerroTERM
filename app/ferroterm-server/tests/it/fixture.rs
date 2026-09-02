@@ -81,7 +81,7 @@ impl Server {
     }
 }
 
-async fn json(response: Response<Body>) -> (StatusCode, Value) {
+pub(crate) async fn json(response: Response<Body>) -> (StatusCode, Value) {
     let status = response.status();
     assert_eq!(
         response

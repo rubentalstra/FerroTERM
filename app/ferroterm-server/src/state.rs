@@ -14,9 +14,11 @@ use ferroterm_terminology::registry::{RegisterError, Registry, Resolved};
 use ferroterm_terminology::snomed::{OpenError, SnomedProvider};
 use ferroterm_terminology::supplement::{Additions, Supplement, Supplemented};
 use ferroterm_terminology::valueset;
+use ferroterm_terminology::valueset::model::ValueSetModel;
 use ferroterm_terminology::valueset::store::{DuplicateValueSet, ValueSetStore};
 
 use crate::config::Config;
+use crate::scope::Caches;
 
 /// A failure to load the state.
 #[derive(Debug, thiserror::Error)]
@@ -94,6 +96,9 @@ pub struct InstanceSummary {
 pub struct AppState {
     registry: Registry,
     value_sets: ValueSetStore,
+    /// `ValueSet` instance id to (url, version).
+    value_set_instances: BTreeMap<String, (String, Option<String>)>,
+    caches: Caches,
     /// `CodeSystem` instance id to (system, version).
     instances: BTreeMap<String, (String, String)>,
     /// The directory each version was loaded from.
@@ -147,6 +152,15 @@ impl AppState {
         }
         let mut state = Self::from_registry(registry);
         state.paths = paths;
+        for model in value_sets.iter() {
+            let id = unique_id_of(
+                &state.value_set_instances,
+                instance_id(&model.url, model.version.as_deref().unwrap_or_default()),
+            );
+            state
+                .value_set_instances
+                .insert(id, (model.url.clone(), model.version.clone()));
+        }
         state.value_sets = value_sets;
         Ok(state)
     }
@@ -165,6 +179,8 @@ impl AppState {
         Self {
             registry,
             value_sets: ValueSetStore::new(),
+            value_set_instances: BTreeMap::new(),
+            caches: Caches::default(),
             instances,
             paths: BTreeMap::new(),
             software_version: env!("CARGO_PKG_VERSION"),
@@ -209,6 +225,26 @@ impl AppState {
     #[must_use]
     pub fn value_sets(&self) -> &ValueSetStore {
         &self.value_sets
+    }
+
+    /// The caches `$cache-control` started.
+    #[must_use]
+    pub fn caches(&self) -> &Caches {
+        &self.caches
+    }
+
+    /// The `ValueSet` instance ids and what they serve, sorted by id.
+    pub fn value_set_instances(&self) -> impl Iterator<Item = (&str, &str, Option<&str>)> {
+        self.value_set_instances
+            .iter()
+            .map(|(id, (url, version))| (id.as_str(), url.as_str(), version.as_deref()))
+    }
+
+    /// Resolves a `ValueSet` instance id.
+    #[must_use]
+    pub fn value_set_instance(&self, id: &str) -> Option<Arc<ValueSetModel>> {
+        let (url, version) = self.value_set_instances.get(id)?;
+        self.value_sets.resolve(url, version.as_deref())
     }
 
     /// The code systems and value sets an operation works over.
@@ -297,7 +333,7 @@ fn load_code_systems(
 }
 
 /// The additions a supplement resource carries, keyed by code.
-fn supplement_of(model: &CodeSystemModel) -> Supplement {
+pub(crate) fn supplement_of(model: &CodeSystemModel) -> Supplement {
     let mut concepts = BTreeMap::new();
     for entry in &model.concepts {
         concepts.insert(
@@ -370,6 +406,12 @@ fn split_canonical(canonical: &str) -> (&str, Option<&str>) {
 
 /// `wanted`, or `wanted` with a numeric suffix when the reduced id is taken.
 fn unique_id(taken: &BTreeMap<String, (String, String)>, wanted: String) -> String {
+    unique_id_of(taken, wanted)
+}
+
+/// `wanted`, or `wanted` with a numeric suffix when the reduced id is a key
+/// of `taken`.
+fn unique_id_of<V>(taken: &BTreeMap<String, V>, wanted: String) -> String {
     if !taken.contains_key(&wanted) {
         return wanted;
     }

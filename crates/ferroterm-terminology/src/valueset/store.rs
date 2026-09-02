@@ -48,6 +48,15 @@ impl ValueSetStore {
         Ok(())
     }
 
+    /// Stores `model`, replacing the one with the same `url` and `version`.
+    pub fn replace(&mut self, model: ValueSetModel) {
+        let key = model.version.clone().unwrap_or_default();
+        self.by_url
+            .entry(model.url.clone())
+            .or_default()
+            .insert(key, Arc::new(model));
+    }
+
     /// The value set at `url`, at `version` or the default version.
     ///
     /// `url` may carry its version as `url|version`. No FHIR version fixes

@@ -16,6 +16,7 @@ mod fixture;
 mod health;
 mod metadata;
 mod operations;
+mod scope;
 mod shutdown;
 mod telemetry;
 mod value_set;

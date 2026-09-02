@@ -39,6 +39,34 @@ name, its designations, and its requested properties. `$subsumes` takes two code
 and a `system` and returns whether the first subsumes the second, the reverse, is
 equivalent, or is unrelated.
 
+## Request-scoped resources
+
+A client can bring its own `CodeSystem` and `ValueSet` resources for one
+request: each `tx-resource` parameter of a `POST` carries one, and the
+operation sees them layered over the loaded resources (a resource with the
+same `url` and `version` as a loaded one shadows it for that request). A
+supplement in a `tx-resource` applies to the system it names. Any other
+resource type is refused with `not-supported`. This is what the HL7
+terminology ecosystem runner sends; `tx-resource` is a declared parameter in
+R6 only and an ecosystem extension on R4B
+(<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+
+To avoid resending the same resources, start a cache:
+
+```text
+POST [base]/$cache-control?mode=start   (Parameters of tx-resource)
+→ Parameters { cache-id }
+```
+
+Then name it with the `X-Cache-Id` header on later requests; their own
+`tx-resource`s stack on top. `POST [base]/$cache-control?mode=end` with the
+header (or a `cache-id` parameter) releases it. A cache unused for 30 minutes
+expires, and an unknown id answers `404`.
+
+`GET [base]/$versions` (R5's `CapabilityStatement/$versions`) names the FHIR
+version of the base as `MAJOR.MINOR`. Loaded value sets are readable as
+`GET [base]/ValueSet/{id}` and searchable as `GET [base]/ValueSet?url=…&version=…`.
+
 ## SNOMED CT as the code system
 
 For SNOMED CT the `system` is the SNOMED CT URI, `http://snomed.info/sct`. An

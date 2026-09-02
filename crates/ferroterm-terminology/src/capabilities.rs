@@ -134,6 +134,7 @@ impl Summary {
             TerminologyCapabilities, TerminologyCapabilitiesCodeSystem,
             TerminologyCapabilitiesCodeSystemVersion,
             TerminologyCapabilitiesCodeSystemVersionFilter, TerminologyCapabilitiesExpansion,
+            TerminologyCapabilitiesExpansionParameter,
         };
         TerminologyCapabilities {
             status: "active".into(),
@@ -186,6 +187,13 @@ impl Summary {
                 paging: Some(true.into()),
                 incomplete: Some(false.into()),
                 text_filter: Some(TEXT_FILTER.into()),
+                parameter: EXPANSION_PARAMETERS
+                    .iter()
+                    .map(|name| TerminologyCapabilitiesExpansionParameter {
+                        name: (*name).into(),
+                        ..Default::default()
+                    })
+                    .collect(),
                 ..Default::default()
             }),
             ..Default::default()
@@ -258,6 +266,28 @@ impl Summary {
         }
     }
 }
+
+/// The `$expand` parameters the server evaluates, for
+/// `expansion.parameter`; `tx-resource` is the terminology ecosystem's
+/// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+pub const EXPANSION_PARAMETERS: [&str; 16] = [
+    "activeOnly",
+    "check-system-version",
+    "count",
+    "designation",
+    "displayLanguage",
+    "exclude-system",
+    "excludeNested",
+    "excludeNotForUI",
+    "excludePostCoordinated",
+    "filter",
+    "force-system-version",
+    "includeDefinition",
+    "includeDesignations",
+    "offset",
+    "system-version",
+    "tx-resource",
+];
 
 /// `expansion.textFilter`: how the `filter` parameter matches.
 const TEXT_FILTER: &str = "Each word of the filter is a prefix that must match the start of a word \

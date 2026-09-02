@@ -16,6 +16,7 @@ pub mod config;
 pub mod outcome;
 pub mod r4b;
 pub mod request_log;
+pub mod scope;
 pub mod state;
 pub mod telemetry;
 
