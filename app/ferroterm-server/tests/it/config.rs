@@ -27,6 +27,11 @@ fn the_state_loads_every_named_artifact_and_names_its_instances() {
     );
     assert!(state.instance(&instance_id(VERSION)).is_some());
     assert!(state.instance("nope").is_none());
+    let summaries = state.summaries().expect("summarises");
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].concepts, 8);
+    assert_eq!(summaries[0].languages, ["en", "nl"]);
+    assert_eq!(summaries[0].path.as_deref(), Some(dir.path()));
 }
 
 #[test]

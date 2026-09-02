@@ -15,6 +15,15 @@ fresh link reference.
 
 ### Added
 
+- Console logs an operator can read: a startup banner naming the version and
+  the maintainer, one line per loaded
+  code system version (id, system, version, concepts, languages, path), one
+  line per request (method, route, status, latency, the system and code named),
+  and one line on stop. `FERROTERM_LOG_FORMAT` chooses `pretty` (colour on a
+  terminal) or `json` (one object per line); `auto`, the default, picks by
+  whether stdout is a terminal. `RUST_LOG` filters; the HTTP stack's crates
+  default to `warn`.
+
 - The first served operations on FHIR R4B: `CodeSystem/$lookup`,
   `CodeSystem/$validate-code`, and `CodeSystem/$subsumes` under `/r4b`, by `GET`
   with query parameters or `POST` with a `Parameters` resource, at the type

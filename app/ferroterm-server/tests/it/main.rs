@@ -17,3 +17,4 @@ mod health;
 mod metadata;
 mod operations;
 mod shutdown;
+mod telemetry;

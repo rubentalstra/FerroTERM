@@ -11,10 +11,13 @@
 //! (<https://hl7.org/fhir/R4B/http.html>, <https://hl7.org/fhir/R4B/operations.html>).
 #![doc(test(attr(deny(warnings))))]
 
+pub mod banner;
 pub mod config;
 pub mod outcome;
 pub mod r4b;
+pub mod request_log;
 pub mod state;
+pub mod telemetry;
 
 use std::future::Future;
 use std::sync::Arc;
@@ -36,6 +39,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/health", get(health))
         .nest("/r4b", r4b::router())
         .fallback(outcome::not_found)
+        .layer(axum::middleware::from_fn(request_log::log))
         .with_state(state)
 }
 
