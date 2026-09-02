@@ -13,6 +13,16 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- `ferroterm-build --rf2 <release> --out <dir>`: the offline build from a SNOMED
+  CT RF2 Snapshot to the served artifacts. One `redb` store per edition version
+  with the concepts, designations, language-reference-set acceptabilities, and
+  the `parent`, `definitionStatus`, and `module` properties; the is-a hierarchy
+  and the designation search index in its blob slots; and a `manifest.json`
+  naming the edition and version URIs, the release date, and the counts. Two
+  builds of the same release are byte-identical.
+
 ### Changed
 
 - Release binaries ship for Linux only (`x86_64` gnu and musl, `aarch64` gnu):
