@@ -22,6 +22,8 @@ redb = "4.2.0"
 roaring = "0.11.5"
 fst = "0.4.7"
 petgraph = "0.8.3"
+# Unicode normalization for the designation tokenizer (NFD, combining-mark stripping).
+unicode-normalization = "0.1.25"
 # HTTP and async.
 axum = "0.8.9"
 tower = "0.5.3"
