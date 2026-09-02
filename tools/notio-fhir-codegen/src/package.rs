@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::model::{
+use crate::fhir::{
     CodeSystem, Derivation, OperationDefinition, ResourceHeader, StructureDefinition, ValueSet,
 };
 

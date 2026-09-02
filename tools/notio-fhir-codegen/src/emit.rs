@@ -1,9 +1,10 @@
-//! The `emit` command: package in, generated crate out, byte-deterministic.
+//! The `emit` command: packages in, generated crate out, byte-deterministic.
 //!
-//! The pipeline renders every file into a scratch directory, formats it with
-//! the pinned `rustfmt`, and then either replaces the generated tree or, in
-//! check mode, compares it with the tree on disk and reports every
-//! difference.
+//! One run emits every FHIR version in [`EmitOptions::versions`]: each
+//! package lowers to its own module, and one `lib.rs` declares them all. The
+//! pipeline renders every file into a scratch directory, formats it with the
+//! pinned `rustfmt`, and then either replaces the generated tree or, in check
+//! mode, compares it with the tree on disk and reports every difference.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -12,20 +13,27 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::closure::{ClosureError, TypeClosure};
-use crate::lower::{LowerError, RustModel};
+use crate::lower::{LowerError, VersionModule};
 use crate::package::{LoadError, Package};
-use crate::render::render_all;
+use crate::render::{render_lib, render_module, render_version_mod};
 use crate::roots::{MissingRoot, RootSet};
+
+/// One FHIR version to emit: its module name and its vendored package.
+#[derive(Debug, Clone)]
+pub struct VersionInput {
+    /// The module name, for example `r4b`.
+    pub module: String,
+    /// The vendored package directory (the one holding `package/`).
+    pub package_dir: PathBuf,
+}
 
 /// What to emit and where.
 #[derive(Debug, Clone)]
 pub struct EmitOptions {
-    /// The vendored package directory (the one holding `package/`).
-    pub package_dir: PathBuf,
+    /// The versions to emit, in module-name order.
+    pub versions: Vec<VersionInput>,
     /// The generated crate directory (the one holding `Cargo.toml` and `src/`).
     pub crate_dir: PathBuf,
-    /// The version module name, for example `r4b`.
-    pub version_module: String,
     /// Compare instead of writing.
     pub check: bool,
 }
@@ -33,6 +41,9 @@ pub struct EmitOptions {
 /// A failure while emitting.
 #[derive(Debug, thiserror::Error)]
 pub enum EmitError {
+    /// No version was given.
+    #[error("no FHIR version to emit")]
+    NoVersions,
     /// The package did not load.
     #[error(transparent)]
     Load(#[from] LoadError),
@@ -74,8 +85,8 @@ pub enum EmitError {
 /// What an emit run produced.
 #[derive(Debug)]
 pub struct EmitReport {
-    /// The number of types in the model.
-    pub types: usize,
+    /// The number of types per version module.
+    pub types: BTreeMap<String, usize>,
     /// The files written or checked, relative to `src/`.
     pub files: Vec<String>,
 }
@@ -87,16 +98,36 @@ pub struct EmitReport {
 /// Returns [`EmitError`] for a load, closure, lowering, I/O, or `rustfmt`
 /// failure, and [`EmitError::Drift`] in check mode when the tree differs.
 pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
-    let package = Package::open(&options.package_dir)?;
-    let roots = RootSet::select(&package)?;
-    let closure = TypeClosure::compute(&package, &roots)?;
-    let model = RustModel::lower(
-        &closure,
-        &options.version_module,
-        &package.manifest().name,
-        &package.manifest().version,
-    )?;
-    let files = render_all(&model)?;
+    if options.versions.is_empty() {
+        return Err(EmitError::NoVersions);
+    }
+    let mut versions: Vec<&VersionInput> = options.versions.iter().collect();
+    versions.sort_by(|a, b| a.module.cmp(&b.module));
+
+    let mut models = Vec::with_capacity(versions.len());
+    for version in &versions {
+        let package = Package::open(&version.package_dir)?;
+        let roots = RootSet::select(&package)?;
+        let closure = TypeClosure::compute(&package, &roots)?;
+        models.push(VersionModule::lower(
+            &closure,
+            &version.module,
+            &package.manifest().name,
+            &package.manifest().version,
+        )?);
+    }
+
+    let mut files = BTreeMap::new();
+    files.insert(String::from("lib.rs"), render_lib(&models)?);
+    for model in &models {
+        files.insert(format!("{}/mod.rs", model.name), render_version_mod(model)?);
+        for (module, types) in model.modules() {
+            files.insert(
+                format!("{}/{module}.rs", model.name),
+                render_module(model, module, &types)?,
+            );
+        }
+    }
 
     let scratch = tempfile::tempdir().map_err(|source| EmitError::Io {
         path: PathBuf::from("(temporary directory)"),
@@ -107,24 +138,30 @@ pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
     rustfmt(&scratch_src, &files, &options.crate_dir)?;
     let formatted = read_tree(&scratch_src, &files)?;
 
+    let module_names: Vec<&str> = models.iter().map(|m| m.name.as_str()).collect();
     let target_src = options.crate_dir.join("src");
     if options.check {
-        let drift = compare(&target_src, &formatted, &options.version_module)?;
+        let drift = compare(&target_src, &formatted, &module_names)?;
         if !drift.is_empty() {
             return Err(EmitError::Drift { paths: drift });
         }
     } else {
-        let version_dir = target_src.join(&options.version_module);
-        if version_dir.exists() {
-            fs::remove_dir_all(&version_dir).map_err(|source| EmitError::Io {
-                path: version_dir.clone(),
-                source,
-            })?;
+        for module in &module_names {
+            let version_dir = target_src.join(module);
+            if version_dir.exists() {
+                fs::remove_dir_all(&version_dir).map_err(|source| EmitError::Io {
+                    path: version_dir.clone(),
+                    source,
+                })?;
+            }
         }
         write_tree(&target_src, &formatted)?;
     }
     Ok(EmitReport {
-        types: model.types.len(),
+        types: models
+            .iter()
+            .map(|m| (m.name.clone(), m.types.len()))
+            .collect(),
         files: formatted.keys().cloned().collect(),
     })
 }
@@ -186,11 +223,12 @@ fn rustfmt(
 }
 
 /// The relative paths that differ between the rendered files and the tree on
-/// disk, including generated files on disk that the model no longer produces.
+/// disk, including files under a version directory that the model no longer
+/// produces.
 fn compare(
     target_src: &Path,
     files: &BTreeMap<String, String>,
-    version_module: &str,
+    version_modules: &[&str],
 ) -> Result<Vec<String>, EmitError> {
     let mut drift = Vec::new();
     for (relative, content) in files {
@@ -201,8 +239,11 @@ fn compare(
             Err(_) => drift.push(format!("{relative} (missing)")),
         }
     }
-    let version_dir = target_src.join(version_module);
-    if version_dir.is_dir() {
+    for module in version_modules {
+        let version_dir = target_src.join(module);
+        if !version_dir.is_dir() {
+            continue;
+        }
         let entries = fs::read_dir(&version_dir).map_err(|source| EmitError::Io {
             path: version_dir.clone(),
             source,
@@ -213,7 +254,7 @@ fn compare(
                 source,
             })?;
             let name = entry.file_name().to_string_lossy().into_owned();
-            let relative = format!("{version_module}/{name}");
+            let relative = format!("{module}/{name}");
             if !files.contains_key(&relative) {
                 drift.push(format!("{relative} (stale)"));
             }

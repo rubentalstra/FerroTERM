@@ -1,4 +1,4 @@
-//! Lowering resolved structures to the Rust model the renderer emits.
+//! Lowering resolved structures to the type definitions the renderer emits.
 //!
 //! Every structure in the closure becomes a struct; a backbone element
 //! becomes a struct named by its path; a choice element (`value[x]`,
@@ -11,7 +11,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::closure::{STRUCTURAL_TYPES, TypeClosure};
-use crate::model::StructureKind;
+use crate::fhir::StructureKind;
 use crate::naming::{backbone_name, field_name, module_name, type_name};
 use crate::snapshot::{ElementShape, Max, ResolvedElement, ResolvedStructure, TypeRef};
 
@@ -55,7 +55,7 @@ pub enum LowerError {
 
 /// How many values a field holds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Card {
+pub enum Cardinality {
     /// Exactly one (`T`).
     One,
     /// Zero or one (`Option<T>`).
@@ -74,6 +74,8 @@ pub enum Scalar {
     I32,
     /// `u32`.
     U32,
+    /// `i64`.
+    I64,
     /// `String`; decimals and dates keep their lexical form.
     Str,
 }
@@ -91,7 +93,7 @@ pub enum Target {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldType {
     /// The cardinality.
-    pub card: Card,
+    pub card: Cardinality,
     /// The target.
     pub target: Target,
     /// Whether the value is boxed to break a type cycle.
@@ -159,9 +161,9 @@ pub enum TypeKind {
     UnknownResource,
 }
 
-/// One Rust type to emit.
+/// One type definition to emit.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RustType {
+pub struct TypeDef {
     /// The Rust name.
     pub name: String,
     /// The module (file) the type lives in.
@@ -176,20 +178,20 @@ pub struct RustType {
     pub is_resource: bool,
 }
 
-/// The whole model for one FHIR version.
+/// The generated module for one FHIR version: every type it emits.
 #[derive(Debug)]
-pub struct RustModel {
-    /// The FHIR version module name, for example `r4b`.
-    pub version_module: String,
+pub struct VersionModule {
+    /// The module name, for example `r4b`.
+    pub name: String,
     /// The package the model was lowered from.
     pub package_name: String,
     /// The package version.
     pub package_version: String,
     /// Every type, keyed by Rust name.
-    pub types: BTreeMap<String, RustType>,
+    pub types: BTreeMap<String, TypeDef>,
 }
 
-impl RustModel {
+impl VersionModule {
     /// Lowers `closure` into a model.
     ///
     /// # Errors
@@ -203,7 +205,7 @@ impl RustModel {
         package_version: &str,
     ) -> Result<Self, LowerError> {
         let mut model = Self {
-            version_module: version_module.to_owned(),
+            name: version_module.to_owned(),
             package_name: package_name.to_owned(),
             package_version: package_version.to_owned(),
             types: BTreeMap::new(),
@@ -232,20 +234,20 @@ impl RustModel {
             )?;
         }
         let resources: Vec<String> = closure.roots().iter().map(|name| type_name(name)).collect();
-        model.insert(RustType {
+        model.insert(TypeDef {
             name: RESOURCE_ENUM.to_owned(),
             module: RESOURCE_MODULE.to_owned(),
             docs: Docs {
                 short: Some(String::from("A resource of the terminology root set, or an unknown resource carried as JSON.")),
-                definition: Some(String::from(
-                    "The abstract Resource type (https://hl7.org/fhir/R4B/resource.html) as the root set closes over it: one variant per root-set resource, and UnknownResource for any other resource type met inside a Bundle entry or a contained list.",
-                )),
+                definition: Some(
+                    format!("The abstract Resource type (https://hl7.org/fhir/{}/resource.html) as the root set closes over it: one variant per root-set resource, and UnknownResource for any other resource type met inside a Bundle entry or a contained list.", version_module.to_uppercase()),
+                ),
             },
             kind: TypeKind::ResourceEnum { resources },
             is_primitive: false,
             is_resource: false,
         }, "the Resource enum")?;
-        model.insert(RustType {
+        model.insert(TypeDef {
             name: UNKNOWN_RESOURCE.to_owned(),
             module: RESOURCE_MODULE.to_owned(),
             docs: Docs {
@@ -262,7 +264,7 @@ impl RustModel {
         Ok(model)
     }
 
-    fn insert(&mut self, ty: RustType, origin: &str) -> Result<(), LowerError> {
+    fn insert(&mut self, ty: TypeDef, origin: &str) -> Result<(), LowerError> {
         if let Some(existing) = self.types.get(&ty.name) {
             return Err(LowerError::NameCollision {
                 name: ty.name.clone(),
@@ -276,8 +278,8 @@ impl RustModel {
 
     /// The modules of the model, in name order, each with its types in name order.
     #[must_use]
-    pub fn modules(&self) -> BTreeMap<&str, Vec<&RustType>> {
-        let mut modules: BTreeMap<&str, Vec<&RustType>> = BTreeMap::new();
+    pub fn modules(&self) -> BTreeMap<&str, Vec<&TypeDef>> {
+        let mut modules: BTreeMap<&str, Vec<&TypeDef>> = BTreeMap::new();
         for ty in self.types.values() {
             modules.entry(ty.module.as_str()).or_default().push(ty);
         }
@@ -297,7 +299,7 @@ impl RustModel {
             match &mut ty.kind {
                 TypeKind::Struct { fields } => {
                     for field in fields.iter_mut() {
-                        if field.ty.card == Card::Many {
+                        if field.ty.card == Cardinality::Many {
                             continue;
                         }
                         if let Target::Named(target) = &field.ty.target
@@ -332,7 +334,7 @@ impl RustModel {
             match &ty.kind {
                 TypeKind::Struct { fields } => {
                     for field in fields {
-                        if field.ty.card != Card::Many
+                        if field.ty.card != Cardinality::Many
                             && let Target::Named(target) = &field.ty.target
                         {
                             out.insert(target.clone());
@@ -357,7 +359,7 @@ impl RustModel {
 }
 
 fn lower_struct(
-    model: &mut RustModel,
+    model: &mut VersionModule,
     structure: &ResolvedStructure,
     path: &str,
     name: &str,
@@ -382,7 +384,7 @@ fn lower_struct(
                 );
                 let variants = choice_variants(types, &element.path)?;
                 model.insert(
-                    RustType {
+                    TypeDef {
                         name: enum_name.clone(),
                         module: module.to_owned(),
                         docs: Docs {
@@ -446,7 +448,7 @@ fn lower_struct(
         });
     }
     model.insert(
-        RustType {
+        TypeDef {
             name: name.to_owned(),
             module: module.to_owned(),
             docs: root_docs,
@@ -482,12 +484,12 @@ fn choice_variants(types: &[TypeRef], path: &str) -> Result<Vec<Variant>, LowerE
         .collect())
 }
 
-fn card_of(element: &ResolvedElement) -> Card {
+fn card_of(element: &ResolvedElement) -> Cardinality {
     match (element.min, element.max) {
-        (_, Max::Unbounded) => Card::Many,
-        (_, Max::Bounded(n)) if n > 1 => Card::Many,
-        (0, _) => Card::Optional,
-        (_, _) => Card::One,
+        (_, Max::Unbounded) => Cardinality::Many,
+        (_, Max::Bounded(n)) if n > 1 => Cardinality::Many,
+        (0, _) => Cardinality::Optional,
+        (_, _) => Cardinality::One,
     }
 }
 
@@ -510,6 +512,7 @@ fn scalar_for(code: &str) -> Scalar {
         "boolean" => Scalar::Bool,
         "integer" => Scalar::I32,
         "positiveInt" | "unsignedInt" => Scalar::U32,
+        "integer64" => Scalar::I64,
         _ => Scalar::Str,
     }
 }

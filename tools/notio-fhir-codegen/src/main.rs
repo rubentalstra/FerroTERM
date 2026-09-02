@@ -6,10 +6,9 @@ use clap::Parser;
 fn main() -> anyhow::Result<()> {
     let cli = notio_fhir_codegen::Cli::parse();
     let report = notio_fhir_codegen::run(&cli)?;
-    println!(
-        "notio-fhir-codegen: {} types across {} files",
-        report.types,
-        report.files.len()
-    );
+    for (module, types) in &report.types {
+        println!("notio-fhir-codegen: {module}: {types} types");
+    }
+    println!("notio-fhir-codegen: {} files", report.files.len());
     Ok(())
 }

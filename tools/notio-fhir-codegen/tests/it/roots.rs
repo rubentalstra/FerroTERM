@@ -1,4 +1,4 @@
-use notio_fhir_codegen::model::ParameterUse;
+use notio_fhir_codegen::fhir::ParameterUse;
 use notio_fhir_codegen::roots::{OPERATION_RESOURCES, ROOT_RESOURCES, RootSet};
 
 use crate::R4B;

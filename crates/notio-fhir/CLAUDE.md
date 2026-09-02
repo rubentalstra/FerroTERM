@@ -13,7 +13,7 @@ to hand edits; the only hand-maintained files are `Cargo.toml` and this
   CapabilityStatement, CodeSystem, ConceptMap, OperationOutcome, Parameters,
   TerminologyCapabilities, ValueSet, and the terminology OperationDefinitions)
   and the complete closure of every type those roots reference, per version,
-  one module per version (`r4b` first). Never trim inside that closure.
+  one module per version (`r4b` and `r5` today). Never trim inside that closure.
 - `Resource`-typed elements (`Bundle.entry.resource`, `contained`) hold the
   `Resource` enum over the root set plus `UnknownResource`, which keeps any
   other resource's JSON body so a Bundle round-trips.

@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::model::{OperationDefinition, StructureDefinition};
+use crate::fhir::{OperationDefinition, StructureDefinition};
 use crate::package::Package;
 
 /// The resource types the generator emits, by name.
