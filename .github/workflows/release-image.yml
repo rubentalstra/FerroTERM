@@ -171,7 +171,7 @@ jobs:
       # syft reads the dependency list cargo-auditable embedded in the binary,
       # so the SBOM names the crates, not only the two files in the image.
       - name: Install syft
-        uses: anchore/sbom-action/download-syft@006b7ce8314066bdf1765b4500370d40fa6917a3 # v0.24.2
+        uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
       - name: Generate one SBOM per platform
         env:
           TAG: ${{ inputs.tag }}
