@@ -284,6 +284,1088 @@ pub struct CodeSystem {
     pub concept: Vec<CodeSystemConcept>,
 }
 
+impl super::super::codec::Json for CodeSystem {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        object.insert(
+            std::string::String::from("resourceType"),
+            serde_json::Value::String(std::string::String::from("CodeSystem")),
+        );
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if let Some(item) = &self.meta {
+            object.insert(
+                std::string::String::from("meta"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        if let Some(item) = &self.implicit_rules {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("implicitRules"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_implicitRules"), e);
+            }
+        }
+        if let Some(item) = &self.language {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("language"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_language"), e);
+            }
+        }
+        if let Some(item) = &self.text {
+            object.insert(
+                std::string::String::from("text"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        if !self.contained.is_empty() {
+            let mut items = Vec::with_capacity(self.contained.len());
+            for item in &self.contained {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("contained"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.modifier_extension.is_empty() {
+            let mut items = Vec::with_capacity(self.modifier_extension.len());
+            for item in &self.modifier_extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("modifierExtension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.url {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("url"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_url"), e);
+            }
+        }
+        if !self.identifier.is_empty() {
+            let mut items = Vec::with_capacity(self.identifier.len());
+            for item in &self.identifier {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("identifier"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.version {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("version"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_version"), e);
+            }
+        }
+        if let Some(item) = &self.version_algorithm {
+            let (suffix, value, element) = item.to_json_parts()?;
+            if let Some(value) = value {
+                object.insert(format!("versionAlgorithm{suffix}"), value);
+            }
+            if let Some(element) = element {
+                object.insert(format!("_versionAlgorithm{suffix}"), element);
+            }
+        }
+        if let Some(item) = &self.name {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("name"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_name"), e);
+            }
+        }
+        if let Some(item) = &self.title {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("title"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_title"), e);
+            }
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.status)? {
+            object.insert(std::string::String::from("status"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.status)? {
+            object.insert(std::string::String::from("_status"), e);
+        }
+        if let Some(item) = &self.experimental {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("experimental"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_experimental"), e);
+            }
+        }
+        if let Some(item) = &self.date {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("date"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_date"), e);
+            }
+        }
+        if let Some(item) = &self.publisher {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("publisher"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_publisher"), e);
+            }
+        }
+        if !self.contact.is_empty() {
+            let mut items = Vec::with_capacity(self.contact.len());
+            for item in &self.contact {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("contact"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.description {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("description"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_description"), e);
+            }
+        }
+        if !self.use_context.is_empty() {
+            let mut items = Vec::with_capacity(self.use_context.len());
+            for item in &self.use_context {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("useContext"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.jurisdiction.is_empty() {
+            let mut items = Vec::with_capacity(self.jurisdiction.len());
+            for item in &self.jurisdiction {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("jurisdiction"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.purpose {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("purpose"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_purpose"), e);
+            }
+        }
+        if let Some(item) = &self.copyright {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("copyright"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_copyright"), e);
+            }
+        }
+        if let Some(item) = &self.copyright_label {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("copyrightLabel"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_copyrightLabel"), e);
+            }
+        }
+        if let Some(item) = &self.approval_date {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("approvalDate"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_approvalDate"), e);
+            }
+        }
+        if let Some(item) = &self.last_review_date {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("lastReviewDate"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_lastReviewDate"), e);
+            }
+        }
+        if let Some(item) = &self.effective_period {
+            object.insert(
+                std::string::String::from("effectivePeriod"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        if !self.topic.is_empty() {
+            let mut items = Vec::with_capacity(self.topic.len());
+            for item in &self.topic {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("topic"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.author.is_empty() {
+            let mut items = Vec::with_capacity(self.author.len());
+            for item in &self.author {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("author"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.editor.is_empty() {
+            let mut items = Vec::with_capacity(self.editor.len());
+            for item in &self.editor {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("editor"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.reviewer.is_empty() {
+            let mut items = Vec::with_capacity(self.reviewer.len());
+            for item in &self.reviewer {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("reviewer"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.endorser.is_empty() {
+            let mut items = Vec::with_capacity(self.endorser.len());
+            for item in &self.endorser {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("endorser"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.related_artifact.is_empty() {
+            let mut items = Vec::with_capacity(self.related_artifact.len());
+            for item in &self.related_artifact {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("relatedArtifact"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.case_sensitive {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("caseSensitive"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_caseSensitive"), e);
+            }
+        }
+        if let Some(item) = &self.value_set {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("valueSet"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_valueSet"), e);
+            }
+        }
+        if let Some(item) = &self.hierarchy_meaning {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("hierarchyMeaning"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_hierarchyMeaning"), e);
+            }
+        }
+        if let Some(item) = &self.compositional {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("compositional"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_compositional"), e);
+            }
+        }
+        if let Some(item) = &self.version_needed {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("versionNeeded"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_versionNeeded"), e);
+            }
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.content)? {
+            object.insert(std::string::String::from("content"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.content)? {
+            object.insert(std::string::String::from("_content"), e);
+        }
+        if let Some(item) = &self.supplements {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("supplements"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_supplements"), e);
+            }
+        }
+        if let Some(item) = &self.count {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("count"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_count"), e);
+            }
+        }
+        if !self.filter.is_empty() {
+            let mut items = Vec::with_capacity(self.filter.len());
+            for item in &self.filter {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("filter"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.property.is_empty() {
+            let mut items = Vec::with_capacity(self.property.len());
+            for item in &self.property {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("property"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.concept.is_empty() {
+            let mut items = Vec::with_capacity(self.concept.len());
+            for item in &self.concept {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("concept"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_meta: Option<&serde_json::Value> = None;
+        let mut raw_implicit_rules: Option<&serde_json::Value> = None;
+        let mut raw_implicit_rules_element: Option<&serde_json::Value> = None;
+        let mut raw_language: Option<&serde_json::Value> = None;
+        let mut raw_language_element: Option<&serde_json::Value> = None;
+        let mut raw_text: Option<&serde_json::Value> = None;
+        let mut raw_contained: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
+        let mut raw_url: Option<&serde_json::Value> = None;
+        let mut raw_url_element: Option<&serde_json::Value> = None;
+        let mut raw_identifier: Option<&serde_json::Value> = None;
+        let mut raw_version: Option<&serde_json::Value> = None;
+        let mut raw_version_element: Option<&serde_json::Value> = None;
+        let mut raw_version_algorithm = super::super::codec::ChoiceSlot::default();
+        let mut raw_name: Option<&serde_json::Value> = None;
+        let mut raw_name_element: Option<&serde_json::Value> = None;
+        let mut raw_title: Option<&serde_json::Value> = None;
+        let mut raw_title_element: Option<&serde_json::Value> = None;
+        let mut raw_status: Option<&serde_json::Value> = None;
+        let mut raw_status_element: Option<&serde_json::Value> = None;
+        let mut raw_experimental: Option<&serde_json::Value> = None;
+        let mut raw_experimental_element: Option<&serde_json::Value> = None;
+        let mut raw_date: Option<&serde_json::Value> = None;
+        let mut raw_date_element: Option<&serde_json::Value> = None;
+        let mut raw_publisher: Option<&serde_json::Value> = None;
+        let mut raw_publisher_element: Option<&serde_json::Value> = None;
+        let mut raw_contact: Option<&serde_json::Value> = None;
+        let mut raw_description: Option<&serde_json::Value> = None;
+        let mut raw_description_element: Option<&serde_json::Value> = None;
+        let mut raw_use_context: Option<&serde_json::Value> = None;
+        let mut raw_jurisdiction: Option<&serde_json::Value> = None;
+        let mut raw_purpose: Option<&serde_json::Value> = None;
+        let mut raw_purpose_element: Option<&serde_json::Value> = None;
+        let mut raw_copyright: Option<&serde_json::Value> = None;
+        let mut raw_copyright_element: Option<&serde_json::Value> = None;
+        let mut raw_copyright_label: Option<&serde_json::Value> = None;
+        let mut raw_copyright_label_element: Option<&serde_json::Value> = None;
+        let mut raw_approval_date: Option<&serde_json::Value> = None;
+        let mut raw_approval_date_element: Option<&serde_json::Value> = None;
+        let mut raw_last_review_date: Option<&serde_json::Value> = None;
+        let mut raw_last_review_date_element: Option<&serde_json::Value> = None;
+        let mut raw_effective_period: Option<&serde_json::Value> = None;
+        let mut raw_topic: Option<&serde_json::Value> = None;
+        let mut raw_author: Option<&serde_json::Value> = None;
+        let mut raw_editor: Option<&serde_json::Value> = None;
+        let mut raw_reviewer: Option<&serde_json::Value> = None;
+        let mut raw_endorser: Option<&serde_json::Value> = None;
+        let mut raw_related_artifact: Option<&serde_json::Value> = None;
+        let mut raw_case_sensitive: Option<&serde_json::Value> = None;
+        let mut raw_case_sensitive_element: Option<&serde_json::Value> = None;
+        let mut raw_value_set: Option<&serde_json::Value> = None;
+        let mut raw_value_set_element: Option<&serde_json::Value> = None;
+        let mut raw_hierarchy_meaning: Option<&serde_json::Value> = None;
+        let mut raw_hierarchy_meaning_element: Option<&serde_json::Value> = None;
+        let mut raw_compositional: Option<&serde_json::Value> = None;
+        let mut raw_compositional_element: Option<&serde_json::Value> = None;
+        let mut raw_version_needed: Option<&serde_json::Value> = None;
+        let mut raw_version_needed_element: Option<&serde_json::Value> = None;
+        let mut raw_content: Option<&serde_json::Value> = None;
+        let mut raw_content_element: Option<&serde_json::Value> = None;
+        let mut raw_supplements: Option<&serde_json::Value> = None;
+        let mut raw_supplements_element: Option<&serde_json::Value> = None;
+        let mut raw_count: Option<&serde_json::Value> = None;
+        let mut raw_count_element: Option<&serde_json::Value> = None;
+        let mut raw_filter: Option<&serde_json::Value> = None;
+        let mut raw_property: Option<&serde_json::Value> = None;
+        let mut raw_concept: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "resourceType" => {
+                    if value.as_str() != Some("CodeSystem") {
+                        return Err(path.error(super::super::codec::DecodeErrorKind::ResourceType));
+                    }
+                }
+                "id" => raw_id = Some(value),
+                "meta" => raw_meta = Some(value),
+                "implicitRules" => raw_implicit_rules = Some(value),
+                "_implicitRules" => raw_implicit_rules_element = Some(value),
+                "language" => raw_language = Some(value),
+                "_language" => raw_language_element = Some(value),
+                "text" => raw_text = Some(value),
+                "contained" => raw_contained = Some(value),
+                "extension" => raw_extension = Some(value),
+                "modifierExtension" => raw_modifier_extension = Some(value),
+                "url" => raw_url = Some(value),
+                "_url" => raw_url_element = Some(value),
+                "identifier" => raw_identifier = Some(value),
+                "version" => raw_version = Some(value),
+                "_version" => raw_version_element = Some(value),
+                "versionAlgorithmString" => {
+                    raw_version_algorithm.value("String", value, path)?;
+                }
+                "_versionAlgorithmString" => {
+                    raw_version_algorithm.element("String", value, path)?;
+                }
+                "versionAlgorithmCoding" => {
+                    raw_version_algorithm.value("Coding", value, path)?;
+                }
+                "_versionAlgorithmCoding" => {
+                    raw_version_algorithm.element("Coding", value, path)?;
+                }
+                "name" => raw_name = Some(value),
+                "_name" => raw_name_element = Some(value),
+                "title" => raw_title = Some(value),
+                "_title" => raw_title_element = Some(value),
+                "status" => raw_status = Some(value),
+                "_status" => raw_status_element = Some(value),
+                "experimental" => raw_experimental = Some(value),
+                "_experimental" => raw_experimental_element = Some(value),
+                "date" => raw_date = Some(value),
+                "_date" => raw_date_element = Some(value),
+                "publisher" => raw_publisher = Some(value),
+                "_publisher" => raw_publisher_element = Some(value),
+                "contact" => raw_contact = Some(value),
+                "description" => raw_description = Some(value),
+                "_description" => raw_description_element = Some(value),
+                "useContext" => raw_use_context = Some(value),
+                "jurisdiction" => raw_jurisdiction = Some(value),
+                "purpose" => raw_purpose = Some(value),
+                "_purpose" => raw_purpose_element = Some(value),
+                "copyright" => raw_copyright = Some(value),
+                "_copyright" => raw_copyright_element = Some(value),
+                "copyrightLabel" => raw_copyright_label = Some(value),
+                "_copyrightLabel" => raw_copyright_label_element = Some(value),
+                "approvalDate" => raw_approval_date = Some(value),
+                "_approvalDate" => raw_approval_date_element = Some(value),
+                "lastReviewDate" => raw_last_review_date = Some(value),
+                "_lastReviewDate" => raw_last_review_date_element = Some(value),
+                "effectivePeriod" => raw_effective_period = Some(value),
+                "topic" => raw_topic = Some(value),
+                "author" => raw_author = Some(value),
+                "editor" => raw_editor = Some(value),
+                "reviewer" => raw_reviewer = Some(value),
+                "endorser" => raw_endorser = Some(value),
+                "relatedArtifact" => raw_related_artifact = Some(value),
+                "caseSensitive" => raw_case_sensitive = Some(value),
+                "_caseSensitive" => raw_case_sensitive_element = Some(value),
+                "valueSet" => raw_value_set = Some(value),
+                "_valueSet" => raw_value_set_element = Some(value),
+                "hierarchyMeaning" => raw_hierarchy_meaning = Some(value),
+                "_hierarchyMeaning" => raw_hierarchy_meaning_element = Some(value),
+                "compositional" => raw_compositional = Some(value),
+                "_compositional" => raw_compositional_element = Some(value),
+                "versionNeeded" => raw_version_needed = Some(value),
+                "_versionNeeded" => raw_version_needed_element = Some(value),
+                "content" => raw_content = Some(value),
+                "_content" => raw_content_element = Some(value),
+                "supplements" => raw_supplements = Some(value),
+                "_supplements" => raw_supplements_element = Some(value),
+                "count" => raw_count = Some(value),
+                "_count" => raw_count_element = Some(value),
+                "filter" => raw_filter = Some(value),
+                "property" => raw_property = Some(value),
+                "concept" => raw_concept = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let field_meta = raw_meta
+            .map(|value| {
+                path.with("meta", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        let field_implicit_rules = match (raw_implicit_rules, raw_implicit_rules_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("implicitRules", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_language = match (raw_language, raw_language_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("language", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_text = raw_text
+            .map(|value| {
+                path.with("text", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        let mut field_contained = Vec::new();
+        if let Some(raw) = raw_contained {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_contained.push(path.with_index("contained", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_modifier_extension = Vec::new();
+        if let Some(raw) = raw_modifier_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_modifier_extension.push(path.with_index(
+                    "modifierExtension",
+                    index,
+                    |path| {
+                        super::super::codec::Json::from_json(
+                            super::super::codec::expect_object(value, path)?,
+                            path,
+                        )
+                    },
+                )?);
+            }
+        }
+        let field_url = match (raw_url, raw_url_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("url", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let mut field_identifier = Vec::new();
+        if let Some(raw) = raw_identifier {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_identifier.push(path.with_index("identifier", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_version = match (raw_version, raw_version_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("version", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_version_algorithm = match raw_version_algorithm.suffix {
+            None => None,
+            Some(suffix) => Some(path.with("versionAlgorithm", |path| {
+                CodeSystemVersionAlgorithm::from_json_parts(
+                    suffix,
+                    raw_version_algorithm.value,
+                    raw_version_algorithm.element,
+                    path,
+                )
+            })?),
+        };
+        let field_name = match (raw_name, raw_name_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("name", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_title = match (raw_title, raw_title_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("title", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_status = path.with("status", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_status, raw_status_element, path)
+        })?;
+        let field_experimental = match (raw_experimental, raw_experimental_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("experimental", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_date = match (raw_date, raw_date_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("date", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_publisher = match (raw_publisher, raw_publisher_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("publisher", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let mut field_contact = Vec::new();
+        if let Some(raw) = raw_contact {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_contact.push(path.with_index("contact", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_description = match (raw_description, raw_description_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("description", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let mut field_use_context = Vec::new();
+        if let Some(raw) = raw_use_context {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_use_context.push(path.with_index("useContext", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_jurisdiction = Vec::new();
+        if let Some(raw) = raw_jurisdiction {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_jurisdiction.push(path.with_index("jurisdiction", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_purpose = match (raw_purpose, raw_purpose_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("purpose", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_copyright = match (raw_copyright, raw_copyright_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("copyright", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_copyright_label = match (raw_copyright_label, raw_copyright_label_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("copyrightLabel", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_approval_date = match (raw_approval_date, raw_approval_date_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("approvalDate", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_last_review_date = match (raw_last_review_date, raw_last_review_date_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("lastReviewDate", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_effective_period = raw_effective_period
+            .map(|value| {
+                path.with("effectivePeriod", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        let mut field_topic = Vec::new();
+        if let Some(raw) = raw_topic {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_topic.push(path.with_index("topic", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_author = Vec::new();
+        if let Some(raw) = raw_author {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_author.push(path.with_index("author", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_editor = Vec::new();
+        if let Some(raw) = raw_editor {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_editor.push(path.with_index("editor", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_reviewer = Vec::new();
+        if let Some(raw) = raw_reviewer {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_reviewer.push(path.with_index("reviewer", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_endorser = Vec::new();
+        if let Some(raw) = raw_endorser {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_endorser.push(path.with_index("endorser", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_related_artifact = Vec::new();
+        if let Some(raw) = raw_related_artifact {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_related_artifact.push(path.with_index("relatedArtifact", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_case_sensitive = match (raw_case_sensitive, raw_case_sensitive_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("caseSensitive", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_value_set = match (raw_value_set, raw_value_set_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("valueSet", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_hierarchy_meaning = match (raw_hierarchy_meaning, raw_hierarchy_meaning_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("hierarchyMeaning", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_compositional = match (raw_compositional, raw_compositional_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("compositional", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_version_needed = match (raw_version_needed, raw_version_needed_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("versionNeeded", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_content = path.with("content", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_content, raw_content_element, path)
+        })?;
+        let field_supplements = match (raw_supplements, raw_supplements_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("supplements", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_count = match (raw_count, raw_count_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("count", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let mut field_filter = Vec::new();
+        if let Some(raw) = raw_filter {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_filter.push(path.with_index("filter", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_property = Vec::new();
+        if let Some(raw) = raw_property {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_property.push(path.with_index("property", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_concept = Vec::new();
+        if let Some(raw) = raw_concept {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_concept.push(path.with_index("concept", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        Ok(Self {
+            id: field_id,
+            meta: field_meta,
+            implicit_rules: field_implicit_rules,
+            language: field_language,
+            text: field_text,
+            contained: field_contained,
+            extension: field_extension,
+            modifier_extension: field_modifier_extension,
+            url: field_url,
+            identifier: field_identifier,
+            version: field_version,
+            version_algorithm: field_version_algorithm,
+            name: field_name,
+            title: field_title,
+            status: field_status,
+            experimental: field_experimental,
+            date: field_date,
+            publisher: field_publisher,
+            contact: field_contact,
+            description: field_description,
+            use_context: field_use_context,
+            jurisdiction: field_jurisdiction,
+            purpose: field_purpose,
+            copyright: field_copyright,
+            copyright_label: field_copyright_label,
+            approval_date: field_approval_date,
+            last_review_date: field_last_review_date,
+            effective_period: field_effective_period,
+            topic: field_topic,
+            author: field_author,
+            editor: field_editor,
+            reviewer: field_reviewer,
+            endorser: field_endorser,
+            related_artifact: field_related_artifact,
+            case_sensitive: field_case_sensitive,
+            value_set: field_value_set,
+            hierarchy_meaning: field_hierarchy_meaning,
+            compositional: field_compositional,
+            version_needed: field_version_needed,
+            content: field_content,
+            supplements: field_supplements,
+            count: field_count,
+            filter: field_filter,
+            property: field_property,
+            concept: field_concept,
+        })
+    }
+}
+
+impl serde::Serialize for CodeSystem {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CodeSystem {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("CodeSystem");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Concepts in the code system
 ///
 /// Concepts that are in the code system. The concept definitions are inherently
@@ -354,6 +1436,266 @@ pub struct CodeSystemConcept {
     pub concept: Vec<CodeSystemConcept>,
 }
 
+impl super::super::codec::Json for CodeSystemConcept {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.modifier_extension.is_empty() {
+            let mut items = Vec::with_capacity(self.modifier_extension.len());
+            for item in &self.modifier_extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("modifierExtension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.code)? {
+            object.insert(std::string::String::from("code"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.code)? {
+            object.insert(std::string::String::from("_code"), e);
+        }
+        if let Some(item) = &self.display {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("display"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_display"), e);
+            }
+        }
+        if let Some(item) = &self.definition {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("definition"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_definition"), e);
+            }
+        }
+        if !self.designation.is_empty() {
+            let mut items = Vec::with_capacity(self.designation.len());
+            for item in &self.designation {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("designation"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.property.is_empty() {
+            let mut items = Vec::with_capacity(self.property.len());
+            for item in &self.property {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("property"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.concept.is_empty() {
+            let mut items = Vec::with_capacity(self.concept.len());
+            for item in &self.concept {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("concept"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
+        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_code_element: Option<&serde_json::Value> = None;
+        let mut raw_display: Option<&serde_json::Value> = None;
+        let mut raw_display_element: Option<&serde_json::Value> = None;
+        let mut raw_definition: Option<&serde_json::Value> = None;
+        let mut raw_definition_element: Option<&serde_json::Value> = None;
+        let mut raw_designation: Option<&serde_json::Value> = None;
+        let mut raw_property: Option<&serde_json::Value> = None;
+        let mut raw_concept: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "modifierExtension" => raw_modifier_extension = Some(value),
+                "code" => raw_code = Some(value),
+                "_code" => raw_code_element = Some(value),
+                "display" => raw_display = Some(value),
+                "_display" => raw_display_element = Some(value),
+                "definition" => raw_definition = Some(value),
+                "_definition" => raw_definition_element = Some(value),
+                "designation" => raw_designation = Some(value),
+                "property" => raw_property = Some(value),
+                "concept" => raw_concept = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_modifier_extension = Vec::new();
+        if let Some(raw) = raw_modifier_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_modifier_extension.push(path.with_index(
+                    "modifierExtension",
+                    index,
+                    |path| {
+                        super::super::codec::Json::from_json(
+                            super::super::codec::expect_object(value, path)?,
+                            path,
+                        )
+                    },
+                )?);
+            }
+        }
+        let field_code = path.with("code", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_code, raw_code_element, path)
+        })?;
+        let field_display = match (raw_display, raw_display_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("display", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_definition = match (raw_definition, raw_definition_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("definition", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let mut field_designation = Vec::new();
+        if let Some(raw) = raw_designation {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_designation.push(path.with_index("designation", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_property = Vec::new();
+        if let Some(raw) = raw_property {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_property.push(path.with_index("property", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_concept = Vec::new();
+        if let Some(raw) = raw_concept {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_concept.push(path.with_index("concept", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            modifier_extension: field_modifier_extension,
+            code: field_code,
+            display: field_display,
+            definition: field_definition,
+            designation: field_designation,
+            property: field_property,
+            concept: field_concept,
+        })
+    }
+}
+
+impl serde::Serialize for CodeSystemConcept {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CodeSystemConcept {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("CodeSystemConcept");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Additional representations for the concept
 ///
 /// Additional representations for the concept - other languages, aliases,
@@ -406,6 +1748,211 @@ pub struct CodeSystemConceptDesignation {
     pub value: super::primitives::String,
 }
 
+impl super::super::codec::Json for CodeSystemConceptDesignation {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.modifier_extension.is_empty() {
+            let mut items = Vec::with_capacity(self.modifier_extension.len());
+            for item in &self.modifier_extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("modifierExtension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.language {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("language"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_language"), e);
+            }
+        }
+        if let Some(item) = &self.r#use {
+            object.insert(
+                std::string::String::from("use"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        if !self.additional_use.is_empty() {
+            let mut items = Vec::with_capacity(self.additional_use.len());
+            for item in &self.additional_use {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("additionalUse"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.value)? {
+            object.insert(std::string::String::from("value"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.value)? {
+            object.insert(std::string::String::from("_value"), e);
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
+        let mut raw_language: Option<&serde_json::Value> = None;
+        let mut raw_language_element: Option<&serde_json::Value> = None;
+        let mut raw_use: Option<&serde_json::Value> = None;
+        let mut raw_additional_use: Option<&serde_json::Value> = None;
+        let mut raw_value: Option<&serde_json::Value> = None;
+        let mut raw_value_element: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "modifierExtension" => raw_modifier_extension = Some(value),
+                "language" => raw_language = Some(value),
+                "_language" => raw_language_element = Some(value),
+                "use" => raw_use = Some(value),
+                "additionalUse" => raw_additional_use = Some(value),
+                "value" => raw_value = Some(value),
+                "_value" => raw_value_element = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_modifier_extension = Vec::new();
+        if let Some(raw) = raw_modifier_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_modifier_extension.push(path.with_index(
+                    "modifierExtension",
+                    index,
+                    |path| {
+                        super::super::codec::Json::from_json(
+                            super::super::codec::expect_object(value, path)?,
+                            path,
+                        )
+                    },
+                )?);
+            }
+        }
+        let field_language = match (raw_language, raw_language_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("language", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_use = raw_use
+            .map(|value| {
+                path.with("use", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        let mut field_additional_use = Vec::new();
+        if let Some(raw) = raw_additional_use {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_additional_use.push(path.with_index("additionalUse", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_value = path.with("value", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_value, raw_value_element, path)
+        })?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            modifier_extension: field_modifier_extension,
+            language: field_language,
+            r#use: field_use,
+            additional_use: field_additional_use,
+            value: field_value,
+        })
+    }
+}
+
+impl serde::Serialize for CodeSystemConceptDesignation {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CodeSystemConceptDesignation {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("CodeSystemConceptDesignation");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Property value for the concept
 ///
 /// A property value for this concept.
@@ -450,6 +1997,203 @@ pub struct CodeSystemConceptProperty {
     pub value: CodeSystemConceptPropertyValue,
 }
 
+impl super::super::codec::Json for CodeSystemConceptProperty {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.modifier_extension.is_empty() {
+            let mut items = Vec::with_capacity(self.modifier_extension.len());
+            for item in &self.modifier_extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("modifierExtension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.code)? {
+            object.insert(std::string::String::from("code"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.code)? {
+            object.insert(std::string::String::from("_code"), e);
+        }
+        let (suffix, value, element) = self.value.to_json_parts()?;
+        if let Some(value) = value {
+            object.insert(format!("value{suffix}"), value);
+        }
+        if let Some(element) = element {
+            object.insert(format!("_value{suffix}"), element);
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
+        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_code_element: Option<&serde_json::Value> = None;
+        let mut raw_value = super::super::codec::ChoiceSlot::default();
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "modifierExtension" => raw_modifier_extension = Some(value),
+                "code" => raw_code = Some(value),
+                "_code" => raw_code_element = Some(value),
+                "valueCode" => {
+                    raw_value.value("Code", value, path)?;
+                }
+                "_valueCode" => {
+                    raw_value.element("Code", value, path)?;
+                }
+                "valueCoding" => {
+                    raw_value.value("Coding", value, path)?;
+                }
+                "_valueCoding" => {
+                    raw_value.element("Coding", value, path)?;
+                }
+                "valueString" => {
+                    raw_value.value("String", value, path)?;
+                }
+                "_valueString" => {
+                    raw_value.element("String", value, path)?;
+                }
+                "valueInteger" => {
+                    raw_value.value("Integer", value, path)?;
+                }
+                "_valueInteger" => {
+                    raw_value.element("Integer", value, path)?;
+                }
+                "valueBoolean" => {
+                    raw_value.value("Boolean", value, path)?;
+                }
+                "_valueBoolean" => {
+                    raw_value.element("Boolean", value, path)?;
+                }
+                "valueDateTime" => {
+                    raw_value.value("DateTime", value, path)?;
+                }
+                "_valueDateTime" => {
+                    raw_value.element("DateTime", value, path)?;
+                }
+                "valueDecimal" => {
+                    raw_value.value("Decimal", value, path)?;
+                }
+                "_valueDecimal" => {
+                    raw_value.element("Decimal", value, path)?;
+                }
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_modifier_extension = Vec::new();
+        if let Some(raw) = raw_modifier_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_modifier_extension.push(path.with_index(
+                    "modifierExtension",
+                    index,
+                    |path| {
+                        super::super::codec::Json::from_json(
+                            super::super::codec::expect_object(value, path)?,
+                            path,
+                        )
+                    },
+                )?);
+            }
+        }
+        let field_code = path.with("code", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_code, raw_code_element, path)
+        })?;
+        let field_value = path.with("value", |path| {
+            let suffix = raw_value
+                .suffix
+                .ok_or_else(|| path.error(super::super::codec::DecodeErrorKind::MissingProperty))?;
+            CodeSystemConceptPropertyValue::from_json_parts(
+                suffix,
+                raw_value.value,
+                raw_value.element,
+                path,
+            )
+        })?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            modifier_extension: field_modifier_extension,
+            code: field_code,
+            value: field_value,
+        })
+    }
+}
+
+impl serde::Serialize for CodeSystemConceptProperty {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CodeSystemConceptProperty {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("CodeSystemConceptProperty");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// The \`value\[x\]\` choice of \`CodeSystemConceptProperty\`.
 ///
 /// The value of this property.
@@ -469,6 +2213,116 @@ pub enum CodeSystemConceptPropertyValue {
     DateTime(super::primitives::DateTime),
     /// The `decimal` form.
     Decimal(super::primitives::Decimal),
+}
+
+impl CodeSystemConceptPropertyValue {
+    /// The key suffix, the value part, and the `_name` part of this form.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::EncodeError`] when a held value has no JSON form.
+    pub fn to_json_parts(
+        &self,
+    ) -> Result<
+        (
+            &'static str,
+            Option<serde_json::Value>,
+            Option<serde_json::Value>,
+        ),
+        super::super::codec::EncodeError,
+    > {
+        match self {
+            Self::Code(inner) => Ok((
+                "Code",
+                super::super::codec::Primitive::value_json(inner)?,
+                super::super::codec::Primitive::element_json(inner)?,
+            )),
+            Self::Coding(inner) => Ok((
+                "Coding",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+            Self::String(inner) => Ok((
+                "String",
+                super::super::codec::Primitive::value_json(inner)?,
+                super::super::codec::Primitive::element_json(inner)?,
+            )),
+            Self::Integer(inner) => Ok((
+                "Integer",
+                super::super::codec::Primitive::value_json(inner)?,
+                super::super::codec::Primitive::element_json(inner)?,
+            )),
+            Self::Boolean(inner) => Ok((
+                "Boolean",
+                super::super::codec::Primitive::value_json(inner)?,
+                super::super::codec::Primitive::element_json(inner)?,
+            )),
+            Self::DateTime(inner) => Ok((
+                "DateTime",
+                super::super::codec::Primitive::value_json(inner)?,
+                super::super::codec::Primitive::element_json(inner)?,
+            )),
+            Self::Decimal(inner) => Ok((
+                "Decimal",
+                super::super::codec::Primitive::value_json(inner)?,
+                super::super::codec::Primitive::element_json(inner)?,
+            )),
+        }
+    }
+
+    /// Decodes the form named by `suffix` from its value and `_name` parts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
+    pub fn from_json_parts(
+        suffix: &str,
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        match suffix {
+            "Code" => Ok(Self::Code(super::super::codec::Primitive::from_json_parts(
+                value, element, path,
+            )?)),
+            "Coding" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Coding(inner))
+            }
+            "String" => Ok(Self::String(
+                super::super::codec::Primitive::from_json_parts(value, element, path)?,
+            )),
+            "Integer" => Ok(Self::Integer(
+                super::super::codec::Primitive::from_json_parts(value, element, path)?,
+            )),
+            "Boolean" => Ok(Self::Boolean(
+                super::super::codec::Primitive::from_json_parts(value, element, path)?,
+            )),
+            "DateTime" => Ok(Self::DateTime(
+                super::super::codec::Primitive::from_json_parts(value, element, path)?,
+            )),
+            "Decimal" => Ok(Self::Decimal(
+                super::super::codec::Primitive::from_json_parts(value, element, path)?,
+            )),
+            _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
+        }
+    }
 }
 
 /// Filter that can be used in a value set
@@ -524,6 +2378,196 @@ pub struct CodeSystemFilter {
     ///
     /// A description of what the value for the filter should be.
     pub value: super::primitives::String,
+}
+
+impl super::super::codec::Json for CodeSystemFilter {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.modifier_extension.is_empty() {
+            let mut items = Vec::with_capacity(self.modifier_extension.len());
+            for item in &self.modifier_extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("modifierExtension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.code)? {
+            object.insert(std::string::String::from("code"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.code)? {
+            object.insert(std::string::String::from("_code"), e);
+        }
+        if let Some(item) = &self.description {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("description"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_description"), e);
+            }
+        }
+        if !self.operator.is_empty() {
+            let (values, elements) = super::super::codec::primitive_arrays(&self.operator)?;
+            object.insert(std::string::String::from("operator"), values);
+            if let Some(elements) = elements {
+                object.insert(std::string::String::from("_operator"), elements);
+            }
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.value)? {
+            object.insert(std::string::String::from("value"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.value)? {
+            object.insert(std::string::String::from("_value"), e);
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
+        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_code_element: Option<&serde_json::Value> = None;
+        let mut raw_description: Option<&serde_json::Value> = None;
+        let mut raw_description_element: Option<&serde_json::Value> = None;
+        let mut raw_operator: Option<&serde_json::Value> = None;
+        let mut raw_operator_element: Option<&serde_json::Value> = None;
+        let mut raw_value: Option<&serde_json::Value> = None;
+        let mut raw_value_element: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "modifierExtension" => raw_modifier_extension = Some(value),
+                "code" => raw_code = Some(value),
+                "_code" => raw_code_element = Some(value),
+                "description" => raw_description = Some(value),
+                "_description" => raw_description_element = Some(value),
+                "operator" => raw_operator = Some(value),
+                "_operator" => raw_operator_element = Some(value),
+                "value" => raw_value = Some(value),
+                "_value" => raw_value_element = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_modifier_extension = Vec::new();
+        if let Some(raw) = raw_modifier_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_modifier_extension.push(path.with_index(
+                    "modifierExtension",
+                    index,
+                    |path| {
+                        super::super::codec::Json::from_json(
+                            super::super::codec::expect_object(value, path)?,
+                            path,
+                        )
+                    },
+                )?);
+            }
+        }
+        let field_code = path.with("code", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_code, raw_code_element, path)
+        })?;
+        let field_description = match (raw_description, raw_description_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("description", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let mut field_operator = Vec::new();
+        for (index, (value, element)) in
+            super::super::codec::pair_arrays(raw_operator, raw_operator_element, path)?
+                .into_iter()
+                .enumerate()
+        {
+            field_operator.push(path.with_index("operator", index, |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?);
+        }
+        let field_value = path.with("value", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_value, raw_value_element, path)
+        })?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            modifier_extension: field_modifier_extension,
+            code: field_code,
+            description: field_description,
+            operator: field_operator,
+            value: field_value,
+        })
+    }
+}
+
+impl serde::Serialize for CodeSystemFilter {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CodeSystemFilter {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("CodeSystemFilter");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
 }
 
 /// Additional information supplied about each concept
@@ -585,6 +2629,193 @@ pub struct CodeSystemProperty {
     pub r#type: super::primitives::Code,
 }
 
+impl super::super::codec::Json for CodeSystemProperty {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.modifier_extension.is_empty() {
+            let mut items = Vec::with_capacity(self.modifier_extension.len());
+            for item in &self.modifier_extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("modifierExtension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.code)? {
+            object.insert(std::string::String::from("code"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.code)? {
+            object.insert(std::string::String::from("_code"), e);
+        }
+        if let Some(item) = &self.uri {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("uri"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_uri"), e);
+            }
+        }
+        if let Some(item) = &self.description {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("description"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_description"), e);
+            }
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.r#type)? {
+            object.insert(std::string::String::from("type"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.r#type)? {
+            object.insert(std::string::String::from("_type"), e);
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
+        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_code_element: Option<&serde_json::Value> = None;
+        let mut raw_uri: Option<&serde_json::Value> = None;
+        let mut raw_uri_element: Option<&serde_json::Value> = None;
+        let mut raw_description: Option<&serde_json::Value> = None;
+        let mut raw_description_element: Option<&serde_json::Value> = None;
+        let mut raw_type: Option<&serde_json::Value> = None;
+        let mut raw_type_element: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "modifierExtension" => raw_modifier_extension = Some(value),
+                "code" => raw_code = Some(value),
+                "_code" => raw_code_element = Some(value),
+                "uri" => raw_uri = Some(value),
+                "_uri" => raw_uri_element = Some(value),
+                "description" => raw_description = Some(value),
+                "_description" => raw_description_element = Some(value),
+                "type" => raw_type = Some(value),
+                "_type" => raw_type_element = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_modifier_extension = Vec::new();
+        if let Some(raw) = raw_modifier_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_modifier_extension.push(path.with_index(
+                    "modifierExtension",
+                    index,
+                    |path| {
+                        super::super::codec::Json::from_json(
+                            super::super::codec::expect_object(value, path)?,
+                            path,
+                        )
+                    },
+                )?);
+            }
+        }
+        let field_code = path.with("code", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_code, raw_code_element, path)
+        })?;
+        let field_uri = match (raw_uri, raw_uri_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("uri", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_description = match (raw_description, raw_description_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("description", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_type = path.with("type", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_type, raw_type_element, path)
+        })?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            modifier_extension: field_modifier_extension,
+            code: field_code,
+            uri: field_uri,
+            description: field_description,
+            r#type: field_type,
+        })
+    }
+}
+
+impl serde::Serialize for CodeSystemProperty {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CodeSystemProperty {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("CodeSystemProperty");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// The \`versionAlgorithm\[x\]\` choice of \`CodeSystem\`.
 ///
 /// Indicates the mechanism used to compare versions to determine which
@@ -595,4 +2826,74 @@ pub enum CodeSystemVersionAlgorithm {
     String(super::primitives::String),
     /// The `Coding` form.
     Coding(super::coding::Coding),
+}
+
+impl CodeSystemVersionAlgorithm {
+    /// The key suffix, the value part, and the `_name` part of this form.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::EncodeError`] when a held value has no JSON form.
+    pub fn to_json_parts(
+        &self,
+    ) -> Result<
+        (
+            &'static str,
+            Option<serde_json::Value>,
+            Option<serde_json::Value>,
+        ),
+        super::super::codec::EncodeError,
+    > {
+        match self {
+            Self::String(inner) => Ok((
+                "String",
+                super::super::codec::Primitive::value_json(inner)?,
+                super::super::codec::Primitive::element_json(inner)?,
+            )),
+            Self::Coding(inner) => Ok((
+                "Coding",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+        }
+    }
+
+    /// Decodes the form named by `suffix` from its value and `_name` parts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
+    pub fn from_json_parts(
+        suffix: &str,
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        match suffix {
+            "String" => Ok(Self::String(
+                super::super::codec::Primitive::from_json_parts(value, element, path)?,
+            )),
+            "Coding" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Coding(inner))
+            }
+            _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
+        }
+    }
 }

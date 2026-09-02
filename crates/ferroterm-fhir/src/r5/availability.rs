@@ -25,6 +25,156 @@ pub struct Availability {
     pub not_available_time: Vec<AvailabilityNotAvailableTime>,
 }
 
+impl super::super::codec::Json for Availability {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.available_time.is_empty() {
+            let mut items = Vec::with_capacity(self.available_time.len());
+            for item in &self.available_time {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("availableTime"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.not_available_time.is_empty() {
+            let mut items = Vec::with_capacity(self.not_available_time.len());
+            for item in &self.not_available_time {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("notAvailableTime"),
+                serde_json::Value::Array(items),
+            );
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_available_time: Option<&serde_json::Value> = None;
+        let mut raw_not_available_time: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "availableTime" => raw_available_time = Some(value),
+                "notAvailableTime" => raw_not_available_time = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_available_time = Vec::new();
+        if let Some(raw) = raw_available_time {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_available_time.push(path.with_index("availableTime", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_not_available_time = Vec::new();
+        if let Some(raw) = raw_not_available_time {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_not_available_time.push(path.with_index(
+                    "notAvailableTime",
+                    index,
+                    |path| {
+                        super::super::codec::Json::from_json(
+                            super::super::codec::expect_object(value, path)?,
+                            path,
+                        )
+                    },
+                )?);
+            }
+        }
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            available_time: field_available_time,
+            not_available_time: field_not_available_time,
+        })
+    }
+}
+
+impl serde::Serialize for Availability {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Availability {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("Availability");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Times the {item} is available.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AvailabilityAvailableTime {
@@ -52,6 +202,175 @@ pub struct AvailabilityAvailableTime {
     pub available_end_time: Option<super::primitives::Time>,
 }
 
+impl super::super::codec::Json for AvailabilityAvailableTime {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.days_of_week.is_empty() {
+            let (values, elements) = super::super::codec::primitive_arrays(&self.days_of_week)?;
+            object.insert(std::string::String::from("daysOfWeek"), values);
+            if let Some(elements) = elements {
+                object.insert(std::string::String::from("_daysOfWeek"), elements);
+            }
+        }
+        if let Some(item) = &self.all_day {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("allDay"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_allDay"), e);
+            }
+        }
+        if let Some(item) = &self.available_start_time {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("availableStartTime"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_availableStartTime"), e);
+            }
+        }
+        if let Some(item) = &self.available_end_time {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("availableEndTime"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_availableEndTime"), e);
+            }
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_days_of_week: Option<&serde_json::Value> = None;
+        let mut raw_days_of_week_element: Option<&serde_json::Value> = None;
+        let mut raw_all_day: Option<&serde_json::Value> = None;
+        let mut raw_all_day_element: Option<&serde_json::Value> = None;
+        let mut raw_available_start_time: Option<&serde_json::Value> = None;
+        let mut raw_available_start_time_element: Option<&serde_json::Value> = None;
+        let mut raw_available_end_time: Option<&serde_json::Value> = None;
+        let mut raw_available_end_time_element: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "daysOfWeek" => raw_days_of_week = Some(value),
+                "_daysOfWeek" => raw_days_of_week_element = Some(value),
+                "allDay" => raw_all_day = Some(value),
+                "_allDay" => raw_all_day_element = Some(value),
+                "availableStartTime" => raw_available_start_time = Some(value),
+                "_availableStartTime" => raw_available_start_time_element = Some(value),
+                "availableEndTime" => raw_available_end_time = Some(value),
+                "_availableEndTime" => raw_available_end_time_element = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_days_of_week = Vec::new();
+        for (index, (value, element)) in
+            super::super::codec::pair_arrays(raw_days_of_week, raw_days_of_week_element, path)?
+                .into_iter()
+                .enumerate()
+        {
+            field_days_of_week.push(path.with_index("daysOfWeek", index, |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?);
+        }
+        let field_all_day = match (raw_all_day, raw_all_day_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("allDay", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_available_start_time =
+            match (raw_available_start_time, raw_available_start_time_element) {
+                (None, None) => None,
+                (value, element) => Some(path.with("availableStartTime", |path| {
+                    super::super::codec::Primitive::from_json_parts(value, element, path)
+                })?),
+            };
+        let field_available_end_time =
+            match (raw_available_end_time, raw_available_end_time_element) {
+                (None, None) => None,
+                (value, element) => Some(path.with("availableEndTime", |path| {
+                    super::super::codec::Primitive::from_json_parts(value, element, path)
+                })?),
+            };
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            days_of_week: field_days_of_week,
+            all_day: field_all_day,
+            available_start_time: field_available_start_time,
+            available_end_time: field_available_end_time,
+        })
+    }
+}
+
+impl serde::Serialize for AvailabilityAvailableTime {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for AvailabilityAvailableTime {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("AvailabilityAvailableTime");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Not available during this time due to provided reason.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AvailabilityNotAvailableTime {
@@ -73,4 +392,133 @@ pub struct AvailabilityNotAvailableTime {
     pub description: Option<super::primitives::String>,
     /// Service not available during this period.
     pub during: Option<super::period::Period>,
+}
+
+impl super::super::codec::Json for AvailabilityNotAvailableTime {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.description {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("description"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_description"), e);
+            }
+        }
+        if let Some(item) = &self.during {
+            object.insert(
+                std::string::String::from("during"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_description: Option<&serde_json::Value> = None;
+        let mut raw_description_element: Option<&serde_json::Value> = None;
+        let mut raw_during: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "description" => raw_description = Some(value),
+                "_description" => raw_description_element = Some(value),
+                "during" => raw_during = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_description = match (raw_description, raw_description_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("description", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_during = raw_during
+            .map(|value| {
+                path.with("during", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            description: field_description,
+            during: field_during,
+        })
+    }
+}
+
+impl serde::Serialize for AvailabilityNotAvailableTime {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for AvailabilityNotAvailableTime {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("AvailabilityNotAvailableTime");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
 }

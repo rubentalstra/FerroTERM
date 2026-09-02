@@ -77,3 +77,278 @@ pub struct SampledData {
     /// in place of decimal values.
     pub data: Option<super::primitives::String>,
 }
+
+impl super::super::codec::Json for SampledData {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        object.insert(
+            std::string::String::from("origin"),
+            serde_json::Value::Object(super::super::codec::Json::to_json(&self.origin)?),
+        );
+        if let Some(item) = &self.interval {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("interval"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_interval"), e);
+            }
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.interval_unit)? {
+            object.insert(std::string::String::from("intervalUnit"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.interval_unit)? {
+            object.insert(std::string::String::from("_intervalUnit"), e);
+        }
+        if let Some(item) = &self.factor {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("factor"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_factor"), e);
+            }
+        }
+        if let Some(item) = &self.lower_limit {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("lowerLimit"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_lowerLimit"), e);
+            }
+        }
+        if let Some(item) = &self.upper_limit {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("upperLimit"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_upperLimit"), e);
+            }
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.dimensions)? {
+            object.insert(std::string::String::from("dimensions"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.dimensions)? {
+            object.insert(std::string::String::from("_dimensions"), e);
+        }
+        if let Some(item) = &self.code_map {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("codeMap"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_codeMap"), e);
+            }
+        }
+        if let Some(item) = &self.offsets {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("offsets"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_offsets"), e);
+            }
+        }
+        if let Some(item) = &self.data {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("data"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_data"), e);
+            }
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_origin: Option<&serde_json::Value> = None;
+        let mut raw_interval: Option<&serde_json::Value> = None;
+        let mut raw_interval_element: Option<&serde_json::Value> = None;
+        let mut raw_interval_unit: Option<&serde_json::Value> = None;
+        let mut raw_interval_unit_element: Option<&serde_json::Value> = None;
+        let mut raw_factor: Option<&serde_json::Value> = None;
+        let mut raw_factor_element: Option<&serde_json::Value> = None;
+        let mut raw_lower_limit: Option<&serde_json::Value> = None;
+        let mut raw_lower_limit_element: Option<&serde_json::Value> = None;
+        let mut raw_upper_limit: Option<&serde_json::Value> = None;
+        let mut raw_upper_limit_element: Option<&serde_json::Value> = None;
+        let mut raw_dimensions: Option<&serde_json::Value> = None;
+        let mut raw_dimensions_element: Option<&serde_json::Value> = None;
+        let mut raw_code_map: Option<&serde_json::Value> = None;
+        let mut raw_code_map_element: Option<&serde_json::Value> = None;
+        let mut raw_offsets: Option<&serde_json::Value> = None;
+        let mut raw_offsets_element: Option<&serde_json::Value> = None;
+        let mut raw_data: Option<&serde_json::Value> = None;
+        let mut raw_data_element: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "origin" => raw_origin = Some(value),
+                "interval" => raw_interval = Some(value),
+                "_interval" => raw_interval_element = Some(value),
+                "intervalUnit" => raw_interval_unit = Some(value),
+                "_intervalUnit" => raw_interval_unit_element = Some(value),
+                "factor" => raw_factor = Some(value),
+                "_factor" => raw_factor_element = Some(value),
+                "lowerLimit" => raw_lower_limit = Some(value),
+                "_lowerLimit" => raw_lower_limit_element = Some(value),
+                "upperLimit" => raw_upper_limit = Some(value),
+                "_upperLimit" => raw_upper_limit_element = Some(value),
+                "dimensions" => raw_dimensions = Some(value),
+                "_dimensions" => raw_dimensions_element = Some(value),
+                "codeMap" => raw_code_map = Some(value),
+                "_codeMap" => raw_code_map_element = Some(value),
+                "offsets" => raw_offsets = Some(value),
+                "_offsets" => raw_offsets_element = Some(value),
+                "data" => raw_data = Some(value),
+                "_data" => raw_data_element = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_origin = path.with("origin", |path| {
+            let value = raw_origin
+                .ok_or_else(|| path.error(super::super::codec::DecodeErrorKind::MissingProperty))?;
+            super::super::codec::Json::from_json(
+                super::super::codec::expect_object(
+                    super::super::codec::expect_single(value, path)?,
+                    path,
+                )?,
+                path,
+            )
+        })?;
+        let field_interval = match (raw_interval, raw_interval_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("interval", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_interval_unit = path.with("intervalUnit", |path| {
+            super::super::codec::Primitive::from_json_parts(
+                raw_interval_unit,
+                raw_interval_unit_element,
+                path,
+            )
+        })?;
+        let field_factor = match (raw_factor, raw_factor_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("factor", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_lower_limit = match (raw_lower_limit, raw_lower_limit_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("lowerLimit", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_upper_limit = match (raw_upper_limit, raw_upper_limit_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("upperLimit", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_dimensions = path.with("dimensions", |path| {
+            super::super::codec::Primitive::from_json_parts(
+                raw_dimensions,
+                raw_dimensions_element,
+                path,
+            )
+        })?;
+        let field_code_map = match (raw_code_map, raw_code_map_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("codeMap", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_offsets = match (raw_offsets, raw_offsets_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("offsets", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_data = match (raw_data, raw_data_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("data", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            origin: field_origin,
+            interval: field_interval,
+            interval_unit: field_interval_unit,
+            factor: field_factor,
+            lower_limit: field_lower_limit,
+            upper_limit: field_upper_limit,
+            dimensions: field_dimensions,
+            code_map: field_code_map,
+            offsets: field_offsets,
+            data: field_data,
+        })
+    }
+}
+
+impl serde::Serialize for SampledData {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for SampledData {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("SampledData");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}

@@ -46,3 +46,237 @@ pub struct ExtendedContactDetail {
     /// Period that this contact was valid for usage.
     pub period: Option<super::period::Period>,
 }
+
+impl super::super::codec::Json for ExtendedContactDetail {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.purpose {
+            object.insert(
+                std::string::String::from("purpose"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        if !self.name.is_empty() {
+            let mut items = Vec::with_capacity(self.name.len());
+            for item in &self.name {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("name"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.telecom.is_empty() {
+            let mut items = Vec::with_capacity(self.telecom.len());
+            for item in &self.telecom {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("telecom"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.address {
+            object.insert(
+                std::string::String::from("address"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        if let Some(item) = &self.organization {
+            object.insert(
+                std::string::String::from("organization"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        if let Some(item) = &self.period {
+            object.insert(
+                std::string::String::from("period"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_purpose: Option<&serde_json::Value> = None;
+        let mut raw_name: Option<&serde_json::Value> = None;
+        let mut raw_telecom: Option<&serde_json::Value> = None;
+        let mut raw_address: Option<&serde_json::Value> = None;
+        let mut raw_organization: Option<&serde_json::Value> = None;
+        let mut raw_period: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "purpose" => raw_purpose = Some(value),
+                "name" => raw_name = Some(value),
+                "telecom" => raw_telecom = Some(value),
+                "address" => raw_address = Some(value),
+                "organization" => raw_organization = Some(value),
+                "period" => raw_period = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_purpose = raw_purpose
+            .map(|value| {
+                path.with("purpose", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        let mut field_name = Vec::new();
+        if let Some(raw) = raw_name {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_name.push(path.with_index("name", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_telecom = Vec::new();
+        if let Some(raw) = raw_telecom {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_telecom.push(path.with_index("telecom", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_address = raw_address
+            .map(|value| {
+                path.with("address", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        let field_organization = raw_organization
+            .map(|value| {
+                path.with("organization", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        let field_period = raw_period
+            .map(|value| {
+                path.with("period", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            purpose: field_purpose,
+            name: field_name,
+            telecom: field_telecom,
+            address: field_address,
+            organization: field_organization,
+            period: field_period,
+        })
+    }
+}
+
+impl serde::Serialize for ExtendedContactDetail {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ExtendedContactDetail {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("ExtendedContactDetail");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}

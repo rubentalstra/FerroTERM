@@ -49,3 +49,186 @@ pub struct Coding {
     /// list of available items (codes or displays).
     pub user_selected: Option<super::primitives::Boolean>,
 }
+
+impl super::super::codec::Json for Coding {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.system {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("system"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_system"), e);
+            }
+        }
+        if let Some(item) = &self.version {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("version"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_version"), e);
+            }
+        }
+        if let Some(item) = &self.code {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("code"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_code"), e);
+            }
+        }
+        if let Some(item) = &self.display {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("display"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_display"), e);
+            }
+        }
+        if let Some(item) = &self.user_selected {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("userSelected"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_userSelected"), e);
+            }
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_system: Option<&serde_json::Value> = None;
+        let mut raw_system_element: Option<&serde_json::Value> = None;
+        let mut raw_version: Option<&serde_json::Value> = None;
+        let mut raw_version_element: Option<&serde_json::Value> = None;
+        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_code_element: Option<&serde_json::Value> = None;
+        let mut raw_display: Option<&serde_json::Value> = None;
+        let mut raw_display_element: Option<&serde_json::Value> = None;
+        let mut raw_user_selected: Option<&serde_json::Value> = None;
+        let mut raw_user_selected_element: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "system" => raw_system = Some(value),
+                "_system" => raw_system_element = Some(value),
+                "version" => raw_version = Some(value),
+                "_version" => raw_version_element = Some(value),
+                "code" => raw_code = Some(value),
+                "_code" => raw_code_element = Some(value),
+                "display" => raw_display = Some(value),
+                "_display" => raw_display_element = Some(value),
+                "userSelected" => raw_user_selected = Some(value),
+                "_userSelected" => raw_user_selected_element = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_system = match (raw_system, raw_system_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("system", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_version = match (raw_version, raw_version_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("version", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_code = match (raw_code, raw_code_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("code", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_display = match (raw_display, raw_display_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("display", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_user_selected = match (raw_user_selected, raw_user_selected_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("userSelected", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            system: field_system,
+            version: field_version,
+            code: field_code,
+            display: field_display,
+            user_selected: field_user_selected,
+        })
+    }
+}
+
+impl serde::Serialize for Coding {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Coding {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("Coding");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}

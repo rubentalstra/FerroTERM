@@ -31,6 +31,81 @@ pub enum Resource {
     Unknown(UnknownResource),
 }
 
+impl super::super::codec::Json for Resource {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        match self {
+            Self::Bundle(inner) => super::super::codec::Json::to_json(inner.as_ref()),
+            Self::CapabilityStatement(inner) => super::super::codec::Json::to_json(inner.as_ref()),
+            Self::CodeSystem(inner) => super::super::codec::Json::to_json(inner.as_ref()),
+            Self::ConceptMap(inner) => super::super::codec::Json::to_json(inner.as_ref()),
+            Self::OperationOutcome(inner) => super::super::codec::Json::to_json(inner.as_ref()),
+            Self::Parameters(inner) => super::super::codec::Json::to_json(inner.as_ref()),
+            Self::TerminologyCapabilities(inner) => {
+                super::super::codec::Json::to_json(inner.as_ref())
+            }
+            Self::ValueSet(inner) => super::super::codec::Json::to_json(inner.as_ref()),
+            Self::Unknown(inner) => match &inner.body {
+                serde_json::Value::Object(object) => Ok(object.clone()),
+                _ => Err(super::super::codec::EncodeError::UnknownResourceBody),
+            },
+        }
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        match super::super::codec::resource_type(object, path)? {
+            "Bundle" => Ok(Self::Bundle(Box::new(
+                super::super::codec::Json::from_json(object, path)?,
+            ))),
+            "CapabilityStatement" => Ok(Self::CapabilityStatement(Box::new(
+                super::super::codec::Json::from_json(object, path)?,
+            ))),
+            "CodeSystem" => Ok(Self::CodeSystem(Box::new(
+                super::super::codec::Json::from_json(object, path)?,
+            ))),
+            "ConceptMap" => Ok(Self::ConceptMap(Box::new(
+                super::super::codec::Json::from_json(object, path)?,
+            ))),
+            "OperationOutcome" => Ok(Self::OperationOutcome(Box::new(
+                super::super::codec::Json::from_json(object, path)?,
+            ))),
+            "Parameters" => Ok(Self::Parameters(Box::new(
+                super::super::codec::Json::from_json(object, path)?,
+            ))),
+            "TerminologyCapabilities" => Ok(Self::TerminologyCapabilities(Box::new(
+                super::super::codec::Json::from_json(object, path)?,
+            ))),
+            "ValueSet" => Ok(Self::ValueSet(Box::new(
+                super::super::codec::Json::from_json(object, path)?,
+            ))),
+            other => Ok(Self::Unknown(UnknownResource {
+                resource_type: other.to_owned(),
+                body: serde_json::Value::Object(object.clone()),
+            })),
+        }
+    }
+}
+
+impl serde::Serialize for Resource {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Resource {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("Resource");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// A resource outside the root set, kept as its JSON body.
 ///
 /// Carries the resourceType and the complete JSON object so a Bundle or a

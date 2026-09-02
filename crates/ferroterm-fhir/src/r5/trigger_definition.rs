@@ -61,6 +61,266 @@ pub struct TriggerDefinition {
     pub condition: Option<super::expression::Expression>,
 }
 
+impl super::super::codec::Json for TriggerDefinition {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.r#type)? {
+            object.insert(std::string::String::from("type"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.r#type)? {
+            object.insert(std::string::String::from("_type"), e);
+        }
+        if let Some(item) = &self.name {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("name"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_name"), e);
+            }
+        }
+        if let Some(item) = &self.code {
+            object.insert(
+                std::string::String::from("code"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        if let Some(item) = &self.subscription_topic {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("subscriptionTopic"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_subscriptionTopic"), e);
+            }
+        }
+        if let Some(item) = &self.timing {
+            let (suffix, value, element) = item.to_json_parts()?;
+            if let Some(value) = value {
+                object.insert(format!("timing{suffix}"), value);
+            }
+            if let Some(element) = element {
+                object.insert(format!("_timing{suffix}"), element);
+            }
+        }
+        if !self.data.is_empty() {
+            let mut items = Vec::with_capacity(self.data.len());
+            for item in &self.data {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("data"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.condition {
+            object.insert(
+                std::string::String::from("condition"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_type: Option<&serde_json::Value> = None;
+        let mut raw_type_element: Option<&serde_json::Value> = None;
+        let mut raw_name: Option<&serde_json::Value> = None;
+        let mut raw_name_element: Option<&serde_json::Value> = None;
+        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_subscription_topic: Option<&serde_json::Value> = None;
+        let mut raw_subscription_topic_element: Option<&serde_json::Value> = None;
+        let mut raw_timing = super::super::codec::ChoiceSlot::default();
+        let mut raw_data: Option<&serde_json::Value> = None;
+        let mut raw_condition: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "type" => raw_type = Some(value),
+                "_type" => raw_type_element = Some(value),
+                "name" => raw_name = Some(value),
+                "_name" => raw_name_element = Some(value),
+                "code" => raw_code = Some(value),
+                "subscriptionTopic" => raw_subscription_topic = Some(value),
+                "_subscriptionTopic" => raw_subscription_topic_element = Some(value),
+                "timingTiming" => {
+                    raw_timing.value("Timing", value, path)?;
+                }
+                "_timingTiming" => {
+                    raw_timing.element("Timing", value, path)?;
+                }
+                "timingReference" => {
+                    raw_timing.value("Reference", value, path)?;
+                }
+                "_timingReference" => {
+                    raw_timing.element("Reference", value, path)?;
+                }
+                "timingDate" => {
+                    raw_timing.value("Date", value, path)?;
+                }
+                "_timingDate" => {
+                    raw_timing.element("Date", value, path)?;
+                }
+                "timingDateTime" => {
+                    raw_timing.value("DateTime", value, path)?;
+                }
+                "_timingDateTime" => {
+                    raw_timing.element("DateTime", value, path)?;
+                }
+                "data" => raw_data = Some(value),
+                "condition" => raw_condition = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_type = path.with("type", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_type, raw_type_element, path)
+        })?;
+        let field_name = match (raw_name, raw_name_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("name", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_code = raw_code
+            .map(|value| {
+                path.with("code", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        let field_subscription_topic =
+            match (raw_subscription_topic, raw_subscription_topic_element) {
+                (None, None) => None,
+                (value, element) => Some(path.with("subscriptionTopic", |path| {
+                    super::super::codec::Primitive::from_json_parts(value, element, path)
+                })?),
+            };
+        let field_timing = match raw_timing.suffix {
+            None => None,
+            Some(suffix) => Some(path.with("timing", |path| {
+                TriggerDefinitionTiming::from_json_parts(
+                    suffix,
+                    raw_timing.value,
+                    raw_timing.element,
+                    path,
+                )
+            })?),
+        };
+        let mut field_data = Vec::new();
+        if let Some(raw) = raw_data {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_data.push(path.with_index("data", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_condition = raw_condition
+            .map(|value| {
+                path.with("condition", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            r#type: field_type,
+            name: field_name,
+            code: field_code,
+            subscription_topic: field_subscription_topic,
+            timing: field_timing,
+            data: field_data,
+            condition: field_condition,
+        })
+    }
+}
+
+impl serde::Serialize for TriggerDefinition {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for TriggerDefinition {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("TriggerDefinition");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// The \`timing\[x\]\` choice of \`TriggerDefinition\`.
 ///
 /// The timing of the event (if this is a periodic trigger).
@@ -74,4 +334,107 @@ pub enum TriggerDefinitionTiming {
     Date(super::primitives::Date),
     /// The `dateTime` form.
     DateTime(super::primitives::DateTime),
+}
+
+impl TriggerDefinitionTiming {
+    /// The key suffix, the value part, and the `_name` part of this form.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::EncodeError`] when a held value has no JSON form.
+    pub fn to_json_parts(
+        &self,
+    ) -> Result<
+        (
+            &'static str,
+            Option<serde_json::Value>,
+            Option<serde_json::Value>,
+        ),
+        super::super::codec::EncodeError,
+    > {
+        match self {
+            Self::Timing(inner) => Ok((
+                "Timing",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+            Self::Reference(inner) => Ok((
+                "Reference",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+            Self::Date(inner) => Ok((
+                "Date",
+                super::super::codec::Primitive::value_json(inner)?,
+                super::super::codec::Primitive::element_json(inner)?,
+            )),
+            Self::DateTime(inner) => Ok((
+                "DateTime",
+                super::super::codec::Primitive::value_json(inner)?,
+                super::super::codec::Primitive::element_json(inner)?,
+            )),
+        }
+    }
+
+    /// Decodes the form named by `suffix` from its value and `_name` parts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
+    pub fn from_json_parts(
+        suffix: &str,
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        match suffix {
+            "Timing" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Timing(inner))
+            }
+            "Reference" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Reference(inner))
+            }
+            "Date" => Ok(Self::Date(super::super::codec::Primitive::from_json_parts(
+                value, element, path,
+            )?)),
+            "DateTime" => Ok(Self::DateTime(
+                super::super::codec::Primitive::from_json_parts(value, element, path)?,
+            )),
+            _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
+        }
+    }
 }

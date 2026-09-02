@@ -36,6 +36,151 @@ pub struct UsageContext {
     pub value: UsageContextValue,
 }
 
+impl super::super::codec::Json for UsageContext {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        object.insert(
+            std::string::String::from("code"),
+            serde_json::Value::Object(super::super::codec::Json::to_json(&self.code)?),
+        );
+        let (suffix, value, element) = self.value.to_json_parts()?;
+        if let Some(value) = value {
+            object.insert(format!("value{suffix}"), value);
+        }
+        if let Some(element) = element {
+            object.insert(format!("_value{suffix}"), element);
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_value = super::super::codec::ChoiceSlot::default();
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "code" => raw_code = Some(value),
+                "valueCodeableConcept" => {
+                    raw_value.value("CodeableConcept", value, path)?;
+                }
+                "_valueCodeableConcept" => {
+                    raw_value.element("CodeableConcept", value, path)?;
+                }
+                "valueQuantity" => {
+                    raw_value.value("Quantity", value, path)?;
+                }
+                "_valueQuantity" => {
+                    raw_value.element("Quantity", value, path)?;
+                }
+                "valueRange" => {
+                    raw_value.value("Range", value, path)?;
+                }
+                "_valueRange" => {
+                    raw_value.element("Range", value, path)?;
+                }
+                "valueReference" => {
+                    raw_value.value("Reference", value, path)?;
+                }
+                "_valueReference" => {
+                    raw_value.element("Reference", value, path)?;
+                }
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_code = path.with("code", |path| {
+            let value = raw_code
+                .ok_or_else(|| path.error(super::super::codec::DecodeErrorKind::MissingProperty))?;
+            super::super::codec::Json::from_json(
+                super::super::codec::expect_object(
+                    super::super::codec::expect_single(value, path)?,
+                    path,
+                )?,
+                path,
+            )
+        })?;
+        let field_value = path.with("value", |path| {
+            let suffix = raw_value
+                .suffix
+                .ok_or_else(|| path.error(super::super::codec::DecodeErrorKind::MissingProperty))?;
+            UsageContextValue::from_json_parts(suffix, raw_value.value, raw_value.element, path)
+        })?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            code: field_code,
+            value: field_value,
+        })
+    }
+}
+
+impl serde::Serialize for UsageContext {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for UsageContext {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("UsageContext");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// The \`value\[x\]\` choice of \`UsageContext\`.
 ///
 /// A value that defines the context specified in this context of use. The
@@ -50,4 +195,141 @@ pub enum UsageContextValue {
     Range(super::range::Range),
     /// The `Reference` form.
     Reference(super::reference::Reference),
+}
+
+impl UsageContextValue {
+    /// The key suffix, the value part, and the `_name` part of this form.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::EncodeError`] when a held value has no JSON form.
+    pub fn to_json_parts(
+        &self,
+    ) -> Result<
+        (
+            &'static str,
+            Option<serde_json::Value>,
+            Option<serde_json::Value>,
+        ),
+        super::super::codec::EncodeError,
+    > {
+        match self {
+            Self::CodeableConcept(inner) => Ok((
+                "CodeableConcept",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+            Self::Quantity(inner) => Ok((
+                "Quantity",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+            Self::Range(inner) => Ok((
+                "Range",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+            Self::Reference(inner) => Ok((
+                "Reference",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+        }
+    }
+
+    /// Decodes the form named by `suffix` from its value and `_name` parts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
+    pub fn from_json_parts(
+        suffix: &str,
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        match suffix {
+            "CodeableConcept" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::CodeableConcept(inner))
+            }
+            "Quantity" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Quantity(inner))
+            }
+            "Range" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Range(inner))
+            }
+            "Reference" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Reference(inner))
+            }
+            _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
+        }
+    }
 }

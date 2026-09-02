@@ -58,3 +58,214 @@ pub struct ParameterDefinition {
     /// or that the output data will conform to.
     pub profile: Option<super::primitives::Canonical>,
 }
+
+impl super::super::codec::Json for ParameterDefinition {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.name {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("name"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_name"), e);
+            }
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.r#use)? {
+            object.insert(std::string::String::from("use"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.r#use)? {
+            object.insert(std::string::String::from("_use"), e);
+        }
+        if let Some(item) = &self.min {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("min"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_min"), e);
+            }
+        }
+        if let Some(item) = &self.max {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("max"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_max"), e);
+            }
+        }
+        if let Some(item) = &self.documentation {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("documentation"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_documentation"), e);
+            }
+        }
+        if let Some(v) = super::super::codec::Primitive::value_json(&self.r#type)? {
+            object.insert(std::string::String::from("type"), v);
+        }
+        if let Some(e) = super::super::codec::Primitive::element_json(&self.r#type)? {
+            object.insert(std::string::String::from("_type"), e);
+        }
+        if let Some(item) = &self.profile {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("profile"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_profile"), e);
+            }
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_name: Option<&serde_json::Value> = None;
+        let mut raw_name_element: Option<&serde_json::Value> = None;
+        let mut raw_use: Option<&serde_json::Value> = None;
+        let mut raw_use_element: Option<&serde_json::Value> = None;
+        let mut raw_min: Option<&serde_json::Value> = None;
+        let mut raw_min_element: Option<&serde_json::Value> = None;
+        let mut raw_max: Option<&serde_json::Value> = None;
+        let mut raw_max_element: Option<&serde_json::Value> = None;
+        let mut raw_documentation: Option<&serde_json::Value> = None;
+        let mut raw_documentation_element: Option<&serde_json::Value> = None;
+        let mut raw_type: Option<&serde_json::Value> = None;
+        let mut raw_type_element: Option<&serde_json::Value> = None;
+        let mut raw_profile: Option<&serde_json::Value> = None;
+        let mut raw_profile_element: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "name" => raw_name = Some(value),
+                "_name" => raw_name_element = Some(value),
+                "use" => raw_use = Some(value),
+                "_use" => raw_use_element = Some(value),
+                "min" => raw_min = Some(value),
+                "_min" => raw_min_element = Some(value),
+                "max" => raw_max = Some(value),
+                "_max" => raw_max_element = Some(value),
+                "documentation" => raw_documentation = Some(value),
+                "_documentation" => raw_documentation_element = Some(value),
+                "type" => raw_type = Some(value),
+                "_type" => raw_type_element = Some(value),
+                "profile" => raw_profile = Some(value),
+                "_profile" => raw_profile_element = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_name = match (raw_name, raw_name_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("name", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_use = path.with("use", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_use, raw_use_element, path)
+        })?;
+        let field_min = match (raw_min, raw_min_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("min", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_max = match (raw_max, raw_max_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("max", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_documentation = match (raw_documentation, raw_documentation_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("documentation", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_type = path.with("type", |path| {
+            super::super::codec::Primitive::from_json_parts(raw_type, raw_type_element, path)
+        })?;
+        let field_profile = match (raw_profile, raw_profile_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("profile", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            name: field_name,
+            r#use: field_use,
+            min: field_min,
+            max: field_max,
+            documentation: field_documentation,
+            r#type: field_type,
+            profile: field_profile,
+        })
+    }
+}
+
+impl serde::Serialize for ParameterDefinition {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ParameterDefinition {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("ParameterDefinition");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}

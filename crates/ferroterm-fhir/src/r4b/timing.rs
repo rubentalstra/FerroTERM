@@ -60,6 +60,193 @@ pub struct Timing {
     pub code: Option<super::codeable_concept::CodeableConcept>,
 }
 
+impl super::super::codec::Json for Timing {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.modifier_extension.is_empty() {
+            let mut items = Vec::with_capacity(self.modifier_extension.len());
+            for item in &self.modifier_extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("modifierExtension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if !self.event.is_empty() {
+            let (values, elements) = super::super::codec::primitive_arrays(&self.event)?;
+            object.insert(std::string::String::from("event"), values);
+            if let Some(elements) = elements {
+                object.insert(std::string::String::from("_event"), elements);
+            }
+        }
+        if let Some(item) = &self.repeat {
+            object.insert(
+                std::string::String::from("repeat"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        if let Some(item) = &self.code {
+            object.insert(
+                std::string::String::from("code"),
+                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+            );
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
+        let mut raw_event: Option<&serde_json::Value> = None;
+        let mut raw_event_element: Option<&serde_json::Value> = None;
+        let mut raw_repeat: Option<&serde_json::Value> = None;
+        let mut raw_code: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "modifierExtension" => raw_modifier_extension = Some(value),
+                "event" => raw_event = Some(value),
+                "_event" => raw_event_element = Some(value),
+                "repeat" => raw_repeat = Some(value),
+                "code" => raw_code = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let mut field_modifier_extension = Vec::new();
+        if let Some(raw) = raw_modifier_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_modifier_extension.push(path.with_index(
+                    "modifierExtension",
+                    index,
+                    |path| {
+                        super::super::codec::Json::from_json(
+                            super::super::codec::expect_object(value, path)?,
+                            path,
+                        )
+                    },
+                )?);
+            }
+        }
+        let mut field_event = Vec::new();
+        for (index, (value, element)) in
+            super::super::codec::pair_arrays(raw_event, raw_event_element, path)?
+                .into_iter()
+                .enumerate()
+        {
+            field_event.push(path.with_index("event", index, |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?);
+        }
+        let field_repeat = raw_repeat
+            .map(|value| {
+                path.with("repeat", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        let field_code = raw_code
+            .map(|value| {
+                path.with("code", |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(
+                            super::super::codec::expect_single(value, path)?,
+                            path,
+                        )?,
+                        path,
+                    )
+                })
+            })
+            .transpose()?;
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            modifier_extension: field_modifier_extension,
+            event: field_event,
+            repeat: field_repeat,
+            code: field_code,
+        })
+    }
+}
+
+impl serde::Serialize for Timing {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Timing {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("Timing");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// When the event is to occur
 ///
 /// A set of rules that describe when the event is scheduled.
@@ -159,6 +346,409 @@ pub struct TimingRepeat {
     pub offset: Option<super::primitives::UnsignedInt>,
 }
 
+impl super::super::codec::Json for TimingRepeat {
+    fn to_json(&self) -> Result<super::super::codec::Object, super::super::codec::EncodeError> {
+        let mut object = super::super::codec::Object::new();
+        if let Some(v) = &self.id {
+            object.insert(
+                std::string::String::from("id"),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if !self.extension.is_empty() {
+            let mut items = Vec::with_capacity(self.extension.len());
+            for item in &self.extension {
+                items.push(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(item)?,
+                ));
+            }
+            object.insert(
+                std::string::String::from("extension"),
+                serde_json::Value::Array(items),
+            );
+        }
+        if let Some(item) = &self.bounds {
+            let (suffix, value, element) = item.to_json_parts()?;
+            if let Some(value) = value {
+                object.insert(format!("bounds{suffix}"), value);
+            }
+            if let Some(element) = element {
+                object.insert(format!("_bounds{suffix}"), element);
+            }
+        }
+        if let Some(item) = &self.count {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("count"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_count"), e);
+            }
+        }
+        if let Some(item) = &self.count_max {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("countMax"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_countMax"), e);
+            }
+        }
+        if let Some(item) = &self.duration {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("duration"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_duration"), e);
+            }
+        }
+        if let Some(item) = &self.duration_max {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("durationMax"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_durationMax"), e);
+            }
+        }
+        if let Some(item) = &self.duration_unit {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("durationUnit"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_durationUnit"), e);
+            }
+        }
+        if let Some(item) = &self.frequency {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("frequency"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_frequency"), e);
+            }
+        }
+        if let Some(item) = &self.frequency_max {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("frequencyMax"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_frequencyMax"), e);
+            }
+        }
+        if let Some(item) = &self.period {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("period"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_period"), e);
+            }
+        }
+        if let Some(item) = &self.period_max {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("periodMax"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_periodMax"), e);
+            }
+        }
+        if let Some(item) = &self.period_unit {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("periodUnit"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_periodUnit"), e);
+            }
+        }
+        if !self.day_of_week.is_empty() {
+            let (values, elements) = super::super::codec::primitive_arrays(&self.day_of_week)?;
+            object.insert(std::string::String::from("dayOfWeek"), values);
+            if let Some(elements) = elements {
+                object.insert(std::string::String::from("_dayOfWeek"), elements);
+            }
+        }
+        if !self.time_of_day.is_empty() {
+            let (values, elements) = super::super::codec::primitive_arrays(&self.time_of_day)?;
+            object.insert(std::string::String::from("timeOfDay"), values);
+            if let Some(elements) = elements {
+                object.insert(std::string::String::from("_timeOfDay"), elements);
+            }
+        }
+        if !self.when.is_empty() {
+            let (values, elements) = super::super::codec::primitive_arrays(&self.when)?;
+            object.insert(std::string::String::from("when"), values);
+            if let Some(elements) = elements {
+                object.insert(std::string::String::from("_when"), elements);
+            }
+        }
+        if let Some(item) = &self.offset {
+            if let Some(v) = super::super::codec::Primitive::value_json(item)? {
+                object.insert(std::string::String::from("offset"), v);
+            }
+            if let Some(e) = super::super::codec::Primitive::element_json(item)? {
+                object.insert(std::string::String::from("_offset"), e);
+            }
+        }
+        Ok(object)
+    }
+
+    fn from_json(
+        object: &super::super::codec::Object,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        let mut raw_id: Option<&serde_json::Value> = None;
+        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_bounds = super::super::codec::ChoiceSlot::default();
+        let mut raw_count: Option<&serde_json::Value> = None;
+        let mut raw_count_element: Option<&serde_json::Value> = None;
+        let mut raw_count_max: Option<&serde_json::Value> = None;
+        let mut raw_count_max_element: Option<&serde_json::Value> = None;
+        let mut raw_duration: Option<&serde_json::Value> = None;
+        let mut raw_duration_element: Option<&serde_json::Value> = None;
+        let mut raw_duration_max: Option<&serde_json::Value> = None;
+        let mut raw_duration_max_element: Option<&serde_json::Value> = None;
+        let mut raw_duration_unit: Option<&serde_json::Value> = None;
+        let mut raw_duration_unit_element: Option<&serde_json::Value> = None;
+        let mut raw_frequency: Option<&serde_json::Value> = None;
+        let mut raw_frequency_element: Option<&serde_json::Value> = None;
+        let mut raw_frequency_max: Option<&serde_json::Value> = None;
+        let mut raw_frequency_max_element: Option<&serde_json::Value> = None;
+        let mut raw_period: Option<&serde_json::Value> = None;
+        let mut raw_period_element: Option<&serde_json::Value> = None;
+        let mut raw_period_max: Option<&serde_json::Value> = None;
+        let mut raw_period_max_element: Option<&serde_json::Value> = None;
+        let mut raw_period_unit: Option<&serde_json::Value> = None;
+        let mut raw_period_unit_element: Option<&serde_json::Value> = None;
+        let mut raw_day_of_week: Option<&serde_json::Value> = None;
+        let mut raw_day_of_week_element: Option<&serde_json::Value> = None;
+        let mut raw_time_of_day: Option<&serde_json::Value> = None;
+        let mut raw_time_of_day_element: Option<&serde_json::Value> = None;
+        let mut raw_when: Option<&serde_json::Value> = None;
+        let mut raw_when_element: Option<&serde_json::Value> = None;
+        let mut raw_offset: Option<&serde_json::Value> = None;
+        let mut raw_offset_element: Option<&serde_json::Value> = None;
+        for (key, value) in object {
+            match key.as_str() {
+                "id" => raw_id = Some(value),
+                "extension" => raw_extension = Some(value),
+                "boundsDuration" => {
+                    raw_bounds.value("Duration", value, path)?;
+                }
+                "_boundsDuration" => {
+                    raw_bounds.element("Duration", value, path)?;
+                }
+                "boundsRange" => {
+                    raw_bounds.value("Range", value, path)?;
+                }
+                "_boundsRange" => {
+                    raw_bounds.element("Range", value, path)?;
+                }
+                "boundsPeriod" => {
+                    raw_bounds.value("Period", value, path)?;
+                }
+                "_boundsPeriod" => {
+                    raw_bounds.element("Period", value, path)?;
+                }
+                "count" => raw_count = Some(value),
+                "_count" => raw_count_element = Some(value),
+                "countMax" => raw_count_max = Some(value),
+                "_countMax" => raw_count_max_element = Some(value),
+                "duration" => raw_duration = Some(value),
+                "_duration" => raw_duration_element = Some(value),
+                "durationMax" => raw_duration_max = Some(value),
+                "_durationMax" => raw_duration_max_element = Some(value),
+                "durationUnit" => raw_duration_unit = Some(value),
+                "_durationUnit" => raw_duration_unit_element = Some(value),
+                "frequency" => raw_frequency = Some(value),
+                "_frequency" => raw_frequency_element = Some(value),
+                "frequencyMax" => raw_frequency_max = Some(value),
+                "_frequencyMax" => raw_frequency_max_element = Some(value),
+                "period" => raw_period = Some(value),
+                "_period" => raw_period_element = Some(value),
+                "periodMax" => raw_period_max = Some(value),
+                "_periodMax" => raw_period_max_element = Some(value),
+                "periodUnit" => raw_period_unit = Some(value),
+                "_periodUnit" => raw_period_unit_element = Some(value),
+                "dayOfWeek" => raw_day_of_week = Some(value),
+                "_dayOfWeek" => raw_day_of_week_element = Some(value),
+                "timeOfDay" => raw_time_of_day = Some(value),
+                "_timeOfDay" => raw_time_of_day_element = Some(value),
+                "when" => raw_when = Some(value),
+                "_when" => raw_when_element = Some(value),
+                "offset" => raw_offset = Some(value),
+                "_offset" => raw_offset_element = Some(value),
+                other => {
+                    return path.with(other, |path| {
+                        Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty))
+                    });
+                }
+            }
+        }
+        let field_id = raw_id
+            .map(|value| {
+                path.with("id", |path| {
+                    let value = super::super::codec::expect_single(value, path)?;
+                    super::super::codec::expect_string(value, path)
+                })
+            })
+            .transpose()?;
+        let mut field_extension = Vec::new();
+        if let Some(raw) = raw_extension {
+            for (index, value) in super::super::codec::expect_array(raw, path)?
+                .iter()
+                .enumerate()
+            {
+                field_extension.push(path.with_index("extension", index, |path| {
+                    super::super::codec::Json::from_json(
+                        super::super::codec::expect_object(value, path)?,
+                        path,
+                    )
+                })?);
+            }
+        }
+        let field_bounds = match raw_bounds.suffix {
+            None => None,
+            Some(suffix) => Some(path.with("bounds", |path| {
+                TimingRepeatBounds::from_json_parts(
+                    suffix,
+                    raw_bounds.value,
+                    raw_bounds.element,
+                    path,
+                )
+            })?),
+        };
+        let field_count = match (raw_count, raw_count_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("count", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_count_max = match (raw_count_max, raw_count_max_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("countMax", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_duration = match (raw_duration, raw_duration_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("duration", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_duration_max = match (raw_duration_max, raw_duration_max_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("durationMax", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_duration_unit = match (raw_duration_unit, raw_duration_unit_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("durationUnit", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_frequency = match (raw_frequency, raw_frequency_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("frequency", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_frequency_max = match (raw_frequency_max, raw_frequency_max_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("frequencyMax", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_period = match (raw_period, raw_period_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("period", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_period_max = match (raw_period_max, raw_period_max_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("periodMax", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let field_period_unit = match (raw_period_unit, raw_period_unit_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("periodUnit", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        let mut field_day_of_week = Vec::new();
+        for (index, (value, element)) in
+            super::super::codec::pair_arrays(raw_day_of_week, raw_day_of_week_element, path)?
+                .into_iter()
+                .enumerate()
+        {
+            field_day_of_week.push(path.with_index("dayOfWeek", index, |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?);
+        }
+        let mut field_time_of_day = Vec::new();
+        for (index, (value, element)) in
+            super::super::codec::pair_arrays(raw_time_of_day, raw_time_of_day_element, path)?
+                .into_iter()
+                .enumerate()
+        {
+            field_time_of_day.push(path.with_index("timeOfDay", index, |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?);
+        }
+        let mut field_when = Vec::new();
+        for (index, (value, element)) in
+            super::super::codec::pair_arrays(raw_when, raw_when_element, path)?
+                .into_iter()
+                .enumerate()
+        {
+            field_when.push(path.with_index("when", index, |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?);
+        }
+        let field_offset = match (raw_offset, raw_offset_element) {
+            (None, None) => None,
+            (value, element) => Some(path.with("offset", |path| {
+                super::super::codec::Primitive::from_json_parts(value, element, path)
+            })?),
+        };
+        Ok(Self {
+            id: field_id,
+            extension: field_extension,
+            bounds: field_bounds,
+            count: field_count,
+            count_max: field_count_max,
+            duration: field_duration,
+            duration_max: field_duration_max,
+            duration_unit: field_duration_unit,
+            frequency: field_frequency,
+            frequency_max: field_frequency_max,
+            period: field_period,
+            period_max: field_period_max,
+            period_unit: field_period_unit,
+            day_of_week: field_day_of_week,
+            time_of_day: field_time_of_day,
+            when: field_when,
+            offset: field_offset,
+        })
+    }
+}
+
+impl serde::Serialize for TimingRepeat {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        super::super::codec::Json::to_json(self)
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for TimingRepeat {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let mut path = super::super::codec::Path::root("TimingRepeat");
+        let object =
+            super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
+        super::super::codec::Json::from_json(object, &mut path).map_err(serde::de::Error::custom)
+    }
+}
+
 /// The \`bounds\[x\]\` choice of \`TimingRepeat\`.
 ///
 /// Either a duration for the length of the timing schedule, a range of possible
@@ -171,4 +761,116 @@ pub enum TimingRepeatBounds {
     Range(super::range::Range),
     /// The `Period` form.
     Period(super::period::Period),
+}
+
+impl TimingRepeatBounds {
+    /// The key suffix, the value part, and the `_name` part of this form.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::EncodeError`] when a held value has no JSON form.
+    pub fn to_json_parts(
+        &self,
+    ) -> Result<
+        (
+            &'static str,
+            Option<serde_json::Value>,
+            Option<serde_json::Value>,
+        ),
+        super::super::codec::EncodeError,
+    > {
+        match self {
+            Self::Duration(inner) => Ok((
+                "Duration",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+            Self::Range(inner) => Ok((
+                "Range",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+            Self::Period(inner) => Ok((
+                "Period",
+                Some(serde_json::Value::Object(
+                    super::super::codec::Json::to_json(inner)?,
+                )),
+                None,
+            )),
+        }
+    }
+
+    /// Decodes the form named by `suffix` from its value and `_name` parts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
+    pub fn from_json_parts(
+        suffix: &str,
+        value: Option<&serde_json::Value>,
+        element: Option<&serde_json::Value>,
+        path: &mut super::super::codec::Path,
+    ) -> Result<Self, super::super::codec::DecodeError> {
+        match suffix {
+            "Duration" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Duration(inner))
+            }
+            "Range" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Range(inner))
+            }
+            "Period" => {
+                if element.is_some() {
+                    return Err(path.error(super::super::codec::DecodeErrorKind::WrongType {
+                        expected: "no underscore form for a complex type",
+                    }));
+                }
+                let value = value.ok_or_else(|| {
+                    path.error(super::super::codec::DecodeErrorKind::MissingProperty)
+                })?;
+                let inner = super::super::codec::Json::from_json(
+                    super::super::codec::expect_object(
+                        super::super::codec::expect_single(value, path)?,
+                        path,
+                    )?,
+                    path,
+                )?;
+                Ok(Self::Period(inner))
+            }
+            _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
+        }
+    }
 }

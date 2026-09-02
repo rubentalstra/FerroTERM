@@ -373,6 +373,11 @@ fn lower_struct(
     let root_docs = structure.element(path).map(docs_of).unwrap_or_default();
     let mut fields = Vec::new();
     for element in structure.children_of(path).cloned().collect::<Vec<_>>() {
+        // NOTE: a max of 0 prohibits the element (https://hl7.org/fhir/R4B/conformance-rules.html#cardinality),
+        // so it has no field; xhtml prohibits extension this way.
+        if element.max == Max::Bounded(0) {
+            continue;
+        }
         let card = card_of(&element);
         let target = match &element.shape {
             ElementShape::Root => continue,

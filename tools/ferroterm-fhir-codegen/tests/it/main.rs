@@ -15,6 +15,7 @@ use std::sync::LazyLock;
 use ferroterm_fhir_codegen::package::Package;
 
 mod closure;
+mod codec;
 mod emit;
 mod operations;
 mod package;
