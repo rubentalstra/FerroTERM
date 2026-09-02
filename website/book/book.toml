@@ -3,7 +3,7 @@
 [book]
 title = "Notio"
 authors = ["Notio contributors"]
-description = "Documentation for Notio, a pure-Rust FHIR terminology server for SNOMED CT."
+description = "Documentation for Notio, a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems."
 language = "en"
 src = "src"
 

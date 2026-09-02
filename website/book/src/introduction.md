@@ -1,8 +1,9 @@
 # Introduction
 
-Notio is a pure-Rust FHIR terminology server for SNOMED CT. It serves the HL7
-FHIR terminology API from a single binary, backed by a memory-mapped index built
-once per SNOMED release. There is no JVM, no Elasticsearch, and no external
+Notio is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other
+clinical code systems, SNOMED CT first. It serves the HL7 FHIR terminology API
+from a single binary, backed by a memory-mapped index built once per code
+system release. There is no JVM, no Elasticsearch, and no external
 database.
 
 > [!NOTE]
@@ -39,7 +40,7 @@ The book is organized by what you want to do.
 
 ## Two things that are always true
 
-You bring your own SNOMED CT content. The software is open source under the MIT
-license. SNOMED CT is licensed separately by SNOMED International, and this
-repository ships no SNOMED content. You load a licensed RF2 release, and the
-server serves it. See [Loading a SNOMED CT edition](operate/loading-snomed.md).
+You bring your own code system content. The software is open source under the
+MIT license. SNOMED CT is licensed by SNOMED International, LOINC by the
+Regenstrief Institute, and this repository ships no code system content. You
+load a licensed release, and the server serves it. See [Loading a SNOMED CT edition](operate/loading-snomed.md).

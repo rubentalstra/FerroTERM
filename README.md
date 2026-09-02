@@ -6,11 +6,12 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_notio&metric=alert_status)](https://sonarcloud.io/summary/overall?id=rubentalstra_notio)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A pure-Rust FHIR terminology server for SNOMED CT. Machine-generated FHIR
-support across R4, R4B, R5, and R6. No JVM, no Elasticsearch.
+A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical
+code systems, SNOMED CT first. Machine-generated FHIR support across R4, R4B,
+R5, and R6. No JVM, no Elasticsearch.
 
 > **Notio** is a codename. The project's official name is not set yet, so it
-> carries a working name until then. Notio is Latin for "concept". A SNOMED CT
+> carries a working name until then. Notio is Latin for "concept". A
 > terminology service is, at heart, a service that knows what each concept means
 > and how the concepts relate.
 
@@ -35,7 +36,10 @@ modest box.
 
 ## What it is
 
-- A read-oriented FHIR terminology server for SNOMED CT.
+- A read-oriented FHIR terminology server for clinical code systems. SNOMED CT
+  is the first system it serves; LOINC and the systems recorded in
+  [`docs/terminologies.md`](docs/terminologies.md) follow through the same
+  engine seam, so no code system is a special case in the operations.
 - The HL7 FHIR terminology API (`CodeSystem/$lookup`, `CodeSystem/$subsumes`,
   `CodeSystem/$validate-code`, `ValueSet/$expand`, `ValueSet/$validate-code`,
   and `ConceptMap/$translate`), served across **R4, R4B, R5, and R6** from one
@@ -75,8 +79,12 @@ profile**. That splits the system into two problems with different answers.
   is absent where it does not. This mirrors how the sibling project
   [FerroEHR](https://github.com/rubentalstra/FerroEHR) generates its openEHR
   model from the vendored machine-readable specs.
-- **The SNOMED semantics are hand-written and owned.** RF2 loading, the
-  materialized ontology, ECL evaluation, and `$expand` paging are the product.
+- **The engine is code-system-neutral, and the semantics are hand-written and
+  owned.** The store, the hierarchy index, and the search index know concepts,
+  designations, properties, and typed edges, never one system's identifiers.
+  Each code system arrives through a loader and a provider (SNOMED CT: RF2
+  loading, the materialized ontology, ECL evaluation; LOINC and the rest
+  follow), and the FHIR operations talk to that seam only.
   The generated FHIR layer gives standards-correct shapes and signatures by
   construction; the engine beneath it implements the meaning.
 
@@ -114,7 +122,7 @@ Two separate things, and they must not be confused:
 
 ## Why it exists
 
-Notio is a standalone project with a simple motivation: run a SNOMED CT
+Notio is a standalone project with a simple motivation: run a clinical
 terminology server on ordinary hardware. The reference servers are Java on
 Elasticsearch and want 16 to 32 GB of RAM to serve the International edition,
 more than a laptop or a small box has. Notio is a pure-Rust server built to

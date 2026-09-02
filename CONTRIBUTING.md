@@ -2,7 +2,8 @@
 
 # Contributing to Notio
 
-Notio is a pure-Rust FHIR terminology server for SNOMED CT. It is in early
+Notio is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other
+clinical code systems, SNOMED CT first. It is in early
 design; the architecture is recorded, with citations, in
 [`docs/architecture.md`](docs/architecture.md), and the working discipline is in
 [`CLAUDE.md`](CLAUDE.md). Read both before making a change.

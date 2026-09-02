@@ -8,6 +8,12 @@ paths:
 
 # SNOMED CT on FHIR + ECL + RF2
 
+This file governs the SNOMED CT provider: the RF2 loader, ECL, and the SNOMED
+implicit forms. The substrates and the operations are code-system-neutral
+(`docs/architecture.md` §5); a rule here never leaks into them as a SNOMED
+special case. Other code systems get their own rule file as their providers
+land (`docs/terminologies.md`).
+
 SNOMED International's specifications are the oracle for everything SNOMED: the
 URI standard, the implicit value-set / concept-map conventions, ECL, and the RF2
 release format. Cite the spec section (e.g. "snomedct.html §Implicit Value

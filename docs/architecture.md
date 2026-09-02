@@ -1,15 +1,22 @@
 # Architecture
 
-Notio (codename) is a pure-Rust FHIR terminology server for SNOMED CT. It serves
-the HL7 FHIR terminology API across R4, R4B, R5, and R6 from one running server,
-backed by a memory-mapped, precomputed SNOMED index, with no JVM, no
-Elasticsearch, and no graph database.
+Notio (codename) is a pure-Rust FHIR terminology server for SNOMED CT, LOINC,
+and other clinical code systems, SNOMED CT first. It serves the HL7 FHIR
+terminology API across R4, R4B, R5, and R6 from one running server, backed by a
+memory-mapped, precomputed concept index per loaded code system, with no JVM,
+no Elasticsearch, and no graph database.
 
 This document is the design authority. It is grounded in the terminology-server
 literature and the graph-reachability literature, cited inline, rather than in
 convention.
 
 ## First principles: what SNOMED CT actually is
+
+SNOMED CT is the first code system Notio serves and the one that shapes the
+engine, because it is the hardest case: a polyhierarchy, a formal ontology, and
+the only system with its own query language (ECL). A design that serves SNOMED
+well serves the simpler systems (LOINC, ICD-10, UCUM) with capabilities turned
+off, and decision 5 below records how they plug in.
 
 SNOMED CT is two things at once, and conflating them is the mistake most
 architectures make.
@@ -226,6 +233,68 @@ path the materialized bitmap closure is the hot primitive, so a Datalog layer
 stays a possible later addition for complex ad-hoc ECL rather than a foundation
 piece.
 
+### 5. The engine is code-system-neutral: one provider seam, SNOMED CT first
+
+The FHIR terminology operations never ask "is this SNOMED". They talk to a
+**code system provider** seam, and each code system reaches the operations
+through its own provider: a loader that turns the system's release into the
+shared substrates, plus the system's semantics (its filters, properties,
+implicit value sets, and version rules). No FHIR or SNOMED specification
+governs the seam itself (the Terminology Ecosystem IG defines behaviour, not an
+interface), so this is our own design; the FHIR `CodeSystem` metadata
+(`content`, `hierarchyMeaning`, `caseSensitive`, `compositional`,
+`versionNeeded`, `property`, `filter`) is the capability declaration each
+provider returns (<https://hl7.org/fhir/R4B/codesystem.html>,
+<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+
+The substrates are neutral by construction. `notio-store` holds one code system
+version's concepts, displays, designations by language, and typed property
+values, keyed by dense ordinal, with the system's native code as the string
+key. `notio-graph` holds typed edges and closure bitmaps over ordinals; a system
+without a hierarchy has no closure. `notio-text` indexes designation words. None
+of them knows an SCTID, a LOINC part, or an ICD chapter. A loader (`notio-rf2`
+for SNOMED CT, then one crate per system) maps its release into ordinals, edge
+types, and a property vocabulary. `tools/notio-build` runs whichever loader the
+release needs.
+
+What every provider supplies, and what is optional, follows the seam that the
+multi-system servers converge on. `tx.fhir.org`'s `TCodeSystemProvider`
+(identity and version rules, `locate`, `Display`, `Designations`,
+`getProperties`, `filter`, `searchFilter`, `getIterator`, `subsumesTest`,
+`cloneWithSupplements`;
+<https://github.com/HealthIntersections/fhirserver/blob/master/library/ftx/ftx_service.pas>)
+and hades' `CodeSystem` protocol (`cs-metadata`, `cs-lookup`,
+`cs-validate-code`, `cs-subsumes`, `cs-expand*`; <https://github.com/wardle/hades>)
+both hide storage behind an opaque concept handle and keep compose, exclude,
+dedup, and paging in one shared layer above the providers. HAPI FHIR and
+Snowstorm instead push every system into one concept table with a precomputed
+ancestor list and grow per-system special cases in the filter code (HAPI's
+`handleFilterLoinc*` family, Snowstorm's `isSnomed()` fork). Notio takes the
+first shape.
+
+| Capability | Every provider | Declared per system |
+|---|---|---|
+| Identity: system URI, versions, the default-version rule, `versionNeeded` | yes | SNOMED edition and version URIs; LOINC `2.78`; UCUM fixed |
+| Metadata for `TerminologyCapabilities`: content mode, case sensitivity, hierarchy meaning, compositional, property and filter definitions | yes | |
+| Locate a code; display, definition, active or inactive with reason, abstract, designations by language | yes | |
+| Typed properties, including `parent`, `child`, `status`, `inactive`, `notSelectable`, `itemWeight` | yes | SNOMED attributes and module; LOINC's axes |
+| Supplements applied to designations | yes | |
+| Generic filters on `concept` and `code` (`=`, `in`, `not-in`, `regex`), membership tests, a closed-or-open answer | yes | |
+| Text search over designations | yes | |
+| Enumeration with a total count, for expansion | yes | grammar-defined systems (UCUM, BCP 47) validate by parsing and refuse enumeration |
+| Hierarchy and subsumption (`is-a`, `descendent-of`, `generalizes`, `child exists`) | | SNOMED, ICD-10, FHIR CodeSystems with `hierarchyMeaning = is-a`; LOINC and UCUM have none |
+| System-specific filters and a filter language | | SNOMED `constraint` (ECL) and refset membership; LOINC's named axes, `parent`, `ancestor`, `copyright`; UCUM `canonical` |
+| Implicit value sets and concept maps parsed from the system URI | | SNOMED `?fhir_vs=…` and `?fhir_cm=…`; LOINC `/vs/…`; UCUM `/vs/…` |
+| Alternate and normalized codes | | UCUM canonicalization; FHIR CodeSystems with alternate codes |
+| Concept maps carried by the release | | SNOMED map and association refsets |
+
+The compose layer (include, exclude, dedup, `offset`, `count`, `expansion.total`)
+lives once, in `notio-terminology`, above every provider. ECL is the one
+SNOMED-only filter language and stays in `notio-ecl`, reached through the
+SNOMED provider's `constraint` filter. The build order and the per-system facts
+(URI, release format, licence, hierarchy, FHIR-defined filters) are in
+`docs/terminologies.md`.
+
 ## Text search
 
 Description search is a separate concern from the graph, kept in its own index.
@@ -245,20 +314,22 @@ memory-mapped, built once per edition.
 ## Workspace layout
 
 A single Cargo workspace. `notio-fhir` is generated; the rest is hand-written;
-`notio-fhir-codegen` and `notio-build` are tooling.
+`notio-fhir-codegen` and `notio-build` are tooling. The substrate crates
+(`notio-store`, `notio-graph`, `notio-text`) are code-system-neutral; each
+code system adds a loader crate (`notio-rf2` is the first) that feeds them.
 
 | Crate | Role | Kind |
 |---|---|---|
 | `crates/notio-fhir` | Generated per-version FHIR types + terminology operation contracts (R4/R4B/R5/R6) | generated |
-| `crates/notio-rf2` | SNOMED CT RF2 loader (inferred relationships, descriptions, refsets, transitive-closure file) + typed component model | hand-written |
-| `crates/notio-graph` | The materialized ontology: CSR adjacency (is-a + per-attribute) and roaring transitive-closure bitmaps; subsumption + ECL set algebra | hand-written |
-| `crates/notio-store` | The memory-mapped (`redb`) columnar concept/description store: point reads for `$lookup`/`$validate-code` | hand-written |
-| `crates/notio-text` | The `fst` + roaring description search index (prefix, refset/status filter, term-length sort) | hand-written |
+| `crates/notio-rf2` | SNOMED CT RF2 loader (inferred relationships, descriptions, refsets, transitive-closure file) + typed component model; the first code system loader | hand-written |
+| `crates/notio-graph` | The materialized hierarchy of a loaded code system: CSR adjacency (is-a + per-relationship-type) and roaring transitive-closure bitmaps; subsumption + ECL set algebra | hand-written |
+| `crates/notio-store` | The memory-mapped (`redb`) columnar concept and designation store, one per code system version: point reads for `$lookup`/`$validate-code` | hand-written |
+| `crates/notio-text` | The `fst` + roaring designation search index (prefix, language and use filter, term-length sort) | hand-written |
 | `crates/notio-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `notio-graph`) | hand-written |
-| `crates/notio-terminology` | The engine: the FHIR terminology operations over store + graph + text + ecl, dispatched per version | hand-written |
+| `crates/notio-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
 | `app/notio-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
 | `tools/notio-fhir-codegen` | The generator: vendored FHIR packages → `notio-fhir` | tooling |
-| `tools/notio-build` | The offline build: an RF2 release → the memory-mapped graph/store/text artifacts, once per edition | tooling |
+| `tools/notio-build` | The offline build: a code system release (RF2 first) → the memory-mapped graph/store/text artifacts, once per release | tooling |
 
 Dependencies point one way (app/tools → crates); nothing depends upward into the
 server.
@@ -277,16 +348,23 @@ server.
 
 ## Licensing
 
-The software is MIT. SNOMED CT content is licensed separately by SNOMED
-International and is never distributed here. A deployment brings its own RF2
-release under a valid licence (free within member countries, affiliate licence
-elsewhere). The vendored FHIR packages are HL7 material under their own terms,
+The software is MIT. Code system content is licensed by its owner and is never
+distributed here: SNOMED CT by SNOMED International (free within member
+countries, affiliate licence elsewhere), LOINC by the Regenstrief Institute,
+and so on per `docs/terminologies.md`. A deployment brings its own releases
+under valid licences. The vendored FHIR packages are HL7 material under their own terms,
 vendored verbatim with provenance as codegen input.
 
 ## Prior art
 
 - **Snowstorm** (SNOMED International, Java + Elasticsearch): the reference
-  server and correctness oracle.
+  server and correctness oracle for SNOMED CT.
+- **tx.fhir.org** (Health Intersections, the `fhirserver` repository): the
+  reference for the HL7 tx-ecosystem test cases, and the clearest existing
+  code system provider seam (`TCodeSystemProvider`).
+- **hades** (Mark Wardle, Clojure): a composite FHIR terminology server over
+  SNOMED CT, LOINC, and FHIR packages, dispatching by canonical URL; the
+  closest analogue to the provider design.
 - **Ontoserver** (CSIRO, Postgres + Lucene): a production FHIR terminology
   server; index-materialized, not a graph database.
 - **Hermes** (Mark Wardle, Clojure, memory-mapped store + Lucene): the

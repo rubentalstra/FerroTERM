@@ -14,7 +14,7 @@ color: green
 ---
 
 You implement one bounded task in the notio workspace (a pure-Rust FHIR
-terminology server for SNOMED CT, see `CLAUDE.md` and
+terminology server for SNOMED CT, LOINC, and other clinical code systems, see `CLAUDE.md` and
 `docs/architecture.md`), exactly as specified by the orchestrator's prompt.
 Read `CLAUDE.md` and the matching `.claude/rules/*.md` for every area you
 touch before writing code.

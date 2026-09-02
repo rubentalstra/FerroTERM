@@ -1,7 +1,8 @@
 # Implementation checklist
 
-Notio implements the whole FHIR terminology surface for SNOMED CT. This is the
-master list of what the server must do. Check items off as they land. There is
+Notio implements the whole FHIR terminology surface for SNOMED CT, LOINC, and
+the other clinical code systems in `docs/terminologies.md`, SNOMED CT first.
+This is the master list of what the server must do. Check items off as they land. There is
 no fixed scope cut and no "version 1" boundary: what a given release contains is
 decided during development, and every item here is in scope until it is built.
 
@@ -60,6 +61,30 @@ sequence, not a scope limit; the server serves every version.
 - [ ] R6 (ballot, tracked as it moves)
 - [ ] Per-version operation parameter sets generated from each version's
   `OperationDefinition`; one server answers every version at runtime
+
+## Code systems (the provider seam, `docs/architecture.md` §5)
+
+- [ ] The code system provider seam: identity and versions, metadata for
+  `TerminologyCapabilities`, locate, designations by language, typed
+  properties, supplements, generic filters, text search, enumeration; hierarchy,
+  system-specific filters, implicit value sets, and concept maps as declared
+  capabilities
+- [ ] The compose layer (include, exclude, dedup, `offset`, `count`,
+  `expansion.total`) once, above every provider
+- [ ] SNOMED CT provider (RF2 loader, ECL, implicit forms; the sections below)
+- [ ] Generic FHIR `CodeSystem` resource provider (HL7 Terminology, custom code
+  systems, supplements; `hierarchyMeaning`, `caseSensitive`, `content`,
+  `versionNeeded` honoured); passes the tx-ecosystem `general` mode
+- [ ] LOINC provider (LoincTable, multiaxial hierarchy, parts, answer lists,
+  linguistic variants; the FHIR LOINC filters and `/vs/` implicit value sets)
+- [ ] UCUM provider (grammar-defined validation, `canonical` filter, no
+  enumeration)
+- [ ] ICD-10 providers (WHO ClaML, ICD-10-NL, ICD-10-CM; `classified-with`
+  hierarchy)
+- [ ] Further providers per `docs/terminologies.md` (RxNorm, ATC, ICD-11,
+  BCP 47, BCP 13, ISO 3166, the Dutch national code systems)
+- [ ] `TerminologyCapabilities` enumerates every loaded system, version, filter,
+  and property
 
 ## SNOMED CT on FHIR
 
@@ -123,7 +148,7 @@ sequence, not a scope limit; the server serves every version.
 
 - [ ] Single static binary; container image
 - [ ] Configuration surface
-- [ ] SNOMED RF2 edition loading with licence enforcement (bring-your-own,
+- [ ] Code system release loading with licence enforcement (bring-your-own,
   content never committed)
 - [ ] SLSA Build L3 releases with signed SBOM (`docs/ci-cd.md`)
 - [ ] External documentation (`website/book`)

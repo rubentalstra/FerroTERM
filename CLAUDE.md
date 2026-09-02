@@ -1,10 +1,13 @@
 # CLAUDE.md
 
-**Notio (codename)** is a pure-Rust FHIR terminology server for SNOMED CT. It
-serves the HL7 FHIR terminology API across R4, R4B, R5, and R6 from one running
-server, backed by a memory-mapped SNOMED index, with no JVM and no
-Elasticsearch. The name is a working codename (Latin "concept"); the official
-name is not set yet.
+**Notio (codename)** is a pure-Rust FHIR terminology server for SNOMED CT,
+LOINC, and other clinical code systems, SNOMED CT first. It serves the HL7 FHIR
+terminology API across R4, R4B, R5, and R6 from one running server, backed by a
+memory-mapped concept index, with no JVM and no Elasticsearch. The engine is
+code-system-neutral: the operations talk to a code system provider seam, and
+each system arrives through its own loader (`docs/architecture.md` §5,
+`docs/terminologies.md`). The name is a working codename (Latin "concept");
+the official name is not set yet.
 
 The full design, with citations, is in **`docs/architecture.md`**. Read it
 first. This file is the working discipline. Write all prose (docs, comments,
@@ -19,10 +22,11 @@ commits, PRs, issues) to `.claude/rules/writing-style.md`.
   and regenerate; never hand-edit generated code. The generator emits per-version
   modules (R4/R4B/R5/R6) so the operation surface is correct per version by
   construction.
-- **The SNOMED engine is HAND-WRITTEN** and is the product: RF2 loading, the
-  memory-mapped concept store and subsumption graph, the `fst` and `roaring`
-  description index, ECL evaluation, and the FHIR terminology operations over
-  them. Idiomatic Rust of our own design, with the FHIR and SNOMED specifications
+- **The engine is HAND-WRITTEN** and is the product: the code-system-neutral
+  memory-mapped concept store, hierarchy graph, and `fst` and `roaring`
+  designation index, the per-system loaders (SNOMED RF2 first), ECL
+  evaluation, and the FHIR terminology operations over the provider seam.
+  Idiomatic Rust of our own design, with the FHIR and SNOMED specifications
   as the authority.
 
 ## Repo map (a single Cargo workspace)
@@ -35,18 +39,19 @@ crate-local discipline.
   contracts (`// @generated`).
 - `crates/notio-rf2`: SNOMED CT RF2 loader (inferred relationships, descriptions,
   refsets, transitive-closure file) and typed component model.
-- `crates/notio-graph`: the materialized ontology. Integer-keyed CSR adjacency
-  (is-a and per-attribute) and roaring transitive-closure bitmaps; subsumption
-  and ECL set algebra.
-- `crates/notio-store`: the memory-mapped (`redb`) columnar concept/description
-  store. Point reads for `$lookup`/`$validate-code`.
-- `crates/notio-text`: the `fst` and `roaring` description search index (per-word
-  prefix, refset/status filters, matched-term-length sort).
+- `crates/notio-graph`: the materialized hierarchy of a loaded code system.
+  Integer-keyed CSR adjacency (is-a and per-relationship-type) and roaring
+  transitive-closure bitmaps; subsumption and ECL set algebra.
+- `crates/notio-store`: the memory-mapped (`redb`) columnar concept and
+  designation store, one per code system version. Point reads for
+  `$lookup`/`$validate-code`.
+- `crates/notio-text`: the `fst` and `roaring` designation search index
+  (per-word prefix, language and use filters, matched-term-length sort).
 - `crates/notio-ecl`: the Expression Constraint Language lexer, parser, and
   evaluator (compiles ECL to set algebra over `notio-graph`).
 - `crates/notio-terminology`: the engine. `$lookup`/`$validate-code`/`$expand`/
-  `$subsumes`/`$translate` over store, graph, text, and ecl, dispatched per FHIR
-  version.
+  `$subsumes`/`$translate` over the code system provider seam, dispatched per
+  FHIR version.
 - `app/notio-server`: the `axum` HTTP server (FHIR endpoints, content
   negotiation, runtime version routing).
 - `tools/notio-fhir-codegen`: the generator, from vendored FHIR packages to
@@ -55,9 +60,11 @@ crate-local discipline.
   memory-mapped graph/store/text artifacts, once per edition.
 
 Dependencies point one way (app/tools depend on crates); nothing depends upward
-into the server. SNOMED is a graph MODEL served from an index-materialized store
-(CSR adjacency and roaring closure), never a graph database and never live
-traversal on the hot path. See `docs/architecture.md` for the evidence.
+into the server. A code system is a graph MODEL served from an
+index-materialized store (CSR adjacency and roaring closure), never a graph
+database and never live traversal on the hot path. Nothing in the substrates or
+the operations is SNOMED-specific; SNOMED semantics live in its loader, ECL,
+and its provider. See `docs/architecture.md` for the evidence.
 
 ## Code generation: read this first
 
