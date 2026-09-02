@@ -32,10 +32,11 @@ use clap::{Parser, Subcommand};
 ///
 /// Every entry is emitted on each run so the generated crate always carries
 /// the whole set (`codegen.md`).
-pub const VERSIONS: [(&str, &str); 3] = [
+pub const VERSIONS: [(&str, &str); 4] = [
     ("r4", "hl7.fhir.r4.core"),
     ("r4b", "hl7.fhir.r4b.core"),
     ("r5", "hl7.fhir.r5.core"),
+    ("r6", "hl7.fhir.r6.core"),
 ];
 
 /// The command line of `ferroterm-fhir-codegen`.

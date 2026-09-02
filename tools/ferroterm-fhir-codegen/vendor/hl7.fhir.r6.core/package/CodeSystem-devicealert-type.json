@@ -1,0 +1,62 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "devicealert-type",
+  "meta" : {
+    "lastUpdated" : "2026-06-18T22:45:45.053-05:00"
+  },
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: CodeSystem devicealert-type</b></p><a name=\"devicealert-type\"> </a><a name=\"hcdevicealert-type\"> </a><p>This case-sensitive code system <code>http://hl7.org/fhir/devicealert-type</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td style=\"white-space:nowrap\">physiological<a name=\"devicealert-type-physiological\"> </a></td><td>Physiological</td><td>The alert condition is related to the patient state</td></tr><tr><td style=\"white-space:nowrap\">technical<a name=\"devicealert-type-technical\"> </a></td><td>Technical</td><td>The alert condition is related to the device state</td></tr></table></div>"
+  },
+  "extension" : [{
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+    "valueCode" : "dev"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+    "valueCode" : "normative"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
+    "valueInteger" : 2
+  }],
+  "url" : "http://hl7.org/fhir/devicealert-type",
+  "version" : "6.0.0-ballot4",
+  "name" : "DeviceAlertType",
+  "title" : "Device Alert Type",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2023-12-10T10:01:24+11:00",
+  "publisher" : "HL7 International / Devices",
+  "contact" : [{
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://www.hl7.org/Special/committees/healthcaredevices"
+    },
+    {
+      "system" : "email",
+      "value" : "fhir@lists.hl7.org"
+    }]
+  }],
+  "description" : "Describes the type of a DeviceAlert.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code" : "001",
+      "display" : "World"
+    }]
+  }],
+  "caseSensitive" : true,
+  "valueSet" : "http://hl7.org/fhir/ValueSet/devicealert-type",
+  "content" : "complete",
+  "concept" : [{
+    "code" : "physiological",
+    "display" : "Physiological",
+    "definition" : "The alert condition is related to the patient state"
+  },
+  {
+    "code" : "technical",
+    "display" : "Technical",
+    "definition" : "The alert condition is related to the device state"
+  }]
+}

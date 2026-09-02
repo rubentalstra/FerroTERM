@@ -1,0 +1,67 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "evidence-variable-constraint",
+  "meta" : {
+    "lastUpdated" : "2026-06-18T22:45:45.053-05:00"
+  },
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: CodeSystem evidence-variable-constraint</b></p><a name=\"evidence-variable-constraint\"> </a><a name=\"hcevidence-variable-constraint\"> </a><p>This case-sensitive code system <code>http://hl7.org/fhir/evidence-variable-constraint</code> defines the following codes:</p><table class=\"codes\"><tr><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td style=\"white-space:nowrap\">alphanumeric-only<a name=\"evidence-variable-constraint-alphanumeric-only\"> </a></td><td>Alphanumeric Characters Only</td><td>String values that are restricted to only numbers and letters [A-Za-z0-9].</td></tr><tr><td style=\"white-space:nowrap\">alphanumeric-space-only<a name=\"evidence-variable-constraint-alphanumeric-space-only\"> </a></td><td>Alphanumeric and Space Characters Only</td><td>String values that are restricted to only numbers, letters, and spaces [A-Za-z0-9\\s].</td></tr><tr><td style=\"white-space:nowrap\">range-zero-to-one<a name=\"evidence-variable-constraint-range-zero-to-one\"> </a></td><td>Range Zero to One</td><td>Numeric value between 0 and 1, inclusive.</td></tr></table></div>"
+  },
+  "extension" : [{
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+    "valueCode" : "cds"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+    "valueCode" : "informative"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
+    "valueInteger" : 1
+  }],
+  "url" : "http://hl7.org/fhir/evidence-variable-constraint",
+  "version" : "6.0.0-ballot4",
+  "name" : "EvidenceVariableConstraint",
+  "title" : "Evidence Variable Constraint",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-14T10:01:24+11:00",
+  "publisher" : "HL7 (FHIR Project)",
+  "contact" : [{
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7.org/fhir"
+    },
+    {
+      "system" : "email",
+      "value" : "fhir@lists.hl7.org"
+    }]
+  }],
+  "description" : "A rule, such as a format or other expectation, for the data values.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code" : "001",
+      "display" : "World"
+    }]
+  }],
+  "caseSensitive" : true,
+  "valueSet" : "http://hl7.org/fhir/ValueSet/evidence-variable-constraint",
+  "content" : "complete",
+  "concept" : [{
+    "code" : "alphanumeric-only",
+    "display" : "Alphanumeric Characters Only",
+    "definition" : "String values that are restricted to only numbers and letters [A-Za-z0-9]."
+  },
+  {
+    "code" : "alphanumeric-space-only",
+    "display" : "Alphanumeric and Space Characters Only",
+    "definition" : "String values that are restricted to only numbers, letters, and spaces [A-Za-z0-9\\s]."
+  },
+  {
+    "code" : "range-zero-to-one",
+    "display" : "Range Zero to One",
+    "definition" : "Numeric value between 0 and 1, inclusive."
+  }]
+}

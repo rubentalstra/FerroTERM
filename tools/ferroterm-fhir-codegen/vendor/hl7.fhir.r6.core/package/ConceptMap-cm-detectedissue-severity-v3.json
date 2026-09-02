@@ -1,0 +1,53 @@
+{
+  "resourceType" : "ConceptMap",
+  "id" : "cm-detectedissue-severity-v3",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-detectedissue-severity-v3</b></p><a name=\"cm-detectedissue-severity-v3\"> </a><a name=\"hccm-detectedissue-severity-v3\"> </a><p>This mapping does not specify any particular context of use.</p><br/><p>Mapping from <a href=\"codesystem-detectedissue-severity.html\">Detected Issue Severity</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-ObservationValue.html\">ObservationValue</a></p><table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr><tr><td>high</td><td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td><td>H (High)</td></tr><tr><td>moderate</td><td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td><td>M (Moderate)</td></tr><tr><td>low</td><td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td><td>L (Low)</td></tr></table></div>"
+  },
+  "url" : "http://hl7.org/fhir/ConceptMap/cm-detectedissue-severity-v3",
+  "identifier" : [{
+    "system" : "urn:ietf:rfc:3986",
+    "value" : "urn:oid:2.16.840.1.113883.4.642.14.10"
+  }],
+  "version" : "6.0.0-ballot4",
+  "name" : "V3DetectedIssueSeverity",
+  "title" : "v3 map for DetectedIssueSeverity",
+  "status" : "draft",
+  "experimental" : false,
+  "date" : "2020-12-24T21:13:15+00:00",
+  "publisher" : "HL7 (FHIR Project)",
+  "description" : "v3 map for DetectedIssueSeverity",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code" : "001",
+      "display" : "World"
+    }]
+  }],
+  "group" : [{
+    "source" : "http://hl7.org/fhir/detectedissue-severity",
+    "target" : "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+    "element" : [{
+      "code" : "high",
+      "target" : [{
+        "code" : "H",
+        "relationship" : "equivalent"
+      }]
+    },
+    {
+      "code" : "moderate",
+      "target" : [{
+        "code" : "M",
+        "relationship" : "equivalent"
+      }]
+    },
+    {
+      "code" : "low",
+      "target" : [{
+        "code" : "L",
+        "relationship" : "equivalent"
+      }]
+    }]
+  }]
+}

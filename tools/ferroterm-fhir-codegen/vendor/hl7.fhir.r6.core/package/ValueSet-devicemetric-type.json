@@ -1,0 +1,58 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "devicemetric-type",
+  "meta" : {
+    "lastUpdated" : "2026-06-18T22:45:45.053-05:00"
+  },
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ValueSet devicemetric-type</b></p><a name=\"devicemetric-type\"> </a><a name=\"hcdevicemetric-type\"> </a><ul><li>Include all codes defined in <a href=\"http://tx.fhir.org/r5\"><code>urn:iso:std:iso:11073:10101</code></a><span style=\"opacity: 0.5\" title=\"Version is not explicitly stated. When building this specification, the most recent version 2024-12-05 has been used\"> version ⏿2024-12-05</span></li></ul></div>"
+  },
+  "extension" : [{
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+    "valueCode" : "dev"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+    "valueCode" : "normative"
+  }],
+  "url" : "http://hl7.org/fhir/ValueSet/devicemetric-type",
+  "identifier" : [{
+    "system" : "urn:ietf:rfc:3986",
+    "value" : "urn:oid:2.16.840.1.113883.6.24"
+  },
+  {
+    "system" : "urn:ietf:rfc:3986",
+    "value" : "urn:oid:2.16.840.1.113883.4.642.3.645"
+  },
+  {
+    "use" : "old",
+    "system" : "urn:ietf:rfc:3986",
+    "value" : "urn:oid:2.16.840.1.113883.4.642.3.895"
+  }],
+  "version" : "6.0.0-ballot4",
+  "name" : "DeviceMetricAndComponentTypes",
+  "title" : "Device Metric and Component Types",
+  "status" : "active",
+  "experimental" : false,
+  "publisher" : "HL7 International / Devices",
+  "contact" : [{
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7.org/fhir"
+    }]
+  }],
+  "description" : "Codes used to identify health care device metric types and units and component types as part of the ISO/IEEE 11073-10101 Medical Device Communication Nomenclature.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code" : "001",
+      "display" : "World"
+    }]
+  }],
+  "compose" : {
+    "include" : [{
+      "system" : "urn:iso:std:iso:11073:10101"
+    }]
+  }
+}

@@ -75,7 +75,7 @@ and its provider. See `docs/architecture.md` for the evidence.
 The FHIR layer is generated. HL7 publishes the whole type system and every
 operation as machine-readable resources in versioned packages
 (`hl7.fhir.r4.core` 4.0.1, `hl7.fhir.r4b.core` 4.3.0, `hl7.fhir.r5.core` 5.0.0,
-`hl7.fhir.r6.core` 6.0.0-ballot), plus `hl7.terminology` (THO). We vendor and pin
+`hl7.fhir.r6.core` 6.0.0-ballot5), plus `hl7.terminology` (THO). We vendor and pin
 those packages under `tools/ferroterm-fhir-codegen/vendor/` with a `PROVENANCE.md`
 per package, and generate `crates/ferroterm-fhir` from them. **R4B is the first
 generation implemented** (current stable R4-family release, a near-superset of

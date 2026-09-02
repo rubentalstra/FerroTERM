@@ -1,0 +1,54 @@
+{
+  "resourceType" : "ValueSet",
+  "id" : "evidence-variable-unacceptable-data-handling",
+  "meta" : {
+    "lastUpdated" : "2026-06-18T22:45:45.053-05:00"
+  },
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ValueSet evidence-variable-unacceptable-data-handling</b></p><a name=\"evidence-variable-unacceptable-data-handling\"> </a><a name=\"hcevidence-variable-unacceptable-data-handling\"> </a><ul><li>Include all codes defined in <a href=\"codesystem-evidence-variable-unacceptable-data-handling.html\"><code>http://hl7.org/fhir/evidence-variable-unacceptable-data-handling</code></a><span title=\"Version is not explicitly stated, which means it is fixed to the version provided in this specification\"> version &#x1F4E6;6.0.0-ballot4</span></li></ul></div>"
+  },
+  "extension" : [{
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+    "valueCode" : "cds"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+    "valueCode" : "informative"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
+    "valueInteger" : 1
+  }],
+  "url" : "http://hl7.org/fhir/ValueSet/evidence-variable-unacceptable-data-handling",
+  "version" : "6.0.0-ballot4",
+  "name" : "EvidenceVariableUnacceptableDataHandling",
+  "title" : "Evidence Variable Unacceptable Data Handling",
+  "status" : "active",
+  "experimental" : false,
+  "date" : "2024-11-16T12:55:11+11:00",
+  "publisher" : "HL7 (FHIR Project)",
+  "contact" : [{
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7.org/fhir"
+    },
+    {
+      "system" : "email",
+      "value" : "fhir@lists.hl7.org"
+    }]
+  }],
+  "description" : "A method or transformation applied for data that does not match required patterns.",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code" : "001",
+      "display" : "World"
+    }]
+  }],
+  "compose" : {
+    "include" : [{
+      "system" : "http://hl7.org/fhir/evidence-variable-unacceptable-data-handling"
+    }]
+  }
+}

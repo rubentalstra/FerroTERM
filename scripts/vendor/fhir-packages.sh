@@ -23,9 +23,10 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 
 registry="https://packages.fhir.org"
+registry2="https://packages2.fhir.org/packages"
 vendor_dir="tools/ferroterm-fhir-codegen/vendor"
 pins="docs/VERSIONS.md"
-default_packages=(hl7.fhir.r4.core hl7.fhir.r4b.core hl7.fhir.r5.core hl7.terminology)
+default_packages=(hl7.fhir.r4.core hl7.fhir.r4b.core hl7.fhir.r5.core hl7.fhir.r6.core hl7.terminology)
 
 die() { printf 'fhir-packages: %s\n' "$*" >&2; exit 1; }
 
@@ -53,7 +54,14 @@ vendor_one() {
   dest="$vendor_dir/$pkg"
 
   echo "== $pkg $ver"
-  meta="$(curl -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" "$registry/$pkg")" \
+  # The R6 ballots are published on packages2.fhir.org only; every other
+  # package comes from packages.fhir.org. Both speak the npm registry shape.
+  local meta_url
+  case "$pkg" in
+    hl7.fhir.r6.*) meta_url="$registry2/$pkg" ;;
+    *) meta_url="$registry/$pkg" ;;
+  esac
+  meta="$(curl -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" "$meta_url")" \
     || die "cannot read registry metadata for $pkg"
   shasum="$(printf '%s' "$meta" | jq -r --arg v "$ver" '.versions[$v].dist.shasum // empty')"
   tarball_url="$(printf '%s' "$meta" | jq -r --arg v "$ver" '.versions[$v].dist.tarball // empty')"
@@ -61,7 +69,8 @@ vendor_one() {
 
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' RETURN
-  curl -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" -o "$tmp/pkg.tgz" "$registry/$pkg/$ver" \
+  [ -n "$tarball_url" ] || die "the registry lists no tarball for $pkg $ver"
+  curl -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" -o "$tmp/pkg.tgz" "$tarball_url" \
     || die "download of $pkg $ver failed"
   got="$(shasum -a 1 "$tmp/pkg.tgz" | cut -d' ' -f1)"
   [ "$got" = "$shasum" ] || die "checksum mismatch for $pkg $ver: registry $shasum, downloaded $got"
@@ -90,7 +99,7 @@ edit a file under \`package/\`; change the pin in docs/VERSIONS.md and re-run
 
 - Package: $pkg
 - Version: $ver
-- Source: the FHIR package registry, $registry/$pkg/$ver
+- Source: the FHIR package registry, $meta_url
 - Tarball: $tarball_url
 - SHA-1 (registry shasum): $shasum
 - SHA-256 (tarball): $sha256

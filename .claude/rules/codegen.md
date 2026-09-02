@@ -22,7 +22,7 @@ emitter) → `crates/ferroterm-fhir`, one module per version (R4 / R4B / R5 / R6
   vendored packages + the current emitter.
 - **Pinned packages** (the versions the modules mirror): `hl7.fhir.r4.core`
   4.0.1, `hl7.fhir.r4b.core` 4.3.0, `hl7.fhir.r5.core` 5.0.0,
-  `hl7.fhir.r6.core` 6.0.0-ballot, plus `hl7.terminology`. Exact pins +
+  `hl7.fhir.r6.core` 6.0.0-ballot5, plus `hl7.terminology`. Exact pins +
   provenance live in each package's `PROVENANCE.md`; the fetcher is
   `scripts/vendor/*.sh`.
 

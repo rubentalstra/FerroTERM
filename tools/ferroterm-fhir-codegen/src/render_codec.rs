@@ -131,6 +131,8 @@ fn render_primitive(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Re
         .unwrap_or(Scalar::Str);
     let value_required = value_field.is_some_and(|f| f.ty.card == Cardinality::One);
     let has_extension = fields.iter().any(|f| f.name == "extension");
+    // R6 prohibits `xhtml.id` (max 0), so a primitive may carry no id at all.
+    let has_id = fields.iter().any(|f| f.name == "id");
     writeln!(out, "\nimpl {C}::Primitive for {} {{", ty.name)?;
     writeln!(
         out,
@@ -163,23 +165,31 @@ fn render_primitive(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Re
         out,
         "    fn element_json(&self) -> Result<Option<serde_json::Value>, {C}::EncodeError> {{"
     )?;
-    if has_extension {
-        writeln!(
+    match (has_id, has_extension) {
+        (true, true) => writeln!(
             out,
             "        if self.id.is_none() && self.extension.is_empty() {{"
-        )?;
-    } else {
-        writeln!(out, "        if self.id.is_none() {{")?;
+        )?,
+        (true, false) => writeln!(out, "        if self.id.is_none() {{")?,
+        (false, true) => writeln!(out, "        if self.extension.is_empty() {{")?,
+        (false, false) => {}
     }
-    writeln!(out, "            return Ok(None);")?;
-    writeln!(out, "        }}")?;
-    writeln!(out, "        let mut object = {C}::Object::new();")?;
-    writeln!(out, "        if let Some(id) = &self.id {{")?;
-    writeln!(
-        out,
-        "            object.insert(std::string::String::from(\"id\"), serde_json::Value::String(id.clone()));"
-    )?;
-    writeln!(out, "        }}")?;
+    if has_id || has_extension {
+        writeln!(out, "            return Ok(None);")?;
+        writeln!(out, "        }}")?;
+        writeln!(out, "        let mut object = {C}::Object::new();")?;
+    } else {
+        // Nothing but the value: the element form never carries anything.
+        writeln!(out, "        Ok(None)")?;
+    }
+    if has_id {
+        writeln!(out, "        if let Some(id) = &self.id {{")?;
+        writeln!(
+            out,
+            "            object.insert(std::string::String::from(\"id\"), serde_json::Value::String(id.clone()));"
+        )?;
+        writeln!(out, "        }}")?;
+    }
     if has_extension {
         writeln!(out, "        if !self.extension.is_empty() {{")?;
         writeln!(
@@ -198,9 +208,11 @@ fn render_primitive(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Re
         )?;
         writeln!(out, "        }}")?;
     }
-    writeln!(out, "        Ok(Some(serde_json::Value::Object(object)))")?;
+    if has_id || has_extension {
+        writeln!(out, "        Ok(Some(serde_json::Value::Object(object)))")?;
+    }
     writeln!(out, "    }}\n")?;
-    render_primitive_decode(out, ty, scalar, value_required, has_extension)?;
+    render_primitive_decode(out, ty, scalar, value_required, has_id, has_extension)?;
     writeln!(out, "}}")
 }
 
@@ -209,6 +221,7 @@ fn render_primitive_decode(
     ty: &TypeDef,
     scalar: Scalar,
     value_required: bool,
+    has_id: bool,
     has_extension: bool,
 ) -> fmt::Result {
     writeln!(out, "    fn from_json_parts(")?;
@@ -242,7 +255,9 @@ fn render_primitive_decode(
             "        let value = value.ok_or_else(|| path.error({C}::DecodeErrorKind::MissingProperty))?;"
         )?;
     }
-    writeln!(out, "        let mut id = None;")?;
+    if has_id {
+        writeln!(out, "        let mut id = None;")?;
+    }
     if has_extension {
         writeln!(out, "        let mut extension = Vec::new();")?;
     }
@@ -251,12 +266,30 @@ fn render_primitive_decode(
         out,
         "            let object = {C}::expect_object(element, path)?;"
     )?;
+    if !has_id && !has_extension {
+        // No element property is admitted: the first key is the error.
+        writeln!(
+            out,
+            "            if let Some(key) = object.keys().next() {{"
+        )?;
+        writeln!(
+            out,
+            "                return path.with(key, |path| Err(path.error({C}::DecodeErrorKind::UnknownProperty)));"
+        )?;
+        writeln!(out, "            }}")?;
+        writeln!(out, "        }}")?;
+        writeln!(out, "        Ok(Self {{ value }})")?;
+        writeln!(out, "    }}")?;
+        return Ok(());
+    }
     writeln!(out, "            for (key, item) in object {{")?;
     writeln!(out, "                match key.as_str() {{")?;
-    writeln!(
-        out,
-        "                    \"id\" => {{ id = Some(path.with(\"id\", |path| {C}::expect_string(item, path))?); }}"
-    )?;
+    if has_id {
+        writeln!(
+            out,
+            "                    \"id\" => {{ id = Some(path.with(\"id\", |path| {C}::expect_string(item, path))?); }}"
+        )?;
+    }
     if has_extension {
         writeln!(out, "                    \"extension\" => {{")?;
         writeln!(
@@ -282,11 +315,15 @@ fn render_primitive_decode(
     writeln!(out, "                }}")?;
     writeln!(out, "            }}")?;
     writeln!(out, "        }}")?;
-    if has_extension {
-        writeln!(out, "        Ok(Self {{ id, extension, value }})")?;
-    } else {
-        writeln!(out, "        Ok(Self {{ id, value }})")?;
+    let mut init = Vec::new();
+    if has_id {
+        init.push("id");
     }
+    if has_extension {
+        init.push("extension");
+    }
+    init.push("value");
+    writeln!(out, "        Ok(Self {{ {} }})", init.join(", "))?;
     writeln!(out, "    }}")
 }
 

@@ -234,7 +234,11 @@ fn render_value_constructors(out: &mut String, ty: &TypeDef, fields: &[Field]) -
     };
     writeln!(out, "impl From<{scalar_type}> for {} {{", ty.name)?;
     writeln!(out, "    fn from(value: {scalar_type}) -> Self {{")?;
-    writeln!(out, "        Self {{ {stored}, ..Self::default() }}")?;
+    if fields.len() == 1 {
+        writeln!(out, "        Self {{ {stored} }}")?;
+    } else {
+        writeln!(out, "        Self {{ {stored}, ..Self::default() }}")?;
+    }
     out.push_str("    }\n}\n");
     if *scalar == Scalar::Str {
         writeln!(out, "impl From<&str> for {} {{", ty.name)?;
