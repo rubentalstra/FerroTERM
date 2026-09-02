@@ -32,7 +32,7 @@
 
 services:
   ferroterm:
-    image: ghcr.io/rubentalstra/ferroterm:${FERROTERM_VERSION:-0.0.2}
+    image: ghcr.io/rubentalstra/ferroterm:${FERROTERM_VERSION:-0.0.3}
     container_name: ferroterm
     restart: unless-stopped
     ports:

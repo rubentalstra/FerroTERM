@@ -13,23 +13,23 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-09-02
+
+The first release that serves: a built SNOMED CT edition answers `$lookup`,
+`$validate-code`, and `$subsumes` on FHIR R4B, from a binary or the container
+image, with a quickstart compose file and readable console logs.
+
 ### Added
 
-- A `compose.yaml` quickstart at the repository root, attached to every
-  release: it pulls the released image, mounts a built index read-only, binds
-  the loopback interface, and runs with every capability dropped and a
-  read-only root filesystem. `docker compose up` beside an index is the whole
-  install.
-
-- Console logs an operator can read: a startup banner naming the version and
-  the maintainer, one line per loaded
-  code system version (id, system, version, concepts, languages, path), one
-  line per request (method, route, status, latency, the system and code named),
-  and one line on stop. `FERROTERM_LOG_FORMAT` chooses `pretty` (colour on a
-  terminal) or `json` (one object per line); `auto`, the default, picks by
-  whether stdout is a terminal. `RUST_LOG` filters; the HTTP stack's crates
-  default to `warn`.
-
+- `ferroterm-build --rf2 <release> --out <dir>`: the offline build from a SNOMED
+  CT RF2 Snapshot to the served artifacts. One `redb` store per edition version
+  with the concepts, designations, language-reference-set acceptabilities, the
+  `parent`, `definitionStatus`, and `module` properties, and every concept-model
+  attribute keyed by its concept id; the is-a hierarchy and the designation
+  search index in its blob slots; and a `manifest.json` naming the edition and
+  version URIs, the release date, the languages, and the counts. Two builds of
+  the same release are byte-identical; the Netherlands edition builds in about
+  a minute.
 - The first served operations on FHIR R4B: `CodeSystem/$lookup`,
   `CodeSystem/$validate-code`, and `CodeSystem/$subsumes` under `/r4b`, by `GET`
   with query parameters or `POST` with a `Parameters` resource, at the type
@@ -38,24 +38,33 @@ fresh link reference.
   `CapabilityStatement` and `?mode=terminology` the `TerminologyCapabilities`
   describing the loaded editions. The server loads the artifact directories
   named by `FERROTERM_INDEX` at start and refuses a missing or damaged one.
-
-- `ferroterm-build --rf2 <release> --out <dir>`: the offline build from a SNOMED
-  CT RF2 Snapshot to the served artifacts. One `redb` store per edition version
-  with the concepts, designations, language-reference-set acceptabilities, and
-  the `parent`, `definitionStatus`, and `module` properties; the is-a hierarchy
-  and the designation search index in its blob slots; and a `manifest.json`
-  naming the edition and version URIs, the release date, and the counts. Two
-  builds of the same release are byte-identical.
+- The code system provider seam and the compose layer the operations run on,
+  with SNOMED CT as the first provider: identity by edition version URI,
+  display by language reference set, the SNOMED-on-FHIR properties, subsumption
+  from the closure, and text search from the index.
 - The container image `ghcr.io/rubentalstra/ferroterm` (`linux/amd64` and
-  `linux/arm64`; the static binary on distroless static, numeric non-root user,
-  listening on `0.0.0.0:8080`), built from the attested static binaries with
-  SLSA Build L3 provenance on the index and each platform manifest and an SPDX
-  SBOM per platform, all verifiable with `gh attestation verify oci://…`.
+  `linux/arm64`; the static binary on `distroless/static-debian13`, numeric
+  non-root user, listening on `0.0.0.0:8080`), built from the attested static
+  binaries with SLSA Build L3 provenance on the index and each platform manifest
+  and an SPDX SBOM per platform, all verifiable with
+  `gh attestation verify oci://…`.
+- A `compose.yaml` quickstart at the repository root, attached to every
+  release: it pulls the released image, mounts a built index read-only, binds
+  the loopback interface, and runs with every capability dropped and a
+  read-only root filesystem. `docker compose up` beside an index is the whole
+  install.
+- Console logs an operator can read: a startup banner naming the version and
+  the maintainer, one line per loaded code system version (id, system, version,
+  concepts, languages, path), one line per request (method, route, status,
+  latency, the system and code named), and one line on stop.
+  `FERROTERM_LOG_FORMAT` chooses `pretty` (colour on a terminal) or `json` (one
+  object per line); `auto`, the default, picks by whether stdout is a terminal.
+  `RUST_LOG` filters; the HTTP stack's crates default to `warn`.
+- The server stops cleanly on `SIGTERM` and `SIGINT`, finishing the requests in
+  flight.
 
 ### Changed
 
-- The container image is based on `gcr.io/distroless/static-debian13:nonroot`
-  (Debian 13), the same generation as the toolchain image.
 - Release binaries ship for Linux only (`x86_64` and `aarch64`, gnu and musl):
   the server runs in a container or on a Linux host. The macOS build is
   dropped from the release; a developer on a Mac builds from source.
@@ -121,6 +130,7 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.3
 [0.0.2]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.2
 [0.0.1]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.1
