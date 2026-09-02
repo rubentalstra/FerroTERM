@@ -7,7 +7,7 @@ sets FerroTERM beside Snowstorm, Ontoserver, and Hermes.
 > [!NOTE]
 > The numbers for the other servers come from their own documentation and
 > published work, cited in
-> [`docs/architecture.md`](https://github.com/rubentalstra/ferroterm/blob/main/docs/architecture.md).
+> [`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md).
 > FerroTERM's own figures are design targets, since the server is in design.
 
 ## The servers

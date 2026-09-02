@@ -79,6 +79,6 @@ Provenance can be verified with:
 
 ```
 gh attestation verify ferroterm-<tag>-<target>.tar.gz \
-  -R rubentalstra/ferroterm \
-  --signer-workflow rubentalstra/ferroterm/.github/workflows/release-build.yml
+  -R rubentalstra/FerroTERM \
+  --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
 ```

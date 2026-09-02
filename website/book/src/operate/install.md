@@ -35,7 +35,7 @@ through the settings described in [Configuration](configuration.md).
 ```console
 $ docker run --rm -p 8080:8080 \
     -v /path/to/ferroterm-index:/data/index:ro \
-    ghcr.io/rubentalstra/ferroterm:<tag> \
+    ghcr.io/rubentalstra/FerroTERM:<tag> \
     --index /data/index
 ```
 

@@ -26,7 +26,7 @@ pub struct Cli {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// The pipeline is not part of the tool yet.
-    #[error("the build pipeline is not implemented yet (tracked in rubentalstra/ferroterm#6)")]
+    #[error("the build pipeline is not implemented yet (tracked in rubentalstra/FerroTERM#6)")]
     PipelineMissing,
 }
 

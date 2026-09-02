@@ -17,7 +17,7 @@ product code, so this book describes intended behaviour, marked as planned where
 the server does not exist yet. Read a sentence in the future tense ("the server
 returns", "you run") as a design commitment, not a claim that you can run it
 today. The design authority, with citations, is
-[`docs/architecture.md`](https://github.com/rubentalstra/ferroterm/blob/main/docs/architecture.md)
+[`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md)
 in the repository.
 
 ## Who each part of this book is for

@@ -6,7 +6,7 @@ ordinary hardware. This page gives the design targets and where the memory goes.
 > [!NOTE]
 > These are design targets grounded in the reference servers and in roaring-bitmap
 > compression behaviour, not measurements of a shipped build. See
-> [`docs/architecture.md`](https://github.com/rubentalstra/ferroterm/blob/main/docs/architecture.md)
+> [`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md)
 > for the reasoning.
 
 <!-- toc -->

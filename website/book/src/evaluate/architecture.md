@@ -2,7 +2,7 @@
 
 This page is a short tour of the design. The full design authority, with
 citations to the terminology-server and graph-reachability literature, is
-[`docs/architecture.md`](https://github.com/rubentalstra/ferroterm/blob/main/docs/architecture.md)
+[`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md)
 in the repository.
 
 <!-- toc -->

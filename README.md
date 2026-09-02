@@ -1,8 +1,8 @@
 # FerroTERM
 
-[![CI](https://github.com/rubentalstra/ferroterm/actions/workflows/ci.yml/badge.svg)](https://github.com/rubentalstra/ferroterm/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/rubentalstra/ferroterm/actions/workflows/codeql.yml/badge.svg)](https://github.com/rubentalstra/ferroterm/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/rubentalstra/ferroterm/badge)](https://scorecard.dev/viewer/?uri=github.com/rubentalstra/ferroterm)
+[![CI](https://github.com/rubentalstra/FerroTERM/actions/workflows/ci.yml/badge.svg)](https://github.com/rubentalstra/FerroTERM/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/rubentalstra/FerroTERM/actions/workflows/codeql.yml/badge.svg)](https://github.com/rubentalstra/FerroTERM/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/rubentalstra/FerroTERM/badge)](https://scorecard.dev/viewer/?uri=github.com/rubentalstra/FerroTERM)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_ferroterm&metric=alert_status)](https://sonarcloud.io/summary/overall?id=rubentalstra_ferroterm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 

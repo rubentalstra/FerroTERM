@@ -8,10 +8,10 @@ building.
 
 ## Read these first
 
-- [`docs/architecture.md`](https://github.com/rubentalstra/ferroterm/blob/main/docs/architecture.md):
+- [`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md):
   the design authority, with citations to the terminology-server and
   graph-reachability literature.
-- [`CONTRIBUTING.md`](https://github.com/rubentalstra/ferroterm/blob/main/CONTRIBUTING.md):
+- [`CONTRIBUTING.md`](https://github.com/rubentalstra/FerroTERM/blob/main/CONTRIBUTING.md):
   the contribution rules, branches, commit signing, and pull-request checklist.
 
 ## The local gates

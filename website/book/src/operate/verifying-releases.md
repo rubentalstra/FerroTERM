@@ -8,7 +8,7 @@ release workflow and not tampered with.
 > The release pipeline is stood up and activates on the first tag. Until a
 > release exists, the recipe below is the interface you will use, not a check you
 > can run yet. The design and rationale are in
-> [`docs/ci-cd.md`](https://github.com/rubentalstra/ferroterm/blob/main/docs/ci-cd.md).
+> [`docs/ci-cd.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/ci-cd.md).
 
 <!-- toc -->
 
@@ -32,8 +32,8 @@ Use the GitHub CLI to verify an artifact against the workflow that is allowed to
 sign it. Replace `<tag>` and `<target>` with the release you downloaded:
 
 ```console
-$ gh attestation verify ferroterm-<tag>-<target>.tar.gz -R rubentalstra/ferroterm \
-    --signer-workflow rubentalstra/ferroterm/.github/workflows/release-build.yml
+$ gh attestation verify ferroterm-<tag>-<target>.tar.gz -R rubentalstra/FerroTERM \
+    --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
 ```
 
 The `--signer-workflow` flag is the point of the check. It requires that the

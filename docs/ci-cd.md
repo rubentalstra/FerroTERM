@@ -37,8 +37,8 @@ the build+attest into a normal job; that is only L2.
 Consumers verify provenance against the signer workflow:
 
 ```
-gh attestation verify ferroterm-<tag>-<target>.tar.gz -R rubentalstra/ferroterm \
-  --signer-workflow rubentalstra/ferroterm/.github/workflows/release-build.yml
+gh attestation verify ferroterm-<tag>-<target>.tar.gz -R rubentalstra/FerroTERM \
+  --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
 ```
 
 We claim L3 by GitHub's builder isolation; we do not (yet) claim reproducible or
