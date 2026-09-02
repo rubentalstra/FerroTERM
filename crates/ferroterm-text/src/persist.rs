@@ -11,7 +11,7 @@ use roaring::RoaringBitmap;
 
 use ferroterm_graph::ordinal::Ordinal;
 
-use crate::index::{BuildError, Entry, TextIndex};
+use crate::index::{BuildError, Entry, OwnedParts, TextIndex};
 
 const MAGIC: &[u8; 8] = b"FTTEXT\0\0";
 const VERSION: u32 = 1;
@@ -72,6 +72,14 @@ pub fn write_to(index: &TextIndex, out: &mut impl Write) -> Result<(), PersistEr
     write_keyed(out, parts.uses)?;
     write_keyed(out, parts.refsets)?;
     write_bitmap(out, parts.active)?;
+    write_u32(
+        out,
+        u32::try_from(parts.lengths.len()).map_err(|_| io::Error::other("too many lengths"))?,
+    )?;
+    for (length, bitmap) in parts.lengths {
+        out.write_all(&length.to_le_bytes())?;
+        write_bitmap(out, bitmap)?;
+    }
     Ok(())
 }
 
@@ -117,9 +125,23 @@ pub fn read_from(input: &mut impl Read) -> Result<TextIndex, PersistError> {
     let uses = read_keyed(input)?;
     let refsets = read_keyed(input)?;
     let active = read_bitmap(input)?;
-    Ok(TextIndex::from_parts(
-        dictionary, postings, entries, languages, uses, refsets, active,
-    )?)
+    let length_count = read_u32(input)?;
+    let mut lengths = BTreeMap::new();
+    for _ in 0..length_count {
+        let mut length = [0_u8; 2];
+        input.read_exact(&mut length)?;
+        lengths.insert(u16::from_le_bytes(length), read_bitmap(input)?);
+    }
+    Ok(TextIndex::from_parts(OwnedParts {
+        dictionary,
+        postings,
+        entries,
+        languages,
+        uses,
+        refsets,
+        active,
+        lengths,
+    })?)
 }
 
 fn write_u32(out: &mut impl Write, value: u32) -> io::Result<()> {

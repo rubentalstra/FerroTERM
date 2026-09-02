@@ -60,6 +60,7 @@ pub struct IndexBuilder {
     uses: BTreeMap<u32, RoaringBitmap>,
     refsets: BTreeMap<u32, RoaringBitmap>,
     active: RoaringBitmap,
+    lengths: BTreeMap<u16, RoaringBitmap>,
 }
 
 impl IndexBuilder {
@@ -76,11 +77,13 @@ impl IndexBuilder {
     /// Returns [`BuildError::TooMany`] past `u32::MAX` designations.
     pub fn add(&mut self, input: &Input<'_>) -> Result<u32, BuildError> {
         let ordinal = u32::try_from(self.entries.len()).map_err(|_| BuildError::TooMany)?;
+        let term_length = u16::try_from(input.term.chars().count()).unwrap_or(u16::MAX);
         self.entries.push(Entry {
             concept: input.concept,
             index: input.index,
-            term_length: u16::try_from(input.term.chars().count()).unwrap_or(u16::MAX),
+            term_length,
         });
+        self.lengths.entry(term_length).or_default().insert(ordinal);
         for word in tokens(input.term) {
             self.words.entry(word).or_default().insert(ordinal);
         }
@@ -122,6 +125,7 @@ impl IndexBuilder {
             uses: self.uses,
             refsets: self.refsets,
             active: self.active,
+            lengths: self.lengths,
         })
     }
 }
@@ -160,6 +164,7 @@ pub struct TextIndex {
     uses: BTreeMap<u32, RoaringBitmap>,
     refsets: BTreeMap<u32, RoaringBitmap>,
     active: RoaringBitmap,
+    lengths: BTreeMap<u16, RoaringBitmap>,
 }
 
 impl TextIndex {
@@ -168,23 +173,16 @@ impl TextIndex {
     /// # Errors
     ///
     /// Returns [`BuildError::Fst`] when the dictionary bytes are not an fst map.
-    pub fn from_parts(
-        dictionary: Vec<u8>,
-        postings: Vec<RoaringBitmap>,
-        entries: Vec<Entry>,
-        languages: BTreeMap<String, RoaringBitmap>,
-        uses: BTreeMap<u32, RoaringBitmap>,
-        refsets: BTreeMap<u32, RoaringBitmap>,
-        active: RoaringBitmap,
-    ) -> Result<Self, BuildError> {
+    pub fn from_parts(parts: OwnedParts) -> Result<Self, BuildError> {
         Ok(Self {
-            dictionary: Map::new(dictionary)?,
-            postings,
-            entries,
-            languages,
-            uses,
-            refsets,
-            active,
+            dictionary: Map::new(parts.dictionary)?,
+            postings: parts.postings,
+            entries: parts.entries,
+            languages: parts.languages,
+            uses: parts.uses,
+            refsets: parts.refsets,
+            active: parts.active,
+            lengths: parts.lengths,
         })
     }
 
@@ -305,6 +303,7 @@ impl TextIndex {
             uses: &self.uses,
             refsets: &self.refsets,
             active: &self.active,
+            lengths: &self.lengths,
         }
     }
 }
@@ -328,6 +327,29 @@ pub struct Parts<'a> {
     pub refsets: &'a BTreeMap<u32, RoaringBitmap>,
     /// The active designations.
     pub active: &'a RoaringBitmap,
+    /// The designations per term length, the ranking order.
+    pub lengths: &'a BTreeMap<u16, RoaringBitmap>,
+}
+
+/// Owned parts of an index, for [`TextIndex::from_parts`].
+#[derive(Debug, Default)]
+pub struct OwnedParts {
+    /// The fst map bytes.
+    pub dictionary: Vec<u8>,
+    /// The posting bitmap per word position.
+    pub postings: Vec<RoaringBitmap>,
+    /// The entries by designation ordinal.
+    pub entries: Vec<Entry>,
+    /// The designations per language.
+    pub languages: BTreeMap<String, RoaringBitmap>,
+    /// The designations per use.
+    pub uses: BTreeMap<u32, RoaringBitmap>,
+    /// The designations per language reference set.
+    pub refsets: BTreeMap<u32, RoaringBitmap>,
+    /// The active designations.
+    pub active: RoaringBitmap,
+    /// The designations per term length.
+    pub lengths: BTreeMap<u16, RoaringBitmap>,
 }
 
 #[cfg(test)]
