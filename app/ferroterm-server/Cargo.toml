@@ -15,7 +15,7 @@ publish.workspace = true
 path = "src/lib.rs"
 
 [[bin]]
-name = "ferroterm-server"
+name = "ferroterm"
 path = "src/main.rs"
 
 [dependencies]

@@ -23,7 +23,7 @@ Download the binary for your platform and its attestation, verify the
 attestation (see [Verifying releases](verifying-releases.md)), then run it:
 
 ```console
-$ ferroterm-server --index /path/to/ferroterm-index
+$ ferroterm --index /path/to/ferroterm-index
 ```
 
 The server starts, opens the index read-only, and listens for FHIR requests. You

@@ -13,6 +13,13 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Fixed
+
+- The release build packages the server binary again: the binary is named
+  `ferroterm`, as the release workflow, the install guide, and the container
+  image expect. The 0.0.1 tag never published because the crate produced
+  `ferroterm-server` and the packaging step found no file to strip.
+
 ## [0.0.1] - 2026-09-02
 
 The first cut: the project foundation, the generated FHIR layer for R4B and
