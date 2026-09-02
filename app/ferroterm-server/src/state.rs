@@ -8,10 +8,13 @@ use std::sync::Arc;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
 use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
 use ferroterm_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
+use ferroterm_terminology::operations::Sources;
 use ferroterm_terminology::provider::{CodeSystemProvider, ContentMode, ProviderError};
 use ferroterm_terminology::registry::{RegisterError, Registry, Resolved};
 use ferroterm_terminology::snomed::{OpenError, SnomedProvider};
 use ferroterm_terminology::supplement::{Additions, Supplement, Supplemented};
+use ferroterm_terminology::valueset;
+use ferroterm_terminology::valueset::store::{DuplicateValueSet, ValueSetStore};
 
 use crate::config::Config;
 
@@ -64,6 +67,9 @@ pub enum LoadError {
     /// Two sources serve the same system version.
     #[error(transparent)]
     Register(#[from] RegisterError),
+    /// Two sources carry the same value set version.
+    #[error(transparent)]
+    ValueSet(#[from] DuplicateValueSet),
 }
 
 /// One loaded code system version, for the startup summary.
@@ -87,6 +93,7 @@ pub struct InstanceSummary {
 #[derive(Debug)]
 pub struct AppState {
     registry: Registry,
+    value_sets: ValueSetStore,
     /// `CodeSystem` instance id to (system, version).
     instances: BTreeMap<String, (String, String)>,
     /// The directory each version was loaded from.
@@ -126,8 +133,9 @@ impl AppState {
             });
         }
         let mut supplements = Vec::new();
+        let mut value_sets = ValueSetStore::new();
         for path in &config.code_systems {
-            load_code_systems(path, &mut loaded, &mut supplements)?;
+            load_code_systems(path, &mut loaded, &mut supplements, &mut value_sets)?;
         }
         let loaded = apply_supplements(loaded, &supplements)?;
         let mut registry = Registry::new();
@@ -139,6 +147,7 @@ impl AppState {
         }
         let mut state = Self::from_registry(registry);
         state.paths = paths;
+        state.value_sets = value_sets;
         Ok(state)
     }
 
@@ -155,6 +164,7 @@ impl AppState {
         }
         Self {
             registry,
+            value_sets: ValueSetStore::new(),
             instances,
             paths: BTreeMap::new(),
             software_version: env!("CARGO_PKG_VERSION"),
@@ -195,6 +205,21 @@ impl AppState {
         &self.registry
     }
 
+    /// The loaded value sets.
+    #[must_use]
+    pub fn value_sets(&self) -> &ValueSetStore {
+        &self.value_sets
+    }
+
+    /// The code systems and value sets an operation works over.
+    #[must_use]
+    pub fn sources(&self) -> Sources<'_> {
+        Sources {
+            registry: &self.registry,
+            value_sets: &self.value_sets,
+        }
+    }
+
     /// The `CodeSystem` instance ids and what they serve, sorted by id.
     pub fn instances(&self) -> impl Iterator<Item = (&str, &str, &str)> {
         self.instances
@@ -222,8 +247,9 @@ impl AppState {
     }
 }
 
-/// Loads the `CodeSystem` resources in `path`: complete systems become
-/// providers, supplements are collected for [`apply_supplements`].
+/// Loads the `CodeSystem` and `ValueSet` resources in `path`: complete
+/// systems become providers, supplements are collected for
+/// [`apply_supplements`], value sets go to the store.
 ///
 /// The FHIR version is the one the directory's `package.json` declares;
 /// a plain directory of resources is read as R4B, the version the server
@@ -232,6 +258,7 @@ fn load_code_systems(
     path: &Path,
     loaded: &mut Vec<Loaded>,
     supplements: &mut Vec<(String, Supplement)>,
+    value_sets: &mut ValueSetStore,
 ) -> Result<(), LoadError> {
     let failed = |source| LoadError::CodeSystems {
         path: path.to_path_buf(),
@@ -262,6 +289,9 @@ fn load_code_systems(
             path: path.to_path_buf(),
             provider: Arc::new(provider),
         });
+    }
+    for model in valueset::load::load_dir(path, version).map_err(failed)? {
+        value_sets.insert(model)?;
     }
     Ok(())
 }

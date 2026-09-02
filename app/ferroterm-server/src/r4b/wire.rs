@@ -146,7 +146,19 @@ pub fn parameters_failure(error: &ParametersError) -> Failure {
 ///
 /// Returns a `500` failure when the resource cannot be encoded.
 pub fn respond(parameters: &Parameters) -> Result<Response, Failure> {
-    let object = parameters.to_json().map_err(|e| {
+    respond_resource(parameters)
+}
+
+/// A `200` response carrying any FHIR resource as JSON.
+///
+/// An operation whose only output is a resource named `return` answers with
+/// that resource itself (<https://hl7.org/fhir/R4B/operations.html#response>).
+///
+/// # Errors
+///
+/// Returns a `500` failure when the resource cannot be encoded.
+pub fn respond_resource<R: Json>(resource: &R) -> Result<Response, Failure> {
+    let object = resource.to_json().map_err(|e| {
         Failure::new(
             StatusCode::INTERNAL_SERVER_ERROR,
             "exception",

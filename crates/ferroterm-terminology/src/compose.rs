@@ -157,6 +157,12 @@ pub enum ComposeError {
     /// An include references a value set and no resolver is configured.
     #[error("value set `{0}` cannot be resolved: no resolver")]
     NoResolver(String),
+    /// A referenced value set is not known.
+    #[error("value set `{0}` is not known")]
+    UnknownValueSet(String),
+    /// A value set references itself through `include.valueSet`.
+    #[error("value set `{0}` references itself")]
+    Cycle(String),
 }
 
 type Key = (String, String, String);

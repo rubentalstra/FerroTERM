@@ -11,8 +11,9 @@ use axum::routing::get;
 
 use crate::state::AppState;
 
-/// The R4B routes: the capability statements and the `CodeSystem` operations
-/// at the levels the R4B `OperationDefinition`s declare.
+/// The R4B routes: the capability statements, the `CodeSystem` operations at
+/// the levels the R4B `OperationDefinition`s declare, and the type-level
+/// `ValueSet` operations.
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/metadata", get(metadata::metadata))
@@ -28,6 +29,15 @@ pub fn router() -> Router<Arc<AppState>> {
             "/CodeSystem/{id}/$validate-code",
             get(operations::validate_code_instance_get)
                 .post(operations::validate_code_instance_post),
+        )
+        .route(
+            "/ValueSet/$expand",
+            get(operations::expand_get).post(operations::expand_post),
+        )
+        .route(
+            "/ValueSet/$validate-code",
+            get(operations::value_set_validate_code_get)
+                .post(operations::value_set_validate_code_post),
         )
         .route(
             "/CodeSystem/$subsumes",

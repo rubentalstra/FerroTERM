@@ -18,10 +18,23 @@ pub(crate) struct Server {
 
 impl Server {
     pub(crate) fn start() -> Self {
+        Self::start_with(false)
+    }
+
+    /// The edition plus the testkit's `CodeSystem` and `ValueSet` resources.
+    pub(crate) fn start_with_resources() -> Self {
+        Self::start_with(true)
+    }
+
+    fn start_with(resources: bool) -> Self {
         let dir = tempfile::tempdir().expect("tempdir");
         ferroterm_testkit::snomed::write(dir.path()).expect("writes the edition");
+        let fhir = dir.path().join("fhir");
+        std::fs::create_dir_all(&fhir).expect("creates");
+        ferroterm_testkit::fhir::write_code_systems(&fhir).expect("writes the resources");
         let config = Config {
             index: vec![dir.path().to_path_buf()],
+            code_systems: if resources { vec![fhir] } else { Vec::new() },
             ..Config::default()
         };
         let state = Arc::new(AppState::load(&config).expect("loads"));

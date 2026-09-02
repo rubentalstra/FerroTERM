@@ -18,6 +18,8 @@ use ferroterm_fhir::r4b::capability_statement::{
 use ferroterm_fhir::r4b::operations::code_system_lookup::CODE_SYSTEM_LOOKUP;
 use ferroterm_fhir::r4b::operations::code_system_subsumes::CODE_SYSTEM_SUBSUMES;
 use ferroterm_fhir::r4b::operations::code_system_validate_code::CODE_SYSTEM_VALIDATE_CODE;
+use ferroterm_fhir::r4b::operations::value_set_expand::VALUE_SET_EXPAND;
+use ferroterm_fhir::r4b::operations::value_set_validate_code::VALUE_SET_VALIDATE_CODE;
 use ferroterm_fhir::r4b::terminology_capabilities::{
     TerminologyCapabilities, TerminologyCapabilitiesImplementation, TerminologyCapabilitiesSoftware,
 };
@@ -96,18 +98,28 @@ pub fn capability_statement(state: &AppState) -> CapabilityStatement {
         }),
         rest: vec![CapabilityStatementRest {
             mode: "server".into(),
-            resource: vec![CapabilityStatementRestResource {
-                r#type: "CodeSystem".into(),
-                operation: vec![
-                    operation(CODE_SYSTEM_LOOKUP.code, CODE_SYSTEM_LOOKUP.url),
-                    operation(
-                        CODE_SYSTEM_VALIDATE_CODE.code,
-                        CODE_SYSTEM_VALIDATE_CODE.url,
-                    ),
-                    operation(CODE_SYSTEM_SUBSUMES.code, CODE_SYSTEM_SUBSUMES.url),
-                ],
-                ..Default::default()
-            }],
+            resource: vec![
+                CapabilityStatementRestResource {
+                    r#type: "CodeSystem".into(),
+                    operation: vec![
+                        operation(CODE_SYSTEM_LOOKUP.code, CODE_SYSTEM_LOOKUP.url),
+                        operation(
+                            CODE_SYSTEM_VALIDATE_CODE.code,
+                            CODE_SYSTEM_VALIDATE_CODE.url,
+                        ),
+                        operation(CODE_SYSTEM_SUBSUMES.code, CODE_SYSTEM_SUBSUMES.url),
+                    ],
+                    ..Default::default()
+                },
+                CapabilityStatementRestResource {
+                    r#type: "ValueSet".into(),
+                    operation: vec![
+                        operation(VALUE_SET_EXPAND.code, VALUE_SET_EXPAND.url),
+                        operation(VALUE_SET_VALIDATE_CODE.code, VALUE_SET_VALIDATE_CODE.url),
+                    ],
+                    ..Default::default()
+                },
+            ],
             ..Default::default()
         }],
         ..Default::default()

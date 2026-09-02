@@ -44,14 +44,14 @@ pub struct Resolved {
     pub defaulted: bool,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct System {
     versions: BTreeMap<String, Arc<dyn CodeSystemProvider>>,
     default: Option<String>,
 }
 
 /// The providers a server has loaded.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Registry {
     systems: BTreeMap<String, System>,
 }

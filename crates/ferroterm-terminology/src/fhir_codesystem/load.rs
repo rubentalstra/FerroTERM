@@ -58,13 +58,15 @@ pub enum LoadError {
         #[source]
         source: serde_json::Error,
     },
-    /// A `CodeSystem` file does not fit the version's definition.
-    #[error("{path} is not a {version:?} CodeSystem")]
+    /// A resource file does not fit the version's definition.
+    #[error("{path} is not a {version:?} {resource_type}")]
     Decode {
         /// The path.
         path: PathBuf,
         /// The version tried.
         version: FhirVersion,
+        /// The resource type expected.
+        resource_type: &'static str,
         /// The cause.
         #[source]
         source: DecodeError,
@@ -77,6 +79,15 @@ pub enum LoadError {
         /// The cause.
         #[source]
         source: ModelError,
+    },
+    /// A `ValueSet` cannot be modelled.
+    #[error("{path}: cannot model the ValueSet")]
+    ValueSet {
+        /// The path.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: crate::valueset::model::ModelError,
     },
 }
 
@@ -95,22 +106,30 @@ pub fn load_file(path: &Path, version: FhirVersion) -> Result<CodeSystemModel, L
             path: path.to_path_buf(),
             source,
         })?;
-    model_from_value(&value, version).map_err(|source| match source {
-        Decoded::Decode(source) => LoadError::Decode {
-            path: path.to_path_buf(),
-            version,
-            source,
-        },
-        Decoded::Model(source) => LoadError::Model {
-            path: path.to_path_buf(),
-            source,
-        },
-    })
+    model_from_value(&value, version).map_err(|source| source.at(path, version))
 }
 
-enum Decoded {
+/// A decode or model failure before its path is known.
+pub(crate) enum Decoded {
     Decode(DecodeError),
     Model(ModelError),
+}
+
+impl Decoded {
+    fn at(self, path: &Path, version: FhirVersion) -> LoadError {
+        match self {
+            Self::Decode(source) => LoadError::Decode {
+                path: path.to_path_buf(),
+                version,
+                resource_type: "CodeSystem",
+                source,
+            },
+            Self::Model(source) => LoadError::Model {
+                path: path.to_path_buf(),
+                source,
+            },
+        }
+    }
 }
 
 fn model_from_value(
@@ -140,14 +159,32 @@ fn model_from_value(
     model.map_err(Decoded::Model)
 }
 
-/// Loads every `CodeSystem` resource in a directory (files whose
-/// `resourceType` is `CodeSystem`; other resources are skipped), sorted by
-/// file name so the result is deterministic.
+/// Loads every `CodeSystem` resource in a directory.
+///
+/// Files whose `resourceType` is not `CodeSystem` are skipped; the result is
+/// sorted by file name so it is deterministic.
 ///
 /// # Errors
 ///
 /// Returns [`LoadError`] when the directory or a `CodeSystem` file fails.
 pub fn load_dir(dir: &Path, version: FhirVersion) -> Result<Vec<CodeSystemModel>, LoadError> {
+    let mut models = Vec::new();
+    for (path, value) in scan_json(dir, "CodeSystem")? {
+        models.push(model_from_value(&value, version).map_err(|source| source.at(&path, version))?);
+    }
+    Ok(models)
+}
+
+/// The JSON files in `dir` whose `resourceType` is `resource_type`, sorted by
+/// file name so the result is deterministic.
+///
+/// # Errors
+///
+/// Returns [`LoadError::Io`] when the directory or a file does not read.
+pub(crate) fn scan_json(
+    dir: &Path,
+    resource_type: &str,
+) -> Result<Vec<(PathBuf, serde_json::Value)>, LoadError> {
     let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
         .map_err(|source| LoadError::Io {
             path: dir.to_path_buf(),
@@ -161,7 +198,7 @@ pub fn load_dir(dir: &Path, version: FhirVersion) -> Result<Vec<CodeSystemModel>
         })
         .collect();
     paths.sort();
-    let mut models = Vec::new();
+    let mut found = Vec::new();
     for path in paths {
         let text = std::fs::read_to_string(&path).map_err(|source| LoadError::Io {
             path: path.clone(),
@@ -173,24 +210,11 @@ pub fn load_dir(dir: &Path, version: FhirVersion) -> Result<Vec<CodeSystemModel>
             // .index.json); a file that is not a resource is not a CodeSystem.
             Err(_) => continue,
         };
-        if value.get("resourceType").and_then(|t| t.as_str()) != Some("CodeSystem") {
-            continue;
+        if value.get("resourceType").and_then(|t| t.as_str()) == Some(resource_type) {
+            found.push((path, value));
         }
-        models.push(
-            model_from_value(&value, version).map_err(|source| match source {
-                Decoded::Decode(source) => LoadError::Decode {
-                    path: path.clone(),
-                    version,
-                    source,
-                },
-                Decoded::Model(source) => LoadError::Model {
-                    path: path.clone(),
-                    source,
-                },
-            })?,
-        );
     }
-    Ok(models)
+    Ok(found)
 }
 
 /// The FHIR version a package declares in its `package.json`

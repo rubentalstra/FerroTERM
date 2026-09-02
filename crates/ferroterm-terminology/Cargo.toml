@@ -17,11 +17,13 @@ ferroterm-rf2.workspace = true
 ferroterm-store.workspace = true
 ferroterm-text.workspace = true
 http.workspace = true
+jiff.workspace = true
 regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 roaring.workspace = true
 thiserror.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true

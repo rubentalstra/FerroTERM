@@ -18,3 +18,4 @@ mod metadata;
 mod operations;
 mod shutdown;
 mod telemetry;
+mod value_set;
