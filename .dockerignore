@@ -1,0 +1,5 @@
+# The build context for docker/Dockerfile is the repository root, so this file
+# guards it: nothing enters the context but the staged binaries. A checkout
+# with a target/ directory would otherwise send gigabytes to the builder.
+*
+!dist/

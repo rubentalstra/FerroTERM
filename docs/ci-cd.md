@@ -20,7 +20,9 @@ exist.
 | `codeql.yml` | CodeQL: `actions` now, `rust` self-activates when the workspace lands | actions now |
 | `sonar.yml` | SonarQube Cloud (advisory; `.claude/rules/ai-code-review.md`) | now (sweep); coverage on workspace |
 | `release-build.yml` | reusable SLSA Build L3 lane: build + SBOM + keyless attest | on tag |
-| `release.yml` | `v*` orchestrator: draft → per-arch build → verify assets → publish last | on tag |
+| `release.yml` | `v*` orchestrator: draft → per-arch build → image → verify assets → publish last | on tag |
+| `release-image.yml` | reusable SLSA Build L3 lane: the distroless static image from the attested musl binaries, pushed to GHCR with provenance and SBOM attestations on the index and on each platform manifest | on tag |
+| `ci.yml` (`hadolint` job) | `hadolint` over `docker/Dockerfile` | now |
 
 Dependabot (`github-actions` + `cargo`) keeps `uses:` SHAs and crate pins current.
 
@@ -53,9 +55,45 @@ writes it into the binary's `.dep-v0` section), a CycloneDX SBOM
 `actions/attest-sbom`, `id-token: write`), so there is no long-lived key. A
 "signed SBOM" here is the SBOM wrapped in a Sigstore DSSE bundle bound to the
 artifact digest and signed by the pinnable workflow identity, verifiable with
-`gh attestation verify`. OCI images (later) get BuildKit `provenance: mode=max` +
-`sbom: true`, a registry-pushed attestation, and a keyless `cosign sign` by
-digest.
+`gh attestation verify`.
+
+## The container image
+
+`ghcr.io/rubentalstra/ferroterm` (`linux/amd64` and `linux/arm64`) is
+`docker/Dockerfile`: the static musl binary copied root-owned onto
+`gcr.io/distroless/static-debian12:nonroot`, pinned by index digest and bumped
+by Dependabot. Distroless static brings `/etc/passwd`, `/tmp`, tzdata, and
+ca-certificates for about 2 MiB and is itself keyless-signed; there is no shell
+and no package manager. The user is the numeric `65532:65532` (the kubelet
+refuses `runAsNonRoot` on a named user), the entrypoint is exec-form so the
+binary is PID 1 and receives `SIGTERM` itself, and there is no `HEALTHCHECK`
+(Kubernetes ignores it; probes belong in the manifest). The root `.dockerignore`
+denies everything but the staged `dist/` tree, so no source, vendored package,
+or build output enters the context.
+
+The image is built in its own reusable lane (`release-image.yml`) for the same
+L3 reason as the binaries: the signing identity names that workflow and no
+caller step can reach it. The lane downloads the two musl tarballs the binary
+lane built in the same run, verifies each against `release-build.yml`'s identity
+before extracting the binary, builds both platforms with no cache and BuildKit
+`provenance: mode=max`, then attests with `actions/attest` and
+`push-to-registry`: SLSA provenance for the index and for each platform manifest,
+and one syft SPDX SBOM per platform manifest (syft reads the `cargo auditable`
+dependency list inside the binary, so the SBOM names the crates). BuildKit's own
+SBOM scanner is off; it would see a two-file filesystem. The lane finishes by
+verifying its own output as a consumer would, and the release does not publish
+without it.
+
+Tags are `<version>`, `<major.minor>`, and `latest` (skipped for a
+pre-release); GHCR tags are mutable, so deploy by digest. Verify:
+
+```
+gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:<version> \
+  -R rubentalstra/FerroTERM \
+  --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-image.yml
+gh attestation verify oci://ghcr.io/rubentalstra/ferroterm@<platform digest> \
+  -R rubentalstra/FerroTERM --predicate-type https://spdx.dev/Document/v2.3
+```
 
 ## OpenSSF
 

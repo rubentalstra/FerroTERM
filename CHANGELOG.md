@@ -15,6 +15,8 @@ fresh link reference.
 
 ### Added
 
+### Added
+
 - `ferroterm-build --rf2 <release> --out <dir>`: the offline build from a SNOMED
   CT RF2 Snapshot to the served artifacts. One `redb` store per edition version
   with the concepts, designations, language-reference-set acceptabilities, and
@@ -22,10 +24,21 @@ fresh link reference.
   and the designation search index in its blob slots; and a `manifest.json`
   naming the edition and version URIs, the release date, and the counts. Two
   builds of the same release are byte-identical.
+- The container image `ghcr.io/rubentalstra/ferroterm` (`linux/amd64` and
+  `linux/arm64`; the static binary on distroless static, numeric non-root user,
+  listening on `0.0.0.0:8080`), built from the attested static binaries with
+  SLSA Build L3 provenance on the index and each platform manifest and an SPDX
+  SBOM per platform, all verifiable with `gh attestation verify oci://…`.
 
 ### Changed
 
-- Release binaries ship for Linux only (`x86_64` gnu and musl, `aarch64` gnu):
+- Release binaries ship for Linux only (`x86_64` and `aarch64`, gnu and musl):
+  the server runs in a container or on a Linux host. The macOS build is
+  dropped from the release; a developer on a Mac builds from source.
+
+### Changed
+
+- Release binaries ship for Linux only (`x86_64` and `aarch64`, gnu and musl):
   the server runs in a container or on a Linux host. The macOS build is
   dropped from the release; a developer on a Mac builds from source.
 
