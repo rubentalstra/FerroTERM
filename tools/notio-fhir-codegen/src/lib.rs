@@ -4,7 +4,16 @@
 //! per-version Rust modules of `crates/notio-fhir`: the terminology root-set
 //! types and the terminology operation contracts. The output is
 //! byte-deterministic so the CI drift check can regenerate and compare.
+//!
+//! The pipeline is [`package::Package`] (read a package), then
+//! [`snapshot::ResolvedStructure`] (resolve each structure's snapshot) and
+//! [`roots::RootSet`] (select what to emit).
 #![doc(test(attr(deny(warnings))))]
+
+pub mod model;
+pub mod package;
+pub mod roots;
+pub mod snapshot;
 
 use clap::{Parser, Subcommand};
 
