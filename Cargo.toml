@@ -1,0 +1,138 @@
+# SPDX-License-Identifier: MIT
+
+[workspace]
+resolver = "3"
+members = ["crates/*", "app/*", "tools/*"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT"
+repository = "https://github.com/rubentalstra/notio"
+authors = ["Ruben Talstra"]
+publish = false
+
+# The authoritative third-party set. A crate takes a dependency with
+# `dep.workspace = true`; every version below was checked against crates.io on
+# 2026-09-02 and Cargo.lock pins the exact resolution.
+[workspace.dependencies]
+# Ontology store and indexes.
+redb = "4.2.0"
+roaring = "0.11.5"
+fst = "0.4.7"
+petgraph = "0.8.3"
+# HTTP and async.
+axum = "0.8.9"
+tower = "0.5.3"
+tower-http = "0.7.1"
+hyper = "1.11.1"
+http = "1.5.0"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+# ECL parsing and diagnostics.
+logos = "0.16.1"
+winnow = "1.0.4"
+miette = "7.6.0"
+ariadne = "0.6.0"
+# RF2 (tab-delimited, streamed).
+csv = "1.4.0"
+# Serde and formats.
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+# Errors.
+thiserror = "2.0.20"
+anyhow = "1.0.104"
+# Dates and times.
+jiff = "0.2.35"
+# Observability.
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+# Command-line parsing for the tools and the server binary.
+clap = { version = "4.6.6", features = ["derive"] }
+# Testing.
+insta = { version = "1.48.0", features = ["json"] }
+proptest = "1.11.0"
+reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls"] }
+wiremock = "0.6.5"
+criterion = "0.8.2"
+divan = "0.1.21"
+tempfile = "3.27.0"
+# Workspace-internal crates (path dependencies, versioned with the workspace).
+notio-fhir = { path = "crates/notio-fhir", version = "0.0.0" }
+notio-rf2 = { path = "crates/notio-rf2", version = "0.0.0" }
+notio-graph = { path = "crates/notio-graph", version = "0.0.0" }
+notio-store = { path = "crates/notio-store", version = "0.0.0" }
+notio-text = { path = "crates/notio-text", version = "0.0.0" }
+notio-ecl = { path = "crates/notio-ecl", version = "0.0.0" }
+notio-terminology = { path = "crates/notio-terminology", version = "0.0.0" }
+
+# The reliability bar (.claude/rules/reliability.md). Groups sit at priority -1
+# so every named lint below overrides its group.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+let_underscore_drop = "deny"
+ambiguous_negative_literals = "deny"
+unused_must_use = "deny"
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
+private_intra_doc_links = "deny"
+missing_crate_level_docs = "warn"
+invalid_codeblock_attributes = "deny"
+invalid_html_tags = "deny"
+bare_urls = "deny"
+unescaped_backticks = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Panics are for states that cannot happen; everything else is a Result.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+unreachable = "deny"
+unimplemented = "deny"
+todo = "deny"
+panic_in_result_fn = "deny"
+indexing_slicing = "deny"
+string_slice = "deny"
+# Numeric honesty: no silent narrowing, wrapping, or lossy literals.
+float_cmp_const = "deny"
+lossy_float_literal = "deny"
+as_underscore = "deny"
+fn_to_numeric_cast_any = "deny"
+integer_division = "warn"
+# Guards and results are never dropped on the floor.
+let_underscore_must_use = "deny"
+let_underscore_untyped = "deny"
+unused_result_ok = "deny"
+# Determinism: hash iteration order feeds nothing that must be stable.
+iter_over_hash_type = "deny"
+# Libraries speak tracing; only binaries write to stdio.
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+# Suppressions are scoped and justified.
+allow_attributes_without_reason = "deny"
+# Documentation and comment shape (RFC 505 / RFC 1574).
+too_long_first_doc_paragraph = "warn"
+unnecessary_safety_comment = "deny"
+unnecessary_safety_doc = "deny"
+# The RFC 3107 shape: derive Default when the default is a variant.
+derivable_impls = "deny"
+# Explicitly named (default-on) lints that carry rules from the reliability bar.
+disallowed_methods = "deny"
+disallowed_types = "deny"
+await_holding_lock = "deny"
+let_underscore_lock = "deny"
+
+# Fail loud: overflow panics rather than wrapping, the panic unwinds so the
+# HTTP layer can turn it into a clean 500, and a production panic names its
+# file and line.
+[profile.release]
+panic = "unwind"
+overflow-checks = true
+debug = "line-tables-only"

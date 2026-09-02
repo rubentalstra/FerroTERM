@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MIT
+[package]
+name = "notio-build"
+description = "Builds the served SNOMED CT artifacts from an RF2 release, offline"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "notio-build"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

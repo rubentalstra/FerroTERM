@@ -42,7 +42,7 @@ fi
 # --- rust-toolchain.toml present (sanity; channel recorded in VERSIONS.md) -----
 echo "== rust toolchain"
 if [ -f rust-toolchain.toml ]; then
-  chan="$(grep -m1 'channel' rust-toolchain.toml | sed -E 's/.*=[[:space:]]*//; s/["'\'']//g' | tr -d '[:space:]' || true)"
+  chan="$(grep -m1 -E '^channel[[:space:]]*=' rust-toolchain.toml | sed -E 's/.*=[[:space:]]*//; s/["'\'']//g' | tr -d '[:space:]' || true)"
   note "rust-toolchain.toml channel: ${chan:-unset}"
 else
   note "no rust-toolchain.toml yet — skipped (lands with the workspace)"

@@ -1,0 +1,14 @@
+# notio-ecl
+
+The ECL lexer, parser, and evaluator. Hand-written; the ECL specification and
+its ANTLR grammar are the authority
+(<https://github.com/IHTSDO/snomed-expression-constraint-language>), version
+pinned in `docs/VERSIONS.md`.
+
+- The grammar in the parser mirrors the `.g4` rule for rule; a rule name in a
+  comment cites the grammar section.
+- A parse failure is the answer for a grammar probe and is the one sanctioned
+  `Result` to `Option` conversion; a failure anywhere else is a typed error
+  (`.claude/rules/reliability.md`).
+- Every ECL operator gets its own spec-cited test case over a synthetic
+  hierarchy; coverage only ratchets up (`.claude/rules/testing.md`).

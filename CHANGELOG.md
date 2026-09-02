@@ -15,6 +15,9 @@ fresh link reference.
 
 ### Added
 
+- The Cargo workspace: the seven engine crates, the `notio-server` binary
+  (with a `GET /health` route), and the two tools, with the pinned dependency
+  set, the workspace lint table, and the Rust CI lanes active.
 - Project foundation: architecture, `.claude/` project configuration (rules,
   agents, hooks, skills, memory), CI/CD + supply-chain scaffolding, the tracker
-  work-style, and citation/funding metadata. No product code yet (discovery).
+  work-style, and citation/funding metadata.

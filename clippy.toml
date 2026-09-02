@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT
+# Clippy configuration (.claude/rules/reliability.md). The panicking and
+# stdio lints stay hard in application code and relax inside tests only.
+
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-dbg-in-tests = true
+allow-print-in-tests = true
+allow-useless-vec-in-tests = true
+
+# Compile-time API bans. A legitimate exception site carries a scoped
+# `#[expect(clippy::disallowed_methods, reason = "...")]`.
+disallowed-methods = [
+  { path = "std::time::SystemTime::now", reason = "wall-clock time for FHIR dates comes from jiff; std::time::Instant stays fine for latency" },
+  { path = "core::option::Option::as_slice", reason = "on an Option<Vec<T>> this yields a slice of zero or one vectors, never &[T]; spell it .as_deref().unwrap_or_default() or match" },
+  { path = "core::option::Option::as_mut_slice", reason = "on an Option<Vec<T>> this yields a slice of zero or one vectors, never &mut [T]; match instead" },
+]
+disallowed-types = [
+  { path = "chrono::DateTime", reason = "jiff is the one time library" },
+  { path = "chrono::NaiveDate", reason = "jiff is the one time library" },
+  { path = "chrono::NaiveDateTime", reason = "jiff is the one time library" },
+  { path = "chrono::NaiveTime", reason = "jiff is the one time library" },
+]

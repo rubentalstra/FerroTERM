@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT
+[package]
+name = "notio-fhir"
+description = "Generated per-version FHIR types and terminology operation contracts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lib]
+# Generated doc text is not a curated example set (.claude/rules/testing.md).
+doctest = false
+
+[dependencies]
+
+[lints]
+workspace = true
