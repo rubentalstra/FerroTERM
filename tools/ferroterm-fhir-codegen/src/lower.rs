@@ -411,36 +411,7 @@ fn lower_struct(
                 Target::Named(enum_name)
             }
             ElementShape::Typed(types) => {
-                let Some(only) = types.first() else {
-                    return Err(LowerError::EmptyChoice {
-                        path: element.path.clone(),
-                    });
-                };
-                if types.len() > 1 && types.iter().any(|t| t.code != only.code) {
-                    return Err(LowerError::MultiTyped {
-                        path: element.path.clone(),
-                        count: types.len(),
-                    });
-                }
-                if only.fhirpath_type.is_some() {
-                    Target::Inline(scalar_for(&only.code))
-                } else if only.code == "BackboneElement" || only.code == "Element" {
-                    let nested = backbone_name(&element.path);
-                    lower_struct(
-                        model,
-                        structure,
-                        &element.path,
-                        &nested,
-                        module,
-                        false,
-                        false,
-                    )?;
-                    Target::Named(nested)
-                } else if only.code == "Resource" {
-                    Target::Named(RESOURCE_ENUM.to_owned())
-                } else {
-                    Target::Named(type_name(&only.code))
-                }
+                lower_typed(model, structure, &element, types, module, is_primitive)?
             }
         };
         fields.push(Field {
@@ -505,6 +476,60 @@ fn docs_of(element: &ResolvedElement) -> Docs {
     Docs {
         short: element.short.clone(),
         definition: element.definition.clone(),
+    }
+}
+
+/// The target of a single-typed element: an inline scalar for a primitive's
+/// value, a nested struct for a backbone, the resource enum, or a named type.
+fn lower_typed(
+    model: &mut VersionModule,
+    structure: &ResolvedStructure,
+    element: &ResolvedElement,
+    types: &[TypeRef],
+    module: &str,
+    is_primitive: bool,
+) -> Result<Target, LowerError> {
+    let Some(only) = types.first() else {
+        return Err(LowerError::EmptyChoice {
+            path: element.path.clone(),
+        });
+    };
+    if types.len() > 1 && types.iter().any(|t| t.code != only.code) {
+        return Err(LowerError::MultiTyped {
+            path: element.path.clone(),
+            count: types.len(),
+        });
+    }
+    if only.fhirpath_type.is_some() {
+        // NOTE: a primitive's JSON scalar follows the primitive's own name
+        // (<https://hl7.org/fhir/R4/json.html#primitive>); the 4.0.1 package
+        // tags unsignedInt.value and positiveInt.value as `string`.
+        let is_value = element
+            .path
+            .rsplit_once('.')
+            .is_some_and(|(_, last)| last == "value");
+        let scalar_name = if is_primitive && is_value {
+            structure.name.as_str()
+        } else {
+            only.code.as_str()
+        };
+        Ok(Target::Inline(scalar_for(scalar_name)))
+    } else if only.code == "BackboneElement" || only.code == "Element" {
+        let nested = backbone_name(&element.path);
+        lower_struct(
+            model,
+            structure,
+            &element.path,
+            &nested,
+            module,
+            false,
+            false,
+        )?;
+        Ok(Target::Named(nested))
+    } else if only.code == "Resource" {
+        Ok(Target::Named(RESOURCE_ENUM.to_owned()))
+    } else {
+        Ok(Target::Named(type_name(&only.code)))
     }
 }
 
