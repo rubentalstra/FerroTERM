@@ -79,8 +79,8 @@ before the value-set surface depends on it.
 
 Two separate things, and they must not be confused:
 
-- **The software** in this repository is open source under Apache-2.0. Use it,
-  embed it, run it.
+- **The software** in this repository is open source under the MIT license.
+  Use it, embed it, run it.
 - **SNOMED CT content** is licensed by SNOMED International and is not
   distributed here. Running Nomenclator against the International edition
   requires a valid SNOMED CT licence, which is free within member countries
