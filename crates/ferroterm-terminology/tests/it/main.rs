@@ -10,9 +10,11 @@
     reason = "test assertions"
 )]
 
+mod artifact;
 mod capabilities;
 mod compose;
 mod filter;
 mod fixture;
 mod registry;
+mod snomed;
 mod supplement;

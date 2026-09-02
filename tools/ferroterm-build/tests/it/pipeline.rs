@@ -64,6 +64,8 @@ fn the_manifest_records_the_edition_and_the_counts() {
     assert_eq!(manifest["concepts"], 9);
     assert_eq!(manifest["designations"], 12);
     assert_eq!(manifest["isAEdges"], 4);
+    assert_eq!(manifest["languages"], serde_json::json!(["en", "nl"]));
+    assert_eq!(report.languages, ["en", "nl"]);
 }
 
 #[test]

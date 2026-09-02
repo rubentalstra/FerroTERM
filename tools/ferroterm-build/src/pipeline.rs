@@ -136,6 +136,8 @@ pub struct Report {
     pub is_a_edges: u64,
     /// Distinct words in the designation index.
     pub words: u64,
+    /// The designation languages present (RF2 `languageCode`), sorted.
+    pub languages: Vec<String>,
 }
 
 fn ordinal_of(count: usize, what: &'static str) -> Result<u32, Error> {
@@ -186,6 +188,12 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
     hierarchy.write_to(&mut graph_bytes)?;
     builder.blob(tables::BLOB_HIERARCHY, &graph_bytes)?;
     let (text_bytes, words) = build_text(&designations, &acceptabilities)?;
+    let mut languages: Vec<String> = designations
+        .iter()
+        .map(|placed| placed.record.language.clone())
+        .collect();
+    languages.sort();
+    languages.dedup();
     builder.blob(tables::BLOB_TEXT, &text_bytes)?;
     builder.finish(&PreferredRule { preferred: 0 })?;
 
@@ -202,6 +210,7 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         "designations": designation_count,
         "isAEdges": is_a_edges,
         "words": words,
+        "languages": languages,
     });
     let text = serde_json::to_string_pretty(&manifest).map_err(|source| Error::Io {
         path: manifest_path.clone(),
@@ -218,6 +227,7 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         designations: designation_count,
         is_a_edges,
         words,
+        languages,
     })
 }
 
