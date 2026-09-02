@@ -51,7 +51,7 @@ fn the_manifest_records_the_edition_and_the_counts() {
     );
     assert_eq!(
         (report.concepts, report.designations, report.is_a_edges),
-        (6, 12, 4)
+        (9, 12, 4)
     );
     let manifest: Value =
         serde_json::from_str(&fs::read_to_string(&report.manifest).expect("manifest"))
@@ -61,7 +61,7 @@ fn the_manifest_records_the_edition_and_the_counts() {
     assert_eq!(manifest["version"], report.version_uri);
     assert_eq!(manifest["releaseDate"], DATE);
     assert_eq!(manifest["store"], STORE_FILE);
-    assert_eq!(manifest["concepts"], 6);
+    assert_eq!(manifest["concepts"], 9);
     assert_eq!(manifest["designations"], 12);
     assert_eq!(manifest["isAEdges"], 4);
 }
@@ -135,6 +135,36 @@ fn the_store_graph_and_text_crates_open_what_the_build_wrote() {
         )])
     );
     assert!(parents(fish).is_none(), "the inactive edge is not a parent");
+
+    // Attribute properties keyed by the attribute SCTID; concrete values typed.
+    let property = |ordinal, key_name: &str| {
+        let key = store
+            .vocabulary_ordinal(Vocabulary::PropertyKeys, key_name)
+            .expect("read")
+            .expect("key");
+        store
+            .properties(ordinal)
+            .expect("read")
+            .into_iter()
+            .find(|(k, _)| *k == key)
+            .map(|(_, values)| values)
+    };
+    let fur = store.ordinal(&concept(7)).expect("read").expect("fur");
+    assert_eq!(
+        property(cat, &concept(6)),
+        Some(vec![ferroterm_store::record::PropertyValue::Concept(fur)])
+    );
+    assert_eq!(
+        property(cat, &concept(8)),
+        Some(vec![ferroterm_store::record::PropertyValue::Decimal(
+            String::from("4")
+        )])
+    );
+    let dog = store.ordinal(&concept(4)).expect("read").expect("dog");
+    assert!(
+        property(dog, &concept(6)).is_none(),
+        "the inactive attribute is not stored"
+    );
 }
 
 #[test]
@@ -162,7 +192,7 @@ fn the_graph_and_text_blobs_open_from_the_store() {
     assert!(hierarchy.closure.is_ancestor(animal, cat));
     assert!(hierarchy.closure.is_ancestor(top, cat));
     assert!(hierarchy.closure.ancestors(fish).is_empty());
-    assert_eq!(hierarchy.is_a.nodes(), 6);
+    assert_eq!(hierarchy.is_a.nodes(), 9);
 
     // The text blob: a Dutch prefix, filtered by the NL refset, ranks the shortest first.
     let text = store
