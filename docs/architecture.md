@@ -215,7 +215,10 @@ designed in from the start, not retrofitted.
 ### 4. The SNOMED semantics are hand-written and owned
 
 RF2 loading, the materialized ontology, ECL evaluation, and `$expand` paging are
-the product, and no existing Rust project provides them. ECL is the hard part and
+the product. Two Rust projects cover parts of the ground (`snomed-rust` parses
+RF2 and evaluates simple ECL; `fhir-sdk` generates FHIR models), and neither
+is a terminology server; Notio designs its own engine and reads them as prior
+art. ECL is the hard part and
 the main risk: every expression constraint returns a *set of codes* (SNOMED ECL
 specification,
 <https://docs.snomed.org/snomed-ct-specifications/snomed-ct-expression-constraint-language>),
@@ -372,6 +375,13 @@ vendored verbatim with provenance as codegen input.
 - **ELK / Snorocket:** the OWL 2 EL reasoners that classify SNOMED offline.
 - **Helios `hfs`** (MIT, Rust): machine-generates per-version FHIR modules; a
   client, not a server; prior art for the generator.
+- **`fhir-sdk`** (Rust, <https://github.com/FlixCoder/fhir-sdk>): generated
+  per-version FHIR models and a client (`fhir-model` on crates.io); prior art
+  for the generated type shapes and the JSON codec.
+- **`snomed-rust`** (Rust, <https://github.com/snomed-rust/snomed-rust>): the
+  `snomed-rf2` and `snomed-ecl` crates, an RF2 parser and an evaluator for
+  simple expression constraints; prior art for the RF2 loader, read, not
+  ported.
 
 No existing Rust project is a complete, standards-generated, multi-version FHIR
 terminology server. Notio fills that gap, built the way the evidence supports: a
