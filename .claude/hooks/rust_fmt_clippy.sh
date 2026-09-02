@@ -4,7 +4,7 @@
 #
 # Claude Code PostToolUse hook (matcher: Write|Edit).
 #
-# For an edited .rs file: format it with rustfmt (never blocks — rustfmt
+# For an edited .rs file: format it with rustfmt (never blocks, rustfmt
 # failing to parse a draft is expected and fine), then run the comment-style
 # guard (.claude/rules/comments.md), which CAN block (exit 2) to feed its
 # findings back as a correction.

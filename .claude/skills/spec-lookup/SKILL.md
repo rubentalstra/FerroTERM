@@ -7,22 +7,22 @@ allowed-tools: Read, Grep, Glob, WebFetch
 # Spec lookup
 
 Answer a "what does the spec say" question about the FHIR terminology wire,
-SNOMED CT, ECL, or RF2 — and cite the source (file + section). Never resolve a
+SNOMED CT, ECL, or RF2, and cite the source (file + section). Never resolve a
 spec-facing question from memory or from a reference server's behaviour alone.
 
 ## Oracle precedence (highest first)
 
-1. **The FHIR normative specification for the SERVED wire version** — the
+1. **The FHIR normative specification for the SERVED wire version:** the
    terminology module and the specific `OperationDefinition` (R4/R4B/R5/R6).
    Check the served version's own definition, not a remembered one.
-2. **SNOMED CT specifications** — the URI Standard and the ECL specification
+2. **SNOMED CT specifications:** the URI Standard and the ECL specification
    (docs.snomed.org).
 3. **The SNOMED-on-FHIR Implementation Guide** (snomedct.html + the IHTSDO IG)
    for how SNOMED binds to the FHIR wire (implicit value sets/concept maps).
 4. **The HL7 `fhir-tx-ecosystem-ig`** requirements + test cases (the server
    conformance policy).
 
-Reference servers — **Snowstorm**, Ontoserver, tx.fhir.org — are BEHAVIOURAL
+Reference servers (**Snowstorm**, Ontoserver, tx.fhir.org) are BEHAVIOURAL
 oracles for spec-silent edge cases only. Cite them explicitly as such and record
 the decision; never treat them as spec authority.
 
@@ -56,5 +56,5 @@ the decision; never treat them as spec authority.
 
 State the requirement, quote the decisive sentence, and cite file + section. If
 the sources are silent, say so explicitly and name the reference-server
-behaviour you would match — flag it as a spec-silent deviation to record, never
+behaviour you would match; flag it as a spec-silent deviation to record, never
 a spec fact.

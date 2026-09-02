@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "Notio"
+abstract: >-
+  A pure-Rust FHIR terminology server for SNOMED CT, with machine-generated
+  multi-version FHIR support (R4B, R5, R4, R6) and an index-materialized
+  ontology store. "Notio" is a working codename; the official name is not yet
+  set.
+type: software
+authors:
+  - given-names: Ruben
+    family-names: Talstra
+license: MIT
+repository-code: "https://github.com/rubentalstra/notio"
+url: "https://github.com/rubentalstra/notio"
+keywords:
+  - FHIR
+  - SNOMED CT
+  - terminology server
+  - ECL
+  - Rust
+version: 0.0.0

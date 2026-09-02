@@ -12,18 +12,18 @@ chapters, and the Clippy book.
 
 ## Enforcement tiers (strongest first)
 
-1. **Compile property** — the type system makes the violation
+1. **Compile property:** the type system makes the violation
    unrepresentable (newtypes, `#[must_use]`, sealed traits, `forbid`).
-2. **Workspace lint at `deny`/`forbid`** — fails every `cargo clippy`, local
+2. **Workspace lint at `deny`/`forbid`:** fails every `cargo clippy`, local
    and CI (`Cargo.toml [workspace.lints]`). `forbid` cannot be relaxed by any
    attribute; escaping it is an owner decision, not an `#[allow]`.
-3. **Warn + CI `-D warnings`** — `clippy::all` + `clippy::pedantic` both live
+3. **Warn + CI `-D warnings`:** `clippy::all` + `clippy::pedantic` both live
    here, so every pedantic lint is effectively a hard rule (including
    `missing_errors_doc` / `missing_panics_doc`).
-4. **A committed check script / CI job** — currently
+4. **A committed check script / CI job:** currently
    `scripts/checks/comment-style.sh` (per-edit via the hook); more are added
    as CI is stood up.
-5. **Review-enforced** (weakest; minimize) — only for properties no tool can
+5. **Review-enforced** (weakest; minimize): only for properties no tool can
    check, each marked below.
 
 ## The rules
@@ -32,13 +32,13 @@ chapters, and the Clippy book.
   need for `unsafe` is a design defect to solve differently.
   `unnecessary_safety_comment` / `unnecessary_safety_doc` deny a `// SAFETY:`
   comment or `# Safety` doc section on safe code. (Memory-mapping is provided
-  by `redb`/`fst`, which own the `unsafe` internally — the server code stays
+  by `redb`/`fst`, which own the `unsafe` internally; the server code stays
   safe.)
 - **Fail loud, never wrap**: release builds run with `overflow-checks = true`
   so integer overflow panics instead of silently wrapping into a wrong
   answer. On load-bearing arithmetic (SCTID/ordinal math, bitmap offsets,
   `$expand` pagination) prefer explicit `checked_*`/`saturating_*` with a
-  typed error — a panic is the backstop, not the design. Numeric-honesty
+  typed error; a panic is the backstop, not the design. Numeric-honesty
   lints back this at deny tier: `float_cmp_const`, `lossy_float_literal`,
   `as_underscore`, `fn_to_numeric_cast_any`, `ambiguous_negative_literals`
   (+ `integer_division` at warn).
@@ -51,40 +51,40 @@ chapters, and the Clippy book.
   `debug = "line-tables-only"` so a production panic names its file:line.
 - **No `unwrap`/`expect`/`panic!`/`unreachable!`/`unimplemented!`/`todo!` in
   application code** (deny-tier lints). Tests keep the `clippy.toml`
-  `allow-*-in-tests` scoping — a panicking assertion is how a test fails.
+  `allow-*-in-tests` scoping; a panicking assertion is how a test fails.
   Recoverable failures return typed errors (`thiserror` in libraries,
-  `anyhow` only in the binary) — the Book ch9 split: panic is for states that
+  `anyhow` only in the binary), the Book ch9 split: panic is for states that
   cannot happen, `Result` for everything that can.
 - **The ONE sanctioned escape for a logically-impossible `Err`/`None`** (Book
   ch9): a narrowly-scoped `#[expect(clippy::expect_used, reason = "…")]` on
   the smallest item, whose reason states the inspection proving
   unreachability, plus a *should*-phrased message (`.expect("the closure
   bitmap should exist for a classified concept")`). Dodging the lint with
-  `unwrap_or_default()` instead is FORBIDDEN — that converts a loud
+  `unwrap_or_default()` instead is FORBIDDEN: that converts a loud
   impossible state into a silent wrong answer, the exact failure class this
   file exists to prevent.
 - **No panicking indexing on request paths** (deny tier: `indexing_slicing`,
-  `string_slice`): `.get(..)` / pattern matching over `x[i]` and `&s[a..b]` —
+  `string_slice`): `.get(..)` / pattern matching over `x[i]` and `&s[a..b]`.
   `string_slice` panics on a UTF-8 boundary and SNOMED descriptions and FHIR
   text are full of multi-byte content. Tests are scoped out via `clippy.toml`;
   a hot-path site PROVEN in-bounds uses the `#[expect]` escape above.
 - **Guards are never silently dropped**: `let _ = lock/handle;` is denied
-  (`let_underscore_drop` + `let_underscore_lock`) — bind guards to named
+  (`let_underscore_drop` + `let_underscore_lock`): bind guards to named
   variables that live to scope end. `unused_result_ok` (deny) closes the
   `.ok();` variant. Edition-2024 corollary (review-enforced): a guard/borrow
   produced in an `if let` scrutinee is dropped BEFORE the `else` branch runs
-  (https://doc.rust-lang.org/edition-guide/rust-2024/temporary-if-let-scope.html)
-  — rewrite as `match` when the guard must span both arms.
+  (https://doc.rust-lang.org/edition-guide/rust-2024/temporary-if-let-scope.html);
+  rewrite as `match` when the guard must span both arms.
 - **An error carries its cause** (RFC 0201; `Error::source`). Every wrapping
   variant uses `#[source]` / `#[from]`; a stringified cause
   (`map_err(|e| Variant(e.to_string()))`) cannot be walked, matched, or
-  logged structurally — the same silent-context-loss class this file
+  logged structurally, the same silent-context-loss class this file
   legislates for `Result → Option`. There is no lint for it; new code carries
   the source and reviewers check for it. Two verified thiserror foot-guns:
   `#[source]` over an `Option<Box<…>>` yields the smart pointer as the source
   hop, not the error inside it (hand-write `Display`+`Error` returning
   `self.source.as_deref()`), and `#[error(transparent)]` removes its own type
-  from the chain — so a test walking the cause chain asserts the ROOT cause,
+  from the chain, so a test walking the cause chain asserts the ROOT cause,
   not an intermediate wrapper type.
 - **`Result → Option` inside a chain is a DECISION** (review-enforced; no
   lint can make the distinction). `.filter_map(|x| f(x).ok())`,
@@ -94,7 +94,7 @@ chapters, and the Clippy book.
   ABSENT / not of this form" may become `Option`, and it carries a `// NOTE:`
   saying so. (An ECL grammar probe where a parse failure IS the answer is the
   legitimate shape; a code silently swallowed in the FHIR codec is the defect
-  shape — they read identically, which is why judgment carries it.)
+  shape, and they read identically, which is why judgment carries it.)
 - **Determinism is lint-backed** (deny tier: `iter_over_hash_type`):
   HashMap/HashSet iteration order is undefined; anything that feeds generated
   code, a canonical FHIR serialization, or an ordered `$expand`/search result
@@ -129,7 +129,7 @@ chapters, and the Clippy book.
   `# Errors`/`# Panics` sections** (C-DOC, C-DEBUG, C-FAILURE):
   `missing_docs`, `missing_debug_implementations`, `missing_errors_doc` /
   `missing_panics_doc`. The generated `notio-fhir` crate gets its docs from
-  the emitter — never hand-edit a `// @generated` file to document it.
+  the emitter; never hand-edit a `// @generated` file to document it.
 - **Visibility is deliberate** (C-STRUCT-PRIVATE): private by default, scoped
   visibility only at real module boundaries, zero re-exports (every import
   names its defining module), `unreachable_pub` watched at CI. Struct fields
@@ -140,13 +140,13 @@ chapters, and the Clippy book.
 - **Blocking never hides in async**: no `std::sync` locks held across `.await`
   (clippy `await_holding_lock`), no synchronous I/O on the runtime.
   `spawn_blocking` for the rare CPU-heavy transform. (The build tool
-  `notio-build` is offline and synchronous — that discipline is the server's,
+  `notio-build` is offline and synchronous; that discipline is the server's,
   not the tool's.)
 - **Dependencies are pinned, locked, and vetted**: workspace-table only, no
   new dependency for what the pinned set already provides, verify the version
   against crates.io/docs.rs at the moment of adding. CI builds run `--locked`.
   A `cargo deny` / `cargo audit` gate is added when CI is stood up.
-- **Comment style is machine-enforced** (`comments.md` — RFC 505 + RFC 1574):
+- **Comment style is machine-enforced** (`comments.md`, RFC 505 + RFC 1574):
   line comments only, `// TODO(#NNNN):` (issue reference mandatory), `// NOTE:`
   as a citation + one sentence (≤3 lines), plain `//` runs ≤8 lines,
   `// SAFETY:` reserved for `unsafe`, no unsanctioned marker vocabulary.
@@ -162,17 +162,17 @@ chapters, and the Clippy book.
 
 ## Deviations from the API Guidelines (deliberate)
 
-- **C-PERMISSIVE — MIT for the project's own code.** SNOMED CT content is
+- **C-PERMISSIVE: MIT for the project's own code.** SNOMED CT content is
   licensed separately by SNOMED International and is NEVER distributed here
   (`vendored-inputs.md`). The vendored FHIR packages keep their upstream HL7
   terms, vendored verbatim with provenance as codegen input.
-- **C-STABLE — pre-1.0 dependencies are acceptable while the crates are
+- **C-STABLE: pre-1.0 dependencies are acceptable while the crates are
   unpublished.** If any crate is ever published, re-adjudicate every pre-1.0
   public dependency in its API first.
 
 ## When a lint fights a legitimate case
 
-**`#[expect(lint, reason = "…")]` is the default suppression** — it
+**`#[expect(lint, reason = "…")]` is the default suppression:** it
 self-reports the moment the expectation stops being fulfilled
 (`unfulfilled_lint_expectations`), so stale suppressions cannot accumulate.
 `#[allow(lint, reason = "…")]` is reserved for cases where the lint fires only

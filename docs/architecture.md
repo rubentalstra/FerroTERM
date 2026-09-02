@@ -24,11 +24,11 @@ architectures make.
    <https://docs.snomed.org/snomed-ct-specifications/snomed-ct-owl-reference-set-specification>).
    ELK classifies all of SNOMED in about five seconds. Its output is the
    inferred DIRECT is-a relation (a few million edges); the TRANSITIVE closure
-   over it — every ancestor/descendant pair, which is what serving needs — is
+   over it (every ancestor/descendant pair, which is what serving needs) is
    several-fold larger, on the order of tens of millions of pairs (see the
    footprint note in decision 1). Still an extremely sparse fraction of all
    possible concept pairs.
-2. **It is a polyhierarchical graph** — a concept has many parents; edges are
+2. **It is a polyhierarchical graph.** A concept has many parents; edges are
    typed (is-a, finding site, associated morphology, and the rest) (SNOMED
    Concept Model,
    <https://docs.snomed.org/snomed-ct-practical-guides/snomed-ct-starter-guide/6-snomed-ct-concept-model>).
@@ -46,17 +46,17 @@ The hierarchy Notio serves is a reasoner output, computed once per SNOMED
 release, never at query time. The default:
 
 - **Compute the transitive closure from the shipped inferred Relationship file**
-  (`typeId = 116680003` is-a) — a topological-order bitset-propagation sweep
+  (`typeId = 116680003` is-a), a topological-order bitset-propagation sweep
   over the ~1.5M is-a edges, a matter of seconds offline, then persisted.
   SNOMED does NOT distribute a transitive-closure file in the International
-  Release — it ships only a script to generate one
-  (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-release-file-specification/component-release-file-specification/4.2-file-format-specifications/4.2.5-transitive-closure-files>)
-  — so computing it is the baseline, not consuming a file. Where a distributed
+  Release. It ships only a script to generate one
+  (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-release-file-specification/component-release-file-specification/4.2-file-format-specifications/4.2.5-transitive-closure-files>),
+  so computing it is the baseline, not consuming a file. Where a distributed
   edition does include a transitive-closure file, use it as an opportunistic
   fast path. SNOMED's own guidance calls a precomputed transitive closure "one
   of the most efficient ways to test for subsumption"
   (<https://docs.snomed.org/snomed-ct-practical-guides/snomed-ct-data-analytics-guide/6-snomed-ct-analytic-techniques/6.2-subsumption>).
-- **Run a reasoner** — an ELK-style consequence-based classifier over the OWL
+- **Run a reasoner:** an ELK-style consequence-based classifier over the OWL
   axiom refset. Needed only when the input is stated axioms or post-coordinated
   expressions that must be classified locally. This is a later capability, not a
   requirement to serve a released edition (which already ships inferred
@@ -74,7 +74,7 @@ decision:
 
 | Operation | True query shape | Structure that answers it |
 |---|---|---|
-| `$subsumes` | deep ancestor test | roaring-bitmap membership — O(1) |
+| `$subsumes` | deep ancestor test | roaring-bitmap membership, O(1) |
 | `$expand` ECL `<<`/`<`/`>>`/`>` | reachability set | the precomputed descendant/ancestor bitmap, returned directly |
 | `$expand` ECL refinement (`: attr = <<X`) | set intersection/union across typed edges | bitmap set-algebra over the per-attribute adjacency |
 | `$validate-code` | point read + MRCM check | columnar concept/description store |
@@ -89,11 +89,11 @@ answer what a terminology server is actually asked.
 
 ## The defining decisions
 
-### 1. Graph model, index-materialized storage — not a graph database, not live traversal
+### 1. Graph model, index-materialized storage: not a graph database, not live traversal
 
 SNOMED is stored as a graph, natively: integer-keyed (SCTID) **compressed
-sparse-row (CSR) adjacency arrays** — is-a in both directions, plus one CSR per
-attribute type for ECL refinement — and **roaring bitmaps** holding the
+sparse-row (CSR) adjacency arrays** (is-a in both directions, plus one CSR per
+attribute type for ECL refinement) and **roaring bitmaps** holding the
 transitive closure (each concept's ancestor and descendant sets). CSR arrays are
 graph-native and cache-friendly; they are not a pointer graph and not a database.
 
@@ -113,22 +113,22 @@ A general-purpose graph database is rejected on the evidence, not on taste:
   and a triple store lost to a relational store on query time even where it won
   on load time (Can et al., Entropy 19(1):30, 2017,
   <https://www.mdpi.com/1099-4300/19/1/30>).
-- Graph databases degrade exactly where a terminology server is stressed —
+- Graph databases degrade exactly where a terminology server is stressed:
   out-of-memory on large multi-hop neighborhoods, slow on high-degree subgraphs
-  (<https://pmc.ncbi.nlm.nih.gov/articles/PMC7233100/>) — which is ECL
+  (<https://pmc.ncbi.nlm.nih.gov/articles/PMC7233100/>), which is ECL
   descendant expansion of a high-level concept.
 
 At SNOMED's size (~360k concepts, ~1.5M edges, static between releases) the full
 transitive closure is the degenerate-optimal case of the whole reachability-index
 family (2-hop, interval, GRAIL): when the closure fits in memory, it *is* the
-best reachability index — O(1) test, no traversal fallback (Cohen et al., 2-hop,
+best reachability index, O(1) test, no traversal fallback (Cohen et al., 2-hop,
 SODA 2002, <https://dl.acm.org/doi/10.5555/545381.545503>; Agrawal et al.,
 interval labeling, SIGMOD 1989, <https://dl.acm.org/doi/10.1145/67544.66950>).
-Hermes demonstrates the payoff: ~13–69 µs subsumption and ~0.82 µs concept lookup
+Hermes demonstrates the payoff: ~13 to 69 µs subsumption and ~0.82 µs concept lookup
 on a laptop, from a materialized structure rather than a graph walk.
 
-Live adjacency traversal is kept for the queries it is genuinely best at — the
-immediate parents/children and neighbourhood browsing of `$lookup` — and nothing
+Live adjacency traversal is kept for the queries it is best at, the
+immediate parents/children and neighbourhood browsing of `$lookup`, and nothing
 else routes through it.
 
 ### 2. FHIR support is machine-generated across every version
@@ -153,24 +153,24 @@ generation (publication expected around late 2026).
 A terminology server touches a handful of resources; generating all ~150
 resources of each core package across four versions would be dead weight
 (compile time, binary size) with no consumer. The generator's root set is the
-terminology surface — `CodeSystem`, `ValueSet`, `ConceptMap`, `Parameters`,
+terminology surface (`CodeSystem`, `ValueSet`, `ConceptMap`, `Parameters`,
 `OperationOutcome`, `CapabilityStatement`, `TerminologyCapabilities`, `Bundle`,
-plus the terminology `OperationDefinition`s — and it emits the COMPLETE
+plus the terminology `OperationDefinition`s), and it emits the COMPLETE
 transitive closure of datatypes and primitives those roots reference. That is
 "complete within a declared closure", the sanctioned form of the
-emit-the-whole-model rule (`codegen.md`) — never trimming inside the closure to
+emit-the-whole-model rule (`codegen.md`): never trimming inside the closure to
 quiet a diff, and never a hand-written shape outside it.
 
 **R4B is the first generation implemented.** It is the current stable release of
 the R4 line and a near-superset of R4, so an R4B-first build already serves the
 R4-family terminology surface; R5, R4, and R6 follow. (R4 4.0.1 remains the most
-widely deployed base and is a generation in its own right — R4B first is a
+widely deployed base and is a generation in its own right: R4B first is a
 sequencing choice, not a drop of R4.)
 
 ### 3. Persistence is a pure-Rust embedded engine; the hot closure is resident
 
-The built structures — the CSR adjacency, the roaring closure bitmaps, the
-columnar concept/description store — are persisted in **`redb`**, a pure-Rust,
+The built structures (the CSR adjacency, the roaring closure bitmaps, the
+columnar concept/description store) are persisted in **`redb`**, a pure-Rust,
 memory-mapped, ACID embedded key-value engine. This is deliberate: it is
 disk-backed and a real storage engine, so it is neither a hand-rolled file
 format nor a service, while staying pure Rust and a single self-contained
@@ -179,7 +179,7 @@ opens them read-only.
 
 **`redb` is the persistence FORMAT, not the query-time path for the hot
 structures.** `redb.get()` yields the value *bytes*, and a `roaring` bitmap has
-no query-over-serialized-bytes API — deserializing an ancestor bitmap on every
+no query-over-serialized-bytes API: deserializing an ancestor bitmap on every
 `$subsumes` would be O(bitmap size) per call and would forfeit the
 microsecond-subsumption goal. So at startup the server loads the closure into a
 **resident, ordinal-indexed structure** (an SCTID→ordinal map plus
@@ -191,18 +191,18 @@ the reachability closure and the CSR adjacency need to be resident. This is how
 Hermes reaches tens-of-microseconds subsumption, realized in pure Rust.
 
 Footprint: the transitive closure is tens of millions of ancestor/descendant
-pairs (both directions are stored — subsumption needs one, ECL returns each set
+pairs (both directions are stored: subsumption needs one, ECL returns each set
 directly, a deliberate ~2× space cost). Roaring compresses SNOMED-shaped sets
 heavily (dense high-level sets to bitmap containers, sparse leaves to array
-containers), so the resident closure lands at roughly 100–300 MB, plus tens of
-MB for CSR adjacency and the `fst` index and an mmap'd columnar text store —
-near the ~500 MB the reference Snowstorm Lite needs, and far under a 2–4 GB box.
+containers), so the resident closure lands at roughly 100 to 300 MB, plus tens of
+MB for CSR adjacency and the `fst` index and an mmap'd columnar text store,
+near the ~500 MB the reference Snowstorm Lite needs, and far under a 2 to 4 GB box.
 
 Serving concurrency: point reads against hot mmap pages and resident-bitmap
 subsumption run inline in the async handler. A heavy `$expand` that materializes
 a 100k-member set, and any cold read that page-faults from disk, run on a
-blocking pool (`tokio::task::spawn_blocking`) so they never stall the runtime —
-the blocking seam sits at the `notio-terminology` engine boundary and is
+blocking pool (`tokio::task::spawn_blocking`) so they never stall the runtime.
+The blocking seam sits at the `notio-terminology` engine boundary and is
 designed in from the start, not retrofitted.
 
 ### 4. The SNOMED semantics are hand-written and owned
@@ -213,24 +213,24 @@ the main risk: every expression constraint returns a *set of codes* (SNOMED ECL
 specification,
 <https://docs.snomed.org/snomed-ct-specifications/snomed-ct-expression-constraint-language>),
 so the evaluator compiles ECL to **set algebra** over the descendant bitmaps and
-the attribute adjacency — bitmap AND/OR, not pointer-chasing. It is built and
+the attribute adjacency, bitmap AND/OR, not pointer-chasing. It is built and
 tested as its own layer against the published ECL ANTLR grammar
 (<https://github.com/IHTSDO/snomed-expression-constraint-language>) before the
 value-set surface depends on it. Correctness is measured against Snowstorm as the
 reference server.
 
-A declarative alternative was considered and deferred: expressing subsumption and
-ECL as Datalog over an embedded engine (`cozo`, pure-Rust, recursive queries
-native). Datalog is a sound way to *compute and express* the closure, but for a
-latency-critical path the materialized bitmap closure is the hot primitive; a
-Datalog layer is a possible later addition for complex ad-hoc ECL, not the v1
-foundation.
+A declarative alternative was considered: expressing subsumption and ECL as
+Datalog over an embedded engine (`cozo`, pure-Rust, recursive queries native).
+Datalog is a sound way to compute and express the closure. For a latency-critical
+path the materialized bitmap closure is the hot primitive, so a Datalog layer
+stays a possible later addition for complex ad-hoc ECL rather than a foundation
+piece.
 
 ## Text search
 
 Description search is a separate concern from the graph, kept in its own index.
 SNOMED search is per-word prefix matching in any order, filtered by language
-reference set and active status, ranked by matched-term length — not relevance
+reference set and active status, ranked by matched-term length, not relevance
 scoring (Snowstorm search docs,
 <https://github.com/IHTSDO/snowstorm/blob/master/docs/search.md>). The structure
 is a **word inverted index**: each word token maps to a roaring-bitmap postings
@@ -239,23 +239,8 @@ the word dictionary and answers per-word prefix (and Levenshtein-fuzzy) lookup,
 expanding a typed prefix to its matching word ids; the query intersects those
 words' postings, ANDs the language-refset and active-status filter bitmaps, and
 sorts the surviving descriptions by matched-term length. The `fst` alone is not
-the index — it is the prefix front end over the inverted postings. Pure Rust,
+the index. It is the prefix front end over the inverted postings. Pure Rust,
 memory-mapped, built once per edition.
-
-## Scope: v1 and deliberate deferrals
-
-The v1 target is a read-only R4B server over the International edition:
-`$lookup`, `$subsumes`, `$validate-code`, `$expand` (with ECL), and `$translate`,
-plus the metadata/capability statements. These are named as deferrals, not
-silent omissions:
-
-- **MRCM validation** of post-coordinated expressions is a large sub-project;
-  v1 `$validate-code` validates pre-coordinated codes, displays, and value-set
-  membership. Post-coordination and MRCM come later.
-- **`ConceptMap/$closure`** (client-side closure maintenance) is out of v1.
-- **CodeSystem supplements / `useSupplement`** beyond echoing the parameter.
-- **The full R4/R4B/R5/R6 test matrix** is the north star; v1 gates R4B, with
-  the other generations added as they are implemented.
 
 ## Workspace layout
 
@@ -293,24 +278,24 @@ server.
 ## Licensing
 
 The software is MIT. SNOMED CT content is licensed separately by SNOMED
-International and is never distributed here — a deployment brings its own RF2
+International and is never distributed here. A deployment brings its own RF2
 release under a valid licence (free within member countries, affiliate licence
 elsewhere). The vendored FHIR packages are HL7 material under their own terms,
 vendored verbatim with provenance as codegen input.
 
 ## Prior art
 
-- **Snowstorm** (SNOMED International, Java + Elasticsearch) — the reference
+- **Snowstorm** (SNOMED International, Java + Elasticsearch): the reference
   server and correctness oracle.
-- **Ontoserver** (CSIRO, Postgres + Lucene) — a production FHIR terminology
+- **Ontoserver** (CSIRO, Postgres + Lucene): a production FHIR terminology
   server; index-materialized, not a graph database.
-- **Hermes** (Mark Wardle, Clojure — memory-mapped store + Lucene) — the
+- **Hermes** (Mark Wardle, Clojure, memory-mapped store + Lucene): the
   memory-mapped, materialized-structure design, at microsecond latencies.
-- **ELK / Snorocket** — the OWL 2 EL reasoners that classify SNOMED offline.
-- **Helios `hfs`** (MIT, Rust) — machine-generates per-version FHIR modules; a
+- **ELK / Snorocket:** the OWL 2 EL reasoners that classify SNOMED offline.
+- **Helios `hfs`** (MIT, Rust): machine-generates per-version FHIR modules; a
   client, not a server; prior art for the generator.
 
 No existing Rust project is a complete, standards-generated, multi-version FHIR
 terminology server. Notio fills that gap, built the way the evidence supports: a
 graph model, an offline classification pass, and a memory-mapped
-index-materialized store — not a graph database, and not live traversal.
+index-materialized store, not a graph database and not live traversal.

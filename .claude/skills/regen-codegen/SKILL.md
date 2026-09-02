@@ -1,15 +1,13 @@
 ---
 name: regen-codegen
 description: Regenerate the generated notio-fhir crate from the vendored FHIR packages and verify no drift. Use after changing the generator, an override, or a vendored FHIR package pin.
-type: workflow
-disable-model-invocation: true
 allowed-tools: Bash, Read, Grep
 ---
 
 # Regenerate the FHIR layer
 
 `crates/notio-fhir` is generated from the vendored, pinned FHIR packages by
-`tools/notio-fhir-codegen`. Never hand-edit a `// @generated` file — change the
+`tools/notio-fhir-codegen`. Never hand-edit a `// @generated` file: change the
 generator or its override map and regenerate here. Full discipline:
 `.claude/rules/codegen.md`.
 
@@ -32,7 +30,7 @@ generator or its override map and regenerate here. Full discipline:
    cargo run -p notio-fhir-codegen -- emit
    ```
 
-3. **Verify no drift** — regeneration must be byte-deterministic and the working
+3. **Verify no drift:** regeneration must be byte-deterministic and the working
    tree clean afterward:
 
    ```bash
@@ -52,7 +50,7 @@ generator or its override map and regenerate here. Full discipline:
 
 ## Rules
 
-- The generator emits the COMPLETE model from the vendored inputs — never trim
+- The generator emits the COMPLETE model from the vendored inputs; never trim
   output to quiet a diff or dodge a build error.
 - A shape a consumer needs but the generated crate lacks is fixed in the
   generator/override, never with a hand-written shadow type.

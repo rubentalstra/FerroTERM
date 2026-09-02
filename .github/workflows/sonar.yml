@@ -1,0 +1,126 @@
+# SPDX-License-Identifier: MIT
+
+# SonarQube Cloud analysis — the machine opinion beside CodeQL. Findings are
+# ADVISORY: they never outrank the specs, the project rules, or the local
+# gates, and they gate no merge (.claude/rules/ai-code-review.md).
+#
+# Rust is analyzed first-party (the analyzer runs Clippy from the root
+# Cargo.toml); shell, YAML, Dockerfiles and other languages are covered by the
+# multi-language sweep, which runs NOW — before any Rust exists. The Rust-only
+# steps (the pinned toolchain, the instrumented coverage run, the
+# projectVersion derivation) are guarded on Cargo.toml, so the sweep still
+# analyzes config and shell in discovery. Scan SCOPE lives in
+# sonar-project.properties (do not overwrite it here).
+name: SonarQube Cloud
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  # Change detection (pull requests only). A main push is NEVER gated —
+  # coverage and the New Code baseline are wanted on every merge.
+  changes:
+    name: change detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: filter
+        shell: bash
+        # Context reaches the shell through env, never `${{ }}`-inline.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "$EVENT_NAME is not a pull request — scanning unconditionally."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git rev-parse --verify --quiet "$PR_BASE" >/dev/null; then
+            echo "Base $PR_BASE unavailable — treating as a scannable change."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$PR_BASE" "$PR_HEAD")
+          echo "Changed files:"; echo "$changed"
+          # Anything the sweep or the Rust analyzer reads: the source trees, the
+          # manifests, the analyzer's own config, the scan scope, this workflow,
+          # and the multi-language surfaces (shell / yaml / Dockerfiles).
+          if echo "$changed" | grep -qE '^(app/|crates/|tools/|scripts/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|clippy\.toml$|sonar-project\.properties$|\.github/|.*\.sh$|.*\.ya?ml$|.*Dockerfile.*)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nothing scannable touched — the analysis will be skipped."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  scan:
+    name: analyze
+    needs: changes
+    # PR analysis authenticates with SONAR_TOKEN, which fork PRs and DEPENDABOT
+    # PRs cannot read (a dependabot-actor run gets Dependabot secrets, not
+    # Actions secrets). A main push always scans; a pull request scans only from
+    # the same repository, not dependabot, and only when it touched scannable
+    # files.
+    if: github.event_name == 'push' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository && needs.changes.outputs.code == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pull-requests: read # PR decoration reads the PR metadata
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history: Sonar assigns issues and new-code status by blame.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # ── Rust-only steps, guarded on the workspace existing ──────────────────
+      # hashFiles() works here because the checkout above populated the
+      # workspace. In discovery these skip and the sweep still analyzes
+      # shell/yaml below.
+      - name: Install the Rust toolchain
+        if: ${{ hashFiles('Cargo.toml') != '' }}
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          components: llvm-tools-preview
+          cache-shared-key: sonar
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install cargo-llvm-cov + cargo-nextest
+        if: ${{ hashFiles('Cargo.toml') != '' }}
+        uses: taiki-e/install-action@742a3317eac7bd62f91cd888b4eead5e784ba833 # v2.87.1
+        with:
+          tool: cargo-llvm-cov,cargo-nextest
+      - name: Instrumented tests → lcov
+        if: ${{ hashFiles('Cargo.toml') != '' }}
+        run: cargo llvm-cov nextest --locked --workspace --all-features --no-tests=pass --lcov --output-path lcov.info
+
+      # sonar.projectVersion anchors the "Previous version" New Code window: the
+      # workspace version bumps at every release cut, so "new code" means "since
+      # the last release". Read from the root Cargo.toml at scan time (never a
+      # second hand-maintained copy) and appended to the properties file — so no
+      # context value reaches a shell or the action args.
+      - name: Derive sonar.projectVersion from the workspace version
+        if: ${{ hashFiles('Cargo.toml') != '' }}
+        run: |
+          set -euo pipefail
+          v="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+          echo "sonar.projectVersion=$v" >> sonar-project.properties
+
+      - uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

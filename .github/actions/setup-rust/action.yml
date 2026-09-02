@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT
+name: Set up Rust
+description: >-
+  Install the toolchain pinned in rust-toolchain.toml and restore the build
+  cache. The calling job checks out the repository FIRST: a local action
+  (./.github/actions/setup-rust) resolves only after checkout, so this action
+  does not check out.
+inputs:
+  components:
+    description: >-
+      Comma-separated extra rustup components to install, for example clippy,
+      rustfmt, or llvm-tools-preview. Empty installs no extra component.
+    required: false
+    default: ""
+  cache-key:
+    description: >-
+      Extra string mixed into the build-cache key, to keep one job's cache
+      separate from another's.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    # No `toolchain:` input: setup-rust-toolchain reads rust-toolchain.toml when
+    # it is present, which is where the channel is pinned. Caching is built in
+    # and keyed by the cache-key input.
+    - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+      with:
+        components: ${{ inputs.components }}
+        cache-key: ${{ inputs.cache-key }}

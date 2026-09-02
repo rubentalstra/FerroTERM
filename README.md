@@ -1,10 +1,16 @@
 # Notio
 
+[![CI](https://github.com/rubentalstra/notio/actions/workflows/ci.yml/badge.svg)](https://github.com/rubentalstra/notio/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/rubentalstra/notio/actions/workflows/codeql.yml/badge.svg)](https://github.com/rubentalstra/notio/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/rubentalstra/notio/badge)](https://scorecard.dev/viewer/?uri=github.com/rubentalstra/notio)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_notio&metric=alert_status)](https://sonarcloud.io/summary/overall?id=rubentalstra_notio)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A pure-Rust FHIR terminology server for SNOMED CT. Machine-generated FHIR
 support across R4, R4B, R5, and R6. No JVM, no Elasticsearch.
 
 > **Notio** is a codename. The project's official name is not set yet, so it
-> carries a working name until then. Notio is Latin for "concept" — a SNOMED CT
+> carries a working name until then. Notio is Latin for "concept". A SNOMED CT
 > terminology service is, at heart, a service that knows what each concept means
 > and how the concepts relate.
 
@@ -30,9 +36,9 @@ modest box.
 ## What it is
 
 - A read-oriented FHIR terminology server for SNOMED CT.
-- The HL7 FHIR terminology API — `CodeSystem/$lookup`, `CodeSystem/$subsumes`,
+- The HL7 FHIR terminology API (`CodeSystem/$lookup`, `CodeSystem/$subsumes`,
   `CodeSystem/$validate-code`, `ValueSet/$expand`, `ValueSet/$validate-code`,
-  and `ConceptMap/$translate` — served across **R4, R4B, R5, and R6** from one
+  and `ConceptMap/$translate`), served across **R4, R4B, R5, and R6** from one
   running server.
 - Value-set expansion driven by SNOMED's Expression Constraint Language (ECL).
 - A single static binary. No JVM, no separate search service, no external
@@ -42,23 +48,23 @@ modest box.
 
 The design is recorded in full, with citations, in
 [`docs/architecture.md`](docs/architecture.md). The starting point is what SNOMED
-CT actually is: not just a graph, but a **formal ontology in the OWL 2 EL
+CT actually is: a graph, and also a **formal ontology in the OWL 2 EL
 profile**. That splits the system into two problems with different answers.
 
 - **Offline: classification, once per release.** The is-a hierarchy a client
-  queries is a reasoner output — the same result SNOMED ships in its inferred and
-  transitive-closure files — computed once, not re-derived per query.
+  queries is a reasoner output (the same result SNOMED ships in its inferred and
+  transitive-closure files), computed once, not re-derived per query.
 - **Online: serving, from precomputed structures.** SNOMED is stored as a graph,
   natively, but as **integer-keyed CSR adjacency arrays plus roaring bitmaps for
   the transitive closure**. Subsumption is then an O(1) bitmap test, a
   descendant set is a bitmap returned directly, and ECL refinement is bitmap set
-  algebra. This is a graph *model* with an index-materialized *store* — not a
-  graph database, and not live traversal, both of which the evidence shows lose
+  algebra. This is a graph *model* with an index-materialized *store*, not a
+  graph database and not live traversal, both of which the evidence shows lose
   on exactly the deep-reachability queries ECL depends on. Text search is a
   separate `fst` index. Every production terminology server (Snowstorm,
   Ontoserver, Hermes) converges on this materialized-index shape; Hermes serves
   subsumption in tens of microseconds this way.
-- **Persistence is `redb`** — a pure-Rust, memory-mapped, ACID embedded engine.
+- **Persistence is `redb`:** a pure-Rust, memory-mapped, ACID embedded engine.
   Disk-backed and a real engine, so it is neither everything-in-RAM nor a
   hand-rolled format, while staying pure Rust and a single self-contained binary.
 - **FHIR support is machine-generated from the official specs, never
@@ -76,7 +82,7 @@ profile**. That splits the system into two problems with different answers.
 
 ## The plan
 
-**FHIR R4B is the first version implemented** — the current stable release of
+**FHIR R4B is the first version implemented:** the current stable release of
 the R4 line and a near-superset of R4, so an R4B-first build already serves the
 R4-family terminology surface; R5, R4, and R6 (ballot) follow as further
 generations.
@@ -106,14 +112,20 @@ Two separate things, and they must not be confused:
   Netherlands among them) and available under the affiliate licence elsewhere.
   You bring your own RF2 release and the server loads it.
 
-## Relationship to FerroEHR
+## Why it exists
 
-Notio is a standalone project. It grew out of
+Notio is a standalone project with a simple motivation: run a SNOMED CT
+terminology server on ordinary hardware. The reference servers are Java on
+Elasticsearch and want 16 to 32 GB of RAM to serve the International edition,
+more than a laptop or a small box has. Notio is a pure-Rust server built to
+serve the same edition in a few hundred megabytes, so it runs on a personal
+computer.
+
+It speaks the FHIR terminology API, so it is useful to any FHIR client.
 [FerroEHR](https://github.com/rubentalstra/FerroEHR), a pure-Rust openEHR
-clinical data repository, which resolves archetype value-set bindings against an
-external FHIR terminology server. openEHR places that resolver outside the CDR
-by design, so Notio is a separate server reached over FHIR rather than a part of
-the CDR, and it is useful to any FHIR client, not only to FerroEHR.
+clinical data repository by the same author, is one such client (openEHR
+resolves archetype value-set bindings against an external FHIR terminology
+server), but Notio is independent of it and was not derived from it.
 
 ## Contributing
 

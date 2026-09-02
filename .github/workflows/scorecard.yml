@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: MIT
+
+# OpenSSF Scorecard — an INDEPENDENT score of this repository's security
+# posture. It checks the supply-chain properties this project spends real work
+# on (pinned action digests, minimal workflow token permissions, no dangerous
+# `run:` interpolation, code scanning, branch protection, signed releases,
+# dependency update automation) and publishes a score we do not control. A
+# self-made "hardened" badge would assert the same thing while proving nothing.
+#
+# Results go two places: the OpenSSF API (which backs the README badge, enabled
+# by `publish_results`) and this repository's code-scanning alerts, so a
+# regression shows up in the Security tab rather than only in a number.
+#
+# TWO CHECKS SCORE LOW FOR A NEW SOLO REPOSITORY AND ALWAYS WILL — recorded
+# here so the badge does not send the next reader on an investigation that has
+# already been done:
+#
+#   * `Maintained` — the API's reason is "project was created within the last
+#     90 days". A new-repository caution, not a judgement about activity, and it
+#     expires by itself.
+#   * `Code-Review` — wants a second human to approve pull requests. With one
+#     maintainer the only ways to move it are to add a reviewer or to fake one.
+#
+# The score is an outcome, never the target. Do not chase these two.
+#
+# Docs: https://github.com/ossf/scorecard-action
+name: Scorecard
+
+on:
+  # Re-score immediately when branch protection changes (the Branch-Protection
+  # check reads exactly that configuration).
+  branch_protection_rule:
+  # Weekly, because most checks measure repository CONFIGURATION rather than a
+  # commit: branch protection, code scanning, the update bot. A per-push run
+  # would re-measure unchanged settings.
+  schedule:
+    - cron: "37 5 * * 1"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # publish_results works only from the default branch (the action refuses
+    # elsewhere); this keeps a stray off-branch dispatch from failing
+    # confusingly.
+    if: github.ref_name == github.event.repository.default_branch
+    permissions:
+      # Upload the SARIF into code scanning.
+      security-events: write
+      # Publish to the OpenSSF API (the badge's source) via OIDC — no token.
+      id-token: write
+      contents: read
+      # Read branch-protection settings, which Scorecard cannot check
+      # otherwise.
+      actions: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # Publishing is what makes the badge possible, and it is a deliberate
+          # choice: the score becomes public, including when it drops.
+          publish_results: true
+
+      - name: Upload the SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          sarif_file: results.sarif

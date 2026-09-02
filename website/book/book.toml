@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+
+[book]
+title = "Notio"
+authors = ["Notio contributors"]
+description = "Documentation for Notio, a pure-Rust FHIR terminology server for SNOMED CT."
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+
+[output.html]
+# The book is served under /docs/ on the combined Pages site (the landing page
+# sits at the root). site-url makes the book's absolute asset and search links
+# resolve under that path.
+site-url = "/docs/"
+default-theme = "rust"
+preferred-dark-theme = "coal"
+git-repository-url = "https://github.com/rubentalstra/notio"
+edit-url-template = "https://github.com/rubentalstra/notio/edit/main/website/book/src/{path}"
+mathjax-support = true
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
+
+[output.html.search]
+enable = true
+
+# Mermaid diagrams render from ```mermaid fenced blocks. The additional-js above
+# ships the vendored renderer, dropped by `mdbook-mermaid install website/book`.
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+# Table of contents from a `<!-- toc -->` marker in long chapters.
+[preprocessor.toc]
+command = "mdbook-toc"
+renderer = ["html"]

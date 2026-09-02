@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+#
+# actionlint configuration.
+# https://github.com/rhysd/actionlint/blob/main/docs/config.md
+#
+# actionlint runs shellcheck over every `run:` block by itself; the SC2016
+# exclusion the workflows need is passed at invoke time through SHELLCHECK_OPTS
+# (see .github/workflows/ci.yml), which the config file has no key for.
+
+# No self-hosted runners: every job runs on GitHub-hosted ubuntu-latest, so no
+# custom runner labels are declared.
+self-hosted-runner:
+  labels: []
+
+# null disables the configuration-variables check, so any `vars.*` used later is
+# accepted without listing it here.
+config-variables: null

@@ -1,6 +1,6 @@
 ---
 name: owner-work-style
-description: How the owner wants Notio work done — research-first, evidence-based, from-first-principles, confirm foundational decisions before scaffolding
+description: How the owner wants Notio work done (research-first, evidence-based, from-first-principles, confirm foundational decisions before scaffolding)
 metadata:
   type: feedback
 ---
@@ -15,7 +15,7 @@ the start. **How to apply:**
 - For any foundational choice, do proper research and put the evidence in front
   of the owner BEFORE building. Present options with a recommendation; do not
   default to the conventional answer.
-- Do NOT scaffold code/workspace while the design is still open — the owner
+- Do NOT scaffold code/workspace while the design is still open; the owner
   stopped an early scaffold saying "still in the discover phase". Build only
   after the direction is confirmed.
 - Take the owner's design intuitions seriously and test them against evidence:

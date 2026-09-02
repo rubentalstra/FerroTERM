@@ -17,7 +17,7 @@ behavioural oracles for spec-silent edge cases only.
 
 ## URI grammar
 
-- **[S-URI-1]** The code system URI is exactly `http://snomed.info/sct` — never a
+- **[S-URI-1]** The code system URI is exactly `http://snomed.info/sct`, never a
   variant. Edition = `http://snomed.info/sct/[moduleSctid]`; edition+version =
   `http://snomed.info/sct/[moduleSctid]/version/[YYYYMMDD]`. The edition and
   version live ONLY in the FHIR `version` element / URI, never in `system`.
@@ -41,13 +41,13 @@ behavioural oracles for spec-silent edge cases only.
   historical-association + map reference sets into `$translate`, so translating an
   inactive concept via `REPLACED BY` / `SAME AS` returns its successor.
 - **[S-IMP-3]** A `ValueSet.compose.filter` with op `is-a` / `in` is answered by
-  the SAME subsumption/ECL engine as the implicit forms — one evaluation path.
+  the SAME subsumption/ECL engine as the implicit forms: one evaluation path.
 
 ## ECL (Expression Constraint Language)
 
 - **[S-ECL-1]** Target **ECL 2.2** (superset-compatible with 2.0/2.1); build the
-  parser faithful to the official ANTLR `ECL.g4` for that version — never a
-  hand-rolled divergent grammar. Port it in pure Rust (`logos` + `winnow` —
+  parser faithful to the official ANTLR `ECL.g4` for that version, never a
+  hand-rolled divergent grammar. Port it in pure Rust (`logos` + `winnow`,
   preferred over the pre-1.0 `chumsky`) mirroring the grammar, and test against
   the official valid/invalid example corpus.
 - **[S-ECL-2]** Support the full operator set: `<` / `<<` / `>` / `>>` / `*`,
@@ -57,7 +57,7 @@ behavioural oracles for spec-silent edge cases only.
   supplements, and alternate identifiers.
 - **[S-ECL-3]** Evaluate `<` / `<<` / `>` / `>>` against the **inferred**
   transitive closure of is-a (not the stated view), and bind every evaluation to
-  the resolved `(edition, version)` — the same expression yields different sets
+  the resolved `(edition, version)`: the same expression yields different sets
   across editions.
 - **[S-ECL-4]** Malformed ECL → an `OperationOutcome(invalid)`, never a panic or
   500. Distinguish syntactically-invalid ECL from valid ECL naming an unknown
@@ -94,7 +94,7 @@ behavioural oracles for spec-silent edge cases only.
   (moduleId + effectiveTime), never inferred from a filename alone; expose it as
   the FHIR `version` URI.
 - **[S-RF2-7]** Parse each reference set by its `refsetId`/descriptor, not by
-  positional column assumptions — simple, ordered, and map refsets have distinct
+  positional column assumptions: simple, ordered, and map refsets have distinct
   layouts.
 
 ## Testing and discipline
@@ -105,12 +105,12 @@ behavioural oracles for spec-silent edge cases only.
   in Notio (or a recorded, spec-cited deviation), never silently accepted.
 - **[S-TEST-2]** Run the official ECL valid/invalid example corpus for parse
   conformance; pin the SNOMED release + oracle versions in the test artifacts.
-- **[S-TEST-3]** Never tune a test to match observed output — adjudicate against
+- **[S-TEST-3]** Never tune a test to match observed output; adjudicate against
   the FHIR + SNOMED spec text first, then fix the server (see `testing.md`).
 - **[S-DIS-1]** Inactive is not invalid: serve inactive concepts, mark them, and
   route successors via associations.
 - **[S-DIS-2]** SNOMED CT content is licence-gated and NEVER committed
-  (`vendored-inputs.md`) — fixtures are shaped/synthetic only.
+  (`vendored-inputs.md`): fixtures are shaped/synthetic only.
 
 ## Sources
 

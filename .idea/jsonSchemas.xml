@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JsonSchemaMappingsProjectConfiguration">
+    <state>
+      <map>
+        <entry key="Citation File Format">
+          <value>
+            <SchemaInfo>
+              <option name="name" value="Citation File Format" />
+              <option name="relativePathToSchema" value="https://raw.githubusercontent.com/citation-file-format/citation-file-format/1.2.0/schema.json" />
+              <option name="applicationDefined" value="true" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value="CITATION.cff" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+        <entry key="GitHub Funding">
+          <value>
+            <SchemaInfo>
+              <option name="name" value="GitHub Funding" />
+              <option name="relativePathToSchema" value="https://www.schemastore.org/github-funding.json" />
+              <option name="applicationDefined" value="true" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value=".github/FUNDING.yml" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+        <entry key="actionlint">
+          <value>
+            <SchemaInfo>
+              <option name="name" value="actionlint" />
+              <option name="relativePathToSchema" value="https://www.schemastore.org/actionlint.json" />
+              <option name="applicationDefined" value="true" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value=".github/actionlint.yaml" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+        <entry key="dependabot-v2.json">
+          <value>
+            <SchemaInfo>
+              <option name="name" value="dependabot-v2.json" />
+              <option name="relativePathToSchema" value="https://www.schemastore.org/dependabot-2.0.json" />
+              <option name="applicationDefined" value="true" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value=".github/dependabot.yml" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+      </map>
+    </state>
+  </component>
+</project>

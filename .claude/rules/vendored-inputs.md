@@ -8,7 +8,7 @@ Two kinds of external material touch this repo, and they are handled
 oppositely: the FHIR packages are vendored verbatim as codegen input; SNOMED
 CT content is NEVER committed.
 
-## FHIR packages — vendored verbatim, pinned, provenance-stamped
+## FHIR packages: vendored verbatim, pinned, provenance-stamped
 
 The pinned FHIR packages are the codegen input (`codegen.md`). Every one is:
 
@@ -40,23 +40,23 @@ input is not done until the drift check exercises it (`codegen.md`).
 
 SNOMED CT is licensed by SNOMED International (free within member countries,
 affiliate licence elsewhere). **The repository ships no RF2 content and no
-derived edition data** — no concepts, no descriptions, no relationships, no
+derived edition data:** no concepts, no descriptions, no relationships, no
 transitive-closure file, no built `redb`/`fst`/roaring artifacts derived from a
 release. A deployment brings its own licensed RF2 release; `tools/notio-build`
 turns it into the served artifacts offline, outside version control.
 
-- **Test fixtures use shaped, synthetic content only** — a small, hand-built
+- **Test fixtures use shaped, synthetic content only:** a small, hand-built
   hierarchy invented for the test (synthetic SCTIDs, invented terms) that
   exercises subsumption, ECL, expansion, and search. **Never** extract real
   SNOMED concepts, descriptions, or terms from a release into a fixture, even
-  a handful — that is redistribution of licensed content. The reference-server
+  a handful: that is redistribution of licensed content. The reference-server
   comparison (`testing.md`) runs against a locally-provisioned licensed
   edition that stays out of the repo.
 - **`.gitignore` refuses RF2 and built artifacts** so a licensed release
   dropped into a working tree cannot be committed by accident (the
   `Snapshot`/`Full`/`Delta` RF2 layouts, `*.rf2`, `sct2_*`/`der2_*` files, and
   the build output directory). If a genuinely new content shape appears,
-  widen `.gitignore` in the same change — never commit content to "just get it
+  widen `.gitignore` in the same change; never commit content to "just get it
   working".
 
 When in doubt about whether a byte is licensed SNOMED content: it is, and it

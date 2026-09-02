@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/nomenclator.iml" filepath="$PROJECT_DIR$/.idea/nomenclator.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/notio.iml" filepath="$PROJECT_DIR$/.idea/notio.iml" />
     </modules>
   </component>
 </project>

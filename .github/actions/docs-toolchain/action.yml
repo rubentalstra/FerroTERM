@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MIT
+name: Install the docs toolchain
+description: >-
+  Install the pinned mdBook toolchain (mdBook, mdbook-toc, mdbook-mermaid) used
+  to build the documentation site. The calling job checks out the repository
+  FIRST: a local action (./.github/actions/docs-toolchain) resolves only after
+  checkout, so this action does not check out.
+inputs:
+  mdbook-version:
+    description: mdBook version.
+    required: false
+    default: "0.5.4"
+  mdbook-toc-version:
+    description: mdbook-toc version.
+    required: false
+    default: "0.15.4"
+  mdbook-mermaid-version:
+    description: mdbook-mermaid version.
+    required: false
+    default: "0.17.1"
+runs:
+  using: composite
+  steps:
+    # taiki-e/install-action fetches each tool's upstream release binary and
+    # verifies its checksum, so no `cargo install` compile is needed.
+    - uses: taiki-e/install-action@742a3317eac7bd62f91cd888b4eead5e784ba833 # v2.87.1
+      with:
+        tool: mdbook@${{ inputs.mdbook-version }},mdbook-toc@${{ inputs.mdbook-toc-version }},mdbook-mermaid@${{ inputs.mdbook-mermaid-version }}

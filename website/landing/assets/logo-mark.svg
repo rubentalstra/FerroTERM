@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="Notio">
+  <!-- A concept and its relations: one parent node linked to its descendants,
+       the graph shape a SNOMED CT terminology serves. -->
+  <circle cx="24" cy="9" r="5" fill="#0e7c86"/>
+  <circle cx="10" cy="34" r="5" fill="#137e88" opacity="0.85"/>
+  <circle cx="24" cy="39" r="5" fill="#17a2b0"/>
+  <circle cx="38" cy="34" r="5" fill="#137e88" opacity="0.85"/>
+  <g stroke="#0e7c86" stroke-width="2.2" stroke-linecap="round" opacity="0.7">
+    <path d="M21 13 12 30"/>
+    <path d="M24 14v20"/>
+    <path d="M27 13 36 30"/>
+  </g>
+</svg>

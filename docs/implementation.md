@@ -1,0 +1,136 @@
+# Implementation checklist
+
+Notio implements the whole FHIR terminology surface for SNOMED CT. This is the
+master list of what the server must do. Check items off as they land. There is
+no fixed scope cut and no "version 1" boundary: what a given release contains is
+decided during development, and every item here is in scope until it is built.
+
+Conformance is verified, not asserted: the HL7 `fhir-tx-ecosystem-ig` test cases
+(run through the FHIR Validator's `txTests` mode) are the wire check, and
+differential testing against Snowstorm and Hermes over a licensed edition is the
+behavioural check (`.claude/rules/testing.md`). An item counts as done when its
+tests and the relevant conformance cases pass.
+
+Implementation order starts with **R4B**, then R5, R4, and R6. That is a build
+sequence, not a scope limit; the server serves every version.
+
+## FHIR terminology operations
+
+- [ ] `CodeSystem/$lookup`: display, designations, properties, the SNOMED
+  edition+version in `version`
+- [ ] `CodeSystem/$validate-code`: code validity, display validation, correct
+  display returned when the submitted one is wrong
+- [ ] `CodeSystem/$subsumes`: subsumed / subsumes / equivalent / not-subsumed
+- [ ] `ValueSet/$expand`: `filter`, `count`, `offset`, `expansion.total`,
+  `expansion.parameter` echo, `includeDesignations`, `designation`,
+  `displayLanguage`, `activeOnly`, `property`, `excludeNested`
+- [ ] `ValueSet/$validate-code`: membership, display, inactive handling
+- [ ] `ConceptMap/$translate`: explicit maps and SNOMED implicit maps
+- [ ] `ConceptMap/$closure`: client-side transitive-closure maintenance
+- [ ] `CodeSystem/$find-matches`
+- [ ] `metadata` (CapabilityStatement) and `metadata?mode=terminology`
+  (TerminologyCapabilities) enumerating supported systems, versions, and
+  implicit-value-set capability
+
+## Operation mechanics
+
+- [ ] GET (query params) and POST (`Parameters`) invocation for every operation
+- [ ] Type-level (`ValueSet/$expand?url=`) and instance-level forms
+- [ ] `(system, version)` identity: resolve the default version and echo the
+  resolved version in every response
+- [ ] `$expand` version pinning: `system-version`, `check-system-version`,
+  `force-system-version`
+- [ ] Deterministic, stable expansion ordering so paging is repeatable
+- [ ] `OperationOutcome` on every failure, with `severity`, `code`, `expression`,
+  `details.coding` (from `tx-issue-type`), `details.text`
+- [ ] Unknown-system handling (`x-caused-by-unknown-system`) distinct from
+  invalid-code; `not-supported` for unsupported targets; client input errors are
+  `OperationOutcome`, never a 500
+- [ ] Inactive concepts served and marked `inactive`, never a 404; successors
+  routed through `$translate`
+- [ ] `displayLanguage` parameter and `Accept-Language` header both honoured;
+  `designation.language`/`.use`/`.value` returned; deterministic language
+  fallback, stated
+
+## FHIR versions (all served)
+
+- [ ] R4B (4.3.0)
+- [ ] R5 (5.0.0)
+- [ ] R4 (4.0.1)
+- [ ] R6 (ballot, tracked as it moves)
+- [ ] Per-version operation parameter sets generated from each version's
+  `OperationDefinition`; one server answers every version at runtime
+
+## SNOMED CT on FHIR
+
+- [ ] URI standard: `http://snomed.info/sct`, edition and version URIs, concept
+  URIs; edition/version only in `version`
+- [ ] Implicit value sets: `?fhir_vs`, `?fhir_vs=isa/[sctid]`,
+  `?fhir_vs=ecl/[ecl]`, `?fhir_vs=refset`, `?fhir_vs=refset/[sctid]`, with an
+  edition/version base
+- [ ] Implicit concept maps: `?fhir_cm=[sctid]`; historical-association and
+  map reference sets wired into `$translate`
+- [ ] Multi-edition support via the Module Dependency Reference Set; default
+  edition+version resolution and per-request override
+- [ ] Preferred-term / display selection from the language reference set and RF2
+  acceptability; FSN vs synonym
+- [ ] `compose.filter` (`is-a`, `in`) answered by the same engine as the implicit
+  forms
+
+## ECL (Expression Constraint Language 2.2)
+
+- [ ] Parser faithful to the official ANTLR `ECL.g4`; malformed ECL is an
+  `OperationOutcome(invalid)`
+- [ ] Operators: `<`, `<<`, `>`, `>>`, `*`, `^` (memberOf), `.` (dotted
+  attribute), `:` refinement with attribute groups and cardinality, reverse `R`,
+  `AND`, `OR`, `MINUS`, concrete values with comparisons
+- [ ] 2.1+ term/description filters (`{{ … }}`), history supplements, alternate
+  identifiers
+- [ ] Evaluation against the inferred transitive closure, edition/version-scoped
+
+## MRCM and post-coordination
+
+- [ ] MRCM domain/attribute/cardinality validation
+- [ ] Post-coordinated expression parsing and validation
+
+## CodeSystem supplements
+
+- [ ] Supplement handling and `useSupplement` beyond echoing the parameter
+
+## RF2 ingestion (offline build)
+
+- [ ] Snapshot load; Full for history; Delta for incremental updates; record the
+  release type
+- [ ] Activity from the latest `effectiveTime` per component
+- [ ] Subsumption from the inferred Relationship file; transitive closure
+  computed and persisted (shipped closure file used when present)
+- [ ] Module Dependency Reference Set assembly; warn on unmet dependencies
+- [ ] Reference-set parsing by descriptor (simple, ordered, map layouts)
+- [ ] Edition/version identified from release metadata, not filenames; post-load
+  verification of counts and known facts
+
+## Engine and storage
+
+- [ ] `notio-fhir` generated per version from the vendored packages; drift check
+- [ ] CSR adjacency (is-a and per-attribute) and roaring transitive-closure
+  bitmaps; resident at query time
+- [ ] `redb` persistence of the built artifacts
+- [ ] `fst` word inverted index for description search (prefix, refset/status
+  filter, matched-term-length sort)
+- [ ] `spawn_blocking` seam for heavy `$expand` and cold reads
+
+## Deployment and operations
+
+- [ ] Single static binary; container image
+- [ ] Configuration surface
+- [ ] SNOMED RF2 edition loading with licence enforcement (bring-your-own,
+  content never committed)
+- [ ] SLSA Build L3 releases with signed SBOM (`docs/ci-cd.md`)
+- [ ] External documentation (`website/book`)
+
+## Conformance and verification
+
+- [ ] `fhir-tx-ecosystem-ig` `txTests` pass, per served version
+- [ ] Differential testing against Snowstorm and Hermes over a pinned licensed
+  edition
+- [ ] ECL evaluated against the official valid/invalid example corpus

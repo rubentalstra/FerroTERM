@@ -5,11 +5,11 @@ paths:
   - "app/notio-server/**"
 ---
 
-# FHIR terminology service — wire conformance
+# FHIR terminology service: wire conformance
 
 The FHIR specification is the oracle for the terminology wire. Implement and
 review every operation against the terminology module and the specific
-`OperationDefinition` of the SERVED wire version (R4/R4B/R5/R6) — the operation
+`OperationDefinition` of the SERVED wire version (R4/R4B/R5/R6). The operation
 contracts are stable across versions but the result-parameter sets grew (R5+
 added `$expand` properties, `x-caused-by-unknown-system`, richer
 `$validate-code` issues), so check the served version's own definition, never a
@@ -23,7 +23,7 @@ in the commit/PR for any conformance-relevant decision.
   expects it).
 - **[F-OP-2]** Serve `GET {root}/metadata` (CapabilityStatement) and
   `GET {root}/metadata?mode=terminology` (TerminologyCapabilities) enumerating
-  every supported code system + version and the implicit-value-set capability —
+  every supported code system + version and the implicit-value-set capability,
   a SHALL in the terminology ecosystem IG.
 - **[F-OP-3]** Accept both GET (query params) and POST (`Parameters` resource);
   support type-level (`ValueSet/$expand?url=…`) and instance-level
@@ -40,9 +40,9 @@ in the commit/PR for any conformance-relevant decision.
 ## Expansion
 
 - **[F-EXP-1]** Honour `count` and `offset`; populate `expansion.total` when
-  computable (for SNOMED implicit sets it is — include it); echo
+  computable (for SNOMED implicit sets it is, include it); echo
   `expansion.offset`. Ordering is **deterministic** across calls so paging is
-  stable — make the order explicit (by code, then evaluation order), never store
+  stable; make the order explicit (by code, then evaluation order), never store
   iteration order.
 - **[F-EXP-2]** Echo every effective parameter in `expansion.parameter`,
   including assumed defaults and the resolved code-system version(s) used.
@@ -58,7 +58,7 @@ in the commit/PR for any conformance-relevant decision.
   submitted one is wrong (a warning, never a silent pass).
 - **[F-VAL-2]** Every `OperationOutcome` issue carries `severity`, `code`,
   `expression`, `details.coding` (from
-  `http://hl7.org/fhir/tools/CodeSystem/tx-issue-type` — e.g. `not-found`,
+  `http://hl7.org/fhir/tools/CodeSystem/tx-issue-type`, e.g. `not-found`,
   `invalid-code`, `invalid-display`, `this-code-not-in-vs`, `vs-invalid`), and
   `details.text`.
 - **[F-VAL-3]** Distinguish "the code is wrong" from "I cannot check this":
@@ -87,19 +87,19 @@ in the commit/PR for any conformance-relevant decision.
 ## Cross-version
 
 - **[F-XV-1]** Serve R4/R4B/R5/R6 each with its own `OperationDefinition`
-  parameter shapes (generated per version — see `codegen.md`); test the full
+  parameter shapes (generated per version, see `codegen.md`); test the full
   matrix. `$validate-code` issue structure and `$expand` result parameters
   differ materially in R5/R6.
 
 ## Discipline
 
 - **[F-DIS-1]** One evaluation engine for subsumption/ECL/refset across implicit
-  value sets, `compose.filter`, and `$subsumes` — divergent code paths are where
+  value sets, `compose.filter`, and `$subsumes`; divergent code paths are where
   conformance rots.
 - **[F-DIS-2]** Acceptance is the HL7 `fhir-tx-ecosystem-ig` test cases run per
   wire version (the FHIR Validator `txTests` mode); a green run is the merge gate
   for terminology behaviour. Reference servers (Snowstorm, Ontoserver,
-  tx.fhir.org) are BEHAVIOURAL oracles for spec-silent edge cases only — never
+  tx.fhir.org) are BEHAVIOURAL oracles for spec-silent edge cases only, never
   spec authorities. See `testing.md`.
 
 ## Sources

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- GitHub Pages sets no response headers, so the policy travels in a <meta>
+       element. Every source is 'self': the page loads no external script,
+       style, font, or image, and connects to nothing at load time. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Notio — a pure-Rust FHIR terminology server for SNOMED CT</title>
+  <meta name="description" content="Notio (codename) is a pure-Rust FHIR terminology server for SNOMED CT that runs on ordinary hardware. Machine-generated FHIR across R4B, R5, R4, and R6. No JVM, no Elasticsearch. MIT licensed. In discovery.">
+  <link rel="icon" type="image/svg+xml" href="./assets/logo-mark.svg">
+  <link rel="stylesheet" href="./style.css">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Notio — a pure-Rust FHIR terminology server for SNOMED CT">
+  <meta property="og:description" content="A SNOMED CT terminology server that serves the FHIR terminology API in a few hundred megabytes. No JVM, no Elasticsearch. MIT licensed. In discovery.">
+  <meta property="og:site_name" content="Notio">
+
+  <!-- Structured data. Browsers never execute an application/ld+json data block
+       (https://html.spec.whatwg.org/multipage/scripting.html#data-block), so
+       script-src does not govern it and the page stays CSP-clean. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    "name": "Notio",
+    "description": "A pure-Rust FHIR terminology server for SNOMED CT, in discovery. Serves the HL7 FHIR terminology API from a memory-mapped SNOMED index, with no JVM and no Elasticsearch.",
+    "codeRepository": "https://github.com/rubentalstra/notio",
+    "programmingLanguage": "Rust",
+    "license": "https://opensource.org/licenses/MIT",
+    "applicationCategory": "HealthApplication",
+    "developmentStatus": "Discovery"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Nav -->
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="./">
+        <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
+        <span>Notio</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="./docs/">Docs</a>
+        <a href="#why" class="hide-sm">Why</a>
+        <a href="#facts" class="hide-sm">Facts</a>
+        <a href="https://github.com/rubentalstra/notio" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="wrap">
+        <img class="hero-logo" src="./assets/logo-mark.svg" alt="Notio" width="88" height="88">
+        <p class="status" role="note">Discovery. No product code yet.</p>
+        <h1>A pure-Rust FHIR terminology server for SNOMED CT that runs on ordinary hardware.</h1>
+        <p class="sub">
+          Notio serves the HL7 FHIR terminology API for SNOMED CT from a
+          memory-mapped index built once per edition. You run the full
+          International edition in a few hundred megabytes on a laptop or a
+          small box, with no JVM and no search cluster to operate.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="./docs/">Read the documentation</a>
+          <a class="btn btn-ghost" href="https://github.com/rubentalstra/notio" rel="noopener">View on GitHub</a>
+        </div>
+        <p class="note">
+          Notio is a codename. Latin for "concept": a SNOMED CT service knows
+          what each concept means and how the concepts relate. The official
+          name is not set yet.
+        </p>
+      </div>
+    </section>
+
+    <!-- Why it exists -->
+    <section id="why">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Why it exists</span>
+          <h2>The same edition, on hardware you already have</h2>
+          <p>
+            SNOMED CT terminology servers today are almost all Java, and the
+            reference server runs on Elasticsearch. That stack wants 16 to
+            32 GB of RAM to serve the International edition, more than a laptop
+            or a small box has.
+          </p>
+        </div>
+        <div class="compare">
+          <article class="compare-card">
+            <span class="tag">Reference stack</span>
+            <p class="big">16 to 32 GB</p>
+            <p class="cap">RAM to serve the International edition, most of it Elasticsearch heap, plus a search cluster to run.</p>
+          </article>
+          <article class="compare-card accent">
+            <span class="tag">Notio, by design</span>
+            <p class="big">a few hundred MB</p>
+            <p class="cap">One Rust binary and a memory-mapped index. Small enough to run beside other services on a modest box.</p>
+          </article>
+        </div>
+        <p class="compare-note">
+          The data itself is small: about 360,000 concepts, 1.2 million
+          descriptions, and 1.5 million relationships. Notio treats SNOMED as a
+          graph, materializes the answers a terminology server is asked for once
+          per release, and serves them from precomputed structures. These are
+          the design targets recorded in the architecture, not measurements of a
+          running server.
+        </p>
+      </div>
+    </section>
+
+    <!-- Key facts -->
+    <section id="facts" class="surface">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">What it is</span>
+          <h2>The decisions already taken</h2>
+          <p>
+            The architecture is recorded in full, with citations, in the
+            documentation. Here is the shape of it.
+          </p>
+        </div>
+        <div class="grid">
+
+          <article class="card">
+            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+            <h3>Machine-generated FHIR</h3>
+            <p>HL7 publishes the type system and every operation as machine-readable resources. A generator emits per-version Rust from them, so the operation surface is correct per version by construction. Planned across R4B, R5, R4, and R6.</p>
+          </article>
+
+          <article class="card">
+            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2M12 12.5v3"/></svg></div>
+            <h3>An index-materialized graph store</h3>
+            <p>SNOMED is stored as a graph, natively, as integer-keyed adjacency arrays and roaring bitmaps for the transitive closure. Subsumption is a bitmap test, a descendant set is a bitmap returned directly. This is a graph model with a materialized store, not a graph database and not live traversal.</p>
+          </article>
+
+          <article class="card">
+            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+            <h3>Value sets driven by ECL</h3>
+            <p>Value-set expansion follows SNOMED's Expression Constraint Language. The evaluator compiles ECL to set algebra over the descendant bitmaps and typed adjacency, tested against the published ECL grammar as its own layer.</p>
+          </article>
+
+          <article class="card">
+            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h.01M7 12h.01M7 16h.01M11 8h6M11 12h6M11 16h4"/></svg></div>
+            <h3>One self-contained binary</h3>
+            <p>A single static binary over a pure-Rust, memory-mapped embedded engine (<code>redb</code>). No JVM, no separate search service, no external database. The offline build turns an RF2 release into the store, graph, and text index once per edition.</p>
+          </article>
+
+          <article class="card">
+            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></div>
+            <h3>The FHIR terminology API</h3>
+            <p><code>$lookup</code>, <code>$subsumes</code>, <code>$validate-code</code>, <code>$expand</code>, and <code>$translate</code>, served from one running server. Correctness is checked against Snowstorm as the reference server.</p>
+          </article>
+
+          <article class="card">
+            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13"/><path d="M4 19a2 2 0 0 0 2 2h14"/><path d="M8 8h8M8 12h5"/></svg></div>
+            <h3>MIT licensed</h3>
+            <p>The software is open source under the MIT license. Use it, embed it, run it. SNOMED CT content is licensed separately by SNOMED International and is never distributed here: you bring your own RF2 release.</p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Status -->
+    <section id="status">
+      <div class="wrap">
+        <div class="status-panel">
+          <h2>Where the project is</h2>
+          <p>
+            Notio is in discovery. This repository is being scoped before
+            implementation, so it describes the intended architecture and the
+            decisions already taken, not a finished server. There is no product
+            code yet, and no benchmark to quote.
+          </p>
+          <p>
+            The most useful thing you can do right now is read the architecture
+            and the ECL approach, then tell us where it is wrong. Issues and
+            discussion are welcome.
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href="./docs/">Read the architecture</a>
+            <a class="btn btn-ghost" href="https://github.com/rubentalstra/notio" rel="noopener">Open an issue</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="./">
+            <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
+            <span>Notio</span>
+          </a>
+          <p>
+            A pure-Rust FHIR terminology server for SNOMED CT, in discovery.
+            The software is licensed under
+            <a href="https://github.com/rubentalstra/notio/blob/main/LICENSE" rel="noopener">MIT</a>.
+            SNOMED CT is a registered trademark of SNOMED International and its
+            content is licensed separately.
+          </p>
+        </div>
+        <div class="footer-links">
+          <div>
+            <h4>Read</h4>
+            <ul>
+              <li><a href="./docs/">Documentation</a></li>
+              <li><a href="./docs/evaluate/architecture.html">Architecture</a></li>
+              <li><a href="./docs/integrate/fhir-api.html">FHIR terminology API</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Project</h4>
+            <ul>
+              <li><a href="https://github.com/rubentalstra/notio" rel="noopener">GitHub</a></li>
+              <li><a href="https://github.com/rubentalstra/notio/blob/main/LICENSE" rel="noopener">License</a></li>
+              <li><a href="https://github.com/rubentalstra/notio/issues" rel="noopener">Issues</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="footer-note">
+        <span>Notio is a working codename. The official name is not set yet.</span>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

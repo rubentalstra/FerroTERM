@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: MIT
+
+# Docs — build and deploy the documentation site (mdBook) to GitHub Pages.
+#
+# This follows GitHub's official Pages-with-Actions pattern (the
+# actions/starter-workflows pages/mdbook.yml): a `build` job renders the book and
+# uploads it as a Pages artifact, and a `deploy` job publishes that artifact to
+# the github-pages environment. The build runs on pull requests too, so a broken
+# book fails the PR; only a push to main (or a manual dispatch) deploys.
+#
+# OWNER ACTION REQUIRED once, before the first deploy: enable GitHub Pages with
+# Source = GitHub Actions (repository Settings -> Pages). Without it the deploy
+# job cannot publish.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+# The Pages deployment is serialized on one concurrency group. cancel-in-progress
+# is false so an in-flight deploy finishes rather than being cut off mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Render the book and upload it as the Pages artifact. Runs on every event,
+  # including pull requests, so a book that does not build fails the check.
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/docs-toolchain
+      - name: Assemble the site (landing at /, the book under /docs/)
+        run: |
+          set -euo pipefail
+          # The landing page is served at the site root; the mdBook goes under
+          # /docs/ (book.toml sets site-url = "/docs/" so its absolute links
+          # resolve there). book.toml sets build-dir = "book", so mdbook renders
+          # into website/book/book.
+          mdbook build website/book
+          rm -rf _site
+          mkdir -p _site
+          cp -R website/landing/. _site/
+          mkdir -p _site/docs
+          cp -R website/book/book/. _site/docs/
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  # Publish the artifact to GitHub Pages. Skipped on pull requests: a PR builds
+  # and verifies the book but never deploys it.
+  deploy:
+    name: deploy
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

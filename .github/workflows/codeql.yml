@@ -1,0 +1,130 @@
+# SPDX-License-Identifier: MIT
+
+# CodeQL code scanning (security analysis).
+#
+# Two languages, each in its own job:
+#
+#   * actions — runs NOW, on every change. The workflows in this directory are
+#     code holding tokens that can publish releases, so they get the same
+#     scrutiny as source. Build-mode "none".
+#   * rust — GUARDED behind a detection job that checks for a root Cargo.toml,
+#     the same primitive ci.yml uses. It is skipped cleanly while the repository
+#     is pre-code and activates by itself when the Cargo workspace lands, with no
+#     workflow edit. `rust` is a generally-available CodeQL language (GA
+#     2025-10-14), build-mode "none", so it never contends for cargo's build
+#     tree.
+#
+# Code scanning must be the ADVANCED setup for this workflow to run: GitHub
+# rejects an advanced-config analysis while the CodeQL default setup is enabled
+# for the repository. Keep the default setup OFF in Settings → Code security.
+#
+# Docs: https://docs.github.com/en/code-security/code-scanning
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+      - "**/*.rs"
+      - "**/Cargo.toml"
+      - "Cargo.lock"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+      - "**/*.rs"
+      - "**/Cargo.toml"
+      - "Cargo.lock"
+  schedule:
+    - cron: "23 5 * * 1" # Mondays 05:23 UTC (off-the-hour to dodge load spikes)
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+# No permissions by default — each job grants its own.
+permissions: {}
+
+jobs:
+  # The actions analysis always runs: the workflows are live code from day one.
+  analyze-actions:
+    name: Analyze (actions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      security-events: write # upload the SARIF results / alerts
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          languages: actions
+          build-mode: none
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          category: "/language:actions"
+
+  # Decides whether the Rust analysis runs at all: it checks out and looks for a
+  # root Cargo.toml. hashFiles() cannot gate at `if:` time on a pre-code tree, so
+  # a real detection job is the correct primitive (the ci.yml pattern).
+  detect:
+    name: detect workspace
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      cargo: ${{ steps.check.outputs.cargo }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: check
+        run: |
+          set -euo pipefail
+          if [ -f Cargo.toml ]; then
+            echo "cargo=true" >> "$GITHUB_OUTPUT"
+            echo "Cargo.toml present — the Rust analysis will run."
+          else
+            echo "cargo=false" >> "$GITHUB_OUTPUT"
+            echo "No Cargo.toml — the Rust analysis is skipped (repository in discovery)."
+          fi
+
+  # The Rust analysis self-activates once the workspace lands.
+  analyze-rust:
+    name: Analyze (rust)
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      security-events: write # upload the SARIF results / alerts
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          languages: rust
+          build-mode: none
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          category: "/language:rust"
