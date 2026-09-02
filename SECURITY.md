@@ -2,12 +2,12 @@
 
 # Security Policy
 
-Notio is a read-oriented FHIR terminology server. This document says which
+FerroTERM is a read-oriented FHIR terminology server. This document says which
 versions receive security fixes and how to report a vulnerability privately.
 
 ## Supported versions
 
-Notio is pre-1.0 and in active early development. Security fixes are applied to
+FerroTERM is pre-1.0 and in active early development. Security fixes are applied to
 the latest released version only; there is no back-port line yet.
 
 | Version         | Supported          |
@@ -57,13 +57,13 @@ to release a fix before any public disclosure (coordinated disclosure).
 
 ## Scope
 
-In scope: the Notio server and libraries in this repository, its build and
+In scope: the FerroTERM server and libraries in this repository, its build and
 release pipeline, and its published artifacts.
 
 Out of scope: vulnerabilities in third-party dependencies without a
-Notio-specific impact (report those upstream; Dependabot and `cargo deny`
+FerroTERM-specific impact (report those upstream; Dependabot and `cargo deny`
 track advisories here), and issues that require a already-compromised host or
-misconfiguration outside Notio's control.
+misconfiguration outside FerroTERM's control.
 
 ## How releases are verified
 
@@ -78,7 +78,7 @@ Release binaries are built in an isolated reusable workflow (SLSA Build Level
 Provenance can be verified with:
 
 ```
-gh attestation verify notio-<tag>-<target>.tar.gz \
-  -R rubentalstra/notio \
-  --signer-workflow rubentalstra/notio/.github/workflows/release-build.yml
+gh attestation verify ferroterm-<tag>-<target>.tar.gz \
+  -R rubentalstra/FerroTERM \
+  --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
 ```

@@ -50,16 +50,16 @@ fi
 
 # --- Vendored FHIR package pins == docs/VERSIONS.md table ----------------------
 echo "== vendored FHIR package pins (PROVENANCE.md <-> docs/VERSIONS.md)"
-if [ -d tools/notio-fhir-codegen/vendor ]; then
+if [ -d tools/ferroterm-fhir-codegen/vendor ]; then
   found=0
-  for prov in tools/notio-fhir-codegen/vendor/*/PROVENANCE.md; do
+  for prov in tools/ferroterm-fhir-codegen/vendor/*/PROVENANCE.md; do
     [ -f "$prov" ] || continue
     found=1
     pkg="$(basename "$(dirname "$prov")")"
     prov_ver="$(sed -nE 's/^- Version:[[:space:]]*//p' "$prov" | head -n1 | tr -d '[:space:]')"
     # The second cell of the package's row in the docs/VERSIONS.md FHIR table.
     pin_ver="$(awk -F'|' -v pkg="$pkg" '$2 ~ "^[[:space:]]*`" pkg "`" { v = $3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); print v; exit }' docs/VERSIONS.md)"
-    pkg_json="tools/notio-fhir-codegen/vendor/$pkg/package/package.json"
+    pkg_json="tools/ferroterm-fhir-codegen/vendor/$pkg/package/package.json"
     json_ver=""
     [ -f "$pkg_json" ] && json_ver="$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$pkg_json" | head -n1)"
     if [ -z "$prov_ver" ]; then

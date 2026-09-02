@@ -1,8 +1,8 @@
-# Notio brand
+# FerroTERM brand
 
-Notio is a working codename (Latin for "concept"). These assets travel with the
-codename until the official name is set. All of it is MIT-licensed with the rest
-of the repository.
+FerroTERM is the official name (Ferro for the Rust family shared with FerroEHR,
+TERM for terminology). All of it is MIT-licensed with the rest of the
+repository.
 
 ## The mark
 
@@ -30,15 +30,15 @@ brightens to teal `#14b8a6` edges and `#2dd4bf` nodes so it holds contrast.
 
 | File | What it is |
 |---|---|
-| `notio-icon.svg` | primary icon, full colour, transparent background |
-| `notio-icon-mono.svg` | one-colour icon, inherits `currentColor` |
-| `notio-icon-dark.svg` | the icon on a dark rounded tile |
-| `notio-lockup-light.svg` | icon and "Notio" wordmark for light backgrounds |
-| `notio-lockup-dark.svg` | the lockup for dark backgrounds |
-| `notio-lockup-auto.svg` | the lockup that follows `prefers-color-scheme` |
+| `ferroterm-icon.svg` | primary icon, full colour, transparent background |
+| `ferroterm-icon-mono.svg` | one-colour icon, inherits `currentColor` |
+| `ferroterm-icon-dark.svg` | the icon on a dark rounded tile |
+| `ferroterm-lockup-light.svg` | icon and "FerroTERM" wordmark for light backgrounds |
+| `ferroterm-lockup-dark.svg` | the lockup for dark backgrounds |
+| `ferroterm-lockup-auto.svg` | the lockup that follows `prefers-color-scheme` |
 | `favicon.svg` | the mark on a teal tile, for browser tabs |
 | `favicon-32.png`, `favicon-16.png`, `favicon.ico` | raster favicons |
-| `notio-social.svg`, `notio-social.png` | 1200x630 social card |
+| `ferroterm-social.svg`, `ferroterm-social.png` | 1200x630 social card |
 | `tokens.css` | the palette as CSS custom properties |
 
 The wordmark is set in Bricolage Grotesque (700). Body copy pairs with IBM Plex
@@ -49,9 +49,9 @@ with a system-sans fallback; outline the wordmark to paths before any print use.
 
 - Keep clear space around the mark equal to the diameter of one node.
 - The smallest the mark reads is 16 px; below that use the favicon.
-- Put the colour mark on light or quiet surfaces, and `notio-icon-dark.svg` (the
+- Put the colour mark on light or quiet surfaces, and `ferroterm-icon-dark.svg` (the
   tile) on busy or light-photographic backgrounds.
-- Use `notio-icon-mono.svg` where one colour is required; it takes the
+- Use `ferroterm-icon-mono.svg` where one colour is required; it takes the
   surrounding text colour.
 - Do not recolour the mark outside the palette, stretch it, add effects, or
   rebuild the wordmark in another typeface.
@@ -64,5 +64,5 @@ The PNG and ICO files derive from the SVGs:
 rsvg-convert -w 32 -h 32 favicon.svg -o favicon-32.png
 rsvg-convert -w 16 -h 16 favicon.svg -o favicon-16.png
 magick favicon-32.png favicon-16.png favicon.ico
-rsvg-convert -w 1200 -h 630 notio-social.svg -o notio-social.png
+rsvg-convert -w 1200 -h 630 ferroterm-social.svg -o ferroterm-social.png
 ```

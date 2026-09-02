@@ -1,11 +1,11 @@
 # The FHIR terminology API
 
-Notio speaks the HL7 FHIR terminology API. If your client already talks to a FHIR
-terminology server, it talks to Notio. This page lists the operations and what
+FerroTERM speaks the HL7 FHIR terminology API. If your client already talks to a FHIR
+terminology server, it talks to FerroTERM. This page lists the operations and what
 each one answers.
 
 > [!NOTE]
-> The server is in design. The operations below are the terminology surface Notio
+> The server is in design. The operations below are the terminology surface FerroTERM
 > implements, and their FHIR shapes are fixed by the specification, but you cannot
 > call a running server yet. Requests and responses are marked as planned on the
 > [Worked examples](examples.md) page.
@@ -24,7 +24,7 @@ each one answers.
 | `ConceptMap/$translate` | the targets a code maps to | map-refset lookup |
 
 The FHIR specification defines the parameters and the response shape for each
-operation. Notio follows the specification for the FHIR version in the request.
+operation. FerroTERM follows the specification for the FHIR version in the request.
 
 ## How a request is shaped
 

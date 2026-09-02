@@ -2,7 +2,7 @@
 
 This page is a short tour of the design. The full design authority, with
 citations to the terminology-server and graph-reachability literature, is
-[`docs/architecture.md`](https://github.com/rubentalstra/notio/blob/main/docs/architecture.md)
+[`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md)
 in the repository.
 
 <!-- toc -->
@@ -24,8 +24,8 @@ graph TD
     ON --> API["FHIR terminology API (R4 / R4B / R5 / R6)"]
 ```
 
-- **Offline: classification, once per release.** The hierarchy Notio serves is a
-  reasoner output. Notio computes the transitive closure from the shipped
+- **Offline: classification, once per release.** The hierarchy FerroTERM serves is a
+  reasoner output. FerroTERM computes the transitive closure from the shipped
   inferred relationship file once per release and persists it. It never
   re-derives inference at query time.
 - **Online: serving, from precomputed structures.** Each operation is answered
@@ -60,7 +60,7 @@ which is how the design reaches microsecond-scale subsumption in pure Rust.
 
 HL7 publishes the whole type system and every operation as machine-readable
 `StructureDefinition` and `OperationDefinition` resources, in versioned packages.
-Notio vendors and pins those packages and generates per-version Rust modules from
+FerroTERM vendors and pins those packages and generates per-version Rust modules from
 them, so R5's extra `$expand` parameters appear where the spec has them and are
 absent where it does not. Every generated file is marked `// @generated`, a drift
 check regenerates it in CI, and one runtime wrapper answers R4, R4B, R5, and R6

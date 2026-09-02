@@ -19,7 +19,7 @@ body:
     id: solution
     attributes:
       label: Proposed solution
-      description: What you want Notio to do.
+      description: What you want FerroTERM to do.
     validations:
       required: true
   - type: textarea

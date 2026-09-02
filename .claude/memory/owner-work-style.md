@@ -1,11 +1,11 @@
 ---
 name: owner-work-style
-description: How the owner wants Notio work done (research-first, evidence-based, from-first-principles, confirm foundational decisions before scaffolding)
+description: How the owner wants FerroTERM work done (research-first, evidence-based, from-first-principles, confirm foundational decisions before scaffolding)
 metadata:
   type: feedback
 ---
 
-On Notio, the owner decides foundational architecture from **cited research
+On FerroTERM, the owner decides foundational architecture from **cited research
 (academic papers included), not convention**, and is explicitly skeptical of the
 "legacy" way others build CT/terminology servers (Elasticsearch,
 everything-in-RAM, general-purpose search engines).

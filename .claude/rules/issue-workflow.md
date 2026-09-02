@@ -51,7 +51,7 @@ Bootstrap the labels once with `scripts/gh/labels.sh`.
 - **Priority:** `P0` (critical, drop everything) / `P1` (high, current focus)
   / `P2` (normal) / `P3` (backlog).
 - **Domain/area:** `spec:FHIR` (the FHIR terminology wire), `spec:SNOMED`
-  (SNOMED CT / ECL / RF2 semantics), `codegen` (the `notio-fhir` generator),
+  (SNOMED CT / ECL / RF2 semantics), `codegen` (the `ferroterm-fhir` generator),
   `server` (the axum server). Add more as the project grows; keep the set
   small and meaningful.
 

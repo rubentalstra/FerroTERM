@@ -1,7 +1,7 @@
 # Implicit value sets and ECL
 
 SNOMED CT defines implicit value sets: value sets you name by a URL convention
-rather than by storing a ValueSet resource. Notio expands them with SNOMED's
+rather than by storing a ValueSet resource. FerroTERM expands them with SNOMED's
 Expression Constraint Language (ECL). This page explains the URL convention and
 how ECL drives an expansion.
 
@@ -43,9 +43,9 @@ reads as the descendants of one concept that have a given attribute pointing int
 a given subtree. ECL also supports conjunction, disjunction, exclusion, attribute
 groups, and cardinality.
 
-## How Notio evaluates it
+## How FerroTERM evaluates it
 
-Notio compiles an ECL expression to set algebra over the precomputed structures.
+FerroTERM compiles an ECL expression to set algebra over the precomputed structures.
 A `<<` or `>>` set is a precomputed bitmap returned directly, a refinement is a
 bitmap intersection or union over the per-attribute adjacency, and conjunction
 and disjunction are bitmap AND and OR. There is no live graph traversal on this

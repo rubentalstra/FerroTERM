@@ -1,8 +1,8 @@
 ---
 paths:
-  - "crates/notio-fhir/**"
-  - "crates/notio-terminology/**"
-  - "app/notio-server/**"
+  - "crates/ferroterm-fhir/**"
+  - "crates/ferroterm-terminology/**"
+  - "app/ferroterm-server/**"
 ---
 
 # FHIR terminology service: wire conformance

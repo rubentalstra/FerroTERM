@@ -1,13 +1,13 @@
 # CLAUDE.md
 
-**Notio (codename)** is a pure-Rust FHIR terminology server for SNOMED CT,
+**FerroTERM** is a pure-Rust FHIR terminology server for SNOMED CT,
 LOINC, and other clinical code systems, SNOMED CT first. It serves the HL7 FHIR
 terminology API across R4, R4B, R5, and R6 from one running server, backed by a
 memory-mapped concept index, with no JVM and no Elasticsearch. The engine is
 code-system-neutral: the operations talk to a code system provider seam, and
 each system arrives through its own loader (`docs/architecture.md` §5,
-`docs/terminologies.md`). The name is a working codename (Latin "concept");
-the official name is not set yet.
+`docs/terminologies.md`). The name is official: Ferro for the Rust family shared
+with FerroEHR, TERM for terminology; the site is <https://ferroterm.eu>.
 
 The full design, with citations, is in **`docs/architecture.md`**. Read it
 first. This file is the working discipline. Write all prose (docs, comments,
@@ -15,10 +15,10 @@ commits, PRs, issues) to `.claude/rules/writing-style.md`.
 
 ## The two layers (the FerroEHR split, applied to FHIR + SNOMED)
 
-- **`notio-fhir` is GENERATED** from the vendored, machine-readable FHIR specs
+- **`ferroterm-fhir` is GENERATED** from the vendored, machine-readable FHIR specs
   (`StructureDefinition` and `OperationDefinition`, from the pinned
   `hl7.fhir.*.core` packages). Treat every file marked `// @generated` as
-  off-limits. To change output, change the generator (`tools/notio-fhir-codegen`)
+  off-limits. To change output, change the generator (`tools/ferroterm-fhir-codegen`)
   and regenerate; never hand-edit generated code. The generator emits per-version
   modules (R4/R4B/R5/R6) so the operation surface is correct per version by
   construction.
@@ -35,28 +35,28 @@ commits, PRs, issues) to `.claude/rules/writing-style.md`.
 tooling not shipped in the server. Every crate carries its own `CLAUDE.md` with
 crate-local discipline.
 
-- `crates/notio-fhir`: generated per-version FHIR types and terminology operation
+- `crates/ferroterm-fhir`: generated per-version FHIR types and terminology operation
   contracts (`// @generated`).
-- `crates/notio-rf2`: SNOMED CT RF2 loader (inferred relationships, descriptions,
+- `crates/ferroterm-rf2`: SNOMED CT RF2 loader (inferred relationships, descriptions,
   refsets, transitive-closure file) and typed component model.
-- `crates/notio-graph`: the materialized hierarchy of a loaded code system.
+- `crates/ferroterm-graph`: the materialized hierarchy of a loaded code system.
   Integer-keyed CSR adjacency (is-a and per-relationship-type) and roaring
   transitive-closure bitmaps; subsumption and ECL set algebra.
-- `crates/notio-store`: the memory-mapped (`redb`) columnar concept and
+- `crates/ferroterm-store`: the memory-mapped (`redb`) columnar concept and
   designation store, one per code system version. Point reads for
   `$lookup`/`$validate-code`.
-- `crates/notio-text`: the `fst` and `roaring` designation search index
+- `crates/ferroterm-text`: the `fst` and `roaring` designation search index
   (per-word prefix, language and use filters, matched-term-length sort).
-- `crates/notio-ecl`: the Expression Constraint Language lexer, parser, and
-  evaluator (compiles ECL to set algebra over `notio-graph`).
-- `crates/notio-terminology`: the engine. `$lookup`/`$validate-code`/`$expand`/
+- `crates/ferroterm-ecl`: the Expression Constraint Language lexer, parser, and
+  evaluator (compiles ECL to set algebra over `ferroterm-graph`).
+- `crates/ferroterm-terminology`: the engine. `$lookup`/`$validate-code`/`$expand`/
   `$subsumes`/`$translate` over the code system provider seam, dispatched per
   FHIR version.
-- `app/notio-server`: the `axum` HTTP server (FHIR endpoints, content
+- `app/ferroterm-server`: the `axum` HTTP server (FHIR endpoints, content
   negotiation, runtime version routing).
-- `tools/notio-fhir-codegen`: the generator, from vendored FHIR packages to
-  `notio-fhir`.
-- `tools/notio-build`: the offline build, from an RF2 release to the
+- `tools/ferroterm-fhir-codegen`: the generator, from vendored FHIR packages to
+  `ferroterm-fhir`.
+- `tools/ferroterm-build`: the offline build, from an RF2 release to the
   memory-mapped graph/store/text artifacts, once per edition.
 
 Dependencies point one way (app/tools depend on crates); nothing depends upward
@@ -72,12 +72,12 @@ The FHIR layer is generated. HL7 publishes the whole type system and every
 operation as machine-readable resources in versioned packages
 (`hl7.fhir.r4.core` 4.0.1, `hl7.fhir.r4b.core` 4.3.0, `hl7.fhir.r5.core` 5.0.0,
 `hl7.fhir.r6.core` 6.0.0-ballot), plus `hl7.terminology` (THO). We vendor and pin
-those packages under `tools/notio-fhir-codegen/vendor/` with a `PROVENANCE.md`
-per package, and generate `crates/notio-fhir` from them. **R4B is the first
+those packages under `tools/ferroterm-fhir-codegen/vendor/` with a `PROVENANCE.md`
+per package, and generate `crates/ferroterm-fhir` from them. **R4B is the first
 generation implemented** (current stable R4-family release, a near-superset of
 R4); R5, R4, and R6 follow.
 
-- **Regenerate:** `cargo run -p notio-fhir-codegen -- emit` (types) and the
+- **Regenerate:** `cargo run -p ferroterm-fhir-codegen -- emit` (types) and the
   operation-contract emit; a `codegen-drift` check regenerates in CI and fails on
   any diff.
 - **Never hand-edit a `// @generated` file.** Change the emitter or its override
@@ -127,16 +127,16 @@ cargo fmt --all
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --document-private-items
 ```
 
-Regeneration and drift: `cargo run -p notio-fhir-codegen -- emit`, then the drift
+Regeneration and drift: `cargo run -p ferroterm-fhir-codegen -- emit`, then the drift
 check. Conformance is measured against Snowstorm as the reference server (see
 `docs/architecture.md` §Verification).
 
 ## Conventions
 
 - Crate boundaries mirror the layers; dependencies point downward (app/tools
-  depend on crates). Consume the generated `notio-fhir` types directly; never
+  depend on crates). Consume the generated `ferroterm-fhir` types directly; never
   re-model or re-serialize FHIR by hand.
-- Two disciplines by layer. `notio-fhir` is generated (change the emitter,
+- Two disciplines by layer. `ferroterm-fhir` is generated (change the emitter,
   regenerate, never hand-edit `// @generated`); everything else is idiomatic Rust
   of our own design, with the FHIR/SNOMED specs as the authority.
 - `thiserror` in libraries, `anyhow` only in the binary. No `unwrap`/`expect`
@@ -155,7 +155,7 @@ check. Conformance is measured against Snowstorm as the reference server (see
   docs.rs of a pinned crate). Never cite an internal markdown file as a design
   authority. Where no spec governs a decision (storage mechanics, the index
   format, infra), flag it: "no spec governs this, our own design".
-- **Never hand-edit a `// @generated` file.** Change `tools/notio-fhir-codegen`
+- **Never hand-edit a `// @generated` file.** Change `tools/ferroterm-fhir-codegen`
   and regenerate.
 - **Never distribute SNOMED CT content.** SNOMED CT is licensed by SNOMED
   International; the repository ships no RF2 content and no derived edition data.
@@ -207,7 +207,7 @@ apply always. Read the relevant one before working in that area.
   crates.
 - `.claude/rules/snomed-terminology.md`: the SNOMED URI standard, implicit value
   sets and concept maps, ECL 2.2, RF2 handling, scoped to the SNOMED crates.
-- `.claude/rules/codegen.md`, `vendored-inputs.md`: the `notio-fhir` generation
+- `.claude/rules/codegen.md`, `vendored-inputs.md`: the `ferroterm-fhir` generation
   discipline and the vendored-input / SNOMED-content-never-committed rules.
 - `.claude/rules/ci-cd.md`, `ai-code-review.md`: the CI/CD and supply-chain
   discipline (SLSA L3, signed SBOM, pinned actions) and the advisory-Sonar
@@ -215,7 +215,7 @@ apply always. Read the relevant one before working in that area.
 - `.claude/rules/issue-workflow.md`, `issue-relationships.md`, `project-board.md`:
   the tracker work-style.
 - Skills: `/spec-lookup` (find the authoritative spec answer in oracle order),
-  `/regen-codegen` (regenerate `notio-fhir` and drift-check), `/next-task`,
+  `/regen-codegen` (regenerate `ferroterm-fhir` and drift-check), `/next-task`,
   `/phase-done`, `/phase-status` (the issue loop).
 - Agents: `spec-researcher`, `fhir-conformance-reviewer`, `implementer` (all on
   Opus 5).
@@ -236,5 +236,5 @@ tx.fhir.org) are behavioural oracles for spec-silent edge cases only.
 - `website/book`: the mdBook documentation site (`website/book/src`).
 - `website/landing`: the landing page.
 - The FHIR terminology module (per version) and the ECL specification are the
-  spec oracles; the pinned FHIR packages under `tools/notio-fhir-codegen/vendor/`
+  spec oracles; the pinned FHIR packages under `tools/ferroterm-fhir-codegen/vendor/`
   are the codegen input.

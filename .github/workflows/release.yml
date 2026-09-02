@@ -240,8 +240,8 @@ jobs:
               ".tar.gz.intoto.jsonl" \
               ".cdx.json"; do
               printf '%s\n' "$assets" \
-                | grep -Fxq "notio-${TAG}-${target}${suffix}" \
-                || missing="$missing notio-${TAG}-${target}${suffix}"
+                | grep -Fxq "ferroterm-${TAG}-${target}${suffix}" \
+                || missing="$missing ferroterm-${TAG}-${target}${suffix}"
             done
           done
           [ -z "$missing" ] || {

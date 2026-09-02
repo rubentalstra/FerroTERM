@@ -128,7 +128,7 @@ chapters, and the Clippy book.
 - **Every public item: documented, `Debug`, with concrete
   `# Errors`/`# Panics` sections** (C-DOC, C-DEBUG, C-FAILURE):
   `missing_docs`, `missing_debug_implementations`, `missing_errors_doc` /
-  `missing_panics_doc`. The generated `notio-fhir` crate gets its docs from
+  `missing_panics_doc`. The generated `ferroterm-fhir` crate gets its docs from
   the emitter; never hand-edit a `// @generated` file to document it.
 - **Visibility is deliberate** (C-STRUCT-PRIVATE): private by default, scoped
   visibility only at real module boundaries, zero re-exports (every import
@@ -140,7 +140,7 @@ chapters, and the Clippy book.
 - **Blocking never hides in async**: no `std::sync` locks held across `.await`
   (clippy `await_holding_lock`), no synchronous I/O on the runtime.
   `spawn_blocking` for the rare CPU-heavy transform. (The build tool
-  `notio-build` is offline and synchronous; that discipline is the server's,
+  `ferroterm-build` is offline and synchronous; that discipline is the server's,
   not the tool's.)
 - **Dependencies are pinned, locked, and vetted**: workspace-table only, no
   new dependency for what the pinned set already provides, verify the version

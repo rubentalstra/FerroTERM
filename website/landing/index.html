@@ -8,14 +8,16 @@
        style, font, or image, and connects to nothing at load time. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Notio — a pure-Rust FHIR terminology server for clinical code systems</title>
-  <meta name="description" content="Notio (codename) is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems that runs on ordinary hardware. Machine-generated FHIR across R4B, R5, R4, and R6. No JVM, no Elasticsearch. MIT licensed. In discovery.">
+  <title>FerroTERM — a pure-Rust FHIR terminology server for clinical code systems</title>
+  <meta name="description" content="FerroTERM is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems that runs on ordinary hardware. Machine-generated FHIR across R4B, R5, R4, and R6. No JVM, no Elasticsearch. MIT licensed. In discovery.">
   <link rel="icon" type="image/svg+xml" href="./assets/logo-mark.svg">
+  <link rel="canonical" href="https://ferroterm.eu/">
+  <meta property="og:url" content="https://ferroterm.eu/">
   <link rel="stylesheet" href="./style.css">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Notio — a pure-Rust FHIR terminology server for clinical code systems">
+  <meta property="og:title" content="FerroTERM — a pure-Rust FHIR terminology server for clinical code systems">
   <meta property="og:description" content="A terminology server for SNOMED CT, LOINC, and other clinical code systems that serves the FHIR terminology API in a few hundred megabytes. No JVM, no Elasticsearch. MIT licensed. In discovery.">
-  <meta property="og:site_name" content="Notio">
+  <meta property="og:site_name" content="FerroTERM">
 
   <!-- Structured data. Browsers never execute an application/ld+json data block
        (https://html.spec.whatwg.org/multipage/scripting.html#data-block), so
@@ -24,9 +26,9 @@
   {
     "@context": "https://schema.org",
     "@type": "SoftwareSourceCode",
-    "name": "Notio",
+    "name": "FerroTERM",
     "description": "A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems, in discovery. Serves the HL7 FHIR terminology API from a memory-mapped concept index, with no JVM and no Elasticsearch.",
-    "codeRepository": "https://github.com/rubentalstra/notio",
+    "codeRepository": "https://github.com/rubentalstra/FerroTERM",
     "programmingLanguage": "Rust",
     "license": "https://opensource.org/licenses/MIT",
     "applicationCategory": "HealthApplication",
@@ -41,13 +43,13 @@
     <div class="wrap">
       <a class="brand" href="./">
         <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
-        <span>Notio</span>
+        <span>FerroTERM</span>
       </a>
       <nav class="nav-links" aria-label="Primary">
         <a href="./docs/">Docs</a>
         <a href="#why" class="hide-sm">Why</a>
         <a href="#facts" class="hide-sm">Facts</a>
-        <a href="https://github.com/rubentalstra/notio" rel="noopener">GitHub</a>
+        <a href="https://github.com/rubentalstra/FerroTERM" rel="noopener">GitHub</a>
       </nav>
     </div>
   </header>
@@ -57,23 +59,22 @@
     <!-- Hero -->
     <section class="hero">
       <div class="wrap">
-        <img class="hero-logo" src="./assets/logo-mark.svg" alt="Notio" width="88" height="88">
+        <img class="hero-logo" src="./assets/logo-mark.svg" alt="FerroTERM" width="88" height="88">
         <p class="status" role="note">Discovery. No product code yet.</p>
         <h1>A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems, on ordinary hardware.</h1>
         <p class="sub">
-          Notio serves the HL7 FHIR terminology API for SNOMED CT, LOINC, and other clinical code systems from a
+          FerroTERM serves the HL7 FHIR terminology API for SNOMED CT, LOINC, and other clinical code systems from a
           memory-mapped index built once per edition. You run the full
           International edition in a few hundred megabytes on a laptop or a
           small box, with no JVM and no search cluster to operate.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="./docs/">Read the documentation</a>
-          <a class="btn btn-ghost" href="https://github.com/rubentalstra/notio" rel="noopener">View on GitHub</a>
+          <a class="btn btn-ghost" href="https://github.com/rubentalstra/FerroTERM" rel="noopener">View on GitHub</a>
         </div>
         <p class="note">
-          Notio is a codename. Latin for "concept": a SNOMED CT service knows
-          what each concept means and how the concepts relate. The official
-          name is not set yet.
+          Ferro for the Rust family FerroTERM shares with FerroEHR, TERM for
+          terminology.
         </p>
       </div>
     </section>
@@ -98,14 +99,14 @@
             <p class="cap">RAM to serve the International edition, most of it Elasticsearch heap, plus a search cluster to run.</p>
           </article>
           <article class="compare-card accent">
-            <span class="tag">Notio, by design</span>
+            <span class="tag">FerroTERM, by design</span>
             <p class="big">a few hundred MB</p>
             <p class="cap">One Rust binary and a memory-mapped index. Small enough to run beside other services on a modest box.</p>
           </article>
         </div>
         <p class="compare-note">
           The data itself is small: about 360,000 concepts, 1.2 million
-          descriptions, and 1.5 million relationships. Notio treats SNOMED as a
+          descriptions, and 1.5 million relationships. FerroTERM treats SNOMED as a
           graph, materializes the answers a terminology server is asked for once
           per release, and serves them from precomputed structures. These are
           the design targets recorded in the architecture, not measurements of a
@@ -173,7 +174,7 @@
         <div class="status-panel">
           <h2>Where the project is</h2>
           <p>
-            Notio is in discovery. This repository is being scoped before
+            FerroTERM is in discovery. This repository is being scoped before
             implementation, so it describes the intended architecture and the
             decisions already taken, not a finished server. There is no product
             code yet, and no benchmark to quote.
@@ -185,7 +186,7 @@
           </p>
           <div class="hero-cta">
             <a class="btn btn-primary" href="./docs/">Read the architecture</a>
-            <a class="btn btn-ghost" href="https://github.com/rubentalstra/notio" rel="noopener">Open an issue</a>
+            <a class="btn btn-ghost" href="https://github.com/rubentalstra/FerroTERM" rel="noopener">Open an issue</a>
           </div>
         </div>
       </div>
@@ -200,12 +201,12 @@
         <div class="footer-brand">
           <a class="brand" href="./">
             <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
-            <span>Notio</span>
+            <span>FerroTERM</span>
           </a>
           <p>
             A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems, in discovery.
             The software is licensed under
-            <a href="https://github.com/rubentalstra/notio/blob/main/LICENSE" rel="noopener">MIT</a>.
+            <a href="https://github.com/rubentalstra/FerroTERM/blob/main/LICENSE" rel="noopener">MIT</a>.
             SNOMED CT is a registered trademark of SNOMED International and its
             content is licensed separately.
           </p>
@@ -222,15 +223,15 @@
           <div>
             <h4>Project</h4>
             <ul>
-              <li><a href="https://github.com/rubentalstra/notio" rel="noopener">GitHub</a></li>
-              <li><a href="https://github.com/rubentalstra/notio/blob/main/LICENSE" rel="noopener">License</a></li>
-              <li><a href="https://github.com/rubentalstra/notio/issues" rel="noopener">Issues</a></li>
+              <li><a href="https://github.com/rubentalstra/FerroTERM" rel="noopener">GitHub</a></li>
+              <li><a href="https://github.com/rubentalstra/FerroTERM/blob/main/LICENSE" rel="noopener">License</a></li>
+              <li><a href="https://github.com/rubentalstra/FerroTERM/issues" rel="noopener">Issues</a></li>
             </ul>
           </div>
         </div>
       </div>
       <div class="footer-note">
-        <span>Notio is a working codename. The official name is not set yet.</span>
+        <span>FerroTERM, a FerroEHR sibling project. ferroterm.eu</span>
       </div>
     </div>
   </footer>

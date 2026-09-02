@@ -4,7 +4,7 @@
 
 # Evaluate
 
-- [What Notio is](evaluate/what-notio-is.md)
+- [What FerroTERM is](evaluate/what-ferroterm-is.md)
 - [Architecture at a glance](evaluate/architecture.md)
 - [How it compares](evaluate/comparison.md)
 

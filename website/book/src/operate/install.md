@@ -4,7 +4,7 @@ This page describes how you install and start the server. The distribution is in
 design, so treat the steps as the planned shape.
 
 > [!WARNING]
-> Notio has no released binary or image yet. The commands below are the intended
+> FerroTERM has no released binary or image yet. The commands below are the intended
 > interface, not something you can run today. Follow the repository for release
 > announcements.
 
@@ -12,7 +12,7 @@ design, so treat the steps as the planned shape.
 
 ## Planned distribution
 
-Notio ships as a single static binary and as a container image. Both carry the
+FerroTERM ships as a single static binary and as a container image. Both carry the
 whole server: there is no JVM to install, no Elasticsearch to run, and no
 external database to provision. You provide a built SNOMED CT index (see
 [Loading a SNOMED CT edition](loading-snomed.md)) and point the server at it.
@@ -23,7 +23,7 @@ Download the binary for your platform and its attestation, verify the
 attestation (see [Verifying releases](verifying-releases.md)), then run it:
 
 ```console
-$ notio-server --index /path/to/notio-index
+$ ferroterm-server --index /path/to/ferroterm-index
 ```
 
 The server starts, opens the index read-only, and listens for FHIR requests. You
@@ -34,8 +34,8 @@ through the settings described in [Configuration](configuration.md).
 
 ```console
 $ docker run --rm -p 8080:8080 \
-    -v /path/to/notio-index:/data/index:ro \
-    ghcr.io/rubentalstra/notio:<tag> \
+    -v /path/to/ferroterm-index:/data/index:ro \
+    ghcr.io/rubentalstra/FerroTERM:<tag> \
     --index /data/index
 ```
 

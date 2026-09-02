@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: MIT -->
 
-# Contributing to Notio
+# Contributing to FerroTERM
 
-Notio is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other
+FerroTERM is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other
 clinical code systems, SNOMED CT first. It is in early
 design; the architecture is recorded, with citations, in
 [`docs/architecture.md`](docs/architecture.md), and the working discipline is in
@@ -10,11 +10,11 @@ design; the architecture is recorded, with citations, in
 
 ## The two layers
 
-- `crates/notio-fhir` is **generated** from the vendored machine-readable FHIR
+- `crates/ferroterm-fhir` is **generated** from the vendored machine-readable FHIR
   specs. Never hand-edit a file marked `// @generated`; change the generator
-  (`tools/notio-fhir-codegen`) and regenerate.
-- The SNOMED engine (`notio-rf2`, `notio-graph`, `notio-store`, `notio-text`,
-  `notio-ecl`, `notio-terminology`) and the server (`app/notio-server`) are
+  (`tools/ferroterm-fhir-codegen`) and regenerate.
+- The SNOMED engine (`ferroterm-rf2`, `ferroterm-graph`, `ferroterm-store`, `ferroterm-text`,
+  `ferroterm-ecl`, `ferroterm-terminology`) and the server (`app/ferroterm-server`) are
   **hand-written**, modern idiomatic Rust; the FHIR and SNOMED specifications
   are the authority.
 

@@ -1,6 +1,6 @@
 # FHIR versions
 
-Notio serves the FHIR terminology API across four versions from one running
+FerroTERM serves the FHIR terminology API across four versions from one running
 server: R4, R4B, R5, and R6. A client picks the version, and the server answers
 in that version's shapes.
 
@@ -9,7 +9,7 @@ in that version's shapes.
 ## Why four versions from one server
 
 HL7 publishes the whole type system and every operation as machine-readable
-resources, in versioned packages. Notio vendors and pins those packages and
+resources, in versioned packages. FerroTERM vendors and pins those packages and
 generates per-version Rust modules from them, so each version's operation surface
 is correct by construction. An operation parameter that R5 adds appears in the R5
 module and is absent from R4B, because the generator emits what each package
@@ -18,7 +18,7 @@ one server answers all four callers at once.
 
 ## Version status
 
-| Version | Package | Status in Notio |
+| Version | Package | Status in FerroTERM |
 |---|---|---|
 | R4B | `hl7.fhir.r4b.core` 4.3.0 | first generation implemented |
 | R5 | `hl7.fhir.r5.core` 5.0.0 | follows R4B |
@@ -35,7 +35,7 @@ one server answers all four callers at once.
 
 Send your request in the FHIR version your client uses. The operation names,
 parameters, and response shapes are the ones the FHIR specification defines for
-that version, so you do not adapt your client to Notio. Implementation starts
+that version, so you do not adapt your client to FerroTERM. Implementation starts
 with R4B, and the other versions become available as they are implemented. The
 CapabilityStatement at `/metadata` reports which versions a given deployment
 serves.

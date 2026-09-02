@@ -1,22 +1,22 @@
 ---
-paths: ["crates/notio-fhir/**", "tools/notio-fhir-codegen/**"]
+paths: ["crates/ferroterm-fhir/**", "tools/ferroterm-fhir-codegen/**"]
 ---
 
-# Code generation: the `notio-fhir` discipline
+# Code generation: the `ferroterm-fhir` discipline
 
 The FHIR layer is GENERATED, not hand-written. HL7 publishes the whole type
 system and every operation as machine-readable `StructureDefinition` and
-`OperationDefinition` resources, in versioned packages. `crates/notio-fhir` is
-produced deterministically from those packages by `tools/notio-fhir-codegen`;
+`OperationDefinition` resources, in versioned packages. `crates/ferroterm-fhir` is
+produced deterministically from those packages by `tools/ferroterm-fhir-codegen`;
 the engine consumes the generated types as its FHIR model.
 
 ## The pipeline
 
-vendored, pinned FHIR packages (`tools/notio-fhir-codegen/vendor/`, verbatim,
-provenance-stamped, `vendored-inputs.md`) → `notio-fhir-codegen` (loader +
-emitter) → `crates/notio-fhir`, one module per version (R4 / R4B / R5 / R6).
+vendored, pinned FHIR packages (`tools/ferroterm-fhir-codegen/vendor/`, verbatim,
+provenance-stamped, `vendored-inputs.md`) → `ferroterm-fhir-codegen` (loader +
+emitter) → `crates/ferroterm-fhir`, one module per version (R4 / R4B / R5 / R6).
 
-- **Regenerate:** `cargo run -p notio-fhir-codegen -- emit` (and the
+- **Regenerate:** `cargo run -p ferroterm-fhir-codegen -- emit` (and the
   operation-contract emit). A `codegen-drift` check re-runs the generator in
   CI and fails on any diff, so the generated tree is always in sync with the
   vendored packages + the current emitter.
@@ -32,9 +32,9 @@ emitter) → `crates/notio-fhir`, one module per version (R4 / R4B / R5 / R6).
   a `// @generated … DO NOT EDIT` banner. To change output, edit the emitter
   (or its override map), then regenerate, never the output. A doc defect, a
   wrong field type, a missing variant in a generated file is a
-  `notio-fhir-codegen` fix + regeneration.
+  `ferroterm-fhir-codegen` fix + regeneration.
 - **The emission scope is a DECLARED root-set closure, and it is emitted
-  COMPLETE, never trimmed inside that closure.** Notio is a terminology
+  COMPLETE, never trimmed inside that closure.** FerroTERM is a terminology
   server, not a full FHIR server, so the generator does NOT emit all ~150
   resources of each core package. The declared root set is the terminology
   surface (`CodeSystem`, `ValueSet`, `ConceptMap`, `Parameters`,
@@ -50,9 +50,9 @@ emitter) → `crates/notio-fhir`, one module per version (R4 / R4B / R5 / R6).
   generation-side defect discovered en route is FIXED in the generator in the
   same change, not worked around.
 - **Fix the emitter, never the consumer.** When engine code hits a shape in
-  `notio-fhir` that is wrong or insufficient versus the vendored package (a
+  `ferroterm-fhir` that is wrong or insufficient versus the vendored package (a
   missing field, a type too narrow, a per-version parameter absent), the fix
-  is a `notio-fhir-codegen` emitter/override change + regeneration, NEVER a
+  is a `ferroterm-fhir-codegen` emitter/override change + regeneration, NEVER a
   shadow type, a duplicate model, an adapter/re-modeling layer, a placeholder
   value, or a "temporary" local FHIR representation in the consumer. A
   consumer-side workaround silently forks the FHIR model and defeats the whole
@@ -72,7 +72,7 @@ emitter) → `crates/notio-fhir`, one module per version (R4 / R4B / R5 / R6).
 
 ## Where the boundary sits
 
-`notio-fhir` is the ONLY generated crate. Everything else (RF2 loading, the
+`ferroterm-fhir` is the ONLY generated crate. Everything else (RF2 loading, the
 materialized graph, the store/text indexes, ECL, the terminology engine, the
 server) is hand-written idiomatic Rust of our own design (`rust-style.md`),
 consuming the generated FHIR types directly. The prior art for the generator

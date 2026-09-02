@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Notio">
-  <title>Notio</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="FerroTERM">
+  <title>FerroTERM</title>
   <rect x="0" y="0" width="32" height="32" rx="7" fill="#0d9488"/>
   <g fill="none" stroke="#f8fafc" stroke-linecap="round" stroke-width="2.4">
     <line x1="16" y1="16" x2="16" y2="7"/>

@@ -8,7 +8,7 @@ The conformance authority for this project is the published specifications:
 the HL7 FHIR specification (per version) and the SNOMED CT / ECL
 specifications, not Snowstorm, not Hermes, not memory, not intuition. The
 FHIR type system and every operation are pinned as machine-readable packages
-under `tools/notio-fhir-codegen/vendor/` (the codegen input;
+under `tools/ferroterm-fhir-codegen/vendor/` (the codegen input;
 `vendored-inputs.md`); the normative text lives at the URLs cited below.
 
 ## Hard rules
@@ -76,10 +76,10 @@ under `tools/notio-fhir-codegen/vendor/` (the codegen input;
 
 ## Multi-version discipline
 
-Notio serves R4, R4B, R5, and R6 from one server. The correct behaviour for
+FerroTERM serves R4, R4B, R5, and R6 from one server. The correct behaviour for
 each version is what THAT version's spec and package define: a single code
 path may back several versions only where the versions genuinely agree, and
-every per-version difference is driven by the generated `notio-fhir` model
+every per-version difference is driven by the generated `ferroterm-fhir` model
 (`codegen.md`), never by a hand-maintained per-version conditional that can
 drift from the package. R6 is ballot-tracking; a behaviour grounded only in
 the ballot is marked as such and re-verified when R6 publishes.

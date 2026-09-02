@@ -1,6 +1,6 @@
 # Loading a SNOMED CT edition
 
-Notio serves the SNOMED CT edition you load. This page explains the licensing
+FerroTERM serves the SNOMED CT edition you load. This page explains the licensing
 rules you must satisfy first, and the planned build step that turns an RF2 release
 into the index the server reads.
 
@@ -9,7 +9,7 @@ into the index the server reads.
 ## You bring your own content
 
 > [!WARNING]
-> This repository ships no SNOMED CT content, and no build of Notio contains any.
+> This repository ships no SNOMED CT content, and no build of FerroTERM contains any.
 > SNOMED CT is licensed separately by SNOMED International. You must hold a valid
 > SNOMED CT licence for the edition you load.
 
@@ -22,7 +22,7 @@ The split is firm, and you must keep the two apart:
 A SNOMED CT licence is free within member countries, the Netherlands among them,
 and available under the affiliate licence elsewhere. You obtain the RF2 release
 for your edition from your national release centre or from SNOMED International,
-under your licence, and you load it into Notio yourself.
+under your licence, and you load it into FerroTERM yourself.
 
 ## The offline build (planned)
 
@@ -32,15 +32,15 @@ server opens that index read-only.
 
 ```mermaid
 graph LR
-    RF2["Licensed RF2 release<br/>(you provide)"] --> BUILD["notio-build<br/>(offline)"]
-    BUILD --> IDX["notio-index<br/>(graph + store + text)"]
-    IDX --> SRV["notio-server<br/>(read-only)"]
+    RF2["Licensed RF2 release<br/>(you provide)"] --> BUILD["ferroterm-build<br/>(offline)"]
+    BUILD --> IDX["ferroterm-index<br/>(graph + store + text)"]
+    IDX --> SRV["ferroterm-server<br/>(read-only)"]
 ```
 
 The planned command takes the unpacked RF2 release and writes the index:
 
 ```console
-$ notio-build --rf2 /path/to/SnomedCT_Release --out /path/to/notio-index
+$ ferroterm-build --rf2 /path/to/SnomedCT_Release --out /path/to/ferroterm-index
 ```
 
 The build computes the transitive closure from the shipped inferred relationship
@@ -55,6 +55,6 @@ server against it.
 
 ## Test content
 
-Notio's own tests use shaped, synthetic content only. They never contain real
+FerroTERM's own tests use shaped, synthetic content only. They never contain real
 SNOMED CT concepts extracted from a release, which keeps the licence line clean
 in the repository itself.

@@ -1,18 +1,18 @@
 ---
 name: regen-codegen
-description: Regenerate the generated notio-fhir crate from the vendored FHIR packages and verify no drift. Use after changing the generator, an override, or a vendored FHIR package pin.
+description: Regenerate the generated ferroterm-fhir crate from the vendored FHIR packages and verify no drift. Use after changing the generator, an override, or a vendored FHIR package pin.
 allowed-tools: Bash, Read, Grep
 ---
 
 # Regenerate the FHIR layer
 
-`crates/notio-fhir` is generated from the vendored, pinned FHIR packages by
-`tools/notio-fhir-codegen`. Never hand-edit a `// @generated` file: change the
+`crates/ferroterm-fhir` is generated from the vendored, pinned FHIR packages by
+`tools/ferroterm-fhir-codegen`. Never hand-edit a `// @generated` file: change the
 generator or its override map and regenerate here. Full discipline:
 `.claude/rules/codegen.md`.
 
 > This workflow is the intended shape; the generator lands in a later milestone
-> (see `docs/architecture.md`). Until `tools/notio-fhir-codegen` exists these
+> (see `docs/architecture.md`). Until `tools/ferroterm-fhir-codegen` exists these
 > steps describe what to run, not a live command.
 
 ## Steps
@@ -20,21 +20,21 @@ generator or its override map and regenerate here. Full discipline:
 1. **Confirm the inputs are the pinned packages.** The vendored FHIR packages
    (`hl7.fhir.r4.core`, `hl7.fhir.r4b.core`, `hl7.fhir.r5.core`,
    `hl7.fhir.r6.core`, `hl7.terminology`) live under
-   `tools/notio-fhir-codegen/vendor/` with a `PROVENANCE.md` each. They are
+   `tools/ferroterm-fhir-codegen/vendor/` with a `PROVENANCE.md` each. They are
    fetched only by `scripts/vendor/fhir-packages.sh`, never hand-edited
    (`.claude/rules/vendored-inputs.md`).
 
 2. **Regenerate** the per-version modules:
 
    ```bash
-   cargo run -p notio-fhir-codegen -- emit
+   cargo run -p ferroterm-fhir-codegen -- emit
    ```
 
 3. **Verify no drift:** regeneration must be byte-deterministic and the working
    tree clean afterward:
 
    ```bash
-   git diff --exit-code crates/notio-fhir
+   git diff --exit-code crates/ferroterm-fhir
    ```
 
    A non-empty diff means the committed generated code was stale; commit the
@@ -43,9 +43,9 @@ generator or its override map and regenerate here. Full discipline:
 4. **Gate the result:**
 
    ```bash
-   cargo build -p notio-fhir
-   cargo clippy -p notio-fhir --all-targets -- -D warnings
-   cargo nextest run -p notio-fhir
+   cargo build -p ferroterm-fhir
+   cargo clippy -p ferroterm-fhir --all-targets -- -D warnings
+   cargo nextest run -p ferroterm-fhir
    ```
 
 ## Rules

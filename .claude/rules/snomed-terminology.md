@@ -1,9 +1,9 @@
 ---
 paths:
-  - "crates/notio-rf2/**"
-  - "crates/notio-graph/**"
-  - "crates/notio-ecl/**"
-  - "crates/notio-terminology/**"
+  - "crates/ferroterm-rf2/**"
+  - "crates/ferroterm-graph/**"
+  - "crates/ferroterm-ecl/**"
+  - "crates/ferroterm-terminology/**"
 ---
 
 # SNOMED CT on FHIR + ECL + RF2
@@ -108,7 +108,7 @@ behavioural oracles for spec-silent edge cases only.
 - **[S-TEST-1]** Differential-test `$expand` (ECL), `$subsumes`,
   `$validate-code`, and `$translate` against Snowstorm (and where feasible
   Ontoserver/tx.fhir.org) on a PINNED edition+version. A divergence is a defect
-  in Notio (or a recorded, spec-cited deviation), never silently accepted.
+  in FerroTERM (or a recorded, spec-cited deviation), never silently accepted.
 - **[S-TEST-2]** Run the official ECL valid/invalid example corpus for parse
   conformance; pin the SNOMED release + oracle versions in the test artifacts.
 - **[S-TEST-3]** Never tune a test to match observed output; adjudicate against

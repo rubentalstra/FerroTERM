@@ -29,11 +29,11 @@ itself; that is a separate step the caller takes after seeing the plan.
      `app/`, `tools/`) rather than guessing paths; if the task names a spec
      surface, resolve it against `docs/architecture.md` (the crate map).
    - **Which mechanism** applies:
-     **FHIR wire layer** (`crates/notio-fhir`) → **the code generator**:
-     change `tools/notio-fhir-codegen`'s emitter and regenerate
+     **FHIR wire layer** (`crates/ferroterm-fhir`) → **the code generator**:
+     change `tools/ferroterm-fhir-codegen`'s emitter and regenerate
      (`/regen-codegen`), never hand-edit `// @generated`.
-     **SNOMED engine** (`notio-rf2`/`notio-graph`/`notio-store`/`notio-text`/
-     `notio-ecl`/`notio-terminology`) or the server → idiomatic modern Rust of
+     **SNOMED engine** (`ferroterm-rf2`/`ferroterm-graph`/`ferroterm-store`/`ferroterm-text`/
+     `ferroterm-ecl`/`ferroterm-terminology`) or the server → idiomatic modern Rust of
      our own design, the FHIR/SNOMED/ECL specs as the authority (Snowstorm/
      Hermes = behavioural oracles only). Build compiling + tested.
    - **Which spec sections govern it:** for any spec-facing task, name the

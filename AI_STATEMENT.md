@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MIT -->
 
-# Notio AI Statement
+# FerroTERM AI Statement
 
 | | |
 |---|---|
@@ -13,7 +13,7 @@
 | Review | at every major or minor release, and on any trigger in §13 |
 
 **Abstract.** This document discloses how artificial-intelligence tools are
-used to develop Notio, an open-source pure-Rust FHIR terminology server for
+used to develop FerroTERM, an open-source pure-Rust FHIR terminology server for
 SNOMED CT and other code systems such as LOINC. It states what the tools do
 and do not touch, who is accountable, which controls bound the work and how
 each is enforced, the licensing and data posture, the rules for contributors,
@@ -33,7 +33,7 @@ generator, tests, tooling, infrastructure, documentation, and this document
 itself.
 
 It does not cover an AI system in the product, because there is none.
-**Notio ships no AI.** No model is trained, embedded, or called at request
+**FerroTERM ships no AI.** No model is trained, embedded, or called at request
 time, and no inference happens anywhere in the served software. The server
 answers FHIR terminology operations from precomputed index structures over a
 licensed SNOMED release. AI is used to *build* the software, in the same sense
@@ -44,7 +44,7 @@ compilers and linters are used to build it.
 Stated plainly, because borrowed authority is worse than none:
 
 - **The EU AI Act imposes no obligation on this project.** The Act binds
-  providers and deployers of AI *systems* (Articles 2 and 3(1)); Notio is
+  providers and deployers of AI *systems* (Articles 2 and 3(1)); FerroTERM is
   neither, because it contains no AI system. Article 50's marking duties bind
   the AI tool's provider, not the tool's user, and the European Commission's
   Article 50 FAQ places source code outside the content-marking obligation.
