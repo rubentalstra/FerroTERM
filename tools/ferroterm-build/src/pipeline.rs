@@ -8,7 +8,9 @@ use ferroterm_graph::closure::{Closure, ClosureError};
 use ferroterm_graph::csr::{Csr, CsrError};
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::persist::Hierarchy;
-use ferroterm_rf2::component::{Concept, Description, Relationship, Rows};
+use ferroterm_rf2::component::{
+    Concept, ConcreteRelationship, ConcreteValue, Description, Relationship, Rows,
+};
 use ferroterm_rf2::constants;
 use ferroterm_rf2::edition::{Edition, EditionError};
 use ferroterm_rf2::file::{ContentType, Release, ReleaseError, ReleaseType};
@@ -29,11 +31,14 @@ pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest layout this tool writes.
 pub const MANIFEST_VERSION: u32 = 1;
 
-/// The property keys the SNOMED loader writes, by ordinal.
+/// The fixed property keys the SNOMED loader writes, by ordinal; every
+/// attribute type found in the release follows, keyed by its SCTID.
 ///
 /// `parent` follows the FHIR `$lookup` property of that name
 /// (<https://hl7.org/fhir/R4B/codesystem-operation-lookup.html>); the others
-/// are the RF2 concept columns.
+/// are the RF2 concept columns. The attribute properties are the SNOMED CT on
+/// FHIR rule that every concept-model attribute is a property keyed by the
+/// attribute's concept id (<https://hl7.org/fhir/R4B/snomedct.html>).
 pub const PROPERTY_KEYS: [&str; 3] = ["parent", "definitionStatus", "module"];
 
 /// The designation-use ordinals: FSN, synonym, definition, in that order.
@@ -161,22 +166,22 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         .enumerate()
         .map(|(i, concept)| Ok((concept.id, Ordinal::new(ordinal_of(i, "concepts")?))))
         .collect::<Result<_, Error>>()?;
-    let is_a = read_is_a(&release, &ordinals)?;
+    let relationships = read_relationships(&release, &ordinals)?;
     let designations = read_designations(&release, &ordinals)?;
     let (refsets, acceptabilities) = read_acceptabilities(&release, &designations)?;
 
     let store_path = out.join(STORE_FILE);
     let version_uri = edition.version_uri();
     let mut builder = StoreBuilder::create(&store_path, "http://snomed.info/sct", &version_uri)?;
-    write_vocabularies(&mut builder, &refsets)?;
-    let is_a_edges = write_concepts(&mut builder, &concepts, &ordinals, &is_a)?;
+    write_vocabularies(&mut builder, &refsets, &relationships.attribute_types)?;
+    let is_a_edges = write_concepts(&mut builder, &concepts, &ordinals, &relationships)?;
     let designation_count = write_designations(&mut builder, &designations)?;
     for ((ordinal, index), memberships) in &acceptabilities {
         for (refset, acceptability) in memberships {
             builder.acceptability(*ordinal, *index, *refset, *acceptability)?;
         }
     }
-    let hierarchy = build_hierarchy(&concepts, &is_a)?;
+    let hierarchy = build_hierarchy(&concepts, &relationships.is_a)?;
     let mut graph_bytes = Vec::new();
     hierarchy.write_to(&mut graph_bytes)?;
     builder.blob(tables::BLOB_HIERARCHY, &graph_bytes)?;
@@ -245,36 +250,81 @@ fn read_concepts(release: &Release) -> Result<Vec<Concept>, Error> {
     Ok(concepts)
 }
 
-/// The active inferred is-a edges as (child, parent) ordinals, sorted.
-fn read_is_a(
+/// The active inferred relationships: is-a edges as (child, parent) ordinals,
+/// sorted, and every other attribute as a property value per (source, type).
+struct Relationships {
+    is_a: Vec<(Ordinal, Ordinal)>,
+    /// Attribute type SCTIDs, sorted; the position is the key ordinal offset.
+    attribute_types: Vec<ConceptId>,
+    /// Per source ordinal, per attribute type, the values in file order.
+    attributes: BTreeMap<(Ordinal, ConceptId), Vec<record::PropertyValue>>,
+}
+
+fn read_relationships(
     release: &Release,
     ordinals: &BTreeMap<ConceptId, Ordinal>,
-) -> Result<Vec<(Ordinal, Ordinal)>, Error> {
-    let mut edges = Vec::new();
+) -> Result<Relationships, Error> {
+    let mut is_a = Vec::new();
+    let mut attributes: BTreeMap<(Ordinal, ConceptId), Vec<record::PropertyValue>> =
+        BTreeMap::new();
+    let lookup = |relationship: &str, concept: ConceptId| {
+        ordinals
+            .get(&concept)
+            .copied()
+            .ok_or_else(|| Error::UnknownConcept {
+                relationship: relationship.to_owned(),
+                concept,
+            })
+    };
     for file in release.of_type(&ContentType::Relationship) {
         for relationship in Rows::<_, Relationship>::open(&file.path)? {
             let relationship = relationship?;
-            if !relationship.base.active || relationship.type_id != constants::IS_A {
+            if !relationship.base.active {
                 continue;
             }
-            let lookup = |concept: ConceptId| {
-                ordinals
-                    .get(&concept)
-                    .copied()
-                    .ok_or_else(|| Error::UnknownConcept {
-                        relationship: relationship.id.to_string(),
-                        concept,
-                    })
-            };
-            edges.push((
-                lookup(relationship.source_id)?,
-                lookup(relationship.destination_id)?,
-            ));
+            let id = relationship.id.to_string();
+            let source = lookup(&id, relationship.source_id)?;
+            let destination = lookup(&id, relationship.destination_id)?;
+            if relationship.type_id == constants::IS_A {
+                is_a.push((source, destination));
+            } else {
+                attributes
+                    .entry((source, relationship.type_id))
+                    .or_default()
+                    .push(record::PropertyValue::Concept(destination));
+            }
         }
     }
-    edges.sort_unstable();
-    edges.dedup();
-    Ok(edges)
+    for file in release.of_type(&ContentType::RelationshipConcreteValues) {
+        for relationship in Rows::<_, ConcreteRelationship>::open(&file.path)? {
+            let relationship = relationship?;
+            if !relationship.base.active {
+                continue;
+            }
+            let id = relationship.id.to_string();
+            let source = lookup(&id, relationship.source_id)?;
+            // NOTE: RF2 spells a numeric concrete value with a `#` prefix and a
+            // string one in quotes; the reader strips both and keeps the kind.
+            let value = match relationship.value {
+                ConcreteValue::Number(number) => record::PropertyValue::Decimal(number),
+                ConcreteValue::String(text) => record::PropertyValue::String(text),
+            };
+            attributes
+                .entry((source, relationship.type_id))
+                .or_default()
+                .push(value);
+        }
+    }
+    is_a.sort_unstable();
+    is_a.dedup();
+    let mut attribute_types: Vec<ConceptId> = attributes.keys().map(|(_, t)| *t).collect();
+    attribute_types.sort_unstable();
+    attribute_types.dedup();
+    Ok(Relationships {
+        is_a,
+        attribute_types,
+        attributes,
+    })
 }
 
 /// One designation, placed under its concept.
@@ -390,12 +440,23 @@ fn read_acceptabilities(
     Ok((refsets, acceptabilities))
 }
 
-fn write_vocabularies(builder: &mut StoreBuilder, refsets: &[RefsetId]) -> Result<(), Error> {
+fn write_vocabularies(
+    builder: &mut StoreBuilder,
+    refsets: &[RefsetId],
+    attribute_types: &[ConceptId],
+) -> Result<(), Error> {
     for (i, key) in PROPERTY_KEYS.iter().enumerate() {
         builder.vocabulary(
             Vocabulary::PropertyKeys,
             ordinal_of(i, "property keys")?,
             key,
+        )?;
+    }
+    for (i, attribute) in attribute_types.iter().enumerate() {
+        builder.vocabulary(
+            Vocabulary::PropertyKeys,
+            ordinal_of(PROPERTY_KEYS.len().saturating_add(i), "property keys")?,
+            &attribute.to_string(),
         )?;
     }
     for (i, use_id) in DESIGNATION_USES.iter().enumerate() {
@@ -427,10 +488,10 @@ fn write_concepts(
     builder: &mut StoreBuilder,
     concepts: &[Concept],
     ordinals: &BTreeMap<ConceptId, Ordinal>,
-    is_a: &[(Ordinal, Ordinal)],
+    relationships: &Relationships,
 ) -> Result<u64, Error> {
     let mut parents: BTreeMap<Ordinal, Vec<record::PropertyValue>> = BTreeMap::new();
-    for (child, parent) in is_a {
+    for (child, parent) in &relationships.is_a {
         parents
             .entry(*child)
             .or_default()
@@ -465,8 +526,23 @@ fn write_concepts(
                 concept.base.module_id.to_string(),
             )],
         )?;
+        for ((_, attribute), values) in relationships
+            .attributes
+            .range((ordinal, ConceptId::published(0))..)
+            .take_while(|((source, _), _)| *source == ordinal)
+        {
+            let position = relationships
+                .attribute_types
+                .binary_search(attribute)
+                .map_err(|_| Error::TooMany("attribute types"))?;
+            let key = ordinal_of(
+                PROPERTY_KEYS.len().saturating_add(position),
+                "property keys",
+            )?;
+            builder.properties(ordinal, key, values)?;
+        }
     }
-    Ok(u64::try_from(is_a.len()).unwrap_or(u64::MAX))
+    Ok(u64::try_from(relationships.is_a.len()).unwrap_or(u64::MAX))
 }
 
 fn write_designations(builder: &mut StoreBuilder, designations: &[Placed]) -> Result<u64, Error> {

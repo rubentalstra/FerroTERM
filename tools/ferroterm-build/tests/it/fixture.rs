@@ -86,6 +86,9 @@ pub(crate) fn write_release(root: &Path) {
             s(&[&animal, DATE, "1", &module, PRIMITIVE]),
             s(&[&cat, DATE, "1", &module, DEFINED]),
             s(&[&module, DATE, "1", &module, PRIMITIVE]),
+            s(&[&concept(6), DATE, "1", &module, PRIMITIVE]),
+            s(&[&concept(7), DATE, "1", &module, PRIMITIVE]),
+            s(&[&concept(8), DATE, "1", &module, PRIMITIVE]),
         ],
     );
     let header = [
@@ -322,7 +325,64 @@ pub(crate) fn write_release(root: &Path) {
                 INFERRED,
                 EXISTENTIAL,
             ]),
+            // An attribute: the cat has covering fur (concept 6 is the attribute type).
+            s(&[
+                &relationship(6),
+                DATE,
+                "1",
+                &module,
+                &cat,
+                &concept(7),
+                "1",
+                &concept(6),
+                INFERRED,
+                EXISTENTIAL,
+            ]),
+            // Inactive attribute: ignored.
+            s(&[
+                &relationship(7),
+                DATE,
+                "0",
+                &module,
+                &dog,
+                &concept(7),
+                "1",
+                &concept(6),
+                INFERRED,
+                EXISTENTIAL,
+            ]),
         ],
+    );
+    write(
+        root,
+        &format!(
+            "Snapshot/Terminology/sct2_RelationshipConcreteValues_Snapshot_XX{NAMESPACE}_{DATE}.txt"
+        ),
+        &[
+            "id",
+            "effectiveTime",
+            "active",
+            "moduleId",
+            "sourceId",
+            "value",
+            "relationshipGroup",
+            "typeId",
+            "characteristicTypeId",
+            "modifierId",
+        ],
+        // A concrete value: the cat has four legs (concept 8 is the attribute type).
+        &[s(&[
+            &relationship(8),
+            DATE,
+            "1",
+            &module,
+            &cat,
+            "#4",
+            "2",
+            &concept(8),
+            INFERRED,
+            EXISTENTIAL,
+        ])],
     );
     let language_header = [
         "id",
