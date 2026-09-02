@@ -96,3 +96,80 @@ impl Operation {
             .filter(move |parameter| parameter.usage == usage)
     }
 }
+
+/// Why a `Parameters` resource does not fit an operation's declared
+/// parameter set. Every variant names the operation and the parameter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParametersError {
+    /// A parameter has no name.
+    Unnamed {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+    },
+    /// A parameter the operation does not declare.
+    Undeclared {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: std::string::String,
+    },
+    /// A parameter with a maximum of one given more than once.
+    Repeated {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: &'static str,
+    },
+    /// A required parameter is absent.
+    Missing {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: &'static str,
+    },
+    /// A parameter carries neither a value nor a resource.
+    MissingValue {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: &'static str,
+    },
+    /// A parameter's value is not of the declared type.
+    WrongType {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: &'static str,
+        /// The declared type.
+        expected: &'static str,
+    },
+}
+
+impl std::fmt::Display for ParametersError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unnamed { operation } => {
+                write!(f, "{operation}: a parameter has no name")
+            }
+            Self::Undeclared { operation, name } => {
+                write!(f, "{operation}: parameter `{name}` is not declared")
+            }
+            Self::Repeated { operation, name } => {
+                write!(f, "{operation}: parameter `{name}` is given more than once")
+            }
+            Self::Missing { operation, name } => {
+                write!(f, "{operation}: parameter `{name}` is required")
+            }
+            Self::MissingValue { operation, name } => {
+                write!(f, "{operation}: parameter `{name}` has no value")
+            }
+            Self::WrongType {
+                operation,
+                name,
+                expected,
+            } => write!(f, "{operation}: parameter `{name}` is not a {expected}"),
+        }
+    }
+}
+
+impl std::error::Error for ParametersError {}

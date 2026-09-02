@@ -167,6 +167,1068 @@ pub struct ValueSetExpandResponse {
     pub r#return: super::super::value_set::ValueSet,
 }
 
+impl ValueSetExpandRequest {
+    /// Reads the parameters from a `Parameters` resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameters(
+        parameters: &super::super::parameters::Parameters,
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        Self::from_parameter_list(&parameters.parameter)
+    }
+    /// Writes the parameters as a `Parameters` resource.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        super::super::parameters::Parameters {
+            parameter: self.to_parameter_list(),
+            ..Default::default()
+        }
+    }
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "ValueSet/$expand";
+        const PREFIX: &str = "";
+        let mut field_url: Option<super::super::primitives::Uri> = None;
+        let mut field_value_set: Option<super::super::value_set::ValueSet> = None;
+        let mut field_value_set_version: Option<super::super::primitives::String> = None;
+        let mut field_context: Option<super::super::primitives::Uri> = None;
+        let mut field_context_direction: Option<super::super::primitives::Code> = None;
+        let mut field_filter: Option<super::super::primitives::String> = None;
+        let mut field_date: Option<super::super::primitives::DateTime> = None;
+        let mut field_offset: Option<super::super::primitives::Integer> = None;
+        let mut field_count: Option<super::super::primitives::Integer> = None;
+        let mut field_include_designations: Option<super::super::primitives::Boolean> = None;
+        let mut field_designation: Vec<super::super::primitives::String> = Vec::new();
+        let mut field_include_definition: Option<super::super::primitives::Boolean> = None;
+        let mut field_active_only: Option<super::super::primitives::Boolean> = None;
+        let mut field_use_supplement: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_exclude_nested: Option<super::super::primitives::Boolean> = None;
+        let mut field_exclude_not_for_u_i: Option<super::super::primitives::Boolean> = None;
+        let mut field_exclude_post_coordinated: Option<super::super::primitives::Boolean> = None;
+        let mut field_display_language: Option<super::super::primitives::Code> = None;
+        let mut field_property: Vec<super::super::primitives::String> = Vec::new();
+        let mut field_exclude_system: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_check_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_force_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "url" => {
+                    if field_url.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "url",
+                        });
+                    }
+                    field_url = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "url",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "url",
+                                },
+                            );
+                        }
+                    });
+                }
+                "valueSet" => {
+                    if field_value_set.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "valueSet",
+                        });
+                    }
+                    field_value_set = Some(match &parameter.resource {
+                        Some(super::super::resource::Resource::ValueSet(value)) => {
+                            (**value).clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "valueSet",
+                                    expected: "ValueSet",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "valueSet",
+                                },
+                            );
+                        }
+                    });
+                }
+                "valueSetVersion" => {
+                    if field_value_set_version.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "valueSetVersion",
+                        });
+                    }
+                    field_value_set_version = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "valueSetVersion",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "valueSetVersion",
+                                },
+                            );
+                        }
+                    });
+                }
+                "context" => {
+                    if field_context.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "context",
+                        });
+                    }
+                    field_context = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "context",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "context",
+                                },
+                            );
+                        }
+                    });
+                }
+                "contextDirection" => {
+                    if field_context_direction.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "contextDirection",
+                        });
+                    }
+                    field_context_direction = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "contextDirection",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "contextDirection",
+                                },
+                            );
+                        }
+                    });
+                }
+                "filter" => {
+                    if field_filter.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "filter",
+                        });
+                    }
+                    field_filter = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "filter",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "filter",
+                                },
+                            );
+                        }
+                    });
+                }
+                "date" => {
+                    if field_date.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "date",
+                        });
+                    }
+                    field_date = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::DateTime(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "date",
+                                    expected: "DateTime",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "date",
+                                },
+                            );
+                        }
+                    });
+                }
+                "offset" => {
+                    if field_offset.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "offset",
+                        });
+                    }
+                    field_offset = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Integer(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "offset",
+                                    expected: "Integer",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "offset",
+                                },
+                            );
+                        }
+                    });
+                }
+                "count" => {
+                    if field_count.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "count",
+                        });
+                    }
+                    field_count = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Integer(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "count",
+                                    expected: "Integer",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "count",
+                                },
+                            );
+                        }
+                    });
+                }
+                "includeDesignations" => {
+                    if field_include_designations.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "includeDesignations",
+                        });
+                    }
+                    field_include_designations = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "includeDesignations",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "includeDesignations",
+                                },
+                            );
+                        }
+                    });
+                }
+                "designation" => {
+                    field_designation.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "designation",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "designation",
+                                },
+                            );
+                        }
+                    });
+                }
+                "includeDefinition" => {
+                    if field_include_definition.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "includeDefinition",
+                        });
+                    }
+                    field_include_definition = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "includeDefinition",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "includeDefinition",
+                                },
+                            );
+                        }
+                    });
+                }
+                "activeOnly" => {
+                    if field_active_only.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "activeOnly",
+                        });
+                    }
+                    field_active_only = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "activeOnly",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "activeOnly",
+                                },
+                            );
+                        }
+                    });
+                }
+                "useSupplement" => {
+                    field_use_supplement.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "useSupplement",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "useSupplement",
+                                },
+                            );
+                        }
+                    });
+                }
+                "excludeNested" => {
+                    if field_exclude_nested.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "excludeNested",
+                        });
+                    }
+                    field_exclude_nested = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "excludeNested",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "excludeNested",
+                                },
+                            );
+                        }
+                    });
+                }
+                "excludeNotForUI" => {
+                    if field_exclude_not_for_u_i.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "excludeNotForUI",
+                        });
+                    }
+                    field_exclude_not_for_u_i = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "excludeNotForUI",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "excludeNotForUI",
+                                },
+                            );
+                        }
+                    });
+                }
+                "excludePostCoordinated" => {
+                    if field_exclude_post_coordinated.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "excludePostCoordinated",
+                        });
+                    }
+                    field_exclude_post_coordinated = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "excludePostCoordinated",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "excludePostCoordinated",
+                                },
+                            );
+                        }
+                    });
+                }
+                "displayLanguage" => {
+                    if field_display_language.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "displayLanguage",
+                        });
+                    }
+                    field_display_language = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "displayLanguage",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "displayLanguage",
+                                },
+                            );
+                        }
+                    });
+                }
+                "property" => {
+                    field_property.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "property",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "property",
+                                },
+                            );
+                        }
+                    });
+                }
+                "exclude-system" => {
+                    field_exclude_system.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "exclude-system",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "exclude-system",
+                                },
+                            );
+                        }
+                    });
+                }
+                "system-version" => {
+                    field_system_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "system-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "system-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "check-system-version" => {
+                    field_check_system_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "check-system-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "check-system-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "force-system-version" => {
+                    field_force_system_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "force-system-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "force-system-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            url: field_url,
+            value_set: field_value_set,
+            value_set_version: field_value_set_version,
+            context: field_context,
+            context_direction: field_context_direction,
+            filter: field_filter,
+            date: field_date,
+            offset: field_offset,
+            count: field_count,
+            include_designations: field_include_designations,
+            designation: field_designation,
+            include_definition: field_include_definition,
+            active_only: field_active_only,
+            use_supplement: field_use_supplement,
+            exclude_nested: field_exclude_nested,
+            exclude_not_for_u_i: field_exclude_not_for_u_i,
+            exclude_post_coordinated: field_exclude_post_coordinated,
+            display_language: field_display_language,
+            property: field_property,
+            exclude_system: field_exclude_system,
+            system_version: field_system_version,
+            check_system_version: field_check_system_version,
+            force_system_version: field_force_system_version,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        if let Some(value) = &self.url {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "url".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.value_set {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "valueSet".into(),
+                resource: Some(super::super::resource::Resource::ValueSet(Box::new(
+                    value.clone(),
+                ))),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.value_set_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "valueSetVersion".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.context {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "context".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.context_direction {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "contextDirection".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.filter {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "filter".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.date {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "date".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::DateTime(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.offset {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "offset".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Integer(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.count {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "count".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Integer(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.include_designations {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "includeDesignations".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.designation {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "designation".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.include_definition {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "includeDefinition".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.active_only {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "activeOnly".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.use_supplement {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "useSupplement".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.exclude_nested {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "excludeNested".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.exclude_not_for_u_i {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "excludeNotForUI".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.exclude_post_coordinated {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "excludePostCoordinated".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.display_language {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "displayLanguage".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.property {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "property".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.exclude_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "exclude-system".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.system_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "system-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.check_system_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "check-system-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.force_system_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "force-system-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl ValueSetExpandResponse {
+    /// Reads the parameters from a `Parameters` resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameters(
+        parameters: &super::super::parameters::Parameters,
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        Self::from_parameter_list(&parameters.parameter)
+    }
+    /// Writes the parameters as a `Parameters` resource.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        super::super::parameters::Parameters {
+            parameter: self.to_parameter_list(),
+            ..Default::default()
+        }
+    }
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "ValueSet/$expand";
+        const PREFIX: &str = "";
+        let mut field_return: Option<super::super::value_set::ValueSet> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "return" => {
+                    if field_return.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "return",
+                        });
+                    }
+                    field_return = Some(match &parameter.resource {
+                        Some(super::super::resource::Resource::ValueSet(value)) => {
+                            (**value).clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "return",
+                                    expected: "ValueSet",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "return",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            r#return: field_return.ok_or(
+                super::super::super::operation::ParametersError::Missing {
+                    operation: OPERATION,
+                    name: "return",
+                },
+            )?,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        {
+            let value = &self.r#return;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "return".into(),
+                resource: Some(super::super::resource::Resource::ValueSet(Box::new(
+                    value.clone(),
+                ))),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
 /// The declared parameter set of `ValueSet/$expand`.
 pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
     super::super::super::operation::Operation {

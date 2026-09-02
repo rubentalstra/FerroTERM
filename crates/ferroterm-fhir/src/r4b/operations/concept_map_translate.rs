@@ -123,6 +123,1157 @@ pub struct ConceptMapTranslateResponseMatchProduct {
     pub concept: Option<super::super::coding::Coding>,
 }
 
+impl ConceptMapTranslateRequest {
+    /// Reads the parameters from a `Parameters` resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameters(
+        parameters: &super::super::parameters::Parameters,
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        Self::from_parameter_list(&parameters.parameter)
+    }
+    /// Writes the parameters as a `Parameters` resource.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        super::super::parameters::Parameters {
+            parameter: self.to_parameter_list(),
+            ..Default::default()
+        }
+    }
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "ConceptMap/$translate";
+        const PREFIX: &str = "";
+        let mut field_url: Option<super::super::primitives::Uri> = None;
+        let mut field_concept_map: Option<super::super::concept_map::ConceptMap> = None;
+        let mut field_concept_map_version: Option<super::super::primitives::String> = None;
+        let mut field_code: Option<super::super::primitives::Code> = None;
+        let mut field_system: Option<super::super::primitives::Uri> = None;
+        let mut field_version: Option<super::super::primitives::String> = None;
+        let mut field_source: Option<super::super::primitives::Uri> = None;
+        let mut field_coding: Option<super::super::coding::Coding> = None;
+        let mut field_codeable_concept: Option<super::super::codeable_concept::CodeableConcept> =
+            None;
+        let mut field_target: Option<super::super::primitives::Uri> = None;
+        let mut field_targetsystem: Option<super::super::primitives::Uri> = None;
+        let mut field_dependency: Vec<ConceptMapTranslateRequestDependency> = Vec::new();
+        let mut field_reverse: Option<super::super::primitives::Boolean> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "url" => {
+                    if field_url.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "url",
+                        });
+                    }
+                    field_url = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "url",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "url",
+                                },
+                            );
+                        }
+                    });
+                }
+                "conceptMap" => {
+                    if field_concept_map.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "conceptMap",
+                        });
+                    }
+                    field_concept_map = Some(match &parameter.resource {
+                        Some(super::super::resource::Resource::ConceptMap(value)) => {
+                            (**value).clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "conceptMap",
+                                    expected: "ConceptMap",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "conceptMap",
+                                },
+                            );
+                        }
+                    });
+                }
+                "conceptMapVersion" => {
+                    if field_concept_map_version.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "conceptMapVersion",
+                        });
+                    }
+                    field_concept_map_version = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "conceptMapVersion",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "conceptMapVersion",
+                                },
+                            );
+                        }
+                    });
+                }
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "system" => {
+                    if field_system.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "system",
+                        });
+                    }
+                    field_system = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "system",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "system",
+                                },
+                            );
+                        }
+                    });
+                }
+                "version" => {
+                    if field_version.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "version",
+                        });
+                    }
+                    field_version = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "version",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "source" => {
+                    if field_source.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "source",
+                        });
+                    }
+                    field_source = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "source",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "source",
+                                },
+                            );
+                        }
+                    });
+                }
+                "coding" => {
+                    if field_coding.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "coding",
+                        });
+                    }
+                    field_coding = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "coding",
+                                    expected: "Coding",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "coding",
+                                },
+                            );
+                        }
+                    });
+                }
+                "codeableConcept" => {
+                    if field_codeable_concept.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "codeableConcept",
+                        });
+                    }
+                    field_codeable_concept = Some(match &parameter.value {
+                        Some(
+                            super::super::parameters::ParametersParameterValue::CodeableConcept(
+                                value,
+                            ),
+                        ) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "codeableConcept",
+                                    expected: "CodeableConcept",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "codeableConcept",
+                                },
+                            );
+                        }
+                    });
+                }
+                "target" => {
+                    if field_target.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "target",
+                        });
+                    }
+                    field_target = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "target",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "target",
+                                },
+                            );
+                        }
+                    });
+                }
+                "targetsystem" => {
+                    if field_targetsystem.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "targetsystem",
+                        });
+                    }
+                    field_targetsystem = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "targetsystem",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "targetsystem",
+                                },
+                            );
+                        }
+                    });
+                }
+                "dependency" => {
+                    field_dependency.push(
+                        ConceptMapTranslateRequestDependency::from_parameter_list(&parameter.part)?,
+                    );
+                }
+                "reverse" => {
+                    if field_reverse.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "reverse",
+                        });
+                    }
+                    field_reverse = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "reverse",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "reverse",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            url: field_url,
+            concept_map: field_concept_map,
+            concept_map_version: field_concept_map_version,
+            code: field_code,
+            system: field_system,
+            version: field_version,
+            source: field_source,
+            coding: field_coding,
+            codeable_concept: field_codeable_concept,
+            target: field_target,
+            targetsystem: field_targetsystem,
+            dependency: field_dependency,
+            reverse: field_reverse,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        if let Some(value) = &self.url {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "url".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.concept_map {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "conceptMap".into(),
+                resource: Some(super::super::resource::Resource::ConceptMap(Box::new(
+                    value.clone(),
+                ))),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.concept_map_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "conceptMapVersion".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.code {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "system".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "version".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.source {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "source".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.coding {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "coding".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Coding(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.codeable_concept {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "codeableConcept".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(
+                        value.clone(),
+                    ),
+                ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.target {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "target".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.targetsystem {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "targetsystem".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.dependency {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "dependency".into(),
+                part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.reverse {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "reverse".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl ConceptMapTranslateRequestDependency {
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "ConceptMap/$translate";
+        const PREFIX: &str = "dependency.";
+        let mut field_element: Option<super::super::primitives::Uri> = None;
+        let mut field_concept: Option<super::super::codeable_concept::CodeableConcept> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "element" => {
+                    if field_element.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "dependency.element",
+                        });
+                    }
+                    field_element = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "dependency.element",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "dependency.element",
+                                },
+                            );
+                        }
+                    });
+                }
+                "concept" => {
+                    if field_concept.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "dependency.concept",
+                        });
+                    }
+                    field_concept = Some(match &parameter.value {
+                        Some(
+                            super::super::parameters::ParametersParameterValue::CodeableConcept(
+                                value,
+                            ),
+                        ) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "dependency.concept",
+                                    expected: "CodeableConcept",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "dependency.concept",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            element: field_element,
+            concept: field_concept,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        if let Some(value) = &self.element {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "element".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.concept {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "concept".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(
+                        value.clone(),
+                    ),
+                ),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl ConceptMapTranslateResponse {
+    /// Reads the parameters from a `Parameters` resource.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameters(
+        parameters: &super::super::parameters::Parameters,
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        Self::from_parameter_list(&parameters.parameter)
+    }
+    /// Writes the parameters as a `Parameters` resource.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        super::super::parameters::Parameters {
+            parameter: self.to_parameter_list(),
+            ..Default::default()
+        }
+    }
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "ConceptMap/$translate";
+        const PREFIX: &str = "";
+        let mut field_result: Option<super::super::primitives::Boolean> = None;
+        let mut field_message: Option<super::super::primitives::String> = None;
+        let mut field_match: Vec<ConceptMapTranslateResponseMatch> = Vec::new();
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "result" => {
+                    if field_result.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "result",
+                        });
+                    }
+                    field_result = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "result",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "result",
+                                },
+                            );
+                        }
+                    });
+                }
+                "message" => {
+                    if field_message.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "message",
+                        });
+                    }
+                    field_message = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "message",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "message",
+                                },
+                            );
+                        }
+                    });
+                }
+                "match" => {
+                    field_match.push(ConceptMapTranslateResponseMatch::from_parameter_list(
+                        &parameter.part,
+                    )?);
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            result: field_result.ok_or(
+                super::super::super::operation::ParametersError::Missing {
+                    operation: OPERATION,
+                    name: "result",
+                },
+            )?,
+            message: field_message,
+            r#match: field_match,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        {
+            let value = &self.result;
+            out.push(super::super::parameters::ParametersParameter {
+                name: "result".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.message {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "message".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.r#match {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "match".into(),
+                part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl ConceptMapTranslateResponseMatch {
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "ConceptMap/$translate";
+        const PREFIX: &str = "match.";
+        let mut field_equivalence: Option<super::super::primitives::Code> = None;
+        let mut field_concept: Option<super::super::coding::Coding> = None;
+        let mut field_product: Vec<ConceptMapTranslateResponseMatchProduct> = Vec::new();
+        let mut field_source: Option<super::super::primitives::Uri> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "equivalence" => {
+                    if field_equivalence.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.equivalence",
+                        });
+                    }
+                    field_equivalence = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.equivalence",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.equivalence",
+                                },
+                            );
+                        }
+                    });
+                }
+                "concept" => {
+                    if field_concept.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.concept",
+                        });
+                    }
+                    field_concept = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.concept",
+                                    expected: "Coding",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.concept",
+                                },
+                            );
+                        }
+                    });
+                }
+                "product" => {
+                    field_product.push(
+                        ConceptMapTranslateResponseMatchProduct::from_parameter_list(
+                            &parameter.part,
+                        )?,
+                    );
+                }
+                "source" => {
+                    if field_source.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.source",
+                        });
+                    }
+                    field_source = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.source",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.source",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            equivalence: field_equivalence,
+            concept: field_concept,
+            product: field_product,
+            source: field_source,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        if let Some(value) = &self.equivalence {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "equivalence".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.concept {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "concept".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Coding(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.product {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "product".into(),
+                part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.source {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "source".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
+impl ConceptMapTranslateResponseMatchProduct {
+    /// Reads the fields from a parameter list.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter.
+    pub fn from_parameter_list(
+        list: &[super::super::parameters::ParametersParameter],
+    ) -> Result<Self, super::super::super::operation::ParametersError> {
+        const OPERATION: &str = "ConceptMap/$translate";
+        const PREFIX: &str = "match.product.";
+        let mut field_element: Option<super::super::primitives::Uri> = None;
+        let mut field_concept: Option<super::super::coding::Coding> = None;
+        for parameter in list {
+            let parameter_name = parameter.name.value.as_deref().ok_or(
+                super::super::super::operation::ParametersError::Unnamed {
+                    operation: OPERATION,
+                },
+            )?;
+            match parameter_name {
+                "element" => {
+                    if field_element.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.product.element",
+                        });
+                    }
+                    field_element = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.product.element",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.product.element",
+                                },
+                            );
+                        }
+                    });
+                }
+                "concept" => {
+                    if field_concept.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.product.concept",
+                        });
+                    }
+                    field_concept = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.product.concept",
+                                    expected: "Coding",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.product.concept",
+                                },
+                            );
+                        }
+                    });
+                }
+                other => {
+                    return Err(
+                        super::super::super::operation::ParametersError::Undeclared {
+                            operation: OPERATION,
+                            name: [PREFIX, other].concat(),
+                        },
+                    );
+                }
+            }
+        }
+        Ok(Self {
+            element: field_element,
+            concept: field_concept,
+        })
+    }
+    /// Writes the fields as a parameter list.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::new();
+        if let Some(value) = &self.element {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "element".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.concept {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "concept".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Coding(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        out
+    }
+}
+
 /// The declared parameter set of `ConceptMap/$translate`.
 pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
     super::super::super::operation::Operation {

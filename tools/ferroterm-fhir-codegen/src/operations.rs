@@ -57,6 +57,21 @@ pub enum OperationError {
 }
 
 /// One typed parameter.
+/// How a parameter's value travels in `Parameters.parameter`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FieldKind {
+    /// A data type: one variant of the open-type enum, named like the type.
+    Value(String),
+    /// A resource: `parameter.resource`, one variant of the resource enum.
+    Resource(String),
+    /// `Element`: any value of the open-type enum.
+    OpenType,
+    /// A multi-part parameter: `parameter.part`.
+    Parts,
+}
+
+/// One operation parameter as the module renders it: a struct field plus
+/// the wire facts the conversions and the descriptor need.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContractField {
     /// The Rust field name.
@@ -81,6 +96,8 @@ pub struct ContractField {
     pub parts: Vec<ContractField>,
     /// The struct name of the nested parts, when there are any.
     pub part_struct: Option<String>,
+    /// How the value travels on the wire.
+    pub kind: FieldKind,
 }
 
 /// One operation's contract.
@@ -173,9 +190,11 @@ fn lower_field(
     })?;
     let part_struct =
         (!parameter.part.is_empty()).then(|| format!("{owner}{}", pascal(&parameter.name)));
+    let mut kind = FieldKind::Parts;
     let rust_type = match (&parameter.type_name, &part_struct) {
         (_, Some(nested)) => nested.clone(),
         (Some(code), None) if code == "Element" => {
+            kind = FieldKind::OpenType;
             format!("super::super::parameters::{OPEN_TYPE_ENUM}")
         }
         (Some(code), None) => {
@@ -188,6 +207,11 @@ fn lower_field(
                     name: parameter.name.clone(),
                     code: code.clone(),
                 })?;
+            kind = if ty.is_resource {
+                FieldKind::Resource(name.clone())
+            } else {
+                FieldKind::Value(name.clone())
+            };
             format!("super::super::{}::{name}", ty.module)
         }
         (None, None) => {
@@ -215,6 +239,7 @@ fn lower_field(
         scope: parameter.scope.clone(),
         parts,
         part_struct,
+        kind,
     })
 }
 
@@ -339,10 +364,92 @@ impl Operation {
         self.parameters.iter().filter(move |parameter| parameter.usage == usage)
     }
 }
+
 ",
     );
+    out.push_str(PARAMETERS_ERROR);
     out
 }
+
+/// The error the generated `from_parameters` conversions return.
+const PARAMETERS_ERROR: &str = r#"
+/// Why a `Parameters` resource does not fit an operation's declared
+/// parameter set. Every variant names the operation and the parameter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParametersError {
+    /// A parameter has no name.
+    Unnamed {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+    },
+    /// A parameter the operation does not declare.
+    Undeclared {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: std::string::String,
+    },
+    /// A parameter with a maximum of one given more than once.
+    Repeated {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: &'static str,
+    },
+    /// A required parameter is absent.
+    Missing {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: &'static str,
+    },
+    /// A parameter carries neither a value nor a resource.
+    MissingValue {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: &'static str,
+    },
+    /// A parameter's value is not of the declared type.
+    WrongType {
+        /// The operation, as `Resource/$code`.
+        operation: &'static str,
+        /// The parameter name (dotted for a part).
+        name: &'static str,
+        /// The declared type.
+        expected: &'static str,
+    },
+}
+
+impl std::fmt::Display for ParametersError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unnamed { operation } => {
+                write!(f, "{operation}: a parameter has no name")
+            }
+            Self::Undeclared { operation, name } => {
+                write!(f, "{operation}: parameter `{name}` is not declared")
+            }
+            Self::Repeated { operation, name } => {
+                write!(f, "{operation}: parameter `{name}` is given more than once")
+            }
+            Self::Missing { operation, name } => {
+                write!(f, "{operation}: parameter `{name}` is required")
+            }
+            Self::MissingValue { operation, name } => {
+                write!(f, "{operation}: parameter `{name}` has no value")
+            }
+            Self::WrongType {
+                operation,
+                name,
+                expected,
+            } => write!(f, "{operation}: parameter `{name}` is not a {expected}"),
+        }
+    }
+}
+
+impl std::error::Error for ParametersError {}
+"#;
 
 /// The `operations/mod.rs` of a version module.
 ///
@@ -414,8 +521,257 @@ pub fn render_operation(banner: &str, contract: &OperationContract) -> Result<St
         ),
         &contract.outputs,
     )?;
+    let operation = format!("{}/${}", contract.resource, contract.code);
+    render_conversions(
+        &mut out,
+        &contract.request,
+        &operation,
+        &contract.inputs,
+        "",
+    )?;
+    render_conversions(
+        &mut out,
+        &contract.response,
+        &operation,
+        &contract.outputs,
+        "",
+    )?;
     render_descriptor(&mut out, contract)?;
     Ok(out)
+}
+
+/// `from_parameters`/`to_parameters` on a request or response struct, and
+/// `from_parameter_list`/`to_parameter_list` on it and every part struct.
+fn render_conversions(
+    out: &mut String,
+    name: &str,
+    operation: &str,
+    fields: &[ContractField],
+    prefix: &str,
+) -> fmt::Result {
+    writeln!(out, "impl {name} {{")?;
+    if prefix.is_empty() {
+        writeln!(
+            out,
+            "    /// Reads the parameters from a `Parameters` resource."
+        )?;
+        writeln!(out, "    ///")?;
+        writeln!(out, "    /// # Errors")?;
+        writeln!(out, "    ///")?;
+        writeln!(
+            out,
+            "    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter."
+        )?;
+        writeln!(
+            out,
+            "    pub fn from_parameters(parameters: &{P}::Parameters) -> Result<Self, {E}> {{"
+        )?;
+        writeln!(
+            out,
+            "        Self::from_parameter_list(&parameters.parameter)"
+        )?;
+        writeln!(out, "    }}")?;
+        writeln!(
+            out,
+            "    /// Writes the parameters as a `Parameters` resource."
+        )?;
+        writeln!(out, "    #[must_use]")?;
+        writeln!(out, "    pub fn to_parameters(&self) -> {P}::Parameters {{")?;
+        writeln!(out, "        {P}::Parameters {{")?;
+        writeln!(out, "            parameter: self.to_parameter_list(),")?;
+        writeln!(out, "            ..Default::default()")?;
+        writeln!(out, "        }}")?;
+        writeln!(out, "    }}")?;
+    }
+    render_from_list(out, operation, fields, prefix)?;
+    render_to_list(out, fields)?;
+    writeln!(out, "}}\n")?;
+    for field in fields {
+        if let Some(nested) = &field.part_struct {
+            render_conversions(
+                out,
+                nested,
+                operation,
+                &field.parts,
+                &format!("{prefix}{}.", field.fhir_name),
+            )?;
+        }
+    }
+    Ok(())
+}
+
+const P: &str = "super::super::parameters";
+const E: &str = "super::super::super::operation::ParametersError";
+
+/// `from_parameter_list`: every field collected by name, cardinality enforced.
+///
+/// Locals carry a `field_` prefix so a parameter named `name` or `value`
+/// cannot shadow the loop's bindings.
+fn render_from_list(
+    out: &mut String,
+    operation: &str,
+    fields: &[ContractField],
+    prefix: &str,
+) -> fmt::Result {
+    writeln!(out, "    /// Reads the fields from a parameter list.")?;
+    writeln!(out, "    ///")?;
+    writeln!(out, "    /// # Errors")?;
+    writeln!(out, "    ///")?;
+    writeln!(
+        out,
+        "    /// Returns the error for an undeclared, repeated, missing, or wrongly typed parameter."
+    )?;
+    writeln!(
+        out,
+        "    pub fn from_parameter_list(list: &[{P}::ParametersParameter]) -> Result<Self, {E}> {{"
+    )?;
+    writeln!(out, "        const OPERATION: &str = {operation:?};")?;
+    writeln!(out, "        const PREFIX: &str = {prefix:?};")?;
+    for field in fields {
+        if cardinality(field.min, field.max) == Cardinality::Many {
+            writeln!(
+                out,
+                "        let mut {}: Vec<{}> = Vec::new();",
+                local(field),
+                field.rust_type
+            )?;
+        } else {
+            writeln!(
+                out,
+                "        let mut {}: Option<{}> = None;",
+                local(field),
+                field.rust_type
+            )?;
+        }
+    }
+    writeln!(out, "        for parameter in list {{")?;
+    writeln!(
+        out,
+        "            let parameter_name = parameter.name.value.as_deref().ok_or({E}::Unnamed {{ operation: OPERATION }})?;"
+    )?;
+    writeln!(out, "            match parameter_name {{")?;
+    for field in fields {
+        let path = format!("{prefix}{}", field.fhir_name);
+        let extract = render_extract(field, &path);
+        writeln!(out, "                {:?} => {{", field.fhir_name)?;
+        if cardinality(field.min, field.max) == Cardinality::Many {
+            writeln!(out, "                    {}.push({extract});", local(field))?;
+        } else {
+            writeln!(out, "                    if {}.is_some() {{", local(field))?;
+            writeln!(
+                out,
+                "                        return Err({E}::Repeated {{ operation: OPERATION, name: {path:?} }});"
+            )?;
+            writeln!(out, "                    }}")?;
+            writeln!(
+                out,
+                "                    {} = Some({extract});",
+                local(field)
+            )?;
+        }
+        writeln!(out, "                }}")?;
+    }
+    writeln!(out, "                other => {{")?;
+    writeln!(
+        out,
+        "                    return Err({E}::Undeclared {{ operation: OPERATION, name: [PREFIX, other].concat() }});"
+    )?;
+    writeln!(out, "                }}")?;
+    writeln!(out, "            }}")?;
+    writeln!(out, "        }}")?;
+    writeln!(out, "        Ok(Self {{")?;
+    for field in fields {
+        let path = format!("{prefix}{}", field.fhir_name);
+        if cardinality(field.min, field.max) == Cardinality::One {
+            writeln!(
+                out,
+                "            {}: {}.ok_or({E}::Missing {{ operation: OPERATION, name: {path:?} }})?,",
+                field.name,
+                local(field)
+            )?;
+        } else {
+            writeln!(out, "            {}: {},", field.name, local(field))?;
+        }
+    }
+    writeln!(out, "        }})")?;
+    writeln!(out, "    }}")
+}
+
+/// The local that accumulates a field inside `from_parameter_list`: the
+/// field name with a `field_` prefix and without a raw-identifier marker.
+fn local(field: &ContractField) -> String {
+    format!("field_{}", field.name.trim_start_matches("r#"))
+}
+
+/// `to_parameter_list`: one `ParametersParameter` per present value.
+fn render_to_list(out: &mut String, fields: &[ContractField]) -> fmt::Result {
+    writeln!(out, "    /// Writes the fields as a parameter list.")?;
+    writeln!(out, "    #[must_use]")?;
+    writeln!(
+        out,
+        "    pub fn to_parameter_list(&self) -> Vec<{P}::ParametersParameter> {{"
+    )?;
+    writeln!(out, "        let mut out = Vec::new();")?;
+    for field in fields {
+        let build = render_build(field, "value");
+        match cardinality(field.min, field.max) {
+            Cardinality::One => {
+                writeln!(out, "        {{")?;
+                writeln!(out, "            let value = &self.{};", field.name)?;
+                writeln!(out, "            out.push({build});")?;
+                writeln!(out, "        }}")?;
+            }
+            Cardinality::Optional => {
+                writeln!(out, "        if let Some(value) = &self.{} {{", field.name)?;
+                writeln!(out, "            out.push({build});")?;
+                writeln!(out, "        }}")?;
+            }
+            Cardinality::Many => {
+                writeln!(out, "        for value in &self.{} {{", field.name)?;
+                writeln!(out, "            out.push({build});")?;
+                writeln!(out, "        }}")?;
+            }
+        }
+    }
+    writeln!(out, "        out")?;
+    writeln!(out, "    }}")
+}
+
+/// The expression reading one field's value out of `parameter`.
+fn render_extract(field: &ContractField, path: &str) -> String {
+    let (p, e) = (P, E);
+    match &field.kind {
+        FieldKind::Value(variant) => format!(
+            "match &parameter.value {{ Some({p}::{OPEN_TYPE_ENUM}::{variant}(value)) => value.clone(), Some(_) => return Err({e}::WrongType {{ operation: OPERATION, name: {path:?}, expected: {variant:?} }}), None => return Err({e}::MissingValue {{ operation: OPERATION, name: {path:?} }}) }}"
+        ),
+        FieldKind::Resource(resource) => format!(
+            "match &parameter.resource {{ Some(super::super::resource::Resource::{resource}(value)) => (**value).clone(), Some(_) => return Err({e}::WrongType {{ operation: OPERATION, name: {path:?}, expected: {resource:?} }}), None => return Err({e}::MissingValue {{ operation: OPERATION, name: {path:?} }}) }}"
+        ),
+        FieldKind::OpenType => format!(
+            "parameter.value.clone().ok_or({e}::MissingValue {{ operation: OPERATION, name: {path:?} }})?"
+        ),
+        FieldKind::Parts => format!("{}::from_parameter_list(&parameter.part)?", field.rust_type),
+    }
+}
+
+/// The expression building one `ParametersParameter` from `value`.
+fn render_build(field: &ContractField, value: &str) -> String {
+    let p = P;
+    let name = format!("{:?}.into()", field.fhir_name);
+    match &field.kind {
+        FieldKind::Value(variant) => format!(
+            "{p}::ParametersParameter {{ name: {name}, value: Some({p}::{OPEN_TYPE_ENUM}::{variant}({value}.clone())), ..Default::default() }}"
+        ),
+        FieldKind::Resource(resource) => format!(
+            "{p}::ParametersParameter {{ name: {name}, resource: Some(super::super::resource::Resource::{resource}(Box::new({value}.clone()))), ..Default::default() }}"
+        ),
+        FieldKind::OpenType => format!(
+            "{p}::ParametersParameter {{ name: {name}, value: Some({value}.clone()), ..Default::default() }}"
+        ),
+        FieldKind::Parts => format!(
+            "{p}::ParametersParameter {{ name: {name}, part: {value}.to_parameter_list(), ..Default::default() }}"
+        ),
+    }
 }
 
 fn render_struct(out: &mut String, name: &str, doc: &str, fields: &[ContractField]) -> fmt::Result {
