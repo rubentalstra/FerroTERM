@@ -50,6 +50,8 @@ pub fn field_name(element_name: &str) -> String {
                 out.push('_');
             }
             out.extend(ch.to_lowercase());
+        } else if ch == '-' {
+            out.push('_');
         } else {
             out.push(ch);
         }
@@ -114,6 +116,8 @@ mod tests {
         assert_eq!(field_name("use"), "r#use");
         assert_eq!(field_name("abstract"), "r#abstract");
         assert_eq!(field_name("modifierExtension"), "modifier_extension");
+        assert_eq!(field_name("exclude-system"), "exclude_system");
+        assert_eq!(field_name("check-system-version"), "check_system_version");
     }
 
     #[test]

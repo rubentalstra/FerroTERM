@@ -14,6 +14,10 @@ use std::process::Command;
 
 use crate::closure::{ClosureError, TypeClosure};
 use crate::lower::{LowerError, VersionModule};
+use crate::operations::{
+    OperationContract, OperationError, render_descriptor_module, render_operation,
+    render_operations_mod,
+};
 use crate::package::{LoadError, Package};
 use crate::render::{render_lib, render_module, render_version_mod};
 use crate::roots::{MissingRoot, RootSet};
@@ -59,6 +63,9 @@ pub enum EmitError {
     /// Rendering to a string failed.
     #[error("rendering failed")]
     Render(#[from] std::fmt::Error),
+    /// An operation contract failed to lower.
+    #[error(transparent)]
+    Operation(#[from] OperationError),
     /// A file could not be read or written.
     #[error("cannot access {path}")]
     Io {
@@ -109,22 +116,46 @@ pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
         let package = Package::open(&version.package_dir)?;
         let roots = RootSet::select(&package)?;
         let closure = TypeClosure::compute(&package, &roots)?;
-        models.push(VersionModule::lower(
+        let mut model = VersionModule::lower(
             &closure,
             &version.module,
             &package.manifest().name,
             &package.manifest().version,
-        )?);
+        )?;
+        let mut contracts = Vec::new();
+        for operation in roots.operations.values() {
+            for resource in &operation.resource {
+                contracts.push(OperationContract::lower(operation, resource, &model)?);
+            }
+        }
+        contracts.sort_by(|a, b| a.module.cmp(&b.module));
+        model.operations = contracts;
+        models.push(model);
     }
 
     let mut files = BTreeMap::new();
     files.insert(String::from("lib.rs"), render_lib(&models)?);
+    files.insert(
+        String::from("operation.rs"),
+        render_descriptor_module(&crate::render::crate_banner(&models)),
+    );
     for model in &models {
         files.insert(format!("{}/mod.rs", model.name), render_version_mod(model)?);
         for (module, types) in model.modules() {
             files.insert(
                 format!("{}/{module}.rs", model.name),
                 render_module(model, module, &types)?,
+            );
+        }
+        let banner = crate::render::banner(model);
+        files.insert(
+            format!("{}/operations/mod.rs", model.name),
+            render_operations_mod(&banner, &model.name.to_uppercase(), &model.operations)?,
+        );
+        for contract in &model.operations {
+            files.insert(
+                format!("{}/operations/{}.rs", model.name, contract.module),
+                render_operation(&banner, contract)?,
             );
         }
     }
@@ -244,17 +275,7 @@ fn compare(
         if !version_dir.is_dir() {
             continue;
         }
-        let entries = fs::read_dir(&version_dir).map_err(|source| EmitError::Io {
-            path: version_dir.clone(),
-            source,
-        })?;
-        for entry in entries {
-            let entry = entry.map_err(|source| EmitError::Io {
-                path: version_dir.clone(),
-                source,
-            })?;
-            let name = entry.file_name().to_string_lossy().into_owned();
-            let relative = format!("{module}/{name}");
+        for relative in files_under(&version_dir, module)? {
             if !files.contains_key(&relative) {
                 drift.push(format!("{relative} (stale)"));
             }
@@ -262,4 +283,27 @@ fn compare(
     }
     drift.sort();
     Ok(drift)
+}
+
+/// Every file under `dir`, recursively, as `prefix/…` relative paths.
+fn files_under(dir: &Path, prefix: &str) -> Result<Vec<String>, EmitError> {
+    let entries = fs::read_dir(dir).map_err(|source| EmitError::Io {
+        path: dir.to_path_buf(),
+        source,
+    })?;
+    let mut out = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|source| EmitError::Io {
+            path: dir.to_path_buf(),
+            source,
+        })?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let relative = format!("{prefix}/{name}");
+        if entry.path().is_dir() {
+            out.extend(files_under(&entry.path(), &relative)?);
+        } else {
+            out.push(relative);
+        }
+    }
+    Ok(out)
 }

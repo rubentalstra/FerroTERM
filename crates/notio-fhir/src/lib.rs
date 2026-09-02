@@ -13,5 +13,6 @@
     reason = "generated from the FHIR specification: the documentation is the specification's own text, choice enums hold every allowed type, and modules mirror FHIR type names"
 )]
 
+pub mod operation;
 pub mod r4b;
 pub mod r5;

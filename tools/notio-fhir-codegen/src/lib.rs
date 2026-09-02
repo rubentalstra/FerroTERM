@@ -17,6 +17,7 @@ pub mod emit;
 pub mod fhir;
 pub mod lower;
 pub mod naming;
+pub mod operations;
 pub mod package;
 pub mod render;
 pub mod roots;

@@ -185,6 +185,8 @@ pub struct VersionModule {
     pub name: String,
     /// The package the model was lowered from.
     pub package_name: String,
+    /// The terminology operations the version declares, in module order.
+    pub operations: Vec<crate::operations::OperationContract>,
     /// The package version.
     pub package_version: String,
     /// Every type, keyed by Rust name.
@@ -208,6 +210,7 @@ impl VersionModule {
             name: version_module.to_owned(),
             package_name: package_name.to_owned(),
             package_version: package_version.to_owned(),
+            operations: Vec::new(),
             types: BTreeMap::new(),
         };
         for structure in closure.structures().values() {

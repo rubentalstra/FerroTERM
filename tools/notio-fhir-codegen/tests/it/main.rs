@@ -16,6 +16,7 @@ use notio_fhir_codegen::package::Package;
 
 mod closure;
 mod emit;
+mod operations;
 mod package;
 mod roots;
 mod snapshot;
