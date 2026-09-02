@@ -261,16 +261,36 @@ impl<'a> Expander<'a> {
             let mut selected = BTreeMap::new();
             for index in set {
                 let concept = Concept::new(index);
-                let Some(code) = provider.code(concept) else {
+                let Some(code) =
+                    provider
+                        .code(concept)
+                        .map_err(|source| ComposeError::Provider {
+                            system: identity.url.clone(),
+                            source,
+                        })?
+                else {
                     continue;
                 };
-                let display = include
+                let overridden = include
                     .concepts
                     .iter()
                     .find(|c| c.code == code)
-                    .and_then(|c| c.display.clone())
-                    .or_else(|| provider.display(concept, options.language.as_deref()));
-                let status = provider.status(concept);
+                    .and_then(|c| c.display.clone());
+                let display = match overridden {
+                    Some(display) => Some(display),
+                    None => provider
+                        .display(concept, options.language.as_deref())
+                        .map_err(|source| ComposeError::Provider {
+                            system: identity.url.clone(),
+                            source,
+                        })?,
+                };
+                let status = provider
+                    .status(concept)
+                    .map_err(|source| ComposeError::Provider {
+                        system: identity.url.clone(),
+                        source,
+                    })?;
                 selected.insert(
                     (identity.url.clone(), identity.version.clone(), code.clone()),
                     Item {
@@ -327,11 +347,11 @@ impl<'a> Expander<'a> {
         };
         let mut set = if include.concepts.is_empty() {
             match include.filters.split_first() {
-                None => provider.all().map_err(failed)?,
+                None => provider.all().map_err(&failed)?,
                 Some((first, rest)) => {
-                    let mut set = provider.filter(first).map_err(failed)?;
+                    let mut set = provider.filter(first).map_err(&failed)?;
                     for filter in rest {
-                        set &= provider.filter(filter).map_err(failed)?;
+                        set &= provider.filter(filter).map_err(&failed)?;
                     }
                     set
                 }
@@ -339,13 +359,13 @@ impl<'a> Expander<'a> {
         } else {
             let mut set = ConceptSet::new();
             for concept in &include.concepts {
-                let located =
-                    provider
-                        .locate(&concept.code)
-                        .ok_or_else(|| ComposeError::UnknownCode {
-                            system: system.clone(),
-                            code: concept.code.clone(),
-                        })?;
+                let located = provider
+                    .locate(&concept.code)
+                    .map_err(&failed)?
+                    .ok_or_else(|| ComposeError::UnknownCode {
+                        system: system.clone(),
+                        code: concept.code.clone(),
+                    })?;
                 set.insert(located.concept.index());
             }
             set
@@ -355,7 +375,9 @@ impl<'a> Expander<'a> {
             .as_deref()
             .filter(|text| !text.trim().is_empty())
         {
-            set &= provider.search(text, options.language.as_deref());
+            set &= provider
+                .search(text, options.language.as_deref())
+                .map_err(failed)?;
         }
         Ok(set)
     }

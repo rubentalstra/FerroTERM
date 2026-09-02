@@ -13,12 +13,16 @@ publish.workspace = true
 [dependencies]
 ferroterm-fhir.workspace = true
 ferroterm-graph.workspace = true
+ferroterm-rf2.workspace = true
+ferroterm-store.workspace = true
+ferroterm-text.workspace = true
 regex.workspace = true
 roaring.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

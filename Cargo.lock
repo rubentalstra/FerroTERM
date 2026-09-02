@@ -389,9 +389,13 @@ version = "0.0.2"
 dependencies = [
  "ferroterm-fhir",
  "ferroterm-graph",
+ "ferroterm-rf2",
+ "ferroterm-store",
+ "ferroterm-text",
  "regex",
  "roaring",
  "serde_json",
+ "tempfile",
  "thiserror",
 ]
 

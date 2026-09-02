@@ -170,7 +170,7 @@ fn locate<P: CodeSystemProvider + ?Sized>(
     code: &str,
 ) -> Result<Concept, ProviderError> {
     provider
-        .locate(code)
+        .locate(code)?
         .map(|located| located.concept)
         .ok_or_else(|| ProviderError::UnknownCode(code.to_owned()))
 }
@@ -215,7 +215,7 @@ fn on_code<P: CodeSystemProvider + ?Sized>(
             let regex = Regex::new(&filter.value)?;
             for index in provider.all()? {
                 if provider
-                    .code(Concept::new(index))
+                    .code(Concept::new(index))?
                     .is_some_and(|code| regex.is_match(&code))
                 {
                     set.insert(index);
@@ -280,7 +280,7 @@ fn on_property<P: CodeSystemProvider + ?Sized>(
     let mut set = ConceptSet::new();
     for index in provider.all()? {
         let texts: Vec<String> = provider
-            .properties(Concept::new(index))
+            .properties(Concept::new(index))?
             .into_iter()
             .filter(|property| property.code == filter.property)
             .map(|property| property.value.as_text())

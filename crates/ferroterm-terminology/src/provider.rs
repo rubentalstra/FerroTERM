@@ -325,6 +325,9 @@ pub enum ProviderError {
     /// A filter names a code the system does not have.
     #[error("unknown code `{0}`")]
     UnknownCode(String),
+    /// The storage behind the provider failed; the cause is the substrate's error.
+    #[error("the code system storage failed")]
+    Storage(#[source] Box<dyn std::error::Error + Send + Sync + 'static>),
     /// An implicit value set URI of this system is malformed.
     #[error("implicit value set `{url}` is malformed: {reason}")]
     MalformedImplicitValueSet {
@@ -367,28 +370,65 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// What it declares.
     fn declaration(&self) -> &Declaration;
 
-    /// Finds a code; `None` when the system has no such code.
-    fn locate(&self, code: &str) -> Option<Located>;
+    /// Finds a code; `Ok(None)` when the system has no such code.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails; a code that
+    /// is absent is never an error.
+    fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError>;
 
     /// The code of a concept.
-    fn code(&self, concept: Concept) -> Option<String>;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails.
+    fn code(&self, concept: Concept) -> Result<Option<String>, ProviderError>;
 
     /// The display in `language`, or the system's default display.
-    fn display(&self, concept: Concept, language: Option<&str>) -> Option<String>;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails.
+    fn display(
+        &self,
+        concept: Concept,
+        language: Option<&str>,
+    ) -> Result<Option<String>, ProviderError>;
 
     /// The formal definition, if the system has one.
-    fn definition(&self, _concept: Concept) -> Option<String> {
-        None
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails.
+    fn definition(&self, _concept: Concept) -> Result<Option<String>, ProviderError> {
+        Ok(None)
     }
 
     /// Active or inactive, abstract or not.
-    fn status(&self, concept: Concept) -> Status;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails.
+    fn status(&self, concept: Concept) -> Result<Status, ProviderError>;
 
     /// Every designation, optionally only those in `language`.
-    fn designations(&self, concept: Concept, language: Option<&str>) -> Vec<Designation>;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails.
+    fn designations(
+        &self,
+        concept: Concept,
+        language: Option<&str>,
+    ) -> Result<Vec<Designation>, ProviderError>;
 
     /// Every property.
-    fn properties(&self, concept: Concept) -> Vec<Property>;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails.
+    fn properties(&self, concept: Concept) -> Result<Vec<Property>, ProviderError>;
 
     /// The hierarchy, for a system that declares subsumption.
     fn hierarchy(&self) -> Option<&dyn Hierarchy> {
@@ -403,7 +443,11 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     fn all(&self) -> Result<ConceptSet, ProviderError>;
 
     /// The concepts with a designation whose words start with the words of `text`.
-    fn search(&self, text: &str, language: Option<&str>) -> ConceptSet;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails.
+    fn search(&self, text: &str, language: Option<&str>) -> Result<ConceptSet, ProviderError>;
 
     /// The compose an implicit value set URI of this system denotes, when the
     /// system defines implicit value sets and `url` is one of them.

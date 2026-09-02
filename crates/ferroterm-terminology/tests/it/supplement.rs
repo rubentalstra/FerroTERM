@@ -30,25 +30,50 @@ fn a_supplement_layers_designations_and_properties_over_the_system() {
         )]),
     };
     let supplemented = Supplemented::new(inner, vec![supplement]);
-    let cat = supplemented.locate("cat").expect("cat").concept;
-    let dog = supplemented.locate("dog").expect("dog").concept;
-    assert_eq!(supplemented.designations(cat, Some("de")).len(), 1);
-    assert_eq!(supplemented.designations(cat, None).len(), 3);
-    assert_eq!(supplemented.designations(dog, None).len(), 2);
+    let cat = supplemented
+        .locate("cat")
+        .expect("reads")
+        .expect("cat")
+        .concept;
+    let dog = supplemented
+        .locate("dog")
+        .expect("reads")
+        .expect("dog")
+        .concept;
     assert_eq!(
-        supplemented.display(cat, Some("de")).as_deref(),
+        supplemented
+            .designations(cat, Some("de"))
+            .expect("reads")
+            .len(),
+        1
+    );
+    assert_eq!(
+        supplemented.designations(cat, None).expect("reads").len(),
+        3
+    );
+    assert_eq!(
+        supplemented.designations(dog, None).expect("reads").len(),
+        2
+    );
+    assert_eq!(
+        supplemented
+            .display(cat, Some("de"))
+            .expect("reads")
+            .as_deref(),
         Some("Cat"),
         "the system's display wins"
     );
     assert!(
         supplemented
             .properties(cat)
+            .expect("reads")
             .iter()
             .any(|p| p.code == "colour")
     );
     assert!(
         !supplemented
             .properties(dog)
+            .expect("reads")
             .iter()
             .any(|p| p.code == "colour")
     );

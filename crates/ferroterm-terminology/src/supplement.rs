@@ -67,12 +67,16 @@ impl Supplemented {
         &self.supplements
     }
 
-    fn additions(&self, concept: Concept) -> impl Iterator<Item = &Additions> {
-        let code = self.inner.code(concept);
-        self.supplements.iter().filter_map(move |supplement| {
-            code.as_deref()
-                .and_then(|code| supplement.concepts.get(code))
-        })
+    fn additions(&self, concept: Concept) -> Result<Vec<&Additions>, ProviderError> {
+        let code = self.inner.code(concept)?;
+        Ok(self
+            .supplements
+            .iter()
+            .filter_map(|supplement| {
+                code.as_deref()
+                    .and_then(|code| supplement.concepts.get(code))
+            })
+            .collect())
     }
 }
 
@@ -85,54 +89,67 @@ impl CodeSystemProvider for Supplemented {
         &self.declaration
     }
 
-    fn locate(&self, code: &str) -> Option<Located> {
+    fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
         self.inner.locate(code)
     }
 
-    fn code(&self, concept: Concept) -> Option<String> {
+    fn code(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
         self.inner.code(concept)
     }
 
-    fn display(&self, concept: Concept, language: Option<&str>) -> Option<String> {
-        self.inner.display(concept, language).or_else(|| {
-            self.additions(concept)
-                .flat_map(|additions| additions.designations.iter())
-                .find(|designation| {
-                    language.is_none_or(|wanted| designation.language.as_deref() == Some(wanted))
-                })
-                .map(|designation| designation.value.clone())
-        })
+    fn display(
+        &self,
+        concept: Concept,
+        language: Option<&str>,
+    ) -> Result<Option<String>, ProviderError> {
+        if let Some(display) = self.inner.display(concept, language)? {
+            return Ok(Some(display));
+        }
+        Ok(self
+            .additions(concept)?
+            .into_iter()
+            .flat_map(|additions| additions.designations.iter())
+            .find(|designation| {
+                language.is_none_or(|wanted| designation.language.as_deref() == Some(wanted))
+            })
+            .map(|designation| designation.value.clone()))
     }
 
-    fn definition(&self, concept: Concept) -> Option<String> {
+    fn definition(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
         self.inner.definition(concept)
     }
 
-    fn status(&self, concept: Concept) -> Status {
+    fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
         self.inner.status(concept)
     }
 
-    fn designations(&self, concept: Concept, language: Option<&str>) -> Vec<Designation> {
-        let mut designations = self.inner.designations(concept, language);
+    fn designations(
+        &self,
+        concept: Concept,
+        language: Option<&str>,
+    ) -> Result<Vec<Designation>, ProviderError> {
+        let mut designations = self.inner.designations(concept, language)?;
         designations.extend(
-            self.additions(concept)
+            self.additions(concept)?
+                .into_iter()
                 .flat_map(|additions| additions.designations.iter())
                 .filter(|designation| {
                     language.is_none_or(|wanted| designation.language.as_deref() == Some(wanted))
                 })
                 .cloned(),
         );
-        designations
+        Ok(designations)
     }
 
-    fn properties(&self, concept: Concept) -> Vec<Property> {
-        let mut properties = self.inner.properties(concept);
+    fn properties(&self, concept: Concept) -> Result<Vec<Property>, ProviderError> {
+        let mut properties = self.inner.properties(concept)?;
         properties.extend(
-            self.additions(concept)
+            self.additions(concept)?
+                .into_iter()
                 .flat_map(|additions| additions.properties.iter())
                 .cloned(),
         );
-        properties
+        Ok(properties)
     }
 
     fn hierarchy(&self) -> Option<&dyn Hierarchy> {
@@ -143,7 +160,7 @@ impl CodeSystemProvider for Supplemented {
         self.inner.all()
     }
 
-    fn search(&self, text: &str, language: Option<&str>) -> ConceptSet {
+    fn search(&self, text: &str, language: Option<&str>) -> Result<ConceptSet, ProviderError> {
         self.inner.search(text, language)
     }
 

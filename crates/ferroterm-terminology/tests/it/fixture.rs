@@ -223,40 +223,49 @@ impl CodeSystemProvider for Fixture {
         &self.declaration
     }
 
-    fn locate(&self, code: &str) -> Option<Located> {
-        self.rows
+    fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
+        Ok(self
+            .rows
             .iter()
             .position(|row| row.code == code)
             .map(|i| Located {
                 concept: Concept::new(ord(i)),
                 code: code.to_owned(),
-            })
+            }))
     }
 
-    fn code(&self, concept: Concept) -> Option<String> {
-        self.row(concept).map(|row| row.code.to_owned())
+    fn code(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
+        Ok(self.row(concept).map(|row| row.code.to_owned()))
     }
 
-    fn display(&self, concept: Concept, language: Option<&str>) -> Option<String> {
-        self.row(concept).map(|row| match language {
+    fn display(
+        &self,
+        concept: Concept,
+        language: Option<&str>,
+    ) -> Result<Option<String>, ProviderError> {
+        Ok(self.row(concept).map(|row| match language {
             Some("nl") => row.nl.to_owned(),
             _ => row.en.to_owned(),
-        })
+        }))
     }
 
-    fn status(&self, concept: Concept) -> Status {
-        Status {
+    fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
+        Ok(Status {
             active: self.row(concept).is_some_and(|row| row.active),
             inactive_reason: None,
             abstract_concept: false,
-        }
+        })
     }
 
-    fn designations(&self, concept: Concept, language: Option<&str>) -> Vec<Designation> {
+    fn designations(
+        &self,
+        concept: Concept,
+        language: Option<&str>,
+    ) -> Result<Vec<Designation>, ProviderError> {
         let Some(row) = self.row(concept) else {
-            return Vec::new();
+            return Ok(Vec::new());
         };
-        [("en", row.en), ("nl", row.nl)]
+        Ok([("en", row.en), ("nl", row.nl)]
             .into_iter()
             .filter(|(lang, _)| language.is_none_or(|wanted| wanted == *lang))
             .map(|(lang, value)| Designation {
@@ -264,12 +273,12 @@ impl CodeSystemProvider for Fixture {
                 use_: Some(synonym()),
                 value: value.to_owned(),
             })
-            .collect()
+            .collect())
     }
 
-    fn properties(&self, concept: Concept) -> Vec<Property> {
+    fn properties(&self, concept: Concept) -> Result<Vec<Property>, ProviderError> {
         let Some(row) = self.row(concept) else {
-            return Vec::new();
+            return Ok(Vec::new());
         };
         let mut properties = Vec::new();
         if let Some(legs) = row.legs {
@@ -286,7 +295,7 @@ impl CodeSystemProvider for Fixture {
                 value: PropertyValue::Code(String::from("animal")),
             });
         }
-        properties
+        Ok(properties)
     }
 
     fn hierarchy(&self) -> Option<&dyn Hierarchy> {
@@ -323,23 +332,23 @@ impl CodeSystemProvider for Fixture {
         Ok((0..ord(self.rows.len())).collect())
     }
 
-    fn search(&self, text: &str, language: Option<&str>) -> ConceptSet {
+    fn search(&self, text: &str, language: Option<&str>) -> Result<ConceptSet, ProviderError> {
         let words: Vec<String> = text.split_whitespace().map(str::to_lowercase).collect();
-        self.rows
-            .iter()
-            .enumerate()
-            .filter(|(i, _)| {
-                let designations = self.designations(Concept::new(ord(*i)), language);
-                words.iter().all(|word| {
-                    designations.iter().any(|d| {
-                        d.value
-                            .split_whitespace()
-                            .any(|term| term.to_lowercase().starts_with(word.as_str()))
-                    })
+        let mut hits = ConceptSet::new();
+        for i in 0..self.rows.len() {
+            let designations = self.designations(Concept::new(ord(i)), language)?;
+            let matched = words.iter().all(|word| {
+                designations.iter().any(|d| {
+                    d.value
+                        .split_whitespace()
+                        .any(|term| term.to_lowercase().starts_with(word.as_str()))
                 })
-            })
-            .map(|(i, _)| ord(i))
-            .collect()
+            });
+            if matched {
+                hits.insert(ord(i));
+            }
+        }
+        Ok(hits)
     }
 }
 
@@ -362,7 +371,11 @@ pub(crate) fn registry() -> Registry {
 pub(crate) fn codes(provider: &dyn CodeSystemProvider, set: &ConceptSet) -> Vec<String> {
     let mut codes: Vec<String> = set
         .iter()
-        .filter_map(|index| provider.code(Concept::new(index)))
+        .filter_map(|index| {
+            provider
+                .code(Concept::new(index))
+                .expect("the fixture never fails")
+        })
         .collect();
     codes.sort();
     codes
