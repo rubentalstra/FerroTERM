@@ -12,6 +12,7 @@ macro_rules! map {
 
             use concept_graph::subsumption::Outcome;
             use fhir_terminology::operations::CodingRef;
+            use fhir_terminology::operations::Issue;
             use fhir_terminology::operations::expand::ExpandInput;
             use fhir_terminology::operations::lookup::{LookupInput, LookupOutcome};
             use fhir_terminology::operations::subsumes::SubsumesInput;
@@ -20,11 +21,13 @@ macro_rules! map {
                 ValidateCodeInput, ValidationOutcome,
             };
             use fhir_terminology::operations::value_set_validate_code::{
-                Validation, ValueSetValidateInput,
+                TX_ISSUE_TYPE, Validation, ValueSetValidateInput,
             };
             use fhir_terminology::provider::{Designation, PropertyValue};
             use fhir_terminology::valueset::convert;
+            use fhir_types::$fhir::codeable_concept::CodeableConcept;
             use fhir_types::$fhir::coding::Coding;
+            use fhir_types::$fhir::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
             use fhir_types::$fhir::operations::code_system_lookup::{
                 CodeSystemLookupRequest, CodeSystemLookupResponse,
                 CodeSystemLookupResponseDesignation, CodeSystemLookupResponseProperty,
@@ -201,8 +204,11 @@ macro_rules! map {
                 }
             }
 
-            /// The `CodeSystem/$validate-code` outcome as the version's response: `result`,
-            /// `message`, and `display`; the ecosystem overlay's outputs follow.
+            /// The `CodeSystem/$validate-code` outcome as the version's response.
+            ///
+            /// `result`, `message`, and `display`, then the ecosystem overlay's validated
+            /// `code`, `system`, `version`, the itemised `issues`, and
+            /// `x-caused-by-unknown-system`.
             #[must_use]
             pub fn validate_code_response(
                 outcome: ValidationOutcome,
@@ -211,14 +217,49 @@ macro_rules! map {
                     result: outcome.result.into(),
                     message: outcome.message.map(Into::into),
                     display: outcome.display.map(Into::into),
-                    // TODO(#162): answer the validated code, system, version, and issues,
-                    // and the systems not served.
-                    code: None,
-                    system: None,
-                    version: None,
-                    issues: None,
-                    x_caused_by_unknown_system: Vec::new(),
+                    code: outcome.code.map(Into::into),
+                    system: outcome.system.map(Into::into),
+                    version: outcome.version.map(Into::into),
+                    issues: issues(&outcome.issues),
+                    x_caused_by_unknown_system: outcome
+                        .unknown_systems
+                        .into_iter()
+                        .map(Into::into)
+                        .collect(),
                 }
+            }
+
+            /// The version's `Coding` of a `tx-issue-type` code, for `issue.details.coding`.
+            fn tx_issue_coding(kind: &str) -> Coding {
+                Coding {
+                    system: Some(TX_ISSUE_TYPE.into()),
+                    code: Some(kind.into()),
+                    ..Default::default()
+                }
+            }
+
+            /// The itemised issues as the `issues` `OperationOutcome`; none when empty.
+            fn issues(list: &[Issue]) -> Option<OperationOutcome> {
+                if list.is_empty() {
+                    return None;
+                }
+                Some(OperationOutcome {
+                    issue: list
+                        .iter()
+                        .map(|issue| OperationOutcomeIssue {
+                            severity: issue.severity.into(),
+                            code: issue.code.into(),
+                            details: Some(CodeableConcept {
+                                coding: vec![tx_issue_coding(issue.kind)],
+                                text: Some(issue.text.as_str().into()),
+                                ..Default::default()
+                            }),
+                            expression: issue.expression.map(Into::into).into_iter().collect(),
+                            ..Default::default()
+                        })
+                        .collect(),
+                    ..Default::default()
+                })
             }
 
             /// The `ValueSet/$validate-code` request as the engine's input; an inline
@@ -268,21 +309,26 @@ macro_rules! map {
                 }
             }
 
-            /// The `ValueSet/$validate-code` outcome as the version's `Parameters`:
-            /// `result`, `message`, and `display`; the ecosystem overlay's outputs follow.
+            /// The `ValueSet/$validate-code` outcome as the version's `Parameters`.
+            ///
+            /// `result`, `message`, and `display`, then the ecosystem overlay's validated
+            /// `code`, `system`, `version`, the itemised `issues`, and
+            /// `x-caused-by-unknown-system`.
             #[must_use]
             pub fn value_set_validation_parameters(validation: &Validation) -> Parameters {
                 let response = ValueSetValidateCodeResponse {
                     result: validation.result.into(),
                     message: validation.message.as_deref().map(Into::into),
                     display: validation.display.as_deref().map(Into::into),
-                    // TODO(#162): answer the validated code, system, version, and issues,
-                    // and the systems not served.
-                    code: None,
-                    system: None,
-                    version: None,
-                    issues: None,
-                    x_caused_by_unknown_system: Vec::new(),
+                    code: validation.code.as_deref().map(Into::into),
+                    system: validation.system.as_deref().map(Into::into),
+                    version: validation.version.as_deref().map(Into::into),
+                    issues: issues(&validation.issues),
+                    x_caused_by_unknown_system: validation
+                        .unknown_systems
+                        .iter()
+                        .map(|s| s.as_str().into())
+                        .collect(),
                 };
                 response.to_parameters()
             }

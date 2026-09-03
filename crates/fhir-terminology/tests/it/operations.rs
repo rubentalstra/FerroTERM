@@ -540,6 +540,70 @@ fn subsumes_refusals_are_errors_never_not_subsumed() {
     ));
 }
 
+// NOTE: the terminology ecosystem answers an unknown system as `result = false`
+// with `x-caused-by-unknown-system`, never as an HTTP error
+// (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, `$validate-code` return parameters).
+#[test]
+fn validate_code_names_an_unknown_system_or_version_instead_of_failing() {
+    let registry = registry();
+    let unknown = validate_code(
+        &registry,
+        &Invocation::Type,
+        &ValidateCodeInput {
+            url: Some(String::from("http://example.org/nowhere")),
+            code: Some(String::from("cat")),
+            ..ValidateCodeInput::default()
+        },
+    )
+    .expect("a false result, not an error");
+    assert!(!unknown.result);
+    assert_eq!(unknown.unknown_systems, ["http://example.org/nowhere"]);
+    assert_eq!(unknown.code.as_deref(), Some("cat"));
+    assert_eq!(
+        unknown.system.as_deref(),
+        Some("http://example.org/nowhere")
+    );
+    assert_eq!(unknown.version, None);
+    assert_eq!(unknown.issues.len(), 1);
+    assert_eq!(
+        (unknown.issues[0].code, unknown.issues[0].kind),
+        ("not-found", "not-found")
+    );
+    assert_eq!(
+        unknown.message.as_deref(),
+        Some(
+            "A definition for CodeSystem 'http://example.org/nowhere' could not be found, so the code cannot be validated"
+        )
+    );
+    let version = validate_code(
+        &registry,
+        &Invocation::Type,
+        &ValidateCodeInput {
+            coding: Some(CodingRef {
+                system: Some(URL.to_owned()),
+                version: Some(String::from("1999")),
+                code: Some(String::from("cat")),
+                display: None,
+            }),
+            ..ValidateCodeInput::default()
+        },
+    )
+    .expect("a false result, not an error");
+    assert!(!version.result);
+    assert_eq!(version.unknown_systems, [format!("{URL}|1999")]);
+    assert_eq!(version.version.as_deref(), Some("1999"));
+    assert_eq!(version.issues[0].expression, Some("coding"));
+    assert!(
+        version
+            .message
+            .as_deref()
+            .unwrap()
+            .contains("version '1999'"),
+        "{:?}",
+        version.message
+    );
+}
+
 // NOTE: R5 `$validate-code` declares `issues`, an OperationOutcome whose issues
 // carry `tx-issue-type` codings (<https://hl7.org/fhir/R5/codesystem-operation-validate-code.html>).
 #[test]

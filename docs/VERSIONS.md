@@ -16,9 +16,10 @@ discovery-phase repo.
 
 ## Crate line (crates.io)
 
-- The `crates/*` members carry their own lockstep version, currently
-  **0.1.0**, in each member's `Cargo.toml` and in every internal requirement
-  of the root `[workspace.dependencies]` table. It moves with the crates'
+- The `crates/*` members carry their own lockstep version in each member's
+  `Cargo.toml` and in every internal requirement of the root
+  `[workspace.dependencies]` table; `scripts/release/publish-crates.sh version`
+  prints the current value. It moves with the crates'
   packaged content (`.claude/rules/crates-publishing.md`), never with the
   product version. `scripts/checks/crate-version-guard.sh` enforces the bump
   and the lockstep; `scripts/checks/versions.sh` checks the members' metadata

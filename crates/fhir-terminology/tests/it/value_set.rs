@@ -400,6 +400,35 @@ fn validate_code_answers_the_membership_the_echo_and_the_issues() {
         .expect("validates");
     assert!(!validation.result);
     assert_eq!(validation.issues[0].kind, "not-found");
+    assert_eq!(validation.issues[0].code, "not-found");
+    assert_eq!(
+        validation.unknown_systems,
+        ["http://example.org/fhir/CodeSystem/nowhere"],
+        "x-caused-by-unknown-system names the system"
+    );
+    assert_eq!(
+        validation.code.as_deref(),
+        Some("kitten"),
+        "the code is echoed"
+    );
+    assert_eq!(
+        validation.message.as_deref(),
+        Some(
+            "A definition for CodeSystem 'http://example.org/fhir/CodeSystem/nowhere' could not be found, so the code cannot be validated"
+        )
+    );
+    let unknown_version = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        system_version: Some(String::from("9.9")),
+        ..ValueSetValidateInput::default()
+    };
+    let validation = value_set_validate_code::validate_code(&world.sources(), &unknown_version)
+        .expect("validates");
+    assert!(!validation.result);
+    assert_eq!(validation.unknown_systems, [format!("{ANIMALS}|9.9")]);
+    assert_eq!(validation.version.as_deref(), Some("9.9"));
 }
 
 #[test]

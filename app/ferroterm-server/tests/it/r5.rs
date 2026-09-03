@@ -96,7 +96,7 @@ async fn lookup_answers_definition_under_r5_only() {
 }
 
 #[tokio::test]
-async fn validate_code_itemises_issues_under_r5_and_not_under_r4b() {
+async fn validate_code_itemises_issues_under_r5_and_under_the_overlay_on_r4b() {
     let server = Server::start_with_resources();
     let request = json!({"resourceType": "Parameters", "parameter": [
         {"name": "url", "valueUri": ANIMALS},
@@ -120,12 +120,18 @@ async fn validate_code_itemises_issues_under_r5_and_not_under_r4b() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], false);
-    for undeclared in ["code", "system", "version", "issues"] {
+    // NOTE: R4B declares none of these; the terminology ecosystem overlay pre-adopts
+    // them from R6 (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+    for adopted in ["code", "system", "version", "issues"] {
         assert!(
-            parameter(&body, undeclared).is_none(),
-            "R4B declares no `{undeclared}` output: {body}"
+            parameter(&body, adopted).is_some(),
+            "R4B answers the pre-adopted `{adopted}` output: {body}"
         );
     }
+    assert_eq!(
+        parameter(&body, "issues").unwrap()["resource"]["issue"][0]["details"]["coding"][0]["code"],
+        "invalid-display"
+    );
     let (status, body) = server
         .get(&format!(
             "/r5/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=cat"
@@ -144,7 +150,11 @@ async fn validate_code_itemises_issues_under_r5_and_not_under_r4b() {
         ))
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    assert!(parameter(&body, "issues").is_none(), "{body}");
+    let issues = &parameter(&body, "issues").expect("the overlay's issues on R4B")["resource"];
+    assert_eq!(
+        issues["issue"][0]["details"]["coding"][0]["code"], "not-in-vs",
+        "{body}"
+    );
 }
 
 #[tokio::test]

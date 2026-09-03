@@ -96,12 +96,18 @@ async fn validate_code_carries_the_declared_outputs_and_the_r5_issues() {
         param(&body, "display").expect("display")["valueString"],
         "Kitten"
     );
-    for undeclared in ["system", "version", "code", "issues"] {
-        assert!(
-            param(&body, undeclared).is_none(),
-            "R4B declares no `{undeclared}` output: {body}"
-        );
-    }
+    // NOTE: R4B declares none of these; the terminology ecosystem overlay pre-adopts
+    // them from R6 (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+    assert_eq!(param(&body, "system").expect("system")["valueUri"], ANIMALS);
+    assert_eq!(
+        param(&body, "version").expect("version")["valueString"],
+        "2.0"
+    );
+    assert_eq!(param(&body, "code").expect("code")["valueCode"], "kitten");
+    assert!(
+        param(&body, "issues").is_none(),
+        "a clean pass has no issues"
+    );
     let (status, body) = server
         .post(
             "/r5/ValueSet/$validate-code",

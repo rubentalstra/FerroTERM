@@ -380,3 +380,41 @@ pub struct Issue {
     /// `issue.expression`: the parameter at fault.
     pub expression: Option<&'static str>,
 }
+
+/// A system the server does not serve, as `x-caused-by-unknown-system` names it.
+///
+/// Returns the canonical (`url` or `url|version`) and the issue that says so;
+/// the wording is the ecosystem's
+/// (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, the
+/// `$validate-code` return parameters).
+#[must_use]
+pub fn unknown_system(
+    url: &str,
+    version: Option<&str>,
+    expression: &'static str,
+) -> (String, Issue) {
+    let (canonical, text) = match version {
+        Some(version) => (
+            format!("{url}|{version}"),
+            format!(
+                "A definition for CodeSystem '{url}' version '{version}' could not be found, so the code cannot be validated"
+            ),
+        ),
+        None => (
+            url.to_owned(),
+            format!(
+                "A definition for CodeSystem '{url}' could not be found, so the code cannot be validated"
+            ),
+        ),
+    };
+    (
+        canonical,
+        Issue {
+            severity: "error",
+            code: "not-found",
+            kind: "not-found",
+            text,
+            expression: Some(expression),
+        },
+    )
+}

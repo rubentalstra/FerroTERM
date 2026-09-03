@@ -215,8 +215,11 @@ pub fn validate_code_response(outcome: ValidationOutcome) -> CodeSystemValidateC
         version: outcome.version.map(Into::into),
         codeable_concept: None,
         issues: issues(&outcome.issues),
-        // TODO(#162): answer the systems not served.
-        x_caused_by_unknown_system: Vec::new(),
+        x_caused_by_unknown_system: outcome
+            .unknown_systems
+            .into_iter()
+            .map(Into::into)
+            .collect(),
     }
 }
 
@@ -316,8 +319,11 @@ pub fn value_set_validation_parameters(validation: &Validation) -> Parameters {
         version: validation.version.as_deref().map(Into::into),
         codeable_concept: None,
         issues: issues(&validation.issues),
-        // TODO(#162): answer the systems not served.
-        x_caused_by_unknown_system: Vec::new(),
+        x_caused_by_unknown_system: validation
+            .unknown_systems
+            .iter()
+            .map(|s| s.as_str().into())
+            .collect(),
     }
     .to_parameters()
 }
