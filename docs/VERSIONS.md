@@ -47,7 +47,7 @@ Machine-generated per version from the vendored, pinned HL7 FHIR packages
 
 | Item | Pin |
 |---|---|
-| ECL | 2.2 (grammar from the official ANTLR `ECL.g4`) |
+| ECL | 2.2 (the tag of the official grammar repository; `ECL.g4` and the example corpus vendored under `crates/ferroterm-ecl/vendor/` by `scripts/vendor/ecl-grammar.sh`) |
 | SNOMED CT content | **not pinned in-repo**: licence-gated, bring-your-own RF2 (International edition); the loaded edition+version is a runtime/deployment fact (`.claude/rules/snomed-terminology.md`) |
 
 ## Rust dependency pins
