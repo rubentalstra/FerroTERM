@@ -56,7 +56,9 @@ fn the_manifest_records_the_edition_and_the_counts() {
     let manifest: Value =
         serde_json::from_str(&fs::read_to_string(&report.manifest).expect("manifest"))
             .expect("json");
-    assert_eq!(manifest["manifest"], 1);
+    assert_eq!(manifest["manifest"], pipeline::MANIFEST_VERSION);
+    assert_eq!(manifest["hierarchy"], "hierarchy.bin");
+    assert_eq!(manifest["text"], "text.bin");
     assert_eq!(manifest["system"], "http://snomed.info/sct");
     assert_eq!(manifest["version"], report.version_uri);
     assert_eq!(manifest["releaseDate"], DATE);
@@ -170,7 +172,7 @@ fn the_store_graph_and_text_crates_open_what_the_build_wrote() {
 }
 
 #[test]
-fn the_graph_and_text_blobs_open_from_the_store() {
+fn the_graph_and_text_files_open_beside_the_store() {
     let release = tempfile::tempdir().expect("tempdir");
     fixture::write_release(release.path());
     let out = tempfile::tempdir().expect("tempdir");
@@ -184,11 +186,8 @@ fn the_graph_and_text_blobs_open_from_the_store() {
         .expect("read")
         .expect("nl refset");
 
-    // The hierarchy blob: cat is under animal and the root; fish is under nothing.
-    let graph = store
-        .blob(tables::BLOB_HIERARCHY)
-        .expect("read")
-        .expect("hierarchy blob");
+    // The hierarchy file: cat is under animal and the root; fish is under nothing.
+    let graph = std::fs::read(&report.hierarchy).expect("hierarchy file");
     let hierarchy = Hierarchy::read_from(&mut graph.as_slice()).expect("hierarchy reads");
     let top = store.ordinal(&concept(1)).expect("read").expect("top");
     assert!(hierarchy.closure.is_ancestor(animal, cat));
@@ -196,11 +195,8 @@ fn the_graph_and_text_blobs_open_from_the_store() {
     assert!(hierarchy.closure.ancestors(fish).is_empty());
     assert_eq!(hierarchy.is_a.nodes(), 9);
 
-    // The text blob: a Dutch prefix, filtered by the NL refset, ranks the shortest first.
-    let text = store
-        .blob(tables::BLOB_TEXT)
-        .expect("read")
-        .expect("text blob");
+    // The text file: a Dutch prefix, filtered by the NL refset, ranks the shortest first.
+    let text = std::fs::read(&report.text).expect("text file");
     let index = read_from(&mut text.as_slice()).expect("index reads");
     assert_eq!(index.len(), 12);
     let hits = index.search(

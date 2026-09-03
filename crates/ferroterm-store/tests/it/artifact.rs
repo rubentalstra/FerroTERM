@@ -1,9 +1,6 @@
 use std::path::Path;
 
-use ferroterm_graph::closure::Closure;
-use ferroterm_graph::csr::Csr;
 use ferroterm_graph::ordinal::Ordinal;
-use ferroterm_graph::persist::Hierarchy;
 use ferroterm_store::builder::{BuildError, PreferredRule, StoreBuilder};
 use ferroterm_store::record::{Concept, Designation, PropertyValue};
 use ferroterm_store::store::{Store, StoreError, Vocabulary};
@@ -115,14 +112,6 @@ fn build(path: &Path) -> Store {
     builder
         .properties(child, PARENT, &[PropertyValue::Concept(root)])
         .expect("properties");
-    let is_a = Csr::build(2, [(child, root)]).expect("csr");
-    let hierarchy = Hierarchy {
-        is_a,
-        closure: Closure::compute(&Csr::build(2, [(child, root)]).expect("csr")).expect("closure"),
-    };
-    let mut bytes = Vec::new();
-    hierarchy.write_to(&mut bytes).expect("graph bytes");
-    builder.blob(tables::BLOB_HIERARCHY, &bytes).expect("blob");
     builder
         .finish(&PreferredRule {
             preferred: PREFERRED,
@@ -223,23 +212,6 @@ fn preferred_designations_are_precomputed_per_refset_and_use() {
         .expect("read")
         .expect("present");
     assert_eq!(dutch.term, "Synthetisch kind");
-}
-
-#[test]
-fn the_hierarchy_blob_round_trips_through_the_artifact() {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let store = build(&dir.path().join("synthetic.redb"));
-    let bytes = store
-        .blob(tables::BLOB_HIERARCHY)
-        .expect("read")
-        .expect("present");
-    let hierarchy = Hierarchy::read_from(&mut bytes.as_slice()).expect("graph parses");
-    assert!(
-        hierarchy
-            .closure
-            .is_ancestor(Ordinal::new(0), Ordinal::new(1))
-    );
-    assert!(store.blob("nothing").expect("read").is_none());
 }
 
 #[test]

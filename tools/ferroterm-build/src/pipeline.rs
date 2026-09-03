@@ -29,7 +29,11 @@ pub const STORE_FILE: &str = "store.redb";
 /// The manifest file name inside the output directory.
 pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest layout this tool writes.
-pub const MANIFEST_VERSION: u32 = 1;
+pub const MANIFEST_VERSION: u32 = 2;
+/// The hierarchy artifact (`ferroterm-graph`), beside the store.
+pub const HIERARCHY_FILE: &str = "hierarchy.bin";
+/// The designation index (`ferroterm-text`), beside the store.
+pub const TEXT_FILE: &str = "text.bin";
 
 /// The fixed property keys the SNOMED loader writes, by ordinal; every
 /// attribute type found in the release follows, keyed by its SCTID.
@@ -126,6 +130,10 @@ pub struct Report {
     pub version_uri: String,
     /// The store file.
     pub store: PathBuf,
+    /// The hierarchy file.
+    pub hierarchy: PathBuf,
+    /// The designation index file.
+    pub text: PathBuf,
     /// The manifest file.
     pub manifest: PathBuf,
     /// Concepts written, active and inactive.
@@ -184,9 +192,10 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         }
     }
     let hierarchy = build_hierarchy(&concepts, &relationships.is_a)?;
+    let hierarchy_path = out.join(HIERARCHY_FILE);
     let mut graph_bytes = Vec::new();
     hierarchy.write_to(&mut graph_bytes)?;
-    builder.blob(tables::BLOB_HIERARCHY, &graph_bytes)?;
+    std::fs::write(&hierarchy_path, &graph_bytes).map_err(io_error(&hierarchy_path))?;
     let (text_bytes, words) = build_text(&designations, &acceptabilities)?;
     let mut languages: Vec<String> = designations
         .iter()
@@ -194,7 +203,8 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         .collect();
     languages.sort();
     languages.dedup();
-    builder.blob(tables::BLOB_TEXT, &text_bytes)?;
+    let text_path = out.join(TEXT_FILE);
+    std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
     builder.finish(&PreferredRule { preferred: 0 })?;
 
     let manifest_path = out.join(MANIFEST_FILE);
@@ -206,6 +216,8 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         "releaseDate": release.date().to_string(),
         "store": STORE_FILE,
         "storeLayout": tables::LAYOUT_VERSION,
+        "hierarchy": HIERARCHY_FILE,
+        "text": TEXT_FILE,
         "concepts": concepts.len(),
         "designations": designation_count,
         "isAEdges": is_a_edges,
@@ -222,6 +234,8 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         edition_uri: edition.edition_uri(),
         version_uri,
         store: store_path,
+        hierarchy: hierarchy_path,
+        text: text_path,
         manifest: manifest_path,
         concepts: u64::try_from(concepts.len()).unwrap_or(u64::MAX),
         designations: designation_count,

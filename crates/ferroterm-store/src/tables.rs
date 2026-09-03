@@ -31,20 +31,14 @@ pub const DESIGNATION_USES: TableDefinition<u32, &str> = TableDefinition::new("d
 pub const LANGUAGE_REFSETS: TableDefinition<u32, &str> = TableDefinition::new("language_refsets");
 /// Acceptability ordinal to its code.
 pub const ACCEPTABILITIES: TableDefinition<u32, &str> = TableDefinition::new("acceptabilities");
-/// Named binary blobs; `is-a` holds the graph artifact.
-pub const BLOBS: TableDefinition<&str, &[u8]> = TableDefinition::new("blobs");
 
 /// The `META` key of the layout version.
 pub const META_LAYOUT: &str = "layout";
 /// The layout version this build writes and reads.
-pub const LAYOUT_VERSION: &str = "1";
+pub const LAYOUT_VERSION: &str = "2";
 /// The `META` key of the code system URI.
 pub const META_SYSTEM: &str = "system";
 /// The `META` key of the code system version string.
 pub const META_VERSION: &str = "version";
 /// The `META` key of the number of concepts.
 pub const META_CONCEPTS: &str = "concepts";
-/// The `BLOBS` key of the hierarchy artifact.
-pub const BLOB_HIERARCHY: &str = "is-a";
-/// The blob slot holding the designation search index (`ferroterm-text`).
-pub const BLOB_TEXT: &str = "text";

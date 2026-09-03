@@ -283,17 +283,6 @@ impl Store {
         }
         Ok(None)
     }
-
-    /// A named blob, for example the hierarchy artifact.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`StoreError`] when the database cannot be read.
-    pub fn blob(&self, name: &str) -> Result<Option<Vec<u8>>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::BLOBS)?;
-        Ok(table.get(name)?.map(|v| v.value().to_vec()))
-    }
 }
 
 /// The small name tables of an artifact.

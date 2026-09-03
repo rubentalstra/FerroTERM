@@ -1,5 +1,5 @@
 //! The SNOMED CT provider: one built edition version read from its artifact
-//! directory (`store.redb` with the hierarchy and text blobs, `manifest.json`).
+//! directory (`store.redb`, `hierarchy.bin`, `text.bin`, and `manifest.json`).
 //!
 //! Identity is the SNOMED CT URI standard: the system `http://snomed.info/sct`
 //! and the edition version URI as `version`
@@ -35,6 +35,9 @@ use crate::provider::{
 pub const SYSTEM: &str = "http://snomed.info/sct";
 /// The manifest file inside an artifact directory.
 pub const MANIFEST_FILE: &str = "manifest.json";
+/// The manifest version this provider reads: the store beside the hierarchy
+/// and the designation index as their own files.
+pub const MANIFEST_VERSION: u32 = 2;
 
 /// The FHIR-defined SNOMED properties this provider serves, in output order
 /// (<https://hl7.org/fhir/R4B/snomedct.html>, the properties section).
@@ -74,14 +77,14 @@ pub enum OpenError {
     /// The store cannot be opened or read.
     #[error(transparent)]
     Store(#[from] StoreError),
-    /// A blob slot the provider needs is empty.
-    #[error("the store has no `{0}` blob")]
-    MissingBlob(&'static str),
-    /// The hierarchy blob does not read.
-    #[error("cannot read the hierarchy blob")]
+    /// The manifest is of another layout version.
+    #[error("the manifest is version {0}; this server reads version {MANIFEST_VERSION}")]
+    ManifestVersion(u32),
+    /// The hierarchy file does not read.
+    #[error("cannot read the hierarchy file")]
     Hierarchy(#[from] ferroterm_graph::persist::PersistError),
-    /// The text blob does not read.
-    #[error("cannot read the designation index blob")]
+    /// The designation index file does not read.
+    #[error("cannot read the designation index file")]
     Text(#[from] ferroterm_text::persist::PersistError),
     /// The child adjacency cannot be derived.
     #[error("cannot transpose the hierarchy")]
@@ -104,9 +107,14 @@ pub enum OpenError {
 
 #[derive(Debug, Deserialize)]
 struct Manifest {
+    #[serde(rename = "manifest")]
+    layout: u32,
     system: String,
     edition: String,
     version: String,
+    store: String,
+    hierarchy: String,
+    text: String,
     #[serde(default)]
     languages: Vec<String>,
 }
@@ -207,7 +215,7 @@ impl SnomedProvider {
     ///
     /// # Errors
     ///
-    /// Returns [`OpenError`] when the manifest, the store, or a blob does not
+    /// Returns [`OpenError`] when the manifest, the store, or a side file does not
     /// read, or the artifact is not a SNOMED CT edition.
     pub fn open(dir: &Path, default_language: &str) -> Result<Self, OpenError> {
         let manifest_path = dir.join(MANIFEST_FILE);
@@ -223,15 +231,18 @@ impl SnomedProvider {
         if manifest.system != SYSTEM {
             return Err(OpenError::NotSnomed(manifest.system));
         }
-        let store = Store::open(&dir.join("store.redb"))?;
-        let graph_bytes = store
-            .blob(tables::BLOB_HIERARCHY)?
-            .ok_or(OpenError::MissingBlob(tables::BLOB_HIERARCHY))?;
+        if manifest.layout != MANIFEST_VERSION {
+            return Err(OpenError::ManifestVersion(manifest.layout));
+        }
+        let store = Store::open(&dir.join(&manifest.store))?;
+        let read = |name: &str| {
+            let path = dir.join(name);
+            std::fs::read(&path).map_err(|source| OpenError::Io { path, source })
+        };
+        let graph_bytes = read(&manifest.hierarchy)?;
         let graph = GraphHierarchy::read_from(&mut graph_bytes.as_slice())?;
         let children = graph.is_a.transpose()?;
-        let text_bytes = store
-            .blob(tables::BLOB_TEXT)?
-            .ok_or(OpenError::MissingBlob(tables::BLOB_TEXT))?;
+        let text_bytes = read(&manifest.text)?;
         let text = ferroterm_text::persist::read_from(&mut text_bytes.as_slice())?;
         let concepts = store
             .meta(tables::META_CONCEPTS)?

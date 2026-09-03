@@ -273,10 +273,19 @@ fn a_foreign_or_broken_artifact_is_refused() {
     snomed::write(dir.path()).expect("writes the fixture");
     std::fs::write(
         dir.path().join("manifest.json"),
-        r#"{"system":"http://loinc.org","edition":"x","version":"2.80"}"#,
+        r#"{"manifest":2,"system":"http://loinc.org","edition":"x","version":"2.80","store":"store.redb","hierarchy":"hierarchy.bin","text":"text.bin"}"#,
     )
     .expect("writes");
     assert!(
         matches!(SnomedProvider::open(dir.path(), "en"), Err(OpenError::NotSnomed(s)) if s == "http://loinc.org")
     );
+    std::fs::write(
+        dir.path().join("manifest.json"),
+        r#"{"manifest":1,"system":"http://snomed.info/sct","edition":"x","version":"2.80","store":"store.redb","hierarchy":"hierarchy.bin","text":"text.bin"}"#,
+    )
+    .expect("writes");
+    assert!(matches!(
+        SnomedProvider::open(dir.path(), "en"),
+        Err(OpenError::ManifestVersion(1))
+    ));
 }
