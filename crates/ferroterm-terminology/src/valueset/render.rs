@@ -1,12 +1,16 @@
 //! A model back to a generated `ValueSet`, for reads and expansions.
 
+use ferroterm_fhir::r4b::coding::Coding;
+use ferroterm_fhir::r4b::primitives::Integer;
 use ferroterm_fhir::r4b::value_set::{
     ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeConcept,
-    ValueSetComposeIncludeFilter,
+    ValueSetComposeIncludeConceptDesignation, ValueSetComposeIncludeFilter, ValueSetExpansion,
+    ValueSetExpansionContains, ValueSetExpansionParameter, ValueSetExpansionParameterValue,
 };
 
 use super::model::ValueSetModel;
 use crate::compose::{Compose, Include};
+use crate::operations::expand::{ExpansionOutcome, ParameterValue};
 
 /// The R4B `ValueSet` of `model`, with its `compose` when `with_compose`.
 #[must_use]
@@ -69,4 +73,74 @@ pub fn compose_r4b(compose: &Compose) -> ValueSetCompose {
         exclude: compose.exclude.iter().map(render).collect(),
         ..Default::default()
     }
+}
+
+/// The expanded value set as an R4B resource.
+///
+/// The definition (the compose when `includeDefinition` asked for it) and the
+/// `expansion` with its identifier, timestamp, total, offset, echoed
+/// parameters, and page.
+#[must_use]
+pub fn expansion_r4b(outcome: &ExpansionOutcome) -> ValueSet {
+    let mut value_set = to_r4b(&outcome.model, outcome.include_definition);
+    let parameter = outcome
+        .parameters
+        .iter()
+        .map(|p| ValueSetExpansionParameter {
+            name: p.name.as_str().into(),
+            value: Some(match &p.value {
+                ParameterValue::String(s) => {
+                    ValueSetExpansionParameterValue::String(s.as_str().into())
+                }
+                ParameterValue::Boolean(b) => ValueSetExpansionParameterValue::Boolean((*b).into()),
+                ParameterValue::Integer(i) => ValueSetExpansionParameterValue::Integer(
+                    i32::try_from(*i).unwrap_or(i32::MAX).into(),
+                ),
+                ParameterValue::Code(c) => ValueSetExpansionParameterValue::Code(c.as_str().into()),
+                ParameterValue::Uri(u) => ValueSetExpansionParameterValue::Uri(u.as_str().into()),
+            }),
+            ..Default::default()
+        })
+        .collect();
+    let contains = outcome
+        .contains
+        .iter()
+        .map(|item| ValueSetExpansionContains {
+            system: Some(item.system.as_str().into()),
+            r#abstract: item.abstract_concept.then_some(true.into()),
+            inactive: item.inactive.then_some(true.into()),
+            code: Some(item.code.as_str().into()),
+            display: item.display.as_deref().map(Into::into),
+            designation: item
+                .designations
+                .iter()
+                .map(|d| ValueSetComposeIncludeConceptDesignation {
+                    language: d.language.as_deref().map(Into::into),
+                    r#use: d.use_.as_ref().map(|u| Coding {
+                        system: Some(u.system.as_str().into()),
+                        code: Some(u.code.as_str().into()),
+                        display: u.display.as_deref().map(Into::into),
+                        ..Default::default()
+                    }),
+                    value: d.value.as_str().into(),
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        })
+        .collect();
+    value_set.expansion = Some(ValueSetExpansion {
+        identifier: Some(outcome.identifier.as_str().into()),
+        timestamp: outcome.timestamp.as_str().into(),
+        total: Some(Integer::from(
+            i32::try_from(outcome.total).unwrap_or(i32::MAX),
+        )),
+        offset: outcome
+            .offset
+            .map(|o| Integer::from(i32::try_from(o).unwrap_or(i32::MAX))),
+        parameter,
+        contains,
+        ..Default::default()
+    });
+    value_set
 }

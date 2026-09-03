@@ -21,6 +21,7 @@ use ferroterm_fhir::r4b::operations::concept_map_translate::{
     ConceptMapTranslateRequest, ConceptMapTranslateResponse, ConceptMapTranslateResponseMatch,
     ConceptMapTranslateResponseMatchProduct,
 };
+use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
 use ferroterm_fhir::r4b::operations::value_set_validate_code::{
     ValueSetValidateCodeRequest, ValueSetValidateCodeResponse,
 };
@@ -29,6 +30,7 @@ use ferroterm_fhir::r4b::parameters::{Parameters, ParametersParameter};
 use ferroterm_fhir::r4b::resource::Resource;
 use ferroterm_graph::subsumption::Outcome;
 use ferroterm_terminology::operations::CodingRef;
+use ferroterm_terminology::operations::expand::ExpandInput;
 use ferroterm_terminology::operations::lookup::{LookupInput, LookupOutcome};
 use ferroterm_terminology::operations::subsumes::SubsumesInput;
 use ferroterm_terminology::operations::translate::{TranslateInput, Translation};
@@ -407,4 +409,55 @@ pub fn translation_parameters(translation: &Translation) -> Parameters {
         }
     }
     parameters
+}
+
+/// The canonicals of a repeated `canonical` parameter, as text.
+fn canonicals(list: &[ferroterm_fhir::r4b::primitives::Canonical]) -> Vec<String> {
+    list.iter().filter_map(|c| c.value.clone()).collect()
+}
+
+/// The `$expand` request as the engine's input; an inline `valueSet` is
+/// converted as an R4B resource. R4B declares no `property` or
+/// `useSupplement`, so those stay empty.
+#[must_use]
+pub fn expand_input(request: &ValueSetExpandRequest) -> ExpandInput {
+    let flag =
+        |b: &Option<ferroterm_fhir::r4b::primitives::Boolean>| b.as_ref().and_then(|b| b.value);
+    let number = |i: &Option<ferroterm_fhir::r4b::primitives::Integer>| {
+        i.as_ref().and_then(|i| i.value).map(i64::from)
+    };
+    ExpandInput {
+        url: request.url.as_ref().and_then(|v| v.value.clone()),
+        value_set_version: request
+            .value_set_version
+            .as_ref()
+            .and_then(|v| v.value.clone()),
+        inline_value_set: request.value_set.as_ref().map(convert::r4b::convert),
+        context: request.context.is_some() || request.context_direction.is_some(),
+        date: request.date.is_some(),
+        filter: request.filter.as_ref().and_then(|v| v.value.clone()),
+        offset: number(&request.offset),
+        count: number(&request.count),
+        include_designations: flag(&request.include_designations),
+        designation: request
+            .designation
+            .iter()
+            .filter_map(|d| d.value.clone())
+            .collect(),
+        include_definition: flag(&request.include_definition),
+        active_only: flag(&request.active_only),
+        exclude_nested: flag(&request.exclude_nested),
+        exclude_not_for_ui: flag(&request.exclude_not_for_u_i),
+        exclude_post_coordinated: flag(&request.exclude_post_coordinated),
+        display_language: request
+            .display_language
+            .as_ref()
+            .and_then(|v| v.value.clone()),
+        exclude_system: canonicals(&request.exclude_system),
+        system_version: canonicals(&request.system_version),
+        check_system_version: canonicals(&request.check_system_version),
+        force_system_version: canonicals(&request.force_system_version),
+        property: Vec::new(),
+        use_supplement: Vec::new(),
+    }
 }

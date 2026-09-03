@@ -3,13 +3,13 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
 use ferroterm_fhir::r4b::value_set::{
     ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeFilter,
 };
 use ferroterm_graph::subsumption::Outcome;
 use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::filter::{Filter, FilterOperator};
+use ferroterm_terminology::operations::expand::ExpandInput;
 use ferroterm_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use ferroterm_terminology::operations::{
     Invocation, OperationError, Sources, expand, subsumes, value_set_validate_code,
@@ -358,17 +358,19 @@ fn ucum_validates_by_canonical_membership_and_refuses_expansion() {
     assert!(!validation.result);
     let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
     assert_eq!(kinds, ["not-in-vs", "invalid-code"]);
-    let all = ValueSetExpandRequest {
-        url: Some("http://unitsofmeasure.org/vs".into()),
-        ..Default::default()
+    let all = ExpandInput {
+        url: Some(String::from("http://unitsofmeasure.org/vs")),
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&sources, &all),
         Err(OperationError::NotSupported(_))
     ));
-    let mass = ValueSetExpandRequest {
-        value_set: Some(canonical_value_set("g")),
-        ..Default::default()
+    let mass = ExpandInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &canonical_value_set("g"),
+        )),
+        ..ExpandInput::default()
     };
     assert!(
         matches!(

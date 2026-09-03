@@ -4,12 +4,12 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
 use ferroterm_fhir::r4b::value_set::{ValueSet, ValueSetCompose, ValueSetComposeInclude};
 use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir};
 use ferroterm_terminology::fhir_codesystem::provider::FhirCodeSystem;
 use ferroterm_terminology::operations::CodingRef;
+use ferroterm_terminology::operations::expand::{ExpandInput, ExpansionOutcome, ParameterValue};
 use ferroterm_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use ferroterm_terminology::operations::{OperationError, Sources, expand, value_set_validate_code};
 use ferroterm_terminology::registry::Registry;
@@ -69,26 +69,16 @@ impl World {
     }
 }
 
-fn codes(value_set: &ValueSet) -> Vec<String> {
-    value_set
-        .expansion
-        .as_ref()
-        .expect("expansion")
-        .contains
-        .iter()
-        .filter_map(|c| c.code.as_ref().and_then(|c| c.value.clone()))
-        .collect()
+fn codes(outcome: &ExpansionOutcome) -> Vec<String> {
+    outcome.contains.iter().map(|c| c.code.clone()).collect()
 }
 
-fn parameter(value_set: &ValueSet, name: &str) -> Vec<String> {
-    value_set
-        .expansion
-        .as_ref()
-        .expect("expansion")
-        .parameter
+fn parameter(outcome: &ExpansionOutcome, name: &str) -> Vec<ParameterValue> {
+    outcome
+        .parameters
         .iter()
-        .filter(|p| p.name.value.as_deref() == Some(name))
-        .map(|p| format!("{:?}", p.value))
+        .filter(|p| p.name == name)
+        .map(|p| p.value.clone())
         .collect()
 }
 
@@ -109,129 +99,89 @@ fn the_store_loads_every_value_set_and_defaults_to_the_greatest_version() {
 #[test]
 fn expand_lists_the_system_flat_with_the_parameter_echo_and_used_codesystem() {
     let world = World::load();
-    let request = ValueSetExpandRequest {
-        url: Some(VS_ALL.into()),
-        value_set_version: Some("1.0".into()),
-        exclude_nested: Some(true.into()),
-        ..Default::default()
+    let request = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        value_set_version: Some(String::from("1.0")),
+        exclude_nested: Some(true),
+        ..ExpandInput::default()
     };
-    let response = expand::expand(&world.sources(), &request).expect("expands");
-    let vs = &response.r#return;
-    assert_eq!(
-        vs.version.as_ref().and_then(|v| v.value.as_deref()),
-        Some("1.0")
-    );
-    assert!(vs.compose.is_none(), "includeDefinition defaults to false");
-    let expansion = vs.expansion.as_ref().expect("expansion");
-    assert_eq!(expansion.total.as_ref().and_then(|t| t.value), Some(9));
+    let vs = expand::expand(&world.sources(), &request).expect("expands");
+    assert_eq!(vs.model.version.as_deref(), Some("1.0"));
     assert!(
-        expansion
-            .identifier
-            .as_ref()
-            .and_then(|i| i.value.as_deref())
-            .is_some_and(|i| i.starts_with("urn:uuid:"))
+        !vs.include_definition,
+        "includeDefinition defaults to false"
     );
+    assert_eq!(vs.total, 9);
+    assert!(vs.identifier.starts_with("urn:uuid:"));
     assert_eq!(
-        codes(vs),
+        codes(&vs),
         [
             "animal", "cat", "dodo", "dog", "fish", "kitten", "living", "pet", "plant"
         ]
     );
-    let dodo = expansion
-        .contains
-        .iter()
-        .find(|c| c.code.as_ref().and_then(|c| c.value.as_deref()) == Some("dodo"))
-        .expect("dodo");
-    assert_eq!(dodo.inactive.as_ref().and_then(|b| b.value), Some(true));
-    let pet = expansion
-        .contains
-        .iter()
-        .find(|c| c.code.as_ref().and_then(|c| c.value.as_deref()) == Some("pet"))
-        .expect("pet");
-    assert_eq!(pet.r#abstract.as_ref().and_then(|b| b.value), Some(true));
-    assert_eq!(parameter(vs, "excludeNested").len(), 1);
+    let dodo = vs.contains.iter().find(|c| c.code == "dodo").expect("dodo");
+    assert!(dodo.inactive);
+    let pet = vs.contains.iter().find(|c| c.code == "pet").expect("pet");
+    assert!(pet.abstract_concept);
+    assert_eq!(parameter(&vs, "excludeNested").len(), 1);
     assert_eq!(
-        parameter(vs, "used-codesystem"),
-        [format!(
-            "Some(Uri(Uri {{ id: None, extension: [], value: Some(\"{ANIMALS}|2.0\") }}))"
-        )]
+        parameter(&vs, "used-codesystem"),
+        [ParameterValue::Uri(format!("{ANIMALS}|2.0"))]
     );
 }
 
 #[test]
 fn expand_pages_filters_and_honours_active_only() {
     let world = World::load();
-    let page = ValueSetExpandRequest {
-        url: Some(VS_ALL.into()),
-        offset: Some(2.into()),
-        count: Some(3.into()),
-        active_only: Some(true.into()),
-        ..Default::default()
+    let page = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        offset: Some(2),
+        count: Some(3),
+        active_only: Some(true),
+        ..ExpandInput::default()
     };
-    let vs = expand::expand(&world.sources(), &page)
-        .expect("expands")
-        .r#return;
-    let expansion = vs.expansion.as_ref().expect("expansion");
-    assert_eq!(
-        expansion.total.as_ref().and_then(|t| t.value),
-        Some(7),
-        "2.0 drops dodo; activeOnly drops fish"
-    );
-    assert_eq!(expansion.offset.as_ref().and_then(|o| o.value), Some(2));
+    let vs = expand::expand(&world.sources(), &page).expect("expands");
+    assert_eq!(vs.total, 7, "2.0 drops dodo; activeOnly drops fish");
+    assert_eq!(vs.offset, Some(2));
     assert_eq!(codes(&vs), ["dog", "kitten", "living"]);
-    let text = ValueSetExpandRequest {
-        url: Some(VS_ALL.into()),
-        filter: Some("kat".into()),
-        display_language: Some("de".into()),
-        include_designations: Some(true.into()),
-        ..Default::default()
+    let text = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        filter: Some(String::from("kat")),
+        display_language: Some(String::from("de")),
+        include_designations: Some(true),
+        ..ExpandInput::default()
     };
-    let vs = expand::expand(&world.sources(), &text)
-        .expect("expands")
-        .r#return;
+    let vs = expand::expand(&world.sources(), &text).expect("expands");
     assert_eq!(codes(&vs), ["cat"]);
-    let cat = &vs.expansion.as_ref().expect("expansion").contains[0];
+    let cat = &vs.contains[0];
+    assert_eq!(cat.display.as_deref(), Some("Katze"));
     assert_eq!(
-        cat.display.as_ref().and_then(|d| d.value.as_deref()),
-        Some("Katze")
-    );
-    assert_eq!(
-        cat.designation.len(),
+        cat.designations.len(),
         1,
         "only the requested language's designations"
     );
-    let zero = ValueSetExpandRequest {
-        url: Some(VS_ALL.into()),
-        count: Some(0.into()),
-        ..Default::default()
+    let zero = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        count: Some(0),
+        ..ExpandInput::default()
     };
-    let vs = expand::expand(&world.sources(), &zero)
-        .expect("expands")
-        .r#return;
+    let vs = expand::expand(&world.sources(), &zero).expect("expands");
     assert!(codes(&vs).is_empty());
-    assert_eq!(
-        vs.expansion
-            .as_ref()
-            .and_then(|e| e.total.as_ref())
-            .and_then(|t| t.value),
-        Some(8)
-    );
+    assert_eq!(vs.total, 8);
 }
 
 #[test]
 fn expand_follows_value_set_references_and_refuses_a_cycle() {
     let world = World::load();
-    let referenced = ValueSetExpandRequest {
-        url: Some(VS_PETS_REF.into()),
-        ..Default::default()
+    let referenced = ExpandInput {
+        url: Some(VS_PETS_REF.to_owned()),
+        ..ExpandInput::default()
     };
-    let vs = expand::expand(&world.sources(), &referenced)
-        .expect("expands")
-        .r#return;
+    let vs = expand::expand(&world.sources(), &referenced).expect("expands");
     assert_eq!(codes(&vs), ["kitten", "pet"]);
-    let looped = ValueSetExpandRequest {
-        url: Some(VS_LOOP_A.into()),
-        ..Default::default()
+    let looped = ExpandInput {
+        url: Some(VS_LOOP_A.to_owned()),
+        ..ExpandInput::default()
     };
     let error = expand::expand(&world.sources(), &looped).expect_err("cycle");
     assert!(
@@ -256,77 +206,73 @@ fn expand_takes_an_inline_value_set_and_pins_system_versions() {
         }),
         ..Default::default()
     };
-    let request = ValueSetExpandRequest {
-        value_set: Some(inline.clone()),
-        include_definition: Some(true.into()),
-        system_version: vec![format!("{COLOURS}|1").as_str().into()],
-        ..Default::default()
+    let request = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        include_definition: Some(true),
+        system_version: vec![format!("{COLOURS}|1")],
+        ..ExpandInput::default()
     };
-    let vs = expand::expand(&world.sources(), &request)
-        .expect("expands")
-        .r#return;
+    let vs = expand::expand(&world.sources(), &request).expect("expands");
     assert_eq!(codes(&vs), ["Green", "RED", "blue"]);
     assert!(
-        vs.compose.is_some(),
+        vs.include_definition,
         "includeDefinition returns the compose"
     );
-    let both = ValueSetExpandRequest {
-        value_set: Some(inline.clone()),
-        url: Some(VS_ALL.into()),
-        ..Default::default()
+    let both = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        url: Some(VS_ALL.to_owned()),
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&world.sources(), &both),
         Err(OperationError::Invalid(_))
     ));
-    let wrong_version = ValueSetExpandRequest {
-        value_set: Some(inline.clone()),
-        check_system_version: vec![format!("{COLOURS}|9").as_str().into()],
-        ..Default::default()
+    let wrong_version = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        check_system_version: vec![format!("{COLOURS}|9")],
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&world.sources(), &wrong_version),
         Err(OperationError::UnknownVersion { .. })
     ));
-    let excluded = ValueSetExpandRequest {
-        value_set: Some(inline),
-        exclude_system: vec![COLOURS.into()],
-        ..Default::default()
+    let excluded = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        exclude_system: vec![COLOURS.to_owned()],
+        ..ExpandInput::default()
     };
-    let vs = expand::expand(&world.sources(), &excluded)
-        .expect("expands")
-        .r#return;
+    let vs = expand::expand(&world.sources(), &excluded).expect("expands");
     assert!(codes(&vs).is_empty());
 }
 
 #[test]
 fn expand_refuses_what_it_cannot_answer() {
     let world = World::load();
-    let unknown = ValueSetExpandRequest {
-        url: Some("http://example.org/fhir/ValueSet/nowhere".into()),
-        ..Default::default()
+    let unknown = ExpandInput {
+        url: Some(String::from("http://example.org/fhir/ValueSet/nowhere")),
+        ..ExpandInput::default()
     };
     let error = expand::expand(&world.sources(), &unknown).expect_err("unknown");
     assert!(matches!(error, OperationError::UnknownValueSet(_)));
     assert_eq!(error.status(), http::StatusCode::NOT_FOUND);
-    let none = ValueSetExpandRequest::default();
+    let none = ExpandInput::default();
     assert!(matches!(
         expand::expand(&world.sources(), &none),
         Err(OperationError::Required(_))
     ));
-    let context = ValueSetExpandRequest {
-        url: Some(VS_ALL.into()),
-        context: Some("Patient.gender".into()),
-        ..Default::default()
+    let context = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        context: true,
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&world.sources(), &context),
         Err(OperationError::NotSupported(_))
     ));
-    let negative = ValueSetExpandRequest {
-        url: Some(VS_ALL.into()),
-        offset: Some((-1).into()),
-        ..Default::default()
+    let negative = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        offset: Some(-1),
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&world.sources(), &negative),
@@ -344,9 +290,9 @@ fn expand_refuses_what_it_cannot_answer() {
         }),
         ..Default::default()
     };
-    let request = ValueSetExpandRequest {
-        value_set: Some(unknown_system),
-        ..Default::default()
+    let request = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&unknown_system)),
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&world.sources(), &request),
@@ -361,9 +307,9 @@ fn expand_refuses_what_it_cannot_answer() {
         }),
         ..Default::default()
     };
-    let request = ValueSetExpandRequest {
-        value_set: Some(no_system),
-        ..Default::default()
+    let request = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&no_system)),
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&world.sources(), &request),

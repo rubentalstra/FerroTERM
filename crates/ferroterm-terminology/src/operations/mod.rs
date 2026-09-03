@@ -271,20 +271,8 @@ pub fn locate(
 }
 
 /// The value of an optional R4B `code`.
-pub(crate) fn code_text(value: Option<&ferroterm_fhir::r4b::primitives::Code>) -> Option<&str> {
-    value.and_then(|v| v.value.as_deref())
-}
-
 /// The value of an optional R4B `string`.
-pub(crate) fn string_text(value: Option<&ferroterm_fhir::r4b::primitives::String>) -> Option<&str> {
-    value.and_then(|v| v.value.as_deref())
-}
-
 /// The value of an optional R4B `uri`.
-pub(crate) fn uri_text(value: Option<&ferroterm_fhir::r4b::primitives::Uri>) -> Option<&str> {
-    value.and_then(|v| v.value.as_deref())
-}
-
 /// A `Coding`'s system, version, code, and display as text.
 impl From<crate::compose::ComposeError> for OperationError {
     fn from(error: crate::compose::ComposeError) -> Self {

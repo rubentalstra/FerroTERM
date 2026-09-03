@@ -30,6 +30,7 @@ use ferroterm_fhir::r4b::parameters::Parameters;
 use ferroterm_terminology::operations::{
     Invocation, expand, lookup, subsumes, translate, validate_code, value_set_validate_code,
 };
+use ferroterm_terminology::valueset::render;
 use http::{HeaderMap, StatusCode};
 
 use crate::outcome::Failure;
@@ -111,8 +112,8 @@ fn run_subsumes(scope: &Scope<'_>, invocation: &Invocation, parameters: &Paramet
 fn run_expand(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
     let request = ValueSetExpandRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let response = expand::expand(&scope.sources(), &request)?;
-    wire::respond_resource(&response.r#return)
+    let outcome = expand::expand(&scope.sources(), &map::expand_input(&request))?;
+    wire::respond_resource(&render::expansion_r4b(&outcome))
 }
 
 fn run_value_set_validate_code(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
