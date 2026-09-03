@@ -12,7 +12,9 @@ suite with the FHIR Validator's `txTests` command
 there) and fails when a listed test stops passing. A test that starts passing
 is printed by the script; add it to the list in the same change that earns it.
 The remaining failures and their adjudication are recorded on the tracker
-(issue #89).
+(issue #89). `total.txt` records the number of cases the suite runs; the script
+fails when a run disagrees with it, and `scripts/checks/conformance-badges.sh`
+turns the lists and the total into the README's badges at site build time.
 
 `passing-icd-11.txt` is the same list for the suite's `icd-11` mode, run by
 hand over the three ICD-11 artifacts built from the WHO ICD-API local

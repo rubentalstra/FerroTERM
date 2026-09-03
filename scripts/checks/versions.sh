@@ -134,6 +134,24 @@ else
   note "no LICENSE yet — skipped"
 fi
 
+# --- Conformance suite pin: the suite script and the badges read the same commit
+echo "== conformance suite (tx-ecosystem.sh <-> docs/VERSIONS.md)"
+if [ -f scripts/checks/tx-ecosystem.sh ]; then
+  script_commit="$(grep -m1 '^SUITE_COMMIT=' scripts/checks/tx-ecosystem.sh | sed 's/^SUITE_COMMIT=//' | tr -d '[:space:]')"
+  table_commit="$(grep -oE 'fhir-tx-ecosystem-ig. at .[0-9a-f]{40}' docs/VERSIONS.md | head -1 | grep -oE '[0-9a-f]{40}' || true)"
+  if [ -z "$table_commit" ]; then
+    bad "docs/VERSIONS.md names no tx-ecosystem suite commit"
+  elif [ "$script_commit" != "$table_commit" ]; then
+    bad "tx-ecosystem.sh pins suite commit $script_commit, docs/VERSIONS.md says $table_commit"
+  else
+    note "OK: the suite commit is $table_commit"
+  fi
+  [ -f conformance/tx-ecosystem/total.txt ] || bad "conformance/tx-ecosystem/total.txt is missing (the badges need the suite total)"
+  grep -qE 'test cases [0-9]+\.[0-9]+\.[0-9]+' docs/VERSIONS.md || bad "docs/VERSIONS.md names no suite test-case version (the badge label needs it)"
+else
+  note "no scripts/checks/tx-ecosystem.sh yet — skipped"
+fi
+
 # --- Published crates: metadata, lockstep line (.claude/rules/crates-publishing.md)
 echo "== published crates (crates/*/Cargo.toml <-> README, LICENSE, root requirements)"
 if ls crates/*/Cargo.toml >/dev/null 2>&1; then
