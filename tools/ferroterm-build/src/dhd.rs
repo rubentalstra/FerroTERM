@@ -8,9 +8,9 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use ferroterm_dhd::{SYSTEM, Thesaurus};
-use ferroterm_fhir::codec::Json;
-use ferroterm_fhir::r4b::concept_map::{
+use ::dhd_thesaurus::{SYSTEM, Thesaurus};
+use fhir_types::codec::Json;
+use fhir_types::r4b::concept_map::{
     ConceptMap, ConceptMapGroup, ConceptMapGroupElement, ConceptMapGroupElementTarget,
 };
 
@@ -36,7 +36,7 @@ pub enum MapError {
     },
     /// The resource cannot be encoded.
     #[error("cannot encode the concept map")]
-    Encode(#[from] ferroterm_fhir::codec::EncodeError),
+    Encode(#[from] fhir_types::codec::EncodeError),
 }
 
 fn map(

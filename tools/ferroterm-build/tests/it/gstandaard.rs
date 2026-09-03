@@ -38,10 +38,10 @@ fn the_release_builds_the_four_rungs_under_the_output_directory() {
     assert_eq!(
         systems,
         [
-            ferroterm_gstandaard::GPK_SYSTEM,
-            ferroterm_gstandaard::PRK_SYSTEM,
-            ferroterm_gstandaard::HPK_SYSTEM,
-            ferroterm_gstandaard::ARTICLE_SYSTEM,
+            ::gstandaard::GPK_SYSTEM,
+            ::gstandaard::PRK_SYSTEM,
+            ::gstandaard::HPK_SYSTEM,
+            ::gstandaard::ARTICLE_SYSTEM,
         ]
     );
     let concepts: Vec<u64> = reports.iter().map(|r| r.concepts).collect();

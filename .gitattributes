@@ -10,8 +10,8 @@
 # vendor/** linguist-vendored
 # crates/*/vendor/** linguist-vendored
 tools/*/vendor/** linguist-vendored
-# The FHIR layer is emitted by ferroterm-fhir-codegen; every file under src/ is .
-crates/ferroterm-fhir/src/** linguist-generated
+# The FHIR layer is emitted by fhir-codegen; every file under src/ is .
+crates/fhir-types/src/** linguist-generated
 
 # Vendored packages are stored byte for byte as HL7 publishes them: no line
 # ending normalization, so the tree matches the registry tarball exactly.

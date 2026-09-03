@@ -29,8 +29,8 @@ engine. Each row is a tracker issue under the program issue.
 
 | Order | Code system | Why here | Provider shape |
 |---|---|---|---|
-| 1 | SNOMED CT | The hardest case: polyhierarchy, ECL, refsets, editions. Shapes the engine. Licensed data available for development. | `ferroterm-rf2` loader, ECL, SNOMED implicit forms |
-| 2 | FHIR `CodeSystem` resources (HL7 Terminology, custom systems, supplements) | Passes the tx-ecosystem `general` mode on its own (667 of 1,174 tests use synthetic FHIR code systems); carries every code system published as a FHIR resource. | Generic provider over the package loader already in `ferroterm-fhir-codegen` |
+| 1 | SNOMED CT | The hardest case: polyhierarchy, ECL, refsets, editions. Shapes the engine. Licensed data available for development. | `rf2` loader, ECL, SNOMED implicit forms |
+| 2 | FHIR `CodeSystem` resources (HL7 Terminology, custom systems, supplements) | Passes the tx-ecosystem `general` mode on its own (667 of 1,174 tests use synthetic FHIR code systems); carries every code system published as a FHIR resource. | Generic provider over the package loader already in `fhir-codegen` |
 | 3 | LOINC | Second most exercised system in the suite (2,152 references); the Dutch lab code set builds on it; the nl-NL linguistic variant exists. | CSV loader; parts hierarchy; the LOINC filters and `/vs/` implicit sets |
 | 4 | UCUM | 2,267 references in the suite; grammar-defined, so it proves the non-enumerable provider shape. | Expression parser over `ucum-essence.xml`; no store |
 | 5 | ICD-10 (WHO), ICD-10-NL, ICD-10-CM | The Dutch diagnosis classification; `classified-with` hierarchy proves the mono-hierarchy shape. | ClaML loader (WHO, NL), tab-delimited loader (CM) |
@@ -78,7 +78,7 @@ engine. Each row is a tracker issue under the program issue.
   `?fhir_vs=refset`, and `?fhir_vs=refset/[sctid]` on the system, edition, or
   version URI, and the `concept is-a`, `descendent-of`, and `in` (reference
   set membership) filters, `?fhir_vs=ecl/[ecl]` and the `constraint` filter
-  through the ECL evaluator (`crates/ferroterm-ecl`); `?fhir_cm=` waits for
+  through the ECL evaluator (`crates/sct-ecl`); `?fhir_cm=` waits for
   its issue.
 
 ## FHIR `CodeSystem` resources (HL7 Terminology and custom systems)
@@ -393,7 +393,7 @@ engine. Each row is a tracker issue under the program issue.
   3166-1 as a table from Unicode CLDR (alpha-2 codes, English names, `alpha3`
   and `numeric` properties, the user-assigned ranges displayed as
   `User-assigned`). The registry data is vendored under
-  `crates/ferroterm-terminology/data/` with provenance.
+  `crates/fhir-terminology/data/` with provenance.
 - **ISO 3166** (`urn:iso:std:iso:3166`, `:-2`, `:-3`): codes upper case, compared
   case-insensitively; one filter, `code regex`; version is the year
   (<https://terminology.hl7.org/ISO3166.html>). A small table provider.
@@ -494,7 +494,7 @@ deployment needs them; none is on the near-term roadmap.
 2. File the tracker issue as a sub-issue of the program issue, in build order.
 3. Add a loader crate (`crates/ferroterm-<system>`) that maps the release into the
    substrates, and a provider that declares the system's capabilities through
-   the FHIR `CodeSystem` metadata. Nothing in `ferroterm-terminology` changes.
+   the FHIR `CodeSystem` metadata. Nothing in `fhir-terminology` changes.
 4. Add a rule file `.claude/rules/<system>-terminology.md` if the system has
    spec-facing behaviour beyond the generic provider.
 5. Run the tx-ecosystem suite in the system's mode where one exists.

@@ -5,27 +5,27 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use ferroterm_terminology::artifact::{self, ArtifactError};
-use ferroterm_terminology::classification::{self, ClassificationProvider};
-use ferroterm_terminology::conceptmap;
-use ferroterm_terminology::conceptmap::store::ConceptMapStore;
-use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
-use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
-use ferroterm_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
-use ferroterm_terminology::icd11::{self, Icd11Provider};
-use ferroterm_terminology::loinc::{self, LoincProvider};
-use ferroterm_terminology::operations::Sources;
-use ferroterm_terminology::provider::{CodeSystemProvider, ContentMode, ProviderError};
-use ferroterm_terminology::registries::ucum::provider::UcumProvider;
-use ferroterm_terminology::registries::{bcp13, bcp47, iso3166};
-use ferroterm_terminology::registry::{RegisterError, Registry, Resolved};
-use ferroterm_terminology::rxnorm::{self, RxNormProvider};
-use ferroterm_terminology::snomed::{self, OpenError, SnomedProvider};
-use ferroterm_terminology::supplement::{Additions, Supplement, Supplemented};
-use ferroterm_terminology::valueset;
-use ferroterm_terminology::valueset::model::ValueSetModel;
-use ferroterm_terminology::valueset::store::ValueSetStore;
-use ferroterm_terminology::versioned::Duplicate;
+use fhir_terminology::artifact::{self, ArtifactError};
+use fhir_terminology::classification::{self, ClassificationProvider};
+use fhir_terminology::conceptmap;
+use fhir_terminology::conceptmap::store::ConceptMapStore;
+use fhir_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
+use fhir_terminology::fhir_codesystem::model::CodeSystemModel;
+use fhir_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
+use fhir_terminology::icd11::{self, Icd11Provider};
+use fhir_terminology::loinc::{self, LoincProvider};
+use fhir_terminology::operations::Sources;
+use fhir_terminology::provider::{CodeSystemProvider, ContentMode, ProviderError};
+use fhir_terminology::registries::ucum::provider::UcumProvider;
+use fhir_terminology::registries::{bcp13, bcp47, iso3166};
+use fhir_terminology::registry::{RegisterError, Registry, Resolved};
+use fhir_terminology::rxnorm::{self, RxNormProvider};
+use fhir_terminology::snomed::{self, OpenError, SnomedProvider};
+use fhir_terminology::supplement::{Additions, Supplement, Supplemented};
+use fhir_terminology::valueset;
+use fhir_terminology::valueset::model::ValueSetModel;
+use fhir_terminology::valueset::store::ValueSetStore;
+use fhir_terminology::versioned::Duplicate;
 
 use crate::config::Config;
 use crate::scope::Caches;
@@ -102,7 +102,7 @@ pub enum LoadError {
         path: PathBuf,
         /// The cause.
         #[source]
-        source: Box<ferroterm_terminology::fhir_codesystem::load::LoadError>,
+        source: Box<fhir_terminology::fhir_codesystem::load::LoadError>,
     },
     /// A `CodeSystem` resource does not build into a provider.
     #[error("cannot serve the CodeSystem `{url}` from {path}")]

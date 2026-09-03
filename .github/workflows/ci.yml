@@ -294,9 +294,50 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           components: rustfmt
-      # Regenerates crates/ferroterm-fhir from the vendored packages in check mode and
+      # Regenerates crates/fhir-types from the vendored packages in check mode and
       # fails on any difference (.claude/rules/codegen.md).
-      - run: cargo run --locked -p ferroterm-fhir-codegen -- emit --check
+      - run: cargo run --locked -p fhir-codegen -- emit --check
+
+  # The crate-line bump rule (.claude/rules/crates-publishing.md): a PR that
+  # changes packaged content of a crates/* member bumps the lockstep crate
+  # version in the same PR. The `no-crate-bump` label is the escape for a diff
+  # that provably does not alter packaged bytes.
+  crate-version-guard:
+    name: crate-version-guard
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-crate-bump')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Packaged crate content moved with its version
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: scripts/checks/crate-version-guard.sh "$BASE" "$HEAD"
+
+  # Every publishable crate packages and verifies as crates.io would build it
+  # (no cache: the dry run verifies the bytes a publish would upload).
+  publish-dry-run:
+    name: publish-dry-run
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          cache: false
+      - run: cargo publish --workspace --dry-run --locked
 
   msrv:
     name: msrv (cargo-hack)
@@ -407,6 +448,8 @@ jobs:
       - doc
       - cargo-deny
       - codegen-drift
+      - crate-version-guard
+      - publish-dry-run
       - msrv
       - tx-ecosystem
       - dependency-review

@@ -2,9 +2,9 @@
 //! (<https://hl7.org/fhir/R5/terminology-service.html>), and the R4-family
 //! endpoints staying within their declared outputs.
 
-use ferroterm_fhir::codec::{Json, Path, expect_object};
 use ferroterm_testkit::fhir::{ANIMALS, CM_ANIMALS_COLOURS, COLOURS, VS_PETS};
 use ferroterm_testkit::snomed::{CAT, VERSION, item, sctid};
+use fhir_types::codec::{Json, Path, expect_object};
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -29,7 +29,7 @@ async fn the_metadata_resources_are_r5() {
     let mut path = Path::root("CapabilityStatement");
     let object = expect_object(&body, &path).expect("object");
     let decoded =
-        ferroterm_fhir::r5::capability_statement::CapabilityStatement::from_json(object, &mut path)
+        fhir_types::r5::capability_statement::CapabilityStatement::from_json(object, &mut path)
             .expect("an R5 CapabilityStatement");
     assert_eq!(Value::Object(decoded.to_json().expect("encodes")), body);
     let (status, body) = server.get("/r5/metadata?mode=terminology").await;
@@ -38,10 +38,8 @@ async fn the_metadata_resources_are_r5() {
     assert_eq!(body["codeSystem"][0]["content"], "not-present");
     let mut path = Path::root("TerminologyCapabilities");
     let object = expect_object(&body, &path).expect("object");
-    ferroterm_fhir::r5::terminology_capabilities::TerminologyCapabilities::from_json(
-        object, &mut path,
-    )
-    .expect("an R5 TerminologyCapabilities");
+    fhir_types::r5::terminology_capabilities::TerminologyCapabilities::from_json(object, &mut path)
+        .expect("an R5 TerminologyCapabilities");
     let (status, body) = server.get("/r5/$versions").await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(parameter(&body, "version").unwrap()["valueCode"], "5.0");
@@ -158,7 +156,7 @@ async fn expand_returns_properties_under_r5() {
     assert_eq!(status, StatusCode::OK, "{body}");
     let mut path = Path::root("ValueSet");
     let object = expect_object(&body, &path).expect("object");
-    ferroterm_fhir::r5::value_set::ValueSet::from_json(object, &mut path).expect("an R5 ValueSet");
+    fhir_types::r5::value_set::ValueSet::from_json(object, &mut path).expect("an R5 ValueSet");
     assert_eq!(body["expansion"]["property"][0]["code"], "legs");
     assert_eq!(
         body["expansion"]["property"][0]["uri"],

@@ -4,32 +4,30 @@ use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use ferroterm_graph::attributes::{self, Attributes, AttributesError};
-use ferroterm_graph::closure::{Closure, ClosureError};
-use ferroterm_graph::csr::{Csr, CsrError};
-use ferroterm_graph::identifiers::{Identifiers, IdentifiersError};
-use ferroterm_graph::members::{MembersError, Memberships};
-use ferroterm_graph::ordinal::Ordinal;
-use ferroterm_graph::persist::Hierarchy;
-use ferroterm_graph::refsets::{self, MemberRow, RefsetMembers, RefsetsError};
-use ferroterm_rf2::component::{
+use concept_graph::attributes::{self, Attributes, AttributesError};
+use concept_graph::closure::{Closure, ClosureError};
+use concept_graph::csr::{Csr, CsrError};
+use concept_graph::identifiers::{Identifiers, IdentifiersError};
+use concept_graph::members::{MembersError, Memberships};
+use concept_graph::ordinal::Ordinal;
+use concept_graph::persist::Hierarchy;
+use concept_graph::refsets::{self, MemberRow, RefsetMembers, RefsetsError};
+use concept_store::builder::{BuildError, PreferredRule, StoreBuilder};
+use concept_store::record;
+use concept_store::store::Vocabulary;
+use concept_store::tables;
+use designation_index::index::{IndexBuilder, Input};
+use rf2::component::{
     AlternateIdentifier, Concept, ConcreteRelationship, ConcreteValue, Description, Relationship,
     Rows,
 };
-use ferroterm_rf2::constants;
-use ferroterm_rf2::edition::{Edition, EditionError};
-use ferroterm_rf2::file::{ContentType, FieldKind, Release, ReleaseError, ReleaseType};
-use ferroterm_rf2::id::{ConceptId, DescriptionId, RefsetId};
-use ferroterm_rf2::reader::Rf2Error;
-use ferroterm_rf2::refset::{
-    FieldValue, LanguageMember, Members, ModuleDependencyMember, ViewError,
-};
-use ferroterm_rf2::time::EffectiveTime;
-use ferroterm_store::builder::{BuildError, PreferredRule, StoreBuilder};
-use ferroterm_store::record;
-use ferroterm_store::store::Vocabulary;
-use ferroterm_store::tables;
-use ferroterm_text::index::{IndexBuilder, Input};
+use rf2::constants;
+use rf2::edition::{Edition, EditionError};
+use rf2::file::{ContentType, FieldKind, Release, ReleaseError, ReleaseType};
+use rf2::id::{ConceptId, DescriptionId, RefsetId};
+use rf2::reader::Rf2Error;
+use rf2::refset::{FieldValue, LanguageMember, Members, ModuleDependencyMember, ViewError};
+use rf2::time::EffectiveTime;
 use serde_json::json;
 
 /// The store file name inside the output directory.
@@ -38,9 +36,9 @@ pub const STORE_FILE: &str = "store.redb";
 pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest layout this tool writes.
 pub const MANIFEST_VERSION: u32 = 2;
-/// The hierarchy artifact (`ferroterm-graph`), beside the store.
+/// The hierarchy artifact (`concept-graph`), beside the store.
 pub const HIERARCHY_FILE: &str = "hierarchy.bin";
-/// The designation index (`ferroterm-text`), beside the store.
+/// The designation index (`designation-index`), beside the store.
 pub const TEXT_FILE: &str = "text.bin";
 /// The reference set memberships file beside the store.
 pub const REFSETS_FILE: &str = "refsets.bin";
@@ -116,13 +114,13 @@ pub enum Error {
     Store(#[from] BuildError),
     /// The hierarchy cannot be serialized.
     #[error("cannot serialize the hierarchy")]
-    Graph(#[from] ferroterm_graph::persist::PersistError),
+    Graph(#[from] concept_graph::persist::PersistError),
     /// The text index cannot be built or serialized.
     #[error("cannot build the designation index")]
-    TextBuild(#[from] ferroterm_text::index::BuildError),
+    TextBuild(#[from] designation_index::index::BuildError),
     /// The text index cannot be serialized.
     #[error("cannot serialize the designation index")]
-    TextPersist(#[from] ferroterm_text::persist::PersistError),
+    TextPersist(#[from] designation_index::persist::PersistError),
     /// The reference set memberships cannot be serialized.
     #[error("cannot serialize the reference set memberships")]
     Members(#[from] MembersError),
@@ -869,6 +867,6 @@ fn build_text(
     }
     let index = index.build()?;
     let mut bytes = Vec::new();
-    ferroterm_text::persist::write_to(&index, &mut bytes)?;
+    designation_index::persist::write_to(&index, &mut bytes)?;
     Ok((bytes, u64::try_from(index.words()).unwrap_or(u64::MAX)))
 }

@@ -14,17 +14,17 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 use std::path::{Path, PathBuf};
 
-use ferroterm_graph::closure::{Closure, ClosureError};
-use ferroterm_graph::csr::{Csr, CsrError};
-use ferroterm_graph::ordinal::Ordinal;
-use ferroterm_graph::persist::Hierarchy;
-use ferroterm_loinc::release::{Release, ReleaseError};
-use ferroterm_loinc::{answer, part, term, variant};
-use ferroterm_store::builder::{BuildError, PreferredRule, StoreBuilder};
-use ferroterm_store::record::{Concept, Designation, PropertyValue};
-use ferroterm_store::store::Vocabulary;
-use ferroterm_store::tables;
-use ferroterm_text::index::{IndexBuilder, Input};
+use ::loinc::release::{Release, ReleaseError};
+use ::loinc::{answer, part, term, variant};
+use concept_graph::closure::{Closure, ClosureError};
+use concept_graph::csr::{Csr, CsrError};
+use concept_graph::ordinal::Ordinal;
+use concept_graph::persist::Hierarchy;
+use concept_store::builder::{BuildError, PreferredRule, StoreBuilder};
+use concept_store::record::{Concept, Designation, PropertyValue};
+use concept_store::store::Vocabulary;
+use concept_store::tables;
+use designation_index::index::{IndexBuilder, Input};
 use serde_json::json;
 
 use crate::pipeline::{HIERARCHY_FILE, MANIFEST_FILE, MANIFEST_VERSION, STORE_FILE, TEXT_FILE};
@@ -89,13 +89,13 @@ pub enum Error {
     Closure(#[from] ClosureError),
     /// The hierarchy cannot be written.
     #[error(transparent)]
-    Graph(#[from] ferroterm_graph::persist::PersistError),
+    Graph(#[from] concept_graph::persist::PersistError),
     /// The text index cannot be built or written.
     #[error(transparent)]
-    Text(#[from] ferroterm_text::index::BuildError),
+    Text(#[from] designation_index::index::BuildError),
     /// The text index cannot be written.
     #[error(transparent)]
-    TextPersist(#[from] ferroterm_text::persist::PersistError),
+    TextPersist(#[from] designation_index::persist::PersistError),
     /// A file cannot be written.
     #[error("cannot write {path}")]
     Io {
@@ -509,7 +509,7 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
     }
     let index = index.build()?;
     let mut text_bytes = Vec::new();
-    ferroterm_text::persist::write_to(&index, &mut text_bytes)?;
+    designation_index::persist::write_to(&index, &mut text_bytes)?;
     let text_path = out.join(TEXT_FILE);
     std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
     builder.finish(&PreferredRule { preferred: 0 })?;

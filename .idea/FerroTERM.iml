@@ -4,37 +4,37 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-server/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-server/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-ecl/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-fhir/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-graph/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rf2/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-store/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-terminology/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-text/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/sct-ecl/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/fhir-types/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/concept-graph/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/rf2/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/concept-store/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/fhir-terminology/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/designation-index/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-build/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-fhir-codegen/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-fhir-codegen/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rf2/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-graph/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-store/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-terminology/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-text/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/fhir-codegen/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/fhir-codegen/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/rf2/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/concept-graph/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/concept-store/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/fhir-terminology/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/designation-index/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-build/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-testkit/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-classification/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-classification/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-icd11/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-icd11/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-loinc/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-loinc/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rrf/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rrf/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-terminology/benches" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-dhd/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-dhd/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-gstandaard/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-gstandaard/tests" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-ecl/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/classification/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/classification/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/icd11/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/icd11/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/loinc/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/loinc/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/rxnorm-rrf/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/rxnorm-rrf/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/fhir-terminology/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/dhd-thesaurus/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/dhd-thesaurus/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/gstandaard/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/gstandaard/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/sct-ecl/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/artifacts" />

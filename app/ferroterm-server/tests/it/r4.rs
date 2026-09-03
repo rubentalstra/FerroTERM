@@ -2,9 +2,9 @@
 //! engine as `/r4b` (<https://hl7.org/fhir/R4/terminology-service.html>).
 
 use axum::body::Body;
-use ferroterm_fhir::codec::{Json, Path, expect_object};
 use ferroterm_testkit::fhir::{ANIMALS, CM_ANIMALS_COLOURS, VS_PETS};
 use ferroterm_testkit::snomed::{ANIMAL, CAT, VERSION, item, sctid};
+use fhir_types::codec::{Json, Path, expect_object};
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
 use tower::ServiceExt;
@@ -49,7 +49,7 @@ async fn the_capability_statement_is_an_r4_resource() {
     let mut path = Path::root("CapabilityStatement");
     let object = expect_object(&body, &path).expect("object");
     let decoded =
-        ferroterm_fhir::r4::capability_statement::CapabilityStatement::from_json(object, &mut path)
+        fhir_types::r4::capability_statement::CapabilityStatement::from_json(object, &mut path)
             .expect("an R4 CapabilityStatement");
     assert_eq!(decoded.fhir_version.value.as_deref(), Some("4.0.1"));
     assert_eq!(Value::Object(decoded.to_json().expect("encodes")), body);
@@ -66,7 +66,7 @@ async fn the_terminology_capabilities_are_an_r4_resource() {
     assert_eq!(body["codeSystem"][0]["version"][0]["code"], VERSION);
     let mut path = Path::root("TerminologyCapabilities");
     let object = expect_object(&body, &path).expect("object");
-    let decoded = ferroterm_fhir::r4::terminology_capabilities::TerminologyCapabilities::from_json(
+    let decoded = fhir_types::r4::terminology_capabilities::TerminologyCapabilities::from_json(
         object, &mut path,
     )
     .expect("an R4 TerminologyCapabilities");
@@ -146,7 +146,7 @@ async fn the_value_set_and_concept_map_operations_answer_under_r4() {
     assert_eq!(codes, ["kitten", "pet"]);
     let mut path = Path::root("ValueSet");
     let object = expect_object(&body, &path).expect("object");
-    ferroterm_fhir::r4::value_set::ValueSet::from_json(object, &mut path).expect("an R4 ValueSet");
+    fhir_types::r4::value_set::ValueSet::from_json(object, &mut path).expect("an R4 ValueSet");
 
     let (status, body) = server
         .get(&format!(
@@ -173,7 +173,7 @@ async fn the_value_set_and_concept_map_operations_answer_under_r4() {
     assert_eq!(body["resourceType"], "Bundle");
     let mut path = Path::root("Bundle");
     let object = expect_object(&body, &path).expect("object");
-    ferroterm_fhir::r4::bundle::Bundle::from_json(object, &mut path).expect("an R4 Bundle");
+    fhir_types::r4::bundle::Bundle::from_json(object, &mut path).expect("an R4 Bundle");
 }
 
 // NOTE: R4 `ValueSet/$expand` declares neither `property` nor `useSupplement`

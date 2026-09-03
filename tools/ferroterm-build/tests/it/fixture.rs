@@ -4,7 +4,7 @@
 use std::fs;
 use std::path::Path;
 
-use ferroterm_rf2::id::with_check_digit;
+use rf2::id::with_check_digit;
 
 const NAMESPACE: &str = "1234567";
 pub(crate) const DATE: &str = "20260101";

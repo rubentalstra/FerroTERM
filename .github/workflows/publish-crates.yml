@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# publish-crates.yml: the between-releases crates.io lane.
+#
+# A release publishes the crates as an approval-gated leg of release.yml, which
+# owns the `v*` tag end to end. This dispatch lane is the dry run that rehearses
+# a publish against the current tree, and the recovery path when a release's
+# crates leg fails (re-running here finishes the set: "already exists" counts as
+# done). Authentication is crates.io Trusted Publishing (OIDC): the
+# rust-lang/crates-io-auth-action step exchanges this workflow's identity for a
+# short-lived token; no long-lived crates.io token exists in the repository.
+# Trusted Publishing matches the top-level workflow filename, so each crate
+# carries two publisher entries, one naming this file and one naming
+# release.yml, both under this repository and the `crates-io` environment. A
+# crate's first-ever version cannot use OIDC and is pushed by the owner with a
+# scoped token (.claude/rules/crates-publishing.md).
+name: Publish crates
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Really publish to crates.io (false = dry run)"
+        required: false
+        default: false
+        type: boolean
+
+permissions: {}
+
+jobs:
+  dry-run:
+    if: ${{ !inputs.publish }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No cache in a publishing lane: the dry run verifies the same bytes a real
+      # publish uploads.
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          cache: false
+      - name: Package and verify every publishable crate (no upload)
+        run: cargo publish --workspace --dry-run --locked
+
+  publish:
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # The protected environment is part of each crate's Trusted Publisher entry
+    # on crates.io, and carries the required reviewer, so a dispatched publish
+    # waits for the same approval as the release leg.
+    environment: crates-io
+    # Shared with the release pipeline's crates leg: two runs uploading the same
+    # immutable versions never interleave. Queue, never cancel.
+    concurrency:
+      group: publish-crates
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write # OIDC token exchange (rust-lang/crates-io-auth-action)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          cache: false
+      - id: auth
+        name: Exchange the OIDC identity for a temporary crates.io token
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+      - name: Publish the crates in dependency order
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: bash scripts/release/publish-crates.sh publish
+      # The registry is the ground truth, so the read-back runs even when the
+      # upload step went red.
+      - name: Verify every crate resolves at the crate-line version
+        if: always() && inputs.publish
+        run: bash scripts/release/publish-crates.sh verify

@@ -5,22 +5,22 @@ paths: ["crates/**/*.rs", "app/**/*.rs", "tools/**/*.rs"]
 # Rust style: idiomatic application code
 
 Applies to hand-written `.rs`: the SNOMED engine and its crates
-(`ferroterm-rf2`, `ferroterm-graph`, `ferroterm-store`, `ferroterm-text`, `ferroterm-ecl`,
-`ferroterm-terminology`), the server (`ferroterm-server`), and the tooling
-(`ferroterm-fhir-codegen`, `ferroterm-build`). **The engine is modern idiomatic Rust
-of our own design, built on the generated `ferroterm-fhir` crate.** The FHIR and
+(`rf2`, `concept-graph`, `concept-store`, `designation-index`, `sct-ecl`,
+`fhir-terminology`), the server (`ferroterm-server`), and the tooling
+(`fhir-codegen`, `ferroterm-build`). **The engine is modern idiomatic Rust
+of our own design, built on the generated `fhir-types` crate.** The FHIR and
 SNOMED CT / ECL specifications are the authority; Snowstorm, Ontoserver, and
 Hermes are prior art only.
 
 **Generated files are off-limits.** The FHIR type + operation crate
-(`crates/ferroterm-fhir`) is produced by `ferroterm-fhir-codegen`; every
+(`crates/fhir-types`) is produced by `fhir-codegen`; every
 `// @generated` file **must never be hand-edited**: change the emitter and
-regenerate (`cargo run -p ferroterm-fhir-codegen -- emit`). Full generation
+regenerate (`cargo run -p fhir-codegen -- emit`). Full generation
 discipline: `codegen.md`.
 
 ## Build idiomatic, compiling, tested code
 
-- **Consume the generated `ferroterm-fhir` types directly** as the FHIR model
+- **Consume the generated `fhir-types` types directly** as the FHIR model
   (per-version R4/R4B/R5/R6). Never re-model or re-serialize FHIR by hand.
 - **Use proper crates; don't hand-roll** what the ecosystem provides:
   `axum`/`tower-http`, `redb`, `roaring`, `fst`, `logos`+`chumsky`/`winnow`,
@@ -156,7 +156,7 @@ standing bar for hand-written code.
 ## Documentation (missing_docs is enforced workspace-wide)
 
 - Every public item carries a doc comment (rustc `missing_docs`; the
-  generated `ferroterm-fhir` crate gets its docs from the emitter; never
+  generated `fhir-types` crate gets its docs from the emitter; never
   hand-edit `// @generated`). Shape, sections, and summary-line rules:
   `comments.md` (RFC 1574).
 - Intra-doc links (`[`Type`]`) resolve in the scope of the module where the
@@ -209,5 +209,5 @@ line). Reach for:
   context, Lucene analyzers): design the idiomatic Rust equivalent (the
   `redb` store, the `fst`+`roaring` index, tower middleware) or register it
   as its own tracker issue with a `// TODO(#NNNN):`.
-- Do not hand-edit generated code; do not re-model what `ferroterm-fhir`
+- Do not hand-edit generated code; do not re-model what `fhir-types`
   provides.

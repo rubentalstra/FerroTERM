@@ -1,5 +1,5 @@
 //! The classification pipeline: a [`Classification`] (`ClaML` or the ICD-10-CM
-//! release, read by `ferroterm-classification`) numbered and written as the
+//! release, read by `classification`) numbered and written as the
 //! artifacts every provider reads.
 //!
 //! Every class is a concept, sorted by code; the single-parent tree is the
@@ -14,16 +14,16 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 use std::path::{Path, PathBuf};
 
-use ferroterm_classification::{Class, Classification};
-use ferroterm_graph::closure::{Closure, ClosureError};
-use ferroterm_graph::csr::{Csr, CsrError};
-use ferroterm_graph::ordinal::Ordinal;
-use ferroterm_graph::persist::Hierarchy;
-use ferroterm_store::builder::{BuildError, PreferredRule, StoreBuilder};
-use ferroterm_store::record::{Concept, Designation, PropertyValue};
-use ferroterm_store::store::Vocabulary;
-use ferroterm_store::tables;
-use ferroterm_text::index::{IndexBuilder, Input};
+use ::classification::{Class, Classification};
+use concept_graph::closure::{Closure, ClosureError};
+use concept_graph::csr::{Csr, CsrError};
+use concept_graph::ordinal::Ordinal;
+use concept_graph::persist::Hierarchy;
+use concept_store::builder::{BuildError, PreferredRule, StoreBuilder};
+use concept_store::record::{Concept, Designation, PropertyValue};
+use concept_store::store::Vocabulary;
+use concept_store::tables;
+use designation_index::index::{IndexBuilder, Input};
 use serde_json::json;
 
 use crate::pipeline::{HIERARCHY_FILE, MANIFEST_FILE, MANIFEST_VERSION, STORE_FILE, TEXT_FILE};
@@ -37,7 +37,7 @@ pub const HIERARCHY_MEANING: &str = "classified-with";
 pub const ICD10CM_SYSTEM: &str = "http://hl7.org/fhir/sid/icd-10-cm";
 /// The rubric kinds stored as designations by default, by use ordinal
 /// (a classification may name its own).
-pub const DESIGNATION_KINDS: [&str; 5] = ferroterm_classification::DEFAULT_DESIGNATION_KINDS;
+pub const DESIGNATION_KINDS: [&str; 5] = ::classification::DEFAULT_DESIGNATION_KINDS;
 /// The property that carries the class kind (`chapter`, `block`, ...).
 pub const KIND_KEY: &str = "kind";
 /// The property that carries the usage mark (`dagger`, `aster`).
@@ -90,13 +90,13 @@ pub enum Error {
     Closure(#[from] ClosureError),
     /// The hierarchy cannot be written.
     #[error(transparent)]
-    Graph(#[from] ferroterm_graph::persist::PersistError),
+    Graph(#[from] concept_graph::persist::PersistError),
     /// The text index cannot be built.
     #[error(transparent)]
-    Text(#[from] ferroterm_text::index::BuildError),
+    Text(#[from] designation_index::index::BuildError),
     /// The text index cannot be written.
     #[error(transparent)]
-    TextPersist(#[from] ferroterm_text::persist::PersistError),
+    TextPersist(#[from] designation_index::persist::PersistError),
     /// A file cannot be written.
     #[error("cannot write {path}")]
     Io {
@@ -302,7 +302,7 @@ pub fn build(
     }
     let index = index.build()?;
     let mut text_bytes = Vec::new();
-    ferroterm_text::persist::write_to(&index, &mut text_bytes)?;
+    designation_index::persist::write_to(&index, &mut text_bytes)?;
     let text_path = out.join(TEXT_FILE);
     std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
     builder.finish(&PreferredRule { preferred: 0 })?;

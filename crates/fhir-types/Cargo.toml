@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "fhir-types"
+description = "Generated per-version FHIR types and terminology operation contracts"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation = "https://docs.rs/fhir-types"
+readme = "README.md"
+keywords = ["fhir", "hl7", "healthcare", "terminology", "codegen"]
+categories = ["data-structures", "encoding", "science"]
+# The crate line is published on crates.io (.claude/rules/crates-publishing.md);
+# `include` is the packaged content the bump rule watches.
+publish = true
+include = ["src/**", "README.md", "LICENSE"]
+
+[lib]
+# Generated doc text is not a curated example set (.claude/rules/testing.md).
+doctest = false
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

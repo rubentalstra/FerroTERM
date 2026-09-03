@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "fhir-terminology"
+description = "The FHIR terminology operations over the code system provider seam"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation = "https://docs.rs/fhir-terminology"
+readme = "README.md"
+keywords = ["fhir", "terminology", "snomed", "loinc", "healthcare"]
+categories = ["science", "web-programming"]
+# The crate line is published on crates.io (.claude/rules/crates-publishing.md);
+# `include` is the packaged content the bump rule watches.
+publish = true
+include = ["src/**", "README.md", "LICENSE", "data/**"]
+
+[dependencies]
+fhir-types.workspace = true
+sct-ecl.workspace = true
+concept-graph.workspace = true
+icd11.workspace = true
+rf2.workspace = true
+rxnorm-rrf.workspace = true
+concept-store.workspace = true
+designation-index.workspace = true
+http.workspace = true
+quick-xml.workspace = true
+jiff.workspace = true
+csv.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+roaring.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+criterion.workspace = true
+ferroterm-testkit.workspace = true
+dhd-thesaurus.workspace = true
+gstandaard.workspace = true
+tempfile.workspace = true
+
+[[bench]]
+name = "nl_reads"
+harness = false
+
+[lints]
+workspace = true

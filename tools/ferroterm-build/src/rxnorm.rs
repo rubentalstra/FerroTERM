@@ -17,16 +17,16 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 use std::path::{Path, PathBuf};
 
-use ferroterm_graph::ordinal::Ordinal;
-use ferroterm_graph::relations::{Relations, RelationsError};
-use ferroterm_rrf::row::Atom;
-use ferroterm_rrf::{Release, RrfError};
-use ferroterm_store::builder::{BuildError, PreferredRule, StoreBuilder};
-use ferroterm_store::keys::{KeyTable, KeyTableError};
-use ferroterm_store::record::{Concept, Designation, PropertyValue};
-use ferroterm_store::store::Vocabulary;
-use ferroterm_store::tables;
-use ferroterm_text::index::{IndexBuilder, Input};
+use concept_graph::ordinal::Ordinal;
+use concept_graph::relations::{Relations, RelationsError};
+use concept_store::builder::{BuildError, PreferredRule, StoreBuilder};
+use concept_store::keys::{KeyTable, KeyTableError};
+use concept_store::record::{Concept, Designation, PropertyValue};
+use concept_store::store::Vocabulary;
+use concept_store::tables;
+use designation_index::index::{IndexBuilder, Input};
+use rxnorm_rrf::row::Atom;
+use rxnorm_rrf::{Release, RrfError};
 use serde_json::json;
 
 use crate::pipeline::{MANIFEST_FILE, MANIFEST_VERSION, STORE_FILE, TEXT_FILE};
@@ -95,10 +95,10 @@ pub enum Error {
     Atoms(#[from] KeyTableError),
     /// The text index cannot be built.
     #[error(transparent)]
-    Text(#[from] ferroterm_text::index::BuildError),
+    Text(#[from] designation_index::index::BuildError),
     /// The text index cannot be written.
     #[error(transparent)]
-    TextPersist(#[from] ferroterm_text::persist::PersistError),
+    TextPersist(#[from] designation_index::persist::PersistError),
     /// A file cannot be written.
     #[error("cannot write {path}")]
     Io {
@@ -394,7 +394,7 @@ pub fn build(
     }
     let index = index.build()?;
     let mut text_bytes = Vec::new();
-    ferroterm_text::persist::write_to(&index, &mut text_bytes)?;
+    designation_index::persist::write_to(&index, &mut text_bytes)?;
     let text_path = out.join(TEXT_FILE);
     std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
     let mut relation_bytes = Vec::new();

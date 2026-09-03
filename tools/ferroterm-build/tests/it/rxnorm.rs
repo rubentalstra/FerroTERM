@@ -1,11 +1,11 @@
 //! The `RxNorm` build over the testkit's release-shaped fixture.
 
+use concept_graph::ordinal::Ordinal;
+use concept_graph::relations::Relations;
+use concept_store::keys::KeyTable;
+use concept_store::record::PropertyValue;
+use concept_store::store::{Store, Vocabulary};
 use ferroterm_build::rxnorm::{self, RXNORM, SAB_KEY, STY_KEY, SYSTEM, TTY_KEY};
-use ferroterm_graph::ordinal::Ordinal;
-use ferroterm_graph::relations::Relations;
-use ferroterm_store::keys::KeyTable;
-use ferroterm_store::record::PropertyValue;
-use ferroterm_store::store::{Store, Vocabulary};
 use ferroterm_testkit::rxnorm::{
     ASPIRIN, ASPIRIN_SYNONYM_ATOM, ASPIRIN_TABLET, BRANDED_TABLET, LABEL_ONLY, OLD_TABLET, VERSION,
     write_release,

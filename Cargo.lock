@@ -335,6 +335,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
+name = "classification"
+version = "0.1.0"
+dependencies = [
+ "csv",
+ "ferroterm-testkit",
+ "quick-xml",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -357,6 +368,27 @@ checksum = "cfc320937d09e6de266b31b9afb480f197d7a861be86be7cb2ea7e5d1bfffc5e"
 dependencies = [
  "bytes",
  "memchr",
+]
+
+[[package]]
+name = "concept-graph"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "rf2",
+ "roaring",
+ "thiserror",
+]
+
+[[package]]
+name = "concept-store"
+version = "0.1.0"
+dependencies = [
+ "concept-graph",
+ "redb",
+ "rf2",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -512,6 +544,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "designation-index"
+version = "0.1.0"
+dependencies = [
+ "concept-graph",
+ "fst",
+ "proptest",
+ "rf2",
+ "roaring",
+ "thiserror",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "dhd-thesaurus"
+version = "0.1.0"
+dependencies = [
+ "classification",
+ "csv",
+ "ferroterm-testkit",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "displaydoc"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -562,18 +618,18 @@ version = "0.0.8"
 dependencies = [
  "anyhow",
  "clap",
- "ferroterm-classification",
- "ferroterm-dhd",
- "ferroterm-fhir",
- "ferroterm-graph",
- "ferroterm-gstandaard",
- "ferroterm-icd11",
- "ferroterm-loinc",
- "ferroterm-rf2",
- "ferroterm-rrf",
- "ferroterm-store",
+ "classification",
+ "concept-graph",
+ "concept-store",
+ "designation-index",
+ "dhd-thesaurus",
  "ferroterm-testkit",
- "ferroterm-text",
+ "fhir-types",
+ "gstandaard",
+ "icd11",
+ "loinc",
+ "rf2",
+ "rxnorm-rrf",
  "serde",
  "serde_json",
  "tempfile",
@@ -582,131 +638,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "ferroterm-classification"
-version = "0.0.8"
-dependencies = [
- "csv",
- "ferroterm-testkit",
- "quick-xml",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "ferroterm-dhd"
-version = "0.0.8"
-dependencies = [
- "csv",
- "ferroterm-classification",
- "ferroterm-testkit",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "ferroterm-ecl"
-version = "0.0.8"
-dependencies = [
- "ferroterm-graph",
- "logos",
- "proptest",
- "roaring",
- "thiserror",
- "winnow",
-]
-
-[[package]]
-name = "ferroterm-fhir"
-version = "0.0.8"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "ferroterm-fhir-codegen"
-version = "0.0.8"
-dependencies = [
- "anyhow",
- "clap",
- "ferroterm-fhir",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "ferroterm-graph"
-version = "0.0.8"
-dependencies = [
- "ferroterm-rf2",
- "proptest",
- "roaring",
- "thiserror",
-]
-
-[[package]]
-name = "ferroterm-gstandaard"
-version = "0.0.8"
-dependencies = [
- "ferroterm-classification",
- "ferroterm-testkit",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "ferroterm-icd11"
-version = "0.0.8"
-dependencies = [
- "ferroterm-testkit",
- "reqwest",
- "serde_json",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "ferroterm-loinc"
-version = "0.0.8"
-dependencies = [
- "csv",
- "ferroterm-testkit",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "ferroterm-rf2"
-version = "0.0.8"
-dependencies = [
- "csv",
- "jiff",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "ferroterm-rrf"
-version = "0.0.8"
-dependencies = [
- "csv",
- "ferroterm-testkit",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
 name = "ferroterm-server"
 version = "0.0.8"
 dependencies = [
  "anyhow",
  "axum",
- "ferroterm-fhir",
- "ferroterm-graph",
- "ferroterm-terminology",
+ "concept-graph",
  "ferroterm-testkit",
+ "fhir-terminology",
+ "fhir-types",
  "http",
  "jiff",
  "serde_json",
@@ -720,39 +660,60 @@ dependencies = [
 ]
 
 [[package]]
-name = "ferroterm-store"
+name = "ferroterm-testkit"
 version = "0.0.8"
 dependencies = [
- "ferroterm-graph",
- "ferroterm-rf2",
- "redb",
+ "classification",
+ "concept-graph",
+ "concept-store",
+ "designation-index",
+ "dhd-thesaurus",
+ "ferroterm-build",
+ "gstandaard",
+ "icd11",
+ "loinc",
+ "rf2",
+ "rxnorm-rrf",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "fhir-codegen"
+version = "0.0.8"
+dependencies = [
+ "anyhow",
+ "clap",
+ "fhir-types",
+ "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
 ]
 
 [[package]]
-name = "ferroterm-terminology"
-version = "0.0.8"
+name = "fhir-terminology"
+version = "0.1.0"
 dependencies = [
+ "concept-graph",
+ "concept-store",
  "criterion",
  "csv",
- "ferroterm-dhd",
- "ferroterm-ecl",
- "ferroterm-fhir",
- "ferroterm-graph",
- "ferroterm-gstandaard",
- "ferroterm-icd11",
- "ferroterm-rf2",
- "ferroterm-rrf",
- "ferroterm-store",
+ "designation-index",
+ "dhd-thesaurus",
  "ferroterm-testkit",
- "ferroterm-text",
+ "fhir-types",
+ "gstandaard",
  "http",
+ "icd11",
  "jiff",
  "proptest",
  "quick-xml",
  "regex",
+ "rf2",
  "roaring",
+ "rxnorm-rrf",
+ "sct-ecl",
  "serde",
  "serde_json",
  "tempfile",
@@ -761,35 +722,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "ferroterm-testkit"
-version = "0.0.8"
+name = "fhir-types"
+version = "0.1.0"
 dependencies = [
- "ferroterm-build",
- "ferroterm-classification",
- "ferroterm-dhd",
- "ferroterm-graph",
- "ferroterm-gstandaard",
- "ferroterm-icd11",
- "ferroterm-loinc",
- "ferroterm-rf2",
- "ferroterm-rrf",
- "ferroterm-store",
- "ferroterm-text",
+ "serde",
  "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "ferroterm-text"
-version = "0.0.8"
-dependencies = [
- "ferroterm-graph",
- "ferroterm-rf2",
- "fst",
- "proptest",
- "roaring",
- "thiserror",
- "unicode-normalization",
 ]
 
 [[package]]
@@ -923,6 +860,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gstandaard"
+version = "0.1.0"
+dependencies = [
+ "classification",
+ "ferroterm-testkit",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1047,6 +994,17 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "icd11"
+version = "0.1.0"
+dependencies = [
+ "ferroterm-testkit",
+ "reqwest",
+ "serde_json",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -1373,6 +1331,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52d3a9855747c17eaf4383823f135220716ab49bea5fbea7dd42cc9a92f8aa31"
 dependencies = [
  "logos-codegen",
+]
+
+[[package]]
+name = "loinc"
+version = "0.1.0"
+dependencies = [
+ "csv",
+ "ferroterm-testkit",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -1833,6 +1801,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rf2"
+version = "0.1.0"
+dependencies = [
+ "csv",
+ "jiff",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1978,6 +1956,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rxnorm-rrf"
+version = "0.1.0"
+dependencies = [
+ "csv",
+ "ferroterm-testkit",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1999,6 +1987,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91c1b7e4904c873ef0710c1f407dde2e6287de2bebc1bbbf7d430bb7cbffd939"
 dependencies = [
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "sct-ecl"
+version = "0.1.0"
+dependencies = [
+ "concept-graph",
+ "logos",
+ "proptest",
+ "roaring",
+ "thiserror",
+ "winnow",
 ]
 
 [[package]]

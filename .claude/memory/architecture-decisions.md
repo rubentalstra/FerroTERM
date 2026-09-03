@@ -52,11 +52,11 @@ streams, 2026-09-02).
   licence-gated and NEVER committed (bring-your-own RF2); fixtures are
   shaped/synthetic.
 
-Crate plan (see `docs/architecture.md`): `ferroterm-fhir` (generated), `ferroterm-rf2`,
-`ferroterm-graph`, `ferroterm-store`, `ferroterm-text`, `ferroterm-ecl`, `ferroterm-terminology`,
-`app/ferroterm-server`, `tools/ferroterm-fhir-codegen`, `tools/ferroterm-build`.
+Crate plan (see `docs/architecture.md`): `fhir-types` (generated), `rf2`,
+`concept-graph`, `concept-store`, `designation-index`, `sct-ecl`, `fhir-terminology`,
+`app/ferroterm-server`, `tools/fhir-codegen`, `tools/ferroterm-build`.
 
-Build sequence: (1) FHIR codegen → `ferroterm-fhir`, R4B first then R5/R4/R6;
+Build sequence: (1) FHIR codegen → `fhir-types`, R4B first then R5/R4/R6;
 (2) RF2 + offline build →
 redb artifacts; (3) read-only serving core ($lookup/$subsumes/$validate-code);
 (4) ECL + $expand + $translate; (5) hardening + packaging. Reference oracles:

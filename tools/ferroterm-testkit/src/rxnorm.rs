@@ -1,4 +1,4 @@
-//! A synthetic `RxNorm`-shaped release: the `RRF` files `ferroterm-rrf`
+//! A synthetic `RxNorm`-shaped release: the `RRF` files `rxnorm-rrf`
 //! reads, with invented identifiers.
 //!
 //! The concept identifiers and atom identifiers are not `RxNorm`'s; the

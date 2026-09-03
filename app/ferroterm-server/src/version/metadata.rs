@@ -14,24 +14,24 @@ macro_rules! metadata {
 
             use axum::extract::{Query, State};
             use axum::response::{IntoResponse, Response};
-            use ferroterm_fhir::codec::Json;
-            use ferroterm_fhir::$fhir::capability_statement::{
+            use fhir_types::codec::Json;
+            use fhir_types::$fhir::capability_statement::{
                 CapabilityStatement, CapabilityStatementImplementation, CapabilityStatementRest,
                 CapabilityStatementRestResource, CapabilityStatementRestResourceInteraction,
                 CapabilityStatementRestResourceOperation, CapabilityStatementSoftware,
             };
-            use ferroterm_fhir::$fhir::extension::{Extension, ExtensionValue};
-            use ferroterm_fhir::operation::{Operation, ParameterSource, ParameterUse};
-            use ferroterm_fhir::$fhir::operations::code_system_lookup::CODE_SYSTEM_LOOKUP;
-            use ferroterm_fhir::$fhir::operations::code_system_subsumes::CODE_SYSTEM_SUBSUMES;
-            use ferroterm_fhir::$fhir::operations::code_system_validate_code::CODE_SYSTEM_VALIDATE_CODE;
-            use ferroterm_fhir::$fhir::operations::concept_map_translate::CONCEPT_MAP_TRANSLATE;
-            use ferroterm_fhir::$fhir::operations::value_set_expand::VALUE_SET_EXPAND;
-            use ferroterm_fhir::$fhir::operations::value_set_validate_code::VALUE_SET_VALIDATE_CODE;
-            use ferroterm_fhir::$fhir::terminology_capabilities::{
+            use fhir_types::$fhir::extension::{Extension, ExtensionValue};
+            use fhir_types::operation::{Operation, ParameterSource, ParameterUse};
+            use fhir_types::$fhir::operations::code_system_lookup::CODE_SYSTEM_LOOKUP;
+            use fhir_types::$fhir::operations::code_system_subsumes::CODE_SYSTEM_SUBSUMES;
+            use fhir_types::$fhir::operations::code_system_validate_code::CODE_SYSTEM_VALIDATE_CODE;
+            use fhir_types::$fhir::operations::concept_map_translate::CONCEPT_MAP_TRANSLATE;
+            use fhir_types::$fhir::operations::value_set_expand::VALUE_SET_EXPAND;
+            use fhir_types::$fhir::operations::value_set_validate_code::VALUE_SET_VALIDATE_CODE;
+            use fhir_types::$fhir::terminology_capabilities::{
                 TerminologyCapabilities, TerminologyCapabilitiesImplementation, TerminologyCapabilitiesSoftware,
             };
-            use ferroterm_terminology::capabilities::Summary;
+            use fhir_terminology::capabilities::Summary;
             use http::StatusCode;
 
             use crate::outcome::{Failure, fhir_json};

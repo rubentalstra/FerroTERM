@@ -307,8 +307,7 @@ pub fn write_icd10cm(root: &Path) -> std::io::Result<()> {
 ///
 /// Returns an I/O error wrapping the build failure.
 pub fn write_claml_artifact(dir: &Path) -> std::io::Result<()> {
-    let classification =
-        ferroterm_classification::claml::read(&claml()).map_err(std::io::Error::other)?;
+    let classification = ::classification::claml::read(&claml()).map_err(std::io::Error::other)?;
     ferroterm_build::classification::build(&classification, CLAML_SYSTEM, None, dir)
         .map(|_| ())
         .map_err(std::io::Error::other)
@@ -322,10 +321,9 @@ pub fn write_claml_artifact(dir: &Path) -> std::io::Result<()> {
 pub fn write_icd10cm_artifact(dir: &Path) -> std::io::Result<()> {
     let release = tempfile::tempdir()?;
     write_icd10cm(release.path())?;
-    let files = ferroterm_classification::icd10cm::locate(&[release.path().to_path_buf()])
+    let files = ::classification::icd10cm::locate(&[release.path().to_path_buf()])
         .map_err(std::io::Error::other)?;
-    let classification =
-        ferroterm_classification::icd10cm::read(&files).map_err(std::io::Error::other)?;
+    let classification = ::classification::icd10cm::read(&files).map_err(std::io::Error::other)?;
     ferroterm_build::classification::build(
         &classification,
         ferroterm_build::classification::ICD10CM_SYSTEM,

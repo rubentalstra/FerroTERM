@@ -98,7 +98,7 @@ fi
 
 # --- The vendored ECL grammar tag == docs/VERSIONS.md ECL pin ------------------
 echo "== vendored ECL grammar (PROVENANCE.md <-> docs/VERSIONS.md)"
-ecl_prov="crates/ferroterm-ecl/vendor/PROVENANCE.md"
+ecl_prov="crates/sct-ecl/vendor/PROVENANCE.md"
 if [ -f "$ecl_prov" ]; then
   ecl_tag="$(sed -nE 's/^- Tag:[[:space:]]*//p' "$ecl_prov" | head -n1 | tr -d '[:space:]')"
   ecl_pin="$(awk -F'|' '$2 ~ /^[[:space:]]*ECL[[:space:]]*$/ { v = $3; gsub(/^[[:space:]]+/, "", v); split(v, w, /[[:space:]]/); print w[1]; exit }' docs/VERSIONS.md)"
@@ -128,10 +128,33 @@ if [ -f LICENSE ]; then
     [ -n "$hit" ] || continue
     bad "stale MIT licence claim at $hit"; stale=1
   done < <(git grep -n -E 'SPDX-License-Identifier: MIT|License-MIT|^license = "MIT"|^license: MIT|image\.licenses="?MIT' \
-    -- ':!scripts/checks/versions.sh' ':!tools/ferroterm-fhir-codegen/vendor' ':!crates/ferroterm-ecl/vendor' ':!crates/ferroterm-fhir/src' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
+    -- ':!scripts/checks/versions.sh' ':!tools/fhir-codegen/vendor' ':!crates/sct-ecl/vendor' ':!crates/fhir-types/src' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
   [ "$stale" -eq 0 ] && note "OK: the project's own files name Apache-2.0"
 else
   note "no LICENSE yet — skipped"
+fi
+
+# --- Published crates: metadata, lockstep line (.claude/rules/crates-publishing.md)
+echo "== published crates (crates/*/Cargo.toml <-> README, LICENSE, root requirements)"
+if ls crates/*/Cargo.toml >/dev/null 2>&1; then
+  line="$(awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' crates/fhir-types/Cargo.toml || true)"
+  for manifest in crates/*/Cargo.toml; do
+    dir="$(dirname "$manifest")"
+    name="$(awk -F'"' '/^\[package\]/{p=1} p && /^name = /{print $2; exit}' "$manifest")"
+    [ -f "$dir/README.md" ] || bad "$dir has no README.md (published crate)"
+    [ -f "$dir/LICENSE" ] || bad "$dir has no LICENSE (published crate)"
+    cmp -s LICENSE "$dir/LICENSE" || bad "$dir/LICENSE differs from the root LICENSE"
+    grep -q '^publish = true' "$manifest" || bad "$manifest is not publish = true"
+    grep -q '^readme = "README.md"' "$manifest" || bad "$manifest names no readme"
+    grep -q '^description = ' "$manifest" || bad "$manifest has no description"
+    ver="$(awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' "$manifest")"
+    [ "$ver" = "$line" ] || bad "$manifest is at $ver, the crate line is $line"
+    grep -qE "^${name} = \{ path = \"crates/${name}\", version = \"${line}\" \}" Cargo.toml \
+      || bad "root Cargo.toml does not require $name at $line"
+  done
+  note "OK: every published crate has README, LICENSE, publish = true, and sits on the $line line"
+else
+  note "no crates/*/Cargo.toml yet — skipped"
 fi
 
 # --- rust-toolchain.toml present (sanity; channel recorded in VERSIONS.md) -----
@@ -145,16 +168,16 @@ fi
 
 # --- Vendored FHIR package pins == docs/VERSIONS.md table ----------------------
 echo "== vendored FHIR package pins (PROVENANCE.md <-> docs/VERSIONS.md)"
-if [ -d tools/ferroterm-fhir-codegen/vendor ]; then
+if [ -d tools/fhir-codegen/vendor ]; then
   found=0
-  for prov in tools/ferroterm-fhir-codegen/vendor/*/PROVENANCE.md; do
+  for prov in tools/fhir-codegen/vendor/*/PROVENANCE.md; do
     [ -f "$prov" ] || continue
     found=1
     pkg="$(basename "$(dirname "$prov")")"
     prov_ver="$(sed -nE 's/^- Version:[[:space:]]*//p' "$prov" | head -n1 | tr -d '[:space:]')"
     # The second cell of the package's row in the docs/VERSIONS.md FHIR table.
     pin_ver="$(awk -F'|' -v pkg="$pkg" '$2 ~ "^[[:space:]]*`" pkg "`" { v = $3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); print v; exit }' docs/VERSIONS.md)"
-    pkg_json="tools/ferroterm-fhir-codegen/vendor/$pkg/package/package.json"
+    pkg_json="tools/fhir-codegen/vendor/$pkg/package/package.json"
     json_ver=""
     [ -f "$pkg_json" ] && json_ver="$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$pkg_json" | head -n1)"
     if [ -z "$prov_ver" ]; then

@@ -114,12 +114,12 @@ The short form:
   (`hierarchy.bin`), and an `fst` word index (`text.bin`). The server
   memory-maps them read-only; subsumption is a bitmap test and a
   descendant set is a bitmap.
-- **FHIR is generated, never hand-written.** `crates/ferroterm-fhir` is
+- **FHIR is generated, never hand-written.** `crates/fhir-types` is
   emitted from the pinned HL7 packages (R4 4.0.1, R4B 4.3.0, R5 5.0.0, R6
   ballot 5, HL7 Terminology) so each version's operation surface is right by
   construction; a drift check regenerates it in CI.
 - **The engine is code-system-neutral.** Providers own the semantics
-  (`crates/ferroterm-terminology`); the operations talk to the seam.
+  (`crates/fhir-terminology`); the operations talk to the seam.
 - **Supply chain.** Releases are built in a reusable workflow to SLSA Build
   Level 3: signed provenance, CycloneDX SBOMs, `cargo auditable` binaries, a
   distroless image for `linux/amd64` and `linux/arm64`, verifiable with

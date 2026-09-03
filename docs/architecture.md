@@ -146,7 +146,7 @@ HL7 publishes the whole type system and every operation as machine-readable
 `hl7.fhir.r6.core` 6.0.0 ballot), plus `hl7.terminology`
 (<https://www.hl7.org/fhir/packages.html>). FerroTERM vendors and pins those
 packages and generates per-version Rust modules from them
-(`tools/ferroterm-fhir-codegen`), so R5's extra `$expand` parameters
+(`tools/fhir-codegen`), so R5's extra `$expand` parameters
 (`useSupplement`, `property`, `displayLanguage`) appear where the spec has them
 and are absent where it does not
 (<http://hl7.org/fhir/R5/valueset-operation-expand.html>). This mirrors how the
@@ -209,7 +209,7 @@ Serving concurrency: point reads against hot mmap pages and resident-bitmap
 subsumption run inline in the async handler. A heavy `$expand` that materializes
 a 100k-member set, and any cold read that page-faults from disk, run on a
 blocking pool (`tokio::task::spawn_blocking`) so they never stall the runtime.
-The blocking seam sits at the `ferroterm-terminology` engine boundary and is
+The blocking seam sits at the `fhir-terminology` engine boundary and is
 designed in from the start, not retrofitted.
 
 ### 4. The SNOMED semantics are hand-written and owned
@@ -250,12 +250,12 @@ interface), so this is our own design; the FHIR `CodeSystem` metadata
 provider returns (<https://hl7.org/fhir/R4B/codesystem.html>,
 <https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
 
-The substrates are neutral by construction. `ferroterm-store` holds one code system
+The substrates are neutral by construction. `concept-store` holds one code system
 version's concepts, displays, designations by language, and typed property
 values, keyed by dense ordinal, with the system's native code as the string
-key. `ferroterm-graph` holds typed edges and closure bitmaps over ordinals; a system
-without a hierarchy has no closure. `ferroterm-text` indexes designation words. None
-of them knows an SCTID, a LOINC part, or an ICD chapter. A loader (`ferroterm-rf2`
+key. `concept-graph` holds typed edges and closure bitmaps over ordinals; a system
+without a hierarchy has no closure. `designation-index` indexes designation words. None
+of them knows an SCTID, a LOINC part, or an ICD chapter. A loader (`rf2`
 for SNOMED CT, then one crate per system) maps its release into ordinals, edge
 types, and a property vocabulary. `tools/ferroterm-build` runs whichever loader the
 release needs.
@@ -292,8 +292,8 @@ first shape.
 | Concept maps carried by the release | | SNOMED map and association refsets |
 
 The compose layer (include, exclude, dedup, `offset`, `count`, `expansion.total`)
-lives once, in `ferroterm-terminology`, above every provider. ECL is the one
-SNOMED-only filter language and stays in `ferroterm-ecl`, reached through the
+lives once, in `fhir-terminology`, above every provider. ECL is the one
+SNOMED-only filter language and stays in `sct-ecl`, reached through the
 SNOMED provider's `constraint` filter. The build order and the per-system facts
 (URI, release format, licence, hierarchy, FHIR-defined filters) are in
 `docs/terminologies.md`.
@@ -316,22 +316,22 @@ memory-mapped, built once per edition.
 
 ## Workspace layout
 
-A single Cargo workspace. `ferroterm-fhir` is generated; the rest is hand-written;
-`ferroterm-fhir-codegen` and `ferroterm-build` are tooling. The substrate crates
-(`ferroterm-store`, `ferroterm-graph`, `ferroterm-text`) are code-system-neutral; each
-code system adds a loader crate (`ferroterm-rf2` is the first) that feeds them.
+A single Cargo workspace. `fhir-types` is generated; the rest is hand-written;
+`fhir-codegen` and `ferroterm-build` are tooling. The substrate crates
+(`concept-store`, `concept-graph`, `designation-index`) are code-system-neutral; each
+code system adds a loader crate (`rf2` is the first) that feeds them.
 
 | Crate | Role | Kind |
 |---|---|---|
-| `crates/ferroterm-fhir` | Generated per-version FHIR types + terminology operation contracts (R4/R4B/R5/R6) | generated |
-| `crates/ferroterm-rf2` | SNOMED CT RF2 loader (inferred relationships, descriptions, refsets, transitive-closure file) + typed component model; the first code system loader | hand-written |
-| `crates/ferroterm-graph` | The materialized hierarchy of a loaded code system: CSR adjacency (is-a + per-relationship-type) and roaring transitive-closure bitmaps; subsumption + ECL set algebra | hand-written |
-| `crates/ferroterm-store` | The memory-mapped (`redb`) columnar concept and designation store, one per code system version: point reads for `$lookup`/`$validate-code` | hand-written |
-| `crates/ferroterm-text` | The `fst` + roaring designation search index (prefix, language and use filter, term-length sort) | hand-written |
-| `crates/ferroterm-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `ferroterm-graph`) | hand-written |
-| `crates/ferroterm-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
+| `crates/fhir-types` | Generated per-version FHIR types + terminology operation contracts (R4/R4B/R5/R6) | generated |
+| `crates/rf2` | SNOMED CT RF2 loader (inferred relationships, descriptions, refsets, transitive-closure file) + typed component model; the first code system loader | hand-written |
+| `crates/concept-graph` | The materialized hierarchy of a loaded code system: CSR adjacency (is-a + per-relationship-type) and roaring transitive-closure bitmaps; subsumption + ECL set algebra | hand-written |
+| `crates/concept-store` | The memory-mapped (`redb`) columnar concept and designation store, one per code system version: point reads for `$lookup`/`$validate-code` | hand-written |
+| `crates/designation-index` | The `fst` + roaring designation search index (prefix, language and use filter, term-length sort) | hand-written |
+| `crates/sct-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `concept-graph`) | hand-written |
+| `crates/fhir-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
 | `app/ferroterm-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
-| `tools/ferroterm-fhir-codegen` | The generator: vendored FHIR packages → `ferroterm-fhir` | tooling |
+| `tools/fhir-codegen` | The generator: vendored FHIR packages → `fhir-types` | tooling |
 | `tools/ferroterm-build` | The offline build: a code system release (RF2 first) → the memory-mapped graph/store/text artifacts, once per release | tooling |
 
 Dependencies point one way (app/tools → crates); nothing depends upward into the

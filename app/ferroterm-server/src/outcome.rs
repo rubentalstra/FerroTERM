@@ -9,12 +9,12 @@
 
 use axum::body::Body;
 use axum::response::{IntoResponse, Response};
-use ferroterm_fhir::codec::Json;
-use ferroterm_fhir::r4b::codeable_concept::CodeableConcept;
-use ferroterm_fhir::r4b::coding::Coding;
-use ferroterm_fhir::r4b::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
-use ferroterm_terminology::operations::OperationError;
-use ferroterm_terminology::operations::value_set_validate_code::TX_ISSUE_TYPE;
+use fhir_terminology::operations::OperationError;
+use fhir_terminology::operations::value_set_validate_code::TX_ISSUE_TYPE;
+use fhir_types::codec::Json;
+use fhir_types::r4b::codeable_concept::CodeableConcept;
+use fhir_types::r4b::coding::Coding;
+use fhir_types::r4b::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
 use http::StatusCode;
 use http::header::CONTENT_TYPE;
 

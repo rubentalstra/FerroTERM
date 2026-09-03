@@ -5,41 +5,41 @@
 //! the R5 `OperationDefinition`s declare
 //! (<https://hl7.org/fhir/R5/terminology-service.html>).
 
-use ferroterm_fhir::r5::codeable_concept::CodeableConcept;
-use ferroterm_fhir::r5::coding::Coding;
-use ferroterm_fhir::r5::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
-use ferroterm_fhir::r5::operations::code_system_lookup::{
+use concept_graph::subsumption::Outcome;
+use fhir_terminology::operations::expand::ExpandInput;
+use fhir_terminology::operations::lookup::{LookupInput, LookupOutcome};
+use fhir_terminology::operations::subsumes::SubsumesInput;
+use fhir_terminology::operations::translate::{TranslateInput, Translation};
+use fhir_terminology::operations::validate_code::{ValidateCodeInput, ValidationOutcome};
+use fhir_terminology::operations::value_set_validate_code::{
+    TX_ISSUE_TYPE, Validation, ValueSetValidateInput,
+};
+use fhir_terminology::operations::{CodingRef, Issue};
+use fhir_terminology::provider::{Designation, PropertyValue};
+use fhir_terminology::{conceptmap, valueset};
+use fhir_types::r5::codeable_concept::CodeableConcept;
+use fhir_types::r5::coding::Coding;
+use fhir_types::r5::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
+use fhir_types::r5::operations::code_system_lookup::{
     CodeSystemLookupRequest, CodeSystemLookupResponse, CodeSystemLookupResponseDesignation,
     CodeSystemLookupResponseProperty, CodeSystemLookupResponsePropertySubproperty,
 };
-use ferroterm_fhir::r5::operations::code_system_subsumes::{
+use fhir_types::r5::operations::code_system_subsumes::{
     CodeSystemSubsumesRequest, CodeSystemSubsumesResponse,
 };
-use ferroterm_fhir::r5::operations::code_system_validate_code::{
+use fhir_types::r5::operations::code_system_validate_code::{
     CodeSystemValidateCodeRequest, CodeSystemValidateCodeResponse,
 };
-use ferroterm_fhir::r5::operations::concept_map_translate::{
+use fhir_types::r5::operations::concept_map_translate::{
     ConceptMapTranslateRequest, ConceptMapTranslateResponse, ConceptMapTranslateResponseMatch,
     ConceptMapTranslateResponseMatchProduct,
 };
-use ferroterm_fhir::r5::operations::value_set_expand::ValueSetExpandRequest;
-use ferroterm_fhir::r5::operations::value_set_validate_code::{
+use fhir_types::r5::operations::value_set_expand::ValueSetExpandRequest;
+use fhir_types::r5::operations::value_set_validate_code::{
     ValueSetValidateCodeRequest, ValueSetValidateCodeResponse,
 };
-use ferroterm_fhir::r5::parameters::{Parameters, ParametersParameterValue};
-use ferroterm_fhir::r5::primitives::{Boolean, Canonical, Integer};
-use ferroterm_graph::subsumption::Outcome;
-use ferroterm_terminology::operations::expand::ExpandInput;
-use ferroterm_terminology::operations::lookup::{LookupInput, LookupOutcome};
-use ferroterm_terminology::operations::subsumes::SubsumesInput;
-use ferroterm_terminology::operations::translate::{TranslateInput, Translation};
-use ferroterm_terminology::operations::validate_code::{ValidateCodeInput, ValidationOutcome};
-use ferroterm_terminology::operations::value_set_validate_code::{
-    TX_ISSUE_TYPE, Validation, ValueSetValidateInput,
-};
-use ferroterm_terminology::operations::{CodingRef, Issue};
-use ferroterm_terminology::provider::{Designation, PropertyValue};
-use ferroterm_terminology::{conceptmap, valueset};
+use fhir_types::r5::parameters::{Parameters, ParametersParameterValue};
+use fhir_types::r5::primitives::{Boolean, Canonical, Integer};
 
 /// A generated `Coding` as the engine's coding.
 #[must_use]

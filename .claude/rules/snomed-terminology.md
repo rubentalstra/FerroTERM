@@ -1,9 +1,9 @@
 ---
 paths:
-  - "crates/ferroterm-rf2/**"
-  - "crates/ferroterm-graph/**"
-  - "crates/ferroterm-ecl/**"
-  - "crates/ferroterm-terminology/**"
+  - "crates/rf2/**"
+  - "crates/concept-graph/**"
+  - "crates/sct-ecl/**"
+  - "crates/fhir-terminology/**"
 ---
 
 # SNOMED CT on FHIR + ECL + RF2

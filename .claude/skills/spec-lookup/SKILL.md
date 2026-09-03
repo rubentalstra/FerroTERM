@@ -29,7 +29,7 @@ the decision; never treat them as spec authority.
 ## Where to look
 
 - **Vendored specs (once present):** the FHIR packages under
-  `tools/ferroterm-fhir-codegen/vendor/` are the machine-readable contract
+  `tools/fhir-codegen/vendor/` are the machine-readable contract
   (`StructureDefinition`, `OperationDefinition`). Grep the operation/resource
   name there for the served version.
 - **The project rules** encode the distilled requirements with citations:
