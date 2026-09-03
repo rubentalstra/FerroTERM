@@ -25,6 +25,17 @@ zip with a tool that ships in the release and the image.
 
 ### Added
 
+- UCUM (`http://unitsofmeasure.org`), served without configuration: expressions
+  are parsed against the UCUM grammar over the vendored `ucum-essence.xml`
+  (2.2, its licence alongside) and reduced to a magnitude over the seven base
+  units; every valid expression is a code and its own display, with an English
+  name composed from the essence; `canonical` and `property` are properties and
+  filters; `$subsumes` answers `equivalent` for the same unit and
+  `not-subsumed` otherwise; the implicit value sets `/vs` and
+  `/vs/[expression]`; enumeration is refused.
+
+### Added
+
 - The registry systems, served without configuration: BCP 47 language tags
   (`urn:ietf:bcp:47`, the RFC 5646 grammar over the IANA Language Subtag
   Registry; a well-formed tag with an unregistered subtag is not a code), BCP

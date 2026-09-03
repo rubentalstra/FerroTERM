@@ -30,9 +30,17 @@ curl -sSL -o "$data/cldr/codeMappings.json" \
   "https://raw.githubusercontent.com/unicode-org/cldr-json/$CLDR_REF/cldr-json/cldr-core/supplemental/codeMappings.json"
 curl -sSL -o "$data/cldr/LICENSE" "https://raw.githubusercontent.com/unicode-org/cldr-json/$CLDR_REF/LICENSE"
 
+mkdir -p "$data/ucum"
+UCUM_REF=${UCUM_REF:-main}
+curl -sSL -o "$data/ucum/ucum-essence.xml" "https://raw.githubusercontent.com/ucum-org/ucum/$UCUM_REF/ucum-essence.xml"
+curl -sSL -o "$data/ucum/LICENSE.md" "https://raw.githubusercontent.com/ucum-org/ucum/$UCUM_REF/LICENSE.md"
+ucum_version=$(grep -o 'ucum-essence" version="[0-9.]*"' "$data/ucum/ucum-essence.xml" | sed 's/.*version="//; s/"$//')
+ucum_commit=$(curl -sSL "https://api.github.com/repos/ucum-org/ucum/commits/$UCUM_REF" | jq -r '.sha')
+
 registry_date=$(sed -n 's/^File-Date: //p' "$data/iana/language-subtag-registry" | head -n1)
 cldr_version=$(jq -r '.supplemental.version._cldrVersion' "$data/cldr/codeMappings.json")
 cldr_commit=$(curl -sSL "https://api.github.com/repos/unicode-org/cldr-json/commits/$CLDR_REF" | jq -r '.sha')
+
 today=$(date -u +%Y-%m-%d)
 
 cat > "$data/PROVENANCE.md" <<PROV
@@ -63,5 +71,13 @@ ISO 3166); never edit a file here, re-run \`scripts/vendor/registries.sh\`.
 - CLDR version: $cldr_version
 - Fetched: $today
 - License: Unicode License v3 (\`cldr/LICENSE\`)
+
+## UCUM essence
+
+- Files: \`ucum/ucum-essence.xml\` (the unit definitions), \`ucum/LICENSE.md\`
+- Source: <https://github.com/ucum-org/ucum>, ref \`$UCUM_REF\` at commit \`$ucum_commit\`
+- UCUM version: $ucum_version
+- Fetched: $today
+- License: the UCUM licence (\`ucum/LICENSE.md\`), verbatim redistribution with the notice
 PROV
-echo "fetched: registry $registry_date, CLDR $cldr_version ($cldr_commit)"
+echo "fetched: registry $registry_date, CLDR $cldr_version ($cldr_commit), UCUM $ucum_version ($ucum_commit)"

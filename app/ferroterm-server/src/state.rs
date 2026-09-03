@@ -12,6 +12,7 @@ use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
 use ferroterm_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
 use ferroterm_terminology::operations::Sources;
 use ferroterm_terminology::provider::{CodeSystemProvider, ContentMode, ProviderError};
+use ferroterm_terminology::registries::ucum::provider::UcumProvider;
 use ferroterm_terminology::registries::{bcp13, bcp47, iso3166};
 use ferroterm_terminology::registry::{RegisterError, Registry, Resolved};
 use ferroterm_terminology::snomed::{OpenError, SnomedProvider};
@@ -151,9 +152,9 @@ impl AppState {
                 provider: Arc::new(provider),
             });
         }
-        // NOTE: the registry systems ship with the server, so a validator finds
-        // `urn:ietf:bcp:47`, `urn:ietf:bcp:13`, and `urn:iso:std:iso:3166` without
-        // configuration (<https://hl7.org/fhir/R4B/terminologies-systems.html>).
+        // NOTE: the registry systems ship with the server, so a validator finds BCP 47,
+        // BCP 13, UCUM, and ISO 3166 without configuration
+        // (<https://hl7.org/fhir/R4B/terminologies-systems.html>).
         loaded.push(Loaded {
             path: PathBuf::new(),
             provider: Arc::new(bcp47::Bcp47Provider::new()),
@@ -161,6 +162,10 @@ impl AppState {
         loaded.push(Loaded {
             path: PathBuf::new(),
             provider: Arc::new(bcp13::Bcp13Provider::new()),
+        });
+        loaded.push(Loaded {
+            path: PathBuf::new(),
+            provider: Arc::new(UcumProvider::new()),
         });
         loaded.push(Loaded {
             path: PathBuf::new(),
