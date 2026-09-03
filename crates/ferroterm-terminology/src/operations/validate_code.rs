@@ -1,111 +1,141 @@
-//! `CodeSystem/$validate-code` on R4B
-//! (<https://hl7.org/fhir/R4B/codesystem-operation-validate-code.html>).
+//! `CodeSystem/$validate-code` in the terms every served FHIR version shares.
 //!
-//! One and only one of `code`, `coding`, `codeableConcept`. The system is the
-//! instance, or `url`; R4B declares no `system` parameter (the generated
-//! request refuses one). An invalid code is `result = false` with a message,
-//! never an error; only an undeterminable validation is an error. A wrong
-//! `display` is `result = false` with the correct `display`, the R4B example's
-//! shape. An inactive code validates with a message (spec-silent in R4B;
-//! `.claude/rules/fhir-terminology.md` F-VAL-4).
+//! One of `code` (with `url`), `coding`, or `codeableConcept` is checked
+//! against a served system; the outcome says whether the code is in the
+//! system, why not, and the display the system prefers
+//! (<https://hl7.org/fhir/R4B/codesystem-operation-validate-code.html>,
+//! <https://hl7.org/fhir/R5/codesystem-operation-validate-code.html>).
 
-use ferroterm_fhir::r4b::coding::Coding;
-use ferroterm_fhir::r4b::operations::code_system_validate_code::{
-    CodeSystemValidateCodeRequest, CodeSystemValidateCodeResponse,
-};
-
-use super::{Invocation, OperationError, code_text, coding_parts, resolve, string_text, uri_text};
+use super::{CodingRef, Invocation, OperationError, resolve};
 use crate::language;
 use crate::provider::CodeSystemProvider;
 use crate::registry::Registry;
+
+/// The input of `CodeSystem/$validate-code`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ValidateCodeInput {
+    /// The code system URI (`url`).
+    pub url: Option<String>,
+    /// The code system version.
+    pub version: Option<String>,
+    /// Whether an inline `codeSystem` resource was given; not supported.
+    pub inline_code_system: bool,
+    /// The code.
+    pub code: Option<String>,
+    /// The display the client asserts.
+    pub display: Option<String>,
+    /// The coding, instead of `code`.
+    pub coding: Option<CodingRef>,
+    /// The codings of a `codeableConcept`, instead of `code`.
+    pub codeable_concept: Option<Vec<CodingRef>>,
+    /// The language of the display (a BCP 47 range list).
+    pub display_language: Option<String>,
+}
+
+/// The outcome of `CodeSystem/$validate-code`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidationOutcome {
+    /// Whether the code is valid in the system.
+    pub result: bool,
+    /// Why the result is what it is, when there is something to say.
+    pub message: Option<String>,
+    /// The display the system prefers, when the code was found.
+    pub display: Option<String>,
+    /// The code that was checked, when one was.
+    pub code: Option<String>,
+    /// The system it was checked against.
+    pub system: Option<String>,
+    /// The version it was checked against.
+    pub version: Option<String>,
+}
 
 /// Runs `$validate-code`.
 ///
 /// # Errors
 ///
-/// Returns [`OperationError`] when the validation cannot be performed: no or
-/// several code inputs, no system, an inline `codeSystem`, an unknown system
-/// or version, or a provider failure.
+/// Returns [`OperationError`] for an inline `codeSystem`, none or more than
+/// one of the code inputs, a coding whose system contradicts `url`, an
+/// unknown system or version, or a provider failure. An unknown code is a
+/// `false` result, never an error.
 pub fn validate_code(
     registry: &Registry,
     invocation: &Invocation,
-    request: &CodeSystemValidateCodeRequest,
-) -> Result<CodeSystemValidateCodeResponse, OperationError> {
-    if request.code_system.is_some() {
+    input: &ValidateCodeInput,
+) -> Result<ValidationOutcome, OperationError> {
+    if input.inline_code_system {
         return Err(OperationError::NotSupported(String::from(
             "validating against an inline `codeSystem` resource is not supported; name a served system with `url`",
         )));
     }
-    let inputs = usize::from(request.code.is_some())
-        + usize::from(request.coding.is_some())
-        + usize::from(request.codeable_concept.is_some());
+    let inputs = usize::from(input.code.is_some())
+        + usize::from(input.coding.is_some())
+        + usize::from(input.codeable_concept.is_some());
     if inputs != 1 {
         return Err(OperationError::Invalid(String::from(
             "provide one and only one of `code`, `coding`, or `codeableConcept`",
         )));
     }
-    let url = uri_text(request.url.as_ref());
-    let version = string_text(request.version.as_ref());
-    let language = code_text(request.display_language.as_ref());
-    if let Some(code) = code_text(request.code.as_ref()) {
+    let url = input.url.as_deref();
+    let version = input.version.as_deref();
+    let language = input.display_language.as_deref();
+    if let Some(code) = input.code.as_deref() {
         let resolved = resolve(registry, invocation, url, version)?;
-        return check(
-            &resolved.provider,
-            code,
-            string_text(request.display.as_ref()),
-            language,
-        );
+        return check(&resolved.provider, code, input.display.as_deref(), language);
     }
-    if let Some(coding) = &request.coding {
-        let (system, coding_version, code, display) = coding_parts(coding);
-        if let (Some(url), Some(system)) = (url, system)
+    if let Some(coding) = &input.coding {
+        if let (Some(url), Some(system)) = (url, coding.system.as_deref())
             && url != system
         {
             return Err(OperationError::Invalid(format!(
                 "`coding.system` `{system}` does not match `url` `{url}`"
             )));
         }
-        let code = code
+        let code = coding
+            .code
+            .as_deref()
             .ok_or_else(|| OperationError::Required(String::from("`coding.code` is required")))?;
         let resolved = resolve(
             registry,
             invocation,
-            url.or(system),
-            coding_version.or(version),
+            url.or(coding.system.as_deref()),
+            coding.version.as_deref().or(version),
         )?;
         return check(
             &resolved.provider,
             code,
-            display.or(string_text(request.display.as_ref())),
+            coding.display.as_deref().or(input.display.as_deref()),
             language,
         );
     }
-    let Some(concept) = &request.codeable_concept else {
+    let Some(codings) = &input.codeable_concept else {
         return Err(OperationError::Required(String::from(
             "provide one of `code`, `coding`, or `codeableConcept`",
         )));
     };
-    // The concept validates when one of its codings is in the code system
-    // (the definition's rule); codings of other systems are skipped.
     let resolved = resolve(registry, invocation, url, version)?;
-    let target = resolved.provider.identity().url.clone();
+    let identity = resolved.provider.identity();
+    let target = identity.url.clone();
     let mut messages = Vec::new();
     let mut any = false;
-    for coding in &concept.coding {
-        let (system, _, code, display) = coding_parts(coding);
-        if system.is_some_and(|s| s != target) {
+    for coding in codings {
+        if coding.system.as_deref().is_some_and(|s| s != target) {
             continue;
         }
-        let Some(code) = code else {
+        let Some(code) = coding.code.as_deref() else {
             continue;
         };
         any = true;
-        let response = check(&resolved.provider, code, display, language)?;
-        if response.result.value == Some(true) {
-            return Ok(response);
+        let outcome = check(
+            &resolved.provider,
+            code,
+            coding.display.as_deref(),
+            language,
+        )?;
+        if outcome.result {
+            return Ok(outcome);
         }
-        if let Some(message) = string_text(response.message.as_ref()) {
-            messages.push(message.to_owned());
+        if let Some(message) = outcome.message {
+            messages.push(message);
         }
     }
     let message = if any {
@@ -113,31 +143,36 @@ pub fn validate_code(
     } else {
         format!("no coding of the CodeableConcept is in code system `{target}`")
     };
-    Ok(CodeSystemValidateCodeResponse {
-        result: false.into(),
-        message: Some(message.into()),
+    Ok(ValidationOutcome {
+        result: false,
+        message: Some(message),
         display: None,
+        code: None,
+        system: Some(target),
+        version: Some(identity.version.clone()),
     })
 }
 
+/// Checks one code against a system: found, its display matches when one was
+/// asserted, and inactive is a warning, never a `false`.
 fn check(
     provider: &std::sync::Arc<dyn CodeSystemProvider>,
     code: &str,
     display: Option<&str>,
     language: Option<&str>,
-) -> Result<CodeSystemValidateCodeResponse, OperationError> {
+) -> Result<ValidationOutcome, OperationError> {
     let identity = provider.identity();
     let Some(located) = provider.locate(code)? else {
-        return Ok(CodeSystemValidateCodeResponse {
-            result: false.into(),
-            message: Some(
-                format!(
-                    "code `{code}` is not in code system `{}` version `{}`",
-                    identity.url, identity.version
-                )
-                .into(),
-            ),
+        return Ok(ValidationOutcome {
+            result: false,
+            message: Some(format!(
+                "code `{code}` is not in code system `{}` version `{}`",
+                identity.url, identity.version
+            )),
             display: None,
+            code: Some(code.to_owned()),
+            system: Some(identity.url.clone()),
+            version: Some(identity.version.clone()),
         });
     };
     let concept = located.concept;
@@ -171,20 +206,12 @@ fn check(
     if !status.active {
         messages.push(format!("code `{code}` is inactive"));
     }
-    Ok(CodeSystemValidateCodeResponse {
-        result: result.into(),
-        message: (!messages.is_empty()).then(|| messages.join("; ").into()),
-        display: preferred.map(std::convert::Into::into),
+    Ok(ValidationOutcome {
+        result,
+        message: (!messages.is_empty()).then(|| messages.join("; ")),
+        display: preferred,
+        code: Some(located.code),
+        system: Some(identity.url.clone()),
+        version: Some(identity.version.clone()),
     })
-}
-
-/// A `Coding` for the code system and code, for callers building outcomes.
-#[must_use]
-pub fn coding(system: &str, code: &str, display: Option<&str>) -> Coding {
-    Coding {
-        system: Some(system.into()),
-        code: Some(code.into()),
-        display: display.map(std::convert::Into::into),
-        ..Default::default()
-    }
 }

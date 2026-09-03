@@ -1,7 +1,8 @@
-//! The R4B wire of the operations: the generated R4B request into the
-//! engine's neutral input, and the neutral outcome into the generated R4B
-//! response, so `/r4b` emits exactly what the 4.3.0 `OperationDefinition`s
-//! declare.
+//! The R4B wire of the operations.
+//!
+//! The generated R4B request becomes the engine's neutral input, and the
+//! neutral outcome the generated R4B response, so `/r4b` emits exactly what
+//! the 4.3.0 `OperationDefinition`s declare.
 
 use ferroterm_fhir::r4b::coding::Coding;
 use ferroterm_fhir::r4b::operations::code_system_lookup::{
@@ -11,14 +12,19 @@ use ferroterm_fhir::r4b::operations::code_system_lookup::{
 use ferroterm_fhir::r4b::operations::code_system_subsumes::{
     CodeSystemSubsumesRequest, CodeSystemSubsumesResponse,
 };
+use ferroterm_fhir::r4b::operations::code_system_validate_code::{
+    CodeSystemValidateCodeRequest, CodeSystemValidateCodeResponse,
+};
 use ferroterm_fhir::r4b::parameters::ParametersParameterValue;
 use ferroterm_graph::subsumption::Outcome;
 use ferroterm_terminology::operations::CodingRef;
 use ferroterm_terminology::operations::lookup::{LookupInput, LookupOutcome};
 use ferroterm_terminology::operations::subsumes::SubsumesInput;
+use ferroterm_terminology::operations::validate_code::{ValidateCodeInput, ValidationOutcome};
 use ferroterm_terminology::provider::{Designation, PropertyValue};
 
 /// A generated `Coding` as the engine names one.
+#[must_use]
 pub fn coding_ref(coding: &Coding) -> CodingRef {
     CodingRef {
         system: coding.system.as_ref().and_then(|v| v.value.clone()),
@@ -29,6 +35,7 @@ pub fn coding_ref(coding: &Coding) -> CodingRef {
 }
 
 /// The `$lookup` request as the engine's input.
+#[must_use]
 pub fn lookup_input(request: &CodeSystemLookupRequest) -> LookupInput {
     LookupInput {
         code: request.code.as_ref().and_then(|v| v.value.clone()),
@@ -50,6 +57,7 @@ pub fn lookup_input(request: &CodeSystemLookupRequest) -> LookupInput {
 
 /// The `$lookup` outcome as the R4B response: `name`, `version`, `display`,
 /// `designation`, and `property` with its `subproperty` parts.
+#[must_use]
 pub fn lookup_response(outcome: LookupOutcome) -> CodeSystemLookupResponse {
     CodeSystemLookupResponse {
         name: outcome.name.into(),
@@ -91,6 +99,7 @@ fn designation(d: Designation) -> CodeSystemLookupResponseDesignation {
 }
 
 /// A property value as a `Parameters.parameter.value[x]`.
+#[must_use]
 pub fn parameter_value(value: &PropertyValue) -> ParametersParameterValue {
     match value {
         PropertyValue::Code(c) => ParametersParameterValue::Code(c.as_str().into()),
@@ -117,6 +126,7 @@ pub fn parameter_value(value: &PropertyValue) -> ParametersParameterValue {
 }
 
 /// The `$subsumes` request as the engine's input.
+#[must_use]
 pub fn subsumes_input(request: &CodeSystemSubsumesRequest) -> SubsumesInput {
     SubsumesInput {
         code_a: request.code_a.as_ref().and_then(|v| v.value.clone()),
@@ -129,8 +139,42 @@ pub fn subsumes_input(request: &CodeSystemSubsumesRequest) -> SubsumesInput {
 }
 
 /// The `$subsumes` outcome as the R4B response.
+#[must_use]
 pub fn subsumes_response(outcome: Outcome) -> CodeSystemSubsumesResponse {
     CodeSystemSubsumesResponse {
         outcome: outcome.code().into(),
+    }
+}
+
+/// The `CodeSystem/$validate-code` request as the engine's input.
+#[must_use]
+pub fn validate_code_input(request: &CodeSystemValidateCodeRequest) -> ValidateCodeInput {
+    ValidateCodeInput {
+        url: request.url.as_ref().and_then(|v| v.value.clone()),
+        version: request.version.as_ref().and_then(|v| v.value.clone()),
+        inline_code_system: request.code_system.is_some(),
+        code: request.code.as_ref().and_then(|v| v.value.clone()),
+        display: request.display.as_ref().and_then(|v| v.value.clone()),
+        coding: request.coding.as_ref().map(coding_ref),
+        codeable_concept: request
+            .codeable_concept
+            .as_ref()
+            .map(|concept| concept.coding.iter().map(coding_ref).collect()),
+        display_language: request
+            .display_language
+            .as_ref()
+            .and_then(|v| v.value.clone()),
+    }
+}
+
+/// The `CodeSystem/$validate-code` outcome as the R4B response: `result`,
+/// `message`, and `display` (4.3.0 declares no `code`, `system`, or
+/// `version` output).
+#[must_use]
+pub fn validate_code_response(outcome: ValidationOutcome) -> CodeSystemValidateCodeResponse {
+    CodeSystemValidateCodeResponse {
+        result: outcome.result.into(),
+        message: outcome.message.map(Into::into),
+        display: outcome.display.map(Into::into),
     }
 }

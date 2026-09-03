@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::operations::code_system_validate_code::CodeSystemValidateCodeRequest;
 use ferroterm_graph::subsumption::Outcome;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
 use ferroterm_terminology::fhir_codesystem::provider::FhirCodeSystem;
@@ -268,10 +267,10 @@ fn example_content_refuses_validation_and_enumeration() {
     for p in providers2 {
         registry.register(Arc::new(p)).expect("registers");
     }
-    let request = CodeSystemValidateCodeRequest {
-        url: Some(SKETCH.into()),
-        code: Some("a".into()),
-        ..Default::default()
+    let request = validate_code::ValidateCodeInput {
+        url: Some(SKETCH.to_owned()),
+        code: Some(String::from("a")),
+        ..validate_code::ValidateCodeInput::default()
     };
     let error =
         validate_code::validate_code(&registry, &Invocation::Type, &request).expect_err("refused");

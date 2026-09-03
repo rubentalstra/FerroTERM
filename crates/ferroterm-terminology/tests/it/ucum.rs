@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::operations::code_system_subsumes::CodeSystemSubsumesRequest;
 use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
 use ferroterm_fhir::r4b::operations::value_set_validate_code::ValueSetValidateCodeRequest;
 use ferroterm_fhir::r4b::value_set::{
@@ -262,14 +261,14 @@ fn ucum_answers_the_operations_the_ecosystem_suite_asks() {
         subsumes::subsumes(
             &registry,
             &Invocation::Type,
-            &CodeSystemSubsumesRequest {
-                system: Some(URL.into()),
-                code_a: Some(a.into()),
-                code_b: Some(b.into()),
-                ..Default::default()
+            &subsumes::SubsumesInput {
+                system: Some(URL.to_owned()),
+                code_a: Some(a.to_owned()),
+                code_b: Some(b.to_owned()),
+                ..subsumes::SubsumesInput::default()
             },
         )
-        .map(|r| r.outcome.value.unwrap_or_default())
+        .map(|outcome| outcome.code().to_owned())
     };
     assert_eq!(
         sub("mg/dL", "mg/dL").expect("answers"),

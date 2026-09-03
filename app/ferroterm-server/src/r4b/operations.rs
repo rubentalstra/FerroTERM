@@ -98,8 +98,12 @@ fn run_validate_code(
 ) -> Handled {
     let request = CodeSystemValidateCodeRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let response = validate_code::validate_code(scope.registry(), invocation, &request)?;
-    wire::respond(&response.to_parameters())
+    let outcome = validate_code::validate_code(
+        scope.registry(),
+        invocation,
+        &map::validate_code_input(&request),
+    )?;
+    wire::respond(&map::validate_code_response(outcome).to_parameters())
 }
 
 fn run_subsumes(scope: &Scope<'_>, invocation: &Invocation, parameters: &Parameters) -> Handled {

@@ -3,28 +3,15 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::code_system::CodeSystem;
-use ferroterm_fhir::r4b::codeable_concept::CodeableConcept;
-use ferroterm_fhir::r4b::coding::Coding;
-use ferroterm_fhir::r4b::operations::code_system_validate_code::CodeSystemValidateCodeRequest;
-use ferroterm_fhir::r4b::parameters::ParametersParameterValue;
 use ferroterm_terminology::operations::lookup::{LookupInput, lookup};
 use ferroterm_terminology::operations::subsumes::{SubsumesInput, subsumes};
-use ferroterm_terminology::operations::validate_code::validate_code;
+use ferroterm_terminology::operations::validate_code::{ValidateCodeInput, validate_code};
 use ferroterm_terminology::operations::{CodingRef, Invocation, OperationError};
 use ferroterm_terminology::provider::PropertyValue;
 use ferroterm_terminology::registry::Registry;
 use http::StatusCode;
 
 use crate::fixture::{FLAT_URL, URL, registry};
-
-fn coding(system: Option<&str>, code: &str) -> Coding {
-    Coding {
-        system: system.map(std::convert::Into::into),
-        code: Some(code.into()),
-        ..Default::default()
-    }
-}
 
 /// A coding as the engine names one.
 fn coding_ref(system: Option<&str>, code: &str) -> CodingRef {
@@ -187,66 +174,61 @@ fn validate_code_by_code_coding_and_codeable_concept() {
     let by_code = validate_code(
         &registry,
         &Invocation::Type,
-        &CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
-            code: Some("cat".into()),
-            ..Default::default()
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            code: Some(String::from("cat")),
+            ..ValidateCodeInput::default()
         },
     )
     .expect("validates");
-    assert_eq!(by_code.result.value, Some(true));
+    assert!(by_code.result);
     assert!(by_code.message.is_none());
-    assert_eq!(
-        by_code.display.and_then(|d| d.value).as_deref(),
-        Some("Cat")
-    );
+    assert_eq!(by_code.display.as_deref(), Some("Cat"));
+    assert_eq!(by_code.code.as_deref(), Some("cat"));
+    assert_eq!(by_code.system.as_deref(), Some(URL));
+    assert_eq!(by_code.version.as_deref(), Some("2025"));
 
     let by_coding = validate_code(
         &registry,
         &Invocation::Type,
-        &CodeSystemValidateCodeRequest {
-            coding: Some(coding(Some(URL), "dog")),
-            ..Default::default()
+        &ValidateCodeInput {
+            coding: Some(coding_ref(Some(URL), "dog")),
+            ..ValidateCodeInput::default()
         },
     )
     .expect("validates");
-    assert_eq!(by_coding.result.value, Some(true));
+    assert!(by_coding.result);
 
-    // Any coding of the concept in the system validates; foreign codings are skipped.
-    let concept = CodeableConcept {
-        coding: vec![
-            coding(Some("http://loinc.org"), "1234-5"),
-            coding(Some(URL), "unicorn"),
-            coding(Some(URL), "cat"),
-        ],
-        ..Default::default()
-    };
+    // A CodeableConcept: codings of other systems are skipped, one valid
+    // coding of the system makes the result true.
+    let concept = vec![
+        coding_ref(Some("http://loinc.org"), "1234-5"),
+        coding_ref(Some(URL), "unicorn"),
+        coding_ref(Some(URL), "cat"),
+    ];
     let by_concept = validate_code(
         &registry,
         &Invocation::Type,
-        &CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
             codeable_concept: Some(concept),
-            ..Default::default()
+            ..ValidateCodeInput::default()
         },
     )
     .expect("validates");
-    assert_eq!(by_concept.result.value, Some(true));
-    let none = CodeableConcept {
-        coding: vec![coding(Some("http://loinc.org"), "1234-5")],
-        ..Default::default()
-    };
+    assert!(by_concept.result);
+    let none = vec![coding_ref(Some("http://loinc.org"), "1234-5")];
     let by_none = validate_code(
         &registry,
         &Invocation::Type,
-        &CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
             codeable_concept: Some(none),
-            ..Default::default()
+            ..ValidateCodeInput::default()
         },
     )
     .expect("validates");
-    assert_eq!(by_none.result.value, Some(false));
+    assert!(!by_none.result);
 }
 
 #[test]
@@ -255,64 +237,68 @@ fn validate_code_wrong_display_unknown_code_and_inactive_code() {
     let wrong = validate_code(
         &registry,
         &Invocation::Type,
-        &CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
-            code: Some("cat".into()),
-            display: Some("Dog".into()),
-            ..Default::default()
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            code: Some(String::from("cat")),
+            display: Some(String::from("Dog")),
+            ..ValidateCodeInput::default()
         },
     )
     .expect("validates");
-    assert_eq!(wrong.result.value, Some(false));
+    assert!(!wrong.result);
     assert!(
         wrong
             .message
-            .as_ref()
-            .and_then(|m| m.value.as_deref())
+            .as_deref()
             .is_some_and(|m| m.contains("display"))
     );
-    assert_eq!(wrong.display.and_then(|d| d.value).as_deref(), Some("Cat"));
-    // A designation in another language is a valid display; the fixture is case-sensitive.
+    assert_eq!(
+        wrong.display.as_deref(),
+        Some("Cat"),
+        "the correct display is returned"
+    );
     let dutch = validate_code(
         &registry,
         &Invocation::Type,
-        &CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
-            code: Some("cat".into()),
-            display: Some("Kat".into()),
-            ..Default::default()
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            code: Some(String::from("cat")),
+            display: Some(String::from("Kat")),
+            ..ValidateCodeInput::default()
         },
     )
     .expect("validates");
-    assert_eq!(dutch.result.value, Some(true));
+    assert!(
+        dutch.result,
+        "a designation in another language is a valid display"
+    );
     let unknown = validate_code(
         &registry,
         &Invocation::Type,
-        &CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
-            code: Some("unicorn".into()),
-            ..Default::default()
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            code: Some(String::from("unicorn")),
+            ..ValidateCodeInput::default()
         },
     )
     .expect("an invalid code is a false result, not an error");
-    assert_eq!(unknown.result.value, Some(false));
+    assert!(!unknown.result);
     assert!(unknown.display.is_none());
     let inactive = validate_code(
         &registry,
         &Invocation::Type,
-        &CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
-            code: Some("fish".into()),
-            ..Default::default()
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            code: Some(String::from("fish")),
+            ..ValidateCodeInput::default()
         },
     )
     .expect("validates");
-    assert_eq!(inactive.result.value, Some(true), "inactive is not invalid");
+    assert!(inactive.result, "inactive is not invalid");
     assert!(
         inactive
             .message
-            .as_ref()
-            .and_then(|m| m.value.as_deref())
+            .as_deref()
             .is_some_and(|m| m.contains("inactive"))
     );
 }
@@ -320,66 +306,71 @@ fn validate_code_wrong_display_unknown_code_and_inactive_code() {
 #[test]
 fn validate_code_refusals() {
     let registry = registry();
-    let run = |request: CodeSystemValidateCodeRequest| {
-        validate_code(&registry, &Invocation::Type, &request).expect_err("refused")
+    let run = |input: ValidateCodeInput| {
+        validate_code(&registry, &Invocation::Type, &input).expect_err("refused")
     };
+    // No code input at all.
     assert!(matches!(
-        run(CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
-            ..Default::default()
+        run(ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            ..ValidateCodeInput::default()
         }),
         OperationError::Invalid(_)
     ));
+    // Two code inputs.
     assert!(matches!(
-        run(CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
-            code: Some("cat".into()),
-            coding: Some(coding(Some(URL), "cat")),
-            ..Default::default()
+        run(ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            code: Some(String::from("cat")),
+            coding: Some(coding_ref(Some(URL), "cat")),
+            ..ValidateCodeInput::default()
         }),
         OperationError::Invalid(_)
     ));
+    // A code without a system.
     assert!(matches!(
-        run(CodeSystemValidateCodeRequest {
-            code: Some("cat".into()),
-            ..Default::default()
+        run(ValidateCodeInput {
+            code: Some(String::from("cat")),
+            ..ValidateCodeInput::default()
         }),
         OperationError::Required(_)
     ));
+    // A coding whose system contradicts the URL.
     assert!(matches!(
-        run(CodeSystemValidateCodeRequest {
-            url: Some(URL.into()),
-            coding: Some(coding(Some("http://loinc.org"), "1")),
-            ..Default::default()
+        run(ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            coding: Some(coding_ref(Some("http://loinc.org"), "1")),
+            ..ValidateCodeInput::default()
         }),
         OperationError::Invalid(_)
     ));
+    // An inline code system.
     assert!(matches!(
-        run(CodeSystemValidateCodeRequest {
-            code_system: Some(CodeSystem::default()),
-            code: Some("cat".into()),
-            ..Default::default()
+        run(ValidateCodeInput {
+            inline_code_system: true,
+            code: Some(String::from("cat")),
+            ..ValidateCodeInput::default()
         }),
         OperationError::NotSupported(_)
     ));
-    // Instance level: the instance is the system; a contradicting url is invalid.
+    // The instance level names the system; a contradicting URL is refused.
     let ok = validate_code(
         &registry,
         &instance(&registry, URL),
-        &CodeSystemValidateCodeRequest {
-            code: Some("cat".into()),
-            ..Default::default()
+        &ValidateCodeInput {
+            code: Some(String::from("cat")),
+            ..ValidateCodeInput::default()
         },
     )
     .expect("validates");
-    assert_eq!(ok.result.value, Some(true));
+    assert!(ok.result);
     let mismatch = validate_code(
         &registry,
         &instance(&registry, URL),
-        &CodeSystemValidateCodeRequest {
-            url: Some(FLAT_URL.into()),
-            code: Some("cat".into()),
-            ..Default::default()
+        &ValidateCodeInput {
+            url: Some(FLAT_URL.to_owned()),
+            code: Some(String::from("cat")),
+            ..ValidateCodeInput::default()
         },
     )
     .expect_err("refused");
