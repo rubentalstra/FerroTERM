@@ -9,4 +9,5 @@
 )]
 
 mod artifact;
+mod footprint;
 mod local_edition;
