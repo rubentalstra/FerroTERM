@@ -32,8 +32,12 @@ pub struct CodeSystemModel {
     pub url: String,
     /// `CodeSystem.version`, or an empty string when the resource has none.
     pub version: String,
+    /// `CodeSystem.name`.
+    pub name: Option<String>,
     /// `CodeSystem.title`, else `name`.
     pub title: Option<String>,
+    /// `CodeSystem.language`: the language of the displays.
+    pub language: Option<String>,
     /// `CodeSystem.content`.
     pub content: ContentMode,
     /// `CodeSystem.caseSensitive` (absent means case-sensitive comparison).

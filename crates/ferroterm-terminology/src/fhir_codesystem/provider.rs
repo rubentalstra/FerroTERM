@@ -122,6 +122,7 @@ impl FhirCodeSystem {
         let identity = Identity {
             url: model.url.clone(),
             version: model.version.clone(),
+            name: model.name.clone(),
             title: model.title.clone(),
             version_needed: model.version_needed,
         };
@@ -263,6 +264,10 @@ impl CodeSystemProvider for FhirCodeSystem {
 
     fn definition(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
         Ok(self.entry(concept).and_then(|c| c.definition.clone()))
+    }
+
+    fn language(&self) -> Option<&str> {
+        self.model.language.as_deref()
     }
 
     fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
@@ -436,9 +441,10 @@ fn build_hierarchy(
     }))
 }
 
-/// The distinct designation languages of `model`, sorted.
+/// The distinct languages of `model`, its own and its designations', sorted.
 fn languages_of(model: &CodeSystemModel) -> Vec<String> {
     let mut languages: BTreeSet<String> = BTreeSet::new();
+    languages.extend(model.language.clone());
     for concept in &model.concepts {
         for designation in &concept.designations {
             if let Some(language) = &designation.language {

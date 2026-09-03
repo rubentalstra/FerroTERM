@@ -114,31 +114,19 @@ pub fn code_system() -> Result<CodeSystemModel, DataError> {
             parents: Vec::new(),
         });
     }
-    let code_property = |code: &str, description: &str, kind: PropertyKind| PropertyDefinition {
-        code: code.to_owned(),
-        uri: None,
-        description: Some(description.to_owned()),
-        kind,
-    };
     Ok(CodeSystemModel {
         url: URL.to_owned(),
         version,
+        name: None,
         title: Some(String::from("ISO 3166-1 country codes")),
+        language: Some(String::from("en")),
         content: ContentMode::Complete,
         case_sensitive: false,
         hierarchy_meaning: None,
         compositional: false,
         version_needed: false,
         supplements: None,
-        properties: vec![
-            code_property("alpha3", "The ISO 3166-1 alpha-3 code", PropertyKind::Code),
-            code_property("numeric", "The ISO 3166-1 numeric code", PropertyKind::Code),
-            code_property(
-                "userAssigned",
-                "The code is in a user-assigned range",
-                PropertyKind::Boolean,
-            ),
-        ],
+        properties: property_definitions(),
         filters: vec![FilterDefinition {
             code: String::from("code"),
             description: Some(String::from("Codes matching a regular expression")),
@@ -151,6 +139,25 @@ pub fn code_system() -> Result<CodeSystemModel, DataError> {
         }],
         concepts,
     })
+}
+
+/// The three properties every code carries: `alpha3`, `numeric`, `userAssigned`.
+fn property_definitions() -> Vec<PropertyDefinition> {
+    let code_property = |code: &str, description: &str, kind: PropertyKind| PropertyDefinition {
+        code: code.to_owned(),
+        uri: None,
+        description: Some(description.to_owned()),
+        kind,
+    };
+    vec![
+        code_property("alpha3", "The ISO 3166-1 alpha-3 code", PropertyKind::Code),
+        code_property("numeric", "The ISO 3166-1 numeric code", PropertyKind::Code),
+        code_property(
+            "userAssigned",
+            "The code is in a user-assigned range",
+            PropertyKind::Boolean,
+        ),
+    ]
 }
 
 /// The ISO 3166-1 provider.

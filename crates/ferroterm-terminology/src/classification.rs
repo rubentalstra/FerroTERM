@@ -244,6 +244,7 @@ impl ClassificationProvider {
                 url: manifest.system,
                 version: manifest.version,
                 title: (!manifest.title.is_empty()).then_some(manifest.title),
+                name: None,
                 version_needed: false,
             },
             declaration: declaration(

@@ -342,6 +342,113 @@ fn a_supplement_layers_designations_and_properties_over_the_system() {
     assert_eq!(outcome.version.as_deref(), Some("2.0"));
 }
 
+fn take(providers: Vec<FhirCodeSystem>, url: &str) -> FhirCodeSystem {
+    providers
+        .into_iter()
+        .find(|p| p.identity().url == url)
+        .expect("system")
+}
+
+fn registry_of(provider: FhirCodeSystem) -> Registry {
+    let mut registry = Registry::new();
+    registry.register(Arc::new(provider)).expect("registers");
+    registry
+}
+
+fn lookup_cat(registry: &Registry, properties: &[&str]) -> lookup::LookupOutcome {
+    let input = lookup::LookupInput {
+        system: Some(ANIMALS.to_owned()),
+        code: Some(String::from("cat")),
+        properties: properties.iter().map(|p| (*p).to_owned()).collect(),
+        ..lookup::LookupInput::default()
+    };
+    lookup::lookup(registry, &Invocation::Type, &input).expect("looks up")
+}
+
+#[test]
+fn lookup_property_star_answers_parent_child_inactive_and_the_declared_properties() {
+    let (_dir, providers) = load_all();
+    let registry = registry_of(take(providers, ANIMALS));
+    let outcome = lookup_cat(&registry, &["*"]);
+    let properties: Vec<(&str, String)> = outcome
+        .properties
+        .iter()
+        .map(|p| (p.code.as_str(), p.value.as_text()))
+        .collect();
+    assert_eq!(
+        properties,
+        [
+            ("inactive", String::from("false")),
+            ("legs", String::from("4")),
+            ("parent", String::from("animal")),
+            ("child", String::from("kitten")),
+        ]
+    );
+    let named = lookup_cat(&registry, &["parent", "inactive"]);
+    let codes: Vec<&str> = named.properties.iter().map(|p| p.code.as_str()).collect();
+    assert_eq!(codes, ["inactive", "parent"]);
+    assert!(
+        named.designations.is_empty(),
+        "designations were not asked for"
+    );
+}
+
+#[test]
+fn lookup_answers_the_display_as_a_designation_in_the_system_language() {
+    let (_dir, providers) = load_all();
+    let registry = registry_of(take(providers, ANIMALS));
+    let outcome = lookup_cat(&registry, &[]);
+    assert_eq!(outcome.display, "Cat");
+    let display = outcome
+        .designations
+        .iter()
+        .find(|d| d.value == "Cat")
+        .expect("the display is a designation");
+    assert_eq!(display.language.as_deref(), Some("en"));
+    let use_ = display.use_.as_ref().expect("has a use");
+    assert_eq!(
+        (use_.system.as_str(), use_.code.as_str()),
+        (
+            "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+            "preferredForLanguage"
+        )
+    );
+    let values: Vec<&str> = outcome
+        .designations
+        .iter()
+        .map(|d| d.value.as_str())
+        .collect();
+    assert_eq!(values, ["Domestic cat", "Katze", "Cat"]);
+    let german = lookup_cat(&registry, &["lang.de"]);
+    let values: Vec<&str> = german
+        .designations
+        .iter()
+        .map(|d| d.value.as_str())
+        .collect();
+    assert_eq!(
+        values,
+        ["Katze"],
+        "lang.de keeps the German designations only"
+    );
+}
+
+#[test]
+fn lookup_name_is_the_code_system_name_then_the_title_then_the_url() {
+    let (_dir, providers) = load_all();
+    let animals = take(providers, ANIMALS);
+    let mut model = animals.model().clone();
+    assert_eq!(lookup_cat(&registry_of(animals), &[]).name, "Animals");
+    model.name = None;
+    let titled = FhirCodeSystem::new(model.clone()).expect("builds");
+    assert_eq!(
+        lookup_cat(&registry_of(titled), &[]).name,
+        "Animals (synthetic)"
+    );
+    model.title = None;
+    let bare = FhirCodeSystem::new(model).expect("builds");
+    assert_eq!(lookup_cat(&registry_of(bare), &[]).name, ANIMALS);
+}
+
 #[test]
 fn the_vendored_hl7_terminology_package_loads() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

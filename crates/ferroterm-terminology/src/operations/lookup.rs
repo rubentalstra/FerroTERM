@@ -8,12 +8,25 @@
 
 use super::{CodingRef, Invocation, OperationError, locate, resolve};
 use crate::language;
-use crate::provider::{CodeSystemProvider, Concept, Designation, Property, PropertyValue};
+use crate::provider::{
+    CodeSystemProvider, Concept, Designation, DesignationUse, Property, PropertyValue,
+};
 use crate::registry::Registry;
 
 /// The `$lookup` parameters `property` never repeats: they are output
 /// parameters of their own.
 const NAMED_ELSEWHERE: [&str; 6] = ["url", "system", "name", "version", "display", "designation"];
+
+/// The `property` value that asks for every property.
+const EVERY_PROPERTY: &str = "*";
+
+/// The designation use of the display, from HL7's terminology maintenance
+/// vocabulary (<https://terminology.hl7.org/CodeSystem-hl7TermMaintInfra.html>).
+const PREFERRED_FOR_LANGUAGE: (&str, &str, &str) = (
+    "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+    "preferredForLanguage",
+    "Preferred For Language",
+);
 
 /// The input of `$lookup`: `code` with `system` (and `version`), or `coding`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -28,7 +41,7 @@ pub struct LookupInput {
     pub coding: Option<CodingRef>,
     /// The language of the display (a BCP 47 range list).
     pub display_language: Option<String>,
-    /// The properties asked for; empty is every one.
+    /// The properties asked for; empty or `*` is every one.
     pub properties: Vec<String>,
     /// The supplements to apply (R5 `useSupplement`), by canonical.
     pub use_supplement: Vec<String>,
@@ -37,7 +50,7 @@ pub struct LookupInput {
 /// The outcome of `$lookup`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LookupOutcome {
-    /// The code system's name (its title, else its URI).
+    /// The code system's name, else its title, else its URI.
     pub name: String,
     /// The version served.
     pub version: Option<String>,
@@ -45,10 +58,54 @@ pub struct LookupOutcome {
     pub display: String,
     /// `definition`: the meaning of the concept, when the system states one.
     pub definition: Option<String>,
-    /// The designations, filtered by the `lang.x` properties asked for.
+    /// The designations, when asked for, filtered by the `lang.x` properties
+    /// asked for; the display is among them with its language.
     pub designations: Vec<Designation>,
     /// The properties asked for, `definition` among them when the concept has one.
     pub properties: Vec<Property>,
+}
+
+/// What the `property` parameters ask for.
+struct Asked<'a> {
+    /// Every property, designations included: nothing named, or `*`.
+    all: bool,
+    /// The property codes named.
+    names: Vec<&'a str>,
+    /// The designation languages named through `lang.X`.
+    languages: Vec<&'a str>,
+}
+
+impl<'a> Asked<'a> {
+    fn from(properties: &'a [String]) -> Self {
+        let names: Vec<&str> = properties.iter().map(String::as_str).collect();
+        Self {
+            all: names.is_empty() || names.contains(&EVERY_PROPERTY),
+            languages: names
+                .iter()
+                .filter_map(|p| p.strip_prefix("lang."))
+                .collect(),
+            names,
+        }
+    }
+
+    fn property(&self, code: &str) -> bool {
+        self.all || self.names.contains(&code)
+    }
+
+    // NOTE: the R4B `property` parameter lists `designation` and `lang.X` among
+    // the properties a client asks for, so naming other properties only leaves
+    // designations out (<https://hl7.org/fhir/R4B/codesystem-operation-lookup.html>).
+    fn designations(&self) -> bool {
+        self.all || self.names.contains(&"designation") || !self.languages.is_empty()
+    }
+
+    fn language(&self, designation: &Designation) -> bool {
+        self.languages.is_empty()
+            || designation
+                .language
+                .as_deref()
+                .is_some_and(|l| self.languages.iter().any(|w| l.eq_ignore_ascii_case(w)))
+    }
 }
 
 /// Runs `$lookup`.
@@ -101,26 +158,27 @@ pub fn lookup(
     let display = provider
         .display(concept, language.as_deref())?
         .unwrap_or_else(|| located.code.clone());
-    let wanted: Vec<&str> = input.properties.iter().map(String::as_str).collect();
-    let languages: Vec<&str> = wanted
-        .iter()
-        .filter_map(|p| p.strip_prefix("lang."))
-        .collect();
-    let designations = provider
-        .designations(concept, None)?
-        .into_iter()
-        .filter(|d| {
-            languages.is_empty()
-                || d.language
-                    .as_deref()
-                    .is_some_and(|l| languages.iter().any(|w| l.eq_ignore_ascii_case(w)))
-        })
-        .collect();
-    let properties = properties(provider.as_ref(), concept, &wanted)?;
+    let asked = Asked::from(&input.properties);
+    let designations = if asked.designations() {
+        let mut designations = provider.designations(concept, None)?;
+        if !designations.iter().any(|d| d.value == display) {
+            designations.push(display_designation(
+                provider.as_ref(),
+                language.as_deref(),
+                &display,
+            ));
+        }
+        designations.retain(|d| asked.language(d));
+        designations
+    } else {
+        Vec::new()
+    };
+    let properties = properties(provider.as_ref(), concept, &asked)?;
     Ok(LookupOutcome {
         name: identity
-            .title
+            .name
             .clone()
+            .or_else(|| identity.title.clone())
             .unwrap_or_else(|| identity.url.clone()),
         version: Some(identity.version.clone()),
         display,
@@ -130,17 +188,36 @@ pub fn lookup(
     })
 }
 
+/// The display as a designation: in the language chosen for it, else the
+/// system's own, marked preferred for that language.
+fn display_designation(
+    provider: &dyn CodeSystemProvider,
+    language: Option<&str>,
+    display: &str,
+) -> Designation {
+    let (system, code, use_display) = PREFERRED_FOR_LANGUAGE;
+    Designation {
+        language: language
+            .map(str::to_owned)
+            .or_else(|| provider.language().map(str::to_owned)),
+        use_: Some(DesignationUse {
+            system: String::from(system),
+            code: String::from(code),
+            display: Some(String::from(use_display)),
+        }),
+        value: display.to_owned(),
+    }
+}
+
 /// The properties asked for: `definition` first when the concept has one,
 /// then every provider property that is not an output parameter of its own.
 fn properties(
     provider: &dyn CodeSystemProvider,
     concept: Concept,
-    wanted: &[&str],
+    asked: &Asked<'_>,
 ) -> Result<Vec<Property>, OperationError> {
     let mut properties = Vec::new();
-    let all = wanted.is_empty();
-    let asked = |name: &str| all || wanted.contains(&name);
-    if asked("definition")
+    if asked.property("definition")
         && let Some(definition) = provider.definition(concept)?
     {
         properties.push(Property {
@@ -150,7 +227,7 @@ fn properties(
         });
     }
     for property in provider.properties(concept)? {
-        if NAMED_ELSEWHERE.contains(&property.code.as_str()) || !asked(&property.code) {
+        if NAMED_ELSEWHERE.contains(&property.code.as_str()) || !asked.property(&property.code) {
             continue;
         }
         properties.push(property);

@@ -44,6 +44,8 @@ pub struct Identity {
     pub url: String,
     /// The version string (`CodeSystem.version`).
     pub version: String,
+    /// The computer-friendly name (`CodeSystem.name`).
+    pub name: Option<String>,
     /// A human title (`CodeSystem.title`).
     pub title: Option<String>,
     /// Whether a version is needed to interpret a code (`CodeSystem.versionNeeded`).
@@ -454,6 +456,12 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// Returns [`ProviderError::Storage`] when the substrate fails.
     fn definition(&self, _concept: Concept) -> Result<Option<String>, ProviderError> {
         Ok(None)
+    }
+
+    /// The language of the system's own displays (`CodeSystem.language`),
+    /// when the system states one.
+    fn language(&self) -> Option<&str> {
+        None
     }
 
     /// Active or inactive, abstract or not.
