@@ -22,6 +22,7 @@ pub mod operations;
 pub mod provider;
 pub mod registries;
 pub mod registry;
+pub mod rxnorm;
 pub mod snomed;
 pub mod supplement;
 pub mod text_match;

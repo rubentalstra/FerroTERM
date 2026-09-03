@@ -18,6 +18,7 @@ use ferroterm_terminology::provider::{CodeSystemProvider, ContentMode, ProviderE
 use ferroterm_terminology::registries::ucum::provider::UcumProvider;
 use ferroterm_terminology::registries::{bcp13, bcp47, iso3166};
 use ferroterm_terminology::registry::{RegisterError, Registry, Resolved};
+use ferroterm_terminology::rxnorm::{self, RxNormProvider};
 use ferroterm_terminology::snomed::{self, OpenError, SnomedProvider};
 use ferroterm_terminology::supplement::{Additions, Supplement, Supplemented};
 use ferroterm_terminology::valueset;
@@ -48,6 +49,15 @@ pub enum LoadError {
         /// The cause.
         #[source]
         source: Box<loinc::OpenError>,
+    },
+    /// An `RxNorm` artifact directory does not open.
+    #[error("cannot open the RxNorm artifact at {path}")]
+    OpenRxNorm {
+        /// The directory.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: Box<rxnorm::OpenError>,
     },
     /// A classification artifact directory does not open.
     #[error("cannot open the classification artifact at {path}")]
@@ -178,45 +188,9 @@ impl AppState {
     pub fn load(config: &Config) -> Result<Self, LoadError> {
         let mut loaded = Vec::new();
         for path in &config.index {
-            let described = artifact::describe(path).map_err(|source| LoadError::Artifact {
-                path: path.clone(),
-                source,
-            })?;
-            let system = described.system;
-            let provider: Arc<dyn CodeSystemProvider> =
-                match system.as_str() {
-                    snomed::SYSTEM => Arc::new(
-                        SnomedProvider::open(path, &config.default_language).map_err(|source| {
-                            LoadError::Open {
-                                path: path.clone(),
-                                source: Box::new(source),
-                            }
-                        })?,
-                    ),
-                    loinc::SYSTEM => Arc::new(LoincProvider::open(path).map_err(|source| {
-                        LoadError::OpenLoinc {
-                            path: path.clone(),
-                            source: Box::new(source),
-                        }
-                    })?),
-                    _ if described.kind.as_deref() == Some(classification::KIND) => {
-                        Arc::new(ClassificationProvider::open(path).map_err(|source| {
-                            LoadError::OpenClassification {
-                                path: path.clone(),
-                                source: Box::new(source),
-                            }
-                        })?)
-                    }
-                    other => {
-                        return Err(LoadError::UnknownArtifact {
-                            path: path.clone(),
-                            system: other.to_owned(),
-                        });
-                    }
-                };
             loaded.push(Loaded {
                 path: path.clone(),
-                provider,
+                provider: open_artifact(path, config)?,
             });
         }
         // NOTE: the registry systems ship with the server, so a validator finds BCP 47,
@@ -578,6 +552,55 @@ pub fn instance_id(url: &str, version: &str) -> String {
     }
     let trimmed = id.trim_end_matches('-');
     trimmed.chars().take(64).collect()
+}
+
+/// Opens the artifact directory `path` with the provider its manifest calls
+/// for: SNOMED CT, LOINC, and `RxNorm` by system, a classification by kind.
+fn open_artifact(path: &Path, config: &Config) -> Result<Arc<dyn CodeSystemProvider>, LoadError> {
+    let described = artifact::describe(path).map_err(|source| LoadError::Artifact {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    Ok(match described.system.as_str() {
+        snomed::SYSTEM => Arc::new(
+            SnomedProvider::open(path, &config.default_language).map_err(|source| {
+                LoadError::Open {
+                    path: path.to_path_buf(),
+                    source: Box::new(source),
+                }
+            })?,
+        ),
+        loinc::SYSTEM => {
+            Arc::new(
+                LoincProvider::open(path).map_err(|source| LoadError::OpenLoinc {
+                    path: path.to_path_buf(),
+                    source: Box::new(source),
+                })?,
+            )
+        }
+        rxnorm::SYSTEM => {
+            Arc::new(
+                RxNormProvider::open(path).map_err(|source| LoadError::OpenRxNorm {
+                    path: path.to_path_buf(),
+                    source: Box::new(source),
+                })?,
+            )
+        }
+        _ if described.kind.as_deref() == Some(classification::KIND) => {
+            Arc::new(ClassificationProvider::open(path).map_err(|source| {
+                LoadError::OpenClassification {
+                    path: path.to_path_buf(),
+                    source: Box::new(source),
+                }
+            })?)
+        }
+        other => {
+            return Err(LoadError::UnknownArtifact {
+                path: path.to_path_buf(),
+                system: other.to_owned(),
+            });
+        }
+    })
 }
 
 #[cfg(test)]

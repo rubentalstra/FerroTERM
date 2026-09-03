@@ -25,6 +25,15 @@ fn main() -> anyhow::Result<()> {
             report.words,
             cli.out.display()
         ),
+        ferroterm_build::Report::RxNorm(report) => println!(
+            "RxNorm {}: {} concepts, {} atoms, {} relationships, {} words, written to {}",
+            report.version,
+            report.concepts,
+            report.atoms,
+            report.relationships,
+            report.words,
+            cli.out.display()
+        ),
         ferroterm_build::Report::Classification(report) => println!(
             "{} {}: {} concepts, {} designations, {} words, written to {}",
             report.system,

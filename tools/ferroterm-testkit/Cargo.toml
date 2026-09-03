@@ -16,6 +16,7 @@ ferroterm-classification.workspace = true
 ferroterm-graph.workspace = true
 ferroterm-loinc.workspace = true
 ferroterm-rf2.workspace = true
+ferroterm-rrf.workspace = true
 ferroterm-store.workspace = true
 ferroterm-text.workspace = true
 serde_json.workspace = true

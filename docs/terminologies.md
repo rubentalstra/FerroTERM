@@ -309,6 +309,24 @@ engine. Each row is a tracker issue under the program issue.
   with `=` or `in`; no implicit value sets beyond `/vs` (all CUIs); lookup
   properties "yet to be done" in the specification, so any FerroTERM exposes are
   our own design and marked so.
+- **Served.** `ferroterm-build --rxnorm <RxNorm_full_prescribe_MMDDYYYY.zip|dir>
+  [--rxnorm-version <MMDDYYYY>] [--rxnorm-sources <SAB,...>]` reads the `RRF`
+  tables streaming (`RXNCONSO`, `RXNREL`, `RXNSAT`, and `RXNSTY` when the
+  release has it): the RXCUIs with an `RXNORM` atom are the codes, the
+  `RXNORM` string of the most preferred term type (`SCD`, `SBD`, then the
+  packs, groups, forms, components, ingredients, brand names, dose forms) is
+  the display, every atom of the kept sources is a designation with its term
+  type as the use, and `TTY`, `SAB`, `STY`, and the `RXNORM` attributes
+  (`NDC`, `RXN_AVAILABLE_STRENGTH`, ...) are properties. The `RXNORM`
+  relationships are typed edges in both directions (`relations.bin`), the atom
+  identifiers a table (`atoms.bin`), so `has_ingredient = CUI:1191` and the
+  other `REL` and `RELA` filters answer by index and `AUI:` values resolve.
+  Only the unrestricted sources (`RXNORM`, `MTHSPL`) are kept unless
+  `--rxnorm-sources` names the licensed ones a full release carries. The
+  prescribable subset (September 2026) builds in 11 s into 81,468 concepts and
+  1.13 million edges; `$lookup` of an ingredient with hundreds of relationships
+  answers in under 1 ms once the codes are held in memory.
+
 
 ## BCP 47, BCP 13, ISO 3166
 

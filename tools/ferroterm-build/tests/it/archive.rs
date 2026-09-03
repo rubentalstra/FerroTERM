@@ -67,6 +67,9 @@ fn a_release_zip_builds_the_same_bytes_as_the_directory() {
         system: None,
         claml_version: None,
         icd10cm: Vec::new(),
+        rxnorm: None,
+        rxnorm_version: None,
+        rxnorm_sources: Vec::new(),
         out: from_dir.path().to_path_buf(),
     })
     .expect("builds from the directory");
@@ -78,6 +81,9 @@ fn a_release_zip_builds_the_same_bytes_as_the_directory() {
         system: None,
         claml_version: None,
         icd10cm: Vec::new(),
+        rxnorm: None,
+        rxnorm_version: None,
+        rxnorm_sources: Vec::new(),
         out: from_zip.path().to_path_buf(),
     })
     .expect("builds from the zip");
@@ -127,6 +133,9 @@ fn only_the_snapshot_is_unpacked_and_a_zip_without_one_is_refused() {
             system: None,
             claml_version: None,
             icd10cm: Vec::new(),
+            rxnorm: None,
+            rxnorm_version: None,
+            rxnorm_sources: Vec::new(),
             out: out.path().to_path_buf(),
         }),
         Err(RunError::Archive(_))

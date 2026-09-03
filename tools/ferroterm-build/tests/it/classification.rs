@@ -205,6 +205,9 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
         system: Some(CLAML_SYSTEM.to_owned()),
         claml_version: Some(String::from("2022")),
         icd10cm: Vec::new(),
+        rxnorm: None,
+        rxnorm_version: None,
+        rxnorm_sources: Vec::new(),
         out: out.path().to_path_buf(),
     })
     .expect("builds");
@@ -236,6 +239,9 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
         system: None,
         claml_version: None,
         icd10cm: vec![tables_zip, order_zip.clone()],
+        rxnorm: None,
+        rxnorm_version: None,
+        rxnorm_sources: Vec::new(),
         out: out.path().to_path_buf(),
     })
     .expect("builds from two zips");
@@ -254,6 +260,9 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
                 system: None,
                 claml_version: None,
                 icd10cm: vec![order_zip],
+                rxnorm: None,
+                rxnorm_version: None,
+                rxnorm_sources: Vec::new(),
                 out: out.path().to_path_buf(),
             }),
             Err(ferroterm_build::RunError::Icd10cm(_))

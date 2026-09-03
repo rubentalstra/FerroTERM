@@ -110,3 +110,20 @@ $ ferroterm-build --icd10cm 2026-code-descriptions-tabular-order.zip \
 Codes come out with the period (`A00.0`, `S02.0XXA`); chapters are named by
 their range (`A00-B99`); the order file's header flag is the `valid`
 property. Point `FERROTERM_INDEX` at each directory as for LOINC.
+
+## Loading RxNorm
+
+The "Current Prescribable Content" subset needs no licence
+(<https://www.nlm.nih.gov/research/umls/rxnorm/docs/prescribe.html>); the
+full monthly release needs a UMLS licence. Both have the same shape:
+
+```console
+$ ferroterm-build --rxnorm RxNorm_full_prescribe_09082026.zip --out /path/to/rxnorm-index
+```
+
+The version is the release date from the readme inside the zip (`09082026`);
+pass `--rxnorm-version` when the release has none. The build keeps the names
+of the unrestricted sources (`RXNORM`, `MTHSPL`). A full release carries
+sources the UMLS licence restricts by category; name the ones your licence
+covers with `--rxnorm-sources MSH,VANDF` to serve their names too. Point
+`FERROTERM_INDEX` at the directory as for LOINC.

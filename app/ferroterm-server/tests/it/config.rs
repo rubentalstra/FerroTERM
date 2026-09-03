@@ -222,3 +222,22 @@ fn a_classification_artifact_is_served_by_its_manifest_kind() {
     );
     assert_eq!(cm_summary.concepts, Some(12));
 }
+
+#[test]
+fn an_rxnorm_artifact_is_served_beside_the_others() {
+    let rxnorm = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::rxnorm::write_artifact(rxnorm.path()).expect("builds");
+    let config = Config {
+        index: vec![rxnorm.path().to_path_buf()],
+        ..Config::default()
+    };
+    let state = AppState::load(&config).expect("loads");
+    let summary = state
+        .summaries()
+        .expect("summarises")
+        .into_iter()
+        .find(|s| s.url == "http://www.nlm.nih.gov/research/umls/rxnorm")
+        .expect("rxnorm");
+    assert_eq!(summary.version, ferroterm_testkit::rxnorm::VERSION);
+    assert_eq!(summary.concepts, Some(6));
+}
