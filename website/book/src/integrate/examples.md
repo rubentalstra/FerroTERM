@@ -1,6 +1,6 @@
 # Worked examples
 
-The requests below were sent to v0.0.6 serving the public ICD-10-CM FY2026
+The requests below were sent to v0.0.7 serving the public ICD-10-CM FY2026
 release, the RxNorm prescribable subset, and the built-in UCUM; the responses
 are what the server returned, trimmed only where marked. Substitute the code
 system you load.

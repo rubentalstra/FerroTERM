@@ -43,3 +43,5 @@ der2_*
 
 # The image build context: binaries staged by the release lane, never committed.
 /dist/
+# The rendered book (mdbook build-dir); .github/workflows/docs.yml renders it.
+/website/book/book/
