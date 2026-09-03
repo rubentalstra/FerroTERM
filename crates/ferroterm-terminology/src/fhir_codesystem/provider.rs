@@ -91,7 +91,10 @@ impl FhirCodeSystem {
     /// # Errors
     ///
     /// Returns [`BuildError`] for a cyclic hierarchy or too many concepts.
-    pub fn new(model: CodeSystemModel) -> Result<Self, BuildError> {
+    pub fn new(mut model: CodeSystemModel) -> Result<Self, BuildError> {
+        // NOTE: no FHIR spec fixes an expansion order; concepts are numbered in code
+        // order so paging over ordinals is paging over codes, as for every built system.
+        model.concepts.sort_by(|a, b| a.code.cmp(&b.code));
         let count = u32::try_from(model.concepts.len()).map_err(|_| BuildError::TooMany {
             url: model.url.clone(),
         })?;

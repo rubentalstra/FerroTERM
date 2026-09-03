@@ -42,8 +42,10 @@ in the commit/PR for any conformance-relevant decision.
 - **[F-EXP-1]** Honour `count` and `offset`; populate `expansion.total` when
   computable (for SNOMED implicit sets it is, include it); echo
   `expansion.offset`. Ordering is **deterministic** across calls so paging is
-  stable; make the order explicit (by code, then evaluation order), never store
-  iteration order.
+  stable; the order is by system, version, then the provider's concept order
+  (the ordinal the build assigns from sorted codes), never an incidental
+  iteration order, and a page is cut from the selection bitmaps before any
+  concept is read.
 - **[F-EXP-2]** Echo every effective parameter in `expansion.parameter`,
   including assumed defaults and the resolved code-system version(s) used.
 - **[F-EXP-3]** Honour `filter` (text search over designations), `activeOnly`

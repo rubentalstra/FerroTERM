@@ -13,6 +13,7 @@
 use std::collections::BTreeSet;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use ferroterm_graph::csr::{Csr, CsrError};
 use ferroterm_graph::members::{MembersError, Memberships};
@@ -189,6 +190,8 @@ pub struct SnomedProvider {
     hierarchy: SnomedHierarchy,
     text: TextIndex,
     memberships: Memberships,
+    /// The inactive concepts, read once on the first request that needs them.
+    inactive: OnceLock<ConceptSet>,
     identity: Identity,
     declaration: Declaration,
     keys: Keys,
@@ -286,6 +289,7 @@ impl SnomedProvider {
             hierarchy: SnomedHierarchy { graph, children },
             text,
             memberships,
+            inactive: OnceLock::new(),
             identity: Identity {
                 url: SYSTEM.to_owned(),
                 version: manifest.version,
@@ -704,6 +708,22 @@ impl CodeSystemProvider for SnomedProvider {
 
     fn hierarchy(&self) -> Option<&dyn Hierarchy> {
         Some(&self.hierarchy)
+    }
+
+    /// The inactive concepts, scanned once from the store and kept.
+    fn inactive(&self) -> Result<ConceptSet, ProviderError> {
+        if let Some(set) = self.inactive.get() {
+            return Ok(set.clone());
+        }
+        let mut set = ConceptSet::new();
+        for index in 0..self.concepts {
+            if let Some(record) = self.store.concept(Ordinal::new(index)).map_err(storage)?
+                && !record.active
+            {
+                set.insert(index);
+            }
+        }
+        Ok(self.inactive.get_or_init(|| set).clone())
     }
 
     /// `concept in [sctid]` is reference set membership

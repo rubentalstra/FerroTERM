@@ -4,8 +4,11 @@
 //! and a concept appears once per system, version, and code
 //! (<https://hl7.org/fhir/R4B/valueset.html#compositions>,
 //! <https://hl7.org/fhir/R5/valueset.html#union-intersection>). Order is by
-//! system, version, then code: no version fixes an expansion order, so this
-//! is our own design, chosen so paging is a stable partition.
+//! system, version, then the provider's concept order (the ordinal the build
+//! assigns from sorted codes): no version fixes an expansion order, so this is
+//! our own design, chosen so paging is a stable partition that costs nothing to
+//! cut. Includes and excludes are bitmap algebra; only the page asked for is
+//! read from the store.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -106,7 +109,8 @@ pub struct Expansion {
     pub total: u64,
     /// The offset of this page.
     pub offset: usize,
-    /// The entries of this page, ordered by system, version, code.
+    /// The entries of this page, ordered by system, version, then the
+    /// provider's concept order.
     pub items: Vec<Item>,
     /// The system versions used.
     pub versions: Vec<UsedVersion>,
@@ -182,7 +186,21 @@ pub enum ComposeError {
     Cycle(String),
 }
 
-type Key = (String, String, String);
+/// A system URL and the version served.
+type SelectionKey = (String, String);
+
+/// One system version's part of an expansion: the concepts selected so far
+/// and the displays the compose fixes for enumerated concepts.
+struct Selection {
+    provider: Arc<dyn CodeSystemProvider>,
+    set: ConceptSet,
+    overrides: BTreeMap<u32, String>,
+}
+
+/// Sets at most this large check activity concept by concept; larger ones
+/// subtract the provider's inactive set, which a system that cannot
+/// enumerate never has to produce.
+const STATUS_SCAN_LIMIT: u64 = 1024;
 
 /// Expands composes over a registry.
 #[derive(Debug)]
@@ -217,30 +235,57 @@ impl<'a> Expander<'a> {
     /// Returns [`ComposeError`] for an invalid compose, an unknown system,
     /// version, or code, or a provider failure.
     pub fn expand(&self, compose: &Compose, options: &Options) -> Result<Expansion, ComposeError> {
-        let mut selected: BTreeMap<Key, Item> = BTreeMap::new();
+        let mut selections: BTreeMap<SelectionKey, Selection> = BTreeMap::new();
         let mut versions: Vec<UsedVersion> = Vec::new();
         for include in &compose.include {
-            for (key, item) in self.evaluate(include, options, &mut versions)? {
-                selected.entry(key).or_insert(item);
+            for (key, part) in self.evaluate(include, options, &mut versions)? {
+                match selections.get_mut(&key) {
+                    Some(existing) => {
+                        existing.set |= &part.set;
+                        for (ordinal, display) in part.overrides {
+                            existing.overrides.entry(ordinal).or_insert(display);
+                        }
+                    }
+                    None => {
+                        selections.insert(key, part);
+                    }
+                }
             }
         }
         for exclude in &compose.exclude {
-            for key in self.evaluate(exclude, options, &mut versions)?.into_keys() {
-                selected.remove(&key);
+            for (key, part) in self.evaluate(exclude, options, &mut versions)? {
+                if let Some(existing) = selections.get_mut(&key) {
+                    existing.set -= &part.set;
+                }
             }
         }
         // NOTE: compose.inactive = false is a floor activeOnly cannot lift, and
         // activeOnly removes inactive codes a compose admits
         // (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, activeOnly).
         if options.active_only || compose.inactive == Some(false) {
-            selected.retain(|_, item| !item.inactive);
+            for ((url, _), selection) in &mut selections {
+                drop_inactive(url, selection)?;
+            }
         }
-        let total = u64::try_from(selected.len()).unwrap_or(u64::MAX);
-        let items = selected
-            .into_values()
-            .skip(options.offset)
-            .take(options.count.unwrap_or(usize::MAX))
-            .collect();
+        let total = selections.values().map(|s| s.set.len()).sum();
+        let mut items = Vec::new();
+        let mut skip = options.offset;
+        let mut remaining = options.count.unwrap_or(usize::MAX);
+        for ((url, version), selection) in &selections {
+            if remaining == 0 {
+                break;
+            }
+            let len = usize::try_from(selection.set.len()).unwrap_or(usize::MAX);
+            if skip >= len {
+                skip = skip.saturating_sub(len);
+                continue;
+            }
+            for index in selection.set.iter().skip(skip).take(remaining) {
+                items.push(materialize(url, version, selection, index, options)?);
+            }
+            remaining = remaining.saturating_sub(len.saturating_sub(skip));
+            skip = 0;
+        }
         versions.sort_by(|a, b| (&a.url, &a.version).cmp(&(&b.url, &b.version)));
         versions.dedup_by(|a, b| a.url == b.url && a.version == b.version);
         Ok(Expansion {
@@ -251,12 +296,13 @@ impl<'a> Expander<'a> {
         })
     }
 
+    /// The selections one include (or exclude) makes, by system version.
     fn evaluate(
         &self,
         include: &Include,
         options: &Options,
         versions: &mut Vec<UsedVersion>,
-    ) -> Result<BTreeMap<Key, Item>, ComposeError> {
+    ) -> Result<BTreeMap<SelectionKey, Selection>, ComposeError> {
         if include.system.is_none() {
             if include.value_sets.is_empty() {
                 return Err(ComposeError::NoSystemOrValueSet);
@@ -268,7 +314,7 @@ impl<'a> Expander<'a> {
         if !include.concepts.is_empty() && !include.filters.is_empty() {
             return Err(ComposeError::ConceptsAndFilters);
         }
-        let mut items: Option<BTreeMap<Key, Item>> = None;
+        let mut parts: Option<BTreeMap<SelectionKey, Selection>> = None;
         if let Some(system) = &include.system {
             let resolved = self
                 .registry
@@ -281,52 +327,29 @@ impl<'a> Expander<'a> {
                 defaulted: resolved.defaulted,
             });
             let set = Self::select(provider, include, options)?;
-            let mut selected = BTreeMap::new();
-            for index in set {
-                let concept = Concept::new(index);
-                let Some(code) =
+            let mut overrides = BTreeMap::new();
+            for concept in include.concepts.iter().filter(|c| c.display.is_some()) {
+                let located =
                     provider
-                        .code(concept)
+                        .locate(&concept.code)
                         .map_err(|source| ComposeError::Provider {
                             system: identity.url.clone(),
                             source,
-                        })?
-                else {
-                    continue;
-                };
-                let overridden = include
-                    .concepts
-                    .iter()
-                    .find(|c| c.code == code)
-                    .and_then(|c| c.display.clone());
-                let display = match overridden {
-                    Some(display) => Some(display),
-                    None => provider
-                        .display(concept, options.language.as_deref())
-                        .map_err(|source| ComposeError::Provider {
-                            system: identity.url.clone(),
-                            source,
-                        })?,
-                };
-                let status = provider
-                    .status(concept)
-                    .map_err(|source| ComposeError::Provider {
-                        system: identity.url.clone(),
-                        source,
-                    })?;
-                selected.insert(
-                    (identity.url.clone(), identity.version.clone(), code.clone()),
-                    Item {
-                        system: identity.url.clone(),
-                        version: identity.version.clone(),
-                        code,
-                        display,
-                        inactive: !status.active,
-                        abstract_concept: status.abstract_concept,
-                    },
-                );
+                        })?;
+                if let (Some(located), Some(display)) = (located, &concept.display) {
+                    overrides.insert(located.concept.index(), display.clone());
+                }
             }
-            items = Some(selected);
+            let mut selected = BTreeMap::new();
+            selected.insert(
+                (identity.url.clone(), identity.version.clone()),
+                Selection {
+                    provider: Arc::clone(provider),
+                    set,
+                    overrides,
+                },
+            );
+            parts = Some(selected);
         }
         // NOTE: several value sets in one include intersect, "in all the referenced
         // value sets" (<https://hl7.org/fhir/R4B/valueset.html#compositions>,
@@ -335,26 +358,62 @@ impl<'a> Expander<'a> {
             let resolver = self
                 .resolver
                 .ok_or_else(|| ComposeError::NoResolver(url.clone()))?;
-            let expansion = resolver.expand(url)?;
-            let referenced: BTreeMap<Key, Item> = expansion
-                .items
-                .into_iter()
-                .map(|item| {
-                    (
-                        (item.system.clone(), item.version.clone(), item.code.clone()),
-                        item,
-                    )
-                })
-                .collect();
-            items = Some(match items {
+            let referenced = self.selections_of(resolver.expand(url)?)?;
+            parts = Some(match parts {
                 None => referenced,
                 Some(current) => current
                     .into_iter()
-                    .filter(|(key, _)| referenced.contains_key(key))
+                    .filter_map(|(key, mut selection)| {
+                        let other = referenced.get(&key)?;
+                        selection.set &= &other.set;
+                        Some((key, selection))
+                    })
                     .collect(),
             });
         }
-        Ok(items.unwrap_or_default())
+        Ok(parts.unwrap_or_default())
+    }
+
+    /// A referenced value set's expansion as selections, its items located
+    /// in their systems, its displays kept as overrides.
+    fn selections_of(
+        &self,
+        expansion: Expansion,
+    ) -> Result<BTreeMap<SelectionKey, Selection>, ComposeError> {
+        let mut selections: BTreeMap<SelectionKey, Selection> = BTreeMap::new();
+        for item in expansion.items {
+            let key = (item.system.clone(), item.version.clone());
+            if !selections.contains_key(&key) {
+                let resolved = self.registry.resolve(&item.system, Some(&item.version))?;
+                selections.insert(
+                    key.clone(),
+                    Selection {
+                        provider: Arc::clone(&resolved.provider),
+                        set: ConceptSet::new(),
+                        overrides: BTreeMap::new(),
+                    },
+                );
+            }
+            let Some(selection) = selections.get_mut(&key) else {
+                continue;
+            };
+            let located = selection
+                .provider
+                .locate(&item.code)
+                .map_err(|source| ComposeError::Provider {
+                    system: item.system.clone(),
+                    source,
+                })?
+                .ok_or_else(|| ComposeError::UnknownCode {
+                    system: item.system.clone(),
+                    code: item.code.clone(),
+                })?;
+            selection.set.insert(located.concept.index());
+            if let Some(display) = item.display {
+                selection.overrides.insert(located.concept.index(), display);
+            }
+        }
+        Ok(selections)
     }
 
     fn select(
@@ -394,6 +453,73 @@ impl<'a> Expander<'a> {
         }
         Ok(set)
     }
+}
+
+/// Removes the inactive concepts from `selection`: concept by concept for a
+/// small set, by the provider's inactive set for a large one.
+fn drop_inactive(url: &str, selection: &mut Selection) -> Result<(), ComposeError> {
+    let failed = |source: ProviderError| ComposeError::Provider {
+        system: url.to_owned(),
+        source,
+    };
+    if selection.set.len() > STATUS_SCAN_LIMIT {
+        match selection.provider.inactive() {
+            Ok(inactive) => {
+                selection.set -= &inactive;
+                return Ok(());
+            }
+            Err(ProviderError::NotEnumerable) => {}
+            Err(source) => return Err(failed(source)),
+        }
+    }
+    let mut inactive = ConceptSet::new();
+    for index in &selection.set {
+        if !selection
+            .provider
+            .status(Concept::new(index))
+            .map_err(&failed)?
+            .active
+        {
+            inactive.insert(index);
+        }
+    }
+    selection.set -= inactive;
+    Ok(())
+}
+
+/// The item for the concept at `index` of `selection`.
+fn materialize(
+    url: &str,
+    version: &str,
+    selection: &Selection,
+    index: u32,
+    options: &Options,
+) -> Result<Item, ComposeError> {
+    let failed = |source: ProviderError| ComposeError::Provider {
+        system: url.to_owned(),
+        source,
+    };
+    let concept = Concept::new(index);
+    let provider = &selection.provider;
+    let code = provider
+        .code(concept)
+        .map_err(&failed)?
+        .unwrap_or_else(|| index.to_string());
+    let display = match selection.overrides.get(&index) {
+        Some(display) => Some(display.clone()),
+        None => provider
+            .display(concept, options.language.as_deref())
+            .map_err(&failed)?,
+    };
+    let status = provider.status(concept).map_err(&failed)?;
+    Ok(Item {
+        system: url.to_owned(),
+        version: version.to_owned(),
+        code,
+        display,
+        inactive: !status.active,
+        abstract_concept: status.abstract_concept,
+    })
 }
 
 impl Expander<'_> {

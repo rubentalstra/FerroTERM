@@ -36,6 +36,19 @@ fresh link reference.
   `description` and `subproperty` parts, and a `uri` value.
 
 
+### Changed
+
+- `ValueSet/$expand` pages before it reads: includes and excludes are bitmap
+  algebra per code system version, `total` is the bitmap count, and only the
+  `count` members after `offset` are read from the store. The order within a
+  system is the provider's concept order (the ordinal the build assigns from
+  sorted codes; a FHIR `CodeSystem` resource's concepts are numbered in code
+  order too) instead of a string sort of the codes, so a page over 133,736
+  SNOMED CT descendants answers in 0.6 ms instead of a second, the whole Dutch
+  edition in 3 ms instead of four seconds. `activeOnly` over a large set
+  subtracts the provider's inactive set, which SNOMED CT reads once from the
+  store (0.4 s) and keeps.
+
 ## [0.0.6] - 2026-09-03
 
 The ICD-10 and RxNorm release: a ClaML classification (WHO ICD-10, ICD-10-NL,

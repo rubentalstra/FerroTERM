@@ -51,7 +51,7 @@ bitset would need.
 Size the disk for the indexes you load; the table above gives the shape. The
 offline build is the CPU-heavy step, once per release, in `ferroterm-build`.
 Serving is a point read or a bitmap operation, so a modest CPU handles it: a
-2 to 4 GB box with two cores serves an edition beside other services. A large
-`$expand` that materializes a big set is the exception; paging it is the
-client's side of the bargain, and the server's side is tracked on the
-performance issues.
+2 to 4 GB box with two cores serves an edition beside other services. A paged
+`$expand` is cut from the bitmaps before any concept is read, so a page of
+ten out of 133,736 descendants costs the same as a page of ten out of ten;
+an unpaged expansion beyond 1,000 members is refused with `too-costly`.
