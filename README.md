@@ -20,7 +20,7 @@ The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration,
 so the first call needs nothing beyond Docker:
 
 ```console
-$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.0.7
+$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.0.8
 $ curl 'http://localhost:8080/r4b/CodeSystem/$lookup?system=http://unitsofmeasure.org&code=mg/dL'
 ```
 
@@ -96,8 +96,6 @@ roadmap, listed on the tracker).
 
 The tracker's milestones are the roadmap:
 
-- **v0.0.8**: ECL 2.2, parsed from the official grammar and evaluated as set
-  algebra over the closure, behind `?fhir_vs=ecl/` and the `constraint` filter.
 - **v0.0.9**: R4, R5, and R6 endpoints from the generated per-version modules,
   and the XML wire format.
 - **v0.0.10**: hierarchical `$expand`, persisted client resources, `Bundle`

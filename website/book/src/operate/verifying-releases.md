@@ -27,10 +27,10 @@ platform.
 ## Verify the provenance
 
 ```console
-$ gh attestation verify ferroterm-v0.0.7-x86_64-unknown-linux-musl.tar.gz \
+$ gh attestation verify ferroterm-v0.0.8-x86_64-unknown-linux-musl.tar.gz \
     -R rubentalstra/FerroTERM \
     --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
-$ gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:0.0.7 \
+$ gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:0.0.8 \
     -R rubentalstra/FerroTERM \
     --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-image.yml
 ```
@@ -44,7 +44,7 @@ identity is not reachable by user build steps.
 ## Check the checksum
 
 ```console
-$ sha256sum -c ferroterm-v0.0.7-x86_64-unknown-linux-musl.tar.gz.sha256sum
+$ sha256sum -c ferroterm-v0.0.8-x86_64-unknown-linux-musl.tar.gz.sha256sum
 ```
 
 Run both checks. The checksum tells you the bytes are intact, and the

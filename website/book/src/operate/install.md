@@ -12,7 +12,7 @@ system is an index you build from a release you are licensed for
 ## The first call, with nothing to load
 
 ```console
-$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.0.7
+$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.0.8
 $ curl 'http://localhost:8080/r4b/CodeSystem/$lookup?system=http://unitsofmeasure.org&code=mg/dL'
 ```
 
@@ -62,7 +62,7 @@ a numeric non-root user (`65532`), and the listen address preset to
 $ docker run --rm -p 8080:8080 \
     -v /path/to/ferroterm-index:/data/index:ro \
     -e FERROTERM_INDEX=/data/index \
-    ghcr.io/rubentalstra/ferroterm:0.0.7
+    ghcr.io/rubentalstra/ferroterm:0.0.8
 ```
 
 Mount the index read-only. The server writes nothing while serving, so the
@@ -71,7 +71,7 @@ container runs with a read-only root filesystem. Tags are `<version>`,
 provenance first (see [Verifying releases](verifying-releases.md)):
 
 ```console
-$ gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:0.0.7 \
+$ gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:0.0.8 \
     -R rubentalstra/FerroTERM \
     --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-image.yml
 ```
@@ -88,10 +88,10 @@ musl) holding `ferroterm` and `ferroterm-build`, with a checksum, a CycloneDX
 SBOM, and Sigstore attestations beside it. Download, verify, unpack, run:
 
 ```console
-$ gh release download v0.0.7 -R rubentalstra/FerroTERM -p 'ferroterm-v0.0.7-x86_64-unknown-linux-musl.tar.gz*'
-$ gh attestation verify ferroterm-v0.0.7-x86_64-unknown-linux-musl.tar.gz -R rubentalstra/FerroTERM \
+$ gh release download v0.0.8 -R rubentalstra/FerroTERM -p 'ferroterm-v0.0.8-x86_64-unknown-linux-musl.tar.gz*'
+$ gh attestation verify ferroterm-v0.0.8-x86_64-unknown-linux-musl.tar.gz -R rubentalstra/FerroTERM \
     --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
-$ tar xzf ferroterm-v0.0.7-x86_64-unknown-linux-musl.tar.gz
+$ tar xzf ferroterm-v0.0.8-x86_64-unknown-linux-musl.tar.gz
 $ FERROTERM_INDEX=/path/to/ferroterm-index ./ferroterm
 ```
 

@@ -67,7 +67,7 @@ clinical data repository by the same author. FerroTERM is independent of it.
 
 ## What is not built yet
 
-The build order is the tracker's milestones. As of v0.0.7:
+The build order is the tracker's milestones. As of v0.0.8:
 
 - Post-coordinated SNOMED expressions (`expressions = true`) and the implicit
   concept maps (`?fhir_cm=`) are v0.0.10; ECL and every implicit value set
