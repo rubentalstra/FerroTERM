@@ -155,6 +155,10 @@ impl CodeSystemProvider for Supplemented {
         self.inner.language()
     }
 
+    fn standing(&self) -> crate::provider::Standing {
+        self.inner.standing()
+    }
+
     fn definition(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
         self.inner.definition(concept)
     }

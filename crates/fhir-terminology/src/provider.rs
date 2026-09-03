@@ -214,6 +214,28 @@ pub struct Located {
     pub code: String,
 }
 
+/// The standing of a code system as a resource: its publication status and
+/// the terminology ecosystem's notes on referencing it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Standing {
+    /// `CodeSystem.status` (`draft`, `active`, `retired`, `unknown`).
+    pub status: String,
+    /// `CodeSystem.experimental`.
+    pub experimental: bool,
+    /// The `structuredefinition-standards-status` extension's code, when set.
+    pub standards_status: Option<String>,
+}
+
+impl Default for Standing {
+    fn default() -> Self {
+        Self {
+            status: String::from("active"),
+            experimental: false,
+            standards_status: None,
+        }
+    }
+}
+
 /// The status of a concept, for `inactive` and `abstract` on the wire.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Status {
@@ -462,6 +484,12 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// when the system states one.
     fn language(&self) -> Option<&str> {
         None
+    }
+
+    /// The system's standing as a resource; active and unremarkable unless the
+    /// system states otherwise.
+    fn standing(&self) -> Standing {
+        Standing::default()
     }
 
     /// Active or inactive, abstract or not.

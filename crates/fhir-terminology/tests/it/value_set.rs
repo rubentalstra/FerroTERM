@@ -624,7 +624,7 @@ fn validate_code_checks_display_case_and_inactive_codes() {
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &inactive).expect("validates");
     assert!(validation.result, "inactive is not invalid");
-    assert_eq!(validation.issues[0].kind, "status-check");
+    assert_eq!(validation.issues[0].kind, "code-comment");
     assert_eq!(validation.issues[0].severity, "warning");
     let abstract_refused = ValueSetValidateInput {
         url: Some(VS_ALL.to_owned()),
@@ -1433,4 +1433,145 @@ fn a_value_set_asks_for_its_supplement_and_a_supplement_is_no_code_system() {
     )
     .expect("expands");
     assert!(!kat_in(&plain), "a dormant supplement adds nothing");
+}
+
+// NOTE: an inactive concept validates with `inactive`, `status`, and a code-comment
+// warning; a draft, experimental, deprecated, or withdrawn resource earns a
+// status-check note (the ecosystem's requirements, #185).
+#[test]
+fn validate_code_reports_inactive_concepts_and_resource_standing() {
+    let world = World::load();
+    let run = |code: &str| {
+        value_set_validate_code::validate_code(
+            &world.sources(),
+            &ValueSetValidateInput {
+                url: Some(VS_ALL.to_owned()),
+                value_set_version: Some(String::from("1.0")),
+                coding: Some(CodingRef {
+                    system: Some(ANIMALS.to_owned()),
+                    version: None,
+                    code: Some(code.to_owned()),
+                    display: None,
+                }),
+                ..ValueSetValidateInput::default()
+            },
+        )
+        .expect("validates")
+    };
+    let active = run("cat");
+    assert_eq!((active.inactive, active.status.as_deref()), (None, None));
+    assert!(active.issues.is_empty(), "{active:?}");
+    let retired = run("fish");
+    assert!(retired.result, "inactive is a warning");
+    assert_eq!(retired.inactive, Some(true));
+    assert_eq!(retired.status.as_deref(), Some("retired"));
+    assert_eq!(retired.issues.len(), 1);
+    assert_eq!(
+        (retired.issues[0].severity, retired.issues[0].kind),
+        ("warning", "code-comment")
+    );
+    assert_eq!(
+        retired.issues[0].text,
+        "The concept 'fish' has a status of retired and inactive and its use should be reviewed"
+    );
+    assert_eq!(retired.issues[0].expression.as_deref(), Some("Coding"));
+    assert_eq!(
+        retired.message.as_deref(),
+        Some(retired.issues[0].text.as_str())
+    );
+    let flagged = run("dodo");
+    assert_eq!(flagged.inactive, Some(true));
+    assert_eq!(
+        flagged.status, None,
+        "no status property, only the inactive flag"
+    );
+    assert_eq!(
+        flagged.issues[0].text,
+        "The concept 'dodo' has a status of inactive and its use should be reviewed"
+    );
+}
+
+#[test]
+fn a_draft_experimental_deprecated_or_withdrawn_resource_earns_a_status_note() {
+    use fhir_terminology::operations::standing_note;
+    use fhir_terminology::provider::Standing;
+    let world = World::load();
+    let draft = Standing {
+        status: String::from("draft"),
+        ..Standing::default()
+    };
+    let note = standing_note("CodeSystem", "http://example.org/cs|1", &draft).expect("noted");
+    assert_eq!((note.severity, note.kind), ("information", "status-check"));
+    assert_eq!(
+        note.text,
+        "Reference to draft CodeSystem http://example.org/cs|1"
+    );
+    let experimental = Standing {
+        experimental: true,
+        ..Standing::default()
+    };
+    assert_eq!(
+        standing_note("CodeSystem", "http://example.org/cs|1", &experimental)
+            .expect("noted")
+            .text,
+        "Reference to experimental CodeSystem http://example.org/cs|1"
+    );
+    let deprecated = Standing {
+        standards_status: Some(String::from("deprecated")),
+        ..Standing::default()
+    };
+    assert_eq!(
+        standing_note("CodeSystem", "http://example.org/cs|1", &deprecated)
+            .expect("noted")
+            .text,
+        "Reference to deprecated CodeSystem http://example.org/cs|1"
+    );
+    assert!(standing_note("CodeSystem", "x", &Standing::default()).is_none());
+    // A withdrawn value set is noted on every validation against it.
+    let withdrawn = ValueSet {
+        url: Some("http://example.org/inline-withdrawn".into()),
+        version: Some("1".into()),
+        status: "active".into(),
+        extension: vec![fhir_types::r4b::extension::Extension {
+            url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status"
+                .into(),
+            value: Some(fhir_types::r4b::extension::ExtensionValue::Code(
+                "withdrawn".into(),
+            )),
+            ..Default::default()
+        }],
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let noted = value_set_validate_code::validate_code(
+        &world.sources(),
+        &ValueSetValidateInput {
+            inline_value_set: Some(valueset::convert::r4b::convert(&withdrawn)),
+            code: Some(String::from("cat")),
+            system: Some(ANIMALS.to_owned()),
+            ..ValueSetValidateInput::default()
+        },
+    )
+    .expect("validates");
+    assert!(noted.result);
+    let shape: Vec<(&str, &str, &str)> = noted
+        .issues
+        .iter()
+        .map(|i| (i.severity, i.kind, i.text.as_str()))
+        .collect();
+    assert_eq!(
+        shape,
+        [(
+            "information",
+            "status-check",
+            "Reference to withdrawn ValueSet http://example.org/inline-withdrawn|1"
+        )]
+    );
+    assert_eq!(noted.message, None, "notes carry no message");
 }

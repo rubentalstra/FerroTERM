@@ -670,7 +670,7 @@ fn validate_code_itemises_its_issues() {
     assert!(inactive.result);
     assert_eq!(inactive.issues.len(), 1);
     assert_eq!(inactive.issues[0].severity, "warning");
-    assert_eq!(inactive.issues[0].kind, "status-check");
+    assert_eq!(inactive.issues[0].kind, "code-comment");
     let valid = validate_code(
         &registry,
         &Invocation::Type,

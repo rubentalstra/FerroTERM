@@ -73,19 +73,19 @@ tempfile = "3.27.0"
 # Workspace-internal crates. The `crates/*` members carry the published crate
 # line (lockstep, bumped with their packaged content, never the product
 # version); the tools stay on the workspace version.
-fhir-types = { path = "crates/fhir-types", version = "0.1.9" }
-rf2 = { path = "crates/rf2", version = "0.1.9" }
-loinc = { path = "crates/loinc", version = "0.1.9" }
-classification = { path = "crates/classification", version = "0.1.9" }
-dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.9" }
-gstandaard = { path = "crates/gstandaard", version = "0.1.9" }
-icd11 = { path = "crates/icd11", version = "0.1.9" }
-rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.9" }
-concept-graph = { path = "crates/concept-graph", version = "0.1.9" }
-concept-store = { path = "crates/concept-store", version = "0.1.9" }
-designation-index = { path = "crates/designation-index", version = "0.1.9" }
-sct-ecl = { path = "crates/sct-ecl", version = "0.1.9" }
-fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.9" }
+fhir-types = { path = "crates/fhir-types", version = "0.1.10" }
+rf2 = { path = "crates/rf2", version = "0.1.10" }
+loinc = { path = "crates/loinc", version = "0.1.10" }
+classification = { path = "crates/classification", version = "0.1.10" }
+dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.10" }
+gstandaard = { path = "crates/gstandaard", version = "0.1.10" }
+icd11 = { path = "crates/icd11", version = "0.1.10" }
+rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.10" }
+concept-graph = { path = "crates/concept-graph", version = "0.1.10" }
+concept-store = { path = "crates/concept-store", version = "0.1.10" }
+designation-index = { path = "crates/designation-index", version = "0.1.10" }
+sct-ecl = { path = "crates/sct-ecl", version = "0.1.10" }
+fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.10" }
 # Path-only, with no `version`: cargo then strips the dev-dependency from a
 # packaged crates/* manifest instead of looking it up on crates.io.
 ferroterm-testkit = { path = "tools/ferroterm-testkit" }

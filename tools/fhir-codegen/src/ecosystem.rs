@@ -178,9 +178,32 @@ fn ecosystem_parameters(url: &str) -> Vec<OperationParameter> {
             "A code system a coding of the `codeableConcept` names that the server does not serve, one parameter per system (the ecosystem's twin of `x-caused-by-unknown-system` for that input).",
         )
     };
+    let inactive = || {
+        ecosystem_parameter(
+            "inactive",
+            ParameterUse::Out,
+            "1",
+            "boolean",
+            "Whether the validated concept is inactive in its code system (the ecosystem requires it beside a warning).",
+        )
+    };
+    let status = || {
+        ecosystem_parameter(
+            "status",
+            ParameterUse::Out,
+            "1",
+            "code",
+            "The status of the validated concept when its code system states one (`retired`, `deprecated`, …).",
+        )
+    };
     match url {
         CODE_SYSTEM_VALIDATE_CODE | VALUE_SET_VALIDATE_CODE => {
-            vec![unknown_system(), unknown_system_of_concept()]
+            vec![
+                unknown_system(),
+                unknown_system_of_concept(),
+                inactive(),
+                status(),
+            ]
         }
         CODE_SYSTEM_LOOKUP => vec![
             ecosystem_parameter(

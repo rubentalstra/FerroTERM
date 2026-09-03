@@ -13,6 +13,8 @@ pub struct ValueSetModel {
     /// The supplements the value set asks for (`valueset-supplement`
     /// extension, canonicals).
     pub supplements: Vec<String>,
+    /// The `structuredefinition-standards-status` extension's code, when set.
+    pub standards_status: Option<String>,
     /// `name`.
     pub name: Option<String>,
     /// `title`.

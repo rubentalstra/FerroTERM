@@ -232,6 +232,8 @@ macro_rules! map {
                         .map(Into::into)
                         .collect(),
                     codeable_concept: outcome.codeable_concept.as_deref().map(concept_of),
+                    inactive: outcome.inactive.map(Into::into),
+                    status: outcome.status.map(Into::into),
                 }
             }
 
@@ -354,6 +356,8 @@ macro_rules! map {
                         .map(|s| s.as_str().into())
                         .collect(),
                     codeable_concept: validation.codeable_concept.as_deref().map(concept_of),
+                    inactive: validation.inactive.map(Into::into),
+                    status: validation.status.as_deref().map(Into::into),
                 };
                 response.to_parameters()
             }
