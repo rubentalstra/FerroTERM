@@ -13,6 +13,16 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-09-03
+
+The multi-terminology release: any FHIR `CodeSystem`, `ValueSet`, and
+`ConceptMap` resource is served beside SNOMED CT, the `ValueSet` and
+`ConceptMap` operations join the `CodeSystem` ones on R4B, the registry systems
+(BCP 47, BCP 13, ISO 3166-1) ship with the server, request-scoped resources
+and `$cache-control` make the HL7 terminology ecosystem suite runnable, and it
+runs in CI against a committed pass list. The index builds from the release
+zip with a tool that ships in the release and the image.
+
 ### Added
 
 - The registry systems, served without configuration: BCP 47 language tags
@@ -224,7 +234,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.4
 [0.0.3]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.3
 [0.0.2]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.2
 [0.0.1]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.1
