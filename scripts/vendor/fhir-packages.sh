@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # scripts/vendor/fhir-packages.sh
 #
 # Vendors the pinned HL7 FHIR packages the generator consumes

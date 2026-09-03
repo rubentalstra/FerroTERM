@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 
 # Maintainers and access continuity
 
@@ -59,7 +59,8 @@ There is no succession plan that a document can create. What exists instead:
 - **Nothing new ships.** No release and no security fix. The support window in
   [SECURITY.md](SECURITY.md) (only the newest release is supported) becomes, in
   that situation, no supported release at all.
-- **The work is not lost.** The licence is MIT, the history is public, every
+- **The work is not lost.** The licence is Apache 2.0, the history is public,
+  every
   gate is a committed script, and every design decision is in the tree or on
   the tracker. A fork is a complete and legitimate continuation, and the
   project's position is that it should be taken rather than waited on.

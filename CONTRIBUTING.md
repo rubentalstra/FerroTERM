@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 
 # Contributing to FerroTERM
 
@@ -67,4 +67,5 @@ a public issue for a security problem.
 ## Licensing
 
 By contributing you agree that your contributions are licensed under the
-project's MIT license (see [`LICENSE`](LICENSE)).
+project's Apache License 2.0 (see [`LICENSE`](LICENSE)), as section 5 of that
+licence provides.

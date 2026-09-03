@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # Release image (reusable): the container image from the attested static
 # binaries, pushed to GHCR with SLSA provenance and SBOM attestations.
 #
@@ -130,7 +130,7 @@ jobs:
             org.opencontainers.image.url=https://ferroterm.eu
             org.opencontainers.image.documentation=https://ferroterm.eu/docs/
             org.opencontainers.image.vendor=FerroTERM
-            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.licenses=Apache-2.0
           # The action derives its annotations from its own default labels, so
           # the custom lines above never reach the index; GHCR reads the package
           # description from the index annotation, hence the repeat here.
@@ -140,7 +140,7 @@ jobs:
             org.opencontainers.image.url=https://ferroterm.eu
             org.opencontainers.image.documentation=https://ferroterm.eu/docs/
             org.opencontainers.image.vendor=FerroTERM
-            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.licenses=Apache-2.0
 
       # Cold by construction, like the binary lane: no cache may influence a
       # published artifact. BuildKit's SBOM scanner is off: it sees a

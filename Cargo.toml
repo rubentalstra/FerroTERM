@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 
 [workspace]
 resolver = "3"
@@ -8,7 +8,7 @@ members = ["crates/*", "app/*", "tools/*"]
 version = "0.0.8"
 edition = "2024"
 rust-version = "1.98"
-license = "MIT"
+license = "Apache-2.0"
 repository = "https://github.com/rubentalstra/FerroTERM"
 authors = ["Ruben Talstra"]
 publish = false

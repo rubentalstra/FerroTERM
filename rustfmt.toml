@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # Stable rustfmt only; the edition matches the workspace.
 edition = "2024"
 style_edition = "2024"

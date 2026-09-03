@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 
 # Governance
 
@@ -111,7 +111,8 @@ Recorded here so the questions do not have to be re-litigated in each pull
 request:
 
 - **No contributor licence agreement, and no copyright assignment.** You keep
-  your copyright; the licence stays MIT for everyone including the maintainer.
+  your copyright; the licence stays Apache 2.0 for everyone including the
+  maintainer.
   This is a deliberate position, not an oversight.
 - **No re-modelling of the FHIR type system or operations by hand.** The FHIR
   crate is generated from the machine-readable packages; a change goes into

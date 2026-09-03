@@ -13,6 +13,14 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- The licence of the project's own code is the Apache License 2.0 (`LICENSE`,
+  `NOTICE`), replacing MIT; every SPDX header, manifest, badge, image label,
+  and page that named MIT follows. Releases up to v0.0.8 stay under the MIT
+  terms they were published with. (A Business Source License change merged and
+  was reverted the same day, before any release carried it.)
+
 ## [0.0.8] - 2026-09-03
 
 The ECL release: the SNOMED CT Expression Constraint Language 2.2, parsed

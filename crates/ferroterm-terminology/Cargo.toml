@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 [package]
 name = "ferroterm-terminology"
 description = "The FHIR terminology operations over the code system provider seam"

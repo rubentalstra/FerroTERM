@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 
 # cargo-deny configuration. Run: cargo deny check
 # Docs: https://embarkstudios.github.io/cargo-deny/
@@ -17,8 +17,8 @@ ignore = []
 
 [licenses]
 version = 2
-# Permissive licenses compatible with an MIT-licensed project. Copyleft is NOT
-# allowed by default; a genuinely necessary weak-copyleft dependency gets a
+# Permissive licenses compatible with an Apache 2.0 licensed project. Copyleft
+# is NOT allowed by default; a genuinely necessary weak-copyleft dependency gets a
 # crate-scoped `exceptions` entry with its reason, never a blanket allow.
 allow = [
   "Apache-2.0",

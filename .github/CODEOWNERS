@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 
 # Default owner for everything in the repository. GitHub requests a review from
 # this owner on every pull request that touches any path.

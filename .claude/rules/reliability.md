@@ -162,7 +162,7 @@ chapters, and the Clippy book.
 
 ## Deviations from the API Guidelines (deliberate)
 
-- **C-PERMISSIVE: MIT for the project's own code.** SNOMED CT content is
+- **C-PERMISSIVE: Apache 2.0 for the project's own code.** SNOMED CT content is
   licensed separately by SNOMED International and is NEVER distributed here
   (`vendored-inputs.md`). The vendored FHIR packages keep their upstream HL7
   terms, vendored verbatim with provenance as codegen input.

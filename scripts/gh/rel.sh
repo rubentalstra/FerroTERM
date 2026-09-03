@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # scripts/gh/rel.sh — the deterministic GitHub issue-relationship helper.
 #
 # WHY THIS EXISTS: `gh` has NO native subcommand for sub-issues or issue

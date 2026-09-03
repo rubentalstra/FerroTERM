@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 
 # SonarQube Cloud analysis — the machine opinion beside CodeQL. Findings are
 # ADVISORY: they never outrank the specs, the project rules, or the local

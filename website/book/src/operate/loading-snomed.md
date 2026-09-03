@@ -16,7 +16,7 @@ command for every supported source; the sections below name each system.
 > licence the release you load requires.
 
 The split is firm: the software in this repository is open source under the
-MIT license, and the code system content is the property of its owner and is
+Apache License 2.0, and the code system content is the property of its owner and is
 not distributed here. A SNOMED CT licence is free within member countries, the
 Netherlands among them, and available under the affiliate licence elsewhere;
 LOINC needs a free account; ICD-10-CM and the RxNorm prescribable subset are

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # .claude/hooks/no_attribution_guard.sh
 #
 # Claude Code PreToolUse hook (matcher: Bash).

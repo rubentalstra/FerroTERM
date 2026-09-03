@@ -10,7 +10,7 @@ type: software
 authors:
   - given-names: Ruben
     family-names: Talstra
-license: MIT
+license: Apache-2.0
 repository-code: "https://github.com/rubentalstra/FerroTERM"
 url: "https://ferroterm.eu"
 keywords:

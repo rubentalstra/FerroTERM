@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # scripts/checks/versions.sh
 #
 # Version-drift guard: docs/VERSIONS.md is the single source of truth, and this
@@ -113,6 +113,25 @@ if [ -f "$ecl_prov" ]; then
   fi
 else
   note "no vendored ECL grammar yet — skipped"
+fi
+
+# --- One licence everywhere the project names its own ------------------------
+# The project's own code is Apache-2.0 (LICENSE); a header, manifest, badge, or
+# image label still saying MIT is a stale claim. Third-party files keep theirs.
+echo "== licence (LICENSE <-> SPDX headers, manifests, badges, labels)"
+if [ -f LICENSE ]; then
+  stale=0
+  if ! grep -q 'Apache License' LICENSE; then
+    bad "LICENSE is not the Apache License 2.0"; stale=1
+  fi
+  while IFS= read -r hit; do
+    [ -n "$hit" ] || continue
+    bad "stale MIT licence claim at $hit"; stale=1
+  done < <(git grep -n -E 'SPDX-License-Identifier: MIT|License-MIT|^license = "MIT"|^license: MIT|image\.licenses="?MIT' \
+    -- ':!scripts/checks/versions.sh' ':!tools/ferroterm-fhir-codegen/vendor' ':!crates/ferroterm-ecl/vendor' ':!crates/ferroterm-fhir/src' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
+  [ "$stale" -eq 0 ] && note "OK: the project's own files name Apache-2.0"
+else
+  note "no LICENSE yet — skipped"
 fi
 
 # --- rust-toolchain.toml present (sanity; channel recorded in VERSIONS.md) -----

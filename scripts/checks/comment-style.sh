@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 # Comment-style guard (.claude/rules/comments.md — RFC 505 / RFC 1574).
 #
 # Checks HAND-WRITTEN .rs files (files carrying the `@generated` marker are

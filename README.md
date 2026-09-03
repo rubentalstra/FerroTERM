@@ -4,7 +4,7 @@
 [![CodeQL](https://github.com/rubentalstra/FerroTERM/actions/workflows/codeql.yml/badge.svg)](https://github.com/rubentalstra/FerroTERM/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/rubentalstra/FerroTERM/badge)](https://scorecard.dev/viewer/?uri=github.com/rubentalstra/FerroTERM)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_ferroterm&metric=alert_status)](https://sonarcloud.io/summary/overall?id=rubentalstra_ferroterm)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD-10, ICD-11,
 RxNorm, UCUM, and any FHIR `CodeSystem`, served from one static binary over a
@@ -125,7 +125,8 @@ The short form:
 
 ## Licensing
 
-The software is MIT. The code systems are not: SNOMED CT is licensed by SNOMED
+The software is Apache 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). The code
+systems are not: SNOMED CT is licensed by SNOMED
 International, LOINC by Regenstrief, ICD by WHO, RxNorm by NLM, and the
 repository ships none of their content. You bring the release you are licensed
 for; UCUM and the IANA and Unicode registries are vendored under their own
