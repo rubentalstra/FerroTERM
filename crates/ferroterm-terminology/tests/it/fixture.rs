@@ -285,6 +285,7 @@ impl CodeSystemProvider for Fixture {
             properties.push(Property {
                 code: String::from("legs"),
                 value: PropertyValue::Integer(legs),
+                ..Property::default()
             });
         }
         if let Some(tree) = &self.tree
@@ -293,6 +294,7 @@ impl CodeSystemProvider for Fixture {
             properties.push(Property {
                 code: String::from("kingdom"),
                 value: PropertyValue::Code(String::from("animal")),
+                ..Property::default()
             });
         }
         Ok(properties)

@@ -21,6 +21,15 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-text/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-build/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-testkit/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-classification/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-classification/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-icd11/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-icd11/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-loinc/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-loinc/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rrf/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rrf/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-terminology/benches" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>

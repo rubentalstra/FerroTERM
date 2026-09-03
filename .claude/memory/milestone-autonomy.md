@@ -19,7 +19,10 @@ this milestone i want you to do again this cut and release way and then go
 to the next milestone please and just go through all of them ... keep going
 create new milestone for new issues? please go autonomously".
 
-**How to apply:** Only the signed tag needs the owner (they tag the merged
-release commit themselves); everything else, including the release PR with
-auto-merge, proceeds without asking. See [[release-cut-cadence]] and
+**How to apply:** Everything proceeds without asking, the signed tag
+included: on 2026-09-03 the owner said "you can of course also cut the
+release just run the same commands", and this clone signs with the
+configured GPG key (`git tag -s vX.Y.Z -m vX.Y.Z <merge commit> && git push
+origin vX.Y.Z`), which triggers `release.yml`. Close the milestone with the
+cut (the owner noticed v0.0.4 left open). See [[release-cut-cadence]] and
 [[repo-merge-gates]].

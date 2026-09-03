@@ -1,27 +1,27 @@
-//! The atom table beside a built `RxNorm` artifact: `RXAUI` to concept ordinal.
+//! A sorted `u64` key to `u32` ordinal table beside an artifact.
 //!
-//! The FHIR `RxNorm` page lets a relationship filter name its target as
-//! `AUI:[RXAUI]` (<https://hl7.org/fhir/R4B/rxnorm.html>), so the served
-//! artifact keeps every atom identifier next to its concept. No spec governs
-//! the layout: our own design, little-endian, a magic and version, a count,
-//! then sorted `(RXAUI as u64, ordinal as u32)` pairs.
+//! A code system whose concepts have identifiers beyond their codes (the atom
+//! identifiers of `RxNorm`, the entity identifiers of ICD-11) keeps them here,
+//! each next to its concept ordinal. No spec governs the layout: our own
+//! design, little-endian, a magic and version, a count, then sorted
+//! `(key, ordinal)` pairs.
 
 use std::io::{self, Read, Write};
 
-const MAGIC: &[u8; 8] = b"FTATOMS\0";
+const MAGIC: &[u8; 8] = b"FTKEYS\0\0";
 const VERSION: u32 = 1;
 
 /// A failure while reading or writing the table.
 #[derive(Debug, thiserror::Error)]
-pub enum AtomsError {
+pub enum KeyTableError {
     /// An I/O failure.
-    #[error("atom table I/O failed")]
+    #[error("key table I/O failed")]
     Io(#[from] io::Error),
     /// The bytes do not start with the table magic.
-    #[error("not an atom table")]
+    #[error("not a key table")]
     Magic,
     /// The layout version is not the one this build reads.
-    #[error("atom table version {found}, expected {expected}")]
+    #[error("key table version {found}, expected {expected}")]
     Version {
         /// The version found.
         found: u32,
@@ -30,14 +30,14 @@ pub enum AtomsError {
     },
 }
 
-/// The sorted atom table.
+/// The sorted table.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct Atoms {
+pub struct KeyTable {
     pairs: Vec<(u64, u32)>,
 }
 
-impl Atoms {
-    /// Builds the table from `(RXAUI, ordinal)` pairs, in any order.
+impl KeyTable {
+    /// Builds the table from `(key, ordinal)` pairs, in any order.
     #[must_use]
     pub fn new(mut pairs: Vec<(u64, u32)>) -> Self {
         pairs.sort_unstable();
@@ -45,17 +45,17 @@ impl Atoms {
         Self { pairs }
     }
 
-    /// The concept ordinal of the atom `rxaui`.
+    /// The ordinal stored under `key`.
     #[must_use]
-    pub fn concept(&self, rxaui: u64) -> Option<u32> {
+    pub fn get(&self, key: u64) -> Option<u32> {
         self.pairs
-            .binary_search_by_key(&rxaui, |(a, _)| *a)
+            .binary_search_by_key(&key, |(k, _)| *k)
             .ok()
             .and_then(|i| self.pairs.get(i))
             .map(|(_, o)| *o)
     }
 
-    /// The atom count.
+    /// The entry count.
     #[must_use]
     pub fn len(&self) -> usize {
         self.pairs.len()
@@ -71,15 +71,14 @@ impl Atoms {
     ///
     /// # Errors
     ///
-    /// Returns [`AtomsError::Io`] when writing fails.
-    pub fn write_to(&self, out: &mut impl Write) -> Result<(), AtomsError> {
+    /// Returns [`KeyTableError::Io`] when writing fails.
+    pub fn write_to(&self, out: &mut impl Write) -> Result<(), KeyTableError> {
         out.write_all(MAGIC)?;
         out.write_all(&VERSION.to_le_bytes())?;
-        let len =
-            u64::try_from(self.pairs.len()).map_err(|_| io::Error::other("too many atoms"))?;
+        let len = u64::try_from(self.pairs.len()).map_err(|_| io::Error::other("too many keys"))?;
         out.write_all(&len.to_le_bytes())?;
-        for (rxaui, ordinal) in &self.pairs {
-            out.write_all(&rxaui.to_le_bytes())?;
+        for (key, ordinal) in &self.pairs {
+            out.write_all(&key.to_le_bytes())?;
             out.write_all(&ordinal.to_le_bytes())?;
         }
         Ok(())
@@ -89,18 +88,18 @@ impl Atoms {
     ///
     /// # Errors
     ///
-    /// Returns [`AtomsError`] for a truncated or foreign table.
-    pub fn read_from(input: &mut impl Read) -> Result<Self, AtomsError> {
+    /// Returns [`KeyTableError`] for a truncated or foreign table.
+    pub fn read_from(input: &mut impl Read) -> Result<Self, KeyTableError> {
         let mut magic = [0_u8; 8];
         input.read_exact(&mut magic)?;
         if &magic != MAGIC {
-            return Err(AtomsError::Magic);
+            return Err(KeyTableError::Magic);
         }
         let mut word = [0_u8; 4];
         input.read_exact(&mut word)?;
         let version = u32::from_le_bytes(word);
         if version != VERSION {
-            return Err(AtomsError::Version {
+            return Err(KeyTableError::Version {
                 found: version,
                 expected: VERSION,
             });
@@ -108,7 +107,7 @@ impl Atoms {
         let mut long = [0_u8; 8];
         input.read_exact(&mut long)?;
         let len = usize::try_from(u64::from_le_bytes(long))
-            .map_err(|_| io::Error::other("atom table too large"))?;
+            .map_err(|_| io::Error::other("key table too large"))?;
         let mut pairs = Vec::with_capacity(len);
         for _ in 0..len {
             input.read_exact(&mut long)?;
@@ -121,23 +120,23 @@ impl Atoms {
 
 #[cfg(test)]
 mod tests {
-    use super::{Atoms, AtomsError};
+    use super::{KeyTable, KeyTableError};
 
     #[test]
-    fn the_table_answers_by_atom_and_round_trips() {
-        let atoms = Atoms::new(vec![(829, 0), (12_251_526, 1), (2_798_745, 1), (829, 0)]);
-        assert_eq!(atoms.len(), 3);
-        assert_eq!(atoms.concept(2_798_745), Some(1));
-        assert_eq!(atoms.concept(1), None);
+    fn the_table_answers_by_key_and_round_trips() {
+        let keys = KeyTable::new(vec![(829, 0), (12_251_526, 1), (2_798_745, 1), (829, 0)]);
+        assert_eq!(keys.len(), 3);
+        assert_eq!(keys.get(2_798_745), Some(1));
+        assert_eq!(keys.get(1), None);
         let mut bytes = Vec::new();
-        atoms.write_to(&mut bytes).expect("writes");
+        keys.write_to(&mut bytes).expect("writes");
         assert_eq!(
-            Atoms::read_from(&mut bytes.as_slice()).expect("reads"),
-            atoms
+            KeyTable::read_from(&mut bytes.as_slice()).expect("reads"),
+            keys
         );
         assert!(matches!(
-            Atoms::read_from(&mut b"XXXXXXXX\0\0\0\0".as_slice()),
-            Err(AtomsError::Magic)
+            KeyTable::read_from(&mut b"XXXXXXXX\0\0\0\0".as_slice()),
+            Err(KeyTableError::Magic)
         ));
     }
 }

@@ -8,7 +8,6 @@
 //! the form the FHIR `RxNorm` page asks for (<https://hl7.org/fhir/R4B/rxnorm.html>).
 #![doc(test(attr(deny(warnings))))]
 
-pub mod atoms;
 pub mod row;
 
 use std::fs::File;

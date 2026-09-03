@@ -11,6 +11,7 @@
 
 pub mod archive;
 pub mod classification;
+pub mod icd11;
 pub mod loinc;
 pub mod pipeline;
 pub mod rxnorm;
@@ -27,8 +28,8 @@ pub struct Cli {
     #[arg(
         long,
         value_name = "DIR_OR_ZIP",
-        conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm"],
-        required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm"]
+        conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11"],
+        required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm", "icd11"]
     )]
     pub rf2: Option<PathBuf>,
     /// The LOINC release: the unpacked `Loinc_<version>` directory, or the release zip.
@@ -55,6 +56,18 @@ pub struct Cli {
     /// The release date to record when the release does not say (`09082026`).
     #[arg(long, value_name = "MMDDYYYY", requires = "rxnorm")]
     pub rxnorm_version: Option<String>,
+    /// The ICD-11 cache directory: the entity JSON a local ICD-API deployment served, per code system and language; built into `<out>/mms`, `<out>/icf`, `<out>/entity`.
+    #[arg(long, value_name = "DIR", conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm"])]
+    pub icd11: Option<PathBuf>,
+    /// A local ICD-API deployment (`http://127.0.0.1:80`) to fill the cache from before building.
+    #[arg(long, value_name = "URL", requires = "icd11")]
+    pub icd11_api: Option<String>,
+    /// The ICD-11 release to fetch and record (`2026-01`); the deployment's latest when absent.
+    #[arg(long, value_name = "RELEASE", requires = "icd11")]
+    pub icd11_release: Option<String>,
+    /// The languages to fetch (`en,fr`); English when absent.
+    #[arg(long, value_name = "LANG", value_delimiter = ',', action = clap::ArgAction::Append, requires = "icd11_api")]
+    pub icd11_languages: Vec<String>,
     /// The `RxNorm` sources (`SAB`) whose names are kept beside the unrestricted `RXNORM` and `MTHSPL` (a full release under a UMLS licence).
     #[arg(long, value_name = "SAB", value_delimiter = ',', action = clap::ArgAction::Append, requires = "rxnorm")]
     pub rxnorm_sources: Vec<String>,
@@ -92,6 +105,16 @@ pub fn run(cli: &Cli) -> Result<Report, RunError> {
             &classification,
             system,
             cli.claml_version.as_deref(),
+            &cli.out,
+        )?));
+    }
+    if let Some(cache) = &cli.icd11 {
+        if let Some(api) = &cli.icd11_api {
+            fetch_icd11(cache, api, cli)?;
+        }
+        return Ok(Report::Icd11(icd11::build_all(
+            cache,
+            cli.icd11_release.as_deref(),
             &cli.out,
         )?));
     }
@@ -167,6 +190,35 @@ pub fn run(cli: &Cli) -> Result<Report, RunError> {
     Ok(Report::Snomed(pipeline::build(rf2, &cli.out)?))
 }
 
+/// Fills the ICD-11 `cache` from the deployment at `api`: every code system
+/// the deployment serves, in the languages asked for.
+fn fetch_icd11(cache: &std::path::Path, api: &str, cli: &Cli) -> Result<(), RunError> {
+    let release = if let Some(release) = &cli.icd11_release {
+        release.clone()
+    } else {
+        let probe = ferroterm_icd11::api::Client::new(api, "")?;
+        let root = probe.get(
+            &format!("{}/icd/release/11/mms", api.trim_end_matches('/')),
+            "en",
+        )?;
+        root.get("latestRelease")
+            .and_then(serde_json::Value::as_str)
+            .and_then(|uri| uri.rsplit('/').nth(1).map(str::to_owned))
+            .ok_or(RunError::NoRelease)?
+    };
+    let client = ferroterm_icd11::api::Client::new(api, &release)?;
+    let languages: Vec<String> = if cli.icd11_languages.is_empty() {
+        vec![String::from("en")]
+    } else {
+        cli.icd11_languages.clone()
+    };
+    for linearization in ferroterm_icd11::Linearization::ALL {
+        let ids = client.ids(linearization)?;
+        client.download(cache, linearization, &ids, &languages, 8)?;
+    }
+    Ok(())
+}
+
 /// What a build wrote.
 #[derive(Debug)]
 pub enum Report {
@@ -178,14 +230,19 @@ pub enum Report {
     Classification(classification::Report),
     /// An `RxNorm` release.
     RxNorm(rxnorm::Report),
+    /// The ICD-11 code systems, one report each.
+    Icd11(Vec<icd11::Report>),
 }
 
 /// A failure of the command as a whole.
 #[derive(Debug, thiserror::Error)]
 pub enum RunError {
     /// No input was given.
-    #[error("give `--rf2`, `--loinc`, `--claml`, `--icd10cm`, or `--rxnorm`")]
+    #[error("give `--rf2`, `--loinc`, `--claml`, `--icd10cm`, `--rxnorm`, or `--icd11`")]
     NoInput,
+    /// The ICD-API names no latest release and none was given.
+    #[error("the ICD-API names no latest release; pass `--icd11-release`")]
+    NoRelease,
     /// `--claml` without `--system`.
     #[error("`--claml` needs `--system`")]
     NoSystem,
@@ -213,4 +270,10 @@ pub enum RunError {
     /// The `RxNorm` build failed.
     #[error(transparent)]
     RxNorm(#[from] rxnorm::Error),
+    /// The ICD-API could not be walked.
+    #[error(transparent)]
+    Icd11Api(#[from] ferroterm_icd11::api::ApiError),
+    /// The ICD-11 build failed.
+    #[error(transparent)]
+    Icd11(#[from] icd11::Error),
 }

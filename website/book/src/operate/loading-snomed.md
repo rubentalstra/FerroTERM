@@ -127,3 +127,25 @@ of the unrestricted sources (`RXNORM`, `MTHSPL`). A full release carries
 sources the UMLS licence restricts by category; name the ones your licence
 covers with `--rxnorm-sources MSH,VANDF` to serve their names too. Point
 `FERROTERM_INDEX` at the directory as for LOINC.
+
+## Loading ICD-11
+
+ICD-11 comes from the WHO ICD-API. Run the local deployment WHO publishes
+(<https://icd.who.int/icdapi>; the licence, CC BY-ND 3.0 IGO, allows the
+local copy but not passing it on), then let the build walk it into a cache
+and build the three code systems:
+
+```console
+$ docker run -d -p 8080:80 -e acceptLicense=true -e saveAnalytics=false \
+    -e include=2026-01_en whoicd/icd-api
+$ ferroterm-build --icd11 /path/to/icd11-cache --icd11-api http://127.0.0.1:8080 \
+    --icd11-release 2026-01 --icd11-languages en --out /path/to/icd11-index
+```
+
+The cache holds one JSON file per entity and language (about 110,000 files
+for the MMS, the ICF, and the Foundation) and is reused by later builds, so
+the API is only needed once per release. The build writes
+`icd11-index/mms`, `icd11-index/icf`, and `icd11-index/entity`; point
+`FERROTERM_INDEX` at each of the three. Languages beyond English need the
+deployment to include them (`include=2026-01_fr`); the build records every
+language the cache holds.

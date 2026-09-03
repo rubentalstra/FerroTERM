@@ -13,6 +13,7 @@ publish = false
 [dependencies]
 ferroterm-build.workspace = true
 ferroterm-classification.workspace = true
+ferroterm-icd11.workspace = true
 ferroterm-graph.workspace = true
 ferroterm-loinc.workspace = true
 ferroterm-rf2.workspace = true

@@ -25,6 +25,7 @@ fn a_supplement_layers_designations_and_properties_over_the_system() {
                 properties: vec![Property {
                     code: String::from("colour"),
                     value: PropertyValue::String(String::from("any")),
+                    ..Property::default()
                 }],
             },
         )]),

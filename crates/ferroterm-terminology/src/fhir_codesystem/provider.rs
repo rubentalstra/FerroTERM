@@ -297,11 +297,13 @@ impl CodeSystemProvider for FhirCodeSystem {
         let mut out = vec![Property {
             code: INACTIVE.to_owned(),
             value: PropertyValue::Boolean(!status.active),
+            ..Property::default()
         }];
         if status.abstract_concept {
             out.push(Property {
                 code: NOT_SELECTABLE.to_owned(),
                 value: PropertyValue::Boolean(true),
+                ..Property::default()
             });
         }
         for property in &entry.properties {
@@ -320,6 +322,7 @@ impl CodeSystemProvider for FhirCodeSystem {
                     out.push(Property {
                         code: PARENT.to_owned(),
                         value: PropertyValue::Code(code),
+                        ..Property::default()
                     });
                 }
             }
@@ -328,6 +331,7 @@ impl CodeSystemProvider for FhirCodeSystem {
                     out.push(Property {
                         code: CHILD.to_owned(),
                         value: PropertyValue::Code(code),
+                        ..Property::default()
                     });
                 }
             }

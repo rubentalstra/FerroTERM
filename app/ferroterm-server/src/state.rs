@@ -12,6 +12,7 @@ use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
 use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
 use ferroterm_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
+use ferroterm_terminology::icd11::{self, Icd11Provider};
 use ferroterm_terminology::loinc::{self, LoincProvider};
 use ferroterm_terminology::operations::Sources;
 use ferroterm_terminology::provider::{CodeSystemProvider, ContentMode, ProviderError};
@@ -58,6 +59,15 @@ pub enum LoadError {
         /// The cause.
         #[source]
         source: Box<rxnorm::OpenError>,
+    },
+    /// An ICD-11 artifact directory does not open.
+    #[error("cannot open the ICD-11 artifact at {path}")]
+    OpenIcd11 {
+        /// The directory.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: Box<icd11::OpenError>,
     },
     /// A classification artifact directory does not open.
     #[error("cannot open the classification artifact at {path}")]
@@ -586,6 +596,12 @@ fn open_artifact(path: &Path, config: &Config) -> Result<Arc<dyn CodeSystemProvi
                 })?,
             )
         }
+        _ if described.kind.as_deref() == Some(icd11::KIND) => Arc::new(
+            Icd11Provider::open(path).map_err(|source| LoadError::OpenIcd11 {
+                path: path.to_path_buf(),
+                source: Box::new(source),
+            })?,
+        ),
         _ if described.kind.as_deref() == Some(classification::KIND) => {
             Arc::new(ClassificationProvider::open(path).map_err(|source| {
                 LoadError::OpenClassification {

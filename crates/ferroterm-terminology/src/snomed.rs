@@ -549,6 +549,7 @@ impl CodeSystemProvider for SnomedProvider {
         let mut out = vec![Property {
             code: String::from("inactive"),
             value: PropertyValue::Boolean(!record.active),
+            ..Property::default()
         }];
         let defined = of(self.keys.definition_status).is_some_and(|values| {
             values
@@ -558,6 +559,7 @@ impl CodeSystemProvider for SnomedProvider {
         out.push(Property {
             code: String::from("sufficientlyDefined"),
             value: PropertyValue::Boolean(defined),
+            ..Property::default()
         });
         if let Some(values) = of(self.keys.module)
             && let Some(record::PropertyValue::Code(module)) = values.first()
@@ -565,24 +567,28 @@ impl CodeSystemProvider for SnomedProvider {
             out.push(Property {
                 code: String::from("moduleId"),
                 value: PropertyValue::Code(module.clone()),
+                ..Property::default()
             });
         }
         if let Some(time) = record.effective_time {
             out.push(Property {
                 code: String::from("effectiveTime"),
                 value: PropertyValue::String(time),
+                ..Property::default()
             });
         }
         for value in self.codes(self.hierarchy.parents(concept))? {
             out.push(Property {
                 code: String::from("parent"),
                 value,
+                ..Property::default()
             });
         }
         for value in self.codes(self.hierarchy.children(concept))? {
             out.push(Property {
                 code: String::from("child"),
                 value,
+                ..Property::default()
             });
         }
         for (key, sctid) in &self.keys.attributes {
@@ -607,6 +613,7 @@ impl CodeSystemProvider for SnomedProvider {
                 out.push(Property {
                     code: sctid.clone(),
                     value,
+                    ..Property::default()
                 });
             }
         }

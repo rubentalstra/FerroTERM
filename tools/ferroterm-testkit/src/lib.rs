@@ -8,6 +8,7 @@
 
 pub mod classification;
 pub mod fhir;
+pub mod icd11;
 pub mod loinc;
 pub mod rxnorm;
 pub mod snomed;

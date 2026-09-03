@@ -85,17 +85,20 @@ pub fn code_system() -> Result<CodeSystemModel, DataError> {
         let mut properties = vec![Property {
             code: String::from("numeric"),
             value: PropertyValue::Code(numeric.to_owned()),
+            ..Property::default()
         }];
         if let Some(alpha3) = mapping.get("_alpha3").and_then(serde_json::Value::as_str) {
             properties.push(Property {
                 code: String::from("alpha3"),
                 value: PropertyValue::Code(alpha3.to_owned()),
+                ..Property::default()
             });
         }
         if !official {
             properties.push(Property {
                 code: String::from("userAssigned"),
                 value: PropertyValue::Boolean(true),
+                ..Property::default()
             });
         }
         concepts.push(ConceptEntry {

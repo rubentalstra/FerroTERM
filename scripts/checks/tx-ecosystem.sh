@@ -3,10 +3,13 @@
 # pass list: a test on the list that fails is a regression, a test that
 # newly passes is reported so it can be added.
 #
-#   scripts/checks/tx-ecosystem.sh [--server URL] [--out DIR]
+#   scripts/checks/tx-ecosystem.sh [--server URL] [--out DIR] [--mode NAME] [--index DIRS]
 #
 # Without --server the script starts target/release/ferroterm on 127.0.0.1:8098
-# (build it first: cargo build --release -p ferroterm-server). The validator
+# (build it first: cargo build --release -p ferroterm-server), serving the
+# artifact directories --index names (the FERROTERM_INDEX form). --mode picks
+# the suite mode (general by default; icd-11 needs the three ICD-11 artifacts)
+# and its pass list conformance/tx-ecosystem/passing-<mode>.txt. The validator
 # jar and the suite are fetched into target/tx-ecosystem/ once and pinned by
 # digest and commit. A JVM runs here only, never in the server.
 set -euo pipefail
@@ -15,17 +18,25 @@ VALIDATOR_VERSION=6.10.3
 VALIDATOR_SHA256=91e4da9d1bd4c11d9a05c0ec0837c0c830ef800bc37faed6873e26f6702bceba
 SUITE_REPO=https://github.com/HL7/fhir-tx-ecosystem-ig
 SUITE_COMMIT=eaec771d82fba4eac596c14963546f39b4ecffe7
-PASSING=conformance/tx-ecosystem/passing.txt
 
 server=""
 out=target/tx-ecosystem/out
+mode=general
+index=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --server) server=$2; shift 2 ;;
     --out) out=$2; shift 2 ;;
+    --mode) mode=$2; shift 2 ;;
+    --index) index=$2; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
+if [ "$mode" = general ]; then
+  PASSING=conformance/tx-ecosystem/passing.txt
+else
+  PASSING=conformance/tx-ecosystem/passing-$mode.txt
+fi
 
 work=target/tx-ecosystem
 mkdir -p "$work"
@@ -51,6 +62,9 @@ fi
 started=""
 if [ -z "$server" ]; then
   server=http://127.0.0.1:8098/r4b
+  if [ -n "$index" ]; then
+    export FERROTERM_INDEX="$index"
+  fi
   FERROTERM_LISTEN=127.0.0.1:8098 FERROTERM_LOG_FORMAT=json target/release/ferroterm > "$work/server.log" 2>&1 &
   started=$!
   trap 'kill "$started" 2>/dev/null || true' EXIT
@@ -63,7 +77,11 @@ fi
 rm -rf "$out"
 mkdir -p "$out"
 # The runner exits non-zero while any test fails; the pass list decides here.
-java -jar "$jar" txTests -tx "$server" -test-version "$suite/tests" -mode general \
+modes=(-mode "$mode")
+if [ "$mode" != general ]; then
+  modes=(-mode '!general' -mode "$mode")
+fi
+java -jar "$jar" txTests -tx "$server" -test-version "$suite/tests" "${modes[@]}" \
   -output "$out" -ssrf-protection-enabled=false > "$out/runner.log" 2>&1 || true
 report=$out/report.json
 if [ ! -f "$report" ]; then
@@ -72,10 +90,16 @@ if [ ! -f "$report" ]; then
   exit 1
 fi
 
+total=$(jq '(.test // []) | length' "$report")
+if [ "$total" = 0 ]; then
+  echo "the runner ran no test; see $out/runner.log and $work/server.log" >&2
+  tail -n 20 "$out/runner.log" >&2
+  tail -n 5 "$work/server.log" >&2 2>/dev/null || true
+  exit 1
+fi
 jq -r '.test[] | select(.action[0].operation.result == "pass") | .name' "$report" | sort > "$out/passing.txt"
-total=$(jq '.test | length' "$report")
 passed=$(wc -l < "$out/passing.txt" | tr -d ' ')
-echo "tx-ecosystem: $passed of $total general tests pass ($(grep -a -o 'tests v[0-9.]*' "$out/runner.log" | head -1), runner $VALIDATOR_VERSION)"
+echo "tx-ecosystem: $passed of $total $mode tests pass ($(grep -a -o 'tests v[0-9.]*' "$out/runner.log" | head -1), runner $VALIDATOR_VERSION)"
 
 regressions=$(comm -23 "$PASSING" "$out/passing.txt")
 gains=$(comm -13 "$PASSING" "$out/passing.txt")

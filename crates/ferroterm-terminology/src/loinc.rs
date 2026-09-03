@@ -427,6 +427,7 @@ impl CodeSystemProvider for LoincProvider {
         let mut out = vec![Property {
             code: String::from("inactive"),
             value: PropertyValue::Boolean(!record.active),
+            ..Property::default()
         }];
         for (key, values) in self.store.properties(ordinal).map_err(storage)? {
             let Some(name) = self.keys.get(&key) else {
@@ -450,6 +451,7 @@ impl CodeSystemProvider for LoincProvider {
                 out.push(Property {
                     code: name.clone(),
                     value,
+                    ..Property::default()
                 });
             }
         }
@@ -457,12 +459,14 @@ impl CodeSystemProvider for LoincProvider {
             out.push(Property {
                 code: String::from("parent"),
                 value,
+                ..Property::default()
             });
         }
         for value in self.codes(self.hierarchy.children(concept))? {
             out.push(Property {
                 code: String::from("child"),
                 value,
+                ..Property::default()
             });
         }
         Ok(out)

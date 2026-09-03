@@ -13,6 +13,21 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- ICD-11: `ferroterm-build --icd11 <cache> [--icd11-api <url>]` walks a local
+  deployment of the WHO ICD-API into a cache of entity JSON and builds the
+  MMS, the ICF, and the Foundation as three code systems
+  (`http://id.who.int/icd/release/11/mms`, `.../icf`,
+  `http://id.who.int/icd/entity`), served from `FERROTERM_INDEX`. A code is a
+  short code, an entity URI in either form, or a postcoordination expression
+  validated against the stem's axes, with `stem` and `postcoordinationValues`
+  in `$lookup`; `id`, `parent`, and `child` are URIs; an entity without a
+  short code is `notSelectable`; a stem's scale is an implicit value set
+  (`<uri>/postcoordinationScale/<axis>`). `$lookup` properties now carry
+  `description` and `subproperty` parts, and a `uri` value.
+
+
 ## [0.0.6] - 2026-09-03
 
 The ICD-10 and RxNorm release: a ClaML classification (WHO ICD-10, ICD-10-NL,

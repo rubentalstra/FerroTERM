@@ -250,6 +250,8 @@ pub struct Designation {
 pub enum PropertyValue {
     /// A `code`.
     Code(String),
+    /// A `uri`.
+    Uri(String),
     /// A `Coding`.
     Coding {
         /// The system.
@@ -276,9 +278,11 @@ impl PropertyValue {
     #[must_use]
     pub fn as_text(&self) -> String {
         match self {
-            Self::Code(text) | Self::String(text) | Self::DateTime(text) | Self::Decimal(text) => {
-                text.clone()
-            }
+            Self::Code(text)
+            | Self::Uri(text)
+            | Self::String(text)
+            | Self::DateTime(text)
+            | Self::Decimal(text) => text.clone(),
             Self::Coding { code, .. } => code.clone(),
             Self::Integer(value) => value.to_string(),
             Self::Boolean(value) => value.to_string(),
@@ -293,6 +297,32 @@ pub struct Property {
     pub code: String,
     /// The value.
     pub value: PropertyValue,
+    /// A human description of the value (`$lookup` `property.description`).
+    pub description: Option<String>,
+    /// The parts of a structured value (`$lookup` `property.subproperty`).
+    pub subproperties: Vec<Subproperty>,
+}
+
+impl Default for Property {
+    fn default() -> Self {
+        Self {
+            code: String::new(),
+            value: PropertyValue::String(String::new()),
+            description: None,
+            subproperties: Vec::new(),
+        }
+    }
+}
+
+/// One part of a structured property value.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Subproperty {
+    /// The part's code.
+    pub code: String,
+    /// The part's value.
+    pub value: PropertyValue,
+    /// A human description of the part.
+    pub description: Option<String>,
 }
 
 /// A failure inside a provider.
@@ -328,6 +358,15 @@ pub enum ProviderError {
     /// A filter names a code the system does not have.
     #[error("unknown code `{0}`")]
     UnknownCode(String),
+    /// The code is malformed for the code system's grammar, and the system
+    /// can say why (a postcoordination value on no axis of its stem).
+    #[error("code `{code}` is invalid: {reason}")]
+    InvalidCode {
+        /// The code as given.
+        code: String,
+        /// Why it is not a code.
+        reason: String,
+    },
     /// The storage behind the provider failed; the cause is the substrate's error.
     #[error("the code system storage failed")]
     Storage(#[source] Box<dyn std::error::Error + Send + Sync + 'static>),
