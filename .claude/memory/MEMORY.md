@@ -17,3 +17,4 @@
 - [Licence: Apache 2.0](license-apache.md), MIT until 2026-09-03, a BUSL 1.1 change (#147) merged and was reverted the same day for Apache 2.0 (#150); the versions guard fails on stale MIT claims
 - [Auto-merge follow-ups](auto-merge-follow-ups.md), never push a follow-up to an auto-merge PR unless it is still BLOCKED; one PR per slice, branch from origin/main; check for UU after stash pop
 - [Repo path FerroTERM](repo-path-ferroterm.md), the clone moved to RustroverProjects/FerroTERM on 2026-09-03; touch the CARGO_MANIFEST_DIR users after a rename or stale test binaries fail
+- [Crate names and publishing](crate-names-and-publishing.md), plain crates.io names since 2026-09-03 (fhir-types, rf2, concept-graph, sct-ecl, fhir-terminology, ...), separate lockstep crate line with a bump guard, Trusted Publishing lanes; new crate names are rate-limited, publish in batches
