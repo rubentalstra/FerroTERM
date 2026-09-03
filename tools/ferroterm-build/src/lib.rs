@@ -28,8 +28,8 @@ pub struct Cli {
     #[arg(
         long,
         value_name = "DIR_OR_ZIP",
-        conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11"],
-        required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm", "icd11"]
+        conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc"],
+        required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc"]
     )]
     pub rf2: Option<PathBuf>,
     /// The LOINC release: the unpacked `Loinc_<version>` directory, or the release zip.
@@ -68,6 +68,12 @@ pub struct Cli {
     /// The languages to fetch (`en,fr`); English when absent.
     #[arg(long, value_name = "LANG", value_delimiter = ',', action = clap::ArgAction::Append, requires = "icd11_api")]
     pub icd11_languages: Vec<String>,
+    /// The WHO ATC/DDD index as a CSV export (`ATC code`, `ATC level name`, `DDD`, `U`, `Adm.R`, `Note`), or the G-Standaard file `BST801T`.
+    #[arg(long, value_name = "FILE", conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11"])]
+    pub atc: Option<PathBuf>,
+    /// The ATC index year to record (`2026`); required, the files carry none.
+    #[arg(long, value_name = "YEAR", requires = "atc")]
+    pub atc_version: Option<String>,
     /// The `RxNorm` sources (`SAB`) whose names are kept beside the unrestricted `RXNORM` and `MTHSPL` (a full release under a UMLS licence).
     #[arg(long, value_name = "SAB", value_delimiter = ',', action = clap::ArgAction::Append, requires = "rxnorm")]
     pub rxnorm_sources: Vec<String>,
@@ -88,25 +94,8 @@ pub struct Cli {
 /// Returns [`RunError`] when the zip does not unpack, the release does not
 /// read, the edition cannot be identified, or an artifact cannot be written.
 pub fn run(cli: &Cli) -> Result<Report, RunError> {
-    if let Some(claml) = &cli.claml {
-        let system = cli.system.as_deref().ok_or(RunError::NoSystem)?;
-        let scratch;
-        let file = if claml
-            .extension()
-            .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
-        {
-            scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
-            archive::unpack_claml(claml, scratch.path())?
-        } else {
-            claml.clone()
-        };
-        let classification = ferroterm_classification::claml::read_file(&file)?;
-        return Ok(Report::Classification(classification::build(
-            &classification,
-            system,
-            cli.claml_version.as_deref(),
-            &cli.out,
-        )?));
+    if let Some(report) = run_classification(cli)? {
+        return Ok(Report::Classification(report));
     }
     if let Some(cache) = &cli.icd11 {
         if let Some(api) = &cli.icd11_api {
@@ -141,26 +130,6 @@ pub fn run(cli: &Cli) -> Result<Report, RunError> {
             &cli.out,
         )?));
     }
-    if !cli.icd10cm.is_empty() {
-        let scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
-        let mut roots = Vec::new();
-        for (i, path) in cli.icd10cm.iter().enumerate() {
-            if path.is_file() {
-                let into = scratch.path().join(i.to_string());
-                roots.push(archive::unpack_icd10cm(path, &into)?);
-            } else {
-                roots.push(path.clone());
-            }
-        }
-        let files = ferroterm_classification::icd10cm::locate(&roots)?;
-        let classification = ferroterm_classification::icd10cm::read(&files)?;
-        return Ok(Report::Classification(classification::build(
-            &classification,
-            classification::ICD10CM_SYSTEM,
-            None,
-            &cli.out,
-        )?));
-    }
     if let Some(loinc) = &cli.loinc {
         let scratch;
         let root = if loinc.is_file() {
@@ -188,6 +157,62 @@ pub fn run(cli: &Cli) -> Result<Report, RunError> {
         return Ok(Report::Snomed(pipeline::build(&root, &cli.out)?));
     }
     Ok(Report::Snomed(pipeline::build(rf2, &cli.out)?))
+}
+
+/// The classification builds (`--claml`, `--atc`, `--icd10cm`), when the
+/// command line asks for one.
+fn run_classification(cli: &Cli) -> Result<Option<classification::Report>, RunError> {
+    if let Some(claml) = &cli.claml {
+        let system = cli.system.as_deref().ok_or(RunError::NoSystem)?;
+        let scratch;
+        let file = if claml
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
+        {
+            scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+            archive::unpack_claml(claml, scratch.path())?
+        } else {
+            claml.clone()
+        };
+        let classification = ferroterm_classification::claml::read_file(&file)?;
+        return Ok(Some(classification::build(
+            &classification,
+            system,
+            cli.claml_version.as_deref(),
+            &cli.out,
+        )?));
+    }
+    if let Some(atc) = &cli.atc {
+        let version = cli.atc_version.as_deref().ok_or(RunError::NoAtcVersion)?;
+        let classification = ferroterm_classification::atc::read(atc, Some(version))?;
+        return Ok(Some(classification::build(
+            &classification,
+            ferroterm_classification::atc::SYSTEM,
+            Some(version),
+            &cli.out,
+        )?));
+    }
+    if cli.icd10cm.is_empty() {
+        return Ok(None);
+    }
+    let scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+    let mut roots = Vec::new();
+    for (i, path) in cli.icd10cm.iter().enumerate() {
+        if path.is_file() {
+            let into = scratch.path().join(i.to_string());
+            roots.push(archive::unpack_icd10cm(path, &into)?);
+        } else {
+            roots.push(path.clone());
+        }
+    }
+    let files = ferroterm_classification::icd10cm::locate(&roots)?;
+    let classification = ferroterm_classification::icd10cm::read(&files)?;
+    Ok(Some(classification::build(
+        &classification,
+        classification::ICD10CM_SYSTEM,
+        None,
+        &cli.out,
+    )?))
 }
 
 /// Fills the ICD-11 `cache` from the deployment at `api`: every code system
@@ -238,8 +263,11 @@ pub enum Report {
 #[derive(Debug, thiserror::Error)]
 pub enum RunError {
     /// No input was given.
-    #[error("give `--rf2`, `--loinc`, `--claml`, `--icd10cm`, `--rxnorm`, or `--icd11`")]
+    #[error("give `--rf2`, `--loinc`, `--claml`, `--icd10cm`, `--rxnorm`, `--icd11`, or `--atc`")]
     NoInput,
+    /// `--atc` without `--atc-version`.
+    #[error("`--atc` needs `--atc-version` (the index year)")]
+    NoAtcVersion,
     /// The ICD-API names no latest release and none was given.
     #[error("the ICD-API names no latest release; pass `--icd11-release`")]
     NoRelease,
@@ -264,6 +292,9 @@ pub enum RunError {
     /// The ICD-10-CM release does not read.
     #[error(transparent)]
     Icd10cm(#[from] ferroterm_classification::icd10cm::Icd10cmError),
+    /// The ATC table does not read.
+    #[error(transparent)]
+    Atc(#[from] ferroterm_classification::atc::AtcError),
     /// The classification build failed.
     #[error(transparent)]
     Classification(#[from] classification::Error),

@@ -582,6 +582,7 @@ dependencies = [
 name = "ferroterm-classification"
 version = "0.0.6"
 dependencies = [
+ "csv",
  "ferroterm-testkit",
  "quick-xml",
  "tempfile",

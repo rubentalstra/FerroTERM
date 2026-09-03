@@ -40,6 +40,11 @@ fresh link reference.
   language range list (`en, en-AU; q=0.4`, `de,*`), resolved against the
   languages the code system carries by quality, then position; `*` is the
   system's own language.
+- ATC/DDD: `ferroterm-build --atc <index.csv|BST801T> --atc-version <year>`
+  builds the WHO index (exported as CSV) or the G-Standaard `BST801T` file
+  into the classification layout under `http://www.whocc.no/atc`: the five
+  levels as `kind`, the tree from the code prefixes, the names as
+  designations by language, every DDD a `ddd` property.
 
 ### Changed
 

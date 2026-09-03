@@ -2,12 +2,14 @@
 //!
 //! `claml` reads Classification Markup Language (ISO 13120: WHO ICD-10, the
 //! national ICD-10 translations, ICPC-2); `icd10cm` reads the NCHS ICD-10-CM
-//! tabular release (the tabular XML and the order file). Both produce a
+//! tabular release (the tabular XML and the order file); `atc` reads the WHO
+//! ATC/DDD index as a table or the G-Standaard ATC file. Both produce a
 //! [`Classification`]: classes of a declared kind, each with one parent,
 //! labelled and annotated by rubric kind. `ferroterm-build` turns the model
 //! into the served artifacts.
 #![doc(test(attr(deny(warnings))))]
 
+pub mod atc;
 pub mod claml;
 pub mod icd10cm;
 mod xml;

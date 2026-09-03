@@ -6,5 +6,6 @@
     reason = "test assertions"
 )]
 
+mod atc;
 mod claml;
 mod icd10cm;

@@ -294,8 +294,18 @@ engine. Each row is a tracker issue under the program issue.
 - **Hierarchy.** Five levels under fourteen anatomical main groups
   (`A`, `A10`, `A10B`, `A10BA`, `A10BA02`), one parent each: `classified-with`
   (<https://atcddd.fhi.no/atc/structure_and_principles/>).
-- **FerroTERM plan.** A small table loader over the purchased file or the
-  G-Standaard files; generic filters over the tree.
+- **Served.** `ferroterm-build --atc <index.csv|BST801T> --atc-version <year>
+  --out <dir>` reads the WHO index exported as CSV (`ATC code`, `ATC level
+  name`, `DDD`, `U`, `Adm.R`, `Note`; the delimiter detected from the header)
+  or the G-Standaard file `BST801T` (fixed-length records, the Dutch and
+  English names, the indicator; removed records skipped) into the
+  classification layout: the five levels as `kind`, each code under the
+  parent its prefix names, the names as designations by language, every DDD
+  a `ddd` property (`2 g O`, the note after a semicolon), the indicator an
+  `indicator` property. The classification provider serves it: the generic
+  tree filters, `kind` and `ddd` filters, `$subsumes` from the closure. The
+  G-Standaard DDD file (`BST802T`) is not read: its units and routes are
+  thesaurus references whose file is not described here.
 
 ## ICPC-2 and ICPC-1 NL
 

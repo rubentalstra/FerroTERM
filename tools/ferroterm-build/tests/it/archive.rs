@@ -73,6 +73,8 @@ fn a_release_zip_builds_the_same_bytes_as_the_directory() {
         icd11_api: None,
         icd11_release: None,
         icd11_languages: Vec::new(),
+        atc: None,
+        atc_version: None,
         rxnorm_sources: Vec::new(),
         out: from_dir.path().to_path_buf(),
     })
@@ -91,6 +93,8 @@ fn a_release_zip_builds_the_same_bytes_as_the_directory() {
         icd11_api: None,
         icd11_release: None,
         icd11_languages: Vec::new(),
+        atc: None,
+        atc_version: None,
         rxnorm_sources: Vec::new(),
         out: from_zip.path().to_path_buf(),
     })
@@ -147,6 +151,8 @@ fn only_the_snapshot_is_unpacked_and_a_zip_without_one_is_refused() {
             icd11_api: None,
             icd11_release: None,
             icd11_languages: Vec::new(),
+            atc: None,
+            atc_version: None,
             rxnorm_sources: Vec::new(),
             out: out.path().to_path_buf(),
         }),
