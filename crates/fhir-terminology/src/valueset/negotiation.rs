@@ -19,7 +19,7 @@ use crate::compose::{Compose, Include};
 pub enum NegotiationError {
     /// A `check-system-version` names one version, the value set another.
     #[error(
-        "`check-system-version` names `{url}|{checked}` but the value set uses version `{named}`"
+        "The version '{named}' is not allowed for system '{url}': required to be '{checked}' by a version-check parameter"
     )]
     SystemVersion {
         /// The system.
@@ -187,6 +187,46 @@ impl Negotiation {
         Ok((url.to_owned(), version))
     }
 
+    /// The version parameter that would apply to system `url` when the
+    /// reference names `named`, without running the checks: the forced one,
+    /// else the named one, else a default; `None` when nothing names one.
+    #[must_use]
+    pub fn system_literal(&self, url: &str, named: Option<&str>) -> Option<String> {
+        if let Some((_, forced)) = self.systems.forced.iter().find(|(u, _)| u == url) {
+            return forced.clone();
+        }
+        if named.is_some() {
+            return named.map(str::to_owned);
+        }
+        self.systems
+            .defaults
+            .iter()
+            .chain(&self.systems.checks)
+            .find(|(u, _)| u == url)
+            .and_then(|(_, v)| v.clone())
+    }
+
+    /// Whether the checks allow `version` for system `url`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`NegotiationError::SystemVersion`] when a check disagrees.
+    pub fn check_system(&self, url: &str, version: &str) -> Result<(), NegotiationError> {
+        for (checked_url, checked) in &self.systems.checks {
+            if checked_url == url
+                && let Some(checked) = checked
+                && !crate::versioned::version_matches(checked, version)
+            {
+                return Err(NegotiationError::SystemVersion {
+                    url: url.to_owned(),
+                    checked: checked.clone(),
+                    named: version.to_owned(),
+                });
+            }
+        }
+        Ok(())
+    }
+
     /// `compose` with every system reference at its negotiated version.
     ///
     /// # Errors
@@ -209,5 +249,27 @@ impl Negotiation {
             exclude: compose.exclude.iter().map(pin).collect::<Result<_, _>>()?,
             inactive: compose.inactive,
         })
+    }
+
+    /// `compose` with every system reference at its negotiated version, the
+    /// checks left to the caller (validation reports a disagreement as an
+    /// itemised issue, never as a refusal).
+    #[must_use]
+    pub fn pin_lenient(&self, compose: &Compose) -> Compose {
+        if self.systems.is_empty() {
+            return compose.clone();
+        }
+        let pin = |include: &Include| -> Include {
+            let mut pinned = include.clone();
+            if let Some(system) = pinned.system.as_mut() {
+                system.version = self.system_literal(&system.url, system.version.as_deref());
+            }
+            pinned
+        };
+        Compose {
+            include: compose.include.iter().map(pin).collect(),
+            exclude: compose.exclude.iter().map(pin).collect(),
+            inactive: compose.inactive,
+        }
     }
 }

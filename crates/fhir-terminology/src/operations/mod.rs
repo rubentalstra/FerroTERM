@@ -56,6 +56,10 @@ pub enum OperationError {
     /// Parameters contradict each other or the invocation.
     #[error("{0}")]
     Invalid(String),
+    /// A `check-system-version` parameter forbids the version a value set
+    /// uses (the ecosystem's `version-error`, an `exception`).
+    #[error("{0}")]
+    VersionCheck(String),
     /// The operation or a parameter combination is not supported here.
     #[error("{0}")]
     NotSupported(String),
@@ -124,7 +128,7 @@ impl OperationError {
             | Self::UnknownValueSet(_)
             | Self::UnknownConceptMap(_) => "not-found",
             Self::TooCostly(_) => "too-costly",
-            Self::Provider(_) => "exception",
+            Self::VersionCheck(_) | Self::Provider(_) => "exception",
         }
     }
 
@@ -141,6 +145,7 @@ impl OperationError {
             | Self::UnknownConceptMap(_) => "not-found",
             Self::UnknownCode { .. } | Self::InvalidCode { .. } => "invalid-code",
             Self::ValueSetInvalid(_) => "vs-invalid",
+            Self::VersionCheck(_) => "version-error",
             Self::TooCostly(_) => "too-costly",
             Self::CannotDetermine(_) => "cannot-determine",
         }
@@ -156,6 +161,7 @@ impl OperationError {
         match self {
             Self::Required(_)
             | Self::Invalid(_)
+            | Self::VersionCheck(_)
             | Self::UnknownCode { .. }
             | Self::InvalidCode { .. }
             | Self::NotSupported(_) => StatusCode::BAD_REQUEST,
@@ -301,7 +307,14 @@ impl From<crate::compose::ComposeError> for OperationError {
 
 impl From<crate::valueset::negotiation::NegotiationError> for OperationError {
     fn from(error: crate::valueset::negotiation::NegotiationError) -> Self {
-        Self::Invalid(error.to_string())
+        match error {
+            crate::valueset::negotiation::NegotiationError::SystemVersion { .. } => {
+                Self::VersionCheck(error.to_string())
+            }
+            crate::valueset::negotiation::NegotiationError::ValueSetVersion { .. } => {
+                Self::Invalid(error.to_string())
+            }
+        }
     }
 }
 
@@ -400,12 +413,14 @@ pub fn unknown_system(
     url: &str,
     version: Option<&str>,
     expression: Option<String>,
+    valid: &[String],
 ) -> (String, Issue) {
     let (canonical, text) = match version {
         Some(version) => (
             format!("{url}|{version}"),
             format!(
-                "A definition for CodeSystem '{url}' version '{version}' could not be found, so the code cannot be validated"
+                "A definition for CodeSystem '{url}' version '{version}' could not be found, so the code cannot be validated{}",
+                valid_versions(valid)
             ),
         ),
         None => (
@@ -434,9 +449,21 @@ pub fn unknown_system(
 /// bare parameter is named as itself.
 #[must_use]
 pub fn at(base: &str, leaf: &str) -> Option<String> {
-    if base.starts_with("CodeableConcept.coding[") {
-        Some(format!("{base}.{leaf}"))
-    } else {
-        Some(base.to_owned())
+    Some(match base {
+        "code" => leaf.to_owned(),
+        "coding" => format!("Coding.{leaf}"),
+        _ if base.starts_with("CodeableConcept.coding[") => format!("{base}.{leaf}"),
+        _ => base.to_owned(),
+    })
+}
+
+/// The `Valid versions: a or b` tail of a not-found text, from the served
+/// versions of the system; empty when none is served.
+#[must_use]
+pub fn valid_versions(versions: &[String]) -> String {
+    match versions {
+        [] => String::new(),
+        [one] => format!(". Valid versions: {one}"),
+        [head @ .., last] => format!(". Valid versions: {} or {last}", head.join(", ")),
     }
 }

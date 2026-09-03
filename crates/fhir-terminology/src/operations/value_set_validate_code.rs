@@ -17,7 +17,6 @@ use super::{CodingRef, Issue, OperationError, Sources};
 use crate::compose::Item;
 use crate::language;
 use crate::provider::CodeSystemProvider;
-use crate::registry::ResolveError;
 use crate::valueset::model::{ModelError, ValueSetModel};
 use crate::valueset::negotiation::Negotiation;
 use crate::valueset::store::Resolver;
@@ -141,7 +140,7 @@ fn prepare(
         version.as_deref(),
     )?;
     let model = Arc::new(ValueSetModel {
-        compose: negotiation.pin(&model.compose)?,
+        compose: negotiation.pin_lenient(&model.compose),
         ..(*model).clone()
     });
     Ok((model, negotiation))
@@ -201,13 +200,7 @@ pub fn validate_code(
         infer_system: input.infer_system.unwrap_or(false),
     };
     let check = |subject: &Subject<'_>| -> Result<Validation, OperationError> {
-        let version =
-            negotiation.system_version(subject.system.unwrap_or_default(), subject.version)?;
-        let subject = Subject {
-            version: version.as_deref(),
-            ..*subject
-        };
-        check(sources, &model, &resolver, &subject, &policy)
+        check(sources, &model, &resolver, &negotiation, subject, &policy)
     };
     let inputs = usize::from(input.code.is_some())
         + usize::from(input.coding.is_some())
@@ -408,6 +401,7 @@ fn check(
     sources: &Sources<'_>,
     model: &ValueSetModel,
     resolver: &Resolver<'_>,
+    negotiation: &Negotiation,
     subject: &Subject<'_>,
     policy: &Policy<'_>,
 ) -> Result<Validation, OperationError> {
@@ -425,31 +419,43 @@ fn check(
             None => return Ok(cannot_infer(model, subject)),
         }
     };
-    let served = match sources.registry.resolve(&system, subject.version) {
-        Ok(served) => served,
-        Err(error) => {
-            let version = match &error {
-                ResolveError::UnknownSystem(_) => None,
-                ResolveError::UnknownVersion { .. } => subject.version,
-            };
-            let (canonical, issue) =
-                super::unknown_system(&system, version, super::at(subject.expression, "system"));
-            let mut validation = failed(Some(system.clone()), version.map(str::to_owned), issue);
-            validation.code = Some(subject.code.to_owned());
-            validation.unknown_systems.push(canonical);
-            return Ok(validation);
-        }
+    let mut target = match resolve_target(sources, model, negotiation, &system, subject) {
+        Ok(target) => target,
+        Err(unserved) => return Ok(*unserved),
     };
-    let provider: &Arc<dyn CodeSystemProvider> = &served.provider;
+    if target.resolvable && !target.alternatives.is_empty() {
+        let alternatives = std::mem::take(&mut target.alternatives);
+        let candidates = std::iter::once(Arc::clone(&target.provider)).chain(alternatives);
+        if let Some(found) =
+            containing_version(model, resolver, &system, subject.code, language, candidates)
+        {
+            target.provider = found;
+        }
+    }
+    let provider: &Arc<dyn CodeSystemProvider> = &target.provider;
     let version = provider.identity().version.clone();
     let Some(located) = provider.locate(subject.code)? else {
-        return Ok(unknown_code(model, &system, version, subject));
+        let mut validation = unknown_code(model, &system, version, subject);
+        validation.issues.splice(0..0, target.issues);
+        validation.unknown_systems.extend(target.unknown_systems);
+        return Ok(validation);
     };
+    let display = provider.display(
+        located.concept,
+        language::for_provider(provider.as_ref(), language).as_deref(),
+    )?;
+    if !target.resolvable {
+        return Ok(with_target(
+            failed_target(&system, version, target),
+            &located,
+            display,
+        ));
+    }
     let contained = match resolver.contains_compose(
         &model.canonical(),
         &model.compose,
         &system,
-        subject.version,
+        Some(&version),
         &located.code,
         language,
     ) {
@@ -460,55 +466,418 @@ fn check(
         Err(crate::compose::ComposeError::UnknownValueSet(url)) => {
             return Ok(unknown_import(&system, version, &url, &located.code));
         }
-        Err(crate::compose::ComposeError::Resolve(error)) => {
-            return unknown_include(
-                provider,
-                &located,
-                version,
-                &error,
-                subject.expression,
-                language,
-            );
-        }
         Err(error) => return Err(error.into()),
     };
     let Some(item) = contained else {
-        let display = provider.display(
-            located.concept,
-            language::for_provider(provider.as_ref(), language).as_deref(),
-        )?;
-        return Ok(outside_value_set(
+        let mut validation = outside_value_set(
             model,
             &system,
             version,
             &located,
             display.as_deref(),
             subject.expression,
-        ));
+        );
+        validation.issues.splice(0..0, target.issues);
+        validation.unknown_systems.extend(target.unknown_systems);
+        return Ok(validation);
     };
-    let issues = assess(provider, &located, &item, subject, policy)?;
-    let display = provider.display(
-        located.concept,
-        language::for_provider(provider.as_ref(), language).as_deref(),
-    )?;
+    let mut issues = target.issues;
+    issues.extend(assess(provider, &located, &item, subject, policy)?);
     let result = !issues.iter().any(|issue| issue.severity == "error");
-    let message = issues
-        .iter()
-        .map(|issue| issue.text.as_str())
-        .collect::<Vec<_>>()
-        .join("; ");
     Ok(Validation {
         result,
-        message: (!message.is_empty()).then_some(message),
+        message: message_of(&issues),
         display,
         system: Some(system),
         version: Some(version).filter(|v| !v.is_empty()),
         code: Some(located.code),
         issues,
-        unknown_systems: Vec::new(),
+        unknown_systems: target.unknown_systems,
         x_unknown_systems: Vec::new(),
         codeable_concept: None,
     })
+}
+
+/// The version of `system` (among `candidates`, the ones the value set
+/// includes) that has `code` in the value set, the greatest first, for a
+/// subject that names no version (the ecosystem's `overload` cases).
+fn containing_version(
+    model: &ValueSetModel,
+    resolver: &Resolver<'_>,
+    system: &str,
+    code: &str,
+    language: Option<&str>,
+    candidates: impl Iterator<Item = Arc<dyn CodeSystemProvider>>,
+) -> Option<Arc<dyn CodeSystemProvider>> {
+    let mut candidates: Vec<Arc<dyn CodeSystemProvider>> = candidates.collect();
+    candidates.sort_by(|a, b| {
+        crate::versioned::version_order(&b.identity().version, &a.identity().version)
+    });
+    candidates.into_iter().find(|candidate| {
+        candidate
+            .locate(code)
+            .ok()
+            .flatten()
+            .is_some_and(|located| {
+                resolver
+                    .contains_compose(
+                        &model.canonical(),
+                        &model.compose,
+                        system,
+                        Some(&candidate.identity().version),
+                        &located.code,
+                        language,
+                    )
+                    .ok()
+                    .flatten()
+                    .is_some()
+            })
+    })
+}
+
+/// The version a subject is validated against and what the choice cost.
+struct Target {
+    /// The provider at that version.
+    provider: Arc<dyn CodeSystemProvider>,
+    /// The other include versions of the system to try when the subject names
+    /// none and the value set includes the system at several versions.
+    alternatives: Vec<Arc<dyn CodeSystemProvider>>,
+    /// Whether the include's own version resolved (else the subject's or the
+    /// default stands in, and the validation fails regardless of membership).
+    resolvable: bool,
+    /// The version disagreements, in the order the ecosystem itemises them.
+    issues: Vec<Issue>,
+    /// The canonicals for `x-caused-by-unknown-system`.
+    unknown_systems: Vec<String>,
+}
+
+/// The `message` of a validation: the not-found and value set issues first
+/// (the ecosystem's order), else every other error.
+fn message_of(issues: &[Issue]) -> Option<String> {
+    let errors = |pick: &dyn Fn(&Issue) -> bool| -> Vec<&str> {
+        issues
+            .iter()
+            .filter(|i| i.severity == "error" && pick(i))
+            .map(|i| i.text.as_str())
+            .collect()
+    };
+    let mut primary = errors(&|i| i.kind == "not-found");
+    primary.extend(errors(&|i| i.kind == "vs-invalid"));
+    let chosen = if primary.is_empty() {
+        errors(&|_| true)
+    } else {
+        primary
+    };
+    (!chosen.is_empty()).then(|| chosen.join("; "))
+}
+
+/// The version of `system` the value set uses for this subject, negotiated,
+/// and the issues a subject version that disagrees or a version the server
+/// does not serve raise (the ecosystem's `version` cases).
+///
+/// Returns the unserved-system validation when neither the include's version
+/// nor the subject's nor a default resolves.
+fn resolve_target(
+    sources: &Sources<'_>,
+    model: &ValueSetModel,
+    negotiation: &Negotiation,
+    system: &str,
+    subject: &Subject<'_>,
+) -> Result<Target, Box<Validation>> {
+    let registry = sources.registry;
+    let valid: Vec<String> = registry
+        .versions(system)
+        .map(|p| p.identity().version.clone())
+        .collect();
+    let subject_served = subject
+        .version
+        .is_none_or(|v| registry.resolve(system, Some(v)).is_ok());
+    let include_literal = include_literal_for(model, system, subject.version);
+    let original = model
+        .compose
+        .include
+        .iter()
+        .filter_map(|i| i.system.as_ref())
+        .find(|s| s.url == system)
+        .map(|s| negotiation_original(negotiation, system, s.version.as_deref()))
+        .unwrap_or_default();
+    let literal = include_literal.map(str::to_owned);
+    let resolved = match &literal {
+        Some(l) => match subject.version {
+            Some(sv) if subject_served && crate::versioned::version_matches(l, sv) => {
+                registry.resolve(system, Some(sv)).ok()
+            }
+            _ => registry.resolve(system, Some(l)).ok(),
+        },
+        None => registry.resolve(system, None).ok(),
+    };
+    let mut issues = Vec::new();
+    let mut unknown_systems = Vec::new();
+    let expression = subject.expression;
+    let Some(resolved) = resolved else {
+        return unresolvable_include(registry, system, subject, subject_served, literal, &valid);
+    };
+    let version = resolved.provider.identity().version.clone();
+    if let Err(error) = negotiation.check_system(system, &version) {
+        issues.push(Issue {
+            severity: "error",
+            code: "exception",
+            kind: "version-error",
+            text: error.to_string(),
+            expression: super::at(expression, "version"),
+        });
+    }
+    disagreement(
+        system,
+        subject,
+        &version,
+        literal.as_deref(),
+        original.as_deref(),
+        subject_served,
+        &valid,
+        &mut issues,
+        &mut unknown_systems,
+    );
+    // NOTE: a value set that includes one system at several versions admits a
+    // versionless subject from any of them (the ecosystem's `overload` cases).
+    let alternatives = if subject.version.is_none() {
+        model
+            .compose
+            .include
+            .iter()
+            .filter_map(|i| i.system.as_ref())
+            .filter(|s| s.url == system && s.version.as_deref() != include_literal)
+            .filter_map(|s| registry.resolve(system, s.version.as_deref()).ok())
+            .map(|r| r.provider)
+            .filter(|p| p.identity().version != version)
+            .collect()
+    } else {
+        Vec::new()
+    };
+    Ok(Target {
+        provider: resolved.provider,
+        alternatives,
+        resolvable: true,
+        issues,
+        unknown_systems,
+    })
+}
+
+/// The version literal of the include for `system` this subject falls under:
+/// one whose version admits the subject's when several do (`version-mixed`),
+/// else the first.
+fn include_literal_for<'m>(
+    model: &'m ValueSetModel,
+    system: &str,
+    subject_version: Option<&str>,
+) -> Option<&'m str> {
+    let includes: Vec<Option<&str>> = model
+        .compose
+        .include
+        .iter()
+        .filter_map(|i| i.system.as_ref())
+        .filter(|s| s.url == system)
+        .map(|s| s.version.as_deref())
+        .collect();
+    includes
+        .iter()
+        .copied()
+        .find(|v| match (v, subject_version) {
+            (Some(pattern), Some(sv)) => crate::versioned::version_matches(pattern, sv),
+            _ => false,
+        })
+        .or_else(|| includes.first().copied())
+        .flatten()
+}
+
+/// The issues a subject version raises when it differs from the version the
+/// value set uses: the `vs-invalid` disagreement (an error, or a warning for
+/// a versionless include and an unserved subject version) and, for an
+/// unserved subject version, the not-found issue, in the ecosystem's order.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the disagreement is described by exactly these facts"
+)]
+fn disagreement(
+    system: &str,
+    subject: &Subject<'_>,
+    version: &str,
+    literal: Option<&str>,
+    original: Option<&str>,
+    subject_served: bool,
+    valid: &[String],
+    issues: &mut Vec<Issue>,
+    unknown_systems: &mut Vec<String>,
+) {
+    let Some(sv) = subject.version else {
+        return;
+    };
+    if crate::versioned::version_matches(sv, version) {
+        return;
+    }
+    let expression = subject.expression;
+    let (severity, text) = match (literal, original) {
+        (Some(named), Some(orig)) if named != orig => (
+            "error",
+            format!(
+                "The code system '{system}' version '{named}' resulting from the version '{orig}' in the ValueSet include is different to the one in the value ('{sv}')"
+            ),
+        ),
+        (Some(named), _) => (
+            "error",
+            format!(
+                "The code system '{system}' version '{named}' in the ValueSet include is different to the one in the value ('{sv}')"
+            ),
+        ),
+        (None, _) if subject_served => (
+            "error",
+            format!(
+                "The code system '{system}' version '{version}' in the ValueSet include is different to the one in the value ('{sv}')"
+            ),
+        ),
+        (None, _) => (
+            "warning",
+            format!(
+                "The code system '{system}' version '{version}' for the versionless include in the ValueSet include is different to the one in the value ('{sv}')"
+            ),
+        ),
+    };
+    let disagreement = vs_invalid(severity, text, expression);
+    if subject_served {
+        issues.push(disagreement);
+        return;
+    }
+    let (canonical, not_found) =
+        super::unknown_system(system, Some(sv), super::at(expression, "system"), valid);
+    unknown_systems.push(canonical);
+    if severity == "error" {
+        issues.push(disagreement);
+        issues.push(not_found);
+    } else {
+        issues.push(not_found);
+        issues.push(disagreement);
+    }
+}
+
+/// The target when the include's version is not served: the subject's version
+/// when served, else the default, and the validation fails regardless.
+fn unresolvable_include(
+    registry: &crate::registry::Registry,
+    system: &str,
+    subject: &Subject<'_>,
+    subject_served: bool,
+    literal: Option<String>,
+    valid: &[String],
+) -> Result<Target, Box<Validation>> {
+    let expression = subject.expression;
+    let fallback = subject.version.filter(|_| subject_served).map_or_else(
+        || registry.resolve(system, None),
+        |v| registry.resolve(system, Some(v)),
+    );
+    let Ok(fallback) = fallback else {
+        return Err(Box::new(unserved_subject(registry, system, subject, valid)));
+    };
+    let bad = literal.unwrap_or_default();
+    let mut issues = Vec::new();
+    if let Some(sv) = subject.version {
+        issues.push(vs_invalid(
+            "error",
+            format!(
+                "The code system '{system}' version '{bad}' in the ValueSet include is different to the one in the value ('{sv}')"
+            ),
+            expression,
+        ));
+    }
+    let (canonical, not_found) =
+        super::unknown_system(system, Some(&bad), super::at(expression, "system"), valid);
+    issues.push(not_found);
+    Ok(Target {
+        provider: fallback.provider,
+        alternatives: Vec::new(),
+        resolvable: false,
+        issues,
+        unknown_systems: vec![canonical],
+    })
+}
+
+/// The include's version before the negotiation touched it, when the
+/// negotiation changed it (`Some(original)`, `Some("")` for none).
+fn negotiation_original(
+    negotiation: &Negotiation,
+    system: &str,
+    pinned: Option<&str>,
+) -> Option<String> {
+    // The lenient pin replaced the literal only when a parameter named one; the
+    // parameter itself tells us so.
+    let from_parameter = negotiation.system_literal(system, None);
+    match (from_parameter, pinned) {
+        (Some(param), Some(now)) if param == now => Some(String::new()),
+        _ => None,
+    }
+}
+
+/// A `vs-invalid` issue about the include's version, at `Coding.version`.
+fn vs_invalid(severity: &'static str, text: String, expression: &str) -> Issue {
+    Issue {
+        severity,
+        code: "invalid",
+        kind: "vs-invalid",
+        text,
+        expression: super::at(expression, "version"),
+    }
+}
+
+/// The failed validation of a subject whose system or version the server does
+/// not serve at all.
+fn unserved_subject(
+    registry: &crate::registry::Registry,
+    system: &str,
+    subject: &Subject<'_>,
+    valid: &[String],
+) -> Validation {
+    let version = subject
+        .version
+        .filter(|_| registry.resolve(system, None).is_ok());
+    let (canonical, issue) = super::unknown_system(
+        system,
+        version,
+        super::at(subject.expression, "system"),
+        valid,
+    );
+    let mut validation = failed(Some(system.to_owned()), version.map(str::to_owned), issue);
+    validation.code = Some(subject.code.to_owned());
+    validation.unknown_systems.push(canonical);
+    validation
+}
+
+/// The failed validation over an include whose version the server does not
+/// serve, answered against `version` (the subject's or the default).
+fn failed_target(system: &str, version: String, target: Target) -> Validation {
+    let mut validation = Validation {
+        result: false,
+        message: None,
+        display: None,
+        system: Some(system.to_owned()),
+        version: Some(version).filter(|v| !v.is_empty()),
+        code: None,
+        issues: target.issues,
+        unknown_systems: target.unknown_systems,
+        x_unknown_systems: Vec::new(),
+        codeable_concept: None,
+    };
+    validation.message = message_of(&validation.issues);
+    validation
+}
+
+/// `validation` with the located code and its display filled in.
+fn with_target(
+    mut validation: Validation,
+    located: &crate::provider::Located,
+    display: Option<String>,
+) -> Validation {
+    validation.code = Some(located.code.clone());
+    validation.display = display;
+    validation
 }
 
 /// The issues of a code the value set contains: abstract, inactive, and the
@@ -723,59 +1092,6 @@ fn failed(system: Option<String>, version: Option<String>, issue: Issue) -> Vali
         x_unknown_systems: Vec::new(),
         codeable_concept: None,
     }
-}
-
-/// The failed validation over a compose whose include names a system or
-/// version the server does not serve: the include is invalid and the system is
-/// named for the validator (the ecosystem's test cases; `$expand` keeps
-/// refusing it as an error).
-fn unknown_include(
-    provider: &Arc<dyn CodeSystemProvider>,
-    located: &crate::provider::Located,
-    version: String,
-    error: &ResolveError,
-    expression: &str,
-    language: Option<&str>,
-) -> Result<Validation, OperationError> {
-    let system = provider.identity().url.as_str();
-    let display = provider.display(
-        located.concept,
-        language::for_provider(provider.as_ref(), language).as_deref(),
-    )?;
-    let (canonical, text) = match error {
-        ResolveError::UnknownSystem(url) => (
-            url.clone(),
-            format!("The code system '{url}' in the ValueSet include is not known"),
-        ),
-        ResolveError::UnknownVersion { url, version } => (
-            format!("{url}|{version}"),
-            format!(
-                "The code system '{url}' version '{version}' in the ValueSet include is not known"
-            ),
-        ),
-    };
-    let mut validation = failed(
-        Some(system.to_owned()),
-        Some(version),
-        Issue {
-            severity: "error",
-            code: "invalid",
-            kind: "vs-invalid",
-            text,
-            expression: super::at(expression, "version"),
-        },
-    );
-    let (url, bad_version) = match error {
-        ResolveError::UnknownSystem(url) => (url.as_str(), None),
-        ResolveError::UnknownVersion { url, version } => (url.as_str(), Some(version.as_str())),
-    };
-    let (_, not_found) = super::unknown_system(url, bad_version, super::at(expression, "system"));
-    validation.message = Some(not_found.text.clone());
-    validation.issues.push(not_found);
-    validation.unknown_systems.push(canonical);
-    validation.code = Some(located.code.clone());
-    validation.display = display;
-    Ok(validation)
 }
 
 /// The failed validation over a value set the compose imports but the server
