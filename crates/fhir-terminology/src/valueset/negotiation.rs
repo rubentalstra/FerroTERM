@@ -78,7 +78,7 @@ impl Rules {
             if checked_url == url
                 && let Some(named) = named
                 && let Some(checked) = checked
-                && checked != named
+                && !crate::versioned::version_matches(checked, named)
             {
                 return Err(mismatch(checked.clone(), named.to_owned()));
             }

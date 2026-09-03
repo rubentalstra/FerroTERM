@@ -602,12 +602,19 @@ impl Expander<'_> {
             if named.url != system {
                 return Ok(None);
             }
-            let resolved = self
-                .registry
-                .resolve(&named.url, named.version.as_deref().or(version))?;
+            // NOTE: a subject version inside the include's pattern (`1.0.0` in
+            // `1.x.x`) is the version checked; the include's own otherwise.
+            let wanted = match (named.version.as_deref(), version) {
+                (Some(pattern), Some(v)) if crate::versioned::version_matches(pattern, v) => {
+                    Some(v)
+                }
+                (Some(pattern), _) => Some(pattern),
+                (None, v) => v,
+            };
+            let resolved = self.registry.resolve(&named.url, wanted)?;
             let provider = &resolved.provider;
             let identity = provider.identity();
-            if version.is_some_and(|v| v != identity.version) {
+            if version.is_some_and(|v| !crate::versioned::version_matches(v, &identity.version)) {
                 return Ok(None);
             }
             let failed = |source| ComposeError::Provider {

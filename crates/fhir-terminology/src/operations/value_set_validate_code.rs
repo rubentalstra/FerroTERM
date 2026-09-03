@@ -335,6 +335,16 @@ fn check(
                 subject.expression,
             ));
         }
+        Err(crate::compose::ComposeError::Resolve(error)) => {
+            return unknown_include(
+                provider,
+                &located,
+                version,
+                &error,
+                subject.expression,
+                language,
+            );
+        }
         Err(error) => return Err(error.into()),
     };
     let Some(item) = contained else {
@@ -584,6 +594,59 @@ fn failed(system: Option<String>, version: Option<String>, issue: Issue) -> Vali
         issues: vec![issue],
         unknown_systems: Vec::new(),
     }
+}
+
+/// The failed validation over a compose whose include names a system or
+/// version the server does not serve: the include is invalid and the system is
+/// named for the validator (the ecosystem's test cases; `$expand` keeps
+/// refusing it as an error).
+fn unknown_include(
+    provider: &Arc<dyn CodeSystemProvider>,
+    located: &crate::provider::Located,
+    version: String,
+    error: &ResolveError,
+    expression: &'static str,
+    language: Option<&str>,
+) -> Result<Validation, OperationError> {
+    let system = provider.identity().url.as_str();
+    let display = provider.display(
+        located.concept,
+        language::for_provider(provider.as_ref(), language).as_deref(),
+    )?;
+    let (canonical, text) = match error {
+        ResolveError::UnknownSystem(url) => (
+            url.clone(),
+            format!("The code system '{url}' in the ValueSet include is not known"),
+        ),
+        ResolveError::UnknownVersion { url, version } => (
+            format!("{url}|{version}"),
+            format!(
+                "The code system '{url}' version '{version}' in the ValueSet include is not known"
+            ),
+        ),
+    };
+    let mut validation = failed(
+        Some(system.to_owned()),
+        Some(version),
+        Issue {
+            severity: "error",
+            code: "invalid",
+            kind: "vs-invalid",
+            text,
+            expression: Some(expression),
+        },
+    );
+    let (url, bad_version) = match error {
+        ResolveError::UnknownSystem(url) => (url.as_str(), None),
+        ResolveError::UnknownVersion { url, version } => (url.as_str(), Some(version.as_str())),
+    };
+    let (_, not_found) = super::unknown_system(url, bad_version, expression);
+    validation.message = Some(not_found.text.clone());
+    validation.issues.push(not_found);
+    validation.unknown_systems.push(canonical);
+    validation.code = Some(located.code.clone());
+    validation.display = display;
+    Ok(validation)
 }
 
 /// The failed validation over a value set the compose imports but the server

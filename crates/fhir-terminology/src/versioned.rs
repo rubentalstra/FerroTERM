@@ -97,7 +97,9 @@ impl<T: Versioned> VersionedStore<T> {
         };
         let versions = self.by_url.get(url)?;
         match version.or(embedded) {
-            Some(version) => versions.get(version).cloned(),
+            Some(wanted) => select_version(versions.keys().map(String::as_str), wanted)
+                .and_then(|v| versions.get(v))
+                .cloned(),
             None => versions
                 .iter()
                 .max_by(|(a, _), (b, _)| version_order(a, b))
@@ -136,6 +138,61 @@ impl<T: Versioned> VersionedStore<T> {
     }
 }
 
+/// Whether `pattern` names `candidate`: equal segment by segment, an `x`
+/// segment standing for any value.
+///
+/// `1.0.x` names every `1.0.*`, `1.x.x` every `1.*.*`, and a pattern without
+/// `x` names itself alone; a bare `1` is no pattern and names only `1`. No
+/// FHIR version defines this form; the terminology ecosystem test cases and
+/// the reference server do (spec-silent, recorded on #174).
+#[must_use]
+pub fn version_matches(pattern: &str, candidate: &str) -> bool {
+    let mut wanted = pattern.split('.');
+    let mut have = candidate.split('.');
+    loop {
+        match (wanted.next(), have.next()) {
+            (None, None) => return true,
+            (None, Some(_)) => return false,
+            (Some(p), None) => {
+                if p != "x" {
+                    return false;
+                }
+            }
+            (Some("x"), Some(_)) => {}
+            (Some(p), Some(c)) => {
+                let equal = match (p.parse::<u64>(), c.parse::<u64>()) {
+                    (Ok(p), Ok(c)) => p == c,
+                    _ => p == c,
+                };
+                if !equal {
+                    return false;
+                }
+            }
+        }
+    }
+}
+
+/// The version among `versions` that `wanted` names: itself when present,
+/// else the greatest one a pattern matches.
+#[must_use]
+pub fn select_version<'a>(
+    versions: impl Iterator<Item = &'a str>,
+    wanted: &str,
+) -> Option<&'a str> {
+    let mut best: Option<&'a str> = None;
+    for version in versions {
+        if version == wanted {
+            return Some(version);
+        }
+        if version_matches(wanted, version)
+            && best.is_none_or(|current| version_order(version, current) == Ordering::Greater)
+        {
+            best = Some(version);
+        }
+    }
+    best
+}
+
 /// Orders version strings segment by segment, numerically where both
 /// segments are numbers, else lexically.
 fn version_order(a: &str, b: &str) -> Ordering {
@@ -163,7 +220,36 @@ fn version_order(a: &str, b: &str) -> Ordering {
 mod tests {
     use std::cmp::Ordering;
 
-    use super::version_order;
+    use super::{select_version, version_matches, version_order};
+
+    #[test]
+    fn x_segments_match_any_value_and_a_bare_prefix_matches_nothing_more() {
+        assert!(version_matches("1.0.x", "1.0.0"));
+        assert!(version_matches("1.0.x", "1.0.7"));
+        assert!(!version_matches("1.0.x", "1.2.0"));
+        assert!(version_matches("1.x.x", "1.2.0"));
+        assert!(!version_matches("1.x.x", "2.0.0"));
+        assert!(version_matches("1.2.0", "1.2.0"));
+        assert!(!version_matches("1", "1.0.0"));
+        assert!(version_matches("1.x", "1.0"));
+        assert!(
+            version_matches("1.0.x", "1.0"),
+            "a trailing x may stand for an absent segment"
+        );
+    }
+
+    #[test]
+    fn a_pattern_selects_the_greatest_match_and_a_version_selects_itself() {
+        let versions = ["1.0.0", "1.2.0", "2.0.0", "1.10.0"];
+        assert_eq!(
+            select_version(versions.into_iter(), "1.x.x"),
+            Some("1.10.0")
+        );
+        assert_eq!(select_version(versions.into_iter(), "1.0.x"), Some("1.0.0"));
+        assert_eq!(select_version(versions.into_iter(), "1.2.0"), Some("1.2.0"));
+        assert_eq!(select_version(versions.into_iter(), "1"), None);
+        assert_eq!(select_version(versions.into_iter(), "3.x.x"), None);
+    }
 
     #[test]
     fn versions_order_numerically_by_segment() {
