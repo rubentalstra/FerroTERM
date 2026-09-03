@@ -23,15 +23,33 @@ resource, and their providers answer them:
 
 Pass the URL as `url` to `ValueSet/$expand` or `ValueSet/$validate-code`.
 
-## A SNOMED CT value set today
+## The SNOMED CT implicit value sets
 
-The FHIR SNOMED CT page defines `http://snomed.info/sct?fhir_vs` (all
-concepts), `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, `?fhir_vs=refset/[sctid]`,
-and `?fhir_vs=ecl/[expression]`, with an optional edition base. FerroTERM does
-not answer these URLs yet; the first four are tracked for the current
-milestone and `ecl/` for v0.0.8. Until then a SNOMED CT value set is a
-`compose` with the filters the provider declares, sent inline or as a loaded
-resource:
+The FHIR SNOMED CT page defines value sets by URL over the SNOMED CT URI
+(<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets"), and the
+provider answers four of the five forms:
+
+| URL | Members |
+|---|---|
+| `http://snomed.info/sct?fhir_vs` | every concept of the edition |
+| `http://snomed.info/sct?fhir_vs=isa/[sctid]` | the concept and its descendants, from the transitive closure |
+| `http://snomed.info/sct?fhir_vs=refset` | the concepts that are reference sets with concept members |
+| `http://snomed.info/sct?fhir_vs=refset/[sctid]` | the active concept members of the reference set |
+| `http://snomed.info/sct?fhir_vs=ecl/[expression]` | refused until the ECL milestone (v0.0.8), with an `OperationOutcome` saying so |
+
+The base may be the edition URI (`http://snomed.info/sct/11000146104?fhir_vs=…`)
+or the edition and version URI, which pins the expansion to that served
+version; another edition's URI is refused. An unknown SCTID or a concept that
+is not a reference set is `vs-invalid` with the code named. The reference set
+memberships come from every RF2 reference set whose members are concepts (the
+simple, association, attribute value, and map reference sets); the language
+reference sets are read as acceptabilities instead.
+
+The same sets are reachable through a `compose`, inline or loaded, with the
+filters the provider declares: `concept is-a [sctid]`, `concept descendent-of
+[sctid]`, and `concept in [refset]` (reference set membership, as the page
+defines `in` for SNOMED CT), plus the generic `is-not-a`, `generalizes`,
+`not-in`, and `regex`:
 
 ```json
 {
@@ -40,16 +58,11 @@ resource:
   "compose": {
     "include": [{
       "system": "http://snomed.info/sct",
-      "filter": [{ "property": "concept", "op": "is-a", "value": "404684003" }]
+      "filter": [{ "property": "concept", "op": "in", "value": "31000147101" }]
     }]
   }
 }
 ```
-
-The `is-a`, `descendent-of`, `is-not-a`, `generalizes`, `in`, `not-in`, and
-`regex` filters over `concept` are answered from the transitive closure and the
-store; a display language selects the preferred term from the language
-reference set.
 
 ## What ECL adds (v0.0.8)
 

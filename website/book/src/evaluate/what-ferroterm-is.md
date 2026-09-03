@@ -66,8 +66,9 @@ clinical data repository by the same author. FerroTERM is independent of it.
 
 The build order is the tracker's milestones. As of v0.0.6:
 
-- ECL and the SNOMED implicit value sets (`?fhir_vs=…`) are v0.0.8; today a
-  SNOMED value set is a `compose` with `is-a` or `in` filters.
+- ECL (`?fhir_vs=ecl/…` and the `constraint` filter) is v0.0.8; the other
+  SNOMED implicit value sets (`?fhir_vs`, `isa/`, `refset`, `refset/`) are
+  served.
 - R4, R5, and R6 endpoints and the XML wire format are v0.0.9; the server
   answers R4B JSON.
 - Hierarchical (nested) expansion, persisted client resources, `Bundle`

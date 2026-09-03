@@ -180,10 +180,13 @@ impl From<ProviderError> for OperationError {
             ProviderError::UnsupportedFilter { .. }
             | ProviderError::InvalidFilterValue { .. }
             | ProviderError::Regex(_)
-            | ProviderError::UnknownCode(_) => Self::ValueSetInvalid(error.to_string()),
+            | ProviderError::UnknownCode(_)
+            | ProviderError::MalformedImplicitValueSet { .. } => {
+                Self::ValueSetInvalid(error.to_string())
+            }
             ProviderError::CannotDetermine(_) => Self::CannotDetermine(error.to_string()),
             ProviderError::InvalidCode { code, reason } => Self::InvalidCode { code, reason },
-            other => Self::Provider(other),
+            other @ ProviderError::Storage(_) => Self::Provider(other),
         }
     }
 }

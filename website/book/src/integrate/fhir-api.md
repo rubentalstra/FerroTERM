@@ -43,8 +43,9 @@ A value set reaches `$expand` and `ValueSet/$validate-code` in four ways:
 - **Implicit**: a URL a code system defines, answered by its provider without
   a resource: LOINC's `http://loinc.org/vs`, `/vs/[answer list]`, and
   `/vs/[part]`; UCUM's `/vs` and `/vs/[unit]`; RxNorm's `/vs`; ICD-11's
-  `<entity>/postcoordinationScale/<axis>`. SNOMED CT's `?fhir_vs=` forms are
-  on the roadmap ([Value sets and ECL](ecl-value-sets.md)).
+  `<entity>/postcoordinationScale/<axis>`; SNOMED CT's `?fhir_vs`,
+  `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, and `?fhir_vs=refset/[sctid]`,
+  on the system, edition, or version URI ([Value sets and ECL](ecl-value-sets.md)).
 
 A `compose` may include whole systems, enumerated concepts, and filters. The
 filters a system answers are the ones its provider declares in

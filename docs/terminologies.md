@@ -66,6 +66,13 @@ engine. Each row is a tracker issue under the program issue.
   `.claude/rules/snomed-terminology.md`.
 - **Size.** International edition: about 360,000 concepts, 1.2 million
   descriptions, 1.5 million relationships.
+- **Served.** `ferroterm-build --rf2 <release zip|dir> --out <dir>` builds the
+  Snapshot into the artifact layout, the reference set memberships of every
+  concept-referencing reference set beside it (`refsets.bin`). The provider
+  answers the implicit value sets `?fhir_vs`, `?fhir_vs=isa/[sctid]`,
+  `?fhir_vs=refset`, and `?fhir_vs=refset/[sctid]` on the system, edition, or
+  version URI, and the `concept is-a`, `descendent-of`, and `in` (reference
+  set membership) filters; `ecl/` and `?fhir_cm=` wait for their issues.
 
 ## FHIR `CodeSystem` resources (HL7 Terminology and custom systems)
 

@@ -15,6 +15,14 @@ fresh link reference.
 
 ### Added
 
+- SNOMED CT: the implicit value sets `?fhir_vs` (every concept),
+  `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, and `?fhir_vs=refset/[sctid]` on
+  the system, edition, or version URI (<https://hl7.org/fhir/R4B/snomedct.html>);
+  `?fhir_vs=ecl/` is refused with an `OperationOutcome` until the ECL
+  milestone. `concept in [sctid]` is reference set membership, as the page
+  defines it. `ferroterm-build --rf2` writes the active concept members of
+  every concept-referencing reference set to `refsets.bin` beside the store
+  (an artifact without the file still opens, with no reference sets).
 - ICD-11: `ferroterm-build --icd11 <cache> [--icd11-api <url>]` walks a local
   deployment of the WHO ICD-API into a cache of entity JSON and builds the
   MMS, the ICF, and the Foundation as three code systems
