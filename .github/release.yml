@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: BUSL-1.1
 #
 # Configuration for GitHub's auto-generated release notes. Categories map to the
 # issue and PR labels (see .claude/rules/issue-workflow.md and

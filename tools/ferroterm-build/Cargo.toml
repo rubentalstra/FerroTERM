@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: BUSL-1.1
 [package]
 name = "ferroterm-build"
 description = "Builds the served SNOMED CT artifacts from an RF2 release, offline"

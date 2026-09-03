@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-License-Identifier: BUSL-1.1 -->
 
 # Getting help
 
@@ -71,8 +71,9 @@ is how the decision gets made and how someone becomes a maintainer.
 
 ## What you are entitled to
 
-Nothing, and that is worth saying plainly. FerroTERM is MIT-licensed software
-provided as-is, with no warranty. Read the [LICENSE](LICENSE), which says
+Nothing, and that is worth saying plainly. FerroTERM is source-available
+software under the Business Source License 1.1, provided as-is, with no
+warranty. Read the [LICENSE](LICENSE), which says
 exactly that in the language that binds. Everything above describes what the
 project *intends* to do, and the intent is sincere; none of it is a
 contractual commitment, and only the security-report windows in SECURITY.md

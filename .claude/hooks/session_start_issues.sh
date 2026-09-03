@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: BUSL-1.1
 # .claude/hooks/session_start_issues.sh
 #
 # Claude Code SessionStart hook: prints the open GitHub issue list (the
