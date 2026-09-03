@@ -33,8 +33,8 @@ pub enum ArchiveError {
         #[source]
         source: io::Error,
     },
-    /// The zip holds no `Snapshot/` tree.
-    #[error("{path} holds no Snapshot/ tree")]
+    /// The zip holds no `Snapshot/` tree (RF2) or no `Loinc.csv` (LOINC).
+    #[error("{path} holds no Snapshot/ tree and no Loinc.csv")]
     NoSnapshot {
         /// The zip.
         path: PathBuf,
@@ -122,6 +122,72 @@ fn snapshot_root(name: &Path) -> Option<PathBuf> {
         }
     }
     None
+}
+
+/// The files of a LOINC release the build reads, by file name.
+const LOINC_FILES: [&str; 5] = [
+    "Loinc.csv",
+    "Part.csv",
+    "ComponentHierarchyBySystem.csv",
+    "AnswerList.csv",
+    "LoincAnswerListLink.csv",
+];
+
+/// Unpacks the tables of the LOINC release zip at `zip_path` under `into`.
+///
+/// Returns the directory to read as the release: the term table, the parts
+/// and hierarchy, the answer lists and links, and every linguistic variant;
+/// the part-link tables (hundreds of megabytes) stay in the zip.
+///
+/// # Errors
+///
+/// Returns [`ArchiveError`] when the zip does not read, an entry cannot be
+/// written, or the zip holds no `Loinc.csv`.
+pub fn unpack_loinc(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveError> {
+    let read = |source| ArchiveError::Read {
+        path: zip_path.to_path_buf(),
+        source,
+    };
+    let file = File::open(zip_path).map_err(|source| ArchiveError::Read {
+        path: zip_path.to_path_buf(),
+        source: zip::result::ZipError::Io(source),
+    })?;
+    let mut archive = zip::ZipArchive::new(file).map_err(read)?;
+    let mut found_terms = false;
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).map_err(read)?;
+        let Some(name) = entry.enclosed_name() else {
+            continue;
+        };
+        let Some(file_name) = name.file_name().and_then(|f| f.to_str()) else {
+            continue;
+        };
+        let wanted = LOINC_FILES
+            .iter()
+            .any(|f| f.eq_ignore_ascii_case(file_name))
+            || file_name.ends_with("LinguisticVariant.csv");
+        if entry.is_dir() || !wanted {
+            continue;
+        }
+        found_terms |= file_name.eq_ignore_ascii_case("Loinc.csv");
+        let target = into.join(&name);
+        let entry_name = entry.name().to_owned();
+        let unpack = |source| ArchiveError::Unpack {
+            entry: entry_name.clone(),
+            source,
+        };
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent).map_err(unpack)?;
+        }
+        let mut out = File::create(&target).map_err(unpack)?;
+        io::copy(&mut entry, &mut out).map_err(unpack)?;
+    }
+    if !found_terms {
+        return Err(ArchiveError::NoSnapshot {
+            path: zip_path.to_path_buf(),
+        });
+    }
+    Ok(into.to_path_buf())
 }
 
 #[cfg(test)]

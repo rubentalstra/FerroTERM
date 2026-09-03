@@ -454,8 +454,10 @@ dependencies = [
  "anyhow",
  "clap",
  "ferroterm-graph",
+ "ferroterm-loinc",
  "ferroterm-rf2",
  "ferroterm-store",
+ "ferroterm-testkit",
  "ferroterm-text",
  "serde_json",
  "tempfile",
@@ -498,6 +500,16 @@ dependencies = [
  "ferroterm-rf2",
  "proptest",
  "roaring",
+ "thiserror",
+]
+
+[[package]]
+name = "ferroterm-loinc"
+version = "0.0.4"
+dependencies = [
+ "csv",
+ "ferroterm-testkit",
+ "tempfile",
  "thiserror",
 ]
 
@@ -571,11 +583,14 @@ dependencies = [
 name = "ferroterm-testkit"
 version = "0.0.4"
 dependencies = [
+ "ferroterm-build",
  "ferroterm-graph",
+ "ferroterm-loinc",
  "ferroterm-rf2",
  "ferroterm-store",
  "ferroterm-text",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]

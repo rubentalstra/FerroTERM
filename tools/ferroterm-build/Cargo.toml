@@ -21,6 +21,7 @@ path = "src/main.rs"
 anyhow.workspace = true
 clap.workspace = true
 ferroterm-graph.workspace = true
+ferroterm-loinc.workspace = true
 ferroterm-rf2.workspace = true
 ferroterm-store.workspace = true
 ferroterm-text.workspace = true
@@ -30,6 +31,7 @@ thiserror.workspace = true
 zip.workspace = true
 
 [dev-dependencies]
+ferroterm-testkit.workspace = true
 tempfile.workspace = true
 
 [lints]

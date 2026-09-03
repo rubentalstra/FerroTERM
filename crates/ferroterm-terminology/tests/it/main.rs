@@ -16,6 +16,7 @@ mod concept_map;
 mod fhir_codesystem;
 mod filter;
 mod fixture;
+mod loinc;
 mod operations;
 mod registries;
 mod registry;

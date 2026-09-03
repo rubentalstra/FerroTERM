@@ -5,15 +5,26 @@ use clap::Parser;
 
 fn main() -> anyhow::Result<()> {
     let cli = ferroterm_build::Cli::parse();
-    let report = ferroterm_build::run(&cli)?;
-    println!(
-        "{}: {} concepts, {} designations, {} is-a edges, {} words, written to {}",
-        report.version_uri,
-        report.concepts,
-        report.designations,
-        report.is_a_edges,
-        report.words,
-        cli.out.display()
-    );
+    match ferroterm_build::run(&cli)? {
+        ferroterm_build::Report::Snomed(report) => println!(
+            "{}: {} concepts, {} designations, {} is-a edges, {} words, written to {}",
+            report.version_uri,
+            report.concepts,
+            report.designations,
+            report.is_a_edges,
+            report.words,
+            cli.out.display()
+        ),
+        ferroterm_build::Report::Loinc(report) => println!(
+            "LOINC {}: {} terms, {} parts, {} answer lists, {} designations, {} words, written to {}",
+            report.version,
+            report.terms,
+            report.parts,
+            report.answer_lists,
+            report.designations,
+            report.words,
+            cli.out.display()
+        ),
+    }
     Ok(())
 }

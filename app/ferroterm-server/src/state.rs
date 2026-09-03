@@ -5,17 +5,19 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use ferroterm_terminology::artifact::{self, ArtifactError};
 use ferroterm_terminology::conceptmap;
 use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
 use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
 use ferroterm_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
+use ferroterm_terminology::loinc::{self, LoincProvider};
 use ferroterm_terminology::operations::Sources;
 use ferroterm_terminology::provider::{CodeSystemProvider, ContentMode, ProviderError};
 use ferroterm_terminology::registries::ucum::provider::UcumProvider;
 use ferroterm_terminology::registries::{bcp13, bcp47, iso3166};
 use ferroterm_terminology::registry::{RegisterError, Registry, Resolved};
-use ferroterm_terminology::snomed::{OpenError, SnomedProvider};
+use ferroterm_terminology::snomed::{self, OpenError, SnomedProvider};
 use ferroterm_terminology::supplement::{Additions, Supplement, Supplemented};
 use ferroterm_terminology::valueset;
 use ferroterm_terminology::valueset::model::ValueSetModel;
@@ -36,6 +38,32 @@ pub enum LoadError {
         /// The cause.
         #[source]
         source: Box<OpenError>,
+    },
+    /// A LOINC artifact directory does not open.
+    #[error("cannot open the LOINC artifact at {path}")]
+    OpenLoinc {
+        /// The directory.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: Box<loinc::OpenError>,
+    },
+    /// An artifact's manifest does not say which system it serves.
+    #[error("cannot read the artifact at {path}")]
+    Artifact {
+        /// The directory.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: ArtifactError,
+    },
+    /// An artifact serves a system this server has no provider for.
+    #[error("the artifact at {path} serves `{system}`, which this server cannot open")]
+    UnknownArtifact {
+        /// The directory.
+        path: PathBuf,
+        /// The system.
+        system: String,
     },
     /// A directory of `CodeSystem` resources does not load.
     #[error("cannot load the CodeSystem resources at {path}")]
@@ -140,16 +168,36 @@ impl AppState {
     pub fn load(config: &Config) -> Result<Self, LoadError> {
         let mut loaded = Vec::new();
         for path in &config.index {
-            let provider =
-                SnomedProvider::open(path, &config.default_language).map_err(|source| {
-                    LoadError::Open {
-                        path: path.clone(),
-                        source: Box::new(source),
+            let system = artifact::system_of(path).map_err(|source| LoadError::Artifact {
+                path: path.clone(),
+                source,
+            })?;
+            let provider: Arc<dyn CodeSystemProvider> =
+                match system.as_str() {
+                    snomed::SYSTEM => Arc::new(
+                        SnomedProvider::open(path, &config.default_language).map_err(|source| {
+                            LoadError::Open {
+                                path: path.clone(),
+                                source: Box::new(source),
+                            }
+                        })?,
+                    ),
+                    loinc::SYSTEM => Arc::new(LoincProvider::open(path).map_err(|source| {
+                        LoadError::OpenLoinc {
+                            path: path.clone(),
+                            source: Box::new(source),
+                        }
+                    })?),
+                    other => {
+                        return Err(LoadError::UnknownArtifact {
+                            path: path.clone(),
+                            system: other.to_owned(),
+                        });
                     }
-                })?;
+                };
             loaded.push(Loaded {
                 path: path.clone(),
-                provider: Arc::new(provider),
+                provider,
             });
         }
         // NOTE: the registry systems ship with the server, so a validator finds BCP 47,
