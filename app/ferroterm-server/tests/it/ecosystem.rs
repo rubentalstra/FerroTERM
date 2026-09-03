@@ -4,7 +4,7 @@
 //! the ones whose semantics are not implemented yet with `not-supported`, and
 //! documents the overlay in its `CapabilityStatement`.
 
-use ferroterm_testkit::fhir::{ANIMALS, CM_ANIMALS_COLOURS, VS_PETS};
+use ferroterm_testkit::fhir::{ANIMALS, CM_ANIMALS_COLOURS, VS_ALL, VS_PETS, VS_PETS_REF};
 use http::StatusCode;
 use serde_json::Value;
 
@@ -13,30 +13,83 @@ use crate::fixture::{Server, parameter};
 const VERSIONS: [&str; 3] = ["r4", "r4b", "r5"];
 
 #[tokio::test]
+async fn the_version_negotiation_parameters_are_accepted_on_every_version() {
+    let server = Server::start_with_resources();
+    for version in VERSIONS {
+        // A default for a system the value set does not pin, and a matching check.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&system-version={ANIMALS}|2.0&check-system-version={ANIMALS}|2.0"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{version}"
+        );
+        assert_eq!(
+            parameter(&body, "version").unwrap()["valueString"],
+            "2.0",
+            "{version}"
+        );
+        // A forced version the server does not serve is an unknown version, named.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&force-system-version={ANIMALS}|9.9"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            false,
+            "{version}"
+        );
+        assert_eq!(
+            parameter(&body, "x-caused-by-unknown-system").unwrap()["valueCanonical"],
+            format!("{ANIMALS}|9.9"),
+            "{version}"
+        );
+        // A check that disagrees with the reference is refused.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_ALL}&valueSetVersion=2.0&system={ANIMALS}&code=cat&check-valueset-version={VS_ALL}|1.0"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{version}: {body}");
+        assert_eq!(body["issue"][0]["code"], "invalid", "{version}: {body}");
+        // $expand pins an imported value set by default-valueset-version and says so.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$expand?url={VS_PETS_REF}&default-valueset-version={VS_PETS}|1.0"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        let names: Vec<(String, String)> = body["expansion"]["parameter"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| {
+                (
+                    p["name"].as_str().unwrap().to_owned(),
+                    p["valueUri"].as_str().unwrap_or_default().to_owned(),
+                )
+            })
+            .collect();
+        let used = (String::from("used-valueset"), format!("{VS_PETS}|1.0"));
+        let echoed = (
+            String::from("default-valueset-version"),
+            format!("{VS_PETS}|1.0"),
+        );
+        assert!(names.contains(&used), "{version}: {names:?}");
+        assert!(names.contains(&echoed), "{version}: {names:?}");
+    }
+}
+
+#[tokio::test]
 async fn an_unimplemented_overlay_input_is_refused_as_not_supported_not_as_undeclared() {
     let server = Server::start_with_resources();
     for version in VERSIONS {
-        for name in [
-            "system-version",
-            "check-system-version",
-            "force-system-version",
-            "default-valueset-version",
-            "check-valueset-version",
-            "force-valueset-version",
-        ] {
-            let (status, body) = server
-                .get(&format!(
-                    "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&{name}=http://example.org/x|1"
-                ))
-                .await;
-            assert_eq!(status, StatusCode::BAD_REQUEST, "{version} {name}: {body}");
-            assert_eq!(
-                body["issue"][0]["code"], "not-supported",
-                "{version} {name}: {body}"
-            );
-            let text = body["issue"][0]["details"]["text"].as_str().unwrap();
-            assert!(text.contains(name), "{version}: {text}");
-        }
         for name in ["inferSystem", "lenient-display-validation"] {
             let (status, body) = server
                 .get(&format!(

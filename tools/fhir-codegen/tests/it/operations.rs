@@ -503,18 +503,34 @@ fn the_overlay_pre_adopts_the_r6_parameters_every_earlier_version_lacks() {
                 "{module}: {name}"
             );
         }
-        // $expand and $subsumes get nothing.
-        for (resource, code) in [("ValueSet", "expand"), ("CodeSystem", "subsumes")] {
-            let contract = find(&contracts, resource, code);
-            assert!(
-                contract
-                    .inputs
-                    .iter()
-                    .chain(&contract.outputs)
-                    .all(|f| f.source == ParameterSource::Version),
-                "{module}: {resource}/${code}"
-            );
-        }
+        // $expand pre-adopts the value set version trio and nothing else;
+        // $subsumes gets nothing.
+        let expand = find(&contracts, "ValueSet", "expand");
+        let adopted: Vec<&str> = expand
+            .inputs
+            .iter()
+            .chain(&expand.outputs)
+            .filter(|f| f.source != ParameterSource::Version)
+            .map(|f| f.fhir_name.as_str())
+            .collect();
+        assert_eq!(
+            adopted,
+            [
+                "default-valueset-version",
+                "check-valueset-version",
+                "force-valueset-version",
+            ],
+            "{module}"
+        );
+        let subsumes = find(&contracts, "CodeSystem", "subsumes");
+        assert!(
+            subsumes
+                .inputs
+                .iter()
+                .chain(&subsumes.outputs)
+                .all(|f| f.source == ParameterSource::Version),
+            "{module}: CodeSystem/$subsumes"
+        );
     }
 }
 

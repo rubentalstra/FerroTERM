@@ -13,6 +13,7 @@ use super::{OperationError, Sources};
 use crate::compose::{Compose, Expansion, Include, Item, Options};
 use crate::provider::{Designation, Property};
 use crate::valueset::model::{ModelError, ValueSetModel};
+use crate::valueset::negotiation::{Negotiation, canonicals};
 use crate::valueset::store::Resolver;
 use crate::versioned::Versioned;
 
@@ -66,6 +67,15 @@ pub struct ExpandInput {
     pub check_system_version: Vec<String>,
     /// `force-system-version` canonicals.
     pub force_system_version: Vec<String>,
+    /// `default-valueset-version` canonicals: the version of a value set
+    /// reference that names none (pre-adopted from R6).
+    pub default_valueset_version: Vec<String>,
+    /// `check-valueset-version` canonicals: a version a differing value set
+    /// reference is refused against (pre-adopted from R6).
+    pub check_valueset_version: Vec<String>,
+    /// `force-valueset-version` canonicals: a version that overrides the value
+    /// set reference's (pre-adopted from R6).
+    pub force_valueset_version: Vec<String>,
     /// `property` (R5): the properties to include on each concept.
     pub property: Vec<String>,
     /// `useSupplement` (R5): the supplements to apply.
@@ -164,15 +174,25 @@ pub fn expand(
     input: &ExpandInput,
 ) -> Result<ExpansionOutcome, OperationError> {
     refuse_unsupported(input)?;
+    let negotiation = negotiation(input);
+    let (url, version) = match input.url.as_deref() {
+        Some(url) => {
+            let (url, version) = negotiation.value_set(url, input.value_set_version.as_deref())?;
+            (Some(url), version)
+        }
+        None => (None, input.value_set_version.clone()),
+    };
     let model = sources.value_set(
         input.inline_value_set.clone(),
-        input.url.as_deref(),
-        input.value_set_version.as_deref(),
+        url.as_deref(),
+        version.as_deref(),
     )?;
-    let compose = pinned_compose(&model.compose, input)?;
+    let compose = pinned_compose(&model.compose, input, &negotiation)?;
     let options = options(input)?;
-    let resolver = Resolver::new(sources.registry, sources.value_sets);
+    let resolver =
+        Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
     let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;
+    let used_value_sets = resolver.used_value_sets();
     if options.count.is_none() && expansion.total > EXPANSION_LIMIT {
         return Err(OperationError::TooCostly(format!(
             "the expansion of `{}` has {} concepts; page it with `count` (and `offset`) to fetch it",
@@ -190,7 +210,7 @@ pub fn expand(
         timestamp: jiff::Timestamp::now().to_string(),
         total: expansion.total,
         offset: (input.offset.is_some() || input.count.is_some()).then_some(offset),
-        parameters: parameters(input, &expansion),
+        parameters: parameters(input, &expansion, &used_value_sets),
         contains,
         properties,
         model,
@@ -229,78 +249,62 @@ fn options(input: &ExpandInput) -> Result<Options, OperationError> {
     })
 }
 
-/// The canonicals of a version parameter as `(url, version)` pairs.
-fn canonicals(list: &[String]) -> Vec<(String, Option<String>)> {
-    list.iter()
-        .map(|c| match c.split_once('|') {
-            Some((url, version)) => (url.to_owned(), Some(version.to_owned())),
-            None => (c.clone(), None),
-        })
-        .collect()
+/// The version negotiation the request asks for.
+fn negotiation(input: &ExpandInput) -> Negotiation {
+    Negotiation::new(
+        &input.system_version,
+        &input.check_system_version,
+        &input.force_system_version,
+        &input.default_valueset_version,
+        &input.check_valueset_version,
+        &input.force_valueset_version,
+    )
 }
 
-fn pinned_compose(compose: &Compose, input: &ExpandInput) -> Result<Compose, OperationError> {
+/// `compose` less the `exclude-system` includes, with its systems at their
+/// negotiated versions.
+fn pinned_compose(
+    compose: &Compose,
+    input: &ExpandInput,
+    negotiation: &Negotiation,
+) -> Result<Compose, OperationError> {
     let excluded = canonicals(&input.exclude_system);
-    let defaults = canonicals(&input.system_version);
-    let checks = canonicals(&input.check_system_version);
-    let forced = canonicals(&input.force_system_version);
-    let pin = |include: &Include| -> Result<Option<Include>, OperationError> {
+    let keep = |include: &Include| -> bool {
         let Some(system) = &include.system else {
-            return Ok(Some(include.clone()));
+            return true;
         };
-        if excluded.iter().any(|(url, version)| {
+        !excluded.iter().any(|(url, version)| {
             *url == system.url
                 && version
                     .as_ref()
                     .is_none_or(|v| Some(v) == system.version.as_ref())
-        }) {
-            return Ok(None);
-        }
-        let mut pinned = include.clone();
-        let Some(target) = pinned.system.as_mut() else {
-            return Ok(Some(pinned));
-        };
-        for (url, version) in &checks {
-            if *url == system.url
-                && let Some(named) = &system.version
-                && version.as_ref().is_some_and(|v| v != named)
-            {
-                return Err(OperationError::Invalid(format!(
-                    "`check-system-version` names `{url}|{}` but the value set uses version `{named}`",
-                    version.as_deref().unwrap_or_default()
-                )));
-            }
-        }
-        if target.version.is_none()
-            && let Some((_, version)) = defaults
-                .iter()
-                .chain(&checks)
-                .find(|(url, _)| *url == system.url)
-        {
-            target.version.clone_from(version);
-        }
-        if let Some((_, version)) = forced.iter().find(|(url, _)| *url == system.url) {
-            target.version.clone_from(version);
-        }
-        Ok(Some(pinned))
+        })
     };
-    let mut pinned = Compose {
-        include: Vec::with_capacity(compose.include.len()),
-        exclude: Vec::with_capacity(compose.exclude.len()),
+    let kept = Compose {
+        include: compose
+            .include
+            .iter()
+            .filter(|i| keep(i))
+            .cloned()
+            .collect(),
+        exclude: compose
+            .exclude
+            .iter()
+            .filter(|i| keep(i))
+            .cloned()
+            .collect(),
         inactive: compose.inactive,
     };
-    for include in &compose.include {
-        pinned.include.extend(pin(include)?);
-    }
-    for exclude in &compose.exclude {
-        pinned.exclude.extend(pin(exclude)?);
-    }
-    Ok(pinned)
+    Ok(negotiation.pin(&kept)?)
 }
 
 /// Every parameter the client gave, echoed, then the code system versions
 /// used (`used-codesystem`).
-fn parameters(input: &ExpandInput, expansion: &Expansion) -> Vec<ExpansionParameter> {
+fn parameters(
+    input: &ExpandInput,
+    expansion: &Expansion,
+    used_value_sets: &[String],
+) -> Vec<ExpansionParameter> {
     let mut out = Vec::new();
     let mut push = |name: &str, value: ParameterValue| {
         out.push(ExpansionParameter {
@@ -345,6 +349,9 @@ fn parameters(input: &ExpandInput, expansion: &Expansion) -> Vec<ExpansionParame
         ("system-version", &input.system_version),
         ("check-system-version", &input.check_system_version),
         ("force-system-version", &input.force_system_version),
+        ("default-valueset-version", &input.default_valueset_version),
+        ("check-valueset-version", &input.check_valueset_version),
+        ("force-valueset-version", &input.force_valueset_version),
     ] {
         for value in list {
             push(name, ParameterValue::Uri(value.clone()));
@@ -355,6 +362,11 @@ fn parameters(input: &ExpandInput, expansion: &Expansion) -> Vec<ExpansionParame
             "used-codesystem",
             ParameterValue::Uri(canonical(&used.url, &used.version)),
         );
+    }
+    // NOTE: the value sets an expansion drew on, the ecosystem's `used-valueset`
+    // (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, `$expand parameters`).
+    for used in used_value_sets {
+        push("used-valueset", ParameterValue::Uri(used.clone()));
     }
     out
 }

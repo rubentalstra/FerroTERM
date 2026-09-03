@@ -156,6 +156,38 @@ pub struct ValueSetExpandRequest {
     /// is override, the version used SHALL explicitly be represented in the
     /// expansion parameters
     pub force_system_version: Vec<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Specifies a version to use for a valueset, if the reference to the value
+    /// set does not specify which version to use. The format is the same as a
+    /// canonical URL: \[system\]|\[version\] - e.g.
+    /// <http://example.org/ValueSet/example|1.0.0>. Note that this is similar
+    /// to the force-system-version parameter but applied to valuesets
+    pub default_valueset_version: Vec<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Edge Case: Specifies a version to use for a valueset. If a reference to
+    /// a value set specifies a different version, an error is returned instead
+    /// of the expansion. The format is the same as a canonical URL:
+    /// \[system\]|\[version\] - e.g.
+    /// <http://example.org/ValueSet/example|1.0.0>. Note that this is similar
+    /// to the force-system-version parameter but applied to valuesets
+    pub check_valueset_version: Vec<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Edge Case: Specifies a version to use for a valueset. This parameter
+    /// overrides any specified version in the reference to the value set (and
+    /// any it depends on). The format is the same as a canonical URL:
+    /// \[system\]|\[version\] - e.g.
+    /// <http://example.org/ValueSet/example|1.0.0>. Note that this has obvious
+    /// safety issues, in that it may result in a value set expansion giving a
+    /// different list of codes that is both wrong and unsafe, and implementers
+    /// should only use this capability reluctantly. It primarily exists to deal
+    /// with situations where specifications have fallen into decay as time
+    /// passes. If the value is overridden, the version used SHALL explicitly be
+    /// represented in the expansion parameters. Note that this is similar to
+    /// the force-system-version parameter but applied to valuesets.
+    pub force_valueset_version: Vec<super::super::primitives::Canonical>,
 }
 
 /// The `out` parameters of `ValueSet/$expand`.
@@ -219,6 +251,10 @@ impl ValueSetExpandRequest {
         let mut field_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
         let mut field_check_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
         let mut field_force_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_default_valueset_version: Vec<super::super::primitives::Canonical> =
+            Vec::new();
+        let mut field_check_valueset_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_force_valueset_version: Vec<super::super::primitives::Canonical> = Vec::new();
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -874,6 +910,78 @@ impl ValueSetExpandRequest {
                         }
                     });
                 }
+                "default-valueset-version" => {
+                    field_default_valueset_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "default-valueset-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "default-valueset-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "check-valueset-version" => {
+                    field_check_valueset_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "check-valueset-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "check-valueset-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "force-valueset-version" => {
+                    field_force_valueset_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "force-valueset-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "force-valueset-version",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -908,6 +1016,9 @@ impl ValueSetExpandRequest {
             system_version: field_system_version,
             check_system_version: field_check_system_version,
             force_system_version: field_force_system_version,
+            default_valueset_version: field_default_valueset_version,
+            check_valueset_version: field_check_valueset_version,
+            force_valueset_version: field_force_valueset_version,
         })
     }
     /// Writes the fields as a parameter list.
@@ -1115,6 +1226,33 @@ impl ValueSetExpandRequest {
         for value in &self.force_system_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "force-system-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.default_valueset_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "default-valueset-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.check_valueset_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "check-valueset-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.force_valueset_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "force-valueset-version".into(),
                 value: Some(
                     super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
                 ),
@@ -1492,6 +1630,33 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 type_code: Some("canonical"),
                 scope: &[],
                 source: super::super::super::operation::ParameterSource::Version,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "default-valueset-version",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "check-valueset-version",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "force-valueset-version",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
                 parts: &[],
             },
             super::super::super::operation::Parameter {

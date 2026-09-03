@@ -88,8 +88,9 @@ pub enum OperationError {
         /// Why it is not a code.
         reason: String,
     },
-    /// The value set is not known.
-    #[error("value set `{0}` is not known")]
+    /// The value set is not known (the ecosystem's wording, so a validator
+    /// recognises it).
+    #[error("A definition for the value Set '{0}' could not be found")]
     UnknownValueSet(String),
     /// The concept map is not known.
     #[error("concept map `{0}` is not known")]
@@ -293,7 +294,14 @@ impl From<crate::compose::ComposeError> for OperationError {
             | ComposeError::ConceptsAndFilters
             | ComposeError::Cycle(_) => Self::ValueSetInvalid(error.to_string()),
             ComposeError::NoResolver(_) => Self::NotSupported(error.to_string()),
+            ComposeError::Negotiation(error) => error.into(),
         }
+    }
+}
+
+impl From<crate::valueset::negotiation::NegotiationError> for OperationError {
+    fn from(error: crate::valueset::negotiation::NegotiationError) -> Self {
+        Self::Invalid(error.to_string())
     }
 }
 

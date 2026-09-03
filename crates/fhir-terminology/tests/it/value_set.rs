@@ -631,3 +631,130 @@ fn expand_returns_the_properties_asked_for() {
     assert!(none.contains.iter().all(|c| c.properties.is_empty()));
     assert!(none.properties.is_empty());
 }
+
+// NOTE: the value set version trio and the system trio negotiate the versions an
+// operation touches, top-level and imported alike
+// (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-expand.html>,
+// <https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
+#[test]
+fn expand_negotiates_value_set_versions_and_names_the_value_sets_it_used() {
+    let world = World::load();
+    let pinned = ExpandInput {
+        url: Some(VS_PETS_REF.to_owned()),
+        default_valueset_version: vec![format!("{VS_PETS}|1.0")],
+        ..ExpandInput::default()
+    };
+    let vs = expand::expand(&world.sources(), &pinned).expect("expands");
+    let echoed: Vec<(&str, String)> = vs
+        .parameters
+        .iter()
+        .filter_map(|p| match &p.value {
+            ParameterValue::Uri(u) => Some((p.name.as_str(), u.clone())),
+            _ => None,
+        })
+        .collect();
+    assert!(echoed.contains(&("default-valueset-version", format!("{VS_PETS}|1.0"))));
+    assert!(
+        echoed.contains(&("used-valueset", format!("{VS_PETS}|1.0"))),
+        "{echoed:?}"
+    );
+    let missing = ExpandInput {
+        url: Some(VS_PETS_REF.to_owned()),
+        default_valueset_version: vec![format!("{VS_PETS}|9.9")],
+        ..ExpandInput::default()
+    };
+    assert!(matches!(
+        expand::expand(&world.sources(), &missing),
+        Err(OperationError::UnknownValueSet(url)) if url == format!("{VS_PETS}|9.9")
+    ));
+    let forced = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        force_valueset_version: vec![format!("{VS_ALL}|1.0")],
+        ..ExpandInput::default()
+    };
+    let vs = expand::expand(&world.sources(), &forced).expect("expands");
+    assert!(
+        codes(&vs).iter().any(|c| c == "dodo"),
+        "1.0 has no exclude, so the forced version keeps the dodo: {:?}",
+        codes(&vs)
+    );
+    let checked = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        value_set_version: Some(String::from("2.0")),
+        check_valueset_version: vec![format!("{VS_ALL}|1.0")],
+        ..ExpandInput::default()
+    };
+    assert!(matches!(
+        expand::expand(&world.sources(), &checked),
+        Err(OperationError::Invalid(_))
+    ));
+}
+
+#[test]
+fn validate_code_negotiates_system_and_value_set_versions() {
+    let world = World::load();
+    let defaulted = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        default_system_version: vec![format!("{ANIMALS}|2.0")],
+        check_system_version: vec![format!("{ANIMALS}|2.0")],
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &defaulted).expect("validates");
+    assert!(validation.result);
+    assert_eq!(validation.version.as_deref(), Some("2.0"));
+    let forced_away = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        force_system_version: vec![format!("{ANIMALS}|9.9")],
+        ..ValueSetValidateInput::default()
+    };
+    let validation = value_set_validate_code::validate_code(&world.sources(), &forced_away)
+        .expect("a false result");
+    assert!(!validation.result);
+    assert_eq!(validation.unknown_systems, [format!("{ANIMALS}|9.9")]);
+    let mismatch = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        coding: Some(CodingRef {
+            system: Some(ANIMALS.to_owned()),
+            version: Some(String::from("2.0")),
+            code: Some(String::from("kitten")),
+            display: None,
+        }),
+        check_system_version: vec![format!("{ANIMALS}|1.0")],
+        ..ValueSetValidateInput::default()
+    };
+    assert!(matches!(
+        value_set_validate_code::validate_code(&world.sources(), &mismatch),
+        Err(OperationError::Invalid(_))
+    ));
+    let imported = ValueSetValidateInput {
+        url: Some(VS_PETS_REF.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        default_valueset_version: vec![format!("{VS_PETS}|1.0")],
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &imported).expect("validates");
+    assert!(validation.result);
+    let unknown_import = ValueSetValidateInput {
+        url: Some(VS_PETS_REF.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        default_valueset_version: vec![format!("{VS_PETS}|9.9")],
+        ..ValueSetValidateInput::default()
+    };
+    let validation = value_set_validate_code::validate_code(&world.sources(), &unknown_import)
+        .expect("a false result, not an error");
+    assert!(!validation.result);
+    assert_eq!(validation.issues[0].kind, "not-found");
+    assert_eq!(
+        validation.message.as_deref(),
+        Some(format!("A definition for the value Set '{VS_PETS}|9.9' could not be found").as_str())
+    );
+    assert_eq!(validation.code.as_deref(), Some("kitten"));
+}
