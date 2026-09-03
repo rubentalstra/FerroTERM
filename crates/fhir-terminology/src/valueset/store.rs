@@ -4,6 +4,7 @@
 use std::cell::RefCell;
 
 use super::model::ValueSetModel;
+use super::negotiation::Negotiation;
 use crate::compose::{Compose, ComposeError, Expander, Expansion, Item, Options, ValueSetResolver};
 use crate::registry::Registry;
 use crate::versioned::VersionedStore;
@@ -17,7 +18,9 @@ pub type ValueSetStore = VersionedStore<ValueSetModel>;
 pub struct Resolver<'a> {
     registry: &'a Registry,
     store: &'a ValueSetStore,
+    negotiation: Option<&'a Negotiation>,
     active: RefCell<Vec<String>>,
+    used: RefCell<Vec<String>>,
 }
 
 impl<'a> Resolver<'a> {
@@ -27,27 +30,68 @@ impl<'a> Resolver<'a> {
         Self {
             registry,
             store,
+            negotiation: None,
             active: RefCell::new(Vec::new()),
+            used: RefCell::new(Vec::new()),
         }
     }
 
-    /// The compose of the value set at `url`: stored, or implicit.
+    /// This resolver applying `negotiation` to every value set it references
+    /// and every system those value sets select from.
+    #[must_use]
+    pub fn with_negotiation(mut self, negotiation: &'a Negotiation) -> Self {
+        self.negotiation = Some(negotiation);
+        self
+    }
+
+    /// The referenced value sets resolved so far, as `url|version` canonicals
+    /// in reference order (the `used-valueset` expansion parameters).
+    #[must_use]
+    pub fn used_value_sets(&self) -> Vec<String> {
+        self.used.borrow().clone()
+    }
+
+    /// The compose of the value set at `url` (which may carry `|version`):
+    /// stored, or implicit, at the negotiated version and with its systems
+    /// pinned.
     ///
     /// # Errors
     ///
-    /// Returns [`ComposeError::UnknownValueSet`] when neither knows it, or the
-    /// provider's error for a malformed implicit form.
+    /// Returns [`ComposeError::UnknownValueSet`] when neither knows it,
+    /// [`ComposeError::Negotiation`] when a check disagrees, or the provider's
+    /// error for a malformed implicit form.
     pub fn compose(&self, url: &str) -> Result<Compose, ComposeError> {
-        if let Some(model) = self.store.resolve(url, None) {
-            return Ok(model.compose.clone());
+        let (url, version) = match self.negotiation {
+            Some(negotiation) => negotiation.value_set(url, None)?,
+            None => match url.split_once('|') {
+                Some((url, version)) => (url.to_owned(), Some(version.to_owned())),
+                None => (url.to_owned(), None),
+            },
+        };
+        if let Some(model) = self.store.resolve(&url, version.as_deref()) {
+            let canonical = match model.version.as_deref() {
+                Some(v) => format!("{url}|{v}"),
+                None => url.clone(),
+            };
+            self.used.borrow_mut().push(canonical);
+            return Ok(match self.negotiation {
+                Some(negotiation) => negotiation.pin(&model.compose)?,
+                None => model.compose.clone(),
+            });
         }
-        match self.registry.implicit_value_set(url) {
-            Some(Ok(compose)) => Ok(compose),
+        match self.registry.implicit_value_set(&url) {
+            Some(Ok(compose)) => Ok(match self.negotiation {
+                Some(negotiation) => negotiation.pin(&compose)?,
+                None => compose,
+            }),
             Some(Err(source)) => Err(ComposeError::Provider {
-                system: url.to_owned(),
+                system: url,
                 source,
             }),
-            None => Err(ComposeError::UnknownValueSet(url.to_owned())),
+            None => Err(ComposeError::UnknownValueSet(match version {
+                Some(v) => format!("{url}|{v}"),
+                None => url,
+            })),
         }
     }
 

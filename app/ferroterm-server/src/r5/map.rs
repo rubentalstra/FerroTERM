@@ -458,6 +458,9 @@ pub fn expand_input(request: &ValueSetExpandRequest) -> ExpandInput {
         system_version: canonicals(&request.system_version),
         check_system_version: canonicals(&request.check_system_version),
         force_system_version: canonicals(&request.force_system_version),
+        default_valueset_version: canonicals(&request.default_valueset_version),
+        check_valueset_version: canonicals(&request.check_valueset_version),
+        force_valueset_version: canonicals(&request.force_valueset_version),
         property: request
             .property
             .iter()

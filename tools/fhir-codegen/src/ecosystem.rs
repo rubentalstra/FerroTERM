@@ -53,6 +53,7 @@ const CODE_SYSTEM_VALIDATE_CODE: &str =
 const VALUE_SET_VALIDATE_CODE: &str =
     "http://hl7.org/fhir/OperationDefinition/ValueSet-validate-code";
 const CONCEPT_MAP_TRANSLATE: &str = "http://hl7.org/fhir/OperationDefinition/ConceptMap-translate";
+const VALUE_SET_EXPAND: &str = "http://hl7.org/fhir/OperationDefinition/ValueSet-expand";
 
 /// The R6 parameters pre-adopted into every version that lacks them, by
 /// operation URL, direction, and name.
@@ -99,6 +100,13 @@ const PRE_ADOPTED: &[(&str, ParameterUse, &str)] = &[
     (CODE_SYSTEM_VALIDATE_CODE, ParameterUse::Out, "issues"),
     (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceSystem"),
     (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceVersion"),
+    (
+        VALUE_SET_EXPAND,
+        ParameterUse::In,
+        "default-valueset-version",
+    ),
+    (VALUE_SET_EXPAND, ParameterUse::In, "check-valueset-version"),
+    (VALUE_SET_EXPAND, ParameterUse::In, "force-valueset-version"),
 ];
 
 /// One parameter the overlay added: its direction, name, and source.

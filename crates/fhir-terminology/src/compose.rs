@@ -180,8 +180,11 @@ pub enum ComposeError {
     #[error("value set `{0}` cannot be resolved: no resolver")]
     NoResolver(String),
     /// A referenced value set is not known.
-    #[error("value set `{0}` is not known")]
+    #[error("A definition for the value Set '{0}' could not be found")]
     UnknownValueSet(String),
+    /// A version negotiation could not be honoured.
+    #[error(transparent)]
+    Negotiation(#[from] crate::valueset::negotiation::NegotiationError),
     /// A value set references itself through `include.valueSet`.
     #[error("value set `{0}` references itself")]
     Cycle(String),

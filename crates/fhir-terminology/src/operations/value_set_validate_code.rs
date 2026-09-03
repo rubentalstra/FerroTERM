@@ -19,6 +19,7 @@ use crate::language;
 use crate::provider::CodeSystemProvider;
 use crate::registry::ResolveError;
 use crate::valueset::model::{ModelError, ValueSetModel};
+use crate::valueset::negotiation::Negotiation;
 use crate::valueset::store::Resolver;
 use crate::versioned::Versioned;
 
@@ -108,23 +109,42 @@ pub struct ValueSetValidateInput {
     pub lenient_display_validation: Option<bool>,
 }
 
+/// The value set at its negotiated version with its systems pinned, and the
+/// negotiation itself, for the subjects and the imports.
+fn prepare(
+    sources: &Sources<'_>,
+    input: &ValueSetValidateInput,
+) -> Result<(Arc<ValueSetModel>, Negotiation), OperationError> {
+    let negotiation = Negotiation::new(
+        &input.default_system_version,
+        &input.check_system_version,
+        &input.force_system_version,
+        &input.default_valueset_version,
+        &input.check_valueset_version,
+        &input.force_valueset_version,
+    );
+    let (url, version) = match input.url.as_deref() {
+        Some(url) => {
+            let (url, version) = negotiation.value_set(url, input.value_set_version.as_deref())?;
+            (Some(url), version)
+        }
+        None => (None, input.value_set_version.clone()),
+    };
+    let model = sources.value_set(
+        input.inline_value_set.clone(),
+        url.as_deref(),
+        version.as_deref(),
+    )?;
+    let model = Arc::new(ValueSetModel {
+        compose: negotiation.pin(&model.compose)?,
+        ..(*model).clone()
+    });
+    Ok((model, negotiation))
+}
+
 /// Refuses the ecosystem overlay's inputs whose semantics are not implemented
 /// yet, so an accepted parameter is never silently ignored.
 fn refuse_unimplemented(input: &ValueSetValidateInput) -> Result<(), OperationError> {
-    // TODO(#160): apply the version negotiation instead of refusing it.
-    let negotiation = [
-        ("system-version", &input.default_system_version),
-        ("check-system-version", &input.check_system_version),
-        ("force-system-version", &input.force_system_version),
-        ("default-valueset-version", &input.default_valueset_version),
-        ("check-valueset-version", &input.check_valueset_version),
-        ("force-valueset-version", &input.force_valueset_version),
-    ];
-    if let Some((name, _)) = negotiation.iter().find(|(_, values)| !values.is_empty()) {
-        return Err(OperationError::NotSupported(format!(
-            "`{name}` is accepted on `ValueSet/$validate-code` but not implemented yet"
-        )));
-    }
     // TODO(#161): implement `inferSystem` and `lenient-display-validation`.
     let flags = [
         ("inferSystem", input.infer_system),
@@ -171,14 +191,20 @@ pub fn validate_code(
         )));
     }
     refuse_unimplemented(input)?;
-    let model = sources.value_set(
-        input.inline_value_set.clone(),
-        input.url.as_deref(),
-        input.value_set_version.as_deref(),
-    )?;
+    let (model, negotiation) = prepare(sources, input)?;
     let language = input.display_language.as_deref();
-    let resolver = Resolver::new(sources.registry, sources.value_sets);
+    let resolver =
+        Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
     let abstract_ok = input.abstract_ok.unwrap_or(true);
+    let check = |subject: &Subject<'_>| -> Result<Validation, OperationError> {
+        let version =
+            negotiation.system_version(subject.system.unwrap_or_default(), subject.version)?;
+        let subject = Subject {
+            version: version.as_deref(),
+            ..*subject
+        };
+        check(sources, &model, &resolver, &subject, language, abstract_ok)
+    };
     let inputs = usize::from(input.code.is_some())
         + usize::from(input.coding.is_some())
         + usize::from(input.codeable_concept.is_some());
@@ -195,7 +221,7 @@ pub fn validate_code(
             display: input.display.as_deref(),
             expression: "code",
         };
-        return check(sources, &model, &resolver, &subject, language, abstract_ok);
+        return check(&subject);
     }
     if let Some(coding) = &input.coding {
         let code = coding
@@ -212,7 +238,7 @@ pub fn validate_code(
             display: coding.display.as_deref().or(input.display.as_deref()),
             expression: "coding",
         };
-        return check(sources, &model, &resolver, &subject, language, abstract_ok);
+        return check(&subject);
     }
     let codings = input
         .codeable_concept
@@ -237,7 +263,7 @@ pub fn validate_code(
             display: coding.display.as_deref(),
             expression: "codeableConcept",
         };
-        let validation = check(sources, &model, &resolver, &subject, language, abstract_ok)?;
+        let validation = check(&subject)?;
         if validation.result {
             return Ok(validation);
         }
@@ -297,15 +323,30 @@ fn check(
     let Some(located) = provider.locate(subject.code)? else {
         return Ok(unknown_code(model, &system, version, subject));
     };
-    let Some(item) = resolver.contains_compose(
+    let contained = match resolver.contains_compose(
         &model.canonical(),
         &model.compose,
         &system,
         subject.version,
         &located.code,
         language,
-    )?
-    else {
+    ) {
+        Ok(contained) => contained,
+        // NOTE: a value set the compose imports but the server does not hold is a
+        // failed validation naming it, the ecosystem's shape (its test cases);
+        // an unknown top-level value set stays an error.
+        Err(crate::compose::ComposeError::UnknownValueSet(url)) => {
+            return Ok(unknown_import(
+                &system,
+                version,
+                &url,
+                &located.code,
+                subject.expression,
+            ));
+        }
+        Err(error) => return Err(error.into()),
+    };
+    let Some(item) = contained else {
         let display = provider.display(
             located.concept,
             language::for_provider(provider.as_ref(), language).as_deref(),
@@ -476,6 +517,31 @@ fn failed(system: Option<String>, version: Option<String>, issue: Issue) -> Vali
         issues: vec![issue],
         unknown_systems: Vec::new(),
     }
+}
+
+/// The failed validation over a value set the compose imports but the server
+/// does not hold: the ecosystem's shape (its test cases), where an unknown
+/// top-level value set stays an error.
+fn unknown_import(
+    system: &str,
+    version: String,
+    url: &str,
+    code: &str,
+    expression: &'static str,
+) -> Validation {
+    let mut validation = failed(
+        Some(system.to_owned()),
+        Some(version),
+        Issue {
+            severity: "error",
+            code: "not-found",
+            kind: "not-found",
+            text: format!("A definition for the value Set '{url}' could not be found"),
+            expression: Some(expression),
+        },
+    );
+    validation.code = Some(code.to_owned());
+    validation
 }
 
 /// The failed validation of a code the system does not have: not in the value
