@@ -13,6 +13,15 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-09-03
+
+The LOINC release: a LOINC release builds into the same artifact layout as a
+SNOMED CT edition and is served beside it, UCUM ships with the server, and the
+hierarchy closure and the designation index move out of the database into
+files beside it, which brings the Dutch edition to 589 MiB on disk and 49 s to
+build.
+
+
 ### Added
 
 - LOINC: `ferroterm-build --loinc <release zip or directory>` builds a LOINC
@@ -267,7 +276,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.5
 [0.0.4]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.4
 [0.0.3]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.3
 [0.0.2]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.2
