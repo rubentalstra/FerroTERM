@@ -463,6 +463,26 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// Returns [`ProviderError::Storage`] when the substrate fails.
     fn status(&self, concept: Concept) -> Result<Status, ProviderError>;
 
+    /// Every inactive concept, for `activeOnly` and `compose.inactive = false`
+    /// over a large selection.
+    ///
+    /// The default scans every concept's status; a provider with a cheaper
+    /// answer overrides.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::NotEnumerable`] when the system cannot
+    /// enumerate, and [`ProviderError::Storage`] when the substrate fails.
+    fn inactive(&self) -> Result<ConceptSet, ProviderError> {
+        let mut inactive = ConceptSet::new();
+        for index in self.all()? {
+            if !self.status(Concept::new(index))?.active {
+                inactive.insert(index);
+            }
+        }
+        Ok(inactive)
+    }
+
     /// Every designation, optionally only those in `language`.
     ///
     /// # Errors

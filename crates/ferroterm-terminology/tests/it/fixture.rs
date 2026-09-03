@@ -68,20 +68,20 @@ const ROWS: [Row; 7] = [
         legs: Some(0),
     },
     Row {
-        code: "plant",
-        parent: Some("root"),
-        en: "Plant",
-        nl: "Plant",
-        active: true,
-        legs: None,
-    },
-    Row {
         code: "kitten",
         parent: Some("cat"),
         en: "Kitten",
         nl: "Kitten",
         active: true,
         legs: Some(4),
+    },
+    Row {
+        code: "plant",
+        parent: Some("root"),
+        en: "Plant",
+        nl: "Plant",
+        active: true,
+        legs: None,
     },
 ];
 

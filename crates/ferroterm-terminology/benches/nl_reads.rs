@@ -14,6 +14,7 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use ferroterm_fhir::r4b::operations::code_system_lookup::CodeSystemLookupRequest;
 use ferroterm_fhir::r4b::operations::code_system_subsumes::CodeSystemSubsumesRequest;
 use ferroterm_fhir::r4b::operations::code_system_validate_code::CodeSystemValidateCodeRequest;
+use ferroterm_terminology::compose::{Expander, Options};
 use ferroterm_terminology::operations::{Invocation, lookup, subsumes, validate_code};
 use ferroterm_terminology::provider::CodeSystemProvider;
 use ferroterm_terminology::registry::Registry;
@@ -95,6 +96,42 @@ fn reads(c: &mut Criterion) {
     group.bench_function("subsumes", |b| {
         b.iter(|| {
             subsumes::subsumes(&registry, &Invocation::Type, &subsumes_request).expect("subsumes")
+        });
+    });
+    group.finish();
+
+    // A paged expansion over a large set: the bar is ten milliseconds, so the
+    // page must be cut from the bitmaps before any concept is read (#129).
+    let mut group = c.benchmark_group("expand");
+    let expander = Expander::new(&registry);
+    let finding_set = registry
+        .implicit_value_set(&format!("{SCT}?fhir_vs=isa/{FINDING}"))
+        .expect("snomed claims the URI")
+        .expect("well formed");
+    let everything = registry
+        .implicit_value_set(&format!("{SCT}?fhir_vs"))
+        .expect("snomed claims the URI")
+        .expect("well formed");
+    let page = Options {
+        count: Some(10),
+        offset: 1000,
+        ..Options::default()
+    };
+    group.bench_function("isa_finding_page_10", |b| {
+        b.iter(|| expander.expand(&finding_set, &page).expect("expands"));
+    });
+    group.bench_function("all_concepts_page_10", |b| {
+        b.iter(|| expander.expand(&everything, &page).expect("expands"));
+    });
+    let active_page = Options {
+        active_only: true,
+        ..page.clone()
+    };
+    group.bench_function("isa_finding_active_only_page_10", |b| {
+        b.iter(|| {
+            expander
+                .expand(&finding_set, &active_page)
+                .expect("expands")
         });
     });
     group.finish();
