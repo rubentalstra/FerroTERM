@@ -11,9 +11,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use ferroterm_fhir::r4b::operations::code_system_lookup::CodeSystemLookupRequest;
-use ferroterm_fhir::r4b::operations::code_system_subsumes::CodeSystemSubsumesRequest;
-use ferroterm_fhir::r4b::operations::code_system_validate_code::CodeSystemValidateCodeRequest;
 use ferroterm_terminology::compose::{Expander, Options};
 use ferroterm_terminology::operations::{Invocation, lookup, subsumes, validate_code};
 use ferroterm_terminology::provider::CodeSystemProvider;
@@ -66,20 +63,20 @@ fn reads(c: &mut Criterion) {
     let mut registry = Registry::new();
     registry.register(Arc::new(provider)).expect("registers");
     let mut group = c.benchmark_group("operations");
-    let lookup_request = CodeSystemLookupRequest {
-        system: Some(SCT.into()),
-        code: Some(FINDING.into()),
-        display_language: Some("nl".into()),
-        ..Default::default()
+    let lookup_request = lookup::LookupInput {
+        system: Some(SCT.to_owned()),
+        code: Some(FINDING.to_owned()),
+        display_language: Some(String::from("nl")),
+        ..lookup::LookupInput::default()
     };
     group.bench_function("lookup", |b| {
         b.iter(|| lookup::lookup(&registry, &Invocation::Type, &lookup_request).expect("looks up"));
     });
-    let validate_request = CodeSystemValidateCodeRequest {
-        url: Some(SCT.into()),
-        code: Some(FINDING.into()),
-        display: Some("Clinical finding".into()),
-        ..Default::default()
+    let validate_request = validate_code::ValidateCodeInput {
+        url: Some(SCT.to_owned()),
+        code: Some(FINDING.to_owned()),
+        display: Some(String::from("Clinical finding")),
+        ..validate_code::ValidateCodeInput::default()
     };
     group.bench_function("validate_code", |b| {
         b.iter(|| {
@@ -87,11 +84,11 @@ fn reads(c: &mut Criterion) {
                 .expect("validates")
         });
     });
-    let subsumes_request = CodeSystemSubsumesRequest {
-        system: Some(SCT.into()),
-        code_a: Some(ROOT.into()),
-        code_b: Some(FINDING.into()),
-        ..Default::default()
+    let subsumes_request = subsumes::SubsumesInput {
+        system: Some(SCT.to_owned()),
+        code_a: Some(ROOT.to_owned()),
+        code_b: Some(FINDING.to_owned()),
+        ..subsumes::SubsumesInput::default()
     };
     group.bench_function("subsumes", |b| {
         b.iter(|| {

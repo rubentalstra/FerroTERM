@@ -12,3 +12,6 @@
 - [Performance bar](performance-bar.md), point reads and operations under 1 ms, NL ingest under 60 s, measured with criterion; never call a millisecond figure fine (#77)
 - [ICD-11 local deployment](icd11-local-deployment.md), the WHO ICD-API container flags, which language bundles exist per release, cache under data/icd11, artifacts under artifacts/icd11, clean up the containers afterwards
 - [Perl edit pitfalls](perl-edit-pitfalls.md), heredoc-quoted literals only, re-read after rustfmt, cargo clean -p on a stale rmeta
+- [Licence: BUSL 1.1](license-busl.md), the owner changed the project licence from MIT to the Business Source License 1.1 on 2026-09-03 (no hosted-service offering, no for-fee resale, Apache 2.0 after four years); the versions guard fails on stale MIT claims
+- [Multi-version program](multi-version-program.md), v0.0.9 plan decided 2026-09-03: neutral-core refactor of the operations (#146) first, then R4, then R5 (the LOINC suite cases need R5 shapes), then R6 and XML
+- [Licence: Apache 2.0](license-apache.md), MIT until 2026-09-03, a BUSL 1.1 change (#147) merged and was reverted the same day for Apache 2.0 (#150); the versions guard fails on stale MIT claims

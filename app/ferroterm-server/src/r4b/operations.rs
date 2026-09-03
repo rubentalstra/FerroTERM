@@ -38,7 +38,7 @@ use ferroterm_terminology::operations::{
 use http::{HeaderMap, StatusCode};
 
 use crate::outcome::Failure;
-use crate::r4b::wire;
+use crate::r4b::{map, wire};
 use crate::scope::{Scope, scope_of, split_resources};
 use crate::state::AppState;
 
@@ -87,8 +87,8 @@ fn from_body<'a>(
 fn run_lookup(scope: &Scope<'_>, invocation: &Invocation, parameters: &Parameters) -> Handled {
     let request = CodeSystemLookupRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let response = lookup::lookup(scope.registry(), invocation, &request)?;
-    wire::respond(&response.to_parameters())
+    let outcome = lookup::lookup(scope.registry(), invocation, &map::lookup_input(&request))?;
+    wire::respond(&map::lookup_response(outcome).to_parameters())
 }
 
 fn run_validate_code(
@@ -98,15 +98,19 @@ fn run_validate_code(
 ) -> Handled {
     let request = CodeSystemValidateCodeRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let response = validate_code::validate_code(scope.registry(), invocation, &request)?;
-    wire::respond(&response.to_parameters())
+    let outcome = validate_code::validate_code(
+        scope.registry(),
+        invocation,
+        &map::validate_code_input(&request),
+    )?;
+    wire::respond(&map::validate_code_response(outcome).to_parameters())
 }
 
 fn run_subsumes(scope: &Scope<'_>, invocation: &Invocation, parameters: &Parameters) -> Handled {
     let request = CodeSystemSubsumesRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let response = subsumes::subsumes(scope.registry(), invocation, &request)?;
-    wire::respond(&response.to_parameters())
+    let outcome = subsumes::subsumes(scope.registry(), invocation, &map::subsumes_input(&request))?;
+    wire::respond(&map::subsumes_response(outcome).to_parameters())
 }
 
 fn run_expand(scope: &Scope<'_>, parameters: &Parameters) -> Handled {

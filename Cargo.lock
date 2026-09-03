@@ -704,6 +704,7 @@ dependencies = [
  "anyhow",
  "axum",
  "ferroterm-fhir",
+ "ferroterm-graph",
  "ferroterm-terminology",
  "ferroterm-testkit",
  "http",

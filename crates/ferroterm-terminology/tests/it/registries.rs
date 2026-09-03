@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::operations::code_system_subsumes::CodeSystemSubsumesRequest;
 use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
 use ferroterm_fhir::r4b::operations::value_set_validate_code::ValueSetValidateCodeRequest;
 use ferroterm_fhir::r4b::value_set::{
@@ -493,11 +492,11 @@ fn the_grammar_systems_validate_by_membership_and_decline_undetermined_subsumpti
             .and_then(|d| d.value.as_deref()),
         Some("English (United States)")
     );
-    let subsumes_request = CodeSystemSubsumesRequest {
-        system: Some(bcp13::URL.into()),
-        code_a: Some("text/plain".into()),
-        code_b: Some("text/plain; foo=bar".into()),
-        ..Default::default()
+    let subsumes_request = subsumes::SubsumesInput {
+        system: Some(bcp13::URL.to_owned()),
+        code_a: Some(String::from("text/plain")),
+        code_b: Some(String::from("text/plain; foo=bar")),
+        ..subsumes::SubsumesInput::default()
     };
     let error = subsumes::subsumes(&registry, &Invocation::Type, &subsumes_request)
         .expect_err("undetermined");
