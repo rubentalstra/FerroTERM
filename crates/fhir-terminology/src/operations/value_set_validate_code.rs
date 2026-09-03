@@ -17,6 +17,7 @@ use super::{CodingRef, Issue, OperationError, Sources};
 use crate::compose::Item;
 use crate::language;
 use crate::provider::CodeSystemProvider;
+use crate::registry::ResolveError;
 use crate::valueset::model::{ModelError, ValueSetModel};
 use crate::valueset::store::Resolver;
 use crate::versioned::Versioned;
@@ -42,6 +43,9 @@ pub struct Validation {
     pub code: Option<String>,
     /// The issues behind the result.
     pub issues: Vec<Issue>,
+    /// The canonicals of the systems the server does not serve
+    /// (`x-caused-by-unknown-system`, the terminology ecosystem's output).
+    pub unknown_systems: Vec<String>,
 }
 
 /// The code under validation, from whichever parameter carried it.
@@ -277,17 +281,15 @@ fn check(
     let served = match sources.registry.resolve(&system, subject.version) {
         Ok(served) => served,
         Err(error) => {
-            return Ok(failed(
-                Some(system.clone()),
-                None,
-                Issue {
-                    severity: "error",
-                    code: "not-found",
-                    kind: "not-found",
-                    text: error.to_string(),
-                    expression: Some(subject.expression),
-                },
-            ));
+            let version = match &error {
+                ResolveError::UnknownSystem(_) => None,
+                ResolveError::UnknownVersion { .. } => subject.version,
+            };
+            let (canonical, issue) = super::unknown_system(&system, version, subject.expression);
+            let mut validation = failed(Some(system.clone()), version.map(str::to_owned), issue);
+            validation.code = Some(subject.code.to_owned());
+            validation.unknown_systems.push(canonical);
+            return Ok(validation);
         }
     };
     let provider: &Arc<dyn CodeSystemProvider> = &served.provider;
@@ -336,6 +338,7 @@ fn check(
         version: Some(version).filter(|v| !v.is_empty()),
         code: Some(located.code),
         issues,
+        unknown_systems: Vec::new(),
     })
 }
 
@@ -471,6 +474,7 @@ fn failed(system: Option<String>, version: Option<String>, issue: Issue) -> Vali
         version,
         code: None,
         issues: vec![issue],
+        unknown_systems: Vec::new(),
     }
 }
 

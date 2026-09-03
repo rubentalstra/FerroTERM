@@ -50,6 +50,50 @@ pub struct ValidationOutcome {
     /// The itemised issues, for the versions that declare `issues`
     /// (<https://hl7.org/fhir/R5/codesystem-operation-validate-code.html>).
     pub issues: Vec<Issue>,
+    /// The canonicals of the systems the server does not serve
+    /// (`x-caused-by-unknown-system`, the terminology ecosystem's output).
+    pub unknown_systems: Vec<String>,
+}
+
+/// The `result = false` outcome for a system or version the server does not
+/// serve: the code is echoed, and the system is named for the validator.
+fn unserved(
+    url: &str,
+    version: Option<&str>,
+    code: Option<&str>,
+    expression: &'static str,
+) -> ValidationOutcome {
+    let (canonical, issue) = super::unknown_system(url, version, expression);
+    ValidationOutcome {
+        result: false,
+        message: Some(issue.text.clone()),
+        display: None,
+        code: code.map(str::to_owned),
+        system: Some(url.to_owned()),
+        version: version.map(str::to_owned),
+        issues: vec![issue],
+        unknown_systems: vec![canonical],
+    }
+}
+
+/// Resolves the system for a validation; a system or version the server does
+/// not serve is a `false` result, never an error (the ecosystem's rule).
+fn resolve_for(
+    registry: &Registry,
+    invocation: &Invocation,
+    url: Option<&str>,
+    version: Option<&str>,
+    code: Option<&str>,
+    expression: &'static str,
+) -> Result<Result<super::Resolved, ValidationOutcome>, OperationError> {
+    match resolve(registry, invocation, url, version) {
+        Ok(resolved) => Ok(Ok(resolved)),
+        Err(OperationError::UnknownSystem(url)) => Ok(Err(unserved(&url, None, code, expression))),
+        Err(OperationError::UnknownVersion { url, version }) => {
+            Ok(Err(unserved(&url, Some(&version), code, expression)))
+        }
+        Err(error) => Err(error),
+    }
 }
 
 /// Runs `$validate-code`.
@@ -57,9 +101,9 @@ pub struct ValidationOutcome {
 /// # Errors
 ///
 /// Returns [`OperationError`] for an inline `codeSystem`, none or more than
-/// one of the code inputs, a coding whose system contradicts `url`, an
-/// unknown system or version, or a provider failure. An unknown code is a
-/// `false` result, never an error.
+/// one of the code inputs, a coding whose system contradicts `url`, or a
+/// provider failure. An unknown code, system, or version is a `false`
+/// result, never an error.
 pub fn validate_code(
     registry: &Registry,
     invocation: &Invocation,
@@ -82,7 +126,10 @@ pub fn validate_code(
     let version = input.version.as_deref();
     let language = input.display_language.as_deref();
     if let Some(code) = input.code.as_deref() {
-        let resolved = resolve(registry, invocation, url, version)?;
+        let resolved = match resolve_for(registry, invocation, url, version, Some(code), "code")? {
+            Ok(resolved) => resolved,
+            Err(unserved) => return Ok(unserved),
+        };
         return check(
             &resolved.provider,
             code,
@@ -103,12 +150,17 @@ pub fn validate_code(
             .code
             .as_deref()
             .ok_or_else(|| OperationError::Required(String::from("`coding.code` is required")))?;
-        let resolved = resolve(
+        let resolved = match resolve_for(
             registry,
             invocation,
             url.or(coding.system.as_deref()),
             coding.version.as_deref().or(version),
-        )?;
+            Some(code),
+            "coding",
+        )? {
+            Ok(resolved) => resolved,
+            Err(unserved) => return Ok(unserved),
+        };
         return check(
             &resolved.provider,
             code,
@@ -122,7 +174,10 @@ pub fn validate_code(
             "provide one of `code`, `coding`, or `codeableConcept`",
         )));
     };
-    let resolved = resolve(registry, invocation, url, version)?;
+    let resolved = match resolve_for(registry, invocation, url, version, None, "codeableConcept")? {
+        Ok(resolved) => resolved,
+        Err(unserved) => return Ok(unserved),
+    };
     check_codeable_concept(&resolved.provider, codings, language)
 }
 
@@ -178,6 +233,7 @@ fn check_codeable_concept(
             text: message,
             expression: Some("codeableConcept"),
         }],
+        unknown_systems: Vec::new(),
     })
 }
 
@@ -210,6 +266,7 @@ fn check(
                 text,
                 expression: Some(expression),
             }],
+            unknown_systems: Vec::new(),
         });
     };
     let concept = located.concept;
@@ -278,5 +335,6 @@ fn check(
         system: Some(identity.url.clone()),
         version: Some(identity.version.clone()),
         issues,
+        unknown_systems: Vec::new(),
     })
 }
