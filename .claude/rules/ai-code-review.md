@@ -2,7 +2,7 @@
 
 Every pull request and every push to `main` is analyzed by SonarQube Cloud
 (`.github/workflows/sonar.yml`; scope in `sonar-project.properties`; project
-`rubentalstra_ferroterm`, org `rubentalstra`). Rust is analyzed first-party (the
+`rubentalstra_FerroTERM`, org `rubentalstra`). Rust is analyzed first-party (the
 analyzer runs Clippy over the workspace); shell, YAML, and other languages are
 covered by the multi-language sweep. It exists as a second opinion beside the
 local gates and CodeQL.
