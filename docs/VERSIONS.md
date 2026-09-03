@@ -10,7 +10,7 @@ discovery-phase repo.
 ## Product and citation version
 
 - The product version is the workspace `version` in the root `Cargo.toml`
-  (inherited by the crates), currently **0.0.6** (pre-release).
+  (inherited by the crates), currently **0.0.7** (pre-release).
 - `CITATION.cff` `version` tracks it exactly. The version guard fails if they
   disagree once `Cargo.toml` exists.
 

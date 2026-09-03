@@ -13,6 +13,15 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-09-03
+
+The code systems release: the ICD-11 code systems from the WHO ICD-API local
+deployment, ATC/DDD, the DHD thesauri, and the G-Standaard product ladder join
+the served systems; SNOMED CT gains its implicit value sets; `$expand` pages
+over selection bitmaps before reading a concept; `Accept-Language` selects the
+display language; and the README, the landing page, and the book describe the
+shipped server.
+
 ### Added
 
 - SNOMED CT: the implicit value sets `?fhir_vs` (every concept),
@@ -377,7 +386,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.6...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.7...HEAD
+[0.0.7]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.7
 [0.0.6]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.6
 [0.0.5]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.5
 [0.0.4]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.4
