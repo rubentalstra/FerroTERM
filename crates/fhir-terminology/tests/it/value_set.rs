@@ -888,3 +888,109 @@ fn validate_code_fails_over_an_include_the_server_cannot_resolve_and_names_the_s
     assert!(validation.result);
     assert_eq!(validation.version.as_deref(), Some("2.0"));
 }
+
+// NOTE: a CodeableConcept is judged coding by coding, the ecosystem's shape (its
+// test cases): the first coding in the value set answers the code outputs, the
+// input is echoed, and issues name the coding at fault by index.
+#[test]
+fn validate_code_judges_a_codeable_concept_coding_by_coding() {
+    let world = World::load();
+    let coding = |system: &str, code: &str, display: Option<&str>| CodingRef {
+        system: Some(system.to_owned()),
+        version: None,
+        code: Some(code.to_owned()),
+        display: display.map(str::to_owned),
+    };
+    let mixed = ValueSetValidateInput {
+        url: Some(VS_ENUMERATED.to_owned()),
+        codeable_concept: Some(vec![
+            coding(COLOURS, "blue", None),
+            coding(ANIMALS, "cat", None),
+        ]),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &mixed).expect("validates");
+    assert!(validation.result, "{validation:?}");
+    assert_eq!(validation.code.as_deref(), Some("cat"));
+    assert_eq!(validation.system.as_deref(), Some(ANIMALS));
+    assert_eq!(
+        validation.codeable_concept.as_ref().map(Vec::len),
+        Some(2),
+        "echoed"
+    );
+    let kinds: Vec<(&str, &str, Option<&str>)> = validation
+        .issues
+        .iter()
+        .map(|i| (i.severity, i.kind, i.expression.as_deref()))
+        .collect();
+    assert_eq!(
+        kinds,
+        [(
+            "information",
+            "this-code-not-in-vs",
+            Some("CodeableConcept.coding[0].code")
+        )]
+    );
+    let wrong_display = ValueSetValidateInput {
+        url: Some(VS_ENUMERATED.to_owned()),
+        codeable_concept: Some(vec![coding(ANIMALS, "cat", Some("Hamster"))]),
+        ..ValueSetValidateInput::default()
+    };
+    let validation = value_set_validate_code::validate_code(&world.sources(), &wrong_display)
+        .expect("validates");
+    assert!(!validation.result);
+    assert_eq!(validation.code.as_deref(), Some("cat"));
+    assert_eq!(
+        validation.issues[0].expression.as_deref(),
+        Some("CodeableConcept.coding[0].display")
+    );
+    let none = ValueSetValidateInput {
+        url: Some(VS_ENUMERATED.to_owned()),
+        codeable_concept: Some(vec![
+            coding(ANIMALS, "dodo", None),
+            coding("http://example.org/none", "x", None),
+        ]),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &none).expect("a false result");
+    assert!(!validation.result);
+    assert_eq!(
+        validation.code, None,
+        "no coding in the value set answers the code outputs"
+    );
+    assert_eq!(validation.system, None);
+    let kinds: Vec<(&str, &str, Option<&str>)> = validation
+        .issues
+        .iter()
+        .map(|i| (i.severity, i.kind, i.expression.as_deref()))
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            ("error", "not-in-vs", None),
+            (
+                "error",
+                "not-found",
+                Some("CodeableConcept.coding[1].system")
+            ),
+            (
+                "information",
+                "this-code-not-in-vs",
+                Some("CodeableConcept.coding[0].code")
+            ),
+            (
+                "information",
+                "this-code-not-in-vs",
+                Some("CodeableConcept.coding[1].code")
+            ),
+        ]
+    );
+    assert_eq!(validation.x_unknown_systems, ["http://example.org/none"]);
+    assert!(validation.unknown_systems.is_empty());
+    assert_eq!(
+        validation.message.as_deref(),
+        Some(format!("No valid coding was found for the value set '{VS_ENUMERATED}|1.0'").as_str())
+    );
+}

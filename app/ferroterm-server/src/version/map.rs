@@ -226,6 +226,20 @@ macro_rules! map {
                         .into_iter()
                         .map(Into::into)
                         .collect(),
+                    x_unknown_system: outcome
+                        .x_unknown_systems
+                        .into_iter()
+                        .map(Into::into)
+                        .collect(),
+                    codeable_concept: outcome.codeable_concept.as_deref().map(concept_of),
+                }
+            }
+
+            /// A neutral `codeableConcept` echoed as the version's `CodeableConcept`.
+            fn concept_of(codings: &[CodingRef]) -> CodeableConcept {
+                CodeableConcept {
+                    coding: codings.iter().map(coding_of).collect(),
+                    ..Default::default()
                 }
             }
 
@@ -254,7 +268,12 @@ macro_rules! map {
                                 text: Some(issue.text.as_str().into()),
                                 ..Default::default()
                             }),
-                            expression: issue.expression.map(Into::into).into_iter().collect(),
+                            expression: issue
+                                .expression
+                                .as_deref()
+                                .map(Into::into)
+                                .into_iter()
+                                .collect(),
                             ..Default::default()
                         })
                         .collect(),
@@ -329,6 +348,12 @@ macro_rules! map {
                         .iter()
                         .map(|s| s.as_str().into())
                         .collect(),
+                    x_unknown_system: validation
+                        .x_unknown_systems
+                        .iter()
+                        .map(|s| s.as_str().into())
+                        .collect(),
+                    codeable_concept: validation.codeable_concept.as_deref().map(concept_of),
                 };
                 response.to_parameters()
             }

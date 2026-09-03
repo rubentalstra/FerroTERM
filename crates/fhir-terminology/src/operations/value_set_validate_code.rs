@@ -47,6 +47,11 @@ pub struct Validation {
     /// The canonicals of the systems the server does not serve
     /// (`x-caused-by-unknown-system`, the terminology ecosystem's output).
     pub unknown_systems: Vec<String>,
+    /// The systems a `CodeableConcept`'s codings name that the server does not
+    /// serve (`x-unknown-system`, the ecosystem's output for that input).
+    pub x_unknown_systems: Vec<String>,
+    /// The `codeableConcept` input, echoed (an R5 output, pre-adopted).
+    pub codeable_concept: Option<Vec<CodingRef>>,
 }
 
 /// The code under validation, from whichever parameter carried it.
@@ -162,7 +167,7 @@ struct Subject<'a> {
     version: Option<&'a str>,
     code: &'a str,
     display: Option<&'a str>,
-    expression: &'static str,
+    expression: &'a str,
 }
 
 /// Runs `$validate-code`.
@@ -248,29 +253,154 @@ pub fn validate_code(
             "`codeableConcept` carries no `coding`",
         )));
     }
-    // NOTE: a CodeableConcept validates when any of its codings is in the value
-    // set (<https://hl7.org/fhir/R4B/valueset-operation-validate-code.html>).
-    let mut last = None;
-    for coding in codings {
+    let mut judged = Vec::with_capacity(codings.len());
+    for (index, coding) in codings.iter().enumerate() {
         let Some(code) = coding.code.as_deref() else {
             continue;
         };
+        let base = format!("CodeableConcept.coding[{index}]");
         let subject = Subject {
             system: coding.system.as_deref(),
             version: coding.version.as_deref(),
             code,
             display: coding.display.as_deref(),
-            expression: "codeableConcept",
+            expression: &base,
         };
-        let validation = check(&subject)?;
-        if validation.result {
-            return Ok(validation);
-        }
-        last = Some(validation);
+        judged.push((coding, check(&subject)?));
     }
-    last.ok_or_else(|| {
-        OperationError::Required(String::from("`codeableConcept.coding.code` is required"))
+    if judged.is_empty() {
+        return Err(OperationError::Required(String::from(
+            "`codeableConcept.coding.code` is required",
+        )));
+    }
+    let mut validation = combine(&model, &judged);
+    validation.codeable_concept = Some(codings.clone());
+    Ok(validation)
+}
+
+/// Whether a judged coding is in the value set (its display may still be wrong).
+fn in_value_set(validation: &Validation) -> bool {
+    !validation.issues.iter().any(|issue| {
+        matches!(
+            issue.kind,
+            "not-in-vs" | "invalid-code" | "not-found" | "cannot-infer" | "vs-invalid"
+        )
     })
+}
+
+/// The systems a failed coding named that the server does not serve, split
+/// between an unknown system (`x-unknown-system`) and an unknown version of a
+/// served one (`x-caused-by-unknown-system`).
+fn take_unknown(from: &Validation, into: &mut Validation) {
+    for canonical in &from.unknown_systems {
+        if canonical.contains('|') {
+            into.unknown_systems.push(canonical.clone());
+        } else {
+            into.x_unknown_systems.push(canonical.clone());
+        }
+    }
+}
+
+/// The `information` issue that a coding is not in the value set.
+fn this_code_not_in_vs(model: &ValueSetModel, coding: &CodingRef, base: &str) -> Issue {
+    let system = match (&coding.system, &coding.version) {
+        (Some(system), Some(version)) => format!("{system}|{version}"),
+        (Some(system), None) => system.clone(),
+        (None, _) => String::new(),
+    };
+    Issue {
+        severity: "information",
+        code: "code-invalid",
+        kind: "this-code-not-in-vs",
+        text: format!(
+            "The provided code '{system}#{}' was not found in the value set '{}'",
+            coding.code.as_deref().unwrap_or_default(),
+            model.canonical()
+        ),
+        expression: super::at(base, "code"),
+    }
+}
+
+/// One answer for a `CodeableConcept` from its codings' judgements, the
+/// ecosystem's shape (its test cases): the first coding in the value set
+/// answers the code outputs and the other codings' issues join it; when none
+/// is, one `not-in-vs` error, each coding's own errors, and an `information`
+/// per coding, with no code outputs.
+fn combine(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Validation {
+    // NOTE: an import the server does not hold fails the whole concept with that
+    // one issue (`validation/simple-codeableconcept-bad-import`).
+    if let Some((_, import)) = judged.iter().find(|(_, v)| {
+        v.issues
+            .iter()
+            .any(|i| i.kind == "not-found" && i.expression.is_none())
+    }) {
+        let mut validation = import.clone();
+        validation.code = None;
+        validation.system = None;
+        validation.version = None;
+        validation.display = None;
+        return validation;
+    }
+    let base = |index: usize| format!("CodeableConcept.coding[{index}]");
+    if let Some((primary, (_, found))) = judged
+        .iter()
+        .enumerate()
+        .find(|(_, (_, v))| in_value_set(v))
+    {
+        let mut answer = found.clone();
+        for (index, (coding, other)) in judged.iter().enumerate() {
+            if index == primary {
+                continue;
+            }
+            for issue in &other.issues {
+                if issue.kind == "not-in-vs" {
+                    answer
+                        .issues
+                        .push(this_code_not_in_vs(model, coding, &base(index)));
+                } else {
+                    answer.issues.push(issue.clone());
+                }
+            }
+            take_unknown(other, &mut answer);
+        }
+        answer.result = !answer.issues.iter().any(|i| i.severity == "error");
+        let errors: Vec<&str> = answer
+            .issues
+            .iter()
+            .filter(|i| i.severity == "error")
+            .map(|i| i.text.as_str())
+            .collect();
+        answer.message = (!errors.is_empty()).then(|| errors.join("; "));
+        return answer;
+    }
+    let mut answer = failed(
+        None,
+        None,
+        Issue {
+            severity: "error",
+            code: "code-invalid",
+            kind: "not-in-vs",
+            text: format!(
+                "No valid coding was found for the value set '{}'",
+                model.canonical()
+            ),
+            expression: None,
+        },
+    );
+    for (_, other) in judged {
+        for issue in &other.issues {
+            if issue.kind != "not-in-vs" && issue.severity == "error" {
+                answer.issues.push(issue.clone());
+            }
+        }
+        take_unknown(other, &mut answer);
+    }
+    for (index, (coding, _)) in judged.iter().enumerate() {
+        answer
+            .issues
+            .push(this_code_not_in_vs(model, coding, &base(index)));
+    }
+    answer
 }
 
 /// Validates one subject against the value set.
@@ -302,7 +432,8 @@ fn check(
                 ResolveError::UnknownSystem(_) => None,
                 ResolveError::UnknownVersion { .. } => subject.version,
             };
-            let (canonical, issue) = super::unknown_system(&system, version, subject.expression);
+            let (canonical, issue) =
+                super::unknown_system(&system, version, super::at(subject.expression, "system"));
             let mut validation = failed(Some(system.clone()), version.map(str::to_owned), issue);
             validation.code = Some(subject.code.to_owned());
             validation.unknown_systems.push(canonical);
@@ -327,13 +458,7 @@ fn check(
         // failed validation naming it, the ecosystem's shape (its test cases);
         // an unknown top-level value set stays an error.
         Err(crate::compose::ComposeError::UnknownValueSet(url)) => {
-            return Ok(unknown_import(
-                &system,
-                version,
-                &url,
-                &located.code,
-                subject.expression,
-            ));
+            return Ok(unknown_import(&system, version, &url, &located.code));
         }
         Err(crate::compose::ComposeError::Resolve(error)) => {
             return unknown_include(
@@ -381,6 +506,8 @@ fn check(
         code: Some(located.code),
         issues,
         unknown_systems: Vec::new(),
+        x_unknown_systems: Vec::new(),
+        codeable_concept: None,
     })
 }
 
@@ -404,7 +531,7 @@ fn assess(
                 "the code `{}` is abstract and cannot be selected",
                 located.code
             ),
-            expression: Some(subject.expression),
+            expression: super::at(subject.expression, "code"),
         });
     }
     if item.inactive {
@@ -447,7 +574,7 @@ fn assess(
             code: "invalid",
             kind: "invalid-display",
             text,
-            expression: Some(subject.expression),
+            expression: super::at(subject.expression, "display"),
         });
     }
     Ok(issues)
@@ -557,7 +684,7 @@ fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
         code: "not-found",
         kind: "cannot-infer",
         text,
-        expression: Some(subject.expression),
+        expression: super::at(subject.expression, "code"),
     });
     validation.code = Some(subject.code.to_owned());
     validation
@@ -568,7 +695,7 @@ fn system_code(system: &str, code: &str) -> String {
 }
 
 /// The issue for a code the value set does not contain.
-fn not_in_vs(model: &ValueSetModel, system_code: &str, expression: &'static str) -> Issue {
+fn not_in_vs(model: &ValueSetModel, system_code: &str, expression: &str) -> Issue {
     Issue {
         severity: "error",
         code: "code-invalid",
@@ -577,7 +704,7 @@ fn not_in_vs(model: &ValueSetModel, system_code: &str, expression: &'static str)
             "the code `{system_code}` is not in the value set `{}`",
             model.canonical()
         ),
-        expression: Some(expression),
+        expression: super::at(expression, "code"),
     }
 }
 
@@ -593,6 +720,8 @@ fn failed(system: Option<String>, version: Option<String>, issue: Issue) -> Vali
         code: None,
         issues: vec![issue],
         unknown_systems: Vec::new(),
+        x_unknown_systems: Vec::new(),
+        codeable_concept: None,
     }
 }
 
@@ -605,7 +734,7 @@ fn unknown_include(
     located: &crate::provider::Located,
     version: String,
     error: &ResolveError,
-    expression: &'static str,
+    expression: &str,
     language: Option<&str>,
 ) -> Result<Validation, OperationError> {
     let system = provider.identity().url.as_str();
@@ -633,14 +762,14 @@ fn unknown_include(
             code: "invalid",
             kind: "vs-invalid",
             text,
-            expression: Some(expression),
+            expression: super::at(expression, "version"),
         },
     );
     let (url, bad_version) = match error {
         ResolveError::UnknownSystem(url) => (url.as_str(), None),
         ResolveError::UnknownVersion { url, version } => (url.as_str(), Some(version.as_str())),
     };
-    let (_, not_found) = super::unknown_system(url, bad_version, expression);
+    let (_, not_found) = super::unknown_system(url, bad_version, super::at(expression, "system"));
     validation.message = Some(not_found.text.clone());
     validation.issues.push(not_found);
     validation.unknown_systems.push(canonical);
@@ -652,13 +781,7 @@ fn unknown_include(
 /// The failed validation over a value set the compose imports but the server
 /// does not hold: the ecosystem's shape (its test cases), where an unknown
 /// top-level value set stays an error.
-fn unknown_import(
-    system: &str,
-    version: String,
-    url: &str,
-    code: &str,
-    expression: &'static str,
-) -> Validation {
+fn unknown_import(system: &str, version: String, url: &str, code: &str) -> Validation {
     let mut validation = failed(
         Some(system.to_owned()),
         Some(version),
@@ -667,7 +790,7 @@ fn unknown_import(
             code: "not-found",
             kind: "not-found",
             text: format!("A definition for the value Set '{url}' could not be found"),
-            expression: Some(expression),
+            expression: None,
         },
     );
     validation.code = Some(code.to_owned());
@@ -690,7 +813,7 @@ fn unknown_code(
             "unknown code `{}` in the code system `{system}` version `{version}`",
             subject.code
         ),
-        expression: Some(subject.expression),
+        expression: super::at(subject.expression, "code"),
     };
     let mut validation = failed(
         Some(system.to_owned()),
@@ -717,7 +840,7 @@ fn outside_value_set(
     version: String,
     located: &crate::provider::Located,
     display: Option<&str>,
-    expression: &'static str,
+    expression: &str,
 ) -> Validation {
     let mut validation = failed(
         Some(system.to_owned()),

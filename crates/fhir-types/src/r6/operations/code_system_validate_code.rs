@@ -102,6 +102,13 @@ pub struct CodeSystemValidateCodeResponse {
     /// one parameter per system, so a validator can tell the user which
     /// resources are missing.
     pub x_caused_by_unknown_system: Vec<super::super::primitives::Canonical>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. A code system a coding of the
+    /// \`codeableConcept\` names that the server does not serve, one parameter
+    /// per system (the ecosystem's twin of \`x-caused-by-unknown-system\` for
+    /// that input).
+    pub x_unknown_system: Vec<super::super::primitives::Canonical>,
 }
 
 impl CodeSystemValidateCodeRequest {
@@ -616,6 +623,7 @@ impl CodeSystemValidateCodeResponse {
         let mut field_issues: Option<super::super::operation_outcome::OperationOutcome> = None;
         let mut field_x_caused_by_unknown_system: Vec<super::super::primitives::Canonical> =
             Vec::new();
+        let mut field_x_unknown_system: Vec<super::super::primitives::Canonical> = Vec::new();
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -889,6 +897,30 @@ impl CodeSystemValidateCodeResponse {
                         }
                     });
                 }
+                "x-unknown-system" => {
+                    field_x_unknown_system.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "x-unknown-system",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "x-unknown-system",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -914,6 +946,7 @@ impl CodeSystemValidateCodeResponse {
             codeable_concept: field_codeable_concept,
             issues: field_issues,
             x_caused_by_unknown_system: field_x_caused_by_unknown_system,
+            x_unknown_system: field_x_unknown_system,
         })
     }
     /// Writes the fields as a parameter list.
@@ -998,6 +1031,15 @@ impl CodeSystemValidateCodeResponse {
         for value in &self.x_caused_by_unknown_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "x-caused-by-unknown-system".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.x_unknown_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "x-unknown-system".into(),
                 value: Some(
                     super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
                 ),
@@ -1236,6 +1278,15 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
             },
             super::super::super::operation::Parameter {
                 name: "x-caused-by-unknown-system",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "x-unknown-system",
                 usage: super::super::super::operation::ParameterUse::Out,
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),

@@ -98,6 +98,16 @@ const PRE_ADOPTED: &[(&str, ParameterUse, &str)] = &[
     (CODE_SYSTEM_VALIDATE_CODE, ParameterUse::Out, "system"),
     (CODE_SYSTEM_VALIDATE_CODE, ParameterUse::Out, "version"),
     (CODE_SYSTEM_VALIDATE_CODE, ParameterUse::Out, "issues"),
+    (
+        CODE_SYSTEM_VALIDATE_CODE,
+        ParameterUse::Out,
+        "codeableConcept",
+    ),
+    (
+        VALUE_SET_VALIDATE_CODE,
+        ParameterUse::Out,
+        "codeableConcept",
+    ),
     (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceSystem"),
     (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceVersion"),
     (
@@ -156,8 +166,19 @@ fn ecosystem_parameters(url: &str) -> Vec<OperationParameter> {
             "A code system the server does not serve, one parameter per system, so a validator can tell the user which resources are missing.",
         )
     };
+    let unknown_system_of_concept = || {
+        ecosystem_parameter(
+            "x-unknown-system",
+            ParameterUse::Out,
+            "*",
+            "canonical",
+            "A code system a coding of the `codeableConcept` names that the server does not serve, one parameter per system (the ecosystem's twin of `x-caused-by-unknown-system` for that input).",
+        )
+    };
     match url {
-        CODE_SYSTEM_VALIDATE_CODE | VALUE_SET_VALIDATE_CODE => vec![unknown_system()],
+        CODE_SYSTEM_VALIDATE_CODE | VALUE_SET_VALIDATE_CODE => {
+            vec![unknown_system(), unknown_system_of_concept()]
+        }
         CODE_SYSTEM_LOOKUP => vec![
             ecosystem_parameter(
                 "code",
