@@ -298,6 +298,9 @@ pub struct Property {
 /// A failure inside a provider.
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {
+    /// The system cannot decide the relationship asked of it.
+    #[error("cannot determine: {0}")]
+    CannotDetermine(String),
     /// The system cannot enumerate its concepts (a grammar-defined system).
     #[error("the code system cannot enumerate its concepts")]
     NotEnumerable,
@@ -480,5 +483,50 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// the system does not answer, and the value errors of the operators.
     fn filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
         crate::filter::evaluate(self, filter)
+    }
+
+    /// The concepts every filter of one include selects, all of them.
+    ///
+    /// The default intersects [`CodeSystemProvider::filter`] per filter; a
+    /// system whose filters only make sense together (a registry flag that
+    /// bounds an otherwise unbounded grammar) overrides.
+    ///
+    /// # Errors
+    ///
+    /// Returns the errors of [`CodeSystemProvider::filter`], and
+    /// [`ProviderError::NotEnumerable`] when the filters do not bound the set.
+    fn filter_all(&self, filters: &[Filter]) -> Result<ConceptSet, ProviderError> {
+        let Some((first, rest)) = filters.split_first() else {
+            return self.all();
+        };
+        let mut set = self.filter(first)?;
+        for filter in rest {
+            set &= self.filter(filter)?;
+        }
+        Ok(set)
+    }
+
+    /// Whether `concept` satisfies `filter`, without enumerating the set.
+    ///
+    /// The default evaluates the filter and tests membership; a grammar system
+    /// answers from the concept alone.
+    ///
+    /// # Errors
+    ///
+    /// Returns the errors of [`CodeSystemProvider::filter`].
+    fn filter_matches(&self, concept: Concept, filter: &Filter) -> Result<bool, ProviderError> {
+        Ok(self.filter(filter)?.contains(concept.index()))
+    }
+
+    /// The subsumption of `a` over `b` when the system decides it without a
+    /// materialized hierarchy (a grammar whose parameters narrow a code).
+    ///
+    /// `None` leaves the answer to [`CodeSystemProvider::hierarchy`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::CannotDetermine`] when the system cannot say.
+    fn subsumes(&self, _a: Concept, _b: Concept) -> Result<Option<Outcome>, ProviderError> {
+        Ok(None)
     }
 }

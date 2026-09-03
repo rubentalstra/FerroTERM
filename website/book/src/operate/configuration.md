@@ -30,6 +30,14 @@ client error logs at `warn`, a server error at `error`. On `SIGTERM` or
 `SIGINT`: the signal, then `ferroterm stopped`. A refused start is one
 `cannot start` line with the reason.
 
+## The registry systems
+
+Three systems ship with the server and are served without configuration: BCP
+47 language tags (`urn:ietf:bcp:47`), BCP 13 media types (`urn:ietf:bcp:13`),
+and ISO 3166-1 country codes (`urn:iso:std:iso:3166`). The first two are
+grammars over the IANA registries and cannot be expanded; the third is a table
+from Unicode CLDR. Their data is vendored in the binary.
+
 ## What a code system version is served as
 
 Each loaded code system version becomes one `CodeSystem` instance. The id is

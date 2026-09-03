@@ -20,7 +20,7 @@ pub fn to_r4b(model: &ValueSetModel, with_compose: bool) -> ValueSet {
         experimental: model.experimental.map(Into::into),
         date: model.date.as_deref().map(Into::into),
         publisher: model.publisher.as_deref().map(Into::into),
-        description: model.description.as_deref().map(Into::into),
+        description: None,
         immutable: model.immutable.map(Into::into),
         compose: with_compose.then(|| compose_r4b(&model.compose)),
         ..Default::default()

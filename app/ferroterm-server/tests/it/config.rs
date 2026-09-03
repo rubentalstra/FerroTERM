@@ -15,6 +15,7 @@ fn the_state_loads_every_named_artifact_and_names_its_instances() {
     let state = AppState::load(&config).expect("loads");
     let instances: Vec<(String, String, String)> = state
         .instances()
+        .filter(|(_, url, _)| !url.starts_with("urn:"))
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
         .collect();
     assert_eq!(
@@ -32,10 +33,27 @@ fn the_state_loads_every_named_artifact_and_names_its_instances() {
     );
     assert!(state.instance("nope").is_none());
     let summaries = state.summaries().expect("summarises");
-    assert_eq!(summaries.len(), 1);
-    assert_eq!(summaries[0].concepts, Some(8));
-    assert_eq!(summaries[0].languages, ["en", "nl"]);
-    assert_eq!(summaries[0].path.as_deref(), Some(dir.path()));
+    assert_eq!(
+        summaries.len(),
+        4,
+        "the edition and the three registry systems"
+    );
+    let snomed = summaries
+        .iter()
+        .find(|s| s.url == "http://snomed.info/sct")
+        .expect("snomed");
+    assert_eq!(snomed.concepts, Some(8));
+    assert_eq!(snomed.languages, ["en", "nl"]);
+    assert_eq!(snomed.path.as_deref(), Some(dir.path()));
+    let registries: Vec<&str> = summaries
+        .iter()
+        .filter(|s| s.url.starts_with("urn:"))
+        .map(|s| s.url.as_str())
+        .collect();
+    assert_eq!(
+        registries,
+        ["urn:ietf:bcp:13", "urn:ietf:bcp:47", "urn:iso:std:iso:3166"]
+    );
 }
 
 #[test]
@@ -58,8 +76,11 @@ fn a_missing_or_duplicate_artifact_refuses_to_start() {
         AppState::load(&twice),
         Err(LoadError::Register(_))
     ));
-    let empty = AppState::load(&Config::default()).expect("no artifacts is a valid, empty server");
-    assert_eq!(empty.instances().count(), 0);
+    let empty = AppState::load(&Config::default()).expect("no artifacts is a valid server");
+    assert!(
+        empty.instances().all(|(_, url, _)| url.starts_with("urn:")),
+        "only the registry systems are served without an index"
+    );
 }
 
 #[test]
@@ -81,7 +102,11 @@ fn code_system_directories_load_and_supplements_apply() {
         ..Config::default()
     };
     let state = AppState::load(&config).expect("loads");
-    let urls: Vec<&str> = state.instances().map(|(_, url, _)| url).collect();
+    let urls: Vec<&str> = state
+        .instances()
+        .map(|(_, url, _)| url)
+        .filter(|url| !url.starts_with("urn:"))
+        .collect();
     assert_eq!(
         urls,
         [ANIMALS, COLOURS, SKETCH],

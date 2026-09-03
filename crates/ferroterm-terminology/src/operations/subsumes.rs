@@ -84,14 +84,19 @@ pub fn subsumes(
     };
     let resolved = resolve(registry, invocation, system, version)?;
     let provider = &resolved.provider;
+    let a = locate(provider, a)?.concept;
+    let b = locate(provider, b)?.concept;
+    if let Some(outcome) = provider.subsumes(a, b)? {
+        return Ok(CodeSystemSubsumesResponse {
+            outcome: outcome.code().into(),
+        });
+    }
     let hierarchy = provider.hierarchy().ok_or_else(|| {
         OperationError::NotSupported(format!(
             "code system `{}` declares no subsumption",
             provider.identity().url
         ))
     })?;
-    let a = locate(provider, a)?.concept;
-    let b = locate(provider, b)?.concept;
     Ok(CodeSystemSubsumesResponse {
         outcome: hierarchy.subsumes(a, b).code().into(),
     })

@@ -120,6 +120,23 @@ pub trait ValueSetResolver: std::fmt::Debug {
     ///
     /// Returns [`ComposeError`] when the value set is unknown or fails to expand.
     fn expand(&self, url: &str) -> Result<Expansion, ComposeError>;
+
+    /// Whether the value set at `url` contains `code` of `system`, as the item
+    /// it would expand to.
+    ///
+    /// The default expands and searches; a resolver over a store answers from
+    /// the compose without enumerating.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ComposeError`] when the value set is unknown or fails.
+    fn contains(&self, url: &str, system: &str, code: &str) -> Result<Option<Item>, ComposeError> {
+        Ok(self
+            .expand(url)?
+            .items
+            .into_iter()
+            .find(|item| item.system == system && item.code == code))
+    }
 }
 
 /// A failure to expand.
@@ -351,16 +368,7 @@ impl<'a> Expander<'a> {
             source,
         };
         let mut set = if include.concepts.is_empty() {
-            match include.filters.split_first() {
-                None => provider.all().map_err(&failed)?,
-                Some((first, rest)) => {
-                    let mut set = provider.filter(first).map_err(&failed)?;
-                    for filter in rest {
-                        set &= provider.filter(filter).map_err(&failed)?;
-                    }
-                    set
-                }
-            }
+            provider.filter_all(&include.filters).map_err(&failed)?
         } else {
             let mut set = ConceptSet::new();
             for concept in &include.concepts {
@@ -385,5 +393,145 @@ impl<'a> Expander<'a> {
                 .map_err(failed)?;
         }
         Ok(set)
+    }
+}
+
+impl Expander<'_> {
+    /// Whether `compose` contains `code` of `system` (at `version` when
+    /// named), evaluated include by include against the code itself, so a
+    /// system that cannot enumerate its codes still validates.
+    ///
+    /// The item carries the display in `language`. `compose.inactive = false`
+    /// excludes an inactive code as it does in an expansion.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ComposeError`] for an invalid compose, an unknown system or
+    /// version, or a provider failure.
+    pub fn contains(
+        &self,
+        compose: &Compose,
+        system: &str,
+        version: Option<&str>,
+        code: &str,
+        language: Option<&str>,
+    ) -> Result<Option<Item>, ComposeError> {
+        let mut found = None;
+        for include in &compose.include {
+            if let Some(item) = self.include_contains(include, system, version, code, language)? {
+                found = Some(item);
+                break;
+            }
+        }
+        let Some(item) = found else {
+            return Ok(None);
+        };
+        for exclude in &compose.exclude {
+            if self
+                .include_contains(exclude, system, version, code, language)?
+                .is_some()
+            {
+                return Ok(None);
+            }
+        }
+        if compose.inactive == Some(false) && item.inactive {
+            return Ok(None);
+        }
+        Ok(Some(item))
+    }
+
+    /// The item `include` admits for `code` of `system`, if any.
+    fn include_contains(
+        &self,
+        include: &Include,
+        system: &str,
+        version: Option<&str>,
+        code: &str,
+        language: Option<&str>,
+    ) -> Result<Option<Item>, ComposeError> {
+        if include.system.is_none() {
+            if include.value_sets.is_empty() {
+                return Err(ComposeError::NoSystemOrValueSet);
+            }
+            if !include.concepts.is_empty() || !include.filters.is_empty() {
+                return Err(ComposeError::CriteriaWithoutSystem);
+            }
+        }
+        if !include.concepts.is_empty() && !include.filters.is_empty() {
+            return Err(ComposeError::ConceptsAndFilters);
+        }
+        let mut item = None;
+        if let Some(named) = &include.system {
+            if named.url != system {
+                return Ok(None);
+            }
+            let resolved = self
+                .registry
+                .resolve(&named.url, named.version.as_deref().or(version))?;
+            let provider = &resolved.provider;
+            let identity = provider.identity();
+            if version.is_some_and(|v| v != identity.version) {
+                return Ok(None);
+            }
+            let failed = |source| ComposeError::Provider {
+                system: identity.url.clone(),
+                source,
+            };
+            let Some(located) = provider.locate(code).map_err(failed)? else {
+                return Ok(None);
+            };
+            let admitted = if include.concepts.is_empty() {
+                let mut all = true;
+                for filter in &include.filters {
+                    if !provider
+                        .filter_matches(located.concept, filter)
+                        .map_err(failed)?
+                    {
+                        all = false;
+                        break;
+                    }
+                }
+                all
+            } else {
+                include.concepts.iter().any(|c| c.code == located.code)
+            };
+            if !admitted {
+                return Ok(None);
+            }
+            let overridden = include
+                .concepts
+                .iter()
+                .find(|c| c.code == located.code)
+                .and_then(|c| c.display.clone());
+            let display = match overridden {
+                Some(display) => Some(display),
+                None => provider
+                    .display(located.concept, language)
+                    .map_err(failed)?,
+            };
+            let status = provider.status(located.concept).map_err(failed)?;
+            item = Some(Item {
+                system: identity.url.clone(),
+                version: identity.version.clone(),
+                code: located.code,
+                display,
+                inactive: !status.active,
+                abstract_concept: status.abstract_concept,
+            });
+        }
+        for url in &include.value_sets {
+            let resolver = self
+                .resolver
+                .ok_or_else(|| ComposeError::NoResolver(url.clone()))?;
+            match resolver.contains(url, system, code)? {
+                Some(referenced) => {
+                    if item.is_none() {
+                        item = Some(referenced);
+                    }
+                }
+                None => return Ok(None),
+            }
+        }
+        Ok(item)
     }
 }

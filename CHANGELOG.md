@@ -15,6 +15,22 @@ fresh link reference.
 
 ### Added
 
+- The registry systems, served without configuration: BCP 47 language tags
+  (`urn:ietf:bcp:47`, the RFC 5646 grammar over the IANA Language Subtag
+  Registry; a well-formed tag with an unregistered subtag is not a code), BCP
+  13 media types (`urn:ietf:bcp:13`, the RFC 6838 grammar; `registered` and
+  `base` filters, `registered = true` enumerates the IANA registry, and
+  `$subsumes` decides by parameters, declining a parameter it does not know),
+  and ISO 3166-1 country codes (`urn:iso:std:iso:3166`, from Unicode CLDR;
+  case-insensitive alpha-2 codes with `alpha3` and `numeric`, `code regex`).
+  The IANA and CLDR data is vendored with provenance
+  (`scripts/vendor/registries.sh`).
+- `ValueSet/$validate-code` decides membership include by include against
+  the code itself, so a value set over a system that cannot be enumerated
+  validates; `$expand` answers `too-costly` for more than 1000 concepts without
+  `count`; every `OperationOutcome` issue carries `details.text` and a
+  `tx-issue-type` coding.
+
 - `ferroterm-build --rf2` takes the SNOMED CT release zip as distributed, not
   only the unpacked directory: the `Snapshot/` tree is unpacked to a temporary
   directory removed with the build, and the bytes written equal those of a

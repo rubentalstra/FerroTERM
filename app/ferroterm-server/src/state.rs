@@ -12,6 +12,7 @@ use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
 use ferroterm_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
 use ferroterm_terminology::operations::Sources;
 use ferroterm_terminology::provider::{CodeSystemProvider, ContentMode, ProviderError};
+use ferroterm_terminology::registries::{bcp13, bcp47, iso3166};
 use ferroterm_terminology::registry::{RegisterError, Registry, Resolved};
 use ferroterm_terminology::snomed::{OpenError, SnomedProvider};
 use ferroterm_terminology::supplement::{Additions, Supplement, Supplemented};
@@ -54,6 +55,15 @@ pub enum LoadError {
         /// The cause.
         #[source]
         source: BuildError,
+    },
+    /// The vendored registry data of a registry code system does not build.
+    #[error("cannot build the registry code system `{url}`")]
+    Registry {
+        /// The system.
+        url: String,
+        /// The cause.
+        #[source]
+        source: iso3166::DataError,
     },
     /// A supplement names a code system that is not loaded.
     #[error("the supplement `{url}` supplements `{target}`, which is not loaded")]
@@ -141,6 +151,24 @@ impl AppState {
                 provider: Arc::new(provider),
             });
         }
+        // NOTE: the registry systems ship with the server, so a validator finds
+        // `urn:ietf:bcp:47`, `urn:ietf:bcp:13`, and `urn:iso:std:iso:3166` without
+        // configuration (<https://hl7.org/fhir/R4B/terminologies-systems.html>).
+        loaded.push(Loaded {
+            path: PathBuf::new(),
+            provider: Arc::new(bcp47::Bcp47Provider::new()),
+        });
+        loaded.push(Loaded {
+            path: PathBuf::new(),
+            provider: Arc::new(bcp13::Bcp13Provider::new()),
+        });
+        loaded.push(Loaded {
+            path: PathBuf::new(),
+            provider: Arc::new(iso3166::provider().map_err(|source| LoadError::Registry {
+                url: iso3166::URL.to_owned(),
+                source,
+            })?),
+        });
         let mut supplements = Vec::new();
         let mut value_sets = ValueSetStore::new();
         let mut concept_maps = ConceptMapStore::new();
@@ -158,7 +186,9 @@ impl AppState {
         let mut paths = BTreeMap::new();
         for Loaded { path, provider } in loaded {
             let identity = provider.identity();
-            paths.insert((identity.url.clone(), identity.version.clone()), path);
+            if !path.as_os_str().is_empty() {
+                paths.insert((identity.url.clone(), identity.version.clone()), path);
+            }
             registry.register(provider)?;
         }
         let mut state = Self::from_registry(registry);

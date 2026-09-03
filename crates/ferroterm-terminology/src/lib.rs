@@ -17,6 +17,7 @@ pub mod fhir_codesystem;
 pub mod filter;
 pub mod operations;
 pub mod provider;
+pub mod registries;
 pub mod registry;
 pub mod snomed;
 pub mod supplement;

@@ -17,6 +17,7 @@ mod fhir_codesystem;
 mod filter;
 mod fixture;
 mod operations;
+mod registries;
 mod registry;
 mod snomed;
 mod supplement;
