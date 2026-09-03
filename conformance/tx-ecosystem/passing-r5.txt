@@ -1,4 +1,3 @@
-
 big/big-echo-fifty-fifty-limit
 big/big-echo-no-limit
 big/big-echo-zero-fifty-limit
@@ -38,15 +37,20 @@ inactive/inactive-3b-validate
 inactive/inactive-active-expand
 language/language-echo-de-de-header
 language/language-echo-de-de-param
+language/language-echo-de-de-vs
 language/language-echo-de-multi-de-header
 language/language-echo-de-multi-de-param
+language/language-echo-de-multi-de-vs
 language/language-echo-de-multi-none
 language/language-echo-de-none
 language/language-echo-en-en-header
 language/language-echo-en-en-param
+language/language-echo-en-en-vs
 language/language-echo-en-multi-none
 language/language-echo-en-none
+language2/validation-right-de-en
 language2/validation-right-de-ende
+language2/validation-right-de-ende-N
 language2/validation-right-de-none
 language2/validation-right-en-en
 language2/validation-right-en-ende
@@ -106,12 +110,15 @@ notSelectable/notSelectable-unprop-true
 notSelectable/notSelectable-unprop-true-false
 notSelectable/notSelectable-unprop-true-true
 notSelectable/notSelectable-unprop-true-unknown
+overload/expand-enum-good
+overload/expand-mixed
 overload/validate-all-bad2
 overload/validate-all-bad2v
 overload/validate-all-good
 overload/validate-all-good2
 overload/validate-all-good3
 overload/validate-all-good4
+overload/validate-bad-enum-code1
 overload/validate-good-enum-code3
 overload/validate-good-exclude-code4
 overload/validate-good-v1code1
@@ -164,6 +171,9 @@ permutations/good-scd-exclude-import-request
 permutations/good-scd-exclude-list-request
 permutations/good-scd-import-request
 permutations/good-scd-isa-request
+regex-bad/expand-regex-bad
+regex-bad/expand-regex-bad-2
+regex-bad/validate-regex-bad-2
 search/search-all-no
 search/search-all-yes
 search/search-enum-no
@@ -177,7 +187,9 @@ simple-cases/simple-expand-enum
 simple-cases/simple-expand-inactive
 simple-cases/simple-expand-isa
 simple-cases/simple-expand-prop
+simple-cases/simple-expand-regex
 simple-cases/simple-expand-regex-none
+simple-cases/simple-expand-regex2
 simple-cases/simple-expand-regexp-prop
 simple-cases/simple-expand-repeating-prop
 simple-cases/simple-lookup-1
@@ -210,11 +222,13 @@ validation/validation-simple-code-bad-display-warning
 validation/validation-simple-code-bad-import
 validation/validation-simple-code-bad-language
 validation/validation-simple-code-bad-language-none
+validation/validation-simple-code-bad-regex
 validation/validation-simple-code-bad-system
 validation/validation-simple-code-bad-valueSet
 validation/validation-simple-code-good
 validation/validation-simple-code-good-display
 validation/validation-simple-code-good-language
+validation/validation-simple-code-good-language-none
 validation/validation-simple-code-good-regex
 validation/validation-simple-code-implied-bad-code
 validation/validation-simple-code-implied-good
@@ -240,6 +254,7 @@ validation/validation-simple-coding-bad-valueSet
 validation/validation-simple-coding-good
 validation/validation-simple-coding-good-display
 validation/validation-simple-coding-good-language
+validation/validation-simple-coding-good-language-none
 version/code-v10-vs10
 version/code-v10-vs10-check
 version/code-v10-vs10-default
@@ -300,6 +315,7 @@ version/codeableconcept-v10-vs1w-force
 version/codeableconcept-v10-vs1wb-force
 version/codeableconcept-v10-vs20-force
 version/codeableconcept-v10-vsbb
+version/codeableconcept-v10-vsbb
 version/codeableconcept-v10-vsbb-check
 version/codeableconcept-v10-vsbb-default
 version/codeableconcept-v10-vsbb-force
@@ -337,6 +353,7 @@ version/coding-v10-vs20
 version/coding-v10-vs20-check
 version/coding-v10-vs20-default
 version/coding-v10-vs20-force
+version/coding-v10-vsbb
 version/coding-v10-vsbb
 version/coding-v10-vsbb-check
 version/coding-v10-vsbb-default
@@ -385,6 +402,7 @@ version/vs-expand-all-v1-force
 version/vs-expand-all-v2
 version/vs-expand-all-v2-check
 version/vs-expand-all-v2-force
+version/vs-expand-v-mixed
 version/vs-expand-v-mixed-check
 version/vs-expand-v-n-check-request
 version/vs-expand-v-n-default-request

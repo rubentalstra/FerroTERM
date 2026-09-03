@@ -18,8 +18,13 @@ use fhir_terminology::operations::{OperationError, Sources, expand, value_set_va
 use fhir_terminology::provider::PropertyValue;
 use fhir_terminology::registry::Registry;
 use fhir_terminology::valueset;
+use fhir_terminology::valueset::model::ExpansionDefault;
 use fhir_terminology::valueset::store::ValueSetStore;
-use fhir_types::r4b::value_set::{ValueSet, ValueSetCompose, ValueSetComposeInclude};
+use fhir_types::r4b::extension::{Extension, ExtensionValue};
+use fhir_types::r4b::value_set::{
+    ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeConcept,
+    ValueSetComposeIncludeFilter,
+};
 
 pub(crate) struct World {
     _dir: tempfile::TempDir,
@@ -1782,4 +1787,126 @@ fn expand_lists_every_designation_and_flags_inactive_concepts() {
         1,
         "the requested language once"
     );
+}
+
+#[test]
+fn expand_anchors_a_regex_filter_to_the_whole_code() {
+    let world = World::load();
+    let inline = ValueSet {
+        url: Some("http://example.org/three-letters".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                filter: vec![ValueSetComposeIncludeFilter {
+                    property: "code".into(),
+                    op: "regex".into(),
+                    value: "[a-z]{3}".into(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let request = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        ..ExpandInput::default()
+    };
+    let vs = expand::expand(&world.sources(), &request).expect("expands");
+    // NOTE: `regex` matches the whole value (<https://hl7.org/fhir/R4B/codesystem-filter-operator.html>);
+    // an unanchored match would also list `animal` and `kitten`.
+    assert_eq!(codes(&vs), ["cat", "dog", "pet"]);
+}
+
+#[test]
+fn expand_applies_the_value_sets_default_expansion_parameters() {
+    let world = World::load();
+    let default = |name: &str, value: &str| Extension {
+        url: "http://hl7.org/fhir/StructureDefinition/valueset-expansion-parameter".into(),
+        extension: vec![
+            Extension {
+                url: "name".into(),
+                value: Some(ExtensionValue::Code(name.into())),
+                ..Default::default()
+            },
+            Extension {
+                url: "value".into(),
+                value: Some(ExtensionValue::Code(value.into())),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    let inline = ValueSet {
+        url: Some("http://example.org/german-cats".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            extension: vec![default("displayLanguage", "de")],
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                concept: vec![ValueSetComposeIncludeConcept {
+                    code: "cat".into(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let model = valueset::convert::r4b::convert(&inline).expect("converts");
+    assert_eq!(
+        model.expansion_parameters,
+        [ExpansionDefault {
+            name: String::from("displayLanguage"),
+            value: String::from("de"),
+        }]
+    );
+    let request = ExpandInput {
+        inline_value_set: Some(Ok(model)),
+        ..ExpandInput::default()
+    };
+    let vs = expand::expand(&world.sources(), &request).expect("expands");
+    assert_eq!(
+        parameter(&vs, "displayLanguage"),
+        [ParameterValue::Code(String::from("de"))],
+        "the default is applied and echoed"
+    );
+    assert_eq!(vs.contains[0].display.as_deref(), Some("Katze"));
+    let english = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        display_language: Some(String::from("en")),
+        ..ExpandInput::default()
+    };
+    let vs = expand::expand(&world.sources(), &english).expect("expands");
+    assert_eq!(
+        parameter(&vs, "displayLanguage"),
+        [ParameterValue::Code(String::from("en"))],
+        "the client's language wins over the default"
+    );
+}
+
+#[test]
+fn validate_code_flags_a_local_system_reference() {
+    let world = World::load();
+    let local = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(String::from("Location1")),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &local).expect("validates");
+    assert!(!validation.result);
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-in-vs", "invalid-data", "not-found"]);
+    assert_eq!(
+        validation.message.as_deref(),
+        Some(
+            "A definition for CodeSystem 'Location1' could not be found, so the code cannot be validated; Coding.system must be an absolute reference, not a local reference"
+        )
+    );
+    assert_eq!(validation.x_unknown_systems, ["Location1"]);
 }

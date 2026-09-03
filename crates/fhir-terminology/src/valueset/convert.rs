@@ -128,6 +128,35 @@ macro_rules! convert_value_set {
                         _ => None,
                     })
                     .collect();
+                // NOTE: `valueset-expansion-parameter` on the compose carries the
+                // value set's default expansion parameters
+                // (<https://hl7.org/fhir/R4B/extension-valueset-expansion-parameter.html>).
+                let expansion_parameters = resource
+                    .compose
+                    .iter()
+                    .flat_map(|c| c.extension.iter())
+                    .filter(|x| x.url == "http://hl7.org/fhir/StructureDefinition/valueset-expansion-parameter")
+                    .filter_map(|x| {
+                        let part = |name: &str| {
+                            x.extension.iter().find(|p| p.url == name).and_then(|p| match &p.value {
+                                Some(fhir_types::$module::extension::ExtensionValue::Code(c)) => c.value.clone(),
+                                Some(fhir_types::$module::extension::ExtensionValue::String(s)) => s.value.clone(),
+                                Some(fhir_types::$module::extension::ExtensionValue::Uri(u)) => u.value.clone(),
+                                Some(fhir_types::$module::extension::ExtensionValue::Boolean(b)) => {
+                                    b.value.map(|b| b.to_string())
+                                }
+                                Some(fhir_types::$module::extension::ExtensionValue::Integer(i)) => {
+                                    i.value.map(|i| i.to_string())
+                                }
+                                _ => None,
+                            })
+                        };
+                        Some(crate::valueset::model::ExpansionDefault {
+                            name: part("name")?,
+                            value: part("value")?,
+                        })
+                    })
+                    .collect();
                 let standards_status = resource
                     .extension
                     .iter()
@@ -140,6 +169,7 @@ macro_rules! convert_value_set {
                     url,
                     version: string(&resource.version),
                     supplements,
+                    expansion_parameters,
                     standards_status,
                     name: string(&resource.name),
                     title: string(&resource.title),

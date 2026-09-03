@@ -13,6 +13,9 @@ pub struct ValueSetModel {
     /// The supplements the value set asks for (`valueset-supplement`
     /// extension, canonicals).
     pub supplements: Vec<String>,
+    /// The expansion parameters the value set carries as defaults
+    /// (`valueset-expansion-parameter` on the compose).
+    pub expansion_parameters: Vec<ExpansionDefault>,
     /// The `structuredefinition-standards-status` extension's code, when set.
     pub standards_status: Option<String>,
     /// `name`.
@@ -33,6 +36,17 @@ pub struct ValueSetModel {
     pub immutable: Option<bool>,
     /// `compose`, empty when the resource has none.
     pub compose: Compose,
+}
+
+/// One default expansion parameter of a value set: the `name` and `value`
+/// of a `valueset-expansion-parameter` extension
+/// (<https://hl7.org/fhir/R4B/extension-valueset-expansion-parameter.html>).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExpansionDefault {
+    /// The parameter name (`displayLanguage`, `activeOnly`, ...).
+    pub name: String,
+    /// The value, as its text.
+    pub value: String,
 }
 
 impl crate::versioned::Versioned for ValueSetModel {

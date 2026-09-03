@@ -419,6 +419,7 @@ impl<'a> Sources<'a> {
                 }
                 match self.registry.implicit_value_set(url) {
                     Some(Ok(compose)) => Ok(Arc::new(crate::valueset::model::ValueSetModel {
+                        expansion_parameters: Vec::new(),
                         url: url.to_owned(),
                         version: None,
                         supplements: Vec::new(),
