@@ -1,8 +1,7 @@
 # FHIR versions
 
-FerroTERM answers FHIR R4 under `/r4` and FHIR R4B under `/r4b`. The R5 and R6
-modules are generated and the endpoints that serve them are the v0.0.9
-milestone.
+FerroTERM answers FHIR R4 under `/r4`, R4B under `/r4b`, and R5 under `/r5`.
+The R6 ballot module is generated and its endpoint is the v0.0.9 milestone.
 
 <!-- toc -->
 
@@ -25,19 +24,20 @@ drift apart.
 |---|---|---|
 | R4 | `hl7.fhir.r4.core` 4.0.1 | served under `/r4` |
 | R4B | `hl7.fhir.r4b.core` 4.3.0 | served under `/r4b` |
-| R5 | `hl7.fhir.r5.core` 5.0.0 | generated; the `/r5` endpoint is v0.0.9 |
+| R5 | `hl7.fhir.r5.core` 5.0.0 | served under `/r5` |
 | R6 | `hl7.fhir.r6.core` 6.0.0-ballot5 | generated; the `/r6` endpoint is v0.0.9, marked ballot-tracking |
 
 R4B is the current stable release of the R4 line and a near-superset of R4;
 both endpoints serve the same engine, and a `$cache-control` cache started on
-one serves the other. The R5 shapes matter most to validators and IG
-tooling (`$validate-code` `issues`, `$lookup` `subproperty`, `$expand`
-`property`), which is why the R5 endpoint is first in that milestone.
+one serves the other. The R5 shapes matter most to validators and IG tooling
+(`$validate-code` `issues` and the validated `code`, `system`, and `version`;
+`$lookup` `definition`; `$expand` `property`), and `/r5` emits them; the R4
+and R4B endpoints emit only what their own definitions declare.
 
 ## What this means for you
 
-Send R4 requests to `/r4` and R4B requests to `/r4b`. `GET {base}/$versions`
-names the version of the base (`4.0` or `4.3`), `GET {base}/metadata` is that
+Send R4 requests to `/r4`, R4B requests to `/r4b`, and R5 requests to `/r5`.
+`GET {base}/$versions` names the version of the base (`4.0`, `4.3`, or `5.0`), `GET {base}/metadata` is that
 version's `CapabilityStatement`, and a parameter the version does not declare
-is refused with an `OperationOutcome` rather than absorbed. When the R5 and R6
-endpoints land, each answers in its own version's shapes at its own base.
+is refused with an `OperationOutcome` rather than absorbed. When the R6 endpoint
+lands, it answers in the ballot's shapes at `/r6`.

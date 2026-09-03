@@ -3,7 +3,10 @@
 `passing.txt` lists the tests of the HL7 terminology ecosystem suite
 (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>, `general` mode) that
 FerroTERM passes on its R4B surface, one name per line, sorted;
-`passing-r4.txt` is the same list on `/r4` (`--fhir r4`), which CI runs too. CI runs the
+`passing-r4.txt` and `passing-r5.txt` are the same lists on `/r4` and `/r5`
+(`--fhir r4`, `--fhir r5`), which CI runs too. R5 is the version the suite
+speaks natively, so its list is the longest; the R4-family lists stop where a
+case expects an R5-only output. CI runs the
 suite with the FHIR Validator's `txTests` command
 (`scripts/checks/tx-ecosystem.sh`, the validator and the suite commit pinned
 there) and fails when a listed test stops passing. A test that starts passing

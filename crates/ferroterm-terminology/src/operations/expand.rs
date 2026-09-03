@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use super::{OperationError, Sources};
 use crate::compose::{Compose, Expansion, Include, Item, Options};
-use crate::provider::Designation;
+use crate::provider::{Designation, Property};
 use crate::valueset::model::{ModelError, ValueSetModel};
 use crate::valueset::store::Resolver;
 use crate::versioned::Versioned;
@@ -113,6 +113,19 @@ pub struct Contains {
     pub inactive: bool,
     /// The designations asked for.
     pub designations: Vec<Designation>,
+    /// The properties asked for with `property`
+    /// (<https://hl7.org/fhir/R5/valueset-operation-expand.html>).
+    pub properties: Vec<Property>,
+}
+
+/// One property the expansion returns on its concepts, for
+/// `expansion.property` (<https://hl7.org/fhir/R5/valueset.html>).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExpansionProperty {
+    /// The property code, as `contains.property.code` names it.
+    pub code: String,
+    /// The formal URI of the property, when the code system declares one.
+    pub uri: Option<String>,
 }
 
 /// The outcome of `$expand`.
@@ -134,6 +147,8 @@ pub struct ExpansionOutcome {
     pub parameters: Vec<ExpansionParameter>,
     /// The page.
     pub contains: Vec<Contains>,
+    /// The properties the concepts carry, each once, in order of appearance.
+    pub properties: Vec<ExpansionProperty>,
 }
 
 /// Runs `$expand`.
@@ -166,6 +181,7 @@ pub fn expand(
         )));
     }
     let contains = contains(sources, &expansion, input, options.language.as_deref())?;
+    let properties = expansion_properties(sources, &expansion, &contains)?;
     let offset = u64::try_from(expansion.offset)
         .map_err(|_| OperationError::Invalid(String::from("`offset` is too large")))?;
     Ok(ExpansionOutcome {
@@ -176,6 +192,7 @@ pub fn expand(
         offset: (input.offset.is_some() || input.count.is_some()).then_some(offset),
         parameters: parameters(input, &expansion),
         contains,
+        properties,
         model,
     })
 }
@@ -357,6 +374,11 @@ fn contains(
         } else {
             Vec::new()
         };
+        let properties = if input.property.is_empty() {
+            Vec::new()
+        } else {
+            properties_of(sources, item, &input.property)?
+        };
         out.push(Contains {
             system: item.system.clone(),
             version: item.version.clone(),
@@ -365,6 +387,7 @@ fn contains(
             abstract_concept: item.abstract_concept,
             inactive: item.inactive,
             designations,
+            properties,
         });
     }
     Ok(out)
@@ -407,4 +430,68 @@ fn designations_of(
 /// `url|version`, the canonical of a code system version.
 fn canonical(url: &str, version: &str) -> String {
     format!("{url}|{version}")
+}
+
+/// The properties of an item the client asked for: every one for `*`, else
+/// those whose code or declared URI is named.
+fn properties_of(
+    sources: &Sources<'_>,
+    item: &Item,
+    wanted: &[String],
+) -> Result<Vec<Property>, OperationError> {
+    let resolved = sources
+        .registry
+        .resolve(&item.system, Some(&item.version))?;
+    let Some(located) = resolved.provider.locate(&item.code)? else {
+        return Ok(Vec::new());
+    };
+    let all = wanted.iter().any(|w| w == "*");
+    let declaration = resolved.provider.declaration();
+    let asked = |code: &str| {
+        all || wanted.iter().any(|w| {
+            w == code
+                || declaration
+                    .properties
+                    .iter()
+                    .any(|p| p.code == code && p.uri.as_deref() == Some(w.as_str()))
+        })
+    };
+    Ok(resolved
+        .provider
+        .properties(located.concept)?
+        .into_iter()
+        .filter(|p| asked(&p.code))
+        .collect())
+}
+
+/// The distinct properties the page carries, with the URI the code system
+/// declares for each, for `expansion.property`.
+fn expansion_properties(
+    sources: &Sources<'_>,
+    expansion: &Expansion,
+    contains: &[Contains],
+) -> Result<Vec<ExpansionProperty>, OperationError> {
+    let mut out: Vec<ExpansionProperty> = Vec::new();
+    for (item, entry) in expansion.items.iter().zip(contains) {
+        for property in &entry.properties {
+            if out.iter().any(|p| p.code == property.code) {
+                continue;
+            }
+            let resolved = sources
+                .registry
+                .resolve(&item.system, Some(&item.version))?;
+            let uri = resolved
+                .provider
+                .declaration()
+                .properties
+                .iter()
+                .find(|p| p.code == property.code)
+                .and_then(|p| p.uri.clone());
+            out.push(ExpansionProperty {
+                code: property.code.clone(),
+                uri,
+            });
+        }
+    }
+    Ok(out)
 }

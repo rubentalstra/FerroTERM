@@ -2,9 +2,99 @@
 //!
 //! One macro produces a module per served version so they cannot drift:
 //! `render::r4b::value_set(&model, true)`, `render::r4b::expansion(&outcome)`.
+//! R5 declares `expansion.property` and `contains.property`
+//! (<https://hl7.org/fhir/R5/valueset.html>); the `element` arms fill them,
+//! the `none` arms are for the versions without them.
 
 macro_rules! render_value_set {
-    ($module:ident) => {
+    (@helpers none, $module:ident) => {};
+    (@helpers element, $module:ident) => {
+        render_value_set!(
+            @value_fn property_value,
+            ferroterm_fhir::$module::value_set::ValueSetExpansionContainsPropertyValue
+        );
+        render_value_set!(
+            @value_fn sub_property_value,
+            ferroterm_fhir::$module::value_set::ValueSetExpansionContainsPropertySubPropertyValue
+        );
+    };
+    (@value_fn $name:ident, $value:ty) => {
+        /// A property value as the wire element `$name` fills.
+        fn $name(value: &crate::provider::PropertyValue) -> $value {
+            use crate::provider::PropertyValue;
+            match value {
+                PropertyValue::Code(c) => <$value>::Code(c.as_str().into()),
+                PropertyValue::Uri(u) | PropertyValue::String(u) => {
+                    <$value>::String(u.as_str().into())
+                }
+                PropertyValue::Coding {
+                    system,
+                    code,
+                    display,
+                } => <$value>::Coding(Coding {
+                    system: Some(system.as_str().into()),
+                    code: Some(code.as_str().into()),
+                    display: display.as_deref().map(Into::into),
+                    ..Default::default()
+                }),
+                PropertyValue::Integer(i) => match i32::try_from(*i) {
+                    Ok(i) => <$value>::Integer(i.into()),
+                    Err(_) => <$value>::String(i.to_string().as_str().into()),
+                },
+                PropertyValue::Boolean(b) => <$value>::Boolean((*b).into()),
+                PropertyValue::DateTime(d) => <$value>::DateTime(d.as_str().into()),
+                PropertyValue::Decimal(d) => <$value>::Decimal(d.as_str().into()),
+            }
+        }
+    };
+    (@properties none, $module:ident, $entry:expr, $item:ident) => {
+        $entry
+    };
+    (@properties element, $module:ident, $entry:expr, $item:ident) => {{
+        let mut entry = $entry;
+        entry.property = $item
+            .properties
+            .iter()
+            .map(|p| ferroterm_fhir::$module::value_set::ValueSetExpansionContainsProperty {
+                id: None,
+                extension: Vec::new(),
+                modifier_extension: Vec::new(),
+                code: p.code.as_str().into(),
+                value: property_value(&p.value),
+                sub_property: p
+                    .subproperties
+                    .iter()
+                    .map(|s| {
+                        ferroterm_fhir::$module::value_set::ValueSetExpansionContainsPropertySubProperty {
+                            id: None,
+                            extension: Vec::new(),
+                            modifier_extension: Vec::new(),
+                            code: s.code.as_str().into(),
+                            value: sub_property_value(&s.value),
+                        }
+                    })
+                    .collect(),
+            })
+            .collect();
+        entry
+    }};
+    (@expansion_properties none, $module:ident, $expansion:expr, $outcome:ident) => {
+        $expansion
+    };
+    (@expansion_properties element, $module:ident, $expansion:expr, $outcome:ident) => {{
+        let mut expansion = $expansion;
+        expansion.property = $outcome
+            .properties
+            .iter()
+            .map(|p| ferroterm_fhir::$module::value_set::ValueSetExpansionProperty {
+                code: p.code.as_str().into(),
+                uri: p.uri.as_deref().map(Into::into),
+                ..Default::default()
+            })
+            .collect();
+        expansion
+    }};
+    ($module:ident, $properties:ident) => {
         /// The `ValueSet` renders of one FHIR version.
         pub mod $module {
             use ferroterm_fhir::$module::coding::Coding;
@@ -19,6 +109,8 @@ macro_rules! render_value_set {
             use crate::compose::{Compose, Include};
             use crate::operations::expand::{ExpansionOutcome, ParameterValue};
             use crate::valueset::model::ValueSetModel;
+
+            render_value_set!(@helpers $properties, $module);
 
             /// The `ValueSet` of `model`, with its `compose` when `with_compose`.
             #[must_use]
@@ -76,7 +168,6 @@ macro_rules! render_value_set {
                     ..Default::default()
                 };
                 ValueSetCompose {
-                    inactive: compose.inactive.map(Into::into),
                     include: compose.include.iter().map(render).collect(),
                     exclude: compose.exclude.iter().map(render).collect(),
                     ..Default::default()
@@ -85,8 +176,8 @@ macro_rules! render_value_set {
 
             /// The expanded value set as a resource of the version.
             ///
-            /// The definition (the compose when `includeDefinition` asked for it) and the
-            /// `expansion` with its identifier, timestamp, total, offset, echoed
+            /// The definition (the compose when `includeDefinition` asked for it) and
+            /// the `expansion` with its identifier, timestamp, total, offset, echoed
             /// parameters, and page.
             #[must_use]
             pub fn expansion(outcome: &ExpansionOutcome) -> ValueSet {
@@ -119,31 +210,34 @@ macro_rules! render_value_set {
                 let contains = outcome
                     .contains
                     .iter()
-                    .map(|item| ValueSetExpansionContains {
-                        system: Some(item.system.as_str().into()),
-                        r#abstract: item.abstract_concept.then_some(true.into()),
-                        inactive: item.inactive.then_some(true.into()),
-                        code: Some(item.code.as_str().into()),
-                        display: item.display.as_deref().map(Into::into),
-                        designation: item
-                            .designations
-                            .iter()
-                            .map(|d| ValueSetComposeIncludeConceptDesignation {
-                                language: d.language.as_deref().map(Into::into),
-                                r#use: d.use_.as_ref().map(|u| Coding {
-                                    system: Some(u.system.as_str().into()),
-                                    code: Some(u.code.as_str().into()),
-                                    display: u.display.as_deref().map(Into::into),
+                    .map(|item| {
+                        let entry = ValueSetExpansionContains {
+                            system: Some(item.system.as_str().into()),
+                            r#abstract: item.abstract_concept.then_some(true.into()),
+                            inactive: item.inactive.then_some(true.into()),
+                            code: Some(item.code.as_str().into()),
+                            display: item.display.as_deref().map(Into::into),
+                            designation: item
+                                .designations
+                                .iter()
+                                .map(|d| ValueSetComposeIncludeConceptDesignation {
+                                    language: d.language.as_deref().map(Into::into),
+                                    r#use: d.use_.as_ref().map(|u| Coding {
+                                        system: Some(u.system.as_str().into()),
+                                        code: Some(u.code.as_str().into()),
+                                        display: u.display.as_deref().map(Into::into),
+                                        ..Default::default()
+                                    }),
+                                    value: d.value.as_str().into(),
                                     ..Default::default()
-                                }),
-                                value: d.value.as_str().into(),
-                                ..Default::default()
-                            })
-                            .collect(),
-                        ..Default::default()
+                                })
+                                .collect(),
+                            ..Default::default()
+                        };
+                        render_value_set!(@properties $properties, $module, entry, item)
                     })
                     .collect();
-                value_set.expansion = Some(ValueSetExpansion {
+                let expansion = ValueSetExpansion {
                     identifier: Some(outcome.identifier.as_str().into()),
                     timestamp: outcome.timestamp.as_str().into(),
                     total: Some(Integer::from(
@@ -155,12 +249,16 @@ macro_rules! render_value_set {
                     parameter,
                     contains,
                     ..Default::default()
-                });
+                };
+                value_set.expansion = Some(render_value_set!(
+                    @expansion_properties $properties, $module, expansion, outcome
+                ));
                 value_set
             }
         }
     };
 }
 
-render_value_set!(r4);
-render_value_set!(r4b);
+render_value_set!(r4, none);
+render_value_set!(r4b, none);
+render_value_set!(r5, element);

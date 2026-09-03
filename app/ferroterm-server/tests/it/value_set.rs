@@ -80,7 +80,7 @@ async fn expand_of_an_unknown_value_set_is_not_found() {
 }
 
 #[tokio::test]
-async fn validate_code_carries_the_echo_and_the_issues() {
+async fn validate_code_carries_the_declared_outputs_and_the_r5_issues() {
     let server = Server::start_with_resources();
     let (status, body) = server
         .get(&format!(
@@ -96,16 +96,15 @@ async fn validate_code_carries_the_echo_and_the_issues() {
         param(&body, "display").expect("display")["valueString"],
         "Kitten"
     );
-    assert_eq!(param(&body, "system").expect("system")["valueUri"], ANIMALS);
-    assert_eq!(
-        param(&body, "version").expect("version")["valueString"],
-        "2.0"
-    );
-    assert_eq!(param(&body, "code").expect("code")["valueCode"], "kitten");
-    assert!(param(&body, "issues").is_none());
+    for undeclared in ["system", "version", "code", "issues"] {
+        assert!(
+            param(&body, undeclared).is_none(),
+            "R4B declares no `{undeclared}` output: {body}"
+        );
+    }
     let (status, body) = server
         .post(
-            "/r4b/ValueSet/$validate-code",
+            "/r5/ValueSet/$validate-code",
             &json!({"resourceType": "Parameters", "parameter": [
                 {"name": "url", "valueUri": VS_PETS},
                 {"name": "coding", "valueCoding": {"system": ANIMALS, "code": "dog"}}

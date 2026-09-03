@@ -358,3 +358,39 @@ fn the_vendored_hl7_terminology_package_loads() {
     }
     assert!(built > 900);
 }
+
+// NOTE: R5 `$lookup` declares `definition` as its own output
+// (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
+#[test]
+fn lookup_carries_the_definition_when_the_system_states_one() {
+    let mut registry = Registry::new();
+    let (_dir, providers) = load_all();
+    for p in providers {
+        registry.register(Arc::new(p)).expect("registers");
+    }
+    let animal = lookup::lookup(
+        &registry,
+        &Invocation::Type,
+        &lookup::LookupInput {
+            system: Some(ANIMALS.to_owned()),
+            code: Some(String::from("animal")),
+            ..lookup::LookupInput::default()
+        },
+    )
+    .expect("looks up");
+    assert_eq!(
+        animal.definition.as_deref(),
+        Some("A living thing that is not a plant.")
+    );
+    let cat = lookup::lookup(
+        &registry,
+        &Invocation::Type,
+        &lookup::LookupInput {
+            system: Some(ANIMALS.to_owned()),
+            code: Some(String::from("cat")),
+            ..lookup::LookupInput::default()
+        },
+    )
+    .expect("looks up");
+    assert_eq!(cat.definition, None);
+}

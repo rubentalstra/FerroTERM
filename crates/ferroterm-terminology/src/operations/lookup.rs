@@ -43,6 +43,8 @@ pub struct LookupOutcome {
     pub version: Option<String>,
     /// The display in the chosen language.
     pub display: String,
+    /// `definition`: the meaning of the concept, when the system states one.
+    pub definition: Option<String>,
     /// The designations, filtered by the `lang.x` properties asked for.
     pub designations: Vec<Designation>,
     /// The properties asked for, `definition` among them when the concept has one.
@@ -122,6 +124,7 @@ pub fn lookup(
             .unwrap_or_else(|| identity.url.clone()),
         version: Some(identity.version.clone()),
         display,
+        definition: provider.definition(concept)?,
         designations,
         properties,
     })

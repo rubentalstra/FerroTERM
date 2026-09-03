@@ -493,3 +493,71 @@ fn subsumes_refusals_are_errors_never_not_subsumed() {
         Err(OperationError::UnknownSystem(_))
     ));
 }
+
+// NOTE: R5 `$validate-code` declares `issues`, an OperationOutcome whose issues
+// carry `tx-issue-type` codings (<https://hl7.org/fhir/R5/codesystem-operation-validate-code.html>).
+#[test]
+fn validate_code_itemises_its_issues() {
+    let registry = registry();
+    let unknown = validate_code(
+        &registry,
+        &Invocation::Type,
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            code: Some(String::from("unicorn")),
+            ..ValidateCodeInput::default()
+        },
+    )
+    .expect("validates");
+    assert_eq!(unknown.issues.len(), 1);
+    assert_eq!(unknown.issues[0].severity, "error");
+    assert_eq!(unknown.issues[0].code, "code-invalid");
+    assert_eq!(unknown.issues[0].kind, "invalid-code");
+    assert_eq!(unknown.issues[0].expression, Some("code"));
+    let wrong = validate_code(
+        &registry,
+        &Invocation::Type,
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            coding: Some(coding_ref(Some(URL), "cat")).map(|mut c| {
+                c.display = Some(String::from("Dog"));
+                c
+            }),
+            ..ValidateCodeInput::default()
+        },
+    )
+    .expect("validates");
+    assert_eq!(wrong.issues.len(), 1);
+    assert_eq!(wrong.issues[0].kind, "invalid-display");
+    assert_eq!(wrong.issues[0].expression, Some("coding"));
+    assert!(
+        wrong.issues[0].text.contains("`Cat`"),
+        "{}",
+        wrong.issues[0].text
+    );
+    let inactive = validate_code(
+        &registry,
+        &Invocation::Type,
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            code: Some(String::from("fish")),
+            ..ValidateCodeInput::default()
+        },
+    )
+    .expect("validates");
+    assert!(inactive.result);
+    assert_eq!(inactive.issues.len(), 1);
+    assert_eq!(inactive.issues[0].severity, "warning");
+    assert_eq!(inactive.issues[0].kind, "status-check");
+    let valid = validate_code(
+        &registry,
+        &Invocation::Type,
+        &ValidateCodeInput {
+            url: Some(URL.to_owned()),
+            code: Some(String::from("cat")),
+            ..ValidateCodeInput::default()
+        },
+    )
+    .expect("validates");
+    assert!(valid.issues.is_empty());
+}

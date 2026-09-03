@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use super::{CodingRef, OperationError, Sources};
+use super::{CodingRef, Issue, OperationError, Sources};
 use crate::compose::Item;
 use crate::language;
 use crate::provider::CodeSystemProvider;
@@ -24,21 +24,6 @@ use crate::versioned::Versioned;
 /// The `tx-issue-type` code system
 /// (<https://build.fhir.org/ig/FHIR/fhir-tools-ig/CodeSystem-tx-issue-type.html>).
 pub const TX_ISSUE_TYPE: &str = "http://hl7.org/fhir/tools/CodeSystem/tx-issue-type";
-
-/// One `OperationOutcome.issue` of a validation.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Issue {
-    /// `issue.severity`: `error`, `warning`, or `information`.
-    pub severity: &'static str,
-    /// `issue.code` from the issue-type value set.
-    pub code: &'static str,
-    /// The `tx-issue-type` code in `issue.details.coding`.
-    pub kind: &'static str,
-    /// `issue.details.text`.
-    pub text: String,
-    /// `issue.expression`: the parameter at fault.
-    pub expression: Option<&'static str>,
-}
 
 /// The outcome of a validation, in no version's types.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,6 +55,9 @@ pub struct ValueSetValidateInput {
     pub value_set_version: Option<String>,
     /// The inline `valueSet`, converted by the wire layer of its version.
     pub inline_value_set: Option<Result<ValueSetModel, ModelError>>,
+    /// `useSupplement` (R5): the supplements named; every supplied supplement
+    /// is layered on its system already, so the names are accepted as is.
+    pub use_supplement: Vec<String>,
     /// Whether `context` was given; not supported.
     pub context: bool,
     /// Whether `date` was given; not supported.

@@ -3,7 +3,7 @@
 # pass list: a test on the list that fails is a regression, a test that
 # newly passes is reported so it can be added.
 #
-#   scripts/checks/tx-ecosystem.sh [--server URL] [--out DIR] [--mode NAME] [--fhir r4|r4b] [--index DIRS]
+#   scripts/checks/tx-ecosystem.sh [--server URL] [--out DIR] [--mode NAME] [--fhir r4|r4b|r5] [--index DIRS]
 #
 # Without --server the script starts target/release/ferroterm on 127.0.0.1:8098
 # (build it first: cargo build --release -p ferroterm-server), serving the
@@ -37,8 +37,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$fhir" in
-  r4|r4b) ;;
-  *) echo "--fhir must be r4 or r4b, not '$fhir'" >&2; exit 2 ;;
+  r4|r4b|r5) ;;
+  *) echo "--fhir must be r4, r4b, or r5, not '$fhir'" >&2; exit 2 ;;
 esac
 PASSING=conformance/tx-ecosystem/passing
 if [ "$fhir" != r4b ]; then

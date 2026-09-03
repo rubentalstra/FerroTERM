@@ -19,7 +19,7 @@ fn part<'a>(m: &'a Value, name: &str) -> Option<&'a Value> {
 }
 
 #[tokio::test]
-async fn translate_by_get_and_post_answers_matches_with_their_origin() {
+async fn translate_by_get_and_post_answers_matches() {
     let server = Server::start_with_resources();
     let (status, body) = server
         .get(&format!(
@@ -48,14 +48,6 @@ async fn translate_by_get_and_post_answers_matches_with_their_origin() {
         part(m, "source").expect("source")["valueUri"],
         format!("{CM_ANIMALS_COLOURS}|1.0")
     );
-    assert_eq!(
-        part(m, "originMap").expect("originMap")["valueCanonical"],
-        format!("{CM_ANIMALS_COLOURS}|1.0")
-    );
-    assert_eq!(
-        part(m, "sourceConcept").expect("sourceConcept")["valueCoding"]["code"],
-        "cat"
-    );
     let (status, body) = server
         .post(
             "/r4b/ConceptMap/$translate",
@@ -71,10 +63,13 @@ async fn translate_by_get_and_post_answers_matches_with_their_origin() {
         false
     );
     let m = param(&body, "match").expect("match");
-    assert_eq!(part(m, "noMap").expect("noMap")["valueBoolean"], true);
     assert_eq!(
-        part(m, "sourceComment").expect("comment")["valueString"],
-        "fish have no colour"
+        part(m, "equivalence").expect("equivalence")["valueCode"],
+        "unmatched"
+    );
+    assert!(
+        part(m, "noMap").is_none(),
+        "R4B declares no noMap part: {body}"
     );
     assert!(param(&body, "message").is_some());
 }
