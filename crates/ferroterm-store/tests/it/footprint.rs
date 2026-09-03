@@ -1,13 +1,16 @@
 //! Prints where the bytes of a built artifact go, table by table, for the
 //! footprint work. Ignored by default: it reads the local artifact under
 //! `artifacts/nl/` (a licensed edition, never committed).
+#![expect(
+    clippy::print_stdout,
+    reason = "a diagnostic report a person reads from the test output"
+)]
 
 use std::path::PathBuf;
 
 use ferroterm_store::tables;
 use redb::{
-    ReadOnlyDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
-    TableHandle,
+    ReadOnlyDatabase, ReadableDatabase, ReadableTableMetadata, TableDefinition, TableHandle,
 };
 
 fn local_artifact() -> Option<PathBuf> {
@@ -26,9 +29,9 @@ fn report<K: redb::Key + 'static, V: redb::Value + 'static>(
         "{:<18} rows {:>9}  stored {:>7} MiB  metadata {:>6} MiB  fragmented {:>6} MiB  leaves {:>8}  height {}",
         def.name(),
         rows,
-        stats.stored_bytes() / 1_048_576,
-        stats.metadata_bytes() / 1_048_576,
-        stats.fragmented_bytes() / 1_048_576,
+        mib(stats.stored_bytes()),
+        mib(stats.metadata_bytes()),
+        mib(stats.fragmented_bytes()),
         stats.leaf_pages(),
         stats.tree_height(),
     );
@@ -41,7 +44,7 @@ fn the_local_artifact_footprint_by_table() {
         panic!("no artifact under artifacts/nl/");
     };
     let size = std::fs::metadata(&path).expect("metadata").len();
-    println!("file {} MiB", size / 1_048_576);
+    println!("file {} MiB", mib(size));
     let db = ReadOnlyDatabase::open(&path).expect("opens");
     let txn = db.begin_read().expect("read txn");
     report(&txn, tables::META);
@@ -56,4 +59,9 @@ fn the_local_artifact_footprint_by_table() {
     report(&txn, tables::LANGUAGE_REFSETS);
     report(&txn, tables::ACCEPTABILITIES);
     report(&txn, tables::BLOBS);
+}
+
+/// Bytes as whole mebibytes.
+fn mib(bytes: u64) -> u64 {
+    bytes >> 20
 }
