@@ -189,6 +189,13 @@ pub fn expand(
     )?;
     let compose = pinned_compose(&model.compose, input, &negotiation)?;
     let options = options(input)?;
+    let mut wanted = input.use_supplement.clone();
+    wanted.extend(model.supplements.iter().cloned());
+    let registry = sources.with_supplements(&wanted)?;
+    let sources = &Sources {
+        registry: &registry,
+        ..*sources
+    };
     let resolver =
         Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
     let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;

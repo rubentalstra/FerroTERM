@@ -21,7 +21,7 @@ use fhir_terminology::registries::{bcp13, bcp47, iso3166};
 use fhir_terminology::registry::{RegisterError, Registry, Resolved};
 use fhir_terminology::rxnorm::{self, RxNormProvider};
 use fhir_terminology::snomed::{self, OpenError, SnomedProvider};
-use fhir_terminology::supplement::{Additions, Supplement, Supplemented};
+use fhir_terminology::supplement::Supplement;
 use fhir_terminology::valueset;
 use fhir_terminology::valueset::model::ValueSetModel;
 use fhir_terminology::valueset::store::ValueSetStore;
@@ -237,7 +237,7 @@ impl AppState {
                 &mut concept_maps,
             )?;
         }
-        let loaded = apply_supplements(loaded, &supplements)?;
+        check_supplement_targets(&loaded, &supplements)?;
         let mut registry = Registry::new();
         let mut paths = BTreeMap::new();
         for Loaded { path, provider } in loaded {
@@ -246,6 +246,11 @@ impl AppState {
                 paths.insert((identity.url.clone(), identity.version.clone()), path);
             }
             registry.register(provider)?;
+        }
+        // NOTE: a loaded supplement stays dormant until a request names it
+        // (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+        for (target, supplement) in supplements {
+            registry.register_supplement(target, supplement);
         }
         let mut state = Self::from_registry(registry);
         state.paths = paths;
@@ -391,7 +396,7 @@ impl AppState {
 
 /// Loads the `CodeSystem`, `ValueSet`, and `ConceptMap` resources in `path`:
 /// complete systems become providers, supplements are collected for
-/// [`apply_supplements`], value sets and concept maps go to their stores.
+/// dormant registration, value sets and concept maps go to their stores.
 ///
 /// The FHIR version is the one the directory's `package.json` declares;
 /// a plain directory of resources is read as R4B, the version the server
@@ -442,35 +447,18 @@ fn load_code_systems(
     Ok(())
 }
 
-/// The additions a supplement resource carries, keyed by code.
+/// The supplement a `CodeSystem` resource describes.
 pub(crate) fn supplement_of(model: &CodeSystemModel) -> Supplement {
-    let mut concepts = BTreeMap::new();
-    for entry in &model.concepts {
-        concepts.insert(
-            entry.code.clone(),
-            Additions {
-                designations: entry.designations.clone(),
-                properties: entry.properties.clone(),
-            },
-        );
-    }
-    Supplement {
-        url: model.url.clone(),
-        version: Some(model.version.clone()).filter(|v| !v.is_empty()),
-        concepts,
-    }
+    Supplement::from_code_system(model)
 }
 
-/// Wraps each supplemented system in its supplements.
-///
-/// `CodeSystem.supplements` is a canonical, `url` or `url|version`
-/// (<https://hl7.org/fhir/R4B/codesystem-definitions.html#CodeSystem.supplements>);
-/// without a version the supplement applies to every loaded version of the
-/// system.
-fn apply_supplements(
-    loaded: Vec<Loaded>,
+/// Every supplement names a loaded system (`CodeSystem.supplements`, a `url`
+/// or `url|version` canonical,
+/// <https://hl7.org/fhir/R4B/codesystem-definitions.html#CodeSystem.supplements>).
+fn check_supplement_targets(
+    loaded: &[Loaded],
     supplements: &[(String, Supplement)],
-) -> Result<Vec<Loaded>, LoadError> {
+) -> Result<(), LoadError> {
     for (target, supplement) in supplements {
         let (url, version) = split_canonical(target);
         let served = loaded.iter().any(|l| {
@@ -484,26 +472,7 @@ fn apply_supplements(
             });
         }
     }
-    Ok(loaded
-        .into_iter()
-        .map(|Loaded { path, provider }| {
-            let identity = provider.identity();
-            let mine: Vec<Supplement> = supplements
-                .iter()
-                .filter(|(target, _)| {
-                    let (url, version) = split_canonical(target);
-                    identity.url == url && version.is_none_or(|v| identity.version == v)
-                })
-                .map(|(_, supplement)| supplement.clone())
-                .collect();
-            let provider: Arc<dyn CodeSystemProvider> = if mine.is_empty() {
-                provider
-            } else {
-                Arc::new(Supplemented::new(provider, mine))
-            };
-            Loaded { path, provider }
-        })
-        .collect())
+    Ok(())
 }
 
 /// `url|version` split into its parts.

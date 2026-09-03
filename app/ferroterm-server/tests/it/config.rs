@@ -122,10 +122,24 @@ fn code_system_directories_load_and_supplements_apply() {
     );
     let animals = state.provider(ANIMALS).expect("animals");
     let cat = animals.locate("cat").expect("reads").expect("cat").concept;
+    // NOTE: a loaded supplement stays dormant until a request names it (#184).
     assert_eq!(
         animals.display(cat, Some("nl")).expect("reads").as_deref(),
+        Some("Cat"),
+        "the supplement {ANIMALS_NL} is loaded but dormant"
+    );
+    let named = state
+        .registry()
+        .with_supplements(&[ANIMALS_NL.to_owned()])
+        .expect("the supplement is loaded");
+    let supplemented = named.resolve(ANIMALS, None).expect("animals").provider;
+    assert_eq!(
+        supplemented
+            .display(cat, Some("nl"))
+            .expect("reads")
+            .as_deref(),
         Some("Kat"),
-        "the supplement {ANIMALS_NL} is applied"
+        "named, the supplement {ANIMALS_NL} applies"
     );
     let summaries = state.summaries().expect("summarises");
     let sketch = summaries.iter().find(|s| s.url == SKETCH).expect("sketch");

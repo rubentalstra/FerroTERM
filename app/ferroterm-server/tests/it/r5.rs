@@ -2,7 +2,7 @@
 //! (<https://hl7.org/fhir/R5/terminology-service.html>), and the R4-family
 //! endpoints staying within their declared outputs.
 
-use ferroterm_testkit::fhir::{ANIMALS, CM_ANIMALS_COLOURS, COLOURS, VS_PETS};
+use ferroterm_testkit::fhir::{ANIMALS, ANIMALS_NL, CM_ANIMALS_COLOURS, COLOURS, VS_PETS};
 use ferroterm_testkit::snomed::{CAT, VERSION, item, sctid};
 use fhir_types::codec::{Json, Path, expect_object};
 use http::StatusCode;
@@ -87,12 +87,25 @@ async fn lookup_answers_definition_under_r5_only() {
     );
     let (status, body) = server
         .get(&format!(
+            "/r5/CodeSystem/$lookup?system={SCT}&code={}&useSupplement={ANIMALS_NL}",
+            sctid(item(CAT))
+        ))
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "useSupplement names a loaded supplement: {body}"
+    );
+    assert_eq!(parameter(&body, "version").unwrap()["valueString"], VERSION);
+    // NOTE: a supplement the server has not loaded is refused (#184).
+    let (status, body) = server
+        .get(&format!(
             "/r5/CodeSystem/$lookup?system={SCT}&code={}&useSupplement=http://example.org/none",
             sctid(item(CAT))
         ))
         .await;
-    assert_eq!(status, StatusCode::OK, "useSupplement is declared: {body}");
-    assert_eq!(parameter(&body, "version").unwrap()["valueString"], VERSION);
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    assert_eq!(body["issue"][0]["code"], "not-found");
 }
 
 #[tokio::test]

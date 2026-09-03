@@ -22,7 +22,6 @@ use fhir_terminology::fhir_codesystem::provider::FhirCodeSystem;
 use fhir_terminology::operations::Sources;
 use fhir_terminology::provider::ContentMode;
 use fhir_terminology::registry::Registry;
-use fhir_terminology::supplement::Supplemented;
 use fhir_terminology::valueset::model::ValueSetModel;
 use fhir_terminology::valueset::store::ValueSetStore;
 use http::{HeaderMap, StatusCode};
@@ -73,8 +72,7 @@ impl<'a> Scope<'a> {
     /// The loaded registry and stores with `resources` layered on top.
     ///
     /// A resource with the url and version of a loaded one replaces it for
-    /// this request; a `CodeSystem` supplement is layered over the system it
-    /// names.
+    /// this request; a `CodeSystem` supplement is kept for the request to name.
     ///
     /// # Errors
     ///
@@ -123,17 +121,17 @@ impl<'a> Scope<'a> {
                 Some((url, version)) => (url, Some(version)),
                 None => (target.as_str(), None),
             };
-            let resolved = registry.resolve(url, version).map_err(|e| {
+            registry.resolve(url, version).map_err(|e| {
                 Failure::new(
                     StatusCode::NOT_FOUND,
                     "not-found",
                     format!("cannot supplement: {e}"),
                 )
             })?;
-            registry.register_or_replace(Arc::new(Supplemented::new(
-                resolved.provider,
-                vec![supplement_of(model)],
-            )));
+            // NOTE: a supplied supplement is dormant like a loaded one: a request
+            // applies it by naming it in `useSupplement`, or through the value set's
+            // `valueset-supplement` (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+            registry.register_supplement(target.clone(), supplement_of(model));
         }
         Ok(Self {
             registry: Cow::Owned(registry),

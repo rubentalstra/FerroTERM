@@ -176,12 +176,13 @@ async fn the_value_set_and_concept_map_operations_answer_under_r4() {
     fhir_types::r4::bundle::Bundle::from_json(object, &mut path).expect("an R4 Bundle");
 }
 
-// NOTE: R4 `ValueSet/$expand` declares neither `property` nor `useSupplement`
-// (<https://hl7.org/fhir/R4/valueset-operation-expand.html>); R5 adds both.
+// NOTE: R4 `ValueSet/$expand` declares no `property`
+// (<https://hl7.org/fhir/R4/valueset-operation-expand.html>); R5 adds it, and the
+// ecosystem overlay pre-adopts `useSupplement` alone (#184).
 #[tokio::test]
 async fn an_r5_only_parameter_is_refused_under_r4() {
     let server = Server::start_with_resources();
-    for parameter_name in ["property", "useSupplement"] {
+    for parameter_name in ["property"] {
         let (status, body) = server
             .get(&format!(
                 "/r4/ValueSet/$expand?url={VS_PETS}&{parameter_name}=x"

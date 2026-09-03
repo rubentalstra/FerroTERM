@@ -78,7 +78,7 @@ macro_rules! map {
                         .iter()
                         .filter_map(|p| p.value.clone())
                         .collect(),
-                    use_supplement: Vec::new(),
+                    use_supplement: canonicals(&request.use_supplement),
                 }
             }
 
@@ -294,7 +294,7 @@ macro_rules! map {
                         .as_ref()
                         .and_then(|v| v.value.clone()),
                     inline_value_set: request.value_set.as_ref().map(convert::$fhir::convert),
-                    use_supplement: Vec::new(),
+                    use_supplement: canonicals(&request.use_supplement),
                     context: request.context.is_some(),
                     date: request.date.is_some(),
                     code: request.code.as_ref().and_then(|v| v.value.clone()),
@@ -492,7 +492,7 @@ macro_rules! map {
                     check_valueset_version: canonicals(&request.check_valueset_version),
                     force_valueset_version: canonicals(&request.force_valueset_version),
                     property: Vec::new(),
-                    use_supplement: Vec::new(),
+                    use_supplement: canonicals(&request.use_supplement),
                 }
             }
         }

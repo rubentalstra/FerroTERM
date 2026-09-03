@@ -16,6 +16,10 @@ exclude/exclude-1
 exclude/exclude-2
 exclude/exclude-all
 exclude/exclude-zero
+extensions/extensions-echo-bad-supplement
+extensions/validate-code-bad-supplement
+extensions/validate-codeableconcept-bad-supplement
+extensions/validate-coding-bad-supplement
 fragment/validation-fragment-code-good
 fragment/validation-fragment-codeableconcept-good
 fragment/validation-fragment-coding-good
@@ -103,7 +107,11 @@ overload/validate-good-v1code1
 overload/validate-good-v1code2-display
 overload/validate-v1code2-wrongdisplay
 parameters/parameters-expand-enum-active
+parameters/parameters-expand-supplement-bad
+parameters/parameters-lookup-supplement-bad
+parameters/parameters-validate-supplement-bad
 parameters/parameters-validate-supplement-good
+parameters/parameters-validate-supplement-none
 permutations/bad-cc2-all-request
 permutations/bad-cc2-enumerated-request
 permutations/bad-cc2-exclude-filter-request

@@ -140,6 +140,14 @@ pub struct ValueSetExpandRequest {
     pub force_system_version: Vec<super::super::primitives::Canonical>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
     /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The supplement must be used when performing an expansion. Use of this
+    /// parameter should result in $expand behaving the same way as if the
+    /// supplements were included in the value set definition using the
+    /// \[ValueSet
+    /// Supplement\](<https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-valueset-supplement.html>)
+    pub use_supplement: Vec<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
     /// Specifies a version to use for a valueset, if the reference to the value
     /// set does not specify which version to use. The format is the same as a
     /// canonical URL: \[system\]|\[version\] - e.g.
@@ -231,6 +239,7 @@ impl ValueSetExpandRequest {
         let mut field_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
         let mut field_check_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
         let mut field_force_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_use_supplement: Vec<super::super::primitives::Canonical> = Vec::new();
         let mut field_default_valueset_version: Vec<super::super::primitives::Canonical> =
             Vec::new();
         let mut field_check_valueset_version: Vec<super::super::primitives::Canonical> = Vec::new();
@@ -842,6 +851,30 @@ impl ValueSetExpandRequest {
                         }
                     });
                 }
+                "useSupplement" => {
+                    field_use_supplement.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "useSupplement",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "useSupplement",
+                                },
+                            );
+                        }
+                    });
+                }
                 "default-valueset-version" => {
                     field_default_valueset_version.push(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Canonical(
@@ -946,6 +979,7 @@ impl ValueSetExpandRequest {
             system_version: field_system_version,
             check_system_version: field_check_system_version,
             force_system_version: field_force_system_version,
+            use_supplement: field_use_supplement,
             default_valueset_version: field_default_valueset_version,
             check_valueset_version: field_check_valueset_version,
             force_valueset_version: field_force_valueset_version,
@@ -1138,6 +1172,15 @@ impl ValueSetExpandRequest {
         for value in &self.force_system_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "force-system-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.use_supplement {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "useSupplement".into(),
                 value: Some(
                     super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
                 ),
@@ -1524,6 +1567,15 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 type_code: Some("canonical"),
                 scope: &[],
                 source: super::super::super::operation::ParameterSource::Version,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "useSupplement",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
                 parts: &[],
             },
             super::super::super::operation::Parameter {

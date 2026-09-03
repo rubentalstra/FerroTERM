@@ -54,7 +54,15 @@ struct System {
 #[derive(Debug, Default, Clone)]
 pub struct Registry {
     systems: BTreeMap<String, System>,
+    /// The supplements loaded but dormant, by their own canonical, with the
+    /// system canonical each supplements; a request applies them by name.
+    supplements: BTreeMap<String, (String, crate::supplement::Supplement)>,
 }
+
+/// A `useSupplement` names no loaded supplement.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("Required supplement not found: {0}")]
+pub struct UnknownSupplement(pub String);
 
 impl Registry {
     /// An empty registry.
@@ -93,6 +101,80 @@ impl Registry {
             .or_default()
             .versions
             .insert(version, provider);
+    }
+
+    /// Keeps `supplement` (which supplements the system `target`, a `url` or
+    /// `url|version` canonical) dormant until a request names it.
+    ///
+    /// No FHIR version says when a supplement applies; the terminology
+    /// ecosystem does (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>):
+    /// when the request names it in `useSupplement`, supplies it, or the
+    /// value set asks for it, never by default.
+    pub fn register_supplement(
+        &mut self,
+        target: String,
+        supplement: crate::supplement::Supplement,
+    ) {
+        let canonical = match &supplement.version {
+            Some(version) => format!("{}|{version}", supplement.url),
+            None => supplement.url.clone(),
+        };
+        self.supplements.insert(canonical, (target, supplement));
+    }
+
+    /// The version of the dormant supplement at `url`, when a system URI names
+    /// a supplement rather than a code system.
+    #[must_use]
+    pub fn supplement_named(&self, url: &str) -> Option<Option<String>> {
+        self.supplements
+            .values()
+            .find(|(_, s)| s.url == url)
+            .map(|(_, s)| s.version.clone())
+    }
+
+    /// This registry with the dormant supplements `wanted` names (each a `url`
+    /// or `url|version` canonical) layered over their systems.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`UnknownSupplement`] for a canonical no loaded supplement
+    /// answers to.
+    pub fn with_supplements(&self, wanted: &[String]) -> Result<Self, UnknownSupplement> {
+        let mut layered = self.clone();
+        for canonical in wanted {
+            let (url, version) = match canonical.split_once('|') {
+                Some((url, version)) => (url, Some(version)),
+                None => (canonical.as_str(), None),
+            };
+            let found = self
+                .supplements
+                .values()
+                .find(|(_, s)| {
+                    s.url == url && version.is_none_or(|v| s.version.as_deref() == Some(v))
+                })
+                .ok_or_else(|| UnknownSupplement(canonical.clone()))?;
+            let (target, supplement) = found.clone();
+            let (target_url, target_version) = match target.split_once('|') {
+                Some((u, v)) => (u.to_owned(), Some(v.to_owned())),
+                None => (target.clone(), None),
+            };
+            let providers: Vec<Arc<dyn CodeSystemProvider>> = layered
+                .versions(&target_url)
+                .filter(|p| {
+                    target_version
+                        .as_deref()
+                        .is_none_or(|v| p.identity().version == v)
+                })
+                .cloned()
+                .collect();
+            for provider in providers {
+                layered.register_or_replace(Arc::new(crate::supplement::Supplemented::new(
+                    provider,
+                    vec![supplement.clone()],
+                )));
+            }
+        }
+        Ok(layered)
     }
 
     /// Configures the version a request without one resolves to.

@@ -5,7 +5,7 @@
 //! documents the overlay in its `CapabilityStatement`.
 
 use ferroterm_testkit::fhir::{
-    ANIMALS, CM_ANIMALS_COLOURS, COLOURS, VS_ALL, VS_ENUMERATED, VS_PETS, VS_PETS_REF,
+    ANIMALS, ANIMALS_NL, CM_ANIMALS_COLOURS, COLOURS, VS_ALL, VS_ENUMERATED, VS_PETS, VS_PETS_REF,
 };
 use http::StatusCode;
 use serde_json::{Value, json};
@@ -478,6 +478,44 @@ async fn a_codeable_concept_is_echoed_and_its_unknown_systems_named_on_every_ver
         let issue = &parameter(&body, "issues").unwrap()["resource"]["issue"][1];
         assert_eq!(
             issue["expression"][0], "CodeableConcept.coding[0].system",
+            "{version}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_loaded_supplement_applies_only_when_use_supplement_names_it() {
+    let server = Server::start_with_resources();
+    for version in VERSIONS {
+        let base = format!(
+            "/{version}/ValueSet/$validate-code?url={VS_ALL}&system={ANIMALS}&code=cat&display=Kat"
+        );
+        let (status, body) = server.get(&base).await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            false,
+            "{version}: dormant"
+        );
+        let (status, body) = server
+            .get(&format!("{base}&useSupplement={ANIMALS_NL}"))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{version}: applied"
+        );
+        let (status, body) = server
+            .get(&format!(
+                "{base}&useSupplement=http://example.org/fhir/CodeSystem/none"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{version}: {body}");
+        assert_eq!(body["issue"][0]["code"], "not-found", "{version}");
+        assert_eq!(
+            body["issue"][0]["details"]["text"],
+            "Required supplement not found: http://example.org/fhir/CodeSystem/none",
             "{version}"
         );
     }
