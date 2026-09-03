@@ -33,11 +33,24 @@ described in [Configuration](configuration.md).
 
 ## Run with Docker Compose
 
-Every release attaches a `compose.yaml`. Download it next to a built index and
-start:
+Every release attaches a `compose.yaml`. With it and the SNOMED CT release zip
+(a licensed download you obtained from SNOMED International or your national
+release centre; the repository ships none), the whole path is two commands:
+build the index once, then serve it.
 
 ```console
 $ curl -LO https://github.com/rubentalstra/FerroTERM/releases/latest/download/compose.yaml
+$ FERROTERM_RF2=/path/to/SnomedCT_Release.zip docker compose run --rm build
+$ docker compose up
+```
+
+The `build` service runs `ferroterm-build` from the same image with the zip
+mounted read-only and writes the index to `./index` (or `FERROTERM_INDEX_DIR`);
+the Snapshot is unpacked to the container's tmpfs and gone with it. It sits
+under the `build` profile, so `docker compose up` never starts it. To serve an
+index you built elsewhere, skip the first command and point at it:
+
+```console
 $ FERROTERM_INDEX_DIR=/path/to/ferroterm-index docker compose up
 ```
 

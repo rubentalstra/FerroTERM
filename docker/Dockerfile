@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-# The FerroTERM server image: one static binary on distroless static, per
-# platform. The binaries are not built here. The release workflow builds and
+# The FerroTERM image: the server and the offline index builder, two static
+# binaries on distroless static, per platform. The binaries are not built here. The release workflow builds and
 # attests them in the SLSA L3 lane (release-build.yml), verifies each
 # attestation, and stages the binaries under dist/<os>/<arch>/ before this
 # file is built for linux/amd64 and linux/arm64 (release-image.yml).
@@ -17,8 +17,11 @@ FROM gcr.io/distroless/static-debian13:nonroot@sha256:1c2c046bc09ed40fad370b599a
 ARG TARGETOS
 ARG TARGETARCH
 
-# Root-owned and not writable by the runtime user.
+# Root-owned and not writable by the runtime user. The server is the
+# entrypoint; the offline index builder is run as a command
+# (`docker compose run --rm build`).
 COPY --chmod=0555 dist/${TARGETOS}/${TARGETARCH}/ferroterm /usr/local/bin/ferroterm
+COPY --chmod=0555 dist/${TARGETOS}/${TARGETARCH}/ferroterm-build /usr/local/bin/ferroterm-build
 
 # The binary's default listen address is loopback, which no container can
 # publish; the image default is every interface on the documented port.

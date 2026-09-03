@@ -88,13 +88,13 @@ jobs:
         with:
           tool: cargo-auditable@0.7.5
 
-      - name: Build server
-        # `ferroterm-server` is the binary-producing crate; the bin name is `ferroterm`.
-        # Adjust both here and in the Package/SBOM steps if the crate or bin is
-        # renamed.
+      - name: Build the server and the build tool
+        # `ferroterm-server` produces the `ferroterm` binary; `ferroterm-build`
+        # produces the offline index builder shipped beside it. Adjust here and
+        # in the Package/SBOM steps if a crate or bin is renamed.
         env:
           TARGET: ${{ inputs.target }}
-        run: cargo auditable build --release --locked --target "$TARGET" -p ferroterm-server
+        run: cargo auditable build --release --locked --target "$TARGET" -p ferroterm-server -p ferroterm-build
 
       - name: Package
         shell: bash
@@ -105,8 +105,8 @@ jobs:
           set -euo pipefail
           out="ferroterm-${TAG}-${TARGET}.tar.gz"
           bindir="target/${TARGET}/release"
-          strip "${bindir}/ferroterm"
-          tar -C "$bindir" -czf "$out" ferroterm
+          strip "${bindir}/ferroterm" "${bindir}/ferroterm-build"
+          tar -C "$bindir" -czf "$out" ferroterm ferroterm-build
           echo "ASSET=$out" >> "$GITHUB_ENV"
           # A plain checksum beside the tarball — the only verification available
           # to an operator with neither `gh` nor a network path to Sigstore
@@ -147,6 +147,15 @@ jobs:
           [ -n "$src" ] || { echo "::error::cargo-cyclonedx produced no .cdx.json"; exit 1; }
           mv "$src" "$sbom"
           echo "SBOM=$sbom" >> "$GITHUB_ENV"
+          # The build tool rides in the same tarball and gets its own document.
+          cargo cyclonedx \
+            --manifest-path tools/ferroterm-build/Cargo.toml \
+            --format json --describe binaries --spec-version 1.5
+          build_sbom="ferroterm-build-${TAG}-${TARGET}.cdx.json"
+          src="$(find tools/ferroterm-build -maxdepth 1 -name '*.cdx.json' | head -n1)"
+          [ -n "$src" ] || { echo "::error::cargo-cyclonedx produced no .cdx.json for ferroterm-build"; exit 1; }
+          mv "$src" "$build_sbom"
+          echo "BUILD_SBOM=$build_sbom" >> "$GITHUB_ENV"
 
       # `actions/attest` is the one attestation action: no sbom/predicate input
       # = provenance mode; `sbom-path` = SBOM mode.
@@ -161,6 +170,12 @@ jobs:
         with:
           subject-path: ${{ env.ASSET }}
           sbom-path: ${{ env.SBOM }}
+      - name: Attest the build tool SBOM
+        id: build-sbom-attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ env.ASSET }}
+          sbom-path: ${{ env.BUILD_SBOM }}
 
       # The attestations live in GitHub's attestations API (what `gh attestation
       # verify` reads without a --bundle flag). Publishing them as assets adds
@@ -174,10 +189,12 @@ jobs:
           ASSET_NAME: ${{ env.ASSET }}
           PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
           SBOM_BUNDLE: ${{ steps.sbom-attestation.outputs.bundle-path }}
+          BUILD_SBOM_BUNDLE: ${{ steps.build-sbom-attestation.outputs.bundle-path }}
         run: |
           set -euo pipefail
           cp "$PROVENANCE_BUNDLE" "${ASSET_NAME}.sigstore.json"
           cp "$SBOM_BUNDLE" "${ASSET_NAME}.sbom.sigstore.json"
+          cp "$BUILD_SBOM_BUNDLE" "${ASSET_NAME}.build-sbom.sigstore.json"
           jq -c '.dsseEnvelope' "$PROVENANCE_BUNDLE" > "${ASSET_NAME}.intoto.jsonl"
           # Refuse to publish an empty or malformed provenance line rather than
           # attaching a file that looks like provenance and is not.
@@ -194,6 +211,7 @@ jobs:
           {
             echo "PROVENANCE_BUNDLE_ASSET=${ASSET_NAME}.sigstore.json"
             echo "SBOM_BUNDLE_ASSET=${ASSET_NAME}.sbom.sigstore.json"
+            echo "BUILD_SBOM_BUNDLE_ASSET=${ASSET_NAME}.build-sbom.sigstore.json"
             echo "PROVENANCE_JSONL_ASSET=${ASSET_NAME}.intoto.jsonl"
           } >> "$GITHUB_ENV"
 
@@ -220,6 +238,8 @@ jobs:
             ${{ env.ASSET }}
             ${{ env.CHECKSUM }}
             ${{ env.SBOM }}
+            ${{ env.BUILD_SBOM }}
             ${{ env.PROVENANCE_BUNDLE_ASSET }}
             ${{ env.SBOM_BUNDLE_ASSET }}
+            ${{ env.BUILD_SBOM_BUNDLE_ASSET }}
             ${{ env.PROVENANCE_JSONL_ASSET }}
