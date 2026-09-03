@@ -61,6 +61,42 @@ pub fn parameters_from_query(
     })
 }
 
+/// Adds a `displayLanguage` parameter from the `Accept-Language` header.
+///
+/// Only when the operation declares the parameter and the request named none:
+/// the terminology ecosystem IG requires both routes
+/// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/languages.html>), and
+/// the parameter wins when both are given.
+pub fn apply_accept_language(
+    operation: &Operation,
+    headers: &HeaderMap,
+    parameters: &mut Parameters,
+) {
+    if operation
+        .parameter(ParameterUse::In, "displayLanguage")
+        .is_none()
+        || parameters
+            .parameter
+            .iter()
+            .any(|p| p.name.value.as_deref() == Some("displayLanguage"))
+    {
+        return;
+    }
+    let Some(language) = headers
+        .get(http::header::ACCEPT_LANGUAGE)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+    else {
+        return;
+    };
+    parameters.parameter.push(ParametersParameter {
+        name: "displayLanguage".into(),
+        value: Some(ParametersParameterValue::Code(language.into())),
+        ..Default::default()
+    });
+}
+
 fn complex(operation: &Operation, name: &str) -> Failure {
     Failure::new(
         StatusCode::BAD_REQUEST,

@@ -18,6 +18,7 @@ pub mod conceptmap;
 pub mod fhir_codesystem;
 pub mod filter;
 pub mod icd11;
+pub mod language;
 pub mod loinc;
 pub mod operations;
 pub mod provider;

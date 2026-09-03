@@ -14,6 +14,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::filter::Filter;
+use crate::language;
 use crate::provider::{CodeSystemProvider, Concept, ConceptSet, ProviderError};
 use crate::registry::{Registry, ResolveError};
 
@@ -448,7 +449,11 @@ impl<'a> Expander<'a> {
             .filter(|text| !text.trim().is_empty())
         {
             set &= provider
-                .search(text, options.language.as_deref())
+                .search(
+                    text,
+                    language::for_provider(provider.as_ref(), options.language.as_deref())
+                        .as_deref(),
+                )
                 .map_err(failed)?;
         }
         Ok(set)
@@ -508,7 +513,10 @@ fn materialize(
     let display = match selection.overrides.get(&index) {
         Some(display) => Some(display.clone()),
         None => provider
-            .display(concept, options.language.as_deref())
+            .display(
+                concept,
+                language::for_provider(provider.as_ref(), options.language.as_deref()).as_deref(),
+            )
             .map_err(&failed)?,
     };
     let status = provider.status(concept).map_err(&failed)?;
@@ -632,7 +640,10 @@ impl Expander<'_> {
             let display = match overridden {
                 Some(display) => Some(display),
                 None => provider
-                    .display(located.concept, language)
+                    .display(
+                        located.concept,
+                        language::for_provider(provider.as_ref(), language).as_deref(),
+                    )
                     .map_err(failed)?,
             };
             let status = provider.status(located.concept).map_err(failed)?;

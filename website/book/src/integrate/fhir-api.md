@@ -97,9 +97,12 @@ the version is the edition and version URI of the SNOMED CT URI standard
 
 ## Languages
 
-`displayLanguage` selects the display and, on `$expand`, the displays of the
-members; designations carry their BCP 47 language and their use. A language the
-code system does not carry falls back to the system's own (English for LOINC
-and ICD-11, the classification's language for a ClaML document, the default
-language for SNOMED CT), and the response states what it used. The
-`Accept-Language` header is not read yet (tracked on the tracker).
+`displayLanguage` and the `Accept-Language` header both select the display
+and, on `$expand`, the displays of the members; the parameter wins when both
+are given. Either carries a language range list with quality values
+(`en, en-AU; q=0.4`, `de,*`), and the first range the code system carries, by
+quality then by position, is the display language; `*` is the system's own.
+A language the code system does not carry falls back to the system's own
+(English for LOINC and ICD-11, the classification's language for a ClaML
+document, the default language for SNOMED CT), and the response states what
+it used. Designations carry their BCP 47 language and their use.

@@ -34,7 +34,12 @@ fresh link reference.
   short code is `notSelectable`; a stem's scale is an implicit value set
   (`<uri>/postcoordinationScale/<axis>`). `$lookup` properties now carry
   `description` and `subproperty` parts, and a `uri` value.
-
+- The `Accept-Language` header selects the display language of `$lookup`,
+  `$validate-code`, and `$expand` when the request names no
+  `displayLanguage`; the parameter wins when both are given. Both carry a
+  language range list (`en, en-AU; q=0.4`, `de,*`), resolved against the
+  languages the code system carries by quality, then position; `*` is the
+  system's own language.
 
 ### Changed
 
@@ -138,8 +143,6 @@ zip with a tool that ships in the release and the image.
   filters; `$subsumes` answers `equivalent` for the same unit and
   `not-subsumed` otherwise; the implicit value sets `/vs` and
   `/vs/[expression]`; enumeration is refused.
-
-### Added
 
 - The registry systems, served without configuration: BCP 47 language tags
   (`urn:ietf:bcp:47`, the RFC 5646 grammar over the IANA Language Subtag

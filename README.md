@@ -85,7 +85,7 @@ pins, inline and request-scoped value sets), `ValueSet/$validate-code`,
 `tx-issue-type` coding.
 
 Conformance is measured, not asserted: CI runs the HL7 terminology ecosystem
-suite against every pull request and holds a committed pass list (117 of the
+suite against every pull request and holds a committed pass list (120 of the
 670 general cases on R4B; the rest are R5-shape cases and features on the
 roadmap, listed on the tracker).
 
