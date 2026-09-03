@@ -333,6 +333,7 @@ pub const CONCEPT_MAP_CLOSURE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -341,6 +342,7 @@ pub const CONCEPT_MAP_CLOSURE: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("Coding"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -352,6 +354,7 @@ pub const CONCEPT_MAP_CLOSURE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -363,6 +366,7 @@ pub const CONCEPT_MAP_CLOSURE: super::super::super::operation::Operation =
                 },
                 type_code: Some("ConceptMap"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
         ],

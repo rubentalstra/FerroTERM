@@ -12,6 +12,7 @@
 )]
 
 mod config;
+mod ecosystem;
 mod fixture;
 mod health;
 mod metadata;

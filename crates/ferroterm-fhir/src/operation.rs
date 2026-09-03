@@ -2,9 +2,11 @@
 // Change the emitter (tools/ferroterm-fhir-codegen) and regenerate.
 //! Runtime descriptors of the terminology operations.
 //!
-//! The exact parameter set each FHIR version declares, so a server accepts
-//! nothing more and nothing less
-//! (<https://hl7.org/fhir/R4B/operationdefinition.html>).
+//! The exact parameter set each FHIR version declares
+//! (<https://hl7.org/fhir/R4B/operationdefinition.html>) plus the terminology
+//! ecosystem overlay (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>),
+//! each parameter marked with its source, so a server accepts nothing more
+//! and nothing less.
 
 /// The direction of an operation parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -13,6 +15,17 @@ pub enum ParameterUse {
     In,
     /// An output parameter.
     Out,
+}
+
+/// Where a declared parameter comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParameterSource {
+    /// The version's own `OperationDefinition`.
+    Version,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem.
+    PreAdopted,
+    /// Defined by the terminology ecosystem alone.
+    Ecosystem,
 }
 
 /// How many values a parameter takes.
@@ -51,6 +64,8 @@ pub struct Parameter {
     pub scope: &'static [&'static str],
     /// The nested parts.
     pub parts: &'static [Parameter],
+    /// Where the parameter comes from.
+    pub source: ParameterSource,
 }
 
 impl Parameter {

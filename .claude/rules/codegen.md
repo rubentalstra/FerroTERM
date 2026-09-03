@@ -65,6 +65,14 @@ emitter) → `crates/ferroterm-fhir`, one module per version (R4 / R4B / R5 / R6
   conditional that can drift. A version difference the packages express is a
   generated difference; if two versions genuinely coincide the emitter may
   share, but the decision is the emitter's, driven by the inputs.
+- **The terminology ecosystem overlay is generator input, applied before
+  lowering.** `src/ecosystem.rs` names the R6 parameters pre-adopted into
+  every earlier version (their shape and documentation come from the vendored
+  R6 package) and declares the parameters the ecosystem alone defines
+  (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>). Every
+  overlaid field and descriptor parameter carries its `source`. Adding a
+  parameter to the overlay is a change to that module plus regeneration, never
+  a hand-written field in a consumer.
 - **The output is byte-deterministic.** The emitter iterates ordered
   structures (`BTreeMap`/sorted vecs), so a regeneration with unchanged inputs
   produces an identical tree, which is what makes the drift check meaningful

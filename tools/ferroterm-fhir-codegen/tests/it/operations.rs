@@ -271,6 +271,9 @@ mod conversions {
                 description: None,
                 subproperty: Vec::new(),
             }],
+            code: None,
+            system: None,
+            r#abstract: None,
         };
         let parameters = response.to_parameters();
         let names: Vec<&str> = parameters
@@ -409,5 +412,163 @@ mod conversions {
                 name: String::from("designation.colour"),
             })
         );
+    }
+}
+
+/// The contracts of `package` with the terminology ecosystem overlay applied,
+/// the R6 package as the source of the pre-adopted parameters.
+fn overlaid(package: &Package, module: &str) -> Vec<OperationContract> {
+    let roots = RootSet::select(package).expect("root set selects");
+    let r6_roots = RootSet::select(&R6).expect("the R6 root set selects");
+    let closure = TypeClosure::compute(package, &roots).expect("closure computes");
+    let model = VersionModule::lower(&closure, module, "pkg", "0").expect("model lowers");
+    let mut contracts = Vec::new();
+    for (url, operation) in &roots.operations {
+        let source = r6_roots.operations.get(url).copied();
+        for resource in &operation.resource {
+            contracts.push(
+                OperationContract::lower_overlaid(operation, resource, &model, source)
+                    .expect("contract lowers"),
+            );
+        }
+    }
+    contracts
+}
+
+#[test]
+fn the_overlay_pre_adopts_the_r6_parameters_every_earlier_version_lacks() {
+    use ferroterm_fhir_codegen::ecosystem::ParameterSource;
+    for (package, module) in [(&*R4, "r4"), (&*R4B, "r4b"), (&*R5, "r5")] {
+        let contracts = overlaid(package, module);
+        let validate = find(&contracts, "ValueSet", "validate-code");
+        let pre_adopted: Vec<&str> = validate
+            .inputs
+            .iter()
+            .filter(|f| f.source == ParameterSource::PreAdopted)
+            .map(|f| f.fhir_name.as_str())
+            .collect();
+        assert_eq!(
+            pre_adopted,
+            [
+                "lenient-display-validation",
+                "inferSystem",
+                "system-version",
+                "check-system-version",
+                "force-system-version",
+                "default-valueset-version",
+                "check-valueset-version",
+                "force-valueset-version",
+            ],
+            "{module}: the R6 order"
+        );
+        let outputs: Vec<(&str, ParameterSource)> = validate
+            .outputs
+            .iter()
+            .map(|f| (f.fhir_name.as_str(), f.source))
+            .collect();
+        let expected_source = if module == "r5" {
+            ParameterSource::Version
+        } else {
+            ParameterSource::PreAdopted
+        };
+        for name in ["code", "system", "version", "issues"] {
+            assert!(
+                outputs.contains(&(name, expected_source)),
+                "{module}: {name} {outputs:?}"
+            );
+        }
+        assert!(outputs.contains(&("x-caused-by-unknown-system", ParameterSource::Ecosystem)));
+        let documented = validate
+            .inputs
+            .iter()
+            .find(|f| f.fhir_name == "inferSystem")
+            .expect("inferSystem");
+        assert!(
+            documented
+                .documentation
+                .as_deref()
+                .unwrap()
+                .starts_with("Pre-adopted from the FHIR R6 ballot"),
+            "{module}: {:?}",
+            documented.documentation
+        );
+        let translate = find(&contracts, "ConceptMap", "translate");
+        for name in ["sourceSystem", "sourceVersion"] {
+            let field = translate
+                .inputs
+                .iter()
+                .find(|f| f.fhir_name == name)
+                .expect(name);
+            assert_eq!(
+                field.source,
+                ParameterSource::PreAdopted,
+                "{module}: {name}"
+            );
+        }
+        // $expand and $subsumes get nothing.
+        for (resource, code) in [("ValueSet", "expand"), ("CodeSystem", "subsumes")] {
+            let contract = find(&contracts, resource, code);
+            assert!(
+                contract
+                    .inputs
+                    .iter()
+                    .chain(&contract.outputs)
+                    .all(|f| f.source == ParameterSource::Version),
+                "{module}: {resource}/${code}"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_ecosystem_defined_outputs_join_every_version_and_r6_pre_adopts_nothing() {
+    use ferroterm_fhir_codegen::ecosystem::ParameterSource;
+    for (package, module) in [(&*R4, "r4"), (&*R4B, "r4b"), (&*R5, "r5"), (&*R6, "r6")] {
+        let contracts = overlaid(package, module);
+        let lookup = find(&contracts, "CodeSystem", "lookup");
+        let ecosystem: Vec<(&str, Option<&str>)> = lookup
+            .outputs
+            .iter()
+            .filter(|f| f.source == ParameterSource::Ecosystem)
+            .map(|f| (f.fhir_name.as_str(), f.type_code.as_deref()))
+            .collect();
+        assert_eq!(
+            ecosystem,
+            [
+                ("code", Some("code")),
+                ("system", Some("uri")),
+                ("abstract", Some("boolean"))
+            ],
+            "{module}"
+        );
+        for (resource, code) in [
+            ("CodeSystem", "validate-code"),
+            ("ValueSet", "validate-code"),
+        ] {
+            let contract = find(&contracts, resource, code);
+            let unknown = contract
+                .outputs
+                .iter()
+                .find(|f| f.fhir_name == "x-caused-by-unknown-system")
+                .expect("x-caused-by-unknown-system");
+            assert_eq!(unknown.source, ParameterSource::Ecosystem);
+            assert_eq!(unknown.type_code.as_deref(), Some("canonical"));
+            assert!(
+                unknown
+                    .documentation
+                    .as_deref()
+                    .unwrap()
+                    .starts_with("Defined by the terminology ecosystem"),
+                "{module}"
+            );
+        }
+        if module == "r6" {
+            let pre_adopted = contracts
+                .iter()
+                .flat_map(|c| c.inputs.iter().chain(&c.outputs))
+                .filter(|f| f.source == ParameterSource::PreAdopted)
+                .count();
+            assert_eq!(pre_adopted, 0, "R6 is the source, it pre-adopts nothing");
+        }
     }
 }

@@ -21,6 +21,7 @@ macro_rules! metadata {
                 CapabilityStatementRestResourceOperation, CapabilityStatementSoftware,
             };
             use ferroterm_fhir::$fhir::extension::{Extension, ExtensionValue};
+            use ferroterm_fhir::operation::{Operation, ParameterSource, ParameterUse};
             use ferroterm_fhir::$fhir::operations::code_system_lookup::CODE_SYSTEM_LOOKUP;
             use ferroterm_fhir::$fhir::operations::code_system_subsumes::CODE_SYSTEM_SUBSUMES;
             use ferroterm_fhir::$fhir::operations::code_system_validate_code::CODE_SYSTEM_VALIDATE_CODE;
@@ -45,6 +46,48 @@ macro_rules! metadata {
             pub const TERMINOLOGY_SERVER: &str = "http://hl7.org/fhir/CapabilityStatement/terminology-server";
             /// The application-feature extension (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>).
             const FEATURE: &str = "http://hl7.org/fhir/uv/application-feature/StructureDefinition/feature";
+            /// The terminology ecosystem requirements the overlay rests on.
+            const ECOSYSTEM_REQUIREMENTS: &str = "https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html";
+
+            /// The terminology ecosystem overlay of `operation`, for the operation's
+            /// `documentation`: what the server accepts and answers beyond the version's
+            /// own definition, by source; `None` when the overlay adds nothing.
+            fn overlay_documentation(operation: &Operation) -> Option<String> {
+                let names = |usage: ParameterUse, source: ParameterSource| -> Vec<String> {
+                    operation
+                        .parameters_of(usage)
+                        .filter(|p| p.source == source)
+                        .map(|p| format!("`{}`", p.name))
+                        .collect()
+                };
+                let mut sentences = Vec::new();
+                for (source, phrase) in [
+                    (
+                        ParameterSource::PreAdopted,
+                        "pre-adopted from the FHIR R6 ballot for the terminology ecosystem",
+                    ),
+                    (ParameterSource::Ecosystem, "defined by the terminology ecosystem"),
+                ] {
+                    let inputs = names(ParameterUse::In, source);
+                    let outputs = names(ParameterUse::Out, source);
+                    let mut clauses = Vec::new();
+                    if !inputs.is_empty() {
+                        clauses.push(format!("accepts {}", inputs.join(", ")));
+                    }
+                    if !outputs.is_empty() {
+                        clauses.push(format!("answers {}", outputs.join(", ")));
+                    }
+                    if !clauses.is_empty() {
+                        sentences.push(format!(
+                            "Beyond the {} definition, the server {} ({phrase}).",
+                            $label,
+                            clauses.join(" and ")
+                        ));
+                    }
+                }
+                (!sentences.is_empty())
+                    .then(|| format!("{} See <{ECOSYSTEM_REQUIREMENTS}>.", sentences.join(" ")))
+            }
 
             /// One application feature: its definition and value.
             fn feature(definition: &str, value: ExtensionValue) -> Extension {
@@ -115,6 +158,10 @@ macro_rules! metadata {
                     documentation: None,
                     ..Default::default()
                 };
+                let declared = |descriptor: &Operation| CapabilityStatementRestResourceOperation {
+                    documentation: overlay_documentation(descriptor).map(Into::into),
+                    ..operation(descriptor.code, descriptor.url)
+                };
                 let interaction = |code: &str| CapabilityStatementRestResourceInteraction {
                     code: code.into(),
                     ..Default::default()
@@ -158,12 +205,9 @@ macro_rules! metadata {
                             CapabilityStatementRestResource {
                                 r#type: "CodeSystem".into(),
                                 operation: vec![
-                                    operation(CODE_SYSTEM_LOOKUP.code, CODE_SYSTEM_LOOKUP.url),
-                                    operation(
-                                        CODE_SYSTEM_VALIDATE_CODE.code,
-                                        CODE_SYSTEM_VALIDATE_CODE.url,
-                                    ),
-                                    operation(CODE_SYSTEM_SUBSUMES.code, CODE_SYSTEM_SUBSUMES.url),
+                                    declared(&CODE_SYSTEM_LOOKUP),
+                                    declared(&CODE_SYSTEM_VALIDATE_CODE),
+                                    declared(&CODE_SYSTEM_SUBSUMES),
                                 ],
                                 ..Default::default()
                             },
@@ -171,17 +215,14 @@ macro_rules! metadata {
                                 r#type: "ValueSet".into(),
                                 interaction: vec![interaction("read"), interaction("search-type")],
                                 operation: vec![
-                                    operation(VALUE_SET_EXPAND.code, VALUE_SET_EXPAND.url),
-                                    operation(VALUE_SET_VALIDATE_CODE.code, VALUE_SET_VALIDATE_CODE.url),
+                                    declared(&VALUE_SET_EXPAND),
+                                    declared(&VALUE_SET_VALIDATE_CODE),
                                 ],
                                 ..Default::default()
                             },
                             CapabilityStatementRestResource {
                                 r#type: "ConceptMap".into(),
-                                operation: vec![operation(
-                                    CONCEPT_MAP_TRANSLATE.code,
-                                    CONCEPT_MAP_TRANSLATE.url,
-                                )],
+                                operation: vec![declared(&CONCEPT_MAP_TRANSLATE)],
                                 ..Default::default()
                             },
                         ],

@@ -23,9 +23,16 @@ under `tools/ferroterm-fhir-codegen/vendor/` (the codegen input;
     (<http://hl7.org/fhir/R4/terminology-service.html>,
     <http://hl7.org/fhir/R5/terminology-module.html>, and the per-version
     `OperationDefinition` in the vendored package). **The parameter set a
-    version admits is exactly what its `OperationDefinition` declares:** R5's
-    `$expand` `useSupplement`/`property`/`displayLanguage` appear where the
-    spec has them and are absent where it does not.
+    version admits is exactly what its `OperationDefinition` declares, plus
+    the terminology ecosystem overlay:** R5's `$expand`
+    `useSupplement`/`property`/`displayLanguage` appear where the spec has
+    them and are absent where it does not. The overlay (the owner's decision
+    on #154, 2026-09-03) adds, on every version, the parameters the ecosystem
+    requires (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>):
+    the R6 ones pre-adopted from the vendored R6 package, the ecosystem-only
+    ones declared in the generator (`tools/ferroterm-fhir-codegen/src/ecosystem.rs`),
+    each marked with its source in the generated descriptor. The overlay
+    extends a version's definition; it never contradicts it.
   - **ECL:** the SNOMED Expression Constraint Language specification
     (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-expression-constraint-language>)
     and its published ANTLR grammar
@@ -42,7 +49,10 @@ under `tools/ferroterm-fhir-codegen/vendor/` (the codegen input;
     silently loosened reader is a failing build, never quiet drift.
   - A version that does NOT define a parameter refuses it (or ignores it
     exactly as that version's `OperationDefinition` dictates), and never absorbs
-    a later version's parameter silently.
+    a later version's parameter silently. The one sanctioned extension is the
+    ecosystem overlay above, applied by the generator and marked by source; an
+    overlaid parameter whose semantics are not implemented yet is refused with
+    `not-supported`, never accepted and ignored.
   - A spec-SILENT form is accepted only with a first-hand citation, recorded
     on a tracker issue; stalled or contradictory upstream material (a draft
     ballot, a reference-server quirk) is never carried silently.

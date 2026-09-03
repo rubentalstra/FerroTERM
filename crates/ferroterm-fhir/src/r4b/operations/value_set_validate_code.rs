@@ -83,6 +83,80 @@ pub struct ValueSetValidateCodeRequest {
     /// Specifies the language to be used for description when validating the
     /// display property
     pub display_language: Option<super::super::primitives::Code>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// When the 'lenient-display-validation' parameter is true, an invalid
+    /// display string will not cause the 'result' output parameter to be
+    /// 'false'. If the 'lenient-display-validation' parameter is false or
+    /// absent, then an invalid display will cause the 'result' output parameter
+    /// to be 'false', i.e. the validation will fail.
+    pub lenient_display_validation: Option<super::super::primitives::Boolean>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). If
+    /// true, the terminology server is required to infer the system from
+    /// evaluation of the value set definition. The inferSystem parameter is
+    /// only to be used with the code parameter, and not with the coding nor
+    /// codeableConcept parameters.
+    pub infer_system: Option<super::super::primitives::Boolean>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Specifies a version to use for a system, if the value set does not
+    /// specify which one to use. The format is the same as a canonical URL:
+    /// \[system\]|\[version\] - e.g. <http://loinc.org|2.56>. Note that this is
+    /// a different parameter to systemVersion
+    pub system_version_canonical: Vec<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Edge Case: Specifies a version to use for a system. If a value set
+    /// specifies a different version, an error is returned instead of the
+    /// expansion. The format is the same as a canonical URL:
+    /// \[system\]|\[version\] - e.g. <http://loinc.org|2.56>
+    pub check_system_version: Vec<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Edge Case: Specifies a version to use for a system. This parameter
+    /// overrides any specified version in the value set (and any it depends
+    /// on). The format is the same as a canonical URL: \[system\]|\[version\] -
+    /// e.g. <http://loinc.org|2.56>. Note that this has obvious safety issues,
+    /// in that it may result in a value set expansion giving a different list
+    /// of codes that is both wrong and unsafe, and implementers should only use
+    /// this capability reluctantly. It primarily exists to deal with situations
+    /// where specifications have fallen into decay as time passes. If the value
+    /// is overridden, the version used SHALL explicitly be represented in the
+    /// expansion parameters
+    pub force_system_version: Vec<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Specifies a version to use for a valueset, if the reference to the value
+    /// set does not specify which version to use. The format is the same as a
+    /// canonical URL: \[system\]|\[version\] - e.g.
+    /// <http://example.org/ValueSet/example|1.0.0>. Note that this is similar
+    /// to the force-system-version parameter but applied to valuesets
+    pub default_valueset_version: Vec<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Edge Case: Specifies a version to use for a valueset. If a reference to
+    /// a value set specifies a different version, an error is returned instead
+    /// of the expansion. The format is the same as a canonical URL:
+    /// \[system\]|\[version\] - e.g.
+    /// <http://example.org/ValueSet/example|1.0.0>. Note that this is similar
+    /// to the force-system-version parameter but applied to valuesets
+    pub check_valueset_version: Vec<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Edge Case: Specifies a version to use for a valueset. This parameter
+    /// overrides any specified version in the reference to the value set (and
+    /// any it depends on). The format is the same as a canonical URL:
+    /// \[system\]|\[version\] - e.g.
+    /// <http://example.org/ValueSet/example|1.0.0>. Note that this has obvious
+    /// safety issues, in that it may result in a value set expansion giving a
+    /// different list of codes that is both wrong and unsafe, and implementers
+    /// should only use this capability reluctantly. It primarily exists to deal
+    /// with situations where specifications have fallen into decay as time
+    /// passes. If the value is overridden, the version used SHALL explicitly be
+    /// represented in the expansion parameters. Note that this is similar to
+    /// the force-system-version parameter but applied to valuesets.
+    pub force_valueset_version: Vec<super::super::primitives::Canonical>,
 }
 
 /// The `out` parameters of `ValueSet/$validate-code`.
@@ -96,6 +170,30 @@ pub struct ValueSetValidateCodeResponse {
     /// A valid display for the concept if the system wishes to display this to
     /// a user
     pub display: Option<super::super::primitives::String>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The code that was validated
+    pub code: Option<super::super::primitives::Code>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The system for the code that was validated
+    pub system: Option<super::super::primitives::Uri>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The version of the system of the code that was validated
+    pub version: Option<super::super::primitives::String>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// List of itemised issues with paths constrained to simple FHIRPath.
+    /// Examples are CodeableConcept, CodeableConcept.coding\[0\],
+    /// CodeableConcept.coding\[1\].display, or Coding.display
+    pub issues: Option<super::super::operation_outcome::OperationOutcome>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. A code system the server does not serve,
+    /// one parameter per system, so a validator can tell the user which
+    /// resources are missing.
+    pub x_caused_by_unknown_system: Vec<super::super::primitives::Canonical>,
 }
 
 impl ValueSetValidateCodeRequest {
@@ -141,6 +239,16 @@ impl ValueSetValidateCodeRequest {
         let mut field_date: Option<super::super::primitives::DateTime> = None;
         let mut field_abstract: Option<super::super::primitives::Boolean> = None;
         let mut field_display_language: Option<super::super::primitives::Code> = None;
+        let mut field_lenient_display_validation: Option<super::super::primitives::Boolean> = None;
+        let mut field_infer_system: Option<super::super::primitives::Boolean> = None;
+        let mut field_system_version_canonical: Vec<super::super::primitives::Canonical> =
+            Vec::new();
+        let mut field_check_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_force_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_default_valueset_version: Vec<super::super::primitives::Canonical> =
+            Vec::new();
+        let mut field_check_valueset_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_force_valueset_version: Vec<super::super::primitives::Canonical> = Vec::new();
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -540,6 +648,210 @@ impl ValueSetValidateCodeRequest {
                         }
                     });
                 }
+                "lenient-display-validation" => {
+                    if field_lenient_display_validation.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "lenient-display-validation",
+                        });
+                    }
+                    field_lenient_display_validation = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "lenient-display-validation",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "lenient-display-validation",
+                                },
+                            );
+                        }
+                    });
+                }
+                "inferSystem" => {
+                    if field_infer_system.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "inferSystem",
+                        });
+                    }
+                    field_infer_system = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "inferSystem",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "inferSystem",
+                                },
+                            );
+                        }
+                    });
+                }
+                "system-version" => {
+                    field_system_version_canonical.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "system-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "system-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "check-system-version" => {
+                    field_check_system_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "check-system-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "check-system-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "force-system-version" => {
+                    field_force_system_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "force-system-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "force-system-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "default-valueset-version" => {
+                    field_default_valueset_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "default-valueset-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "default-valueset-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "check-valueset-version" => {
+                    field_check_valueset_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "check-valueset-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "check-valueset-version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "force-valueset-version" => {
+                    field_force_valueset_version.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "force-valueset-version",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "force-valueset-version",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -564,6 +876,14 @@ impl ValueSetValidateCodeRequest {
             date: field_date,
             r#abstract: field_abstract,
             display_language: field_display_language,
+            lenient_display_validation: field_lenient_display_validation,
+            infer_system: field_infer_system,
+            system_version_canonical: field_system_version_canonical,
+            check_system_version: field_check_system_version,
+            force_system_version: field_force_system_version,
+            default_valueset_version: field_default_valueset_version,
+            check_valueset_version: field_check_valueset_version,
+            force_valueset_version: field_force_valueset_version,
         })
     }
     /// Writes the fields as a parameter list.
@@ -689,6 +1009,78 @@ impl ValueSetValidateCodeRequest {
                 ..Default::default()
             });
         }
+        if let Some(value) = &self.lenient_display_validation {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "lenient-display-validation".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.infer_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "inferSystem".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.system_version_canonical {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "system-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.check_system_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "check-system-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.force_system_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "force-system-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.default_valueset_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "default-valueset-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.check_valueset_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "check-valueset-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.force_valueset_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "force-valueset-version".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
         out
     }
 }
@@ -725,6 +1117,12 @@ impl ValueSetValidateCodeResponse {
         let mut field_result: Option<super::super::primitives::Boolean> = None;
         let mut field_message: Option<super::super::primitives::String> = None;
         let mut field_display: Option<super::super::primitives::String> = None;
+        let mut field_code: Option<super::super::primitives::Code> = None;
+        let mut field_system: Option<super::super::primitives::Uri> = None;
+        let mut field_version: Option<super::super::primitives::String> = None;
+        let mut field_issues: Option<super::super::operation_outcome::OperationOutcome> = None;
+        let mut field_x_caused_by_unknown_system: Vec<super::super::primitives::Canonical> =
+            Vec::new();
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -822,6 +1220,150 @@ impl ValueSetValidateCodeResponse {
                         }
                     });
                 }
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "system" => {
+                    if field_system.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "system",
+                        });
+                    }
+                    field_system = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "system",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "system",
+                                },
+                            );
+                        }
+                    });
+                }
+                "version" => {
+                    if field_version.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "version",
+                        });
+                    }
+                    field_version = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "version",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "issues" => {
+                    if field_issues.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "issues",
+                        });
+                    }
+                    field_issues = Some(match &parameter.resource {
+                        Some(super::super::resource::Resource::OperationOutcome(value)) => {
+                            (**value).clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "issues",
+                                    expected: "OperationOutcome",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "issues",
+                                },
+                            );
+                        }
+                    });
+                }
+                "x-caused-by-unknown-system" => {
+                    field_x_caused_by_unknown_system.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "x-caused-by-unknown-system",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "x-caused-by-unknown-system",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -841,6 +1383,11 @@ impl ValueSetValidateCodeResponse {
             )?,
             message: field_message,
             display: field_display,
+            code: field_code,
+            system: field_system,
+            version: field_version,
+            issues: field_issues,
+            x_caused_by_unknown_system: field_x_caused_by_unknown_system,
         })
     }
     /// Writes the fields as a parameter list.
@@ -875,6 +1422,51 @@ impl ValueSetValidateCodeResponse {
                 ..Default::default()
             });
         }
+        if let Some(value) = &self.code {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "system".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "version".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.issues {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "issues".into(),
+                resource: Some(super::super::resource::Resource::OperationOutcome(
+                    Box::new(value.clone()),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.x_caused_by_unknown_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "x-caused-by-unknown-system".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
         out
     }
 }
@@ -898,6 +1490,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -909,6 +1502,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -920,6 +1514,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("ValueSet"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -931,6 +1526,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -942,6 +1538,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -953,6 +1550,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -964,6 +1562,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -975,6 +1574,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -986,6 +1586,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("Coding"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -997,6 +1598,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("CodeableConcept"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1008,6 +1610,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("dateTime"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1019,6 +1622,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1030,6 +1634,85 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "lenient-display-validation",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("boolean"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "inferSystem",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("boolean"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "system-version",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "check-system-version",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "force-system-version",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "default-valueset-version",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "check-valueset-version",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "force-valueset-version",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1041,6 +1724,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1052,6 +1736,7 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1063,6 +1748,64 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "code",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("code"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "system",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("uri"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "version",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("string"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "issues",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("OperationOutcome"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "x-caused-by-unknown-system",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
                 parts: &[],
             },
         ],

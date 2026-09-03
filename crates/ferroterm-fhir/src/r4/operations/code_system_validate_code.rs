@@ -77,6 +77,30 @@ pub struct CodeSystemValidateCodeResponse {
     /// A valid display for the concept if the system wishes to display this to
     /// a user
     pub display: Option<super::super::primitives::String>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The code that was validated
+    pub code: Option<super::super::primitives::Code>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The system for the code that was validated
+    pub system: Option<super::super::primitives::Uri>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The version of the system of the code that was validated
+    pub version: Option<super::super::primitives::String>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// List of itemised issues with paths constrained to simple FHIRPath.
+    /// Examples are CodeableConcept, CodeableConcept.coding\[0\],
+    /// CodeableConcept.coding\[1\].display, or Coding.display
+    pub issues: Option<super::super::operation_outcome::OperationOutcome>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. A code system the server does not serve,
+    /// one parameter per system, so a validator can tell the user which
+    /// resources are missing.
+    pub x_caused_by_unknown_system: Vec<super::super::primitives::Canonical>,
 }
 
 impl CodeSystemValidateCodeRequest {
@@ -583,6 +607,12 @@ impl CodeSystemValidateCodeResponse {
         let mut field_result: Option<super::super::primitives::Boolean> = None;
         let mut field_message: Option<super::super::primitives::String> = None;
         let mut field_display: Option<super::super::primitives::String> = None;
+        let mut field_code: Option<super::super::primitives::Code> = None;
+        let mut field_system: Option<super::super::primitives::Uri> = None;
+        let mut field_version: Option<super::super::primitives::String> = None;
+        let mut field_issues: Option<super::super::operation_outcome::OperationOutcome> = None;
+        let mut field_x_caused_by_unknown_system: Vec<super::super::primitives::Canonical> =
+            Vec::new();
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -680,6 +710,150 @@ impl CodeSystemValidateCodeResponse {
                         }
                     });
                 }
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "system" => {
+                    if field_system.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "system",
+                        });
+                    }
+                    field_system = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "system",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "system",
+                                },
+                            );
+                        }
+                    });
+                }
+                "version" => {
+                    if field_version.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "version",
+                        });
+                    }
+                    field_version = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "version",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "version",
+                                },
+                            );
+                        }
+                    });
+                }
+                "issues" => {
+                    if field_issues.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "issues",
+                        });
+                    }
+                    field_issues = Some(match &parameter.resource {
+                        Some(super::super::resource::Resource::OperationOutcome(value)) => {
+                            (**value).clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "issues",
+                                    expected: "OperationOutcome",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "issues",
+                                },
+                            );
+                        }
+                    });
+                }
+                "x-caused-by-unknown-system" => {
+                    field_x_caused_by_unknown_system.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "x-caused-by-unknown-system",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "x-caused-by-unknown-system",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -699,6 +873,11 @@ impl CodeSystemValidateCodeResponse {
             )?,
             message: field_message,
             display: field_display,
+            code: field_code,
+            system: field_system,
+            version: field_version,
+            issues: field_issues,
+            x_caused_by_unknown_system: field_x_caused_by_unknown_system,
         })
     }
     /// Writes the fields as a parameter list.
@@ -733,6 +912,51 @@ impl CodeSystemValidateCodeResponse {
                 ..Default::default()
             });
         }
+        if let Some(value) = &self.code {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "system".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "version".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.issues {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "issues".into(),
+                resource: Some(super::super::resource::Resource::OperationOutcome(
+                    Box::new(value.clone()),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.x_caused_by_unknown_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "x-caused-by-unknown-system".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
         out
     }
 }
@@ -756,6 +980,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -767,6 +992,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("CodeSystem"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -778,6 +1004,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -789,6 +1016,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -800,6 +1028,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -811,6 +1040,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("Coding"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -822,6 +1052,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("CodeableConcept"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -833,6 +1064,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("dateTime"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -844,6 +1076,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -855,6 +1088,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -866,6 +1100,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -877,6 +1112,7 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -888,6 +1124,64 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "code",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("code"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "system",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("uri"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "version",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("string"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "issues",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("OperationOutcome"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "x-caused-by-unknown-system",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
                 parts: &[],
             },
         ],
