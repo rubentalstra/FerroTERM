@@ -4,7 +4,9 @@
 //! the ones whose semantics are not implemented yet with `not-supported`, and
 //! documents the overlay in its `CapabilityStatement`.
 
-use ferroterm_testkit::fhir::{ANIMALS, CM_ANIMALS_COLOURS, VS_ALL, VS_PETS, VS_PETS_REF};
+use ferroterm_testkit::fhir::{
+    ANIMALS, CM_ANIMALS_COLOURS, COLOURS, VS_ALL, VS_ENUMERATED, VS_PETS, VS_PETS_REF,
+};
 use http::StatusCode;
 use serde_json::Value;
 
@@ -87,29 +89,76 @@ async fn the_version_negotiation_parameters_are_accepted_on_every_version() {
 }
 
 #[tokio::test]
-async fn an_unimplemented_overlay_input_is_refused_as_not_supported_not_as_undeclared() {
+async fn infer_system_and_lenient_display_validation_apply_on_every_version() {
     let server = Server::start_with_resources();
     for version in VERSIONS {
-        for name in ["inferSystem", "lenient-display-validation"] {
-            let (status, body) = server
-                .get(&format!(
-                    "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&{name}=true"
-                ))
-                .await;
-            assert_eq!(status, StatusCode::BAD_REQUEST, "{version} {name}: {body}");
-            assert_eq!(
-                body["issue"][0]["code"], "not-supported",
-                "{version} {name}: {body}"
-            );
-            // `false` asks for the default behaviour and is accepted.
-            let (status, body) = server
-                .get(&format!(
-                    "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&{name}=false"
-                ))
-                .await;
-            assert_eq!(status, StatusCode::OK, "{version} {name}: {body}");
-            assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], true);
-        }
+        // A bare code finds its system among the two the enumerated value set draws on.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_ENUMERATED}&code=RED&inferSystem=true"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{version}"
+        );
+        assert_eq!(
+            parameter(&body, "system").unwrap()["valueUri"],
+            COLOURS,
+            "{version}"
+        );
+        // A bare code in neither system cannot be inferred: not in the value set, and the
+        // system undetermined.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_ENUMERATED}&code=dodo&inferSystem=true"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            false,
+            "{version}"
+        );
+        let kinds: Vec<&str> = parameter(&body, "issues").unwrap()["resource"]["issue"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|i| i["details"]["coding"][0]["code"].as_str().unwrap())
+            .collect();
+        assert_eq!(kinds, ["not-in-vs", "cannot-infer"], "{version}");
+        // A wrong display is a warning under lenient-display-validation.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&display=Puppy&lenient-display-validation=true"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{version}"
+        );
+        let issue = &parameter(&body, "issues").unwrap()["resource"]["issue"][0];
+        assert_eq!(issue["severity"], "warning", "{version}");
+        assert_eq!(
+            issue["details"]["coding"][0]["code"], "invalid-display",
+            "{version}"
+        );
+        // Without it the same display fails the validation.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&display=Puppy"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            false,
+            "{version}"
+        );
     }
 }
 

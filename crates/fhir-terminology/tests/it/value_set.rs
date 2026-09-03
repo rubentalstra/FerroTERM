@@ -546,7 +546,9 @@ fn validate_code_refuses_malformed_requests() {
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &ambiguous).expect("validates");
     assert!(!validation.result);
-    assert_eq!(validation.issues[0].kind, "cannot-infer");
+    // The ecosystem's shape: not in the value set, then the system undetermined.
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-in-vs", "cannot-infer"]);
 }
 
 // NOTE: R5 `$expand` `property` asks for concept properties on each `contains`,
@@ -757,4 +759,60 @@ fn validate_code_negotiates_system_and_value_set_versions() {
         Some(format!("A definition for the value Set '{VS_PETS}|9.9' could not be found").as_str())
     );
     assert_eq!(validation.code.as_deref(), Some("kitten"));
+}
+
+// NOTE: `inferSystem` finds a bare code's system by its membership in the value
+// set, and `lenient-display-validation` keeps a wrong display from failing the
+// result (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
+#[test]
+fn validate_code_infers_the_system_by_membership_and_can_be_lenient_on_displays() {
+    let world = World::load();
+    let bare = |code: &str, infer: Option<bool>| ValueSetValidateInput {
+        url: Some(VS_ENUMERATED.to_owned()),
+        code: Some(code.to_owned()),
+        infer_system: infer,
+        ..ValueSetValidateInput::default()
+    };
+    let red = value_set_validate_code::validate_code(&world.sources(), &bare("RED", Some(true)))
+        .expect("validates");
+    assert!(red.result);
+    assert_eq!(red.system.as_deref(), Some(COLOURS));
+    let cat = value_set_validate_code::validate_code(&world.sources(), &bare("cat", Some(true)))
+        .expect("validates");
+    assert_eq!(cat.system.as_deref(), Some(ANIMALS));
+    let dodo = value_set_validate_code::validate_code(&world.sources(), &bare("dodo", Some(true)))
+        .expect("a false result");
+    assert!(!dodo.result);
+    let kinds: Vec<&str> = dodo.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-in-vs", "cannot-infer"]);
+    assert_eq!(dodo.issues[1].code, "not-found");
+    assert_eq!(dodo.code.as_deref(), Some("dodo"));
+    assert_eq!(
+        dodo.message.as_deref(),
+        Some(format!("The System URI could not be determined for the code 'dodo' in the ValueSet '{VS_ENUMERATED}|1.0'").as_str())
+    );
+    // Without inferSystem a bare code over two systems cannot be placed.
+    let ambiguous = value_set_validate_code::validate_code(&world.sources(), &bare("cat", None))
+        .expect("a false result");
+    assert!(!ambiguous.result);
+    assert_eq!(ambiguous.issues[1].kind, "cannot-infer");
+    let wrong_display = |lenient: Option<bool>| ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        display: Some(String::from("Puppy")),
+        lenient_display_validation: lenient,
+        ..ValueSetValidateInput::default()
+    };
+    let strict = value_set_validate_code::validate_code(&world.sources(), &wrong_display(None))
+        .expect("validates");
+    assert!(!strict.result);
+    assert_eq!(strict.issues[0].severity, "error");
+    let lenient =
+        value_set_validate_code::validate_code(&world.sources(), &wrong_display(Some(true)))
+            .expect("validates");
+    assert!(lenient.result, "a warning does not fail the result");
+    assert_eq!(lenient.issues[0].severity, "warning");
+    assert_eq!(lenient.issues[0].kind, "invalid-display");
+    assert_eq!(lenient.display.as_deref(), Some("Kitten"));
 }
