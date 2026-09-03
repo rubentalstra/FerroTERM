@@ -152,10 +152,9 @@ impl Summary {
                             code: Some(version.code.as_str().into()),
                             is_default: Some(version.is_default.into()),
                             compositional: Some(version.compositional.into()),
-                            language: version
-                                .languages
-                                .iter()
-                                .map(|l| l.as_str().into())
+                            language: common_languages(&version.languages)
+                                .into_iter()
+                                .map(Into::into)
                                 .collect(),
                             filter: version
                                 .filters
@@ -224,10 +223,9 @@ impl Summary {
                             code: Some(version.code.as_str().into()),
                             is_default: Some(version.is_default.into()),
                             compositional: Some(version.compositional.into()),
-                            language: version
-                                .languages
-                                .iter()
-                                .map(|l| l.as_str().into())
+                            language: common_languages(&version.languages)
+                                .into_iter()
+                                .map(Into::into)
                                 .collect(),
                             filter: version
                                 .filters
@@ -292,3 +290,62 @@ pub const EXPANSION_PARAMETERS: [&str; 16] = [
 /// `expansion.textFilter`: how the `filter` parameter matches.
 const TEXT_FILTER: &str = "Each word of the filter is a prefix that must match the start of a word \
 in one designation of the concept, in any order. Matching ignores case and diacritics. No wild cards.";
+
+/// The codes of the FHIR `CommonLanguages` value set
+/// (<http://hl7.org/fhir/ValueSet/languages>, R4B 4.3.0).
+const COMMON_LANGUAGES: [&str; 56] = [
+    "ar", "bn", "cs", "da", "de", "de-AT", "de-CH", "de-DE", "el", "en", "en-AU", "en-CA", "en-GB",
+    "en-IN", "en-NZ", "en-SG", "en-US", "es", "es-AR", "es-ES", "es-UY", "fi", "fr", "fr-BE",
+    "fr-CH", "fr-FR", "fy", "fy-NL", "hi", "hr", "it", "it-CH", "it-IT", "ja", "ko", "nl", "nl-BE",
+    "nl-NL", "no", "no-NO", "pa", "pl", "pt", "pt-BR", "ru", "ru-RU", "sr", "sr-RS", "sv", "sv-SE",
+    "te", "zh", "zh-CN", "zh-HK", "zh-SG", "zh-TW",
+];
+
+/// The designation languages as `CommonLanguages` codes: a tag in the value
+/// set as it is, another by its primary subtag when that is, the rest left
+/// out, without repeats.
+///
+/// R4B binds `TerminologyCapabilities.codeSystem.version.language` to
+/// nothing (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html>),
+/// but R5 binds it to `CommonLanguages` (required) and the FHIR validator
+/// converts the resource to R5 before reading it, so a tag outside the set
+/// fails the terminology test runner. `$lookup` designations keep every tag.
+#[must_use]
+pub fn common_languages(tags: &[String]) -> Vec<&'static str> {
+    let mut out: Vec<&'static str> = Vec::new();
+    for tag in tags {
+        let primary = tag.split(['-', '_']).next().unwrap_or(tag);
+        let code = COMMON_LANGUAGES
+            .iter()
+            .find(|c| c.eq_ignore_ascii_case(tag))
+            .or_else(|| {
+                COMMON_LANGUAGES
+                    .iter()
+                    .find(|c| c.eq_ignore_ascii_case(primary))
+            });
+        if let Some(code) = code
+            && !out.contains(code)
+        {
+            out.push(code);
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod common_language_tests {
+    use super::common_languages;
+
+    #[test]
+    fn common_languages_fold_to_the_value_set() {
+        let tags: Vec<String> = ["en", "nl-NL", "ar-JO", "cs-CZ", "et-EE", "EN-gb", "zh-CN"]
+            .iter()
+            .map(|t| (*t).to_owned())
+            .collect();
+        assert_eq!(
+            common_languages(&tags),
+            ["en", "nl-NL", "ar", "cs", "en-GB", "zh-CN"],
+            "ar-JO and cs-CZ fold to their primary subtag; et has no code"
+        );
+    }
+}

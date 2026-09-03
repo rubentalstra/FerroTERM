@@ -607,8 +607,10 @@ dependencies = [
 name = "ferroterm-ecl"
 version = "0.0.7"
 dependencies = [
+ "ferroterm-graph",
  "logos",
  "proptest",
+ "roaring",
  "thiserror",
  "winnow",
 ]
@@ -734,6 +736,7 @@ dependencies = [
  "criterion",
  "csv",
  "ferroterm-dhd",
+ "ferroterm-ecl",
  "ferroterm-fhir",
  "ferroterm-graph",
  "ferroterm-gstandaard",
@@ -745,6 +748,7 @@ dependencies = [
  "ferroterm-text",
  "http",
  "jiff",
+ "proptest",
  "quick-xml",
  "regex",
  "roaring",

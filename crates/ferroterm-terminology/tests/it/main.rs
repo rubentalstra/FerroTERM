@@ -14,6 +14,7 @@ mod capabilities;
 mod classification;
 mod compose;
 mod concept_map;
+mod ecl;
 mod fhir_codesystem;
 mod filter;
 mod fixture;

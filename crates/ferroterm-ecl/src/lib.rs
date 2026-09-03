@@ -8,6 +8,8 @@
 #![doc(test(attr(deny(warnings))))]
 
 pub mod ast;
+pub mod dialects;
+pub mod eval;
 pub mod lexer;
 pub mod parser;
 mod print;
