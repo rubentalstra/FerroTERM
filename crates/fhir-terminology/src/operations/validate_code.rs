@@ -63,12 +63,18 @@ pub struct ValidationOutcome {
 /// The `result = false` outcome for a system or version the server does not
 /// serve: the code is echoed, and the system is named for the validator.
 fn unserved(
+    registry: &Registry,
     url: &str,
     version: Option<&str>,
     code: Option<&str>,
     expression: &str,
 ) -> ValidationOutcome {
-    let (canonical, issue) = super::unknown_system(url, version, super::at(expression, "system"));
+    let valid: Vec<String> = registry
+        .versions(url)
+        .map(|p| p.identity().version.clone())
+        .collect();
+    let (canonical, issue) =
+        super::unknown_system(url, version, super::at(expression, "system"), &valid);
     ValidationOutcome {
         result: false,
         message: Some(issue.text.clone()),
@@ -95,10 +101,16 @@ fn resolve_for(
 ) -> Result<Result<super::Resolved, ValidationOutcome>, OperationError> {
     match resolve(registry, invocation, url, version) {
         Ok(resolved) => Ok(Ok(resolved)),
-        Err(OperationError::UnknownSystem(url)) => Ok(Err(unserved(&url, None, code, expression))),
-        Err(OperationError::UnknownVersion { url, version }) => {
-            Ok(Err(unserved(&url, Some(&version), code, expression)))
+        Err(OperationError::UnknownSystem(url)) => {
+            Ok(Err(unserved(registry, &url, None, code, expression)))
         }
+        Err(OperationError::UnknownVersion { url, version }) => Ok(Err(unserved(
+            registry,
+            &url,
+            Some(&version),
+            code,
+            expression,
+        ))),
         Err(error) => Err(error),
     }
 }

@@ -195,7 +195,8 @@ pub fn select_version<'a>(
 
 /// Orders version strings segment by segment, numerically where both
 /// segments are numbers, else lexically.
-fn version_order(a: &str, b: &str) -> Ordering {
+#[must_use]
+pub fn version_order(a: &str, b: &str) -> Ordering {
     let mut left = a.split('.');
     let mut right = b.split('.');
     loop {

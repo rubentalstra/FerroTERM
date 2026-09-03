@@ -595,7 +595,10 @@ fn validate_code_names_an_unknown_system_or_version_instead_of_failing() {
     assert!(!version.result);
     assert_eq!(version.unknown_systems, [format!("{URL}|1999")]);
     assert_eq!(version.version.as_deref(), Some("1999"));
-    assert_eq!(version.issues[0].expression.as_deref(), Some("coding"));
+    assert_eq!(
+        version.issues[0].expression.as_deref(),
+        Some("Coding.system")
+    );
     assert!(
         version
             .message
@@ -642,7 +645,10 @@ fn validate_code_itemises_its_issues() {
     .expect("validates");
     assert_eq!(wrong.issues.len(), 1);
     assert_eq!(wrong.issues[0].kind, "invalid-display");
-    assert_eq!(wrong.issues[0].expression.as_deref(), Some("coding"));
+    assert_eq!(
+        wrong.issues[0].expression.as_deref(),
+        Some("Coding.display")
+    );
     assert!(
         wrong.issues[0].text.contains("`Cat`"),
         "{}",

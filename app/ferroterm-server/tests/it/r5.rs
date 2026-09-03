@@ -114,7 +114,7 @@ async fn validate_code_itemises_issues_under_r5_and_under_the_overlay_on_r4b() {
         issues["issue"][0]["details"]["coding"][0]["code"],
         "invalid-display"
     );
-    assert_eq!(issues["issue"][0]["expression"][0], "coding");
+    assert_eq!(issues["issue"][0]["expression"][0], "Coding.display");
     let (status, body) = server
         .post("/r4b/CodeSystem/$validate-code", &request)
         .await;

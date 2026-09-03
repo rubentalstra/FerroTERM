@@ -137,7 +137,7 @@ async fn validate_code_carries_the_declared_outputs_and_the_r5_issues() {
             .as_str()
             .is_some_and(|t| t.contains("dog"))
     );
-    assert_eq!(issue["expression"][0], "coding");
+    assert_eq!(issue["expression"][0], "Coding.code");
 }
 
 #[tokio::test]

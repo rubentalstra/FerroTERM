@@ -390,6 +390,11 @@ fn validate_code_answers_the_membership_the_echo_and_the_issues() {
     assert!(!validation.result);
     let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
     assert_eq!(kinds, ["not-in-vs", "invalid-code"]);
+}
+
+#[test]
+fn validate_code_names_an_unknown_system_and_an_unknown_version() {
+    let world = World::load();
     let unknown_system = ValueSetValidateInput {
         url: Some(VS_PETS.to_owned()),
         code: Some(String::from("kitten")),
@@ -428,7 +433,133 @@ fn validate_code_answers_the_membership_the_echo_and_the_issues() {
         .expect("validates");
     assert!(!validation.result);
     assert_eq!(validation.unknown_systems, [format!("{ANIMALS}|9.9")]);
-    assert_eq!(validation.version.as_deref(), Some("9.9"));
+    // NOTE: the code is still resolved against the version the value set uses, and
+    // the versionless include's choice is a warning beside the not-found error
+    // (the ecosystem's `version` cases, #177).
+    assert_eq!(validation.version.as_deref(), Some("2.0"));
+    assert_eq!(validation.display.as_deref(), Some("Kitten"));
+    let shape: Vec<(&str, &str)> = validation
+        .issues
+        .iter()
+        .map(|i| (i.severity, i.kind))
+        .collect();
+    assert_eq!(shape, [("error", "not-found"), ("warning", "vs-invalid")]);
+    assert_eq!(validation.issues[0].expression.as_deref(), Some("system"));
+    assert_eq!(validation.issues[1].expression.as_deref(), Some("version"));
+    assert!(
+        validation.issues[0].text.ends_with(". Valid versions: 2.0"),
+        "{}",
+        validation.issues[0].text
+    );
+    assert!(
+        validation.issues[1]
+            .text
+            .contains("for the versionless include"),
+        "{}",
+        validation.issues[1].text
+    );
+}
+
+// NOTE: a coding version that differs from the include's is validated against the
+// include's version and itemised as vs-invalid; a check-system-version that
+// forbids the include's version is a version-error, never a refusal (#177).
+#[test]
+fn validate_code_itemises_version_disagreements_against_the_value_set_version() {
+    let world = World::load();
+    let inline = |version: Option<&str>| ValueSet {
+        url: Some("http://example.org/inline-pinned".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                version: version.map(Into::into),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let coding = |version: &str| CodingRef {
+        system: Some(ANIMALS.to_owned()),
+        version: Some(version.to_owned()),
+        code: Some(String::from("cat")),
+        display: None,
+    };
+    // An unserved coding version against a pinned include: vs-invalid, then not-found.
+    let unserved = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline(Some("2.0")))),
+        coding: Some(coding("9.9")),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &unserved).expect("validates");
+    let shape: Vec<(&str, &str)> = validation
+        .issues
+        .iter()
+        .map(|i| (i.severity, i.kind))
+        .collect();
+    assert_eq!(shape, [("error", "vs-invalid"), ("error", "not-found")]);
+    assert_eq!(validation.unknown_systems, [format!("{ANIMALS}|9.9")]);
+    assert_eq!(validation.display.as_deref(), Some("Cat"));
+    assert_eq!(
+        validation.version.as_deref(),
+        Some("2.0"),
+        "the include's version answers"
+    );
+    assert_eq!(
+        validation.issues[0].text,
+        format!(
+            "The code system '{ANIMALS}' version '2.0' in the ValueSet include is different to the one in the value ('9.9')"
+        )
+    );
+    assert_eq!(
+        validation.issues[0].expression.as_deref(),
+        Some("Coding.version")
+    );
+    assert!(
+        validation
+            .message
+            .as_deref()
+            .unwrap()
+            .starts_with("A definition for CodeSystem"),
+        "the not-found text leads the message: {:?}",
+        validation.message
+    );
+    // A check that forbids the include's version: a version-error, result false.
+    let checked = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline(Some("2.0")))),
+        coding: Some(coding("2.0")),
+        check_system_version: vec![format!("{ANIMALS}|1.x")],
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &checked).expect("validates");
+    assert!(!validation.result);
+    assert_eq!(validation.issues[0].kind, "version-error");
+    assert_eq!(validation.issues[0].code, "exception");
+    assert_eq!(
+        validation.issues[0].text,
+        format!(
+            "The version '2.0' is not allowed for system '{ANIMALS}': required to be '1.x' by a version-check parameter"
+        )
+    );
+    assert_eq!(
+        validation.message.as_deref(),
+        Some(validation.issues[0].text.as_str())
+    );
+    // On $expand the same check is refused as an exception.
+    let expand = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline(Some("2.0")))),
+        check_system_version: vec![format!("{ANIMALS}|1.x")],
+        ..ExpandInput::default()
+    };
+    let error = expand::expand(&world.sources(), &expand).expect_err("refused");
+    assert!(
+        matches!(error, OperationError::VersionCheck(_)),
+        "{error:?}"
+    );
+    assert_eq!(error.issue_code(), "exception");
+    assert_eq!(error.tx_issue_type(), "version-error");
 }
 
 #[test]
@@ -729,10 +860,14 @@ fn validate_code_negotiates_system_and_value_set_versions() {
         check_system_version: vec![format!("{ANIMALS}|1.0")],
         ..ValueSetValidateInput::default()
     };
-    assert!(matches!(
-        value_set_validate_code::validate_code(&world.sources(), &mismatch),
-        Err(OperationError::Invalid(_))
-    ));
+    // NOTE: on a versionless include the check acts as the default, so a version
+    // the server lacks is the unresolvable-include shape, never a refusal (#177).
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &mismatch).expect("validates");
+    assert!(!validation.result);
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["vs-invalid", "not-found"]);
+    assert_eq!(validation.unknown_systems, [format!("{ANIMALS}|1.0")]);
     let imported = ValueSetValidateInput {
         url: Some(VS_PETS_REF.to_owned()),
         code: Some(String::from("kitten")),
@@ -845,11 +980,29 @@ fn validate_code_fails_over_an_include_the_server_cannot_resolve_and_names_the_s
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &input).expect("a false result");
     assert!(!validation.result);
+    // NOTE: without a subject version only the include's unknown version is itemised
+    // (the ecosystem's `coding-vnn-vs1wb`); with one, the disagreement comes first.
     let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
-    assert_eq!(kinds, ["vs-invalid", "not-found"]);
+    assert_eq!(kinds, ["not-found"]);
     assert_eq!(validation.unknown_systems, [format!("{ANIMALS}|9")]);
     assert_eq!(validation.code.as_deref(), Some("kitten"));
     assert_eq!(validation.display.as_deref(), Some("Kitten"));
+    assert_eq!(
+        validation.version.as_deref(),
+        Some("2.0"),
+        "the served default answers"
+    );
+    let with_version = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        system_version: Some(String::from("2.0")),
+        ..ValueSetValidateInput::default()
+    };
+    let validation = value_set_validate_code::validate_code(&world.sources(), &with_version)
+        .expect("a false result");
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["vs-invalid", "not-found"]);
     assert_eq!(
         validation.version.as_deref(),
         Some("2.0"),
