@@ -15,6 +15,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+mod ecl;
+
 use ferroterm_graph::attributes::{Attributes, AttributesError};
 use ferroterm_graph::csr::{Csr, CsrError};
 use ferroterm_graph::identifiers::{Identifiers, IdentifiersError};
@@ -28,6 +30,7 @@ use ferroterm_store::record;
 use ferroterm_store::store::{Store, StoreError, Vocabulary};
 use ferroterm_store::tables;
 use ferroterm_text::index::{Query, TextIndex};
+use roaring::RoaringBitmap;
 use serde::Deserialize;
 
 use crate::compose::{Compose, ConceptRef, Include, SystemRef};
@@ -214,6 +217,9 @@ pub struct SnomedProvider {
     attributes: Attributes,
     member_tables: RefsetMembers,
     identifiers: Identifiers,
+    roots: OnceLock<RoaringBitmap>,
+    leaves: OnceLock<RoaringBitmap>,
+    defined: OnceLock<RoaringBitmap>,
     /// The inactive concepts, read once on the first request that needs them.
     inactive: OnceLock<ConceptSet>,
     identity: Identity,
@@ -256,22 +262,7 @@ impl SnomedProvider {
     /// Returns [`OpenError`] when the manifest, the store, or a side file does not
     /// read, or the artifact is not a SNOMED CT edition.
     pub fn open(dir: &Path, default_language: &str) -> Result<Self, OpenError> {
-        let manifest_path = dir.join(MANIFEST_FILE);
-        let text = std::fs::read_to_string(&manifest_path).map_err(|source| OpenError::Io {
-            path: manifest_path.clone(),
-            source,
-        })?;
-        let manifest: Manifest =
-            serde_json::from_str(&text).map_err(|source| OpenError::Manifest {
-                path: manifest_path,
-                source,
-            })?;
-        if manifest.system != SYSTEM {
-            return Err(OpenError::NotSnomed(manifest.system));
-        }
-        if manifest.layout != MANIFEST_VERSION {
-            return Err(OpenError::ManifestVersion(manifest.layout));
-        }
+        let manifest = Self::read_manifest(dir)?;
         let store = Store::open(&dir.join(&manifest.store))?;
         let read = |name: &str| {
             let path = dir.join(name);
@@ -317,6 +308,9 @@ impl SnomedProvider {
             attributes,
             member_tables,
             identifiers,
+            roots: OnceLock::new(),
+            leaves: OnceLock::new(),
+            defined: OnceLock::new(),
             inactive: OnceLock::new(),
             identity: Identity {
                 url: SYSTEM.to_owned(),
@@ -421,6 +415,28 @@ impl SnomedProvider {
             definition,
             refsets,
         })
+    }
+
+    /// The manifest of the artifact under `dir`, checked to be a SNOMED CT
+    /// artifact of the layout this build reads.
+    fn read_manifest(dir: &Path) -> Result<Manifest, OpenError> {
+        let manifest_path = dir.join(MANIFEST_FILE);
+        let text = std::fs::read_to_string(&manifest_path).map_err(|source| OpenError::Io {
+            path: manifest_path.clone(),
+            source,
+        })?;
+        let manifest: Manifest =
+            serde_json::from_str(&text).map_err(|source| OpenError::Manifest {
+                path: manifest_path,
+                source,
+            })?;
+        if manifest.system != SYSTEM {
+            return Err(OpenError::NotSnomed(manifest.system));
+        }
+        if manifest.layout != MANIFEST_VERSION {
+            return Err(OpenError::ManifestVersion(manifest.layout));
+        }
+        Ok(manifest)
     }
 
     /// The files the ECL evaluator reads, when the artifact has them.

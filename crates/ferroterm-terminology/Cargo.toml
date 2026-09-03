@@ -12,6 +12,7 @@ publish.workspace = true
 
 [dependencies]
 ferroterm-fhir.workspace = true
+ferroterm-ecl.workspace = true
 ferroterm-graph.workspace = true
 ferroterm-icd11.workspace = true
 ferroterm-rf2.workspace = true
@@ -30,6 +31,7 @@ thiserror.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+proptest.workspace = true
 criterion.workspace = true
 ferroterm-testkit.workspace = true
 ferroterm-dhd.workspace = true

@@ -106,12 +106,12 @@ sequence, not a scope limit; the server serves every version.
 
 - [ ] Parser faithful to the official ANTLR `ECL.g4`; malformed ECL is an
   `OperationOutcome(invalid)`
-- [ ] Operators: `<`, `<<`, `>`, `>>`, `*`, `^` (memberOf), `.` (dotted
+- [x] Operators: `<`, `<<`, `>`, `>>`, `*`, `^` (memberOf), `.` (dotted
   attribute), `:` refinement with attribute groups and cardinality, reverse `R`,
   `AND`, `OR`, `MINUS`, concrete values with comparisons
-- [ ] 2.1+ term/description filters (`{{ … }}`), history supplements, alternate
+- [x] 2.1+ term/description filters (`{{ … }}`), history supplements, alternate
   identifiers
-- [ ] Evaluation against the inferred transitive closure, edition/version-scoped
+- [x] Evaluation against the inferred transitive closure, edition/version-scoped
 
 ## MRCM and post-coordination
 

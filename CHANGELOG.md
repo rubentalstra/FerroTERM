@@ -31,9 +31,27 @@ fresh link reference.
   the OWL axiom reference sets left out), and `identifiers.bin` (the alternate
   identifiers of the RF2 identifier file). The provider opens them when the
   manifest names them; an older artifact still opens.
+- ECL: `ferroterm-ecl` evaluates a parsed expression constraint against an
+  edition as set algebra over the closure, the attribute graph, and the
+  reference set tables (`ferroterm_ecl::eval`): every constraint operator
+  (`<`, `<<`, `<!`, `<<!`, `>`, `>>`, `>!`, `>>!`, `!!>`, `!!<`), member of
+  with field selection, refinements with attribute and group cardinalities,
+  the reverse flag, dotted attributes, concrete values, conjunction,
+  disjunction, exclusion, the description, concept, and member filters, the
+  history supplements, and alternate identifiers. The SNOMED provider is the
+  edition behind it; an unknown identifier, scheme, field, or dialect alias
+  is a typed error, and a construct the artifact cannot answer (a description
+  module or effective time filter, a filter on inactive members) is refused
+  as unsupported.
 
 ### Fixed
 
+- `TerminologyCapabilities.codeSystem.version.language` lists the designation
+  languages as `CommonLanguages` codes (a tag outside the set by its primary
+  subtag, or left out): R4B binds the element to nothing, but the FHIR
+  validator converts the resource to R5, whose binding is required, and
+  stopped on `ar-JO` from the LOINC linguistic variants. `$lookup`
+  designations keep every tag.
 - LOINC: the release zip's `AccessoryFiles/PanelsAndForms/Loinc.csv` is no
   longer mistaken for the term table, and a published code whose check digit
   does not follow the Mod 10 algorithm (`11491-6`, deprecated, in 2.83) is

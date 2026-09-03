@@ -1,15 +1,19 @@
 ---
 name: local-snomed-release
-description: "The owner's licensed SNOMED CT NL edition RF2 release lives at data/snomed/ in the ferroterm repo (gitignored), for local development and testing only"
-metadata: 
-  node_type: memory
+description: The owner's licensed SNOMED releases live under data/snomed/ (gitignored): the NL edition 20260630 and, since 2026-09-03, the International edition 20260901 for comparison and speed; LOINC 2.83 under data/loinc/; built artifacts under artifacts/{nl,int,loinc,...}
+metadata:
   type: project
-  originSessionId: 1fab17b9-946d-49fc-af2e-4719ce97bc31
-  modified: 2026-09-02T14:53:21.700Z
 ---
 
-The owner holds an MLDS licence (https://mlds.ihtsdotools.org) for the SNOMED CT Managed Service NL edition and, on 2026-09-02, moved the release archive `SnomedCT_ManagedServiceNL_PRODUCTION_NL1000146_20260630T120000Z.zip` out of the FerroEHR project into `data/snomed/` in the ferroterm repo, unpacked (Snapshot + Full, about 4.3 GB). `/data/` and `SnomedCT_*` are gitignored.
+Licensed source data on this machine, never committed (`/data/` is gitignored):
 
-**Why:** The engine needs a real RF2 release to develop and test against (ferroterm-build, the Snowstorm/Hermes comparison), and the licence permits local development use; the repository must never ship SNOMED content.
+- `data/snomed/SnomedCT_ManagedServiceNL_PRODUCTION_NL1000146_20260630T120000Z.zip` (and the unpacked directory): the Dutch edition, `http://snomed.info/sct/11000146104/version/20260630`, 548,949 concepts.
+- `data/snomed/SnomedCT_InternationalRF2_PRODUCTION_20260901T120000Z.zip`: the International edition September 2026 (MD5 92e46330b8e04016775ca5dd9b8c64cb), `http://snomed.info/sct/449080006/version/20260901`, 535,502 concepts; the owner added it on 2026-09-03 "for comparison, also for the speed later".
+- `data/loinc/Loinc_2.83.zip`: LOINC 2.83 (MD5 057ddf203164705d5a4c3604257060a4), added 2026-09-03.
+- `data/icd11/`, `data/icd10cm/`, `data/rxnorm/` as before.
 
-**How to apply:** Point RF2 loading and build tests at `data/snomed/<release>/Snapshot/Terminology/` and `Refset/` locally. Never copy any concept, description, or term from it into a committed fixture; fixtures stay synthetic. Related: [[architecture-decisions]].
+Built artifacts (gitignored `/artifacts/`): `artifacts/nl`, `artifacts/int` (each about 64 to 67 s to build with the ECL files, above the 60 s ingest bar; see #125), `artifacts/loinc` (112,405 terms), `artifacts/icd11/*`, `artifacts/icd10cm`, `artifacts/rxnorm`.
+
+**Why:** the benches and the differential checks run over these; fixtures stay synthetic ([[performance-bar]], [[milestone-autonomy]]).
+
+**How to apply:** rebuild an artifact after a pipeline change with `cargo run --release -p ferroterm-build -- --rf2 <zip> --out artifacts/<name>`; the ECL benches read `artifacts/nl`.

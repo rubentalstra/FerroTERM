@@ -137,5 +137,36 @@ fn reads(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, reads);
+criterion_group!(benches, reads, ecl);
 criterion_main!(benches);
+
+/// The ECL evaluator over the NL edition: the descendants of the clinical
+/// finding root, and a refinement with a cardinality, the two shapes #111
+/// holds to ten milliseconds.
+fn ecl(c: &mut Criterion) {
+    let Some(dir) = artifact() else {
+        eprintln!("no artifacts/nl: skipping the NL ECL benchmarks");
+        return;
+    };
+    let provider = SnomedProvider::open(&dir, "en").expect("the NL artifact opens");
+    let descendants = ferroterm_ecl::parse("<< 404684003 |Clinical finding|").expect("parses");
+    let refinement = ferroterm_ecl::parse(
+        "< 404684003 |Clinical finding| : [1..1] 363698007 |Finding site| = < 91723000 |Anatomical structure|",
+    )
+    .expect("parses");
+    let group_refinement = ferroterm_ecl::parse(
+        "< 404684003 |Clinical finding| : { 363698007 |Finding site| = << 39057004 |Pulmonary valve structure|, 116676008 |Associated morphology| = << 415582006 |Stenosis| }",
+    )
+    .expect("parses");
+    let mut group = c.benchmark_group("ecl");
+    group.bench_function("descendants_clinical_finding", |b| {
+        b.iter(|| ferroterm_ecl::eval::evaluate(&provider, &descendants).expect("evaluates"));
+    });
+    group.bench_function("refinement_cardinality", |b| {
+        b.iter(|| ferroterm_ecl::eval::evaluate(&provider, &refinement).expect("evaluates"));
+    });
+    group.bench_function("refinement_group", |b| {
+        b.iter(|| ferroterm_ecl::eval::evaluate(&provider, &group_refinement).expect("evaluates"));
+    });
+    group.finish();
+}
