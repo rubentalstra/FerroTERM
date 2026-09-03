@@ -1089,8 +1089,17 @@ impl<M: Model> Evaluator<'_, M> {
             } => {
                 let tests = self.compile_set(attributes)?;
                 let graph = self.model.attributes();
+                // A concept whose rows satisfy the set within one group satisfies
+                // it over all its rows, so the ungrouped answer (the inverted
+                // index) narrows the concepts whose groups are counted, unless
+                // zero groups may match.
+                let candidates = if cardinality.is_none_or(|c| c.min >= 1) {
+                    self.attribute_set(focus, attributes)?
+                } else {
+                    focus.clone()
+                };
                 let mut out = RoaringBitmap::new();
-                for concept in focus {
+                for concept in &candidates {
                     let rows: Vec<Row<'_>> = graph.rows(Ordinal::new(concept)).collect();
                     let mut groups: Vec<Vec<&Row<'_>>> = Vec::new();
                     let mut current: Option<u32> = None;
