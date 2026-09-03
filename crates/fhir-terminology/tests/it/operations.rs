@@ -650,7 +650,10 @@ fn validate_code_itemises_its_issues() {
         Some("Coding.display")
     );
     assert!(
-        wrong.issues[0].text.contains("`Cat`"),
+        wrong.issues[0]
+            .text
+            .starts_with("Wrong Display Name 'Dog' for")
+            && wrong.issues[0].text.contains("'Cat'"),
         "{}",
         wrong.issues[0].text
     );

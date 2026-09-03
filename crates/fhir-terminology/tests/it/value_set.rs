@@ -5,7 +5,8 @@
 use std::sync::Arc;
 
 use ferroterm_testkit::fhir::{
-    ANIMALS, COLOURS, VS_ALL, VS_ENUMERATED, VS_LOOP_A, VS_PETS, VS_PETS_REF, write_code_systems,
+    ANIMALS, COLOURS, VS_ALL, VS_COLOURS, VS_ENUMERATED, VS_LOOP_A, VS_PETS, VS_PETS_REF,
+    write_code_systems,
 };
 use fhir_terminology::conceptmap::store::ConceptMapStore;
 use fhir_terminology::fhir_codesystem::load::{FhirVersion, load_dir};
@@ -1145,5 +1146,146 @@ fn validate_code_judges_a_codeable_concept_coding_by_coding() {
     assert_eq!(
         validation.message.as_deref(),
         Some(format!("No valid coding was found for the value set '{VS_ENUMERATED}|1.0'").as_str())
+    );
+}
+
+// NOTE: the issue texts follow the ecosystem's test cases (spec-silent, #183), so
+// a validator shows its user the wording the reference server would.
+#[test]
+fn validate_code_speaks_the_ecosystems_words_for_displays_codes_and_membership() {
+    let world = World::load();
+    let cat = |display: &str, language: Option<&str>| ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("cat")),
+        system: Some(ANIMALS.to_owned()),
+        display: Some(display.to_owned()),
+        display_language: language.map(str::to_owned),
+        ..ValueSetValidateInput::default()
+    };
+    let run = |input: &ValueSetValidateInput| {
+        value_set_validate_code::validate_code(&world.sources(), input).expect("validates")
+    };
+    // No displayLanguage: every display of the concept is valid, each with its language.
+    let wrong = run(&cat("Hamster", None));
+    assert!(!wrong.result);
+    assert_eq!(
+        wrong.issues[0].text,
+        format!(
+            "Wrong Display Name 'Hamster' for {ANIMALS}#cat. Valid display is one of 3 choices: 'Cat' (en), 'Domestic cat' (en) or 'Katze' (de) (for the language(s) '--')"
+        )
+    );
+    assert_eq!(
+        wrong.message.as_deref(),
+        Some(wrong.issues[0].text.as_str())
+    );
+    // A displayLanguage with displays: only those count.
+    assert!(run(&cat("Katze", Some("de"))).result);
+    let english_in_german = run(&cat("Cat", Some("de")));
+    assert!(!english_in_german.result);
+    assert_eq!(
+        english_in_german.issues[0].text,
+        format!(
+            "Wrong Display Name 'Cat' for {ANIMALS}#cat. Valid display is 'Katze' (de) (for the language(s) 'de')"
+        )
+    );
+    // A displayLanguage without displays: the default language's are a note, others an error.
+    let default_only = run(&cat("Cat", Some("nl")));
+    assert!(default_only.result);
+    assert_eq!(default_only.issues[0].severity, "information");
+    assert_eq!(
+        default_only.issues[0].text,
+        format!(
+            "There are no valid display names found for the code {ANIMALS}#cat for language(s) 'nl'. The display is 'Cat' which is a valid display for the default language"
+        )
+    );
+    let nothing = run(&cat("Hamster", Some("nl")));
+    assert!(!nothing.result);
+    assert_eq!(
+        nothing.issues[0].text,
+        format!(
+            "Wrong Display Name 'Hamster' for {ANIMALS}#cat. There are no valid display names found for language(s) 'nl'. Default display is 'Cat'"
+        )
+    );
+}
+
+#[test]
+fn validate_code_speaks_the_ecosystems_words_for_codes_membership_abstract_and_case() {
+    let world = World::load();
+    let run = |input: &ValueSetValidateInput| {
+        value_set_validate_code::validate_code(&world.sources(), input).expect("validates")
+    };
+    // An unknown code, and a code outside the value set with its asserted display.
+    let unknown = run(&ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("unicorn")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
+    });
+    let kinds: Vec<(&str, String)> = unknown
+        .issues
+        .iter()
+        .map(|i| (i.kind, i.text.clone()))
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            (
+                "not-in-vs",
+                format!(
+                    "The provided code '{ANIMALS}#unicorn' was not found in the value set '{VS_ALL}|2.0'"
+                )
+            ),
+            (
+                "invalid-code",
+                format!("Unknown code 'unicorn' in the CodeSystem '{ANIMALS}' version '2.0'")
+            ),
+        ]
+    );
+    let outside = run(&ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("dog")),
+        system: Some(ANIMALS.to_owned()),
+        display: Some(String::from("Doggo")),
+        ..ValueSetValidateInput::default()
+    });
+    assert_eq!(
+        outside.issues[0].text,
+        format!(
+            "The provided code '{ANIMALS}#dog ('Doggo')' was not found in the value set '{VS_PETS}|1.0'"
+        )
+    );
+    // An abstract code refused: the rule, then the membership, the rule as message.
+    let abstract_code = run(&ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("living")),
+        system: Some(ANIMALS.to_owned()),
+        abstract_ok: Some(false),
+        ..ValueSetValidateInput::default()
+    });
+    let kinds: Vec<&str> = abstract_code.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["code-rule", "not-in-vs"]);
+    assert_eq!(
+        abstract_code.message.as_deref(),
+        Some(
+            format!("Code '{ANIMALS}#living' is abstract, and not allowed in this context")
+                .as_str()
+        )
+    );
+    // A case-insensitive system located the code under another spelling: a warning.
+    let cased = run(&ValueSetValidateInput {
+        url: Some(VS_COLOURS.to_owned()),
+        code: Some(String::from("red")),
+        system: Some(COLOURS.to_owned()),
+        ..ValueSetValidateInput::default()
+    });
+    assert!(cased.result, "{cased:?}");
+    assert_eq!(cased.code.as_deref(), Some("RED"));
+    assert_eq!(cased.issues[0].kind, "code-rule");
+    assert_eq!(cased.issues[0].severity, "warning");
+    assert_eq!(
+        cased.issues[0].text,
+        format!(
+            "The code 'red' differs from the correct code 'RED' by case. Although the code system '{COLOURS}' is case insensitive, implementers are strongly encouraged to use the correct case anyway"
+        )
     );
 }

@@ -306,8 +306,12 @@ fn this_code_not_in_vs(model: &ValueSetModel, coding: &CodingRef, base: &str) ->
         code: "code-invalid",
         kind: "this-code-not-in-vs",
         text: format!(
-            "The provided code '{system}#{}' was not found in the value set '{}'",
-            coding.code.as_deref().unwrap_or_default(),
+            "The provided code '{}' was not found in the value set '{}'",
+            named_code(
+                &system,
+                coding.code.as_deref().unwrap_or_default(),
+                coding.display.as_deref()
+            ),
             model.canonical()
         ),
         expression: super::at(base, "code"),
@@ -435,7 +439,7 @@ fn check(
     let provider: &Arc<dyn CodeSystemProvider> = &target.provider;
     let version = provider.identity().version.clone();
     let Some(located) = provider.locate(subject.code)? else {
-        let mut validation = unknown_code(model, &system, version, subject);
+        let mut validation = unknown_code(model, provider, &system, version, subject);
         validation.issues.splice(0..0, target.issues);
         validation.unknown_systems.extend(target.unknown_systems);
         return Ok(validation);
@@ -475,6 +479,7 @@ fn check(
             version,
             &located,
             display.as_deref(),
+            subject.display,
             subject.expression,
         );
         validation.issues.splice(0..0, target.issues);
@@ -482,7 +487,7 @@ fn check(
         return Ok(validation);
     };
     let mut issues = target.issues;
-    issues.extend(assess(provider, &located, &item, subject, policy)?);
+    issues.extend(assess(model, provider, &located, &item, subject, policy)?);
     let result = !issues.iter().any(|issue| issue.severity == "error");
     Ok(Validation {
         result,
@@ -563,12 +568,10 @@ fn message_of(issues: &[Issue]) -> Option<String> {
     };
     let mut primary = errors(&|i| i.kind == "not-found");
     primary.extend(errors(&|i| i.kind == "vs-invalid"));
-    let chosen = if primary.is_empty() {
-        errors(&|_| true)
-    } else {
-        primary
-    };
-    (!chosen.is_empty()).then(|| chosen.join("; "))
+    if primary.is_empty() {
+        return errors(&|_| true).first().map(|t| (*t).to_owned());
+    }
+    Some(primary.join("; "))
 }
 
 /// The version of `system` the value set uses for this subject, negotiated,
@@ -883,6 +886,7 @@ fn with_target(
 /// The issues of a code the value set contains: abstract, inactive, and the
 /// display check.
 fn assess(
+    model: &ValueSetModel,
     provider: &Arc<dyn CodeSystemProvider>,
     located: &crate::provider::Located,
     item: &Item,
@@ -891,17 +895,34 @@ fn assess(
 ) -> Result<Vec<Issue>, OperationError> {
     let language = policy.language;
     let mut issues = Vec::new();
+    if let Some(note) = super::display::case_note(
+        provider,
+        subject.code,
+        &located.code,
+        super::at(subject.expression, "code"),
+    ) {
+        issues.push(note);
+    }
     if item.abstract_concept && !policy.abstract_ok {
+        // NOTE: an abstract code is refused and, the ecosystem's shape, also reported
+        // as outside the value set (its `notSelectable` cases).
         issues.push(Issue {
             severity: "error",
             code: "business-rule",
             kind: "code-rule",
             text: format!(
-                "the code `{}` is abstract and cannot be selected",
-                located.code
+                "Code '{}' is abstract, and not allowed in this context",
+                system_code(&item.system, &located.code)
             ),
             expression: super::at(subject.expression, "code"),
         });
+        issues.push(not_in_vs(
+            model,
+            &item.system,
+            &located.code,
+            subject.display,
+            subject.expression,
+        ));
     }
     if item.inactive {
         issues.push(Issue {
@@ -915,62 +936,25 @@ fn assess(
             expression: None,
         });
     }
-    let display = provider.display(
-        located.concept,
-        language::for_provider(provider.as_ref(), language).as_deref(),
-    )?;
+    // NOTE: under `lenient-display-validation` a wrong display does not fail the
+    // result (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
     if let Some(given) = subject.display
-        && !display_matches(provider, located.concept, given, display.as_deref())?
-    {
-        let text = match &display {
-            Some(display) => format!(
-                "the display `{given}` is not a valid display for `{}#{}`; the display is `{display}`",
-                item.system, located.code
-            ),
-            None => format!(
-                "the display `{given}` is not a valid display for `{}#{}`",
-                item.system, located.code
-            ),
-        };
-        // NOTE: under `lenient-display-validation` a wrong display does not fail the
-        // result (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
-        issues.push(Issue {
-            severity: if policy.lenient_display {
-                "warning"
-            } else {
-                "error"
+        && let Some(issue) = super::display::judge(
+            provider,
+            located.concept,
+            super::display::Asserted {
+                system: &item.system,
+                code: &located.code,
+                given,
+                requested: language,
+                lenient: policy.lenient_display,
             },
-            code: "invalid",
-            kind: "invalid-display",
-            text,
-            expression: super::at(subject.expression, "display"),
-        });
+            super::at(subject.expression, "display"),
+        )?
+    {
+        issues.push(issue);
     }
     Ok(issues)
-}
-
-/// Whether `given` is the display or one of the designations of `concept`,
-/// compared without case and with whitespace collapsed.
-fn display_matches(
-    provider: &Arc<dyn CodeSystemProvider>,
-    concept: crate::provider::Concept,
-    given: &str,
-    display: Option<&str>,
-) -> Result<bool, OperationError> {
-    let fold = |text: &str| {
-        text.split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ")
-            .to_lowercase()
-    };
-    let wanted = fold(given);
-    if display.is_some_and(|d| fold(d) == wanted) {
-        return Ok(true);
-    }
-    Ok(provider
-        .designations(concept, None)?
-        .iter()
-        .any(|d| fold(&d.value) == wanted))
 }
 
 /// The one system a value set draws on, when there is exactly one.
@@ -1045,7 +1029,7 @@ fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
     let mut validation = failed(
         None,
         None,
-        not_in_vs(model, &system_code("", subject.code), subject.expression),
+        not_in_vs(model, "", subject.code, subject.display, subject.expression),
     );
     validation.message = Some(text.clone());
     validation.issues.push(Issue {
@@ -1063,14 +1047,30 @@ fn system_code(system: &str, code: &str) -> String {
     format!("{system}#{code}")
 }
 
+/// `S#C`, or `S#C ('display')` when the client asserted a display, as the
+/// ecosystem names a code in its texts.
+fn named_code(system: &str, code: &str, display: Option<&str>) -> String {
+    match display {
+        Some(display) => format!("{system}#{code} ('{display}')"),
+        None => format!("{system}#{code}"),
+    }
+}
+
 /// The issue for a code the value set does not contain.
-fn not_in_vs(model: &ValueSetModel, system_code: &str, expression: &str) -> Issue {
+fn not_in_vs(
+    model: &ValueSetModel,
+    system: &str,
+    code: &str,
+    display: Option<&str>,
+    expression: &str,
+) -> Issue {
     Issue {
         severity: "error",
         code: "code-invalid",
         kind: "not-in-vs",
         text: format!(
-            "the code `{system_code}` is not in the value set `{}`",
+            "The provided code '{}' was not found in the value set '{}'",
+            named_code(system, code, display),
             model.canonical()
         ),
         expression: super::at(expression, "code"),
@@ -1117,6 +1117,7 @@ fn unknown_import(system: &str, version: String, url: &str, code: &str) -> Valid
 /// set, and unknown in the system.
 fn unknown_code(
     model: &ValueSetModel,
+    provider: &Arc<dyn CodeSystemProvider>,
     system: &str,
     version: String,
     subject: &Subject<'_>,
@@ -1125,10 +1126,7 @@ fn unknown_code(
         severity: "error",
         code: "code-invalid",
         kind: "invalid-code",
-        text: format!(
-            "unknown code `{}` in the code system `{system}` version `{version}`",
-            subject.code
-        ),
+        text: super::display::unknown_code_text(provider.as_ref(), subject.code),
         expression: super::at(subject.expression, "code"),
     };
     let mut validation = failed(
@@ -1136,7 +1134,9 @@ fn unknown_code(
         Some(version),
         not_in_vs(
             model,
-            &system_code(system, subject.code),
+            system,
+            subject.code,
+            subject.display,
             subject.expression,
         ),
     );
@@ -1156,12 +1156,13 @@ fn outside_value_set(
     version: String,
     located: &crate::provider::Located,
     display: Option<&str>,
+    given: Option<&str>,
     expression: &str,
 ) -> Validation {
     let mut validation = failed(
         Some(system.to_owned()),
         Some(version),
-        not_in_vs(model, &system_code(system, &located.code), expression),
+        not_in_vs(model, system, &located.code, given, expression),
     );
     validation.code = Some(located.code.clone());
     validation.display = display.map(str::to_owned);

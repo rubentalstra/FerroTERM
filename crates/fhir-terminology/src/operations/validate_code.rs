@@ -266,10 +266,7 @@ fn check(
 ) -> Result<ValidationOutcome, OperationError> {
     let identity = provider.identity();
     let Some(located) = provider.locate(code)? else {
-        let text = format!(
-            "code `{code}` is not in code system `{}` version `{}`",
-            identity.url, identity.version
-        );
+        let text = super::display::unknown_code_text(provider.as_ref(), code);
         return Ok(ValidationOutcome {
             result: false,
             message: Some(text.clone()),
@@ -290,47 +287,37 @@ fn check(
         });
     };
     let concept = located.concept;
+    let requested_language = language;
     let language = language::for_provider(provider.as_ref(), language);
     let language = language.as_deref();
     let preferred = provider.display(concept, language)?;
     let mut messages = Vec::new();
     let mut issues = Vec::new();
     let mut result = true;
-    if let Some(display) = display {
-        let case_sensitive = provider.declaration().case_sensitive;
-        let matches = |term: &str| {
-            if case_sensitive {
-                term == display
-            } else {
-                term.eq_ignore_ascii_case(display)
-            }
-        };
-        let known = provider
-            .designations(concept, None)?
-            .iter()
-            .any(|d| matches(&d.value))
-            || preferred.as_deref().is_some_and(matches);
-        if !known {
+    if let Some(note) =
+        super::display::case_note(provider, code, &located.code, super::at(expression, "code"))
+    {
+        issues.push(note);
+    }
+    if let Some(display) = display
+        && let Some(issue) = super::display::judge(
+            provider,
+            concept,
+            super::display::Asserted {
+                system: &identity.url,
+                code: &located.code,
+                given: display,
+                requested: requested_language,
+                lenient: false,
+            },
+            super::at(expression, "display"),
+        )?
+    {
+        if issue.severity == "error" {
             result = false;
-            let text = match &preferred {
-                Some(preferred) => format!(
-                    "the display `{display}` is not a valid display for `{}#{code}`; the display is `{preferred}`",
-                    identity.url
-                ),
-                None => format!(
-                    "the display `{display}` is not a valid display for `{}#{code}`",
-                    identity.url
-                ),
-            };
-            messages.push(text.clone());
-            issues.push(Issue {
-                severity: "error",
-                code: "invalid",
-                kind: "invalid-display",
-                text,
-                expression: super::at(expression, "display"),
-            });
         }
+        messages.push(issue.text.clone());
+        issues.push(issue);
     }
     let status = provider.status(concept)?;
     if !status.active {

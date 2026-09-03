@@ -6,6 +6,7 @@
 //! generated from it. Every client input error is an [`OperationError`] the
 //! server maps to an `OperationOutcome` issue and an HTTP status.
 
+pub mod display;
 pub mod expand;
 pub mod lookup;
 pub mod subsumes;
