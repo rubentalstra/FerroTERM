@@ -15,6 +15,7 @@ use ferroterm_fhir::r4b::operations::code_system_validate_code::{
 };
 
 use super::{Invocation, OperationError, code_text, coding_parts, resolve, string_text, uri_text};
+use crate::language;
 use crate::provider::CodeSystemProvider;
 use crate::registry::Registry;
 
@@ -140,6 +141,8 @@ fn check(
         });
     };
     let concept = located.concept;
+    let language = language::for_provider(provider.as_ref(), language);
+    let language = language.as_deref();
     let preferred = provider.display(concept, language)?;
     let mut messages = Vec::new();
     let mut result = true;

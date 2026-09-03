@@ -66,7 +66,8 @@ fn from_query<'a>(
         .filter(|(name, _)| name != crate::scope::UUID)
         .cloned()
         .collect();
-    let parameters = wire::parameters_from_query(operation, &own)?;
+    let mut parameters = wire::parameters_from_query(operation, &own)?;
+    wire::apply_accept_language(operation, headers, &mut parameters);
     Ok((scope_of(state, headers, Vec::new())?, parameters))
 }
 
@@ -74,10 +75,12 @@ fn from_query<'a>(
 /// the scope those resources and the headers form.
 fn from_body<'a>(
     state: &'a AppState,
+    operation: &ferroterm_fhir::operation::Operation,
     headers: &HeaderMap,
     body: &Bytes,
 ) -> Result<(Scope<'a>, Parameters), Failure> {
-    let (parameters, resources) = split_resources(wire::parameters_from_body(headers, body)?)?;
+    let (mut parameters, resources) = split_resources(wire::parameters_from_body(headers, body)?)?;
+    wire::apply_accept_language(operation, headers, &mut parameters);
     Ok((scope_of(state, headers, resources)?, parameters))
 }
 
@@ -254,7 +257,7 @@ pub async fn lookup_post(
     body: Bytes,
 ) -> Response {
     finish(
-        from_body(&state, &headers, &body)
+        from_body(&state, &CODE_SYSTEM_LOOKUP, &headers, &body)
             .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p)),
     )
 }
@@ -278,7 +281,7 @@ pub async fn validate_code_post(
     body: Bytes,
 ) -> Response {
     finish(
-        from_body(&state, &headers, &body)
+        from_body(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &body)
             .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p)),
     )
 }
@@ -304,7 +307,7 @@ pub async fn validate_code_instance_post(
     body: Bytes,
 ) -> Response {
     finish(instance(&state, &id).and_then(|invocation| {
-        from_body(&state, &headers, &body)
+        from_body(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &body)
             .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p))
     }))
 }
@@ -328,7 +331,7 @@ pub async fn subsumes_post(
     body: Bytes,
 ) -> Response {
     finish(
-        from_body(&state, &headers, &body)
+        from_body(&state, &CODE_SYSTEM_SUBSUMES, &headers, &body)
             .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p)),
     )
 }
@@ -354,7 +357,7 @@ pub async fn subsumes_instance_post(
     body: Bytes,
 ) -> Response {
     finish(instance(&state, &id).and_then(|invocation| {
-        from_body(&state, &headers, &body)
+        from_body(&state, &CODE_SYSTEM_SUBSUMES, &headers, &body)
             .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p))
     }))
 }
@@ -377,7 +380,10 @@ pub async fn expand_post(
     headers: HeaderMap,
     body: Bytes,
 ) -> Response {
-    finish(from_body(&state, &headers, &body).and_then(|(scope, p)| run_expand(&scope, &p)))
+    finish(
+        from_body(&state, &VALUE_SET_EXPAND, &headers, &body)
+            .and_then(|(scope, p)| run_expand(&scope, &p)),
+    )
 }
 
 /// `GET /ValueSet/$validate-code`.
@@ -399,7 +405,7 @@ pub async fn value_set_validate_code_post(
     body: Bytes,
 ) -> Response {
     finish(
-        from_body(&state, &headers, &body)
+        from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body)
             .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)),
     )
 }
@@ -422,5 +428,8 @@ pub async fn translate_post(
     headers: HeaderMap,
     body: Bytes,
 ) -> Response {
-    finish(from_body(&state, &headers, &body).and_then(|(scope, p)| run_translate(&scope, &p)))
+    finish(
+        from_body(&state, &CONCEPT_MAP_TRANSLATE, &headers, &body)
+            .and_then(|(scope, p)| run_translate(&scope, &p)),
+    )
 }

@@ -17,6 +17,7 @@ use ferroterm_fhir::r4b::operations::value_set_validate_code::{
 
 use super::{OperationError, Sources, code_text, coding_parts, string_text, uri_text};
 use crate::compose::Item;
+use crate::language;
 use crate::provider::CodeSystemProvider;
 use crate::valueset::convert;
 use crate::valueset::model::ValueSetModel;
@@ -223,7 +224,10 @@ fn check(
         language,
     )?
     else {
-        let display = provider.display(located.concept, language)?;
+        let display = provider.display(
+            located.concept,
+            language::for_provider(provider.as_ref(), language).as_deref(),
+        )?;
         return Ok(outside_value_set(
             model,
             &system,
@@ -234,7 +238,10 @@ fn check(
         ));
     };
     let issues = assess(provider, &located, &item, subject, language, abstract_ok)?;
-    let display = provider.display(located.concept, language)?;
+    let display = provider.display(
+        located.concept,
+        language::for_provider(provider.as_ref(), language).as_deref(),
+    )?;
     let result = !issues.iter().any(|issue| issue.severity == "error");
     let message = issues
         .iter()
@@ -289,7 +296,10 @@ fn assess(
             expression: None,
         });
     }
-    let display = provider.display(located.concept, language)?;
+    let display = provider.display(
+        located.concept,
+        language::for_provider(provider.as_ref(), language).as_deref(),
+    )?;
     if let Some(given) = subject.display
         && !display_matches(provider, located.concept, given, display.as_deref())?
     {

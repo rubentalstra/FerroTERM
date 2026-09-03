@@ -59,6 +59,34 @@ impl Server {
         json(self.router().oneshot(request).await.expect("response")).await
     }
 
+    pub(crate) async fn get_with_header(
+        &self,
+        uri: &str,
+        name: &str,
+        value: &str,
+    ) -> (StatusCode, Value) {
+        let request = Request::get(uri)
+            .header(name, value)
+            .body(Body::empty())
+            .expect("request");
+        json(self.router().oneshot(request).await.expect("response")).await
+    }
+
+    pub(crate) async fn post_with_header(
+        &self,
+        uri: &str,
+        body: &Value,
+        name: &str,
+        value: &str,
+    ) -> (StatusCode, Value) {
+        let request = Request::post(uri)
+            .header(http::header::CONTENT_TYPE, "application/fhir+json")
+            .header(name, value)
+            .body(Body::from(body.to_string()))
+            .expect("request");
+        json(self.router().oneshot(request).await.expect("response")).await
+    }
+
     pub(crate) async fn post(&self, uri: &str, body: &Value) -> (StatusCode, Value) {
         let request = Request::post(uri)
             .header(http::header::CONTENT_TYPE, "application/fhir+json")

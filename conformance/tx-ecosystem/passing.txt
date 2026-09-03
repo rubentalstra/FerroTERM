@@ -18,9 +18,11 @@ inactive/inactive-1-validate
 inactive/inactive-1a-validate
 inactive/inactive-1b-validate
 inactive/inactive-active-expand
+language/language-echo-de-de-header
 language/language-echo-de-de-param
 language/language-echo-de-multi-none
 language/language-echo-de-none
+language/language-echo-en-en-header
 language/language-echo-en-en-param
 language/language-echo-en-multi-none
 language/language-echo-en-none
@@ -94,6 +96,7 @@ validation/validation-simple-code-bad-code
 validation/validation-simple-code-bad-valueSet
 validation/validation-simple-code-good
 validation/validation-simple-code-good-display
+validation/validation-simple-code-good-language
 validation/validation-simple-code-good-regex
 validation/validation-simple-code-regex-none
 validation/validation-simple-codeableconcept-bad-valueSet

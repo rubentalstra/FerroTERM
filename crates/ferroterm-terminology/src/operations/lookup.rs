@@ -18,6 +18,7 @@ use ferroterm_fhir::r4b::parameters::ParametersParameterValue;
 use super::{
     Invocation, OperationError, code_text, coding_parts, locate, resolve, string_text, uri_text,
 };
+use crate::language;
 use crate::provider::{CodeSystemProvider, Concept, Designation, PropertyValue};
 use crate::registry::Registry;
 
@@ -77,7 +78,11 @@ pub fn lookup(
     let located = locate(provider, code)?;
     let concept = located.concept;
     let identity = provider.identity();
-    let language = code_text(request.display_language.as_ref());
+    let language = language::for_provider(
+        provider.as_ref(),
+        code_text(request.display_language.as_ref()),
+    );
+    let language = language.as_deref();
     // NOTE: `display` is 1..1; a concept without any designation is displayed
     // by its code (no spec says what to show then: our own choice).
     let display = provider

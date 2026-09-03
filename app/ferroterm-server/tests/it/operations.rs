@@ -295,3 +295,84 @@ async fn subsumes_at_type_and_instance_level() {
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(body["issue"][0]["code"], "required");
 }
+
+/// `Accept-Language` picks the display language when `displayLanguage` is
+/// absent, the parameter wins when both are given, and the header's quality
+/// order and wildcard are honoured
+/// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/languages.html>).
+#[tokio::test]
+async fn accept_language_selects_the_display_when_no_parameter_does() {
+    let server = Server::start();
+    let cat = sctid(item(CAT));
+    let uri = format!("/r4b/CodeSystem/$lookup?system={SCT}&code={cat}&property=display");
+    let (status, body) = server.get_with_header(&uri, "Accept-Language", "nl").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(parameter(&body, "display").unwrap()["valueString"], "Kat");
+    let (_, body) = server
+        .get_with_header(
+            &format!("{uri}&displayLanguage=en"),
+            "Accept-Language",
+            "nl",
+        )
+        .await;
+    assert_eq!(
+        parameter(&body, "display").unwrap()["valueString"],
+        "Cat",
+        "the parameter wins"
+    );
+    let (_, body) = server
+        .get_with_header(&uri, "Accept-Language", "fr;q=0.9, nl;q=0.8, en;q=0.7")
+        .await;
+    assert_eq!(
+        parameter(&body, "display").unwrap()["valueString"],
+        "Kat",
+        "French is not carried, Dutch is the next by quality"
+    );
+    let (_, body) = server
+        .get_with_header(&uri, "Accept-Language", "en, nl;q=0.4")
+        .await;
+    assert_eq!(parameter(&body, "display").unwrap()["valueString"], "Cat");
+    let (_, body) = server.get_with_header(&uri, "Accept-Language", "*").await;
+    assert_eq!(
+        parameter(&body, "display").unwrap()["valueString"],
+        "Cat",
+        "any language is the system's own"
+    );
+    let (status, body) = server
+        .post_with_header(
+            "/r4b/CodeSystem/$validate-code",
+            &parameters(&[
+                ("url", json!({"valueUri": SCT})),
+                ("code", json!({"valueCode": cat})),
+                ("display", json!({"valueString": "Cat"})),
+            ]),
+            "Accept-Language",
+            "nl",
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        parameter(&body, "display").unwrap()["valueString"],
+        "Kat",
+        "the header picks the display returned on POST too"
+    );
+    let (status, body) = server
+        .get_with_header(
+            &format!(
+                "/r4b/CodeSystem/$subsumes?system={SCT}&codeA={}&codeB={cat}",
+                sctid(item(ANIMAL))
+            ),
+            "Accept-Language",
+            "nl",
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "an operation without displayLanguage ignores the header"
+    );
+    assert_eq!(
+        parameter(&body, "outcome").unwrap()["valueCode"],
+        "subsumes"
+    );
+}
