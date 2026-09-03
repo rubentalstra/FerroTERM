@@ -270,6 +270,14 @@ impl CodeSystemProvider for FhirCodeSystem {
         self.model.language.as_deref()
     }
 
+    fn standing(&self) -> crate::provider::Standing {
+        crate::provider::Standing {
+            status: self.model.status.clone(),
+            experimental: self.model.experimental.unwrap_or(false),
+            standards_status: self.model.standards_status.clone(),
+        }
+    }
+
     fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
         Ok(self.entry(concept).map(Self::status_of).unwrap_or_default())
     }

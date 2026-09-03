@@ -225,6 +225,8 @@ pub fn validate_code_response(outcome: ValidationOutcome) -> CodeSystemValidateC
             .into_iter()
             .map(Into::into)
             .collect(),
+        inactive: outcome.inactive.map(Into::into),
+        status: outcome.status.map(Into::into),
     }
 }
 
@@ -347,6 +349,8 @@ pub fn value_set_validation_parameters(validation: &Validation) -> Parameters {
             .iter()
             .map(|s| s.as_str().into())
             .collect(),
+        inactive: validation.inactive.map(Into::into),
+        status: validation.status.as_deref().map(Into::into),
     }
     .to_parameters()
 }

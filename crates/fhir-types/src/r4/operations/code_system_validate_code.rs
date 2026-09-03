@@ -112,6 +112,16 @@ pub struct CodeSystemValidateCodeResponse {
     /// per system (the ecosystem's twin of \`x-caused-by-unknown-system\` for
     /// that input).
     pub x_unknown_system: Vec<super::super::primitives::Canonical>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. Whether the validated concept is inactive
+    /// in its code system (the ecosystem requires it beside a warning).
+    pub inactive: Option<super::super::primitives::Boolean>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. The status of the validated concept when
+    /// its code system states one (\`retired\`, \`deprecated\`, …).
+    pub status: Option<super::super::primitives::Code>,
 }
 
 impl CodeSystemValidateCodeRequest {
@@ -627,6 +637,8 @@ impl CodeSystemValidateCodeResponse {
         let mut field_x_caused_by_unknown_system: Vec<super::super::primitives::Canonical> =
             Vec::new();
         let mut field_x_unknown_system: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_inactive: Option<super::super::primitives::Boolean> = None;
+        let mut field_status: Option<super::super::primitives::Code> = None;
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -924,6 +936,66 @@ impl CodeSystemValidateCodeResponse {
                         }
                     });
                 }
+                "inactive" => {
+                    if field_inactive.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "inactive",
+                        });
+                    }
+                    field_inactive = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "inactive",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "inactive",
+                                },
+                            );
+                        }
+                    });
+                }
+                "status" => {
+                    if field_status.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "status",
+                        });
+                    }
+                    field_status = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "status",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "status",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -950,6 +1022,8 @@ impl CodeSystemValidateCodeResponse {
             issues: field_issues,
             x_caused_by_unknown_system: field_x_caused_by_unknown_system,
             x_unknown_system: field_x_unknown_system,
+            inactive: field_inactive,
+            status: field_status,
         })
     }
     /// Writes the fields as a parameter list.
@@ -1046,6 +1120,24 @@ impl CodeSystemValidateCodeResponse {
                 value: Some(
                     super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
                 ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.inactive {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "inactive".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.status {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "status".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
                 ..Default::default()
             });
         }
@@ -1293,6 +1385,30 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 usage: super::super::super::operation::ParameterUse::Out,
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "inactive",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("boolean"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "status",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("code"),
                 scope: &[],
                 source: super::super::super::operation::ParameterSource::Ecosystem,
                 parts: &[],

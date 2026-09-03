@@ -520,3 +520,53 @@ async fn a_loaded_supplement_applies_only_when_use_supplement_names_it() {
         );
     }
 }
+
+#[tokio::test]
+async fn an_inactive_concept_answers_inactive_and_status_with_a_warning_on_every_version() {
+    let server = Server::start_with_resources();
+    for version in VERSIONS {
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_ALL}&system={ANIMALS}&code=fish"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{version}"
+        );
+        assert_eq!(
+            parameter(&body, "inactive").unwrap()["valueBoolean"],
+            true,
+            "{version}: {body}"
+        );
+        assert_eq!(
+            parameter(&body, "status").unwrap()["valueCode"],
+            "retired",
+            "{version}"
+        );
+        let issue = &parameter(&body, "issues").unwrap()["resource"]["issue"][0];
+        assert_eq!(issue["severity"], "warning", "{version}");
+        assert_eq!(
+            issue["details"]["coding"][0]["code"], "code-comment",
+            "{version}"
+        );
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/CodeSystem/$validate-code?url={ANIMALS}&code=fish"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "inactive").unwrap()["valueBoolean"],
+            true,
+            "{version}: {body}"
+        );
+        assert_eq!(
+            parameter(&body, "status").unwrap()["valueCode"],
+            "retired",
+            "{version}"
+        );
+    }
+}

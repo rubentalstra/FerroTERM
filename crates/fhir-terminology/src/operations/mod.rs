@@ -391,6 +391,7 @@ impl<'a> Sources<'a> {
                         url: url.to_owned(),
                         version: None,
                         supplements: Vec::new(),
+                        standards_status: None,
                         name: None,
                         title: None,
                         status: String::from("active"),
@@ -482,6 +483,84 @@ pub fn at(base: &str, leaf: &str) -> Option<String> {
         "coding" => format!("Coding.{leaf}"),
         _ if base.starts_with("CodeableConcept.coding[") => format!("{base}.{leaf}"),
         _ => base.to_owned(),
+    })
+}
+
+/// The warning and the status output an inactive concept earns.
+///
+/// The ecosystem asks for a `code-comment` warning beside `inactive = true`,
+/// and for `status` when the system states one
+/// (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, "Inactive Codes").
+#[must_use]
+pub fn inactive_note(
+    code: &str,
+    status: &crate::provider::Status,
+    expression: Option<String>,
+) -> Option<(Issue, Option<String>)> {
+    if status.active {
+        return None;
+    }
+    let reason = status.inactive_reason.as_deref().unwrap_or("inactive");
+    let (text, status_code) = if reason == "inactive" {
+        (
+            format!("The concept '{code}' has a status of inactive and its use should be reviewed"),
+            None,
+        )
+    } else {
+        (
+            format!(
+                "The concept '{code}' has a status of {reason} and inactive and its use should be reviewed"
+            ),
+            Some(reason.to_owned()),
+        )
+    };
+    Some((
+        Issue {
+            severity: "warning",
+            code: "business-rule",
+            kind: "code-comment",
+            text,
+            expression,
+        },
+        status_code,
+    ))
+}
+
+/// The `issue.expression` of the whole input element (`Coding`, `code`, or the
+/// indexed concept coding), for a note about the concept itself.
+#[must_use]
+pub fn whole(base: &str) -> Option<String> {
+    Some(match base {
+        "coding" => String::from("Coding"),
+        other => other.to_owned(),
+    })
+}
+
+/// The `status-check` notes the ecosystem asks for when a referenced resource
+/// is draft, experimental, deprecated, or withdrawn (its test cases).
+#[must_use]
+pub fn standing_note(
+    kind: &str,
+    canonical: &str,
+    standing: &crate::provider::Standing,
+) -> Option<Issue> {
+    let word = if let Some(standards) = standing.standards_status.as_deref()
+        && matches!(standards, "deprecated" | "withdrawn" | "draft")
+    {
+        standards.to_owned()
+    } else if standing.status == "draft" {
+        String::from("draft")
+    } else if standing.experimental {
+        String::from("experimental")
+    } else {
+        return None;
+    };
+    Some(Issue {
+        severity: "information",
+        code: "business-rule",
+        kind: "status-check",
+        text: format!("Reference to {word} {kind} {canonical}"),
+        expression: None,
     })
 }
 

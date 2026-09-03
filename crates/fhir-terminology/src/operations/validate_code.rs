@@ -58,6 +58,11 @@ pub struct ValidationOutcome {
     pub x_unknown_systems: Vec<String>,
     /// The `codeableConcept` input, echoed (an R5 output, pre-adopted).
     pub codeable_concept: Option<Vec<CodingRef>>,
+    /// `inactive`: whether the concept is inactive (the ecosystem's output).
+    pub inactive: Option<bool>,
+    /// `status`: the concept's status when its system states one (the
+    /// ecosystem's output).
+    pub status: Option<String>,
 }
 
 /// The `result = false` outcome for a system or version the server does not
@@ -86,6 +91,8 @@ fn unserved(
         unknown_systems: vec![canonical],
         x_unknown_systems: Vec::new(),
         codeable_concept: None,
+        inactive: None,
+        status: None,
     }
 }
 
@@ -252,6 +259,8 @@ fn check_codeable_concept(
         unknown_systems: Vec::new(),
         x_unknown_systems: Vec::new(),
         codeable_concept: None,
+        inactive: None,
+        status: None,
     })
 }
 
@@ -284,6 +293,8 @@ fn check(
             unknown_systems: Vec::new(),
             x_unknown_systems: Vec::new(),
             codeable_concept: None,
+            inactive: None,
+            status: None,
         });
     };
     let concept = located.concept;
@@ -320,20 +331,22 @@ fn check(
         issues.push(issue);
     }
     let status = provider.status(concept)?;
-    if !status.active {
-        let text = format!(
-            "code `{code}` is inactive in `{}` version `{}`",
-            identity.url, identity.version
-        );
-        messages.push(text.clone());
-        issues.push(Issue {
-            severity: "warning",
-            code: "business-rule",
-            kind: "status-check",
-            text,
-            expression: None,
-        });
+    let mut inactive = None;
+    let mut status_code = None;
+    if let Some((note, code_status)) =
+        super::inactive_note(&located.code, &status, super::whole(expression))
+    {
+        messages.push(note.text.clone());
+        issues.push(note);
+        inactive = Some(true);
+        status_code = code_status;
     }
+    let canonical = format!("{}|{}", identity.url, identity.version);
+    issues.extend(super::standing_note(
+        "CodeSystem",
+        &canonical,
+        &provider.standing(),
+    ));
     Ok(ValidationOutcome {
         result,
         message: (!messages.is_empty()).then(|| messages.join("; ")),
@@ -345,5 +358,7 @@ fn check(
         unknown_systems: Vec::new(),
         x_unknown_systems: Vec::new(),
         codeable_concept: None,
+        inactive,
+        status: status_code,
     })
 }

@@ -230,6 +230,16 @@ macro_rules! convert_code_system {
                     title: text(resource.title.as_ref().and_then(|t| t.value.as_deref()))
                         .or_else(|| text(resource.name.as_ref().and_then(|n| n.value.as_deref()))),
                     language: text(resource.language.as_ref().and_then(|l| l.value.as_deref())),
+                    status: text(resource.status.value.as_deref()).unwrap_or_default(),
+                    experimental: resource.experimental.as_ref().and_then(|b| b.value),
+                    standards_status: resource
+                        .extension
+                        .iter()
+                        .find(|x| x.url == "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status")
+                        .and_then(|x| match &x.value {
+                            Some(fhir_types::$module::extension::ExtensionValue::Code(c)) => c.value.clone(),
+                            _ => None,
+                        }),
                     content,
                     case_sensitive: flag(&resource.case_sensitive, true),
                     hierarchy_meaning,

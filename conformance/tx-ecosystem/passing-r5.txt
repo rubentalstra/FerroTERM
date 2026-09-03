@@ -12,6 +12,10 @@ default-valueset-version/indirect-validation-two
 default-valueset-version/indirect-validation-zero
 default-valueset-version/indirect-validation-zero-pinned
 default-valueset-version/indirect-validation-zero-pinned-wrong
+deprecated/draft-validate
+deprecated/experimental-validate
+deprecated/not-withdrawn-validate
+deprecated/withdrawn-validate
 exclude/exclude-1
 exclude/exclude-2
 exclude/exclude-all
@@ -26,6 +30,10 @@ fragment/validation-fragment-coding-good
 inactive/inactive-1-validate
 inactive/inactive-1a-validate
 inactive/inactive-1b-validate
+inactive/inactive-2-validate
+inactive/inactive-2b-validate
+inactive/inactive-3-validate
+inactive/inactive-3b-validate
 inactive/inactive-active-expand
 language/language-echo-de-de-header
 language/language-echo-de-de-param
@@ -170,7 +178,9 @@ validation/validation-cs-code-bad-code
 validation/validation-cs-code-good
 validation/validation-simple-child-of-child
 validation/validation-simple-code-bad-code
+validation/validation-simple-code-bad-display-lenient
 validation/validation-simple-code-bad-display-notlenient
+validation/validation-simple-code-bad-display-warning
 validation/validation-simple-code-bad-import
 validation/validation-simple-code-bad-language
 validation/validation-simple-code-bad-language-none
@@ -194,6 +204,7 @@ validation/validation-simple-codeableconcept-good-display
 validation/validation-simple-codeableconcept-good-language
 validation/validation-simple-coding-bad-code
 validation/validation-simple-coding-bad-display
+validation/validation-simple-coding-bad-display-warning
 validation/validation-simple-coding-bad-import
 validation/validation-simple-coding-bad-language
 validation/validation-simple-coding-bad-language-header

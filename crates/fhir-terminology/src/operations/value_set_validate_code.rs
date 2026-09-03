@@ -51,6 +51,11 @@ pub struct Validation {
     pub x_unknown_systems: Vec<String>,
     /// The `codeableConcept` input, echoed (an R5 output, pre-adopted).
     pub codeable_concept: Option<Vec<CodingRef>>,
+    /// `inactive`: whether the concept is inactive (the ecosystem's output).
+    pub inactive: Option<bool>,
+    /// `status`: the concept's status when its system states one (the
+    /// ecosystem's output).
+    pub status: Option<String>,
 }
 
 /// The code under validation, from whichever parameter carried it.
@@ -494,6 +499,13 @@ fn check(
     };
     let mut issues = target.issues;
     issues.extend(assess(model, provider, &located, &item, subject, policy)?);
+    let (inactive, status) = inactive_outputs(&provider.status(located.concept)?);
+    issues.extend(super::standing_note(
+        "CodeSystem",
+        &format!("{system}|{version}"),
+        &provider.standing(),
+    ));
+    issues.extend(value_set_notes(sources, model, resolver));
     let result = !issues.iter().any(|issue| issue.severity == "error");
     Ok(Validation {
         result,
@@ -506,7 +518,58 @@ fn check(
         unknown_systems: target.unknown_systems,
         x_unknown_systems: Vec::new(),
         codeable_concept: None,
+        inactive,
+        status,
     })
+}
+
+/// The `inactive` and `status` outputs of a concept: set when it is inactive,
+/// the status only when the system states one beyond the inactive flag.
+fn inactive_outputs(concept_status: &crate::provider::Status) -> (Option<bool>, Option<String>) {
+    if concept_status.active {
+        return (None, None);
+    }
+    (
+        Some(true),
+        concept_status
+            .inactive_reason
+            .clone()
+            .filter(|reason| reason != "inactive"),
+    )
+}
+
+/// The `status-check` notes for the value set validated against and every
+/// value set it drew on that the ecosystem marks (a withdrawn value set).
+fn value_set_notes(
+    sources: &Sources<'_>,
+    model: &ValueSetModel,
+    resolver: &Resolver<'_>,
+) -> Vec<Issue> {
+    let mut notes = Vec::new();
+    let mut seen = Vec::new();
+    let mut note = |canonical: &str, standards_status: Option<&str>| {
+        if seen.iter().any(|c| c == canonical) {
+            return;
+        }
+        seen.push(canonical.to_owned());
+        let standing = crate::provider::Standing {
+            status: String::from("active"),
+            experimental: false,
+            standards_status: standards_status.map(str::to_owned),
+        };
+        notes.extend(super::standing_note("ValueSet", canonical, &standing));
+    };
+    for used in resolver.used_value_sets() {
+        let (url, version) = match used.split_once('|') {
+            Some((url, version)) => (url, Some(version)),
+            None => (used.as_str(), None),
+        };
+        if let Some(referenced) = sources.value_sets.resolve(url, version) {
+            note(&used, referenced.standards_status.as_deref());
+        }
+    }
+    note(&model.canonical(), model.standards_status.as_deref());
+    notes
 }
 
 /// The version of `system` (among `candidates`, the ones the value set
@@ -575,7 +638,13 @@ fn message_of(issues: &[Issue]) -> Option<String> {
     let mut primary = errors(&|i| i.kind == "not-found");
     primary.extend(errors(&|i| i.kind == "vs-invalid"));
     if primary.is_empty() {
-        return errors(&|_| true).first().map(|t| (*t).to_owned());
+        if let Some(first) = errors(&|_| true).first() {
+            return Some((*first).to_owned());
+        }
+        return issues
+            .iter()
+            .find(|i| i.severity == "warning")
+            .map(|i| i.text.clone());
     }
     Some(primary.join("; "))
 }
@@ -901,6 +970,8 @@ fn failed_target(system: &str, version: String, target: Target) -> Validation {
         unknown_systems: target.unknown_systems,
         x_unknown_systems: Vec::new(),
         codeable_concept: None,
+        inactive: None,
+        status: None,
     };
     validation.message = message_of(&validation.issues);
     validation
@@ -958,17 +1029,14 @@ fn assess(
             subject.expression,
         ));
     }
-    if item.inactive {
-        issues.push(Issue {
-            severity: "warning",
-            code: "business-rule",
-            kind: "status-check",
-            text: format!(
-                "the code `{}` is inactive in `{}` version `{}`",
-                located.code, item.system, item.version
-            ),
-            expression: None,
-        });
+    if item.inactive
+        && let Some((note, _)) = super::inactive_note(
+            &located.code,
+            &provider.status(located.concept)?,
+            super::whole(subject.expression),
+        )
+    {
+        issues.push(note);
     }
     // NOTE: under `lenient-display-validation` a wrong display does not fail the
     // result (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
@@ -1125,6 +1193,8 @@ fn failed(system: Option<String>, version: Option<String>, issue: Issue) -> Vali
         unknown_systems: Vec::new(),
         x_unknown_systems: Vec::new(),
         codeable_concept: None,
+        inactive: None,
+        status: None,
     }
 }
 

@@ -128,10 +128,19 @@ macro_rules! convert_value_set {
                         _ => None,
                     })
                     .collect();
+                let standards_status = resource
+                    .extension
+                    .iter()
+                    .find(|x| x.url == "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status")
+                    .and_then(|x| match &x.value {
+                        Some(fhir_types::$module::extension::ExtensionValue::Code(c)) => c.value.clone(),
+                        _ => None,
+                    });
                 Ok(ValueSetModel {
                     url,
                     version: string(&resource.version),
                     supplements,
+                    standards_status,
                     name: string(&resource.name),
                     title: string(&resource.title),
                     status: text(resource.status.value.as_deref()).unwrap_or_default(),

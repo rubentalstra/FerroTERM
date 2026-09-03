@@ -38,6 +38,12 @@ pub struct CodeSystemModel {
     pub title: Option<String>,
     /// `CodeSystem.language`: the language of the displays.
     pub language: Option<String>,
+    /// `CodeSystem.status`.
+    pub status: String,
+    /// `CodeSystem.experimental`, when stated.
+    pub experimental: Option<bool>,
+    /// The `structuredefinition-standards-status` extension's code, when set.
+    pub standards_status: Option<String>,
     /// `CodeSystem.content`.
     pub content: ContentMode,
     /// `CodeSystem.caseSensitive` (absent means case-sensitive comparison).
