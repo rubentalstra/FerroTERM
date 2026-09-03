@@ -42,6 +42,7 @@ Machine-generated per version from the vendored, pinned HL7 FHIR packages
 | `hl7.fhir.r6.core` | 6.0.0-ballot5 | ballot-tracking generation (not GA); published on packages2.fhir.org |
 | `hl7.terminology` (THO) | 7.3.0 | terminology content moves here in R5/R6 |
 
+
 ## SNOMED CT / ECL
 
 | Item | Pin |
@@ -60,3 +61,13 @@ dependency to a crate with `dep.workspace = true`.
 
 Every `uses:` in `.github/workflows/**` is pinned to a full commit SHA with a
 trailing `# vX.Y.Z` comment (`.claude/rules/ci-cd.md`); Dependabot bumps them.
+
+## Conformance suite
+
+| Item | Pin |
+|---|---|
+| HL7 terminology ecosystem test cases | `HL7/fhir-tx-ecosystem-ig` at `eaec771d82fba4eac596c14963546f39b4ecffe7` (test cases 1.9.3), `tests/` only |
+| FHIR Validator (`txTests` runner) | 6.10.3, `validator_cli.jar` sha256 `91e4da9d1bd4c11d9a05c0ec0837c0c830ef800bc37faed6873e26f6702bceba` |
+
+Both pins live in `scripts/checks/tx-ecosystem.sh`; the pass list is
+`conformance/tx-ecosystem/passing.txt`.

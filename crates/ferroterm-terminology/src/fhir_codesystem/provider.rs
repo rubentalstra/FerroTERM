@@ -387,7 +387,13 @@ fn build_hierarchy(
     count: u32,
 ) -> Result<Option<ModelHierarchy>, BuildError> {
     let has_parents = model.concepts.iter().any(|c| !c.parents.is_empty());
-    if model.hierarchy_meaning != Some(HierarchyMeaning::IsA) || !has_parents {
+    // NOTE: no version defines the hierarchy when `hierarchyMeaning` is absent
+    // (<https://hl7.org/fhir/R4B/codesystem.html>); the ecosystem suite reads nested
+    // concepts as is-a, so only another stated meaning withholds subsumption.
+    let is_a = model
+        .hierarchy_meaning
+        .is_none_or(|meaning| meaning == HierarchyMeaning::IsA);
+    if !is_a || !has_parents {
         return Ok(None);
     }
     let by_code: BTreeMap<&str, u32> = model

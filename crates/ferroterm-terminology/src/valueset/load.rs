@@ -45,10 +45,17 @@ pub fn load_dir(dir: &Path, version: FhirVersion) -> Result<Vec<ValueSetModel>, 
                     .map_err(decode)?,
             ),
         };
-        models.push(model.map_err(|source| LoadError::ValueSet {
+        let model = model.map_err(|source| LoadError::ValueSet {
             path: path.clone(),
             source,
-        })?);
+        })?;
+        if model.url.is_empty() {
+            return Err(LoadError::ValueSet {
+                path: path.clone(),
+                source: super::model::ModelError::NoUrl,
+            });
+        }
+        models.push(model);
     }
     Ok(models)
 }

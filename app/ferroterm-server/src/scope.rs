@@ -32,6 +32,9 @@ use crate::state::{AppState, supplement_of};
 
 /// The parameter that carries a request-scoped resource.
 pub const TX_RESOURCE: &str = "tx-resource";
+/// The ecosystem runner's profile parameter naming the expansion identifier
+/// to use; not declared by any version, peeled off with the resources.
+pub const UUID: &str = "uuid";
 /// The header that names a cache started with `$cache-control`.
 pub const CACHE_ID_HEADER: &str = "X-Cache-Id";
 /// How long an unused cache lives. No spec fixes this: our own design.
@@ -183,8 +186,8 @@ fn resource_type(resource: &Resource) -> &str {
     }
 }
 
-/// Splits the `tx-resource` parameters off `parameters`, returning the
-/// operation's own parameters and the resources.
+/// Splits the `tx-resource` parameters (and the runner's `uuid`) off
+/// `parameters`, returning the operation's own parameters and the resources.
 ///
 /// # Errors
 ///
@@ -193,6 +196,12 @@ pub fn split_resources(parameters: Parameters) -> Result<(Parameters, Vec<Resour
     let mut own = Vec::with_capacity(parameters.parameter.len());
     let mut resources = Vec::new();
     for parameter in parameters.parameter {
+        // NOTE: `uuid` comes with the ecosystem runner's default profile
+        // (`tests/parameters-default.json` of HL7/fhir-tx-ecosystem-ig); no
+        // version declares it, so it never reaches the generated request.
+        if parameter.name.value.as_deref() == Some(UUID) {
+            continue;
+        }
         if parameter.name.value.as_deref() == Some(TX_RESOURCE) {
             let resource = parameter.resource.ok_or_else(|| {
                 Failure::new(
