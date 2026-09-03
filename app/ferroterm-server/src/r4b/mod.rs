@@ -1,5 +1,6 @@
 //! The FHIR R4B surface under `/r4b`.
 
+pub mod map;
 pub mod metadata;
 pub mod operations;
 pub mod system;

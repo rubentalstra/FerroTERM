@@ -6,14 +6,13 @@ use std::sync::Arc;
 use ferroterm_fhir::r4b::code_system::CodeSystem;
 use ferroterm_fhir::r4b::codeable_concept::CodeableConcept;
 use ferroterm_fhir::r4b::coding::Coding;
-use ferroterm_fhir::r4b::operations::code_system_lookup::CodeSystemLookupRequest;
-use ferroterm_fhir::r4b::operations::code_system_subsumes::CodeSystemSubsumesRequest;
 use ferroterm_fhir::r4b::operations::code_system_validate_code::CodeSystemValidateCodeRequest;
 use ferroterm_fhir::r4b::parameters::ParametersParameterValue;
-use ferroterm_terminology::operations::lookup::lookup;
-use ferroterm_terminology::operations::subsumes::subsumes;
+use ferroterm_terminology::operations::lookup::{LookupInput, lookup};
+use ferroterm_terminology::operations::subsumes::{SubsumesInput, subsumes};
 use ferroterm_terminology::operations::validate_code::validate_code;
-use ferroterm_terminology::operations::{Invocation, OperationError};
+use ferroterm_terminology::operations::{CodingRef, Invocation, OperationError};
+use ferroterm_terminology::provider::PropertyValue;
 use ferroterm_terminology::registry::Registry;
 use http::StatusCode;
 
@@ -27,6 +26,15 @@ fn coding(system: Option<&str>, code: &str) -> Coding {
     }
 }
 
+/// A coding as the engine names one.
+fn coding_ref(system: Option<&str>, code: &str) -> CodingRef {
+    CodingRef {
+        system: system.map(str::to_owned),
+        code: Some(code.to_owned()),
+        ..CodingRef::default()
+    }
+}
+
 fn instance(registry: &Registry, url: &str) -> Invocation {
     Invocation::Instance(registry.resolve(url, None).expect("resolves"))
 }
@@ -36,114 +44,100 @@ fn instance(registry: &Registry, url: &str) -> Invocation {
 #[test]
 fn lookup_by_system_and_code_returns_name_version_display_designations_properties() {
     let registry = registry();
-    let request = CodeSystemLookupRequest {
-        system: Some(URL.into()),
-        code: Some("cat".into()),
-        ..Default::default()
+    let input = LookupInput {
+        system: Some(URL.to_owned()),
+        code: Some(String::from("cat")),
+        ..LookupInput::default()
     };
-    let response = lookup(&registry, &Invocation::Type, &request).expect("looks up");
-    assert_eq!(response.name.value.as_deref(), Some("Fixture"));
-    assert_eq!(
-        response.version.and_then(|v| v.value).as_deref(),
-        Some("2025")
-    );
-    assert_eq!(response.display.value.as_deref(), Some("Cat"));
-    let languages: Vec<&str> = response
-        .designation
+    let outcome = lookup(&registry, &Invocation::Type, &input).expect("looks up");
+    assert_eq!(outcome.name, "Fixture");
+    assert_eq!(outcome.version.as_deref(), Some("2025"));
+    assert_eq!(outcome.display, "Cat");
+    let languages: Vec<&str> = outcome
+        .designations
         .iter()
-        .filter_map(|d| d.language.as_ref().and_then(|l| l.value.as_deref()))
+        .filter_map(|d| d.language.as_deref())
         .collect();
     assert_eq!(languages, ["en", "nl"]);
-    let codes: Vec<&str> = response
-        .property
-        .iter()
-        .filter_map(|p| p.code.value.as_deref())
-        .collect();
+    let codes: Vec<&str> = outcome.properties.iter().map(|p| p.code.as_str()).collect();
     assert_eq!(codes, ["legs", "kingdom"]);
-    assert_eq!(
-        response.property[0].value,
-        Some(ParametersParameterValue::Integer(4.into()))
-    );
+    assert_eq!(outcome.properties[0].value, PropertyValue::Integer(4));
 }
 
 #[test]
 fn lookup_by_coding_with_version_and_display_language() {
     let registry = registry();
-    let request = CodeSystemLookupRequest {
-        coding: Some(Coding {
-            system: Some(URL.into()),
-            version: Some("2024".into()),
-            code: Some("dog".into()),
-            ..Default::default()
+    let input = LookupInput {
+        coding: Some(CodingRef {
+            system: Some(URL.to_owned()),
+            version: Some(String::from("2024")),
+            code: Some(String::from("dog")),
+            display: None,
         }),
-        display_language: Some("nl".into()),
-        ..Default::default()
+        display_language: Some(String::from("nl")),
+        ..LookupInput::default()
     };
-    let response = lookup(&registry, &Invocation::Type, &request).expect("looks up");
-    assert_eq!(
-        response.version.and_then(|v| v.value).as_deref(),
-        Some("2024")
-    );
-    assert_eq!(response.display.value.as_deref(), Some("Hond"));
+    let outcome = lookup(&registry, &Invocation::Type, &input).expect("looks up");
+    assert_eq!(outcome.version.as_deref(), Some("2024"));
+    assert_eq!(outcome.display, "Hond");
 }
 
 #[test]
 fn lookup_property_selects_properties_and_lang_x_selects_designations() {
     let registry = registry();
-    let request = CodeSystemLookupRequest {
-        system: Some(URL.into()),
-        code: Some("cat".into()),
-        property: vec!["kingdom".into(), "lang.nl".into(), "display".into()],
-        ..Default::default()
+    let input = LookupInput {
+        system: Some(URL.to_owned()),
+        code: Some(String::from("cat")),
+        properties: vec![
+            String::from("kingdom"),
+            String::from("lang.nl"),
+            String::from("display"),
+        ],
+        ..LookupInput::default()
     };
-    let response = lookup(&registry, &Invocation::Type, &request).expect("looks up");
-    let codes: Vec<&str> = response
-        .property
-        .iter()
-        .filter_map(|p| p.code.value.as_deref())
-        .collect();
+    let outcome = lookup(&registry, &Invocation::Type, &input).expect("looks up");
+    let codes: Vec<&str> = outcome.properties.iter().map(|p| p.code.as_str()).collect();
     assert_eq!(
         codes,
         ["kingdom"],
         "display is a named parameter, legs was not asked"
     );
-    assert_eq!(response.designation.len(), 1);
-    assert_eq!(response.designation[0].value.value.as_deref(), Some("Kat"));
+    assert_eq!(outcome.designations.len(), 1);
+    assert_eq!(outcome.designations[0].value, "Kat");
 }
 
 #[test]
 fn lookup_refusals_carry_their_issue_code_and_status() {
     let registry = registry();
-    let run =
-        |request: CodeSystemLookupRequest| lookup(&registry, &Invocation::Type, &request).err();
+    let run = |input: LookupInput| lookup(&registry, &Invocation::Type, &input).err();
     // Nothing named.
-    let error = run(CodeSystemLookupRequest::default()).expect("refused");
+    let error = run(LookupInput::default()).expect("refused");
     assert!(matches!(error, OperationError::Required(_)));
     assert_eq!(
         (error.issue_code(), error.status()),
         ("required", StatusCode::BAD_REQUEST)
     );
-    // Code without system.
-    let error = run(CodeSystemLookupRequest {
-        code: Some("cat".into()),
-        ..Default::default()
+    // A code without a system.
+    let error = run(LookupInput {
+        code: Some(String::from("cat")),
+        ..LookupInput::default()
     })
     .expect("refused");
     assert!(matches!(error, OperationError::Required(_)));
-    // Both forms.
-    let error = run(CodeSystemLookupRequest {
-        code: Some("cat".into()),
-        system: Some(URL.into()),
-        coding: Some(coding(Some(URL), "cat")),
-        ..Default::default()
+    // Both forms at once.
+    let error = run(LookupInput {
+        code: Some(String::from("cat")),
+        system: Some(URL.to_owned()),
+        coding: Some(coding_ref(Some(URL), "cat")),
+        ..LookupInput::default()
     })
     .expect("refused");
     assert!(matches!(error, OperationError::Invalid(_)));
-    // Unknown code: the page's example status.
-    let error = run(CodeSystemLookupRequest {
-        code: Some("unicorn".into()),
-        system: Some(URL.into()),
-        ..Default::default()
+    // An unknown code.
+    let error = run(LookupInput {
+        code: Some(String::from("unicorn")),
+        system: Some(URL.to_owned()),
+        ..LookupInput::default()
     })
     .expect("refused");
     assert!(matches!(error, OperationError::UnknownCode { ref code, .. } if code == "unicorn"));
@@ -151,32 +145,33 @@ fn lookup_refusals_carry_their_issue_code_and_status() {
         (error.issue_code(), error.status()),
         ("not-found", StatusCode::BAD_REQUEST)
     );
-    // Unknown system and version.
-    let error = run(CodeSystemLookupRequest {
-        code: Some("cat".into()),
-        system: Some("http://example.org/nowhere".into()),
-        ..Default::default()
+    // An unknown system.
+    let error = run(LookupInput {
+        code: Some(String::from("cat")),
+        system: Some(String::from("http://example.org/nowhere")),
+        ..LookupInput::default()
     })
     .expect("refused");
     assert_eq!(
         (error.issue_code(), error.status()),
         ("not-found", StatusCode::NOT_FOUND)
     );
-    let error = run(CodeSystemLookupRequest {
-        code: Some("cat".into()),
-        system: Some(URL.into()),
-        version: Some("1999".into()),
-        ..Default::default()
+    // An unknown version.
+    let error = run(LookupInput {
+        code: Some(String::from("cat")),
+        system: Some(URL.to_owned()),
+        version: Some(String::from("1999")),
+        ..LookupInput::default()
     })
     .expect("refused");
     assert!(matches!(error, OperationError::UnknownVersion { .. }));
-    // Instance level is not declared for $lookup in R4B.
+    // The instance level, which the definition does not declare.
     let error = lookup(
         &registry,
         &instance(&registry, URL),
-        &CodeSystemLookupRequest {
-            code: Some("cat".into()),
-            ..Default::default()
+        &LookupInput {
+            code: Some(String::from("cat")),
+            ..LookupInput::default()
         },
     )
     .expect_err("refused");
@@ -400,90 +395,92 @@ fn subsumes_outcomes_follow_the_closure() {
         subsumes(
             &registry,
             &Invocation::Type,
-            &CodeSystemSubsumesRequest {
-                code_a: Some(a.into()),
-                code_b: Some(b.into()),
-                system: Some(URL.into()),
-                ..Default::default()
+            &SubsumesInput {
+                code_a: Some(a.to_owned()),
+                code_b: Some(b.to_owned()),
+                system: Some(URL.to_owned()),
+                ..SubsumesInput::default()
             },
         )
         .expect("subsumes")
-        .outcome
-        .value
+        .code()
     };
-    assert_eq!(run("animal", "cat").as_deref(), Some("subsumes"));
-    assert_eq!(run("cat", "animal").as_deref(), Some("subsumed-by"));
-    assert_eq!(run("cat", "cat").as_deref(), Some("equivalent"));
-    assert_eq!(run("cat", "dog").as_deref(), Some("not-subsumed"));
+    assert_eq!(run("animal", "cat"), "subsumes");
+    assert_eq!(run("cat", "animal"), "subsumed-by");
+    assert_eq!(run("cat", "cat"), "equivalent");
+    assert_eq!(run("cat", "dog"), "not-subsumed");
     let by_codings = subsumes(
         &registry,
         &Invocation::Type,
-        &CodeSystemSubsumesRequest {
-            coding_a: Some(coding(Some(URL), "root")),
-            coding_b: Some(coding(Some(URL), "kitten")),
-            ..Default::default()
+        &SubsumesInput {
+            coding_a: Some(coding_ref(Some(URL), "root")),
+            coding_b: Some(coding_ref(Some(URL), "kitten")),
+            ..SubsumesInput::default()
         },
     )
     .expect("subsumes");
-    assert_eq!(by_codings.outcome.value.as_deref(), Some("subsumes"));
+    assert_eq!(by_codings.code(), "subsumes");
     let on_instance = subsumes(
         &registry,
         &instance(&registry, URL),
-        &CodeSystemSubsumesRequest {
-            code_a: Some("kitten".into()),
-            code_b: Some("cat".into()),
-            ..Default::default()
+        &SubsumesInput {
+            code_a: Some(String::from("kitten")),
+            code_b: Some(String::from("cat")),
+            ..SubsumesInput::default()
         },
     )
     .expect("subsumes");
-    assert_eq!(on_instance.outcome.value.as_deref(), Some("subsumed-by"));
+    assert_eq!(on_instance.code(), "subsumed-by");
 }
 
 #[test]
 fn subsumes_refusals_are_errors_never_not_subsumed() {
     let registry = registry();
-    let run = |request: CodeSystemSubsumesRequest| {
-        subsumes(&registry, &Invocation::Type, &request).expect_err("refused")
-    };
+    let run =
+        |input: SubsumesInput| subsumes(&registry, &Invocation::Type, &input).expect_err("refused");
     assert!(matches!(
-        run(CodeSystemSubsumesRequest::default()),
+        run(SubsumesInput::default()),
         OperationError::Required(_)
     ));
+    // A code and a coding mixed.
     assert!(matches!(
-        run(CodeSystemSubsumesRequest {
-            code_a: Some("cat".into()),
-            coding_b: Some(coding(Some(URL), "dog")),
-            system: Some(URL.into()),
-            ..Default::default()
+        run(SubsumesInput {
+            code_a: Some(String::from("cat")),
+            coding_b: Some(coding_ref(Some(URL), "dog")),
+            system: Some(URL.to_owned()),
+            ..SubsumesInput::default()
         }),
         OperationError::Invalid(_)
     ));
+    // Codes without a system.
     assert!(matches!(
-        run(CodeSystemSubsumesRequest {
-            code_a: Some("cat".into()),
-            code_b: Some("dog".into()),
-            ..Default::default()
+        run(SubsumesInput {
+            code_a: Some(String::from("cat")),
+            code_b: Some(String::from("dog")),
+            ..SubsumesInput::default()
         }),
         OperationError::Required(_)
     ));
-    let unknown = run(CodeSystemSubsumesRequest {
-        code_a: Some("cat".into()),
-        code_b: Some("unicorn".into()),
-        system: Some(URL.into()),
-        ..Default::default()
+    let unknown = run(SubsumesInput {
+        code_a: Some(String::from("cat")),
+        code_b: Some(String::from("unicorn")),
+        system: Some(URL.to_owned()),
+        ..SubsumesInput::default()
     });
     assert!(matches!(unknown, OperationError::UnknownCode { .. }));
-    let foreign = run(CodeSystemSubsumesRequest {
-        coding_a: Some(coding(Some(URL), "cat")),
-        coding_b: Some(coding(Some("http://loinc.org"), "1")),
-        ..Default::default()
+    // Codings of two systems.
+    let foreign = run(SubsumesInput {
+        coding_a: Some(coding_ref(Some(URL), "cat")),
+        coding_b: Some(coding_ref(Some("http://loinc.org"), "1")),
+        ..SubsumesInput::default()
     });
     assert!(matches!(foreign, OperationError::NotSupported(_)));
-    let flat = run(CodeSystemSubsumesRequest {
-        code_a: Some("cat".into()),
-        code_b: Some("dog".into()),
-        system: Some(FLAT_URL.into()),
-        ..Default::default()
+    // A system without subsumption.
+    let flat = run(SubsumesInput {
+        code_a: Some(String::from("cat")),
+        code_b: Some(String::from("dog")),
+        system: Some(FLAT_URL.to_owned()),
+        ..SubsumesInput::default()
     });
     assert!(matches!(flat, OperationError::NotSupported(_)));
     assert_eq!(flat.status(), StatusCode::BAD_REQUEST);
@@ -495,11 +492,11 @@ fn subsumes_refusals_are_errors_never_not_subsumed() {
         subsumes(
             &registry_without,
             &Invocation::Type,
-            &CodeSystemSubsumesRequest {
-                code_a: Some("a".into()),
-                code_b: Some("b".into()),
-                system: Some(URL.into()),
-                ..Default::default()
+            &SubsumesInput {
+                code_a: Some(String::from("a")),
+                code_b: Some(String::from("b")),
+                system: Some(URL.to_owned()),
+                ..SubsumesInput::default()
             }
         ),
         Err(OperationError::UnknownSystem(_))

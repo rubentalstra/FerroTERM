@@ -1,50 +1,55 @@
-//! `CodeSystem/$subsumes` on R4B
-//! (<https://hl7.org/fhir/R4B/codesystem-operation-subsumes.html>).
+//! `CodeSystem/$subsumes` in the terms every served FHIR version shares.
 //!
-//! `codeA` and `codeB` with a `system` (or the instance), or `codingA` and
-//! `codingB`. The outcome is `equivalent`, `subsumes`, `subsumed-by`, or
-//! `not-subsumed`, A relative to B. When the relationship cannot be
-//! determined (an unknown code, a system without a hierarchy, codings from a
-//! system other than the one tested) the answer is an error, never
-//! `not-subsumed`.
+//! Two codes (or two codings) of one system, and the subsumption outcome of
+//! the provider or its hierarchy
+//! (<https://hl7.org/fhir/R4B/codesystem-operation-subsumes.html>).
 
-use ferroterm_fhir::r4b::operations::code_system_subsumes::{
-    CodeSystemSubsumesRequest, CodeSystemSubsumesResponse,
-};
+use ferroterm_graph::subsumption::Outcome;
 
-use super::{
-    Invocation, OperationError, code_text, coding_parts, locate, resolve, string_text, uri_text,
-};
+use super::{CodingRef, Invocation, OperationError, locate, resolve};
 use crate::registry::Registry;
+
+/// The input of `$subsumes`: `codeA` and `codeB` with `system`, or `codingA`
+/// and `codingB`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SubsumesInput {
+    /// The first code.
+    pub code_a: Option<String>,
+    /// The second code.
+    pub code_b: Option<String>,
+    /// The code system URI.
+    pub system: Option<String>,
+    /// The code system version.
+    pub version: Option<String>,
+    /// The first coding, instead of `codeA`.
+    pub coding_a: Option<CodingRef>,
+    /// The second coding, instead of `codeB`.
+    pub coding_b: Option<CodingRef>,
+}
 
 /// Runs `$subsumes`.
 ///
 /// # Errors
 ///
-/// Returns [`OperationError`] for missing or mixed inputs, a missing system,
-/// codings from another system, an unknown system, version, or code, a
-/// system without subsumption, or a provider failure.
+/// Returns [`OperationError`] for a missing or mixed pair, codings of two
+/// systems or versions, an unknown system, version, or code, a system
+/// without subsumption, or a provider failure.
 pub fn subsumes(
     registry: &Registry,
     invocation: &Invocation,
-    request: &CodeSystemSubsumesRequest,
-) -> Result<CodeSystemSubsumesResponse, OperationError> {
-    let codes = (
-        code_text(request.code_a.as_ref()),
-        code_text(request.code_b.as_ref()),
-    );
-    let codings = (&request.coding_a, &request.coding_b);
-    let mut system = uri_text(request.system.as_ref());
-    let mut version = string_text(request.version.as_ref());
+    input: &SubsumesInput,
+) -> Result<Outcome, OperationError> {
+    let codes = (input.code_a.as_deref(), input.code_b.as_deref());
+    let codings = (&input.coding_a, &input.coding_b);
+    let mut system = input.system.as_deref();
+    let mut version = input.version.as_deref();
     let (a, b) = match (codes, codings) {
         ((Some(a), Some(b)), (None, None)) => (a, b),
         ((None, None), (Some(coding_a), Some(coding_b))) => {
-            let (system_a, version_a, a, _) = coding_parts(coding_a);
-            let (system_b, version_b, b, _) = coding_parts(coding_b);
-            // NOTE: codings from a system other than the one tested need
-            // "well established" relationships between the systems, which the
-            // server does not have; the definition says to return an error.
-            for other in [system_a, system_b].into_iter().flatten() {
+            for other in [coding_a.system.as_deref(), coding_b.system.as_deref()]
+                .into_iter()
+                .flatten()
+            {
                 match system {
                     Some(tested) if tested != other => {
                         return Err(OperationError::NotSupported(format!(
@@ -55,18 +60,20 @@ pub fn subsumes(
                     None => system = Some(other),
                 }
             }
-            if let (Some(va), Some(vb)) = (version_a, version_b)
+            if let (Some(va), Some(vb)) = (&coding_a.version, &coding_b.version)
                 && va != vb
             {
                 return Err(OperationError::Invalid(String::from(
                     "`codingA` and `codingB` name different versions",
                 )));
             }
-            version = version.or(version_a).or(version_b);
-            let a = a.ok_or_else(|| {
+            version = version
+                .or(coding_a.version.as_deref())
+                .or(coding_b.version.as_deref());
+            let a = coding_a.code.as_deref().ok_or_else(|| {
                 OperationError::Required(String::from("`codingA.code` is required"))
             })?;
-            let b = b.ok_or_else(|| {
+            let b = coding_b.code.as_deref().ok_or_else(|| {
                 OperationError::Required(String::from("`codingB.code` is required"))
             })?;
             (a, b)
@@ -87,9 +94,7 @@ pub fn subsumes(
     let a = locate(provider, a)?.concept;
     let b = locate(provider, b)?.concept;
     if let Some(outcome) = provider.subsumes(a, b)? {
-        return Ok(CodeSystemSubsumesResponse {
-            outcome: outcome.code().into(),
-        });
+        return Ok(outcome);
     }
     let hierarchy = provider.hierarchy().ok_or_else(|| {
         OperationError::NotSupported(format!(
@@ -97,7 +102,5 @@ pub fn subsumes(
             provider.identity().url
         ))
     })?;
-    Ok(CodeSystemSubsumesResponse {
-        outcome: hierarchy.subsumes(a, b).code().into(),
-    })
+    Ok(hierarchy.subsumes(a, b))
 }

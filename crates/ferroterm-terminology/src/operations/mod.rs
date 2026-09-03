@@ -20,6 +20,20 @@ use http::StatusCode;
 use crate::provider::{CodeSystemProvider, ProviderError};
 use crate::registry::{Registry, ResolveError, Resolved};
 
+/// A coding as an operation input names it, in no FHIR version's types: the
+/// system, version, code, and display a `Coding` carries.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CodingRef {
+    /// The code system URI.
+    pub system: Option<String>,
+    /// The code system version.
+    pub version: Option<String>,
+    /// The code.
+    pub code: Option<String>,
+    /// The display the client sent.
+    pub display: Option<String>,
+}
+
 /// Where an operation was invoked: on the type, or on one code system
 /// instance the server already resolved from the URL.
 #[derive(Debug, Clone)]

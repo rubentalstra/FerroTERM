@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::operations::code_system_lookup::CodeSystemLookupRequest;
 use ferroterm_fhir::r4b::operations::code_system_validate_code::CodeSystemValidateCodeRequest;
 use ferroterm_graph::subsumption::Outcome;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
@@ -333,18 +332,15 @@ fn a_supplement_layers_designations_and_properties_over_the_system() {
     registry
         .register(Arc::new(supplemented))
         .expect("registers");
-    let request = CodeSystemLookupRequest {
-        system: Some(ANIMALS.into()),
-        code: Some("cat".into()),
-        display_language: Some("nl".into()),
-        ..Default::default()
+    let input = lookup::LookupInput {
+        system: Some(ANIMALS.to_owned()),
+        code: Some(String::from("cat")),
+        display_language: Some(String::from("nl")),
+        ..lookup::LookupInput::default()
     };
-    let response = lookup::lookup(&registry, &Invocation::Type, &request).expect("looks up");
-    assert_eq!(response.display.value.as_deref(), Some("Kat"));
-    assert_eq!(
-        response.version.and_then(|v| v.value).as_deref(),
-        Some("2.0")
-    );
+    let outcome = lookup::lookup(&registry, &Invocation::Type, &input).expect("looks up");
+    assert_eq!(outcome.display, "Kat");
+    assert_eq!(outcome.version.as_deref(), Some("2.0"));
 }
 
 #[test]
