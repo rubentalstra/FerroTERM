@@ -17,37 +17,37 @@ sequence, not a scope limit; the server serves every version.
 
 ## FHIR terminology operations
 
-- [ ] `CodeSystem/$lookup`: display, designations, properties, the SNOMED
+- [x] `CodeSystem/$lookup`: display, designations, properties, the SNOMED
   edition+version in `version`
-- [ ] `CodeSystem/$validate-code`: code validity, display validation, correct
+- [x] `CodeSystem/$validate-code`: code validity, display validation, correct
   display returned when the submitted one is wrong
-- [ ] `CodeSystem/$subsumes`: subsumed / subsumes / equivalent / not-subsumed
+- [x] `CodeSystem/$subsumes`: subsumed / subsumes / equivalent / not-subsumed
 - [ ] `ValueSet/$expand`: `filter`, `count`, `offset`, `expansion.total`,
   `expansion.parameter` echo, `includeDesignations`, `designation`,
   `displayLanguage`, `activeOnly`, `property`, `excludeNested`
-- [ ] `ValueSet/$validate-code`: membership, display, inactive handling
+- [x] `ValueSet/$validate-code`: membership, display, inactive handling
 - [ ] `ConceptMap/$translate`: explicit maps and SNOMED implicit maps
 - [ ] `ConceptMap/$closure`: client-side transitive-closure maintenance
 - [ ] `CodeSystem/$find-matches`
-- [ ] `metadata` (CapabilityStatement) and `metadata?mode=terminology`
+- [x] `metadata` (CapabilityStatement) and `metadata?mode=terminology`
   (TerminologyCapabilities) enumerating supported systems, versions, and
   implicit-value-set capability
 
 ## Operation mechanics
 
-- [ ] GET (query params) and POST (`Parameters`) invocation for every operation
-- [ ] Type-level (`ValueSet/$expand?url=`) and instance-level forms
-- [ ] `(system, version)` identity: resolve the default version and echo the
+- [x] GET (query params) and POST (`Parameters`) invocation for every operation
+- [x] Type-level (`ValueSet/$expand?url=`) and instance-level forms
+- [x] `(system, version)` identity: resolve the default version and echo the
   resolved version in every response
-- [ ] `$expand` version pinning: `system-version`, `check-system-version`,
+- [x] `$expand` version pinning: `system-version`, `check-system-version`,
   `force-system-version`
-- [ ] Deterministic, stable expansion ordering so paging is repeatable
-- [ ] `OperationOutcome` on every failure, with `severity`, `code`, `expression`,
+- [x] Deterministic, stable expansion ordering so paging is repeatable
+- [x] `OperationOutcome` on every failure, with `severity`, `code`, `expression`,
   `details.coding` (from `tx-issue-type`), `details.text`
 - [ ] Unknown-system handling (`x-caused-by-unknown-system`) distinct from
   invalid-code; `not-supported` for unsupported targets; client input errors are
   `OperationOutcome`, never a 500
-- [ ] Inactive concepts served and marked `inactive`, never a 404; successors
+- [x] Inactive concepts served and marked `inactive`, never a 404; successors
   routed through `$translate`
 - [ ] `displayLanguage` parameter and `Accept-Language` header both honoured;
   `designation.language`/`.use`/`.value` returned; deterministic language
@@ -55,31 +55,31 @@ sequence, not a scope limit; the server serves every version.
 
 ## FHIR versions (all served)
 
-- [ ] R4B (4.3.0)
+- [x] R4B (4.3.0)
 - [ ] R5 (5.0.0)
 - [ ] R4 (4.0.1)
 - [ ] R6 (ballot, tracked as it moves)
-- [ ] Per-version operation parameter sets generated from each version's
+- [x] Per-version operation parameter sets generated from each version's
   `OperationDefinition`; one server answers every version at runtime
 
 ## Code systems (the provider seam, `docs/architecture.md` §5)
 
-- [ ] The code system provider seam: identity and versions, metadata for
+- [x] The code system provider seam: identity and versions, metadata for
   `TerminologyCapabilities`, locate, designations by language, typed
   properties, supplements, generic filters, text search, enumeration; hierarchy,
   system-specific filters, implicit value sets, and concept maps as declared
   capabilities
-- [ ] The compose layer (include, exclude, dedup, `offset`, `count`,
+- [x] The compose layer (include, exclude, dedup, `offset`, `count`,
   `expansion.total`) once, above every provider
 - [ ] SNOMED CT provider (RF2 loader, ECL, implicit forms; the sections below)
-- [ ] Generic FHIR `CodeSystem` resource provider (HL7 Terminology, custom code
+- [x] Generic FHIR `CodeSystem` resource provider (HL7 Terminology, custom code
   systems, supplements; `hierarchyMeaning`, `caseSensitive`, `content`,
   `versionNeeded` honoured); passes the tx-ecosystem `general` mode
-- [ ] LOINC provider (LoincTable, multiaxial hierarchy, parts, answer lists,
+- [x] LOINC provider (LoincTable, multiaxial hierarchy, parts, answer lists,
   linguistic variants; the FHIR LOINC filters and `/vs/` implicit value sets)
-- [ ] UCUM provider (grammar-defined validation, `canonical` filter, no
+- [x] UCUM provider (grammar-defined validation, `canonical` filter, no
   enumeration)
-- [ ] ICD-10 providers (WHO ClaML, ICD-10-NL, ICD-10-CM; `classified-with`
+- [x] ICD-10 providers (WHO ClaML, ICD-10-NL, ICD-10-CM; `classified-with`
   hierarchy)
 - [ ] Further providers per `docs/terminologies.md` (RxNorm, ATC, ICD-11,
   BCP 47, BCP 13, ISO 3166, the Dutch national code systems)
@@ -88,7 +88,7 @@ sequence, not a scope limit; the server serves every version.
 
 ## SNOMED CT on FHIR
 
-- [ ] URI standard: `http://snomed.info/sct`, edition and version URIs, concept
+- [x] URI standard: `http://snomed.info/sct`, edition and version URIs, concept
   URIs; edition/version only in `version`
 - [ ] Implicit value sets: `?fhir_vs`, `?fhir_vs=isa/[sctid]`,
   `?fhir_vs=ecl/[ecl]`, `?fhir_vs=refset`, `?fhir_vs=refset/[sctid]`, with an
@@ -97,9 +97,9 @@ sequence, not a scope limit; the server serves every version.
   map reference sets wired into `$translate`
 - [ ] Multi-edition support via the Module Dependency Reference Set; default
   edition+version resolution and per-request override
-- [ ] Preferred-term / display selection from the language reference set and RF2
+- [x] Preferred-term / display selection from the language reference set and RF2
   acceptability; FSN vs synonym
-- [ ] `compose.filter` (`is-a`, `in`) answered by the same engine as the implicit
+- [x] `compose.filter` (`is-a`, `in`) answered by the same engine as the implicit
   forms
 
 ## ECL (Expression Constraint Language 2.2)

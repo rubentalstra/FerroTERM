@@ -1,42 +1,46 @@
-# Loading a SNOMED CT edition
+# Loading code systems
 
-FerroTERM serves the SNOMED CT edition you load. This page explains the licensing
-rules you must satisfy first, and the planned build step that turns an RF2 release
-into the index the server reads.
+FerroTERM serves the code systems you load. Each arrives as the release its
+owner distributes, turned once into an index by `ferroterm-build`, and served
+read-only. This page covers the licensing rule, the build step, and the
+command for every supported source; the sections below name each system.
 
 <!-- toc -->
 
 ## You bring your own content
 
 > [!WARNING]
-> This repository ships no SNOMED CT content, and no build of FerroTERM contains any.
-> SNOMED CT is licensed separately by SNOMED International. You must hold a valid
-> SNOMED CT licence for the edition you load.
+> This repository ships no code system content, and no build of FerroTERM
+> contains any. SNOMED CT is licensed by SNOMED International, LOINC by
+> Regenstrief, ICD by the WHO, RxNorm by the NLM. You must hold whatever
+> licence the release you load requires.
 
-The split is firm, and you must keep the two apart:
-
-- **The software** in this repository is open source under the MIT license.
-- **SNOMED CT content** is the property of SNOMED International and is not
-  distributed here.
-
-A SNOMED CT licence is free within member countries, the Netherlands among them,
-and available under the affiliate licence elsewhere. You obtain the RF2 release
-for your edition from your national release centre or from SNOMED International,
-under your licence, and you load it into FerroTERM yourself.
+The split is firm: the software in this repository is open source under the
+MIT license, and the code system content is the property of its owner and is
+not distributed here. A SNOMED CT licence is free within member countries, the
+Netherlands among them, and available under the affiliate licence elsewhere;
+LOINC needs a free account; ICD-10-CM and the RxNorm prescribable subset are
+public downloads; ICD-11 comes through the WHO's own container under its
+licence.
 
 ## The offline build
 
-The running server never parses RF2 and never classifies the ontology. A separate
-tool, `ferroterm-build`, turns an RF2 release into the memory-mapped index once
-per edition, and the server opens that index read-only. The tool ships in every
-release tarball beside `ferroterm` and in the container image.
+The running server never parses a release. `ferroterm-build` turns it into the
+memory-mapped index once, and the server opens the index read-only. The tool
+ships in every release tarball beside `ferroterm` and in the container image.
 
 ```mermaid
 graph LR
-    RF2["Licensed RF2 release<br/>(you provide)"] --> BUILD["ferroterm-build<br/>(offline)"]
-    BUILD --> IDX["ferroterm-index<br/>(graph + store + text)"]
-    IDX --> SRV["ferroterm<br/>(read-only)"]
+    REL["A release you are licensed for"] --> BUILD["ferroterm-build (offline)"]
+    BUILD --> IDX["index: store.redb + hierarchy.bin + text.bin + manifest.json"]
+    IDX --> SRV["ferroterm (read-only)"]
 ```
+
+Every source builds into the same layout, and the manifest names the system,
+so `FERROTERM_INDEX` takes any mix of them. When a new release arrives, rebuild
+its index and restart the server against it.
+
+## Loading a SNOMED CT edition
 
 The command takes the release zip as SNOMED International or your national
 release centre distributes it, or the unpacked release directory, and writes
@@ -49,20 +53,14 @@ $ ferroterm-build --rf2 /path/to/SnomedCT_Release.zip --out /path/to/ferroterm-i
 From a zip, only the `Snapshot/` tree is unpacked, to a temporary directory
 that is removed when the build ends; the Full and Delta trees are never read.
 With the container image the same build is one compose command (see
-[Install and run](install.md)).
+[Install and run](install.md)). The build reads the concepts, descriptions,
+language reference sets, and inferred relationships, computes the transitive
+closure, and writes the store, the hierarchy, and the text index. The Dutch
+edition of June 2026 takes 49 s and 591 MB.
 
-The build computes the transitive closure from the shipped inferred relationship
-file, builds the CSR adjacency and the roaring closure bitmaps, writes the
-columnar concept and description store, and builds the text index. It runs once
-per release. When a new edition arrives, you rebuild the index and restart the
-server against it.
-
-
-## Test content
-
-FerroTERM's own tests use shaped, synthetic content only. They never contain real
-SNOMED CT concepts extracted from a release, which keeps the licence line clean
-in the repository itself.
+The edition and version come from the release itself (the module and
+effective time), and `$lookup` returns them as the version URI
+(`http://snomed.info/sct/11000146104/version/20260630`).
 
 ## Loading LOINC
 
@@ -149,3 +147,9 @@ the API is only needed once per release. The build writes
 `FERROTERM_INDEX` at each of the three. Languages beyond English need the
 deployment to include them (`include=2026-01_fr`); the build records every
 language the cache holds.
+
+## Test content
+
+FerroTERM's own tests use shaped, synthetic content only. They never contain real
+content extracted from a release, which keeps the licence line clean in the
+repository itself.

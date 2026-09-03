@@ -10,8 +10,8 @@ and its rules in the repository.
 
 HL7 publishes the whole FHIR type system and every operation as machine-readable
 `StructureDefinition` and `OperationDefinition` resources, in versioned packages.
-Rather than transcribe those by hand for four versions, FerroTERM vendors the
-packages and generates per-version Rust modules from them. Each version's
+FerroTERM vendors the packages and generates per-version Rust modules from
+them. Each version's
 operation surface is then correct by construction: a parameter that R5 adds
 appears in the R5 module because the R5 package declares it.
 
@@ -24,8 +24,8 @@ The generator reads vendored, pinned FHIR packages:
 | `hl7.fhir.r4.core` | 4.0.1 |
 | `hl7.fhir.r4b.core` | 4.3.0 |
 | `hl7.fhir.r5.core` | 5.0.0 |
-| `hl7.fhir.r6.core` | 6.0.0-ballot |
-| `hl7.terminology` | THO |
+| `hl7.fhir.r6.core` | 6.0.0-ballot5 |
+| `hl7.terminology` | the HL7 Terminology release pinned in `docs/VERSIONS.md` |
 
 The packages are vendored verbatim under `tools/ferroterm-fhir-codegen/vendor/`, each
 with a `PROVENANCE.md`, and fetched by a script. You never hand-edit a vendored

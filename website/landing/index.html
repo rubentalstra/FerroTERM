@@ -9,14 +9,14 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>FerroTERM — a pure-Rust FHIR terminology server for clinical code systems</title>
-  <meta name="description" content="FerroTERM is a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems that runs on ordinary hardware. Machine-generated FHIR across R4B, R5, R4, and R6. No JVM, no Elasticsearch. MIT licensed. In discovery.">
+  <meta name="description" content="FerroTERM serves SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR CodeSystem through the HL7 FHIR terminology API from one static binary over a memory-mapped index. No JVM, no Elasticsearch. MIT licensed.">
   <link rel="icon" type="image/svg+xml" href="./assets/logo-mark.svg">
   <link rel="canonical" href="https://ferroterm.eu/">
   <meta property="og:url" content="https://ferroterm.eu/">
   <link rel="stylesheet" href="./style.css">
   <meta property="og:type" content="website">
   <meta property="og:title" content="FerroTERM — a pure-Rust FHIR terminology server for clinical code systems">
-  <meta property="og:description" content="A terminology server for SNOMED CT, LOINC, and other clinical code systems that serves the FHIR terminology API in a few hundred megabytes. No JVM, no Elasticsearch. MIT licensed. In discovery.">
+  <meta property="og:description" content="SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR CodeSystem through the FHIR terminology API, from one static binary. A Dutch SNOMED CT edition builds in 49 seconds into a 591 MB index. No JVM, no Elasticsearch. MIT licensed.">
   <meta property="og:site_name" content="FerroTERM">
 
   <!-- Structured data. Browsers never execute an application/ld+json data block
@@ -27,12 +27,13 @@
     "@context": "https://schema.org",
     "@type": "SoftwareSourceCode",
     "name": "FerroTERM",
-    "description": "A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems, in discovery. Serves the HL7 FHIR terminology API from a memory-mapped concept index, with no JVM and no Elasticsearch.",
+    "description": "A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR CodeSystem. Serves the HL7 FHIR terminology API from a memory-mapped index, with no JVM and no Elasticsearch.",
     "codeRepository": "https://github.com/rubentalstra/FerroTERM",
     "programmingLanguage": "Rust",
     "license": "https://opensource.org/licenses/MIT",
     "applicationCategory": "HealthApplication",
-    "developmentStatus": "Discovery"
+    "runtimePlatform": "Linux",
+    "version": "0.0.6"
   }
   </script>
 </head>
@@ -48,7 +49,7 @@
       <nav class="nav-links" aria-label="Primary">
         <a href="./docs/">Docs</a>
         <a href="#why" class="hide-sm">Why</a>
-        <a href="#facts" class="hide-sm">Facts</a>
+        <a href="#facts" class="hide-sm">What it serves</a>
         <a href="https://github.com/rubentalstra/FerroTERM" rel="noopener">GitHub</a>
       </nav>
     </div>
@@ -60,16 +61,17 @@
     <section class="hero">
       <div class="wrap">
         <img class="hero-logo" src="./assets/logo-mark.svg" alt="FerroTERM" width="88" height="88">
-        <p class="status" role="note">Discovery. No product code yet.</p>
-        <h1>A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems, on ordinary hardware.</h1>
+        <p class="status" role="note">v0.0.6 released. Linux binaries and a container image, signed.</p>
+        <h1>A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD, RxNorm, and every FHIR code system, on ordinary hardware.</h1>
         <p class="sub">
-          FerroTERM serves the HL7 FHIR terminology API for SNOMED CT, LOINC, and other clinical code systems from a
-          memory-mapped index built once per edition. You run the full
-          International edition in a few hundred megabytes on a laptop or a
-          small box, with no JVM and no search cluster to operate.
+          FerroTERM serves the HL7 FHIR terminology API from one static binary
+          over a memory-mapped index built once per release. A Dutch SNOMED CT
+          edition builds in 49 seconds into a 591 MB index, opens in half a
+          second, and answers a lookup in a few milliseconds on a laptop, with
+          no JVM and no search cluster to operate.
         </p>
         <div class="hero-cta">
-          <a class="btn btn-primary" href="./docs/">Read the documentation</a>
+          <a class="btn btn-primary" href="./docs/operate/install.html">Install and run</a>
           <a class="btn btn-ghost" href="https://github.com/rubentalstra/FerroTERM" rel="noopener">View on GitHub</a>
         </div>
         <p class="note">
@@ -88,8 +90,8 @@
           <p>
             SNOMED CT terminology servers today are almost all Java, and the
             reference server runs on Elasticsearch. That stack wants 16 to
-            32 GB of RAM to serve the International edition, more than a laptop
-            or a small box has.
+            32 GB of RAM to serve an edition, more than a laptop or a small box
+            has.
           </p>
         </div>
         <div class="compare">
@@ -99,69 +101,72 @@
             <p class="cap">RAM to serve the International edition, most of it Elasticsearch heap, plus a search cluster to run.</p>
           </article>
           <article class="compare-card accent">
-            <span class="tag">FerroTERM, by design</span>
-            <p class="big">a few hundred MB</p>
-            <p class="cap">One Rust binary and a memory-mapped index. Small enough to run beside other services on a modest box.</p>
+            <span class="tag">FerroTERM, measured</span>
+            <p class="big">591 MB on disk</p>
+            <p class="cap">The Dutch edition (548,949 concepts, 49 seconds to build) as one memory-mapped index, served by one Rust binary that started in half a second.</p>
           </article>
         </div>
         <p class="compare-note">
-          The data itself is small: about 360,000 concepts, 1.2 million
-          descriptions, and 1.5 million relationships. FerroTERM treats SNOMED as a
-          graph, materializes the answers a terminology server is asked for once
-          per release, and serves them from precomputed structures. These are
-          the design targets recorded in the architecture, not measurements of a
-          running server.
+          The data itself is small: a few hundred thousand concepts, a million
+          descriptions, a million relationships. FerroTERM materializes the
+          answers a terminology server is asked for once per release (the
+          transitive closure as roaring bitmaps, the designations as a word
+          index) and serves them from those structures. The figures above are
+          measurements of the shipped build over a licensed edition on a
+          laptop; the book records how they were taken.
         </p>
       </div>
     </section>
 
-    <!-- Key facts -->
+    <!-- What it serves -->
     <section id="facts" class="surface">
       <div class="wrap">
         <div class="section-head">
-          <span class="eyebrow">What it is</span>
-          <h2>The decisions already taken</h2>
+          <span class="eyebrow">What it serves</span>
+          <h2>One seam, many code systems</h2>
           <p>
-            The architecture is recorded in full, with citations, in the
-            documentation. Here is the shape of it.
+            Every code system reaches the FHIR operations through the same
+            provider seam, so nothing in an operation is a special case for one
+            system. You bring the release you are licensed for; the build tool
+            turns it into an index.
           </p>
         </div>
         <div class="grid">
 
           <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
-            <h3>Machine-generated FHIR</h3>
-            <p>HL7 publishes the type system and every operation as machine-readable resources. A generator emits per-version Rust from them, so the operation surface is correct per version by construction. Planned across R4B, R5, R4, and R6.</p>
-          </article>
-
-          <article class="card">
             <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2M12 12.5v3"/></svg></div>
-            <h3>An index-materialized graph store</h3>
-            <p>SNOMED is stored as a graph, natively, as integer-keyed adjacency arrays and roaring bitmaps for the transitive closure. Subsumption is a bitmap test, a descendant set is a bitmap returned directly. This is a graph model with a materialized store, not a graph database and not live traversal.</p>
+            <h3>SNOMED CT</h3>
+            <p>Any RF2 edition: the inferred hierarchy as a transitive closure, preferred terms per language reference set, inactive concepts served and marked, the edition and version URI in every answer. ECL follows in v0.0.8.</p>
           </article>
 
           <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
-            <h3>Value sets driven by ECL</h3>
-            <p>Value-set expansion follows SNOMED's Expression Constraint Language. The evaluator compiles ECL to set algebra over the descendant bitmaps and typed adjacency, tested against the published ECL grammar as its own layer.</p>
+            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+            <h3>LOINC, ICD-10, ICD-11, RxNorm</h3>
+            <p>LOINC with its parts, answer lists, and linguistic variants; WHO ICD-10 and national translations from ClaML; ICD-10-CM; ICD-11 with postcoordination from the WHO local deployment; RxNorm with the FHIR relationship filters over typed edges.</p>
           </article>
 
           <article class="card">
             <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h.01M7 12h.01M7 16h.01M11 8h6M11 12h6M11 16h4"/></svg></div>
-            <h3>One self-contained binary</h3>
-            <p>A single static binary over a pure-Rust, memory-mapped embedded engine (<code>redb</code>). No JVM, no separate search service, no external database. The offline build turns an RF2 release into the store, graph, and text index once per edition.</p>
+            <h3>Every FHIR CodeSystem, and the registries</h3>
+            <p>A FHIR package or a directory of <code>CodeSystem</code>, <code>ValueSet</code>, and <code>ConceptMap</code> resources loads as is: HL7 Terminology's 900 systems, your own, and supplements. UCUM, BCP 47, BCP 13, and ISO 3166-1 ship inside the binary and need no configuration.</p>
           </article>
 
           <article class="card">
             <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></div>
             <h3>The FHIR terminology API</h3>
-            <p><code>$lookup</code>, <code>$subsumes</code>, <code>$validate-code</code>, <code>$expand</code>, and <code>$translate</code>, served from one running server. Correctness is checked against Snowstorm as the reference server.</p>
+            <p><code>$lookup</code>, <code>$validate-code</code>, <code>$subsumes</code>, <code>$expand</code>, and <code>$translate</code> on FHIR R4B, with request-scoped resources and <code>$cache-control</code>. The HL7 terminology ecosystem suite runs against every pull request; 117 of its 670 general cases pass today and the list only grows.</p>
+          </article>
+
+          <article class="card">
+            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+            <h3>Machine-generated FHIR</h3>
+            <p>The FHIR types and operation contracts are generated from HL7's own packages for R4, R4B, R5, and R6, so each version's surface is right by construction and a drift check keeps it that way. R4B is served now; the other three endpoints are the v0.0.9 milestone.</p>
           </article>
 
           <article class="card">
             <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13"/><path d="M4 19a2 2 0 0 0 2 2h14"/><path d="M8 8h8M8 12h5"/></svg></div>
-            <h3>MIT licensed</h3>
-            <p>The software is open source under the MIT license. Use it, embed it, run it. SNOMED CT content is licensed separately by SNOMED International and is never distributed here: you bring your own RF2 release.</p>
+            <h3>MIT licensed, verifiably built</h3>
+            <p>The software is MIT. Releases are Linux binaries and a distroless image for amd64 and arm64, built to SLSA Build Level 3 with signed provenance and SBOMs you verify with <code>gh attestation verify</code>. The code systems are licensed by their owners and never distributed here.</p>
           </article>
 
         </div>
@@ -174,19 +179,22 @@
         <div class="status-panel">
           <h2>Where the project is</h2>
           <p>
-            FerroTERM is in discovery. This repository is being scoped before
-            implementation, so it describes the intended architecture and the
-            decisions already taken, not a finished server. There is no product
-            code yet, and no benchmark to quote.
+            v0.0.6 is the current release. It serves the code systems above on
+            FHIR R4B and ships as signed Linux binaries, a container image, and
+            a Compose file that builds an index from a release zip and serves
+            it in two commands.
           </p>
           <p>
-            The most useful thing you can do right now is read the architecture
-            and the ECL approach, then tell us where it is wrong. Issues and
-            discussion are welcome.
+            Next, in milestone order: the remaining Dutch national code systems
+            (v0.0.7), ECL 2.2 and the SNOMED implicit value sets (v0.0.8), the
+            R4, R5, and R6 endpoints and XML (v0.0.9), and hierarchical
+            expansion, persisted client resources, batch, and
+            <code>$closure</code> (v0.0.10). The tracker's milestones are the
+            roadmap; every issue carries its acceptance criteria.
           </p>
           <div class="hero-cta">
-            <a class="btn btn-primary" href="./docs/">Read the architecture</a>
-            <a class="btn btn-ghost" href="https://github.com/rubentalstra/FerroTERM" rel="noopener">Open an issue</a>
+            <a class="btn btn-primary" href="./docs/">Read the documentation</a>
+            <a class="btn btn-ghost" href="https://github.com/rubentalstra/FerroTERM/milestones" rel="noopener">See the roadmap</a>
           </div>
         </div>
       </div>
@@ -204,11 +212,11 @@
             <span>FerroTERM</span>
           </a>
           <p>
-            A pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems, in discovery.
+            A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD, RxNorm, and every FHIR code system.
             The software is licensed under
             <a href="https://github.com/rubentalstra/FerroTERM/blob/main/LICENSE" rel="noopener">MIT</a>.
-            SNOMED CT is a registered trademark of SNOMED International and its
-            content is licensed separately.
+            SNOMED CT is a registered trademark of SNOMED International; each
+            code system's content is licensed separately by its owner.
           </p>
         </div>
         <div class="footer-links">
@@ -216,7 +224,7 @@
             <h4>Read</h4>
             <ul>
               <li><a href="./docs/">Documentation</a></li>
-              <li><a href="./docs/evaluate/architecture.html">Architecture</a></li>
+              <li><a href="./docs/operate/install.html">Install and run</a></li>
               <li><a href="./docs/integrate/fhir-api.html">FHIR terminology API</a></li>
             </ul>
           </div>
@@ -224,7 +232,7 @@
             <h4>Project</h4>
             <ul>
               <li><a href="https://github.com/rubentalstra/FerroTERM" rel="noopener">GitHub</a></li>
-              <li><a href="https://github.com/rubentalstra/FerroTERM/blob/main/LICENSE" rel="noopener">License</a></li>
+              <li><a href="https://github.com/rubentalstra/FerroTERM/releases" rel="noopener">Releases</a></li>
               <li><a href="https://github.com/rubentalstra/FerroTERM/issues" rel="noopener">Issues</a></li>
             </ul>
           </div>

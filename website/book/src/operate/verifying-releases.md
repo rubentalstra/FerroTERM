@@ -1,54 +1,51 @@
 # Verifying releases
 
-Every FerroTERM release artifact carries a signed provenance attestation. Verify it
-before you run a binary, so you know the artifact was built by the project's own
-release workflow and not tampered with.
-
-> [!NOTE]
-> The release pipeline is stood up and activates on the first tag. Until a
-> release exists, the recipe below is the interface you will use, not a check you
-> can run yet. The design and rationale are in
-> [`docs/ci-cd.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/ci-cd.md).
+Every FerroTERM release artifact carries a signed provenance attestation.
+Verify it before you run a binary or pull an image, so you know the artifact
+was built by the project's own release workflow and not tampered with. The
+pipeline and its rationale are in
+[`docs/ci-cd.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/ci-cd.md).
 
 <!-- toc -->
 
 ## What a release carries
 
-Each release artifact ships with:
+For each target (`x86_64` and `aarch64`, glibc and musl), the release holds:
 
-- An embedded dependency list, written into the binary's `.dep-v0` section by
-  `cargo auditable`.
-- A CycloneDX SBOM.
-- A `.sha256` checksum.
-- A keyless Sigstore provenance attestation and a signed SBOM, both bound to the
-  artifact digest and signed by the release workflow's own identity.
+| File | What it is |
+|---|---|
+| `ferroterm-<tag>-<target>.tar.gz` | `ferroterm` and `ferroterm-build`, built with `cargo auditable` so the dependency list is embedded in the binary |
+| `….tar.gz.sha256sum` | the checksum |
+| `….tar.gz.sigstore.json` and `….tar.gz.intoto.jsonl` | the SLSA provenance, signed keyless through Sigstore by the release workflow's identity |
+| `ferroterm-<tag>-<target>.cdx.json` and `ferroterm-build-<tag>-<target>.cdx.json` | CycloneDX SBOMs of the two binaries |
+| `….tar.gz.sbom.sigstore.json` and `….tar.gz.build-sbom.sigstore.json` | the SBOMs' attestations |
+| `compose.yaml` | the quickstart, pinned to the release's image tag |
 
-The signing is keyless through Sigstore, so there is no long-lived key to manage
-or leak.
+The container image carries the same provenance and SBOM attestations per
+platform.
 
 ## Verify the provenance
 
-Use the GitHub CLI to verify an artifact against the workflow that is allowed to
-sign it. Replace `<tag>` and `<target>` with the release you downloaded:
-
 ```console
-$ gh attestation verify ferroterm-<tag>-<target>.tar.gz -R rubentalstra/FerroTERM \
+$ gh attestation verify ferroterm-v0.0.6-x86_64-unknown-linux-musl.tar.gz \
+    -R rubentalstra/FerroTERM \
     --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
+$ gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:0.0.6 \
+    -R rubentalstra/FerroTERM \
+    --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-image.yml
 ```
 
 The `--signer-workflow` flag is the point of the check. It requires that the
-attestation was produced by that exact reusable workflow in this repository, so a
-signature from any other workflow or repository fails. FerroTERM builds its releases
-in a reusable workflow to reach SLSA Build Level 3, where the signing identity is
-not reachable by user build steps.
+attestation was produced by that exact reusable workflow in this repository, so
+a signature from any other workflow or repository fails. FerroTERM builds its
+releases in reusable workflows to reach SLSA Build Level 3, where the signing
+identity is not reachable by user build steps.
 
 ## Check the checksum
 
-Confirm the download matches its published checksum:
-
 ```console
-$ sha256sum -c ferroterm-<tag>-<target>.tar.gz.sha256
+$ sha256sum -c ferroterm-v0.0.6-x86_64-unknown-linux-musl.tar.gz.sha256sum
 ```
 
-Run both checks. The checksum tells you the bytes are intact, and the attestation
-tells you where the bytes came from.
+Run both checks. The checksum tells you the bytes are intact, and the
+attestation tells you where the bytes came from.

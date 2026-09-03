@@ -1,85 +1,88 @@
 # Architecture at a glance
 
-This page is a short tour of the design. The full design authority, with
-citations to the terminology-server and graph-reachability literature, is
+This page is a short tour of the design as built. The full design authority,
+with citations to the terminology-server and graph-reachability literature, is
 [`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md)
 in the repository.
 
 <!-- toc -->
 
-## SNOMED CT is two things at once
+## Offline once, online from precomputed structures
 
-SNOMED CT is a formal ontology in the OWL 2 EL profile, and it is a
-polyhierarchical graph. The is-a hierarchy a client queries is the inferred
-hierarchy, produced by a description-logic reasoner, not the stated one.
-
-That fact splits the system into two problems that have different engineering
-answers:
+A code system release is turned into served structures once, by
+`ferroterm-build`, and the server opens them read-only:
 
 ```mermaid
 graph TD
-    R["SNOMED CT RF2 release"] --> OFF["Offline: classification, once per release"]
-    OFF --> IDX["Materialized index: CSR adjacency + roaring closure + text index"]
-    IDX --> ON["Online: serving, from precomputed structures"]
-    ON --> API["FHIR terminology API (R4 / R4B / R5 / R6)"]
+    R["A release (RF2, LOINC, ClaML, RRF, the ICD-API cache, ...)"] --> BUILD["ferroterm-build, once per release"]
+    BUILD --> IDX["store.redb + hierarchy.bin + text.bin + manifest.json"]
+    IDX --> SRV["ferroterm, read-only, memory-mapped"]
+    SRV --> API["FHIR terminology API (R4B today)"]
 ```
 
-- **Offline: classification, once per release.** The hierarchy FerroTERM serves is a
-  reasoner output. FerroTERM computes the transitive closure from the shipped
-  inferred relationship file once per release and persists it. It never
-  re-derives inference at query time.
-- **Online: serving, from precomputed structures.** Each operation is answered
-  from the structure shaped for it: a subsumption test is a bitmap membership
-  test, an ECL descendant set is a bitmap returned directly, and a point read is
-  a lookup in a columnar store.
+For SNOMED CT the hierarchy a client queries is the inferred one, a reasoner
+output SNOMED ships in its inferred relationship file; the build computes its
+transitive closure once and persists it. The server never re-derives
+inference and never parses a release at request time.
 
-## Index-materialized graph, not a graph database
+## An index-materialized graph, not a graph database
 
-SNOMED is stored as a graph, natively: integer-keyed compressed sparse-row (CSR)
-adjacency arrays, plus roaring bitmaps holding the transitive closure. This is a
-graph *model* with an index-materialized *store*.
+The hierarchy is stored as integer-keyed compressed sparse-row (CSR)
+adjacency plus roaring bitmaps holding the transitive closure in both
+directions. A subsumption test is a bitmap membership test, a descendant set is
+a bitmap returned directly, and set operations over value sets are bitmap AND,
+OR, and difference. Typed relationships (RxNorm's `has_ingredient`, for one)
+are a second adjacency with the type on each edge, both directions
+materialized.
 
-A general-purpose graph database is rejected on the evidence. No production
-terminology server uses one: Ontoserver is Postgres plus Lucene, Snowstorm is
-Elasticsearch, and Hermes is a memory-mapped store plus Lucene. Graph databases
-degrade on the deep multi-hop neighborhoods that ECL descendant expansion
-produces, which is exactly the query a terminology server is stressed by. At
-SNOMED's size the full transitive closure fits in memory and gives an O(1)
-subsumption test with no traversal fallback.
+A general-purpose graph database is rejected on the evidence: no production
+terminology server uses one (Ontoserver is Postgres plus Lucene, Snowstorm is
+Elasticsearch, Hermes a memory-mapped store plus Lucene), and graph databases
+degrade on exactly the deep multi-hop neighbourhoods a descendant expansion
+produces.
 
-## Persistence is a pure-Rust embedded engine
+## The artifact layout
 
-The built structures persist in `redb`, a pure-Rust, memory-mapped, ACID
-embedded key-value engine. The build tool writes these artifacts once per
-edition, and the server opens them read-only. `redb` is the storage format. At
-startup the server loads the transitive closure into a resident, ordinal-indexed
-structure so a subsumption test is a membership check against a resident bitmap,
-which is how the design reaches microsecond-scale subsumption in pure Rust.
+Every code system builds into the same four files, so the server opens each
+by its manifest and nothing downstream knows which file format it came from:
+
+| File | Holds |
+|---|---|
+| `store.redb` | concepts, designations with language and use, typed properties, the vocabularies; a pure-Rust, memory-mapped, ACID embedded engine |
+| `hierarchy.bin` | the CSR is-a adjacency and the roaring closure bitmaps |
+| `text.bin` | the `fst` word dictionary and roaring postings of every designation, by language |
+| `manifest.json` | the system, version, languages, counts, and the files above |
+
+Some systems add a file: RxNorm's typed edges (`relations.bin`) and atom
+identifiers (`atoms.bin`), ICD-11's entity keys (`keys.bin`) and
+postcoordination scales (`scales.json`). No FHIR or SNOMED specification
+governs this layout; it is the project's own design.
+
+## The provider seam
+
+The operations talk to a `CodeSystemProvider` trait and nothing else: locate a
+code, its display and designations by language, its status and properties, the
+hierarchy when the system has one, search, enumeration, filters, implicit value
+sets, and subsumption. Each code system implements the seam over its artifact
+(or, for the registry systems, over a grammar and a vendored table), and
+declares its capabilities, filters, and properties for
+`TerminologyCapabilities`. The compose layer (include, exclude, filters,
+paging, `total`) sits once above every provider.
 
 ## FHIR support is machine-generated
 
 HL7 publishes the whole type system and every operation as machine-readable
-`StructureDefinition` and `OperationDefinition` resources, in versioned packages.
-FerroTERM vendors and pins those packages and generates per-version Rust modules from
-them, so R5's extra `$expand` parameters appear where the spec has them and are
-absent where it does not. Every generated file is marked `// @generated`, a drift
-check regenerates it in CI, and one runtime wrapper answers R4, R4B, R5, and R6
-callers at once. This mirrors how the sibling project FerroEHR generates its
-openEHR model.
-
-## The SNOMED semantics are hand-written
-
-RF2 loading, the materialized ontology, ECL evaluation, and `$expand` paging are
-the product, and no existing Rust project provides them. ECL is the hard part:
-every expression constraint returns a set of codes, so the evaluator compiles ECL
-to set algebra over the descendant bitmaps and the attribute adjacency, using
-bitmap AND and OR rather than pointer-chasing. Correctness is measured against
-Snowstorm as the reference server.
+`StructureDefinition` and `OperationDefinition` resources, in versioned
+packages. FerroTERM vendors and pins those packages (R4 4.0.1, R4B 4.3.0, R5
+5.0.0, R6 ballot 5, HL7 Terminology) and generates per-version Rust modules
+from them, so a parameter R5 adds appears in the R5 module and is absent from
+R4B. Every generated file is marked `// @generated`, and a drift check
+regenerates it in CI. The server mounts the R4B module today; the R4, R5, and
+R6 modules exist and are the v0.0.9 milestone.
 
 ## Text search is a separate index
 
-Description search is its own concern, held in its own index. A word inverted
-index maps each word to a roaring-bitmap postings list, and an `fst` dictionary
-answers per-word prefix and fuzzy lookup. A query intersects the matching words'
-postings, applies the language-reference-set and active-status filters, and sorts
-by matched-term length.
+Description search is its own concern. A word index maps each folded word to a
+roaring postings list of designations, with an `fst` dictionary for prefix
+lookup, per language. A `filter` on `$expand` intersects the matching words'
+postings and the value set's members.
