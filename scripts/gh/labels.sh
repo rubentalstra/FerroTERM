@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: Apache-2.0
 # scripts/gh/labels.sh — bootstrap the FerroTERM issue-label taxonomy.
 #
 # Creates (idempotently) the labels the tracker workflow assumes:

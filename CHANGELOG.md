@@ -15,13 +15,11 @@ fresh link reference.
 
 ### Changed
 
-- The licence of the project's own code is the Business Source License 1.1
-  (`LICENSE`): production use is allowed, including inside products and
-  services you operate; offering the software to third parties as a hosted or
-  managed service, or selling it as a product in its own right, is not; each
-  version becomes Apache 2.0 four years after its release. Every SPDX header,
-  manifest, badge, image label, and page that named MIT follows; releases up
-  to v0.0.8 stay under the MIT terms they were published with.
+- The licence of the project's own code is the Apache License 2.0 (`LICENSE`,
+  `NOTICE`), replacing MIT; every SPDX header, manifest, badge, image label,
+  and page that named MIT follows. Releases up to v0.0.8 stay under the MIT
+  terms they were published with. (A Business Source License change merged and
+  was reverted the same day, before any release carried it.)
 
 ## [0.0.8] - 2026-09-03
 

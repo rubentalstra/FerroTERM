@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: Apache-2.0
 # scripts/gh/project.sh — the deterministic GitHub Projects (v2) board helper.
 #
 # WHY THIS EXISTS: the public roadmap board is a GitHub Project (v2), and its

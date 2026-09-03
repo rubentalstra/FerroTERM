@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: Apache-2.0
 [package]
 name = "ferroterm-fhir-codegen"
 description = "Generates the ferroterm-fhir crate from the vendored FHIR packages"
