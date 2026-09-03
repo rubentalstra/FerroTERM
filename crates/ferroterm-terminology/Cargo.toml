@@ -14,6 +14,7 @@ publish.workspace = true
 ferroterm-fhir.workspace = true
 ferroterm-graph.workspace = true
 ferroterm-rf2.workspace = true
+ferroterm-rrf.workspace = true
 ferroterm-store.workspace = true
 ferroterm-text.workspace = true
 http.workspace = true

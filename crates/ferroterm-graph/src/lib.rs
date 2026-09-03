@@ -13,4 +13,5 @@ pub mod closure;
 pub mod csr;
 pub mod ordinal;
 pub mod persist;
+pub mod relations;
 pub mod subsumption;

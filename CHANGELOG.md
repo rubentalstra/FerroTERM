@@ -29,6 +29,17 @@ fresh link reference.
   answers the generic filters over the tree and `$subsumes` from the closure;
   the ICD page defines no filters and no implicit value sets, so there are
   none.
+- RxNorm: `ferroterm-build --rxnorm <zip|dir>` builds the full release or the
+  Current Prescribable Content into the artifact layout (the RXCUIs with an
+  `RXNORM` atom as codes, the `RXNORM` string as the display, every kept atom
+  as a designation, `TTY`, `SAB`, `STY`, and the `RXNORM` attributes as
+  properties, the `RXNORM` relationships as typed edges both ways), and the
+  server serves it from `FERROTERM_INDEX`. The provider follows the FHIR
+  RxNorm page: the `STY`, `SAB`, and `TTY` filters, every `REL` code and
+  `RELA` label as a filter over the edges (`=`, `in`, `CUI:` or `AUI:`
+  values), the `/vs` implicit value set, no subsumption. Only the unrestricted
+  sources are kept unless `--rxnorm-sources` names the licensed ones.
+
 
 
 ## [0.0.5] - 2026-09-03

@@ -457,6 +457,7 @@ dependencies = [
  "ferroterm-graph",
  "ferroterm-loinc",
  "ferroterm-rf2",
+ "ferroterm-rrf",
  "ferroterm-store",
  "ferroterm-testkit",
  "ferroterm-text",
@@ -535,6 +536,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferroterm-rrf"
+version = "0.0.5"
+dependencies = [
+ "csv",
+ "ferroterm-testkit",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "ferroterm-server"
 version = "0.0.5"
 dependencies = [
@@ -575,6 +586,7 @@ dependencies = [
  "ferroterm-fhir",
  "ferroterm-graph",
  "ferroterm-rf2",
+ "ferroterm-rrf",
  "ferroterm-store",
  "ferroterm-testkit",
  "ferroterm-text",
@@ -599,6 +611,7 @@ dependencies = [
  "ferroterm-graph",
  "ferroterm-loinc",
  "ferroterm-rf2",
+ "ferroterm-rrf",
  "ferroterm-store",
  "ferroterm-text",
  "serde_json",

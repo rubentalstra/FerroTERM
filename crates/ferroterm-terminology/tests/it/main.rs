@@ -21,6 +21,7 @@ mod loinc;
 mod operations;
 mod registries;
 mod registry;
+mod rxnorm;
 mod snomed;
 mod supplement;
 mod ucum;

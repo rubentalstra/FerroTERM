@@ -13,6 +13,7 @@ pub mod archive;
 pub mod classification;
 pub mod loinc;
 pub mod pipeline;
+pub mod rxnorm;
 
 use std::path::PathBuf;
 
@@ -26,23 +27,18 @@ pub struct Cli {
     #[arg(
         long,
         value_name = "DIR_OR_ZIP",
-        conflicts_with_all = ["loinc", "claml", "icd10cm"],
-        required_unless_present_any = ["loinc", "claml", "icd10cm"]
+        conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm"],
+        required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm"]
     )]
     pub rf2: Option<PathBuf>,
     /// The LOINC release: the unpacked `Loinc_<version>` directory, or the release zip.
-    #[arg(long, value_name = "DIR_OR_ZIP", conflicts_with_all = ["claml", "icd10cm"])]
+    #[arg(long, value_name = "DIR_OR_ZIP", conflicts_with_all = ["claml", "icd10cm", "rxnorm"])]
     pub loinc: Option<PathBuf>,
     /// The LOINC version to record when the release does not say (`2.82`).
     #[arg(long, value_name = "VERSION", requires = "loinc")]
     pub loinc_version: Option<String>,
     /// A `ClaML` classification (WHO ICD-10, a national ICD-10, ICPC-2): the XML file, or a zip holding it.
-    #[arg(
-        long,
-        value_name = "XML_OR_ZIP",
-        conflicts_with = "icd10cm",
-        requires = "system"
-    )]
+    #[arg(long, value_name = "XML_OR_ZIP", conflicts_with_all = ["icd10cm", "rxnorm"], requires = "system")]
     pub claml: Option<PathBuf>,
     /// The code system URI the `ClaML` classification is served as (`http://hl7.org/fhir/sid/icd-10`).
     #[arg(long, value_name = "URI", requires = "claml")]
@@ -51,8 +47,17 @@ pub struct Cli {
     #[arg(long, value_name = "VERSION", requires = "claml")]
     pub claml_version: Option<String>,
     /// The ICD-10-CM release: the directories or zips holding the tabular XML and the order file (repeatable).
-    #[arg(long, value_name = "DIR_OR_ZIP", action = clap::ArgAction::Append)]
+    #[arg(long, value_name = "DIR_OR_ZIP", action = clap::ArgAction::Append, conflicts_with = "rxnorm")]
     pub icd10cm: Vec<PathBuf>,
+    /// The `RxNorm` release: the unpacked directory holding `rrf/`, or the release zip (the full release or the Current Prescribable Content).
+    #[arg(long, value_name = "DIR_OR_ZIP")]
+    pub rxnorm: Option<PathBuf>,
+    /// The release date to record when the release does not say (`09082026`).
+    #[arg(long, value_name = "MMDDYYYY", requires = "rxnorm")]
+    pub rxnorm_version: Option<String>,
+    /// The `RxNorm` sources (`SAB`) whose names are kept beside the unrestricted `RXNORM` and `MTHSPL` (a full release under a UMLS licence).
+    #[arg(long, value_name = "SAB", value_delimiter = ',', action = clap::ArgAction::Append, requires = "rxnorm")]
+    pub rxnorm_sources: Vec<String>,
     /// The directory to write the artifacts into.
     #[arg(long, value_name = "DIR")]
     pub out: PathBuf,
@@ -62,7 +67,7 @@ pub struct Cli {
 ///
 /// A zip is unpacked (the Snapshot tree of an RF2 release, the tables of a
 /// LOINC release, the XML of a `ClaML` classification, the two files of an
-/// ICD-10-CM release) to a temporary directory that is removed when the
+/// ICD-10-CM release, the `RRF` tables of an `RxNorm` release) to a temporary directory that is removed when the
 /// build ends; a directory is read in place.
 ///
 /// # Errors
@@ -87,6 +92,29 @@ pub fn run(cli: &Cli) -> Result<Report, RunError> {
             &classification,
             system,
             cli.claml_version.as_deref(),
+            &cli.out,
+        )?));
+    }
+    if let Some(rxnorm) = &cli.rxnorm {
+        let scratch;
+        let root = if rxnorm.is_file() {
+            scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+            archive::unpack_rxnorm(rxnorm, scratch.path())?
+        } else {
+            rxnorm.clone()
+        };
+        let version = cli.rxnorm_version.clone().or_else(|| {
+            rxnorm
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|n| n.trim_end_matches(".zip"))
+                .and_then(|n| n.rsplit_once('_').map(|(_, tail)| tail.to_owned()))
+                .filter(|tail| tail.len() == 8 && tail.bytes().all(|b| b.is_ascii_digit()))
+        });
+        return Ok(Report::RxNorm(rxnorm::build(
+            &root,
+            version.as_deref(),
+            &cli.rxnorm_sources,
             &cli.out,
         )?));
     }
@@ -148,13 +176,15 @@ pub enum Report {
     Loinc(loinc::Report),
     /// A classification: a `ClaML` document or the ICD-10-CM release.
     Classification(classification::Report),
+    /// An `RxNorm` release.
+    RxNorm(rxnorm::Report),
 }
 
 /// A failure of the command as a whole.
 #[derive(Debug, thiserror::Error)]
 pub enum RunError {
     /// No input was given.
-    #[error("give `--rf2`, `--loinc`, `--claml`, or `--icd10cm`")]
+    #[error("give `--rf2`, `--loinc`, `--claml`, `--icd10cm`, or `--rxnorm`")]
     NoInput,
     /// `--claml` without `--system`.
     #[error("`--claml` needs `--system`")]
@@ -180,4 +210,7 @@ pub enum RunError {
     /// The classification build failed.
     #[error(transparent)]
     Classification(#[from] classification::Error),
+    /// The `RxNorm` build failed.
+    #[error(transparent)]
+    RxNorm(#[from] rxnorm::Error),
 }

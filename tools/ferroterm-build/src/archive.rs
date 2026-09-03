@@ -295,6 +295,42 @@ pub fn unpack_icd10cm(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveEr
     Ok(into.to_path_buf())
 }
 
+/// Unpacks the `RRF` tables and the readme of an `RxNorm` zip at `zip_path`
+/// under `into`, returning `into`.
+///
+/// # Errors
+///
+/// Returns [`ArchiveError`] when the zip does not read, an entry cannot be
+/// written, or the zip holds no `RXNCONSO.RRF`.
+pub fn unpack_rxnorm(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveError> {
+    let written = unpack_matching(zip_path, into, &|name| {
+        [
+            ferroterm_rrf::CONSO,
+            ferroterm_rrf::REL,
+            ferroterm_rrf::SAT,
+            ferroterm_rrf::STY,
+        ]
+        .iter()
+        .any(|f| f.eq_ignore_ascii_case(name))
+            || (name.starts_with("Readme")
+                && Path::new(name)
+                    .extension()
+                    .is_some_and(|e| e.eq_ignore_ascii_case("txt")))
+    })?;
+    let has_conso = written.iter().any(|p| {
+        p.file_name()
+            .and_then(|f| f.to_str())
+            .is_some_and(|f| f.eq_ignore_ascii_case(ferroterm_rrf::CONSO))
+    });
+    if !has_conso {
+        return Err(ArchiveError::NoEntry {
+            path: zip_path.to_path_buf(),
+            wanted: "RXNCONSO.RRF",
+        });
+    }
+    Ok(into.to_path_buf())
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::{Path, PathBuf};
