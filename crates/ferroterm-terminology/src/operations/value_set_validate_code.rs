@@ -427,6 +427,9 @@ fn unknown_code(
     );
     validation.response.message = Some(unknown.text.as_str().into());
     validation.issues.push(unknown);
+    // NOTE: the submitted code is echoed even when the system does not have it, the
+    // shape the ecosystem expects (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>).
+    validation.code = Some(subject.code.to_owned());
     validation
 }
 
