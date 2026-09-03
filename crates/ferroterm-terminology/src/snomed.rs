@@ -11,12 +11,15 @@
 //! per request.
 
 use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Arc, Mutex, OnceLock};
 
 mod ecl;
 
+use ferroterm_ecl::ast::ExpressionConstraint;
+use ferroterm_ecl::eval::EvalError;
 use ferroterm_graph::attributes::{Attributes, AttributesError};
 use ferroterm_graph::csr::{Csr, CsrError};
 use ferroterm_graph::identifiers::{Identifiers, IdentifiersError};
@@ -220,6 +223,8 @@ pub struct SnomedProvider {
     roots: OnceLock<RoaringBitmap>,
     leaves: OnceLock<RoaringBitmap>,
     defined: OnceLock<RoaringBitmap>,
+    /// Parsed expression constraints by their text, bounded.
+    expressions: Mutex<HashMap<String, Arc<ExpressionConstraint>>>,
     /// The inactive concepts, read once on the first request that needs them.
     inactive: OnceLock<ConceptSet>,
     identity: Identity,
@@ -311,6 +316,7 @@ impl SnomedProvider {
             roots: OnceLock::new(),
             leaves: OnceLock::new(),
             defined: OnceLock::new(),
+            expressions: Mutex::new(HashMap::new()),
             inactive: OnceLock::new(),
             identity: Identity {
                 url: SYSTEM.to_owned(),
@@ -331,18 +337,7 @@ impl SnomedProvider {
                 properties,
                 // NOTE: the FHIR SNOMED CT page defines `concept is-a` and `concept in`
                 // (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties").
-                filters: vec![FilterDefinition {
-                    code: String::from("concept"),
-                    description: Some(String::from(
-                        "`is-a`: the concept and its descendants; `descendent-of`: its descendants; `in`: the members of the reference set",
-                    )),
-                    operators: vec![
-                        FilterOperator::IsA,
-                        FilterOperator::DescendentOf,
-                        FilterOperator::In,
-                    ],
-                    value: String::from("an SCTID"),
-                }],
+                filters: Self::filter_definitions(),
                 capabilities: BTreeSet::from([
                     Capability::Subsumption,
                     Capability::Enumeration,
@@ -415,6 +410,41 @@ impl SnomedProvider {
             definition,
             refsets,
         })
+    }
+
+    /// The filters of the FHIR SNOMED CT page
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties").
+    fn filter_definitions() -> Vec<FilterDefinition> {
+        vec![
+            FilterDefinition {
+                code: String::from("concept"),
+                description: Some(String::from(
+                    "`is-a`: the concept and its descendants; `descendent-of`: its descendants; `in`: the members of the reference set",
+                )),
+                operators: vec![
+                    FilterOperator::IsA,
+                    FilterOperator::DescendentOf,
+                    FilterOperator::In,
+                ],
+                value: String::from("an SCTID"),
+            },
+            FilterDefinition {
+                code: String::from("constraint"),
+                description: Some(String::from(
+                    "the concepts the SNOMED CT expression constraint selects",
+                )),
+                operators: vec![FilterOperator::Equal],
+                value: String::from("an ECL expression"),
+            },
+            FilterDefinition {
+                code: String::from("expressions"),
+                description: Some(String::from(
+                    "whether post-coordinated expressions are permitted; only `false` is served",
+                )),
+                operators: vec![FilterOperator::Equal],
+                value: String::from("true or false"),
+            },
+        ]
     }
 
     /// The manifest of the artifact under `dir`, checked to be a SNOMED CT
@@ -602,11 +632,71 @@ impl SnomedProvider {
                     value: refset,
                 })
             }
-            "ecl" => Err(malformed(String::from(
-                "ECL expressions are not evaluated yet; `isa/`, `refset`, and `refset/` are",
-            ))),
+            "ecl" => {
+                let text = percent_decode(argument).ok_or_else(|| {
+                    malformed(String::from("the expression constraint is not URI-encoded"))
+                })?;
+                self.expression(&text)
+                    .map_err(|error| malformed(error.to_string()))?;
+                Ok(Filter {
+                    property: String::from("constraint"),
+                    op: FilterOperator::Equal,
+                    value: text,
+                })
+            }
             _ => Err(malformed(format!("`{form}` is not a `fhir_vs` form"))),
         }
+    }
+
+    /// The parsed form of an expression constraint, from the cache when it
+    /// was parsed before (the cache is cleared when it holds 256 entries).
+    fn expression(
+        &self,
+        text: &str,
+    ) -> Result<Arc<ExpressionConstraint>, ferroterm_ecl::ParseError> {
+        if let Ok(cache) = self.expressions.lock()
+            && let Some(parsed) = cache.get(text)
+        {
+            return Ok(Arc::clone(parsed));
+        }
+        let parsed = Arc::new(ferroterm_ecl::parse(text)?);
+        if let Ok(mut cache) = self.expressions.lock() {
+            if cache.len() >= 256 {
+                cache.clear();
+            }
+            cache.insert(text.to_owned(), Arc::clone(&parsed));
+        }
+        Ok(parsed)
+    }
+
+    /// The concepts an expression constraint selects; malformed text is an
+    /// invalid filter value with the parser's position, an identifier the
+    /// edition lacks an invalid code.
+    fn constraint(&self, text: &str) -> Result<ConceptSet, ProviderError> {
+        let invalid = |reason: String| ProviderError::InvalidFilterValue {
+            property: String::from("constraint"),
+            value: text.to_owned(),
+            reason,
+        };
+        let parsed = self
+            .expression(text)
+            .map_err(|error| invalid(error.to_string()))?;
+        ferroterm_ecl::eval::evaluate(self, &parsed).map_err(|error| match error {
+            EvalError::UnknownConcept(id) => ProviderError::InvalidCode {
+                code: id.to_string(),
+                reason: String::from("not a concept of the edition"),
+            },
+            EvalError::NotAReferenceSet(id) => ProviderError::InvalidCode {
+                code: id.to_string(),
+                reason: String::from("not a reference set with members in the edition"),
+            },
+            EvalError::Unsupported(what) => ProviderError::UnsupportedFilter {
+                property: String::from("constraint"),
+                operator: format!("= ({what})"),
+            },
+            EvalError::Storage(message) => ProviderError::Storage(message.into()),
+            other => invalid(other.to_string()),
+        })
     }
 
     fn codes(
@@ -812,10 +902,32 @@ impl CodeSystemProvider for SnomedProvider {
         Ok(self.inactive.get_or_init(|| set).clone())
     }
 
-    /// `concept in [sctid]` is reference set membership
-    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties"); every
-    /// other filter is the generic evaluation over the closure and the store.
+    /// `concept in [sctid]` is reference set membership, `constraint = [ecl]`
+    /// the evaluated expression constraint, and `expressions = false` every
+    /// concept (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties");
+    /// every other filter is the generic evaluation over the closure and the
+    /// store. Post-coordination (`expressions = true`) is not served.
     fn filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
+        if filter.op == FilterOperator::Equal {
+            match filter.property.as_str() {
+                "constraint" => return self.constraint(&filter.value),
+                "expressions" => {
+                    return match filter.value.trim() {
+                        "false" => self.all(),
+                        "true" => Err(ProviderError::UnsupportedFilter {
+                            property: filter.property.clone(),
+                            operator: String::from("= true"),
+                        }),
+                        other => Err(ProviderError::InvalidFilterValue {
+                            property: filter.property.clone(),
+                            value: other.to_owned(),
+                            reason: String::from("expected `true` or `false`"),
+                        }),
+                    };
+                }
+                _ => {}
+            }
+        }
         if filter.property != "concept" || filter.op != FilterOperator::In {
             return crate::filter::evaluate(self, filter);
         }
@@ -932,6 +1044,27 @@ impl CodeSystemProvider for SnomedProvider {
 
 /// The base (the system, edition, or version URI) and the `fhir_vs` form of
 /// an implicit value set URL, when `url` has the shape.
+/// Decodes the percent-encoding of a URI component
+/// (<https://www.rfc-editor.org/rfc/rfc3986#section-2.1>); `None` for a
+/// stray `%` or bytes that are not UTF-8.
+fn percent_decode(text: &str) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while let Some(&byte) = bytes.get(i) {
+        if byte == b'%' {
+            let hex = bytes.get(i.checked_add(1)?..i.checked_add(3)?)?;
+            let text = std::str::from_utf8(hex).ok()?;
+            out.push(u8::from_str_radix(text, 16).ok()?);
+            i = i.checked_add(3)?;
+        } else {
+            out.push(byte);
+            i = i.checked_add(1)?;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
 fn implicit_parts(url: &str) -> Option<(&str, &str)> {
     let (base, query) = url.split_once('?')?;
     let form = match query.strip_prefix("fhir_vs")? {
@@ -943,7 +1076,18 @@ fn implicit_parts(url: &str) -> Option<(&str, &str)> {
 
 #[cfg(test)]
 mod tests {
-    use super::{implicit_parts, primary_subtag};
+    use super::{implicit_parts, percent_decode, primary_subtag};
+
+    #[test]
+    fn percent_encoding_decodes_and_a_stray_percent_is_refused() {
+        assert_eq!(
+            percent_decode("%3C%3C%20404684003%20%7Cfinding%7C").as_deref(),
+            Some("<< 404684003 |finding|")
+        );
+        assert_eq!(percent_decode("<< 1").as_deref(), Some("<< 1"));
+        assert_eq!(percent_decode("%3"), None);
+        assert_eq!(percent_decode("%zz"), None);
+    }
 
     #[test]
     fn the_primary_subtag_is_the_language() {

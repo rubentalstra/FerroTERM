@@ -27,7 +27,7 @@ Pass the URL as `url` to `ValueSet/$expand` or `ValueSet/$validate-code`.
 
 The FHIR SNOMED CT page defines value sets by URL over the SNOMED CT URI
 (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets"), and the
-provider answers four of the five forms:
+provider answers every form:
 
 | URL | Members |
 |---|---|
@@ -35,7 +35,7 @@ provider answers four of the five forms:
 | `http://snomed.info/sct?fhir_vs=isa/[sctid]` | the concept and its descendants, from the transitive closure |
 | `http://snomed.info/sct?fhir_vs=refset` | the concepts that are reference sets with concept members |
 | `http://snomed.info/sct?fhir_vs=refset/[sctid]` | the active concept members of the reference set |
-| `http://snomed.info/sct?fhir_vs=ecl/[expression]` | refused until the ECL milestone (v0.0.8), with an `OperationOutcome` saying so |
+| `http://snomed.info/sct?fhir_vs=ecl/[expression]` | the concepts the expression constraint selects; the expression is URI-encoded |
 
 The base may be the edition URI (`http://snomed.info/sct/11000146104?fhir_vs=…`)
 or the edition and version URI, which pins the expansion to that served
@@ -64,17 +64,33 @@ defines `in` for SNOMED CT), plus the generic `is-not-a`, `generalizes`,
 }
 ```
 
-## What ECL adds (v0.0.8)
+## ECL
 
-Every ECL expression returns a set of concepts, and the evaluator compiles it
-to set algebra over the precomputed bitmaps: `<< X` is the descendant bitmap
-plus `X`, a refinement such as `< 404684003 : 363698007 = << 39057004`
-intersects with the attribute adjacency, and `AND`, `OR`, and `MINUS` are
-bitmap operations. The parser follows the official ANTLR grammar for ECL 2.2
-rule for rule and is tested against the published valid and invalid corpus;
-the evaluator is checked against Snowstorm over the same edition. The three
-issues of the milestone are the parser, the evaluator, and `?fhir_vs=ecl/`
-together with the `constraint` filter.
+An expression constraint names a set of concepts, and the evaluator answers it
+as set algebra over the precomputed structures: `<< X` is the descendant
+bitmap plus `X`, `^ X` the members of the reference set, a refinement such as
+`< 404684003 : 363698007 = << 39057004` the sources of the attribute with a
+value in the set (from an inverted index), a grouped refinement counts the
+role groups that satisfy it, and `AND`, `OR`, and `MINUS` are bitmap
+operations. The parser follows the official ANTLR grammar for ECL 2.2 rule
+for rule and is tested against the published example corpus; every operator,
+the description, concept, and member filters, the history supplements, and
+alternate identifiers evaluate.
+
+ECL reaches the wire two ways: the implicit value set
+`http://snomed.info/sct?fhir_vs=ecl/[expression]` (the expression URI-encoded,
+on the system, edition, or version URI) and the `constraint` filter of a
+`ValueSet.compose.include`:
+
+```json
+{ "property": "constraint", "op": "=", "value": "< 404684003 |Clinical finding| : 363698007 |Finding site| = << 39057004" }
+```
+
+Malformed ECL is an `OperationOutcome` with issue code `invalid` naming the
+byte offset; an identifier the edition does not have is `code-invalid`; a
+construct the artifact cannot answer (a description module or effective time
+filter, a filter on inactive members) is `not-supported`. The `expressions`
+filter accepts `false`; post-coordinated expressions are not served.
 
 ## Paging a large expansion
 
