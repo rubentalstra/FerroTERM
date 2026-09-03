@@ -20,7 +20,6 @@ macro_rules! surface {
     ($fhir:ident, $fhir_version:literal, $label:literal, $capabilities:ident) => {
         crate::version::parameters::parameters!($fhir);
         crate::version::resources::resources!($fhir);
-        crate::version::map::map!($fhir);
         crate::version::metadata::metadata!($fhir, $fhir_version, $label, $capabilities);
         crate::version::system::system!($fhir);
         crate::version::operations::operations!($fhir);

@@ -12,6 +12,7 @@ use ferroterm_terminology::operations::CodingRef;
 use ferroterm_terminology::operations::expand::{ExpandInput, ExpansionOutcome, ParameterValue};
 use ferroterm_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use ferroterm_terminology::operations::{OperationError, Sources, expand, value_set_validate_code};
+use ferroterm_terminology::provider::PropertyValue;
 use ferroterm_terminology::registry::Registry;
 use ferroterm_terminology::valueset;
 use ferroterm_terminology::valueset::store::ValueSetStore;
@@ -517,4 +518,87 @@ fn validate_code_refuses_malformed_requests() {
         value_set_validate_code::validate_code(&world.sources(), &ambiguous).expect("validates");
     assert!(!validation.result);
     assert_eq!(validation.issues[0].kind, "cannot-infer");
+}
+
+// NOTE: R5 `$expand` `property` asks for concept properties on each `contains`,
+// by code or by the property's URI, `*` for all
+// (<https://hl7.org/fhir/R5/valueset-operation-expand.html>).
+#[test]
+fn expand_returns_the_properties_asked_for() {
+    let world = World::load();
+    let by_code = expand::expand(
+        &world.sources(),
+        &ExpandInput {
+            url: Some(VS_PETS.to_owned()),
+            property: vec![String::from("legs")],
+            ..ExpandInput::default()
+        },
+    )
+    .expect("expands");
+    let kitten = by_code
+        .contains
+        .iter()
+        .find(|c| c.code == "kitten")
+        .expect("kitten");
+    assert_eq!(kitten.properties.len(), 1);
+    assert_eq!(kitten.properties[0].code, "legs");
+    assert_eq!(kitten.properties[0].value, PropertyValue::Integer(4));
+    let pet = by_code
+        .contains
+        .iter()
+        .find(|c| c.code == "pet")
+        .expect("pet");
+    assert!(pet.properties.is_empty(), "pet declares no leg count");
+    assert_eq!(by_code.properties.len(), 1);
+    assert_eq!(by_code.properties[0].code, "legs");
+    assert_eq!(
+        by_code.properties[0].uri.as_deref(),
+        Some("http://example.org/legs")
+    );
+    assert_eq!(
+        parameter(&by_code, "property"),
+        [ParameterValue::Code(String::from("legs"))]
+    );
+    let by_uri = expand::expand(
+        &world.sources(),
+        &ExpandInput {
+            url: Some(VS_PETS.to_owned()),
+            property: vec![String::from("http://example.org/legs")],
+            ..ExpandInput::default()
+        },
+    )
+    .expect("expands");
+    assert_eq!(
+        by_uri.contains[0].properties,
+        by_code.contains[0].properties
+    );
+    let all = expand::expand(
+        &world.sources(),
+        &ExpandInput {
+            url: Some(VS_PETS.to_owned()),
+            property: vec![String::from("*")],
+            ..ExpandInput::default()
+        },
+    )
+    .expect("expands");
+    let kitten = all
+        .contains
+        .iter()
+        .find(|c| c.code == "kitten")
+        .expect("kitten");
+    let codes: Vec<&str> = kitten.properties.iter().map(|p| p.code.as_str()).collect();
+    assert!(
+        codes.contains(&"legs") && codes.contains(&"parent"),
+        "{codes:?}"
+    );
+    let none = expand::expand(
+        &world.sources(),
+        &ExpandInput {
+            url: Some(VS_PETS.to_owned()),
+            ..ExpandInput::default()
+        },
+    )
+    .expect("expands");
+    assert!(none.contains.iter().all(|c| c.properties.is_empty()));
+    assert!(none.properties.is_empty());
 }

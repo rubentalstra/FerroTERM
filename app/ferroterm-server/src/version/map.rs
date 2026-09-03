@@ -10,11 +10,7 @@ macro_rules! map {
             //! its `OperationDefinition`s declare. R4 (4.0.1) and R4B (4.3.0) declare the
             //! same parameters, so one macro serves both.
 
-            use ferroterm_fhir::$fhir::codeable_concept::CodeableConcept;
             use ferroterm_fhir::$fhir::coding::Coding;
-            use ferroterm_fhir::$fhir::operation_outcome::{
-                OperationOutcome, OperationOutcomeIssue,
-            };
             use ferroterm_fhir::$fhir::operations::code_system_lookup::{
                 CodeSystemLookupRequest, CodeSystemLookupResponse,
                 CodeSystemLookupResponseDesignation, CodeSystemLookupResponseProperty,
@@ -34,9 +30,8 @@ macro_rules! map {
             use ferroterm_fhir::$fhir::operations::value_set_validate_code::{
                 ValueSetValidateCodeRequest, ValueSetValidateCodeResponse,
             };
+            use ferroterm_fhir::$fhir::parameters::Parameters;
             use ferroterm_fhir::$fhir::parameters::ParametersParameterValue;
-            use ferroterm_fhir::$fhir::parameters::{Parameters, ParametersParameter};
-            use ferroterm_fhir::$fhir::resource::Resource;
             use ferroterm_graph::subsumption::Outcome;
             use ferroterm_terminology::operations::CodingRef;
             use ferroterm_terminology::operations::expand::ExpandInput;
@@ -47,7 +42,7 @@ macro_rules! map {
                 ValidateCodeInput, ValidationOutcome,
             };
             use ferroterm_terminology::operations::value_set_validate_code::{
-                TX_ISSUE_TYPE, Validation, ValueSetValidateInput,
+                Validation, ValueSetValidateInput,
             };
             use ferroterm_terminology::provider::{Designation, PropertyValue};
             use ferroterm_terminology::valueset::convert;
@@ -216,16 +211,6 @@ macro_rules! map {
                 }
             }
 
-            /// The version's `Coding` of a `tx-issue-type` code, for `issue.details.coding`.
-            #[must_use]
-            pub fn tx_issue_coding(kind: &str) -> Coding {
-                Coding {
-                    system: Some(TX_ISSUE_TYPE.into()),
-                    code: Some(kind.into()),
-                    ..Default::default()
-                }
-            }
-
             /// The `ValueSet/$validate-code` request as the engine's input; an inline
             /// `valueSet` is converted as a resource of the version.
             #[must_use]
@@ -239,6 +224,7 @@ macro_rules! map {
                         .as_ref()
                         .and_then(|v| v.value.clone()),
                     inline_value_set: request.value_set.as_ref().map(convert::$fhir::convert),
+                    use_supplement: Vec::new(),
                     context: request.context.is_some(),
                     date: request.date.is_some(),
                     code: request.code.as_ref().and_then(|v| v.value.clone()),
@@ -263,10 +249,9 @@ macro_rules! map {
 
             /// The `ValueSet/$validate-code` outcome as the version's `Parameters`.
             ///
-            /// The declared `result`, `message`, and `display` come first, then the
-            /// `system`, `version`, `code`, and `issues` the terminology ecosystem's
-            /// general-purpose servers return beside them (R5's declared outputs; R4 and R4B
-            /// leave the resource open).
+            /// The declared `result`, `message`, and `display`, nothing beside them
+            /// (R5 declares the validated `code`, `system`, `version`, and `issues`;
+            /// 4.0.1 and 4.3.0 do not).
             #[must_use]
             pub fn value_set_validation_parameters(validation: &Validation) -> Parameters {
                 let response = ValueSetValidateCodeResponse {
@@ -274,55 +259,7 @@ macro_rules! map {
                     message: validation.message.as_deref().map(Into::into),
                     display: validation.display.as_deref().map(Into::into),
                 };
-                let mut parameters = response.to_parameters();
-                let mut push = |name: &str, value: ParametersParameterValue| {
-                    parameters.parameter.push(ParametersParameter {
-                        name: name.into(),
-                        value: Some(value),
-                        ..Default::default()
-                    });
-                };
-                if let Some(system) = &validation.system {
-                    push(
-                        "system",
-                        ParametersParameterValue::Uri(system.as_str().into()),
-                    );
-                }
-                if let Some(version) = &validation.version {
-                    push(
-                        "version",
-                        ParametersParameterValue::String(version.as_str().into()),
-                    );
-                }
-                if let Some(code) = &validation.code {
-                    push("code", ParametersParameterValue::Code(code.as_str().into()));
-                }
-                if !validation.issues.is_empty() {
-                    let issue = validation
-                        .issues
-                        .iter()
-                        .map(|issue| OperationOutcomeIssue {
-                            severity: issue.severity.into(),
-                            code: issue.code.into(),
-                            details: Some(CodeableConcept {
-                                coding: vec![tx_issue_coding(issue.kind)],
-                                text: Some(issue.text.as_str().into()),
-                                ..Default::default()
-                            }),
-                            expression: issue.expression.map(Into::into).into_iter().collect(),
-                            ..Default::default()
-                        })
-                        .collect();
-                    parameters.parameter.push(ParametersParameter {
-                        name: "issues".into(),
-                        resource: Some(Resource::OperationOutcome(Box::new(OperationOutcome {
-                            issue,
-                            ..Default::default()
-                        }))),
-                        ..Default::default()
-                    });
-                }
-                parameters
+                response.to_parameters()
             }
 
             /// A neutral coding as the version's `Coding`.
@@ -368,10 +305,9 @@ macro_rules! map {
 
             /// The `$translate` outcome as the version's `Parameters`.
             ///
-            /// `result`, `message`, and each `match` with `equivalence`, `concept`,
-            /// `product`, and `source`, plus the `originMap`, `sourceConcept`,
-            /// `sourceComment`, and `noMap` parts the terminology ecosystem's servers add
-            /// to a match.
+            /// `result`, `message`, and each `match` with `equivalence`, `concept`, `product`,
+            /// and `source`, the declared shape (R5 declares `originMap`; 4.0.1 and
+            /// 4.3.0 do not).
             #[must_use]
             pub fn translation_parameters(translation: &Translation) -> Parameters {
                 let response = ConceptMapTranslateResponse {
@@ -395,41 +331,7 @@ macro_rules! map {
                         })
                         .collect(),
                 };
-                let mut parameters = response.to_parameters();
-                let mut origins = translation.matches.iter().map(|m| &m.origin);
-                for parameter in &mut parameters.parameter {
-                    if parameter.name.value.as_deref() != Some("match") {
-                        continue;
-                    }
-                    let Some(origin) = origins.next() else { break };
-                    let mut part = |name: &str, value: ParametersParameterValue| {
-                        parameter.part.push(ParametersParameter {
-                            name: name.into(),
-                            value: Some(value),
-                            ..Default::default()
-                        });
-                    };
-                    part(
-                        "originMap",
-                        ParametersParameterValue::Canonical(origin.origin_map.as_str().into()),
-                    );
-                    if let Some(concept) = &origin.source_concept {
-                        part(
-                            "sourceConcept",
-                            ParametersParameterValue::Coding(coding_of(concept)),
-                        );
-                    }
-                    if let Some(comment) = &origin.source_comment {
-                        part(
-                            "sourceComment",
-                            ParametersParameterValue::String(comment.as_str().into()),
-                        );
-                    }
-                    if origin.no_map {
-                        part("noMap", ParametersParameterValue::Boolean(true.into()));
-                    }
-                }
-                parameters
+                response.to_parameters()
             }
 
             /// The canonicals of a repeated `canonical` parameter, as text.

@@ -15,6 +15,15 @@ fresh link reference.
 
 ### Added
 
+- FHIR R5 (5.0.0) is served under `/r5` with the shapes R5 declares: the
+  validated `code`, `system`, `version`, and itemised `issues` on both
+  `$validate-code` operations, `definition` on `$lookup`, `property` and
+  `useSupplement` on `$expand` (with `expansion.property` and
+  `contains.property`), and the R5 `$translate` parameter names
+  (`sourceCode`, `targetCode`, `relationship`, `originMap`). The R4 and R4B
+  endpoints now emit only the outputs their own OperationDefinitions declare.
+  The tx-ecosystem suite runs against `/r5` in CI too
+  (`conformance/tx-ecosystem/passing-r5.txt`).
 - FHIR R4 (4.0.1) is served under `/r4` from the generated `ferroterm_fhir::r4`
   module: every terminology operation with R4's own `OperationDefinition`
   parameter set, `GET /r4/metadata` and `?mode=terminology` as R4 resources,

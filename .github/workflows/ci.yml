@@ -343,6 +343,7 @@ jobs:
       - run: cargo build --release --locked -p ferroterm-server
       - run: scripts/checks/tx-ecosystem.sh
       - run: scripts/checks/tx-ecosystem.sh --fhir r4 --out target/tx-ecosystem/out-r4
+      - run: scripts/checks/tx-ecosystem.sh --fhir r5 --out target/tx-ecosystem/out-r5
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -356,6 +357,9 @@ jobs:
             target/tx-ecosystem/out-r4/report.json
             target/tx-ecosystem/out-r4/runner.log
             target/tx-ecosystem/out-r4/passing.txt
+            target/tx-ecosystem/out-r5/report.json
+            target/tx-ecosystem/out-r5/runner.log
+            target/tx-ecosystem/out-r5/passing.txt
           retention-days: 14
 
   dependency-review:

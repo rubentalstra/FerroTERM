@@ -6,7 +6,7 @@
 //! (<https://hl7.org/fhir/R4B/codesystem-operation-validate-code.html>,
 //! <https://hl7.org/fhir/R5/codesystem-operation-validate-code.html>).
 
-use super::{CodingRef, Invocation, OperationError, resolve};
+use super::{CodingRef, Invocation, Issue, OperationError, resolve};
 use crate::language;
 use crate::provider::CodeSystemProvider;
 use crate::registry::Registry;
@@ -47,6 +47,9 @@ pub struct ValidationOutcome {
     pub system: Option<String>,
     /// The version it was checked against.
     pub version: Option<String>,
+    /// The itemised issues, for the versions that declare `issues`
+    /// (<https://hl7.org/fhir/R5/codesystem-operation-validate-code.html>).
+    pub issues: Vec<Issue>,
 }
 
 /// Runs `$validate-code`.
@@ -80,7 +83,13 @@ pub fn validate_code(
     let language = input.display_language.as_deref();
     if let Some(code) = input.code.as_deref() {
         let resolved = resolve(registry, invocation, url, version)?;
-        return check(&resolved.provider, code, input.display.as_deref(), language);
+        return check(
+            &resolved.provider,
+            code,
+            input.display.as_deref(),
+            language,
+            "code",
+        );
     }
     if let Some(coding) = &input.coding {
         if let (Some(url), Some(system)) = (url, coding.system.as_deref())
@@ -105,6 +114,7 @@ pub fn validate_code(
             code,
             coding.display.as_deref().or(input.display.as_deref()),
             language,
+            "coding",
         );
     }
     let Some(codings) = &input.codeable_concept else {
@@ -113,7 +123,17 @@ pub fn validate_code(
         )));
     };
     let resolved = resolve(registry, invocation, url, version)?;
-    let identity = resolved.provider.identity();
+    check_codeable_concept(&resolved.provider, codings, language)
+}
+
+/// Validates the codings of a `CodeableConcept` that name the system: the
+/// first valid one answers, else the failures are joined.
+fn check_codeable_concept(
+    provider: &std::sync::Arc<dyn CodeSystemProvider>,
+    codings: &[CodingRef],
+    language: Option<&str>,
+) -> Result<ValidationOutcome, OperationError> {
+    let identity = provider.identity();
     let target = identity.url.clone();
     let mut messages = Vec::new();
     let mut any = false;
@@ -126,10 +146,11 @@ pub fn validate_code(
         };
         any = true;
         let outcome = check(
-            &resolved.provider,
+            provider,
             code,
             coding.display.as_deref(),
             language,
+            "codeableConcept",
         )?;
         if outcome.result {
             return Ok(outcome);
@@ -145,11 +166,18 @@ pub fn validate_code(
     };
     Ok(ValidationOutcome {
         result: false,
-        message: Some(message),
+        message: Some(message.clone()),
         display: None,
         code: None,
         system: Some(target),
         version: Some(identity.version.clone()),
+        issues: vec![Issue {
+            severity: "error",
+            code: "code-invalid",
+            kind: "invalid-code",
+            text: message,
+            expression: Some("codeableConcept"),
+        }],
     })
 }
 
@@ -160,19 +188,28 @@ fn check(
     code: &str,
     display: Option<&str>,
     language: Option<&str>,
+    expression: &'static str,
 ) -> Result<ValidationOutcome, OperationError> {
     let identity = provider.identity();
     let Some(located) = provider.locate(code)? else {
+        let text = format!(
+            "code `{code}` is not in code system `{}` version `{}`",
+            identity.url, identity.version
+        );
         return Ok(ValidationOutcome {
             result: false,
-            message: Some(format!(
-                "code `{code}` is not in code system `{}` version `{}`",
-                identity.url, identity.version
-            )),
+            message: Some(text.clone()),
             display: None,
             code: Some(code.to_owned()),
             system: Some(identity.url.clone()),
             version: Some(identity.version.clone()),
+            issues: vec![Issue {
+                severity: "error",
+                code: "code-invalid",
+                kind: "invalid-code",
+                text,
+                expression: Some(expression),
+            }],
         });
     };
     let concept = located.concept;
@@ -180,6 +217,7 @@ fn check(
     let language = language.as_deref();
     let preferred = provider.display(concept, language)?;
     let mut messages = Vec::new();
+    let mut issues = Vec::new();
     let mut result = true;
     if let Some(display) = display {
         let case_sensitive = provider.declaration().case_sensitive;
@@ -197,14 +235,40 @@ fn check(
             || preferred.as_deref().is_some_and(matches);
         if !known {
             result = false;
-            messages.push(format!(
-                "the display `{display}` is not a designation of `{code}`"
-            ));
+            let text = match &preferred {
+                Some(preferred) => format!(
+                    "the display `{display}` is not a valid display for `{}#{code}`; the display is `{preferred}`",
+                    identity.url
+                ),
+                None => format!(
+                    "the display `{display}` is not a valid display for `{}#{code}`",
+                    identity.url
+                ),
+            };
+            messages.push(text.clone());
+            issues.push(Issue {
+                severity: "error",
+                code: "invalid",
+                kind: "invalid-display",
+                text,
+                expression: Some(expression),
+            });
         }
     }
     let status = provider.status(concept)?;
     if !status.active {
-        messages.push(format!("code `{code}` is inactive"));
+        let text = format!(
+            "code `{code}` is inactive in `{}` version `{}`",
+            identity.url, identity.version
+        );
+        messages.push(text.clone());
+        issues.push(Issue {
+            severity: "warning",
+            code: "business-rule",
+            kind: "status-check",
+            text,
+            expression: None,
+        });
     }
     Ok(ValidationOutcome {
         result,
@@ -213,5 +277,6 @@ fn check(
         code: Some(located.code),
         system: Some(identity.url.clone()),
         version: Some(identity.version.clone()),
+        issues,
     })
 }

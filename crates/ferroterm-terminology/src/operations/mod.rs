@@ -365,3 +365,18 @@ impl Sources<'_> {
         }
     }
 }
+
+/// One `OperationOutcome.issue` of a validation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Issue {
+    /// `issue.severity`: `error`, `warning`, or `information`.
+    pub severity: &'static str,
+    /// `issue.code` from the issue-type value set.
+    pub code: &'static str,
+    /// The `tx-issue-type` code in `issue.details.coding`.
+    pub kind: &'static str,
+    /// `issue.details.text`.
+    pub text: String,
+    /// `issue.expression`: the parameter at fault.
+    pub expression: Option<&'static str>,
+}
