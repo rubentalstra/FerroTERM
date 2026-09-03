@@ -566,6 +566,7 @@ dependencies = [
  "ferroterm-dhd",
  "ferroterm-fhir",
  "ferroterm-graph",
+ "ferroterm-gstandaard",
  "ferroterm-icd11",
  "ferroterm-loinc",
  "ferroterm-rf2",
@@ -637,6 +638,16 @@ dependencies = [
  "ferroterm-rf2",
  "proptest",
  "roaring",
+ "thiserror",
+]
+
+[[package]]
+name = "ferroterm-gstandaard"
+version = "0.0.6"
+dependencies = [
+ "ferroterm-classification",
+ "ferroterm-testkit",
+ "tempfile",
  "thiserror",
 ]
 
@@ -722,6 +733,7 @@ dependencies = [
  "ferroterm-dhd",
  "ferroterm-fhir",
  "ferroterm-graph",
+ "ferroterm-gstandaard",
  "ferroterm-icd11",
  "ferroterm-rf2",
  "ferroterm-rrf",
@@ -748,6 +760,7 @@ dependencies = [
  "ferroterm-classification",
  "ferroterm-dhd",
  "ferroterm-graph",
+ "ferroterm-gstandaard",
  "ferroterm-icd11",
  "ferroterm-loinc",
  "ferroterm-rf2",

@@ -392,3 +392,60 @@ fn the_dhd_artifact_serves_a_flat_thesaurus_with_dutch_terms() {
         .expect("searches");
     assert_eq!(codes(&provider, found), [ferroterm_testkit::dhd::FRACTURE]);
 }
+
+#[test]
+fn the_gstandaard_rungs_serve_flat_with_the_ladder_as_properties() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::gstandaard::write_artifacts(dir.path()).expect("builds");
+    let articles = ClassificationProvider::open(&dir.path().join("artikel")).expect("opens");
+    assert_eq!(
+        articles.identity().url,
+        ferroterm_gstandaard::ARTICLE_SYSTEM
+    );
+    assert_eq!(
+        articles.identity().version,
+        ferroterm_testkit::gstandaard::VERSION
+    );
+    assert!(articles.hierarchy().is_none());
+    let article = located(&articles, ferroterm_testkit::gstandaard::ARTICLE);
+    assert_eq!(
+        articles.display(article, None).expect("reads").as_deref(),
+        Some("SYNTHOMET TABLET 500MG 30 STUKS")
+    );
+    let p: Vec<String> = articles
+        .properties(article)
+        .expect("reads")
+        .into_iter()
+        .map(|p| format!("{}={}", p.code, p.value.as_text()))
+        .collect();
+    assert!(p.contains(&format!("hpk={}", ferroterm_testkit::gstandaard::HPK)));
+    assert!(p.contains(&format!("gpk={}", ferroterm_testkit::gstandaard::GPK)));
+    let ended = located(&articles, ferroterm_testkit::gstandaard::ENDED_ARTICLE);
+    assert!(!articles.status(ended).expect("reads").active);
+    assert!(
+        articles
+            .locate(ferroterm_testkit::gstandaard::REMOVED_ARTICLE)
+            .expect("reads")
+            .is_none()
+    );
+    let gpk = ClassificationProvider::open(&dir.path().join("gpk")).expect("opens");
+    let generic = located(&gpk, ferroterm_testkit::gstandaard::GPK);
+    assert!(
+        gpk.designations(generic, None)
+            .expect("reads")
+            .iter()
+            .any(|d| d.value == "metforminoide tablet 500mg")
+    );
+    let with_atc = gpk
+        .filter(&filter(
+            "atc",
+            FilterOperator::Equal,
+            ferroterm_testkit::gstandaard::ATC,
+        ))
+        .expect("filters");
+    assert_eq!(codes(&gpk, with_atc), [ferroterm_testkit::gstandaard::GPK]);
+    assert_eq!(
+        codes(&gpk, gpk.search("metform", Some("nl")).expect("searches")),
+        [ferroterm_testkit::gstandaard::GPK]
+    );
+}

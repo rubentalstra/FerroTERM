@@ -11,6 +11,7 @@ mod archive;
 mod classification;
 mod dhd;
 mod fixture;
+mod gstandaard;
 mod icd11;
 mod local_edition;
 mod loinc;

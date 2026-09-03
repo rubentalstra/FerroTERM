@@ -431,9 +431,18 @@ each has a clear provider shape.
   ATC (801), DDD (802), and the thesauri (902) used by the zib medication
   building blocks (<https://www.z-index.nl/documentatie/bestandsbeschrijvingen>,
   <https://zibs.nl/wiki/FarmaceutischProduct-v2.2.1(2024NL)>). No FHIR
-  representation is published; systems are `urn:oid` URIs. Provider shape: a
-  fixed-length loader producing one code system per table, with the ladder as
-  a `part-of` hierarchy.
+  representation is published; systems are `urn:oid` URIs. **Served.**
+  `ferroterm-build --gstandaard <dir> --gstandaard-version <release> --out
+  <dir>` reads `BST711T` (GPK), `BST052T` (PRK), `BST031T` (HPK), and
+  `BST004T` (articles) at the published positions, the names through
+  `BST020T` (the full name as display, the short and label names as
+  designations) and the coded form, route, and unit through `BST902T`, into
+  four flat classifications under `<out>/{gpk,prk,hpk,artikel}`. The rungs
+  above a concept are properties (`gpk`, `prk`, `hpk`), as are the ATC code,
+  substance, strength, form, route, brand, and firm; removed records are
+  skipped and an article with a removal date is inactive. `BST801T` builds
+  ATC (above). The release is given on the command line; the files carry
+  none.
 - **Nederlandse Labcodeset.** Over 5,000 laboratory determinations: LOINC
   concepts with Dutch names, SNOMED materials and outcome lists, UCUM units,
   published as one XML document and on the Nictiz server

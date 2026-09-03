@@ -31,6 +31,8 @@ fn cli(
         atc_version: None,
         dhd: Some(dhd),
         dhd_version: version.map(str::to_owned),
+        gstandaard: None,
+        gstandaard_version: None,
         rxnorm_sources: Vec::new(),
         out: out.to_path_buf(),
     }

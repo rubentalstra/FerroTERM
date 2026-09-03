@@ -56,6 +56,14 @@ fresh link reference.
   `ConceptMap`) for `FERROTERM_CODESYSTEMS`. A classification without a tree
   (no `hierarchyMeaning`) is served without `parent`/`child` properties and
   without subsumption.
+- G-Standaard: `ferroterm-build --gstandaard <dir> --gstandaard-version
+  <release>` builds the product ladder from the fixed-length files (`BST711T`,
+  `BST052T`, `BST031T`, `BST004T`, names through `BST020T`, thesauri through
+  `BST902T`) into four flat classifications under `<out>/{gpk,prk,hpk,artikel}`
+  (`urn:oid:2.16.840.1.113883.2.4.4.1`, `.10`, `.7`, `.8`): the full name as
+  display, short and label names as designations, the rungs above a concept,
+  the ATC code, substance, strength, form, route, brand, and firm as
+  properties; removed records skipped, articles with a removal date inactive.
 
 ### Changed
 

@@ -14,6 +14,7 @@ publish = false
 ferroterm-build.workspace = true
 ferroterm-classification.workspace = true
 ferroterm-dhd.workspace = true
+ferroterm-gstandaard.workspace = true
 ferroterm-icd11.workspace = true
 ferroterm-graph.workspace = true
 ferroterm-loinc.workspace = true

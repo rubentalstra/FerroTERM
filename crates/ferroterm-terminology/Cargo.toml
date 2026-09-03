@@ -33,6 +33,7 @@ uuid.workspace = true
 criterion.workspace = true
 ferroterm-testkit.workspace = true
 ferroterm-dhd.workspace = true
+ferroterm-gstandaard.workspace = true
 tempfile.workspace = true
 
 [[bench]]
