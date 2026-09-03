@@ -1,26 +1,23 @@
-//! `ValueSet/$validate-code` on R4B
-//! (<https://hl7.org/fhir/R4B/valueset-operation-validate-code.html>).
+//! `ValueSet/$validate-code` in the terms every served FHIR version shares.
+//!
+//! The operation pages: <https://hl7.org/fhir/R4B/valueset-operation-validate-code.html>
+//! and <https://hl7.org/fhir/R5/valueset-operation-validate-code.html>.
 //!
 //! The value set is inline, stored, or implicit, and is expanded whole; the
 //! code is one of `code` with `system`, `coding`, or `codeableConcept`. A code
 //! outside the value set is `result = false` with a message, never an error.
-//! Beside the R4B outputs, the validation carries the `system`, `version`, and
-//! `code` echo and the `issues` a general-purpose server of the terminology
-//! ecosystem returns (`tx-issue-type` codings), which the wire layer appends.
+//! Beside `result`, `message`, and `display`, the validation carries the
+//! `system`, `version`, and `code` echo and the `issues` a general-purpose
+//! server of the terminology ecosystem returns (`tx-issue-type` codings); the
+//! wire layer of each version emits what that version declares.
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::coding::Coding;
-use ferroterm_fhir::r4b::operations::value_set_validate_code::{
-    ValueSetValidateCodeRequest, ValueSetValidateCodeResponse,
-};
-
-use super::{OperationError, Sources, code_text, coding_parts, string_text, uri_text};
+use super::{CodingRef, OperationError, Sources};
 use crate::compose::Item;
 use crate::language;
 use crate::provider::CodeSystemProvider;
-use crate::valueset::convert;
-use crate::valueset::model::ValueSetModel;
+use crate::valueset::model::{ModelError, ValueSetModel};
 use crate::valueset::store::Resolver;
 use crate::versioned::Versioned;
 
@@ -43,11 +40,15 @@ pub struct Issue {
     pub expression: Option<&'static str>,
 }
 
-/// The outcome of a validation: the R4B response and the ecosystem outputs.
+/// The outcome of a validation, in no version's types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Validation {
-    /// `result`, `message`, and `display`.
-    pub response: ValueSetValidateCodeResponse,
+    /// Whether the code is in the value set (and its display, when given, is valid).
+    pub result: bool,
+    /// Why the result is what it is, when there is something to say.
+    pub message: Option<String>,
+    /// The display the system prefers, when the code was found.
+    pub display: Option<String>,
     /// The system the code was checked in, when one was determined.
     pub system: Option<String>,
     /// The served version of that system.
@@ -59,6 +60,38 @@ pub struct Validation {
 }
 
 /// The code under validation, from whichever parameter carried it.
+/// The input of `ValueSet/$validate-code`: the union of the parameters the
+/// served versions declare.
+#[derive(Debug, Default)]
+pub struct ValueSetValidateInput {
+    /// The value set URL (`url`).
+    pub url: Option<String>,
+    /// The value set version (`valueSetVersion`).
+    pub value_set_version: Option<String>,
+    /// The inline `valueSet`, converted by the wire layer of its version.
+    pub inline_value_set: Option<Result<ValueSetModel, ModelError>>,
+    /// Whether `context` was given; not supported.
+    pub context: bool,
+    /// Whether `date` was given; not supported.
+    pub date: bool,
+    /// The code.
+    pub code: Option<String>,
+    /// The code system URI (`system`).
+    pub system: Option<String>,
+    /// The code system version (`systemVersion`).
+    pub system_version: Option<String>,
+    /// The display the client asserts.
+    pub display: Option<String>,
+    /// The coding, instead of `code`.
+    pub coding: Option<CodingRef>,
+    /// The codings of a `codeableConcept`, instead of `code`.
+    pub codeable_concept: Option<Vec<CodingRef>>,
+    /// The language of the display (a BCP 47 range list).
+    pub display_language: Option<String>,
+    /// `abstract`: whether an abstract code may be selected; the default is true.
+    pub abstract_ok: Option<bool>,
+}
+
 struct Subject<'a> {
     system: Option<&'a str>,
     version: Option<&'a str>,
@@ -76,66 +109,66 @@ struct Subject<'a> {
 /// invalid value set, or a provider failure.
 pub fn validate_code(
     sources: &Sources<'_>,
-    request: &ValueSetValidateCodeRequest,
+    input: &ValueSetValidateInput,
 ) -> Result<Validation, OperationError> {
-    if request.context.is_some() {
+    if input.context {
         return Err(OperationError::NotSupported(String::from(
             "`context` is not supported; name the value set with `url` or `valueSet`",
         )));
     }
-    if request.date.is_some() {
+    if input.date {
         return Err(OperationError::NotSupported(String::from(
             "`date` is not supported: codes are validated against the versions served now",
         )));
     }
     let model = sources.value_set(
-        request.value_set.as_ref().map(convert::r4b::convert),
-        uri_text(request.url.as_ref()),
-        string_text(request.value_set_version.as_ref()),
+        input.inline_value_set.clone(),
+        input.url.as_deref(),
+        input.value_set_version.as_deref(),
     )?;
-    let language = code_text(request.display_language.as_ref());
+    let language = input.display_language.as_deref();
     let resolver = Resolver::new(sources.registry, sources.value_sets);
-    let abstract_ok = request
-        .r#abstract
-        .as_ref()
-        .and_then(|b| b.value)
-        .unwrap_or(true);
-    let inputs = usize::from(request.code.is_some())
-        + usize::from(request.coding.is_some())
-        + usize::from(request.codeable_concept.is_some());
+    let abstract_ok = input.abstract_ok.unwrap_or(true);
+    let inputs = usize::from(input.code.is_some())
+        + usize::from(input.coding.is_some())
+        + usize::from(input.codeable_concept.is_some());
     if inputs != 1 {
         return Err(OperationError::Invalid(String::from(
             "provide one and only one of `code`, `coding`, or `codeableConcept`",
         )));
     }
-    if let Some(code) = code_text(request.code.as_ref()) {
+    if let Some(code) = input.code.as_deref() {
         let subject = Subject {
-            system: uri_text(request.system.as_ref()),
-            version: string_text(request.system_version.as_ref()),
+            system: input.system.as_deref(),
+            version: input.system_version.as_deref(),
             code,
-            display: string_text(request.display.as_ref()),
+            display: input.display.as_deref(),
             expression: "code",
         };
         return check(sources, &model, &resolver, &subject, language, abstract_ok);
     }
-    if let Some(coding) = &request.coding {
-        let (system, version, code, display) = coding_parts(coding);
-        let code = code
+    if let Some(coding) = &input.coding {
+        let code = coding
+            .code
+            .as_deref()
             .ok_or_else(|| OperationError::Required(String::from("`coding.code` is required")))?;
         let subject = Subject {
-            system: system.or(uri_text(request.system.as_ref())),
-            version: version.or(string_text(request.system_version.as_ref())),
+            system: coding.system.as_deref().or(input.system.as_deref()),
+            version: coding
+                .version
+                .as_deref()
+                .or(input.system_version.as_deref()),
             code,
-            display: display.or(string_text(request.display.as_ref())),
+            display: coding.display.as_deref().or(input.display.as_deref()),
             expression: "coding",
         };
         return check(sources, &model, &resolver, &subject, language, abstract_ok);
     }
-    let concept = request
+    let codings = input
         .codeable_concept
         .as_ref()
         .ok_or_else(|| OperationError::Invalid(String::from("no code input")))?;
-    if concept.coding.is_empty() {
+    if codings.is_empty() {
         return Err(OperationError::Required(String::from(
             "`codeableConcept` carries no `coding`",
         )));
@@ -143,18 +176,19 @@ pub fn validate_code(
     // NOTE: a CodeableConcept validates when any of its codings is in the value
     // set (<https://hl7.org/fhir/R4B/valueset-operation-validate-code.html>).
     let mut last = None;
-    for coding in &concept.coding {
-        let (system, version, code, display) = coding_parts(coding);
-        let Some(code) = code else { continue };
+    for coding in codings {
+        let Some(code) = coding.code.as_deref() else {
+            continue;
+        };
         let subject = Subject {
-            system,
-            version,
+            system: coding.system.as_deref(),
+            version: coding.version.as_deref(),
             code,
-            display,
+            display: coding.display.as_deref(),
             expression: "codeableConcept",
         };
         let validation = check(sources, &model, &resolver, &subject, language, abstract_ok)?;
-        if validation.response.result.value == Some(true) {
+        if validation.result {
             return Ok(validation);
         }
         last = Some(validation);
@@ -249,11 +283,9 @@ fn check(
         .collect::<Vec<_>>()
         .join("; ");
     Ok(Validation {
-        response: ValueSetValidateCodeResponse {
-            result: result.into(),
-            message: (!message.is_empty()).then(|| message.as_str().into()),
-            display: display.as_deref().map(Into::into),
-        },
+        result,
+        message: (!message.is_empty()).then_some(message),
+        display,
         system: Some(system),
         version: Some(version).filter(|v| !v.is_empty()),
         code: Some(located.code),
@@ -386,25 +418,13 @@ fn not_in_vs(model: &ValueSetModel, system_code: &str, expression: &'static str)
 fn failed(system: Option<String>, version: Option<String>, issue: Issue) -> Validation {
     let version = version.filter(|v| !v.is_empty());
     Validation {
-        response: ValueSetValidateCodeResponse {
-            result: false.into(),
-            message: Some(issue.text.as_str().into()),
-            display: None,
-        },
+        result: false,
+        message: Some(issue.text.clone()),
+        display: None,
         system,
         version,
         code: None,
         issues: vec![issue],
-    }
-}
-
-/// The R4B `Coding` of a `tx-issue-type` code, for `issue.details.coding`.
-#[must_use]
-pub fn tx_issue_coding(kind: &str) -> Coding {
-    Coding {
-        system: Some(TX_ISSUE_TYPE.into()),
-        code: Some(kind.into()),
-        ..Default::default()
     }
 }
 
@@ -435,7 +455,7 @@ fn unknown_code(
             subject.expression,
         ),
     );
-    validation.response.message = Some(unknown.text.as_str().into());
+    validation.message = Some(unknown.text.clone());
     validation.issues.push(unknown);
     // NOTE: the submitted code is echoed even when the system does not have it, the
     // shape the ecosystem expects (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>).
@@ -459,6 +479,6 @@ fn outside_value_set(
         not_in_vs(model, &system_code(system, &located.code), expression),
     );
     validation.code = Some(located.code.clone());
-    validation.response.display = display.map(Into::into);
+    validation.display = display.map(str::to_owned);
     validation
 }

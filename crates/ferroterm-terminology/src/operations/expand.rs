@@ -1,56 +1,163 @@
-//! `ValueSet/$expand` on R4B
-//! (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>).
+//! `ValueSet/$expand` in the terms every served FHIR version shares.
 //!
-//! The value set is inline, stored, or implicit; its compose is evaluated by
-//! the compose layer and the expansion is flat (`excludeNested` is always
-//! honoured). Every effective parameter is echoed in `expansion.parameter`,
-//! with one `used-codesystem` per code system version the expansion drew on.
-//! `context`, `contextDirection`, and `date` are refused as not supported.
+//! The operation pages: <https://hl7.org/fhir/R4B/valueset-operation-expand.html>
+//! and <https://hl7.org/fhir/R5/valueset-operation-expand.html>. The value set
+//! is inline, stored, or implicit; its compose is pinned by the version
+//! parameters, expanded as bitmap algebra, paged, and the page is read into
+//! neutral items with their designations; the wire layer of each version
+//! renders the `ValueSet` resource with its `expansion`.
 
-use ferroterm_fhir::r4b::coding::Coding;
-use ferroterm_fhir::r4b::operations::value_set_expand::{
-    ValueSetExpandRequest, ValueSetExpandResponse,
-};
-use ferroterm_fhir::r4b::primitives::{Canonical, Integer};
-use ferroterm_fhir::r4b::value_set::{
-    ValueSet, ValueSetComposeIncludeConceptDesignation, ValueSetExpansion,
-    ValueSetExpansionContains, ValueSetExpansionParameter, ValueSetExpansionParameterValue,
-};
+use std::sync::Arc;
 
-use super::{OperationError, Sources, code_text, string_text, uri_text};
+use super::{OperationError, Sources};
 use crate::compose::{Compose, Expansion, Include, Item, Options};
 use crate::provider::Designation;
-use crate::valueset::model::ValueSetModel;
+use crate::valueset::model::{ModelError, ValueSetModel};
 use crate::valueset::store::Resolver;
-use crate::valueset::{convert, render};
 use crate::versioned::Versioned;
 
-/// The largest expansion returned without `count`.
+/// The most concepts an unpaged expansion returns before it is `too-costly`.
+///
+/// No specification names the limit; the ecosystem's servers refuse whole
+/// expansions of the large systems, and a client pages with `count`.
 pub const EXPANSION_LIMIT: u64 = 1000;
+
+/// The input of `$expand`: the union of the parameters the served versions
+/// declare.
+#[derive(Debug, Default)]
+pub struct ExpandInput {
+    /// The value set URL (`url`).
+    pub url: Option<String>,
+    /// The value set version (`valueSetVersion`).
+    pub value_set_version: Option<String>,
+    /// The inline `valueSet`, converted by the wire layer of its version.
+    pub inline_value_set: Option<Result<ValueSetModel, ModelError>>,
+    /// Whether `context` or `contextDirection` was given; not supported.
+    pub context: bool,
+    /// Whether `date` was given; not supported.
+    pub date: bool,
+    /// The text filter.
+    pub filter: Option<String>,
+    /// The offset into the expansion.
+    pub offset: Option<i64>,
+    /// The page size.
+    pub count: Option<i64>,
+    /// `includeDesignations`.
+    pub include_designations: Option<bool>,
+    /// `designation`: the languages or `system|code` uses to include.
+    pub designation: Vec<String>,
+    /// `includeDefinition`.
+    pub include_definition: Option<bool>,
+    /// `activeOnly`.
+    pub active_only: Option<bool>,
+    /// `excludeNested`.
+    pub exclude_nested: Option<bool>,
+    /// `excludeNotForUI`.
+    pub exclude_not_for_ui: Option<bool>,
+    /// `excludePostCoordinated`.
+    pub exclude_post_coordinated: Option<bool>,
+    /// The language of the displays (a BCP 47 range list).
+    pub display_language: Option<String>,
+    /// `exclude-system` canonicals.
+    pub exclude_system: Vec<String>,
+    /// `system-version` canonicals.
+    pub system_version: Vec<String>,
+    /// `check-system-version` canonicals.
+    pub check_system_version: Vec<String>,
+    /// `force-system-version` canonicals.
+    pub force_system_version: Vec<String>,
+    /// `property` (R5): the properties to include on each concept.
+    pub property: Vec<String>,
+    /// `useSupplement` (R5): the supplements to apply.
+    pub use_supplement: Vec<String>,
+}
+
+/// One echoed `expansion.parameter`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExpansionParameter {
+    /// The parameter name.
+    pub name: String,
+    /// The value.
+    pub value: ParameterValue,
+}
+
+/// The value of an echoed expansion parameter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParameterValue {
+    /// A `string`.
+    String(String),
+    /// A `boolean`.
+    Boolean(bool),
+    /// An `integer`.
+    Integer(i64),
+    /// A `code`.
+    Code(String),
+    /// A `uri`.
+    Uri(String),
+}
+
+/// One concept of the expansion page.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Contains {
+    /// The code system URI.
+    pub system: String,
+    /// The code system version served.
+    pub version: String,
+    /// The code.
+    pub code: String,
+    /// The display in the requested language.
+    pub display: Option<String>,
+    /// Whether the concept is abstract (not selectable).
+    pub abstract_concept: bool,
+    /// Whether the concept is inactive.
+    pub inactive: bool,
+    /// The designations asked for.
+    pub designations: Vec<Designation>,
+}
+
+/// The outcome of `$expand`.
+#[derive(Debug, Clone)]
+pub struct ExpansionOutcome {
+    /// The value set expanded (its definition, for the resource).
+    pub model: Arc<ValueSetModel>,
+    /// Whether the compose is to be returned (`includeDefinition`).
+    pub include_definition: bool,
+    /// The expansion identifier (`urn:uuid:…`).
+    pub identifier: String,
+    /// The timestamp of the expansion.
+    pub timestamp: String,
+    /// The size of the whole expansion.
+    pub total: u64,
+    /// The offset, when the client paged.
+    pub offset: Option<u64>,
+    /// The parameters echoed, in order.
+    pub parameters: Vec<ExpansionParameter>,
+    /// The page.
+    pub contains: Vec<Contains>,
+}
 
 /// Runs `$expand`.
 ///
 /// # Errors
 ///
-/// Returns [`OperationError`] when the value set is unknown or invalid, a
-/// parameter is out of range or unsupported, or a provider fails.
+/// Returns [`OperationError`] for a value set that cannot be found or is
+/// invalid, a parameter the operation does not support, a version pin the
+/// value set contradicts, a negative page, an unpaged expansion beyond
+/// [`EXPANSION_LIMIT`], or a provider failure.
 pub fn expand(
     sources: &Sources<'_>,
-    request: &ValueSetExpandRequest,
-) -> Result<ValueSetExpandResponse, OperationError> {
-    refuse_unsupported(request)?;
+    input: &ExpandInput,
+) -> Result<ExpansionOutcome, OperationError> {
+    refuse_unsupported(input)?;
     let model = sources.value_set(
-        request.value_set.as_ref().map(convert::r4b::convert),
-        uri_text(request.url.as_ref()),
-        string_text(request.value_set_version.as_ref()),
+        input.inline_value_set.clone(),
+        input.url.as_deref(),
+        input.value_set_version.as_deref(),
     )?;
-    let compose = pinned_compose(&model.compose, request)?;
-    let options = options(request)?;
+    let compose = pinned_compose(&model.compose, input)?;
+    let options = options(input)?;
     let resolver = Resolver::new(sources.registry, sources.value_sets);
     let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;
-    // NOTE: `too-costly` is the issue type for an expansion the server declines to
-    // return whole (<https://hl7.org/fhir/R4B/valueset-issue-type.html>); the
-    // size at which it declines is our own design.
     if options.count.is_none() && expansion.total > EXPANSION_LIMIT {
         return Err(OperationError::TooCostly(format!(
             "the expansion of `{}` has {} concepts; page it with `count` (and `offset`) to fetch it",
@@ -58,44 +165,28 @@ pub fn expand(
             expansion.total
         )));
     }
-    let contains = contains(sources, &expansion, request, options.language.as_deref())?;
-    let total = i32::try_from(expansion.total).map_err(|_| {
-        OperationError::NotSupported(String::from(
-            "the expansion is larger than an R4B integer can count",
-        ))
-    })?;
-    let offset = i32::try_from(expansion.offset).map_err(|_| {
-        OperationError::Invalid(String::from("`offset` is larger than an R4B integer"))
-    })?;
-    let include_definition = request
-        .include_definition
-        .as_ref()
-        .and_then(|b| b.value)
-        .unwrap_or(false);
-    let mut value_set = render::to_r4b(&model, include_definition);
-    value_set.expansion = Some(ValueSetExpansion {
-        identifier: Some(format!("urn:uuid:{}", uuid::Uuid::new_v4()).as_str().into()),
-        timestamp: jiff::Timestamp::now().to_string().as_str().into(),
-        total: Some(Integer::from(total)),
-        offset: (request.offset.is_some() || request.count.is_some())
-            .then_some(Integer::from(offset)),
-        parameter: parameters(request, &expansion),
+    let contains = contains(sources, &expansion, input, options.language.as_deref())?;
+    let offset = u64::try_from(expansion.offset)
+        .map_err(|_| OperationError::Invalid(String::from("`offset` is too large")))?;
+    Ok(ExpansionOutcome {
+        include_definition: input.include_definition.unwrap_or(false),
+        identifier: format!("urn:uuid:{}", uuid::Uuid::new_v4()),
+        timestamp: jiff::Timestamp::now().to_string(),
+        total: expansion.total,
+        offset: (input.offset.is_some() || input.count.is_some()).then_some(offset),
+        parameters: parameters(input, &expansion),
         contains,
-        ..Default::default()
-    });
-    Ok(ValueSetExpandResponse {
-        r#return: value_set,
+        model,
     })
 }
 
-/// Refuses the R4B parameters this server does not evaluate.
-fn refuse_unsupported(request: &ValueSetExpandRequest) -> Result<(), OperationError> {
-    if request.context.is_some() || request.context_direction.is_some() {
+fn refuse_unsupported(input: &ExpandInput) -> Result<(), OperationError> {
+    if input.context {
         return Err(OperationError::NotSupported(String::from(
             "`context` and `contextDirection` are not supported; name the value set with `url` or `valueSet`",
         )));
     }
-    if request.date.is_some() {
+    if input.date {
         return Err(OperationError::NotSupported(String::from(
             "`date` is not supported: expansions are generated from the versions served now",
         )));
@@ -103,13 +194,9 @@ fn refuse_unsupported(request: &ValueSetExpandRequest) -> Result<(), OperationEr
     Ok(())
 }
 
-/// The request-time options of the expansion.
-fn options(request: &ValueSetExpandRequest) -> Result<Options, OperationError> {
-    let non_negative = |value: Option<&Integer>,
-                        name: &str|
-     -> Result<Option<usize>, OperationError> {
+fn options(input: &ExpandInput) -> Result<Options, OperationError> {
+    let non_negative = |value: Option<i64>, name: &str| -> Result<Option<usize>, OperationError> {
         value
-            .and_then(|v| v.value)
             .map(|v| {
                 usize::try_from(v)
                     .map_err(|_| OperationError::Invalid(format!("`{name}` must not be negative")))
@@ -117,38 +204,29 @@ fn options(request: &ValueSetExpandRequest) -> Result<Options, OperationError> {
             .transpose()
     };
     Ok(Options {
-        active_only: request
-            .active_only
-            .as_ref()
-            .and_then(|b| b.value)
-            .unwrap_or(false),
-        text: string_text(request.filter.as_ref()).map(str::to_owned),
-        language: code_text(request.display_language.as_ref()).map(str::to_owned),
-        offset: non_negative(request.offset.as_ref(), "offset")?.unwrap_or(0),
-        count: non_negative(request.count.as_ref(), "count")?,
+        active_only: input.active_only.unwrap_or(false),
+        text: input.filter.clone(),
+        language: input.display_language.clone(),
+        offset: non_negative(input.offset, "offset")?.unwrap_or(0),
+        count: non_negative(input.count, "count")?,
     })
 }
 
-/// `compose` with the version pins and system exclusions applied
-/// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, `system-version`,
-/// `check-system-version`, `force-system-version`, `exclude-system`).
-fn pinned_compose(
-    compose: &Compose,
-    request: &ValueSetExpandRequest,
-) -> Result<Compose, OperationError> {
-    let canonicals = |list: &[Canonical]| -> Vec<(String, Option<String>)> {
-        list.iter()
-            .filter_map(|c| c.value.as_deref())
-            .map(|c| match c.split_once('|') {
-                Some((url, version)) => (url.to_owned(), Some(version.to_owned())),
-                None => (c.to_owned(), None),
-            })
-            .collect()
-    };
-    let excluded = canonicals(&request.exclude_system);
-    let defaults = canonicals(&request.system_version);
-    let checks = canonicals(&request.check_system_version);
-    let forced = canonicals(&request.force_system_version);
+/// The canonicals of a version parameter as `(url, version)` pairs.
+fn canonicals(list: &[String]) -> Vec<(String, Option<String>)> {
+    list.iter()
+        .map(|c| match c.split_once('|') {
+            Some((url, version)) => (url.to_owned(), Some(version.to_owned())),
+            None => (c.clone(), None),
+        })
+        .collect()
+}
+
+fn pinned_compose(compose: &Compose, input: &ExpandInput) -> Result<Compose, OperationError> {
+    let excluded = canonicals(&input.exclude_system);
+    let defaults = canonicals(&input.system_version);
+    let checks = canonicals(&input.check_system_version);
+    let forced = canonicals(&input.force_system_version);
     let pin = |include: &Include| -> Result<Option<Include>, OperationError> {
         let Some(system) = &include.system else {
             return Ok(Some(include.clone()));
@@ -203,124 +281,103 @@ fn pinned_compose(
     Ok(pinned)
 }
 
-/// The `expansion.parameter` echo: every effective request parameter, then
-/// one `used-codesystem` per code system version used.
-fn parameters(
-    request: &ValueSetExpandRequest,
-    expansion: &Expansion,
-) -> Vec<ValueSetExpansionParameter> {
+/// Every parameter the client gave, echoed, then the code system versions
+/// used (`used-codesystem`).
+fn parameters(input: &ExpandInput, expansion: &Expansion) -> Vec<ExpansionParameter> {
     let mut out = Vec::new();
-    let mut push = |name: &str, value: ValueSetExpansionParameterValue| {
-        out.push(ValueSetExpansionParameter {
-            name: name.into(),
-            value: Some(value),
-            ..Default::default()
+    let mut push = |name: &str, value: ParameterValue| {
+        out.push(ExpansionParameter {
+            name: name.to_owned(),
+            value,
         });
     };
-    if let Some(filter) = &request.filter {
-        push(
-            "filter",
-            ValueSetExpansionParameterValue::String(filter.clone()),
-        );
+    if let Some(filter) = &input.filter {
+        push("filter", ParameterValue::String(filter.clone()));
     }
     for (name, flag) in [
-        ("activeOnly", &request.active_only),
-        ("excludeNested", &request.exclude_nested),
-        ("includeDesignations", &request.include_designations),
-        ("includeDefinition", &request.include_definition),
-        ("excludeNotForUI", &request.exclude_not_for_u_i),
-        ("excludePostCoordinated", &request.exclude_post_coordinated),
+        ("activeOnly", input.active_only),
+        ("excludeNested", input.exclude_nested),
+        ("includeDesignations", input.include_designations),
+        ("includeDefinition", input.include_definition),
+        ("excludeNotForUI", input.exclude_not_for_ui),
+        ("excludePostCoordinated", input.exclude_post_coordinated),
     ] {
         if let Some(flag) = flag {
-            push(name, ValueSetExpansionParameterValue::Boolean(flag.clone()));
+            push(name, ParameterValue::Boolean(flag));
         }
     }
-    for (name, number) in [("offset", &request.offset), ("count", &request.count)] {
+    for (name, number) in [("offset", input.offset), ("count", input.count)] {
         if let Some(number) = number {
-            push(
-                name,
-                ValueSetExpansionParameterValue::Integer(number.clone()),
-            );
+            push(name, ParameterValue::Integer(number));
         }
     }
-    if let Some(language) = &request.display_language {
-        push(
-            "displayLanguage",
-            ValueSetExpansionParameterValue::Code(language.clone()),
-        );
+    if let Some(language) = &input.display_language {
+        push("displayLanguage", ParameterValue::Code(language.clone()));
     }
-    for designation in &request.designation {
-        push(
-            "designation",
-            ValueSetExpansionParameterValue::String(designation.clone()),
-        );
+    for designation in &input.designation {
+        push("designation", ParameterValue::String(designation.clone()));
+    }
+    for property in &input.property {
+        push("property", ParameterValue::Code(property.clone()));
+    }
+    for supplement in &input.use_supplement {
+        push("useSupplement", ParameterValue::Uri(supplement.clone()));
     }
     for (name, list) in [
-        ("exclude-system", &request.exclude_system),
-        ("system-version", &request.system_version),
-        ("check-system-version", &request.check_system_version),
-        ("force-system-version", &request.force_system_version),
+        ("exclude-system", &input.exclude_system),
+        ("system-version", &input.system_version),
+        ("check-system-version", &input.check_system_version),
+        ("force-system-version", &input.force_system_version),
     ] {
-        for canonical in list.iter().filter_map(|c| c.value.as_deref()) {
-            push(name, ValueSetExpansionParameterValue::Uri(canonical.into()));
+        for value in list {
+            push(name, ParameterValue::Uri(value.clone()));
         }
     }
     for used in &expansion.versions {
         push(
             "used-codesystem",
-            ValueSetExpansionParameterValue::Uri(
-                canonical(&used.url, &used.version).as_str().into(),
-            ),
+            ParameterValue::Uri(canonical(&used.url, &used.version)),
         );
     }
     out
 }
 
-/// The flat `expansion.contains` list, with designations when asked.
 fn contains(
     sources: &Sources<'_>,
     expansion: &Expansion,
-    request: &ValueSetExpandRequest,
+    input: &ExpandInput,
     language: Option<&str>,
-) -> Result<Vec<ValueSetExpansionContains>, OperationError> {
-    let include_designations = request
-        .include_designations
-        .as_ref()
-        .and_then(|b| b.value)
-        .unwrap_or(false);
-    let wanted: Vec<&str> = request
-        .designation
-        .iter()
-        .filter_map(|d| d.value.as_deref())
-        .collect();
+) -> Result<Vec<Contains>, OperationError> {
+    let include_designations = input.include_designations.unwrap_or(false);
+    let wanted: Vec<&str> = input.designation.iter().map(String::as_str).collect();
     let mut out = Vec::with_capacity(expansion.items.len());
     for item in &expansion.items {
-        let designation = if include_designations {
+        let designations = if include_designations {
             designations_of(sources, item, language, &wanted)?
         } else {
             Vec::new()
         };
-        out.push(ValueSetExpansionContains {
-            system: Some(item.system.as_str().into()),
-            r#abstract: item.abstract_concept.then_some(true.into()),
-            inactive: item.inactive.then_some(true.into()),
-            code: Some(item.code.as_str().into()),
-            display: item.display.as_deref().map(Into::into),
-            designation,
-            ..Default::default()
+        out.push(Contains {
+            system: item.system.clone(),
+            version: item.version.clone(),
+            code: item.code.clone(),
+            display: item.display.clone(),
+            abstract_concept: item.abstract_concept,
+            inactive: item.inactive,
+            designations,
         });
     }
     Ok(out)
 }
 
-/// The designations of one expansion item that `designation` asks for: every
-/// designation, or those whose language or `use` (`system|code`) is listed.
+/// The designations of an item the client asked for: by language, or by
+/// `system|code` use, or every one in the display language.
 fn designations_of(
     sources: &Sources<'_>,
     item: &Item,
     language: Option<&str>,
     wanted: &[&str],
-) -> Result<Vec<ValueSetComposeIncludeConceptDesignation>, OperationError> {
+) -> Result<Vec<Designation>, OperationError> {
     let resolved = sources
         .registry
         .resolve(&item.system, Some(&item.version))?;
@@ -344,35 +401,10 @@ fn designations_of(
         .designations(located.concept, None)?
         .into_iter()
         .filter(selected)
-        .map(|d| ValueSetComposeIncludeConceptDesignation {
-            language: d.language.as_deref().map(Into::into),
-            r#use: d.use_.map(|u| Coding {
-                system: Some(u.system.as_str().into()),
-                code: Some(u.code.as_str().into()),
-                display: u.display.as_deref().map(Into::into),
-                ..Default::default()
-            }),
-            value: d.value.as_str().into(),
-            ..Default::default()
-        })
         .collect())
 }
 
-/// The model of an inline R4B `ValueSet`, for callers outside this module.
-///
-/// # Errors
-///
-/// Returns [`OperationError::ValueSetInvalid`] when the resource has no `url`
-/// or an unknown filter operator.
-pub fn model_of(value_set: &ValueSet) -> Result<ValueSetModel, OperationError> {
-    convert::r4b::convert(value_set).map_err(|e| OperationError::ValueSetInvalid(e.to_string()))
-}
-
-/// `url|version`, or `url` alone for a system without a version.
+/// `url|version`, the canonical of a code system version.
 fn canonical(url: &str, version: &str) -> String {
-    if version.is_empty() {
-        url.to_owned()
-    } else {
-        format!("{url}|{version}")
-    }
+    format!("{url}|{version}")
 }

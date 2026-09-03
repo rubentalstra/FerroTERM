@@ -3,14 +3,14 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
-use ferroterm_fhir::r4b::operations::value_set_validate_code::ValueSetValidateCodeRequest;
 use ferroterm_fhir::r4b::value_set::{
     ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeFilter,
 };
 use ferroterm_graph::subsumption::Outcome;
 use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::filter::{Filter, FilterOperator};
+use ferroterm_terminology::operations::expand::ExpandInput;
+use ferroterm_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use ferroterm_terminology::operations::{
     Invocation, OperationError, Sources, expand, subsumes, value_set_validate_code,
 };
@@ -385,54 +385,60 @@ fn the_grammar_systems_refuse_expansion_and_validate_by_membership() {
         value_sets: &value_sets,
         concept_maps: &concept_maps,
     };
-    let all = ValueSetExpandRequest {
-        value_set: Some(inline(bcp13::URL, vec![])),
-        ..Default::default()
+    let all = ExpandInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(bcp13::URL, vec![]),
+        )),
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&sources, &all),
         Err(OperationError::NotSupported(_))
     ));
-    let base = ValueSetExpandRequest {
-        value_set: Some(inline(bcp13::URL, vec![("base", "=", "text")])),
-        ..Default::default()
+    let base = ExpandInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(bcp13::URL, vec![("base", "=", "text")]),
+        )),
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&sources, &base),
         Err(OperationError::NotSupported(_))
     ));
-    let registered = ValueSetExpandRequest {
-        value_set: Some(inline(bcp13::URL, vec![("registered", "=", "true")])),
-        ..Default::default()
+    let registered = ExpandInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(bcp13::URL, vec![("registered", "=", "true")]),
+        )),
+        ..ExpandInput::default()
     };
     let error = expand::expand(&sources, &registered).expect_err("too costly without count");
     assert!(matches!(error, OperationError::TooCostly(_)), "{error}");
     assert_eq!(error.issue_code(), "too-costly");
-    let paged = ValueSetExpandRequest {
-        value_set: Some(inline(bcp13::URL, vec![("registered", "=", "true")])),
-        count: Some(50.into()),
-        ..Default::default()
-    };
-    let vs = expand::expand(&sources, &paged).expect("pages").r#return;
-    assert_eq!(vs.expansion.as_ref().map(|e| e.contains.len()), Some(50));
-    let narrow = ValueSetExpandRequest {
-        value_set: Some(inline(
-            bcp13::URL,
-            vec![("registered", "=", "true"), ("base", "=", "text/plain")],
+    let paged = ExpandInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(bcp13::URL, vec![("registered", "=", "true")]),
         )),
-        ..Default::default()
+        count: Some(50),
+        ..ExpandInput::default()
     };
-    let vs = expand::expand(&sources, &narrow).expect("expands").r#return;
-    assert_eq!(
-        vs.expansion
-            .as_ref()
-            .and_then(|e| e.total.as_ref())
-            .and_then(|t| t.value),
-        Some(1)
-    );
-    let languages = ValueSetExpandRequest {
-        value_set: Some(inline(bcp47::URL, vec![("language", "=", "en")])),
-        ..Default::default()
+    let vs = expand::expand(&sources, &paged).expect("pages");
+    assert_eq!(vs.contains.len(), 50);
+    let narrow = ExpandInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(
+                bcp13::URL,
+                vec![("registered", "=", "true"), ("base", "=", "text/plain")],
+            ),
+        )),
+        ..ExpandInput::default()
+    };
+    let vs = expand::expand(&sources, &narrow).expect("expands");
+    assert_eq!(vs.total, 1);
+    let languages = ExpandInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(bcp47::URL, vec![("language", "=", "en")]),
+        )),
+        ..ExpandInput::default()
     };
     assert!(matches!(
         expand::expand(&sources, &languages),
@@ -450,46 +456,48 @@ fn the_grammar_systems_validate_by_membership_and_decline_undetermined_subsumpti
         value_sets: &value_sets,
         concept_maps: &concept_maps,
     };
-    let member = ValueSetValidateCodeRequest {
-        value_set: Some(inline(bcp13::URL, vec![("base", "=", "text")])),
-        code: Some("text/plain; charset=utf-8".into()),
-        system: Some(bcp13::URL.into()),
-        ..Default::default()
+    let member = ValueSetValidateInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(bcp13::URL, vec![("base", "=", "text")]),
+        )),
+        code: Some(String::from("text/plain; charset=utf-8")),
+        system: Some(bcp13::URL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&sources, &member).expect("validates");
-    assert_eq!(validation.response.result.value, Some(true));
+    assert!(validation.result);
     assert_eq!(
         validation.code.as_deref(),
         Some("text/plain; charset=utf-8")
     );
-    let outsider = ValueSetValidateCodeRequest {
-        value_set: Some(inline(bcp13::URL, vec![("base", "=", "text")])),
-        code: Some("application/json".into()),
-        system: Some(bcp13::URL.into()),
-        ..Default::default()
+    let outsider = ValueSetValidateInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(bcp13::URL, vec![("base", "=", "text")]),
+        )),
+        code: Some(String::from("application/json")),
+        system: Some(bcp13::URL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&sources, &outsider).expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     assert_eq!(validation.issues[0].kind, "not-in-vs");
-    let english = ValueSetValidateCodeRequest {
-        value_set: Some(inline(
-            bcp47::URL,
-            vec![("language", "=", "en"), ("region", "=", "US")],
+    let english = ValueSetValidateInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(
+                bcp47::URL,
+                vec![("language", "=", "en"), ("region", "=", "US")],
+            ),
         )),
-        code: Some("en-us".into()),
-        system: Some(bcp47::URL.into()),
-        ..Default::default()
+        code: Some(String::from("en-us")),
+        system: Some(bcp47::URL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&sources, &english).expect("validates");
-    assert_eq!(validation.response.result.value, Some(true));
+    assert!(validation.result);
     assert_eq!(validation.code.as_deref(), Some("en-US"));
     assert_eq!(
-        validation
-            .response
-            .display
-            .as_ref()
-            .and_then(|d| d.value.as_deref()),
+        validation.display.as_deref(),
         Some("English (United States)")
     );
     let subsumes_request = subsumes::SubsumesInput {
