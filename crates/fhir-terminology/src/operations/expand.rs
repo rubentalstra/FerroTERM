@@ -207,7 +207,7 @@ pub fn expand(
             expansion.total
         )));
     }
-    let contains = contains(sources, &expansion, input, options.language.as_deref())?;
+    let contains = contains(sources, &expansion, input)?;
     let properties = expansion_properties(sources, &expansion, &contains)?;
     let offset = u64::try_from(expansion.offset)
         .map_err(|_| OperationError::Invalid(String::from("`offset` is too large")))?;
@@ -345,9 +345,6 @@ fn parameters(
     for designation in &input.designation {
         push("designation", ParameterValue::String(designation.clone()));
     }
-    for property in &input.property {
-        push("property", ParameterValue::Code(property.clone()));
-    }
     for supplement in &input.use_supplement {
         push("useSupplement", ParameterValue::Uri(supplement.clone()));
     }
@@ -382,21 +379,27 @@ fn contains(
     sources: &Sources<'_>,
     expansion: &Expansion,
     input: &ExpandInput,
-    language: Option<&str>,
 ) -> Result<Vec<Contains>, OperationError> {
     let include_designations = input.include_designations.unwrap_or(false);
     let wanted: Vec<&str> = input.designation.iter().map(String::as_str).collect();
     let mut out = Vec::with_capacity(expansion.items.len());
     for item in &expansion.items {
         let designations = if include_designations {
-            designations_of(sources, item, language, &wanted)?
+            designations_of(sources, item, &wanted)?
         } else {
             Vec::new()
         };
-        let properties = if input.property.is_empty() {
+        // NOTE: an inactive concept carries its status property unasked, the
+        // ecosystem's shape ("in expansions, the status property SHALL be populated",
+        // <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+        let mut asked = input.property.clone();
+        if item.inactive && !asked.iter().any(|p| p == "status" || p == "*") {
+            asked.push(String::from("status"));
+        }
+        let properties = if asked.is_empty() {
             Vec::new()
         } else {
-            properties_of(sources, item, &input.property)?
+            properties_of(sources, item, &asked)?
         };
         out.push(Contains {
             system: item.system.clone(),
@@ -413,11 +416,10 @@ fn contains(
 }
 
 /// The designations of an item the client asked for: by language, or by
-/// `system|code` use, or every one in the display language.
+/// `system|code` use, or every one when none is named.
 fn designations_of(
     sources: &Sources<'_>,
     item: &Item,
-    language: Option<&str>,
     wanted: &[&str],
 ) -> Result<Vec<Designation>, OperationError> {
     let resolved = sources
@@ -428,7 +430,7 @@ fn designations_of(
     };
     let selected = |d: &Designation| {
         if wanted.is_empty() {
-            return language.is_none_or(|l| d.language.as_deref().is_none_or(|dl| dl == l));
+            return true;
         }
         wanted.iter().any(|w| match w.split_once('|') {
             Some((system, code)) => d
@@ -446,9 +448,14 @@ fn designations_of(
         .collect())
 }
 
-/// `url|version`, the canonical of a code system version.
+/// `url|version`, the canonical of a code system version; `url` alone for a
+/// versionless system.
 fn canonical(url: &str, version: &str) -> String {
-    format!("{url}|{version}")
+    if version.is_empty() {
+        url.to_owned()
+    } else {
+        format!("{url}|{version}")
+    }
 }
 
 /// The properties of an item the client asked for: every one for `*`, else

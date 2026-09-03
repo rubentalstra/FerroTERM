@@ -1,3 +1,4 @@
+
 big/big-echo-fifty-fifty-limit
 big/big-echo-no-limit
 big/big-echo-zero-fifty-limit
@@ -37,6 +38,8 @@ inactive/inactive-3b-validate
 inactive/inactive-active-expand
 language/language-echo-de-de-header
 language/language-echo-de-de-param
+language/language-echo-de-multi-de-header
+language/language-echo-de-multi-de-param
 language/language-echo-de-multi-none
 language/language-echo-de-none
 language/language-echo-en-en-header
@@ -115,6 +118,12 @@ overload/validate-good-v1code1
 overload/validate-good-v1code2-display
 overload/validate-v1code2-wrongdisplay
 parameters/parameters-expand-enum-active
+parameters/parameters-expand-enum-definitions
+parameters/parameters-expand-enum-designations
+parameters/parameters-expand-enum-hierarchy
+parameters/parameters-expand-enum-inactive
+parameters/parameters-expand-enum-property
+parameters/parameters-expand-isa-property
 parameters/parameters-expand-supplement-bad
 parameters/parameters-lookup-supplement-bad
 parameters/parameters-lookup-supplement-none
@@ -161,13 +170,19 @@ search/search-enum-no
 search/search-enum-yes
 search/search-filter-no
 simple-cases/simple-expand-active
+simple-cases/simple-expand-all
 simple-cases/simple-expand-all-count
 simple-cases/simple-expand-child-of
+simple-cases/simple-expand-enum
+simple-cases/simple-expand-inactive
+simple-cases/simple-expand-isa
+simple-cases/simple-expand-prop
 simple-cases/simple-expand-regex-none
 simple-cases/simple-expand-regexp-prop
 simple-cases/simple-expand-repeating-prop
 simple-cases/simple-lookup-1
 simple-cases/simple-lookup-2
+tho/act-exclusion
 tho/validate-child-of-child
 tho/validate-child-of-grandchild
 tho/validate-child-of-self

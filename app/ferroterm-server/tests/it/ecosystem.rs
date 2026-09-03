@@ -620,3 +620,40 @@ async fn every_issue_and_outcome_carries_the_ecosystems_message_id() {
         assert!(parameter(&body, "version").is_none(), "{version}: {body}");
     }
 }
+
+#[tokio::test]
+async fn expand_flags_inactive_concepts_with_their_status_on_every_version() {
+    let server = Server::start_with_resources();
+    for version in VERSIONS {
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$expand?url={VS_ALL}&valueSetVersion=1.0"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        let echoed: Vec<&str> = body["expansion"]["parameter"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| p["name"].as_str().unwrap())
+            .collect();
+        assert!(
+            !echoed.contains(&"displayLanguage"),
+            "{version}: {echoed:?}"
+        );
+        let fish = body["expansion"]["contains"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["code"] == "fish")
+            .expect("fish");
+        assert_eq!(fish["inactive"], true, "{version}: {fish}");
+        if version == "r5" {
+            assert_eq!(fish["property"][0]["code"], "status", "{version}: {fish}");
+            assert_eq!(
+                fish["property"][0]["valueCode"], "retired",
+                "{version}: {fish}"
+            );
+        }
+    }
+}

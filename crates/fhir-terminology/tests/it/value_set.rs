@@ -166,10 +166,12 @@ fn expand_pages_filters_and_honours_active_only() {
     assert_eq!(codes(&vs), ["cat"]);
     let cat = &vs.contains[0];
     assert_eq!(cat.display.as_deref(), Some("Katze"));
+    // NOTE: `includeDesignations` lists every designation; `displayLanguage` chooses
+    // the display alone (the ecosystem's language cases, #190).
     assert_eq!(
         cat.designations.len(),
-        1,
-        "only the requested language's designations"
+        2,
+        "every designation, whatever the display language"
     );
     let zero = ExpandInput {
         url: Some(VS_ALL.to_owned()),
@@ -730,10 +732,8 @@ fn expand_returns_the_properties_asked_for() {
         by_code.properties[0].uri.as_deref(),
         Some("http://example.org/legs")
     );
-    assert_eq!(
-        parameter(&by_code, "property"),
-        [ParameterValue::Code(String::from("legs"))]
-    );
+    // NOTE: the ecosystem does not echo `property` among the expansion parameters (#190).
+    assert!(parameter(&by_code, "property").is_empty());
     let by_uri = expand::expand(
         &world.sources(),
         &ExpandInput {
@@ -1705,4 +1705,81 @@ fn the_message_joins_the_errors_in_the_ecosystems_order() {
         message.find("The version").unwrap(),
     ];
     assert!(order[0] < order[1] && order[1] < order[2], "{message}");
+}
+
+// NOTE: an expansion lists every designation unless asked for some, flags an
+// inactive concept with its status, and echoes neither `property` nor a
+// language it was not asked for (the ecosystem's `$expand` cases, #190).
+#[test]
+fn expand_lists_every_designation_and_flags_inactive_concepts() {
+    let world = World::load();
+    let vs = expand::expand(
+        &world.sources(),
+        &ExpandInput {
+            url: Some(VS_ALL.to_owned()),
+            value_set_version: Some(String::from("1.0")),
+            include_designations: Some(true),
+            property: vec![String::from("legs")],
+            ..ExpandInput::default()
+        },
+    )
+    .expect("expands");
+    let names: Vec<&str> = vs.parameters.iter().map(|p| p.name.as_str()).collect();
+    assert!(!names.contains(&"property"), "{names:?}");
+    assert!(
+        !names.contains(&"displayLanguage"),
+        "no language is echoed when none was asked for: {names:?}"
+    );
+    let fish = vs.contains.iter().find(|c| c.code == "fish").expect("fish");
+    assert!(fish.inactive);
+    let codes: Vec<&str> = fish.properties.iter().map(|p| p.code.as_str()).collect();
+    assert_eq!(
+        codes,
+        ["legs", "status"],
+        "the status property rides along unasked"
+    );
+    assert_eq!(
+        fish.properties[1].value,
+        PropertyValue::Code(String::from("retired"))
+    );
+    let cat = vs.contains.iter().find(|c| c.code == "cat").expect("cat");
+    let mut languages: Vec<Option<&str>> = cat
+        .designations
+        .iter()
+        .map(|d| d.language.as_deref())
+        .collect();
+    languages.sort_unstable();
+    assert_eq!(
+        languages,
+        [Some("de"), Some("en")],
+        "every designation, whatever the display language"
+    );
+    let german = expand::expand(
+        &world.sources(),
+        &ExpandInput {
+            url: Some(VS_ALL.to_owned()),
+            value_set_version: Some(String::from("1.0")),
+            include_designations: Some(true),
+            display_language: Some(String::from("de")),
+            ..ExpandInput::default()
+        },
+    )
+    .expect("expands");
+    let cat = german
+        .contains
+        .iter()
+        .find(|c| c.code == "cat")
+        .expect("cat");
+    assert_eq!(
+        cat.designations.len(),
+        2,
+        "displayLanguage narrows nothing: {:?}",
+        cat.designations
+    );
+    let names: Vec<&str> = german.parameters.iter().map(|p| p.name.as_str()).collect();
+    assert_eq!(
+        names.iter().filter(|n| **n == "displayLanguage").count(),
+        1,
+        "the requested language once"
+    );
 }
