@@ -558,7 +558,7 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferroterm-build"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "anyhow",
  "clap",
@@ -583,7 +583,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-classification"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "csv",
  "ferroterm-testkit",
@@ -594,7 +594,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-dhd"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "csv",
  "ferroterm-classification",
@@ -605,14 +605,14 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-ecl"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "thiserror",
 ]
 
 [[package]]
 name = "ferroterm-fhir"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "serde",
  "serde_json",
@@ -620,7 +620,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-fhir-codegen"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "anyhow",
  "clap",
@@ -633,7 +633,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-graph"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "ferroterm-rf2",
  "proptest",
@@ -643,7 +643,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-gstandaard"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "ferroterm-classification",
  "ferroterm-testkit",
@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-icd11"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "ferroterm-testkit",
  "reqwest",
@@ -664,7 +664,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-loinc"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "csv",
  "ferroterm-testkit",
@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-rf2"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "csv",
  "jiff",
@@ -684,7 +684,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-rrf"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "csv",
  "ferroterm-testkit",
@@ -694,7 +694,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-server"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "anyhow",
  "axum",
@@ -715,7 +715,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-store"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "ferroterm-graph",
  "ferroterm-rf2",
@@ -726,7 +726,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-terminology"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "criterion",
  "csv",
@@ -754,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-testkit"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "ferroterm-build",
  "ferroterm-classification",
@@ -773,7 +773,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-text"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "ferroterm-graph",
  "ferroterm-rf2",
