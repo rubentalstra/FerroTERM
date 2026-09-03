@@ -351,7 +351,10 @@ server.
 
 ## Licensing
 
-The software is MIT. Code system content is licensed by its owner and is never
+The software is source-available under the Business Source License 1.1
+(production use allowed; no hosted-service offering or for-fee resale; Apache
+2.0 four years after each release). Code system content is licensed by its
+owner and is never
 distributed here: SNOMED CT by SNOMED International (free within member
 countries, affiliate licence elsewhere), LOINC by the Regenstrief Institute,
 and so on per `docs/terminologies.md`. A deployment brings its own releases
@@ -394,7 +397,7 @@ vendored verbatim with provenance as codegen input.
   official suite; the one crate shortlisted as a dependency, for the UCUM
   provider.
 - **`sct-rs`** (Rust, AGPL-3.0): RF2 to SQLite and Parquet with an ECL and FHIR
-  R4 server mode; licence-incompatible with MIT distribution, not read for
+  R4 server mode; copyleft terms the project does not take on, not read for
   code.
 
 No existing Rust project is a complete, standards-generated, multi-version FHIR

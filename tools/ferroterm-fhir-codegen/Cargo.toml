@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: BUSL-1.1
 [package]
 name = "ferroterm-fhir-codegen"
 description = "Generates the ferroterm-fhir crate from the vendored FHIR packages"

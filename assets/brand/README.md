@@ -1,7 +1,7 @@
 # FerroTERM brand
 
 FerroTERM is the official name (Ferro for the Rust family shared with FerroEHR,
-TERM for terminology). All of it is MIT-licensed with the rest of the
+TERM for terminology). All of it is licensed under the Business Source License 1.1 with the rest of the
 repository.
 
 ## The mark

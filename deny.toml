@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: BUSL-1.1
 
 # cargo-deny configuration. Run: cargo deny check
 # Docs: https://embarkstudios.github.io/cargo-deny/
@@ -17,10 +17,12 @@ ignore = []
 
 [licenses]
 version = 2
-# Permissive licenses compatible with an MIT-licensed project. Copyleft is NOT
+# Permissive licenses the project's own Business Source License 1.1 code may
+# depend on (BUSL-1.1 itself is the workspace's licence). Copyleft is NOT
 # allowed by default; a genuinely necessary weak-copyleft dependency gets a
 # crate-scoped `exceptions` entry with its reason, never a blanket allow.
 allow = [
+  "BUSL-1.1",
   "Apache-2.0",
   "Apache-2.0 WITH LLVM-exception",
   "MIT",
