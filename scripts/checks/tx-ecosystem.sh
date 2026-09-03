@@ -3,13 +3,15 @@
 # pass list: a test on the list that fails is a regression, a test that
 # newly passes is reported so it can be added.
 #
-#   scripts/checks/tx-ecosystem.sh [--server URL] [--out DIR] [--mode NAME] [--index DIRS]
+#   scripts/checks/tx-ecosystem.sh [--server URL] [--out DIR] [--mode NAME] [--fhir r4|r4b] [--index DIRS]
 #
 # Without --server the script starts target/release/ferroterm on 127.0.0.1:8098
 # (build it first: cargo build --release -p ferroterm-server), serving the
 # artifact directories --index names (the FERROTERM_INDEX form). --mode picks
 # the suite mode (general by default; icd-11 needs the three ICD-11 artifacts)
-# and its pass list conformance/tx-ecosystem/passing-<mode>.txt. The validator
+# and its pass list conformance/tx-ecosystem/passing[-<fhir>][-<mode>].txt; --fhir
+# picks the served FHIR version (r4b by default; the runner reads the version
+# from the server's CapabilityStatement). The validator
 # jar and the suite are fetched into target/tx-ecosystem/ once and pinned by
 # digest and commit. A JVM runs here only, never in the server.
 set -euo pipefail
@@ -22,6 +24,7 @@ SUITE_COMMIT=eaec771d82fba4eac596c14963546f39b4ecffe7
 server=""
 out=target/tx-ecosystem/out
 mode=general
+fhir=r4b
 index=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -29,14 +32,22 @@ while [ $# -gt 0 ]; do
     --out) out=$2; shift 2 ;;
     --mode) mode=$2; shift 2 ;;
     --index) index=$2; shift 2 ;;
+    --fhir) fhir=$2; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-if [ "$mode" = general ]; then
-  PASSING=conformance/tx-ecosystem/passing.txt
-else
-  PASSING=conformance/tx-ecosystem/passing-$mode.txt
+case "$fhir" in
+  r4|r4b) ;;
+  *) echo "--fhir must be r4 or r4b, not '$fhir'" >&2; exit 2 ;;
+esac
+PASSING=conformance/tx-ecosystem/passing
+if [ "$fhir" != r4b ]; then
+  PASSING=$PASSING-$fhir
 fi
+if [ "$mode" != general ]; then
+  PASSING=$PASSING-$mode
+fi
+PASSING=$PASSING.txt
 
 work=target/tx-ecosystem
 mkdir -p "$work"
@@ -61,7 +72,7 @@ fi
 
 started=""
 if [ -z "$server" ]; then
-  server=http://127.0.0.1:8098/r4b
+  server=http://127.0.0.1:8098/$fhir
   if [ -n "$index" ]; then
     export FERROTERM_INDEX="$index"
   fi
@@ -99,7 +110,7 @@ if [ "$total" = 0 ]; then
 fi
 jq -r '.test[] | select(.action[0].operation.result == "pass") | .name' "$report" | sort > "$out/passing.txt"
 passed=$(wc -l < "$out/passing.txt" | tr -d ' ')
-echo "tx-ecosystem: $passed of $total $mode tests pass ($(grep -a -o 'tests v[0-9.]*' "$out/runner.log" | head -1), runner $VALIDATOR_VERSION)"
+echo "tx-ecosystem: $passed of $total $mode tests pass on /$fhir ($(grep -a -o 'tests v[0-9.]*' "$out/runner.log" | head -1), runner $VALIDATOR_VERSION)"
 
 regressions=$(comm -23 "$PASSING" "$out/passing.txt")
 gains=$(comm -13 "$PASSING" "$out/passing.txt")

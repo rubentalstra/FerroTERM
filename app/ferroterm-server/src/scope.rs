@@ -6,24 +6,24 @@
 //! with the `X-Cache-Id` header
 //! (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
 //! A request's resources form a [`Scope`]: the loaded registry and value set
-//! store with those resources layered on top, for that request only.
+//! store with those resources layered on top, for that request only. Each
+//! served version converts its own generated resources to the models held
+//! here, so a cache started on one version serves every version.
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
-use ferroterm_fhir::r4b::parameters::Parameters;
-use ferroterm_fhir::r4b::resource::Resource;
-use ferroterm_terminology::conceptmap;
+use ferroterm_terminology::conceptmap::model::ConceptMapModel;
 use ferroterm_terminology::conceptmap::store::ConceptMapStore;
-use ferroterm_terminology::fhir_codesystem::convert;
+use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
 use ferroterm_terminology::fhir_codesystem::provider::FhirCodeSystem;
 use ferroterm_terminology::operations::Sources;
 use ferroterm_terminology::provider::ContentMode;
 use ferroterm_terminology::registry::Registry;
 use ferroterm_terminology::supplement::Supplemented;
-use ferroterm_terminology::valueset;
+use ferroterm_terminology::valueset::model::ValueSetModel;
 use ferroterm_terminology::valueset::store::ValueSetStore;
 use http::{HeaderMap, StatusCode};
 
@@ -40,7 +40,18 @@ pub const CACHE_ID_HEADER: &str = "X-Cache-Id";
 /// How long an unused cache lives. No spec fixes this: our own design.
 pub const CACHE_IDLE: Duration = Duration::from_mins(30);
 
-/// The code systems and value sets one request works over.
+/// A request-scoped resource as the model the engine serves.
+#[derive(Debug, Clone)]
+pub enum Loaded {
+    /// A `CodeSystem`, complete or a supplement.
+    CodeSystem(CodeSystemModel),
+    /// A `ValueSet`.
+    ValueSet(ValueSetModel),
+    /// A `ConceptMap`.
+    ConceptMap(ConceptMapModel),
+}
+
+/// The registry, value set store, and concept map store one request sees.
 #[derive(Debug)]
 pub struct Scope<'a> {
     registry: Cow<'a, Registry>,
@@ -49,7 +60,7 @@ pub struct Scope<'a> {
 }
 
 impl<'a> Scope<'a> {
-    /// The loaded resources alone.
+    /// The loaded registry and stores, unchanged.
     #[must_use]
     pub fn base(state: &'a AppState) -> Self {
         Self {
@@ -59,15 +70,17 @@ impl<'a> Scope<'a> {
         }
     }
 
-    /// The loaded resources with `resources` layered on top; a resource with
-    /// the same identity as a loaded one shadows it for this request.
+    /// The loaded registry and stores with `resources` layered on top.
+    ///
+    /// A resource with the url and version of a loaded one replaces it for
+    /// this request; a `CodeSystem` supplement is layered over the system it
+    /// names.
     ///
     /// # Errors
     ///
-    /// Returns a `400` failure for a resource that is not a `CodeSystem`, a
-    /// `ValueSet`, or a `ConceptMap`, or one the model cannot represent, and a `404` for a
-    /// supplement whose system is not served.
-    pub fn layered(state: &'a AppState, resources: &[Resource]) -> Result<Self, Failure> {
+    /// A `CodeSystem` the engine cannot serve is a 400; a supplement whose
+    /// target is not loaded is a 404.
+    pub fn layered(state: &'a AppState, resources: &[Loaded]) -> Result<Self, Failure> {
         if resources.is_empty() {
             return Ok(Self::base(state));
         }
@@ -77,33 +90,22 @@ impl<'a> Scope<'a> {
         let mut supplements = Vec::new();
         for resource in resources {
             match resource {
-                Resource::CodeSystem(code_system) => {
-                    let model = convert::r4b::convert(code_system).map_err(invalid)?;
+                Loaded::CodeSystem(model) => {
                     if model.content == ContentMode::Supplement {
                         supplements.push(model);
                         continue;
                     }
-                    let provider = FhirCodeSystem::new(model).map_err(invalid)?;
+                    let provider = FhirCodeSystem::new(model.clone()).map_err(|e| {
+                        Failure::new(
+                            StatusCode::BAD_REQUEST,
+                            "invalid",
+                            format!("a `{TX_RESOURCE}` cannot be served: {e}"),
+                        )
+                    })?;
                     registry.register_or_replace(Arc::new(provider));
                 }
-                Resource::ValueSet(value_set) => {
-                    let model = valueset::convert::r4b::convert(value_set).map_err(invalid)?;
-                    value_sets.replace(model);
-                }
-                Resource::ConceptMap(concept_map) => {
-                    let model = conceptmap::convert::r4b::convert(concept_map).map_err(invalid)?;
-                    concept_maps.replace(model);
-                }
-                other => {
-                    return Err(Failure::new(
-                        StatusCode::BAD_REQUEST,
-                        "not-supported",
-                        format!(
-                            "`{TX_RESOURCE}` carries a {}; only CodeSystem, ValueSet, and ConceptMap resources are accepted",
-                            resource_type(other)
-                        ),
-                    ));
-                }
+                Loaded::ValueSet(model) => value_sets.replace(model.clone()),
+                Loaded::ConceptMap(model) => concept_maps.replace(model.clone()),
             }
         }
         for model in supplements {
@@ -130,7 +132,7 @@ impl<'a> Scope<'a> {
             })?;
             registry.register_or_replace(Arc::new(Supplemented::new(
                 resolved.provider,
-                vec![supplement_of(&model)],
+                vec![supplement_of(model)],
             )));
         }
         Ok(Self {
@@ -140,19 +142,19 @@ impl<'a> Scope<'a> {
         })
     }
 
-    /// The registry of this scope.
+    /// The registry this request resolves systems in.
     #[must_use]
     pub fn registry(&self) -> &Registry {
         &self.registry
     }
 
-    /// The value sets of this scope.
+    /// The value sets this request resolves.
     #[must_use]
     pub fn value_sets(&self) -> &ValueSetStore {
         &self.value_sets
     }
 
-    /// What the operations take.
+    /// The engine's view of this scope.
     #[must_use]
     pub fn sources(&self) -> Sources<'_> {
         Sources {
@@ -163,78 +165,16 @@ impl<'a> Scope<'a> {
     }
 }
 
-fn invalid(error: impl std::fmt::Display) -> Failure {
-    Failure::new(
-        StatusCode::BAD_REQUEST,
-        "invalid",
-        format!("a `{TX_RESOURCE}` cannot be served: {error}"),
-    )
-}
-
-/// The resource type of `resource`, for a refusal.
-fn resource_type(resource: &Resource) -> &str {
-    match resource {
-        Resource::Bundle(_) => "Bundle",
-        Resource::CapabilityStatement(_) => "CapabilityStatement",
-        Resource::CodeSystem(_) => "CodeSystem",
-        Resource::ConceptMap(_) => "ConceptMap",
-        Resource::OperationOutcome(_) => "OperationOutcome",
-        Resource::Parameters(_) => "Parameters",
-        Resource::TerminologyCapabilities(_) => "TerminologyCapabilities",
-        Resource::ValueSet(_) => "ValueSet",
-        Resource::Unknown(_) => "resource of another type",
-    }
-}
-
-/// Splits the `tx-resource` parameters (and the runner's `uuid`) off
-/// `parameters`, returning the operation's own parameters and the resources.
+/// The scope of one request: the named cache's resources, then the request's
+/// own, over the loaded state.
 ///
 /// # Errors
 ///
-/// Returns a `400` failure for a `tx-resource` parameter without a resource.
-pub fn split_resources(parameters: Parameters) -> Result<(Parameters, Vec<Resource>), Failure> {
-    let mut own = Vec::with_capacity(parameters.parameter.len());
-    let mut resources = Vec::new();
-    for parameter in parameters.parameter {
-        // NOTE: `uuid` comes with the ecosystem runner's default profile
-        // (`tests/parameters-default.json` of HL7/fhir-tx-ecosystem-ig); no
-        // version declares it, so it never reaches the generated request.
-        if parameter.name.value.as_deref() == Some(UUID) {
-            continue;
-        }
-        if parameter.name.value.as_deref() == Some(TX_RESOURCE) {
-            let resource = parameter.resource.ok_or_else(|| {
-                Failure::new(
-                    StatusCode::BAD_REQUEST,
-                    "invalid",
-                    format!("`{TX_RESOURCE}` must carry a resource"),
-                )
-            })?;
-            resources.push(resource);
-        } else {
-            own.push(parameter);
-        }
-    }
-    Ok((
-        Parameters {
-            parameter: own,
-            ..parameters
-        },
-        resources,
-    ))
-}
-
-/// The scope of a request: the cache the `X-Cache-Id` header names, then the
-/// request's own `tx-resource`s on top.
-///
-/// # Errors
-///
-/// Returns a `404` failure for an unknown cache id and the failures of
-/// [`Scope::layered`].
+/// A malformed or unknown `X-Cache-Id`, or a resource that cannot be layered.
 pub fn scope_of<'a>(
     state: &'a AppState,
     headers: &HeaderMap,
-    mut resources: Vec<Resource>,
+    mut resources: Vec<Loaded>,
 ) -> Result<Scope<'a>, Failure> {
     if let Some(id) = cache_id(headers)? {
         let cached = state.caches().get(&id)?;
@@ -246,12 +186,11 @@ pub fn scope_of<'a>(
     Scope::layered(state, &resources)
 }
 
-/// The `X-Cache-Id` header, when present and well-formed.
+/// The cache the request names, if any.
 ///
 /// # Errors
 ///
-/// Returns a `400` failure when the header is present more than once or is
-/// not text.
+/// More than one `X-Cache-Id`, or one that is not text.
 pub fn cache_id(headers: &HeaderMap) -> Result<Option<String>, Failure> {
     let mut values = headers.get_all(CACHE_ID_HEADER).iter();
     let Some(first) = values.next() else {
@@ -274,12 +213,12 @@ pub fn cache_id(headers: &HeaderMap) -> Result<Option<String>, Failure> {
 }
 
 struct Entry {
-    resources: Arc<Vec<Resource>>,
+    resources: Arc<Vec<Loaded>>,
     last_used: Instant,
 }
 
-/// The caches `$cache-control` started, by id, expiring after [`CACHE_IDLE`]
-/// without use.
+/// The caches `$cache-control` started, by id; an unused one expires after
+/// [`CACHE_IDLE`].
 #[derive(Default)]
 pub struct Caches {
     entries: Mutex<BTreeMap<String, Entry>>,
@@ -297,8 +236,8 @@ impl std::fmt::Debug for Caches {
 }
 
 impl Caches {
-    /// Starts a cache holding `resources`; returns its id.
-    pub fn start(&self, resources: Vec<Resource>) -> String {
+    /// Starts a cache holding `resources` and returns its id.
+    pub fn start(&self, resources: Vec<Loaded>) -> String {
         let id = uuid::Uuid::new_v4().to_string();
         let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         Self::prune(&mut entries);
@@ -312,12 +251,12 @@ impl Caches {
         id
     }
 
-    /// The resources of cache `id`, refreshing its idle timer.
+    /// The resources of cache `id`, touching it.
     ///
     /// # Errors
     ///
-    /// Returns a `404` failure when the id is unknown or expired.
-    pub fn get(&self, id: &str) -> Result<Arc<Vec<Resource>>, Failure> {
+    /// The cache is unknown or expired.
+    pub fn get(&self, id: &str) -> Result<Arc<Vec<Loaded>>, Failure> {
         let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         Self::prune(&mut entries);
         let entry = entries.get_mut(id).ok_or_else(|| unknown(id))?;
@@ -329,7 +268,7 @@ impl Caches {
     ///
     /// # Errors
     ///
-    /// Returns a `404` failure when the id is unknown or expired.
+    /// The cache is unknown or expired.
     pub fn end(&self, id: &str) -> Result<(), Failure> {
         let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         entries.remove(id).map(|_| ()).ok_or_else(|| unknown(id))

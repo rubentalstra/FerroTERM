@@ -1,7 +1,8 @@
 # The FHIR terminology API
 
 FerroTERM speaks the HL7 FHIR terminology API. If your client already talks to
-a FHIR terminology server, it talks to FerroTERM. The base is `/r4b`; the
+a FHIR terminology server, it talks to FerroTERM. The base is `/r4b` for R4B
+and `/r4` for R4 (see [FHIR versions](fhir-versions.md)); the
 [Worked examples](examples.md) page shows requests and the responses a running
 server gave.
 

@@ -36,8 +36,14 @@ fn the_summary_reads_every_declaration_and_marks_the_default() {
 }
 
 #[test]
-fn r4b_and_r5_render_their_own_shapes() {
+fn r4_r4b_and_r5_render_their_own_shapes() {
     let summary = Summary::of(&registry());
+    let r4 = Value::Object(
+        summary
+            .to_r4("2026-09-02T00:00:00Z")
+            .to_json()
+            .expect("encodes"),
+    );
     let r4b = Value::Object(
         summary
             .to_r4b("2026-09-02T00:00:00Z")
@@ -50,7 +56,7 @@ fn r4b_and_r5_render_their_own_shapes() {
             .to_json()
             .expect("encodes"),
     );
-    for (version, json) in [("r4b", &r4b), ("r5", &r5)] {
+    for (version, json) in [("r4", &r4), ("r4b", &r4b), ("r5", &r5)] {
         assert_eq!(json["resourceType"], "TerminologyCapabilities", "{version}");
         assert_eq!(json["status"], "active", "{version}");
         assert_eq!(json["kind"], "instance", "{version}");
@@ -72,10 +78,12 @@ fn r4b_and_r5_render_their_own_shapes() {
         assert_eq!(json["expansion"]["paging"], true, "{version}");
         assert!(json["expansion"]["textFilter"].is_string(), "{version}");
     }
-    // R5 adds the mandatory codeSystem.content; R4B has no such element.
+    // R5 adds the mandatory codeSystem.content; R4 and R4B have no such element.
     assert_eq!(r5["codeSystem"][1]["content"], "not-present");
     assert_eq!(r5["codeSystem"][1]["uri"], FLAT_URL);
     assert!(r4b["codeSystem"][1].get("content").is_none());
+    assert!(r4["codeSystem"][1].get("content").is_none());
+    assert_eq!(r4, r4b, "R4 and R4B fill the same elements");
     // The rendered resources decode again through the generated codec.
     let mut path = ferroterm_fhir::codec::Path::root("TerminologyCapabilities");
     let object = ferroterm_fhir::codec::expect_object(&r5, &path).expect("object");
