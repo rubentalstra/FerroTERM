@@ -197,7 +197,7 @@ pub fn lookup(
             .clone()
             .or_else(|| identity.title.clone())
             .unwrap_or_else(|| identity.url.clone()),
-        version: Some(identity.version.clone()),
+        version: Some(identity.version.clone()).filter(|v| !v.is_empty()),
         display,
         definition: provider.definition(concept)?,
         designations,

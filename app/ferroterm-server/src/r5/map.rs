@@ -14,11 +14,12 @@ use fhir_terminology::operations::validate_code::{ValidateCodeInput, ValidationO
 use fhir_terminology::operations::value_set_validate_code::{
     TX_ISSUE_TYPE, Validation, ValueSetValidateInput,
 };
-use fhir_terminology::operations::{CodingRef, Issue};
+use fhir_terminology::operations::{CodingRef, Issue, MESSAGE_ID_URL};
 use fhir_terminology::provider::{Designation, PropertyValue};
 use fhir_terminology::{conceptmap, valueset};
 use fhir_types::r5::codeable_concept::CodeableConcept;
 use fhir_types::r5::coding::Coding;
+use fhir_types::r5::extension::{Extension, ExtensionValue};
 use fhir_types::r5::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
 use fhir_types::r5::operations::code_system_lookup::{
     CodeSystemLookupRequest, CodeSystemLookupResponse, CodeSystemLookupResponseDesignation,
@@ -257,6 +258,11 @@ fn issues(list: &[Issue]) -> Option<OperationOutcome> {
         issue: list
             .iter()
             .map(|issue| OperationOutcomeIssue {
+                extension: vec![Extension {
+                    url: String::from(MESSAGE_ID_URL),
+                    value: Some(ExtensionValue::String(issue.message_id().into())),
+                    ..Default::default()
+                }],
                 severity: issue.severity.into(),
                 code: issue.code.into(),
                 details: Some(CodeableConcept {

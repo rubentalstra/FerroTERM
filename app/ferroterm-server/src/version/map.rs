@@ -12,7 +12,6 @@ macro_rules! map {
 
             use concept_graph::subsumption::Outcome;
             use fhir_terminology::operations::CodingRef;
-            use fhir_terminology::operations::Issue;
             use fhir_terminology::operations::expand::ExpandInput;
             use fhir_terminology::operations::lookup::{LookupInput, LookupOutcome};
             use fhir_terminology::operations::subsumes::SubsumesInput;
@@ -23,10 +22,12 @@ macro_rules! map {
             use fhir_terminology::operations::value_set_validate_code::{
                 TX_ISSUE_TYPE, Validation, ValueSetValidateInput,
             };
+            use fhir_terminology::operations::{Issue, MESSAGE_ID_URL};
             use fhir_terminology::provider::{Designation, PropertyValue};
             use fhir_terminology::valueset::convert;
             use fhir_types::$fhir::codeable_concept::CodeableConcept;
             use fhir_types::$fhir::coding::Coding;
+            use fhir_types::$fhir::extension::{Extension, ExtensionValue};
             use fhir_types::$fhir::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
             use fhir_types::$fhir::operations::code_system_lookup::{
                 CodeSystemLookupRequest, CodeSystemLookupResponse,
@@ -263,6 +264,11 @@ macro_rules! map {
                     issue: list
                         .iter()
                         .map(|issue| OperationOutcomeIssue {
+                            extension: vec![Extension {
+                                url: String::from(MESSAGE_ID_URL),
+                                value: Some(ExtensionValue::String(issue.message_id().into())),
+                                ..Default::default()
+                            }],
                             severity: issue.severity.into(),
                             code: issue.code.into(),
                             details: Some(CodeableConcept {

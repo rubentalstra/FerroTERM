@@ -101,6 +101,9 @@ pub enum OperationError {
     /// recognises it).
     #[error("A definition for the value Set '{0}' could not be found")]
     UnknownValueSet(String),
+    /// A value set another value set imports is not known.
+    #[error("A definition for the value Set '{0}' could not be found")]
+    UnknownImport(String),
     /// The concept map is not known.
     #[error("concept map `{0}` is not known")]
     UnknownConceptMap(String),
@@ -131,6 +134,7 @@ impl OperationError {
             | Self::UnknownVersion { .. }
             | Self::UnknownCode { .. }
             | Self::UnknownValueSet(_)
+            | Self::UnknownImport(_)
             | Self::UnknownSupplement(_)
             | Self::UnknownConceptMap(_) => "not-found",
             Self::TooCostly(_) => "too-costly",
@@ -148,6 +152,7 @@ impl OperationError {
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
             | Self::UnknownValueSet(_)
+            | Self::UnknownImport(_)
             | Self::UnknownSupplement(_)
             | Self::UnknownConceptMap(_) => "not-found",
             Self::UnknownCode { .. } | Self::InvalidCode { .. } => "invalid-code",
@@ -155,6 +160,31 @@ impl OperationError {
             Self::VersionCheck(_) => "version-error",
             Self::TooCostly(_) => "too-costly",
             Self::CannotDetermine(_) => "cannot-determine",
+        }
+    }
+
+    /// The message id the terminology ecosystem attaches to an outcome of
+    /// this failure (the reference server's message key; #189).
+    #[must_use]
+    pub fn message_id(&self) -> &'static str {
+        match self {
+            // NOTE: the ecosystem names a pinned import it cannot find on `$expand`
+            // by its own key (its `default-valueset-version` cases).
+            Self::UnknownImport(url) if url.contains('|') => "VS_EXP_IMPORT_UNK_PINNED",
+            Self::UnknownValueSet(_) | Self::UnknownImport(_) => "Unable_to_resolve_value_Set_",
+            Self::UnknownVersion { .. } => "UNKNOWN_CODESYSTEM_VERSION_EXP",
+            Self::UnknownSystem(_) => "UNKNOWN_CODESYSTEM",
+            Self::UnknownSupplement(_) => "VALUESET_SUPPLEMENT_MISSING",
+            Self::VersionCheck(_) => "VALUESET_VERSION_CHECK",
+            Self::TooCostly(_) => "VALUESET_TOO_COSTLY",
+            Self::NotSupported(_) => "CODESYSTEM_NOT_ENUMERABLE",
+            Self::UnknownCode { .. } | Self::InvalidCode { .. } => "Unknown_Code_in_Version",
+            Self::ValueSetInvalid(_) => "VALUESET_CIRCULAR_REFERENCE",
+            Self::Required(_)
+            | Self::Invalid(_)
+            | Self::CannotDetermine(_)
+            | Self::UnknownConceptMap(_)
+            | Self::Provider(_) => "TX_GENERAL_ERROR",
         }
     }
 
@@ -175,6 +205,7 @@ impl OperationError {
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
             | Self::UnknownValueSet(_)
+            | Self::UnknownImport(_)
             | Self::UnknownSupplement(_)
             | Self::UnknownConceptMap(_) => StatusCode::NOT_FOUND,
             // NOTE: 422 is the status for a resource that breaks the server's
@@ -301,7 +332,7 @@ impl From<crate::compose::ComposeError> for OperationError {
                 "The code system '{system}' cannot be expanded because its codes cannot be iterated or enumerated in any meaningful sense"
             )),
             ComposeError::Provider { source, .. } => source.into(),
-            ComposeError::UnknownValueSet(url) => Self::UnknownValueSet(url),
+            ComposeError::UnknownValueSet(url) => Self::UnknownImport(url),
             ComposeError::UnknownCode { .. }
             | ComposeError::NoSystemOrValueSet
             | ComposeError::CriteriaWithoutSystem
@@ -416,6 +447,11 @@ impl<'a> Sources<'a> {
     }
 }
 
+/// The extension that names an issue's message
+/// (<https://hl7.org/fhir/extensions/StructureDefinition-operationoutcome-message-id.html>).
+pub const MESSAGE_ID_URL: &str =
+    "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id";
+
 /// One `OperationOutcome.issue` of a validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Issue {
@@ -429,6 +465,62 @@ pub struct Issue {
     pub text: String,
     /// `issue.expression`: the parameter at fault.
     pub expression: Option<String>,
+}
+
+impl Issue {
+    /// The message id the terminology ecosystem attaches to this issue, the
+    /// reference server's message key for its kind and wording (the
+    /// ecosystem's test cases fix them; spec-silent, #189).
+    #[must_use]
+    pub fn message_id(&self) -> &'static str {
+        let text = self.text.as_str();
+        match self.kind {
+            "invalid-code" if text.contains("labeled as a fragment") => "UNKNOWN_CODE_IN_FRAGMENT",
+            "invalid-code" if text.contains(" version '") => "Unknown_Code_in_Version",
+            "invalid-code" => "Unknown_Code_in",
+            "not-in-vs" if text.starts_with("No valid coding") => "TX_GENERAL_CC_ERROR_MESSAGE",
+            "not-in-vs" | "this-code-not-in-vs" => {
+                "None_of_the_provided_codes_are_in_the_value_set_one"
+            }
+            "invalid-display" if text.starts_with("There are no valid display names") => {
+                "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK"
+            }
+            "invalid-display" if text.contains("There are no valid display names") => {
+                "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_ERR"
+            }
+            "invalid-display" => "Display_Name_for__should_be_one_of__instead_of",
+            "not-found" if text.starts_with("Required supplement") => "VALUESET_SUPPLEMENT_MISSING",
+            "not-found" if text.contains("the value Set") => "Unable_to_resolve_value_Set_",
+            "not-found" if text.contains("could not be found, so the value set") => {
+                "UNKNOWN_CODESYSTEM_VERSION_EXP"
+            }
+            "not-found" if text.contains(" version '") => "UNKNOWN_CODESYSTEM_VERSION",
+            "not-found" => "UNKNOWN_CODESYSTEM",
+            "vs-invalid" if text.contains("for the versionless include") => {
+                "VALUESET_VALUE_MISMATCH_DEFAULT"
+            }
+            "vs-invalid" if text.contains("resulting from the version") => {
+                "VALUESET_VALUE_MISMATCH_CHANGED"
+            }
+            "vs-invalid" => "VALUESET_VALUE_MISMATCH",
+            "version-error" => "VALUESET_VERSION_CHECK",
+            "code-rule" if text.contains("is abstract") => "ABSTRACT_CODE_NOT_ALLOWED",
+            "code-rule" if text.contains("by case") => "CODE_CASE_DIFFERENCE",
+            "code-rule" => "STATUS_CODE_WARNING_CODE",
+            "code-comment" if text.contains("is deprecated") => "DEPRECATED_CONCEPT_FOUND",
+            "code-comment" => "INACTIVE_CONCEPT_FOUND",
+            "status-check" if text.starts_with("Reference to draft") => "MSG_DRAFT",
+            "status-check" if text.starts_with("Reference to deprecated") => "MSG_DEPRECATED",
+            "status-check" if text.starts_with("Reference to withdrawn") => "MSG_WITHDRAWN",
+            "status-check" => "MSG_EXPERIMENTAL",
+            "cannot-infer" => "UNABLE_TO_INFER_CODESYSTEM",
+            "invalid-data" if text.contains("is a supplement") => "CODESYSTEM_CS_NO_SUPPLEMENT",
+            "invalid-data" => "Coding_has_no_system__cannot_validate",
+            "not-supported" => "CODESYSTEM_NOT_ENUMERABLE",
+            "too-costly" => "VALUESET_TOO_COSTLY",
+            _ => "TX_GENERAL_ERROR",
+        }
+    }
 }
 
 /// A system the server does not serve, as `x-caused-by-unknown-system` names it.

@@ -11,9 +11,9 @@ use ferroterm_testkit::fhir::{
 use fhir_terminology::conceptmap::store::ConceptMapStore;
 use fhir_terminology::fhir_codesystem::load::{FhirVersion, load_dir};
 use fhir_terminology::fhir_codesystem::provider::FhirCodeSystem;
-use fhir_terminology::operations::CodingRef;
 use fhir_terminology::operations::expand::{ExpandInput, ExpansionOutcome, ParameterValue};
 use fhir_terminology::operations::value_set_validate_code::ValueSetValidateInput;
+use fhir_terminology::operations::{CodingRef, Issue};
 use fhir_terminology::operations::{OperationError, Sources, expand, value_set_validate_code};
 use fhir_terminology::provider::PropertyValue;
 use fhir_terminology::registry::Registry;
@@ -414,12 +414,15 @@ fn validate_code_names_an_unknown_system_and_an_unknown_version() {
     let validation = value_set_validate_code::validate_code(&world.sources(), &unknown_system)
         .expect("validates");
     assert!(!validation.result);
-    assert_eq!(validation.issues[0].kind, "not-found");
-    assert_eq!(validation.issues[0].code, "not-found");
+    // NOTE: the membership issue leads, then the missing system, which the input
+    // alone named (`x-unknown-system`), the ecosystem's shape (#189).
+    assert_eq!(validation.issues[0].kind, "not-in-vs");
+    assert_eq!(validation.issues[1].kind, "not-found");
+    assert_eq!(validation.issues[1].code, "not-found");
     assert_eq!(
-        validation.unknown_systems,
+        validation.x_unknown_systems,
         ["http://example.org/fhir/CodeSystem/nowhere"],
-        "x-caused-by-unknown-system names the system"
+        "x-unknown-system names the system"
     );
     assert_eq!(
         validation.code.as_deref(),
@@ -808,7 +811,7 @@ fn expand_negotiates_value_set_versions_and_names_the_value_sets_it_used() {
     };
     assert!(matches!(
         expand::expand(&world.sources(), &missing),
-        Err(OperationError::UnknownValueSet(url)) if url == format!("{VS_PETS}|9.9")
+        Err(OperationError::UnknownImport(url)) if url == format!("{VS_PETS}|9.9")
     ));
     let forced = ExpandInput {
         url: Some(VS_ALL.to_owned()),
@@ -1574,4 +1577,132 @@ fn a_draft_experimental_deprecated_or_withdrawn_resource_earns_a_status_note() {
         )]
     );
     assert_eq!(noted.message, None, "notes carry no message");
+}
+
+// NOTE: every issue carries the ecosystem's message id, the message joins the
+// errors in the ecosystem's order, and an unknown system fails with the
+// membership issue first (the ecosystem's test cases, #189).
+#[test]
+fn validate_code_names_its_messages_and_shapes_the_unknown_system_answer() {
+    let world = World::load();
+    let unknown = value_set_validate_code::validate_code(
+        &world.sources(),
+        &ValueSetValidateInput {
+            url: Some(VS_ALL.to_owned()),
+            code: Some(String::from("x")),
+            system: Some(String::from("http://example.org/fhir/CodeSystem/nowhere")),
+            ..ValueSetValidateInput::default()
+        },
+    )
+    .expect("a false result");
+    let shape: Vec<(&str, &str, Option<&str>)> = unknown
+        .issues
+        .iter()
+        .map(|i| (i.kind, i.message_id(), i.expression.as_deref()))
+        .collect();
+    assert_eq!(
+        shape,
+        [
+            (
+                "not-in-vs",
+                "None_of_the_provided_codes_are_in_the_value_set_one",
+                Some("code")
+            ),
+            ("not-found", "UNKNOWN_CODESYSTEM", Some("system")),
+        ]
+    );
+    assert_eq!(
+        unknown.x_unknown_systems,
+        ["http://example.org/fhir/CodeSystem/nowhere"]
+    );
+    assert!(
+        unknown.unknown_systems.is_empty(),
+        "the value set never named the system"
+    );
+    assert!(
+        unknown
+            .message
+            .as_deref()
+            .unwrap()
+            .starts_with("A definition for CodeSystem"),
+        "{:?}",
+        unknown.message
+    );
+    // A system the value set does name is caused by the value set.
+    let inline = ValueSet {
+        url: Some("http://example.org/inline-unknown".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some("http://example.org/fhir/CodeSystem/nowhere".into()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let caused = value_set_validate_code::validate_code(
+        &world.sources(),
+        &ValueSetValidateInput {
+            inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+            code: Some(String::from("x")),
+            system: Some(String::from("http://example.org/fhir/CodeSystem/nowhere")),
+            ..ValueSetValidateInput::default()
+        },
+    )
+    .expect("a false result");
+    assert_eq!(
+        caused.unknown_systems,
+        ["http://example.org/fhir/CodeSystem/nowhere"]
+    );
+    assert!(caused.x_unknown_systems.is_empty());
+}
+
+#[test]
+fn the_message_joins_the_errors_in_the_ecosystems_order() {
+    let world = World::load();
+    let pinned = ValueSet {
+        url: Some("http://example.org/inline-pinned".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                version: Some("2.0".into()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let checked = value_set_validate_code::validate_code(
+        &world.sources(),
+        &ValueSetValidateInput {
+            inline_value_set: Some(valueset::convert::r4b::convert(&pinned)),
+            coding: Some(CodingRef {
+                system: Some(ANIMALS.to_owned()),
+                version: Some(String::from("9.9")),
+                code: Some(String::from("cat")),
+                display: None,
+            }),
+            check_system_version: vec![format!("{ANIMALS}|1.x")],
+            ..ValueSetValidateInput::default()
+        },
+    )
+    .expect("a false result");
+    let ids: Vec<&str> = checked.issues.iter().map(Issue::message_id).collect();
+    assert_eq!(
+        ids,
+        [
+            "VALUESET_VERSION_CHECK",
+            "VALUESET_VALUE_MISMATCH",
+            "UNKNOWN_CODESYSTEM_VERSION"
+        ]
+    );
+    let message = checked.message.as_deref().unwrap();
+    let order = [
+        message.find("A definition for CodeSystem").unwrap(),
+        message.find("The code system").unwrap(),
+        message.find("The version").unwrap(),
+    ];
+    assert!(order[0] < order[1] && order[1] < order[2], "{message}");
 }

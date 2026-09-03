@@ -312,8 +312,15 @@ async fn an_unknown_system_is_a_false_result_naming_the_system_on_every_version(
                 false,
                 "{path}"
             );
+            // NOTE: a value set that never named the system reports the input's own
+            // unknown system; a code system named directly is the cause (#189).
+            let named_as = if path.contains("/ValueSet/") {
+                "x-unknown-system"
+            } else {
+                "x-caused-by-unknown-system"
+            };
             assert_eq!(
-                parameter(&body, "x-caused-by-unknown-system").unwrap()["valueCanonical"],
+                parameter(&body, named_as).unwrap()["valueCanonical"],
                 "http://example.org/none",
                 "{path}: {body}"
             );
@@ -322,7 +329,8 @@ async fn an_unknown_system_is_a_false_result_naming_the_system_on_every_version(
                 "x",
                 "{path}"
             );
-            let issue = &parameter(&body, "issues").expect("issues")["resource"]["issue"][0];
+            let index = usize::from(path.contains("/ValueSet/"));
+            let issue = &parameter(&body, "issues").expect("issues")["resource"]["issue"][index];
             assert_eq!(issue["code"], "not-found", "{path}");
             assert_eq!(issue["details"]["coding"][0]["code"], "not-found", "{path}");
         }
@@ -568,5 +576,47 @@ async fn an_inactive_concept_answers_inactive_and_status_with_a_warning_on_every
             "retired",
             "{version}"
         );
+    }
+}
+
+#[tokio::test]
+async fn every_issue_and_outcome_carries_the_ecosystems_message_id() {
+    let server = Server::start_with_resources();
+    for version in VERSIONS {
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=unicorn"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        let issue = &parameter(&body, "issues").unwrap()["resource"]["issue"][0];
+        assert_eq!(
+            issue["extension"][0]["url"],
+            "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id",
+            "{version}: {body}"
+        );
+        assert_eq!(
+            issue["extension"][0]["valueString"],
+            "None_of_the_provided_codes_are_in_the_value_set_one",
+            "{version}"
+        );
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$expand?url=http://example.org/fhir/ValueSet/none"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{version}: {body}");
+        assert_eq!(
+            body["issue"][0]["extension"][0]["valueString"], "Unable_to_resolve_value_Set_",
+            "{version}: {body}"
+        );
+        // A versionless system answers no version on $lookup.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/CodeSystem/$lookup?system=urn:ietf:bcp:13&code=text/plain"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert!(parameter(&body, "version").is_none(), "{version}: {body}");
     }
 }
