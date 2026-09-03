@@ -13,6 +13,17 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- ECL: `ferroterm-ecl` parses the Expression Constraint Language 2.2 with a
+  lexer and a parser that follow the official ANTLR grammar rule for rule
+  (<https://github.com/IHTSDO/snomed-expression-constraint-language>, the tag
+  pinned in `docs/VERSIONS.md`, vendored with the example corpus by
+  `scripts/vendor/ecl-grammar.sh`). The syntax tree names the grammar's
+  constructs; its `Display` prints a canonical form that parses back to the
+  same tree; a malformed expression is a typed error with the byte offset and
+  the token class expected there. Evaluation follows in the next change.
+
 ## [0.0.7] - 2026-09-03
 
 The code systems release: the ICD-11 code systems from the WHO ICD-API local

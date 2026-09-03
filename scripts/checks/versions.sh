@@ -96,6 +96,25 @@ else
   note "no Cargo.toml yet — skipped"
 fi
 
+# --- The vendored ECL grammar tag == docs/VERSIONS.md ECL pin ------------------
+echo "== vendored ECL grammar (PROVENANCE.md <-> docs/VERSIONS.md)"
+ecl_prov="crates/ferroterm-ecl/vendor/PROVENANCE.md"
+if [ -f "$ecl_prov" ]; then
+  ecl_tag="$(sed -nE 's/^- Tag:[[:space:]]*//p' "$ecl_prov" | head -n1 | tr -d '[:space:]')"
+  ecl_pin="$(awk -F'|' '$2 ~ /^[[:space:]]*ECL[[:space:]]*$/ { v = $3; gsub(/^[[:space:]]+/, "", v); split(v, w, /[[:space:]]/); print w[1]; exit }' docs/VERSIONS.md)"
+  if [ -z "$ecl_tag" ]; then
+    bad "$ecl_prov has no '- Tag:' line"
+  elif [ -z "$ecl_pin" ]; then
+    bad "docs/VERSIONS.md has no ECL row"
+  elif [ "$ecl_tag" != "$ecl_pin" ]; then
+    bad "ECL grammar: PROVENANCE.md says $ecl_tag, docs/VERSIONS.md pins $ecl_pin"
+  else
+    note "OK: ECL grammar $ecl_tag"
+  fi
+else
+  note "no vendored ECL grammar yet — skipped"
+fi
+
 # --- rust-toolchain.toml present (sanity; channel recorded in VERSIONS.md) -----
 echo "== rust toolchain"
 if [ -f rust-toolchain.toml ]; then

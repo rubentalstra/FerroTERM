@@ -1,5 +1,5 @@
 ---
-paths: ["scripts/vendor/*.sh", "tools/ferroterm-fhir-codegen/vendor/**", "crates/**/tests/fixtures/**"]
+paths: ["scripts/vendor/*.sh", "tools/ferroterm-fhir-codegen/vendor/**", "crates/ferroterm-ecl/vendor/**", "crates/**/tests/fixtures/**"]
 ---
 
 # Vendored inputs (FHIR packages) and the SNOMED content rule
@@ -30,6 +30,7 @@ The pinned FHIR packages are the codegen input (`codegen.md`). Every one is:
 | `hl7.fhir.r5.core` 5.0.0 | `scripts/vendor/fhir-packages.sh` | `tools/ferroterm-fhir-codegen/vendor/hl7.fhir.r5.core/` |
 | `hl7.fhir.r6.core` 6.0.0-ballot5 | `scripts/vendor/fhir-packages.sh` | `tools/ferroterm-fhir-codegen/vendor/hl7.fhir.r6.core/` |
 | `hl7.terminology` (THO) | `scripts/vendor/fhir-packages.sh` | `tools/ferroterm-fhir-codegen/vendor/hl7.terminology/` |
+| The ECL grammar and example corpus (IHTSDO, Apache 2.0), tag pinned in `docs/VERSIONS.md` | `scripts/vendor/ecl-grammar.sh` | `crates/ferroterm-ecl/vendor/` |
 
 The `PreToolUse` guard blocks a hand-edit of any file carrying an
 `// @generated` marker; the vendored packages are protected by discipline +
