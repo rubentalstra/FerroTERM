@@ -251,6 +251,7 @@ impl RxNormProvider {
                 url: SYSTEM.to_owned(),
                 version: manifest.version,
                 title: Some(String::from("RxNorm")),
+                name: None,
                 version_needed: false,
             },
             declaration,

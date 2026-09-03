@@ -251,6 +251,7 @@ impl LoincProvider {
                 url: SYSTEM.to_owned(),
                 version: manifest.version,
                 title: Some(String::from("LOINC")),
+                name: None,
                 version_needed: false,
             },
             declaration: declaration(&keys, manifest.languages),

@@ -226,8 +226,10 @@ macro_rules! convert_code_system {
                     url,
                     version: text(resource.version.as_ref().and_then(|v| v.value.as_deref()))
                         .unwrap_or_default(),
+                    name: text(resource.name.as_ref().and_then(|n| n.value.as_deref())),
                     title: text(resource.title.as_ref().and_then(|t| t.value.as_deref()))
                         .or_else(|| text(resource.name.as_ref().and_then(|n| n.value.as_deref()))),
+                    language: text(resource.language.as_ref().and_then(|l| l.value.as_deref())),
                     content,
                     case_sensitive: flag(&resource.case_sensitive, true),
                     hierarchy_meaning,

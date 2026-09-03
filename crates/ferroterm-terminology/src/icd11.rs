@@ -365,6 +365,7 @@ impl Icd11Provider {
                 url: linearization.system().to_owned(),
                 version: manifest.version.clone(),
                 title,
+                name: None,
                 version_needed: false,
             },
             declaration: declaration(linearization, manifest.languages),

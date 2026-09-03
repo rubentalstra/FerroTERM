@@ -46,6 +46,7 @@ impl UcumProvider {
                 url: URL.to_owned(),
                 version: essence.version.clone(),
                 title: Some(String::from("Unified Code for Units of Measure (UCUM)")),
+                name: None,
                 version_needed: false,
             },
             declaration: Declaration {

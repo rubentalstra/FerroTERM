@@ -347,6 +347,7 @@ impl Bcp47Provider {
                 url: URL.to_owned(),
                 version: registry.file_date.clone(),
                 title: Some(String::from("IETF BCP 47 language tags")),
+                name: None,
                 version_needed: false,
             },
             declaration: Declaration {

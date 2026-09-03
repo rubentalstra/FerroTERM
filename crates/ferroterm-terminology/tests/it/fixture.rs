@@ -171,6 +171,7 @@ impl Fixture {
                 url: url.to_owned(),
                 version: version.to_owned(),
                 title: Some(String::from("Fixture")),
+                name: None,
                 version_needed: false,
             },
             declaration: Declaration {

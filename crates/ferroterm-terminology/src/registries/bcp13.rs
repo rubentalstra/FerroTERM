@@ -230,6 +230,7 @@ impl Bcp13Provider {
                 url: URL.to_owned(),
                 version: String::new(),
                 title: Some(String::from("IETF BCP 13 media types")),
+                name: None,
                 version_needed: false,
             },
             declaration: Declaration {

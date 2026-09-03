@@ -128,6 +128,10 @@ impl CodeSystemProvider for Supplemented {
             .map(|designation| designation.value.clone()))
     }
 
+    fn language(&self) -> Option<&str> {
+        self.inner.language()
+    }
+
     fn definition(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
         self.inner.definition(concept)
     }
