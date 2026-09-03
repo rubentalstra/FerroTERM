@@ -331,6 +331,28 @@ pub fn unpack_rxnorm(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveErr
     Ok(into.to_path_buf())
 }
 
+/// Unpacks the CSV tables of a DHD delivery zip at `zip_path` under `into`,
+/// returning `into` (named after the zip, so the reader sees the version).
+///
+/// # Errors
+///
+/// Returns [`ArchiveError`] when the zip does not read, an entry cannot be
+/// written, or the zip holds no `.csv` entry.
+pub fn unpack_dhd(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveError> {
+    let written = unpack_matching(zip_path, into, &|name| {
+        Path::new(name)
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("csv"))
+    })?;
+    if written.is_empty() {
+        return Err(ArchiveError::NoEntry {
+            path: zip_path.to_path_buf(),
+            wanted: "CSV tables",
+        });
+    }
+    Ok(into.to_path_buf())
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::{Path, PathBuf};

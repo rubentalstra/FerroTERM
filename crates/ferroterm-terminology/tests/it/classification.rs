@@ -322,3 +322,73 @@ fn the_atc_artifact_serves_the_five_levels_with_ddds_as_properties() {
         [ferroterm_testkit::atc::SUBSTANCE]
     );
 }
+
+#[test]
+fn the_dhd_artifact_serves_a_flat_thesaurus_with_dutch_terms() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::dhd::write_artifact(dir.path()).expect("builds");
+    let provider = ClassificationProvider::open(dir.path()).expect("opens");
+    assert_eq!(provider.identity().url, ferroterm_dhd::SYSTEM);
+    assert_eq!(provider.identity().version, ferroterm_testkit::dhd::VERSION);
+    assert!(provider.hierarchy().is_none(), "a flat table");
+    let declaration = provider.declaration();
+    assert!(!declaration.capabilities.contains(&Capability::Subsumption));
+    assert!(
+        declaration.properties.iter().all(|p| p.code != "parent"),
+        "no parent property without a tree"
+    );
+    let fracture = located(&provider, ferroterm_testkit::dhd::FRACTURE);
+    assert_eq!(
+        provider.display(fracture, None).expect("reads").as_deref(),
+        Some("fractuur van de synthetische knobbel")
+    );
+    let designations = provider.designations(fracture, None).expect("reads");
+    assert!(
+        designations
+            .iter()
+            .any(|d| d.value == "knobbelfractuur" && d.language.as_deref() == Some("nl-NL"))
+    );
+    assert!(
+        designations
+            .iter()
+            .any(|d| d.value == "Fracture of synthetic knob (disorder)"
+                && d.language.as_deref() == Some("en-GB"))
+    );
+    let p: Vec<String> = provider
+        .properties(fracture)
+        .expect("reads")
+        .into_iter()
+        .map(|p| format!("{}={}", p.code, p.value.as_text()))
+        .collect();
+    assert!(p.contains(&format!(
+        "snomed={}",
+        ferroterm_testkit::dhd::FRACTURE_SCTID
+    )));
+    assert!(p.contains(&String::from("icd10=Z99.0")));
+    assert!(p.contains(&String::from("dbc=1234 (0305)")));
+    assert!(p.contains(&format!("umbrella={}", ferroterm_testkit::dhd::INJURY)));
+    let old = located(&provider, ferroterm_testkit::dhd::OLD);
+    assert!(
+        !provider.status(old).expect("reads").active,
+        "ended concept"
+    );
+    let with_snomed = provider
+        .filter(&filter("snomed", FilterOperator::Exists, "true"))
+        .expect("filters");
+    assert_eq!(
+        codes(&provider, with_snomed),
+        [ferroterm_testkit::dhd::FRACTURE]
+    );
+    assert!(matches!(
+        provider.filter(&filter(
+            "concept",
+            FilterOperator::IsA,
+            ferroterm_testkit::dhd::INJURY
+        )),
+        Err(ProviderError::UnsupportedFilter { .. })
+    ));
+    let found = provider
+        .search("knobbel fract", Some("nl"))
+        .expect("searches");
+    assert_eq!(codes(&provider, found), [ferroterm_testkit::dhd::FRACTURE]);
+}

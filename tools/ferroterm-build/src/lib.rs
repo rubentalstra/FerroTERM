@@ -11,6 +11,7 @@
 
 pub mod archive;
 pub mod classification;
+pub mod dhd;
 pub mod icd11;
 pub mod loinc;
 pub mod pipeline;
@@ -28,8 +29,8 @@ pub struct Cli {
     #[arg(
         long,
         value_name = "DIR_OR_ZIP",
-        conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc"],
-        required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc"]
+        conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc", "dhd"],
+        required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc", "dhd"]
     )]
     pub rf2: Option<PathBuf>,
     /// The LOINC release: the unpacked `Loinc_<version>` directory, or the release zip.
@@ -74,6 +75,12 @@ pub struct Cli {
     /// The ATC index year to record (`2026`); required, the files carry none.
     #[arg(long, value_name = "YEAR", requires = "atc")]
     pub atc_version: Option<String>,
+    /// A DHD Diagnosethesaurus or Verrichtingenthesaurus delivery: the zip, or the unpacked directory of CSV tables.
+    #[arg(long, value_name = "DIR_OR_ZIP", conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc"])]
+    pub dhd: Option<PathBuf>,
+    /// The thesaurus version to record when the delivery name does not carry it (`2.27`).
+    #[arg(long, value_name = "VERSION", requires = "dhd")]
+    pub dhd_version: Option<String>,
     /// The `RxNorm` sources (`SAB`) whose names are kept beside the unrestricted `RXNORM` and `MTHSPL` (a full release under a UMLS licence).
     #[arg(long, value_name = "SAB", value_delimiter = ',', action = clap::ArgAction::Append, requires = "rxnorm")]
     pub rxnorm_sources: Vec<String>,
@@ -182,6 +189,28 @@ fn run_classification(cli: &Cli) -> Result<Option<classification::Report>, RunEr
             &cli.out,
         )?));
     }
+    if let Some(dhd) = &cli.dhd {
+        let scratch;
+        let root = if dhd.is_file() {
+            scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+            let name = dhd.file_name().and_then(|n| n.to_str()).map_or_else(
+                || String::from("delivery"),
+                |n| n.trim_end_matches(".zip").to_owned(),
+            );
+            archive::unpack_dhd(dhd, &scratch.path().join(name))?
+        } else {
+            dhd.clone()
+        };
+        let thesaurus = ferroterm_dhd::read(&root, cli.dhd_version.as_deref())?;
+        let report = classification::build(
+            &thesaurus.classification,
+            ferroterm_dhd::SYSTEM,
+            cli.dhd_version.as_deref(),
+            &cli.out,
+        )?;
+        dhd::write_concept_maps(&thesaurus, &report.version, &cli.out)?;
+        return Ok(Some(report));
+    }
     if let Some(atc) = &cli.atc {
         let version = cli.atc_version.as_deref().ok_or(RunError::NoAtcVersion)?;
         let classification = ferroterm_classification::atc::read(atc, Some(version))?;
@@ -263,7 +292,9 @@ pub enum Report {
 #[derive(Debug, thiserror::Error)]
 pub enum RunError {
     /// No input was given.
-    #[error("give `--rf2`, `--loinc`, `--claml`, `--icd10cm`, `--rxnorm`, `--icd11`, or `--atc`")]
+    #[error(
+        "give `--rf2`, `--loinc`, `--claml`, `--icd10cm`, `--rxnorm`, `--icd11`, `--atc`, or `--dhd`"
+    )]
     NoInput,
     /// `--atc` without `--atc-version`.
     #[error("`--atc` needs `--atc-version` (the index year)")]
@@ -295,6 +326,12 @@ pub enum RunError {
     /// The ATC table does not read.
     #[error(transparent)]
     Atc(#[from] ferroterm_classification::atc::AtcError),
+    /// The DHD delivery does not read.
+    #[error(transparent)]
+    Dhd(#[from] ferroterm_dhd::DhdError),
+    /// The DHD concept maps cannot be written.
+    #[error(transparent)]
+    DhdMaps(#[from] dhd::MapError),
     /// The classification build failed.
     #[error(transparent)]
     Classification(#[from] classification::Error),

@@ -98,6 +98,9 @@ struct Manifest {
     title: String,
     #[serde(default)]
     language: String,
+    /// `classified-with` for a tree; absent for a flat table.
+    #[serde(default, rename = "hierarchyMeaning")]
+    hierarchy_meaning: Option<String>,
     store: String,
     hierarchy: String,
     text: String,
@@ -149,6 +152,8 @@ impl Hierarchy for Tree {
 pub struct ClassificationProvider {
     identity: Identity,
     declaration: Declaration,
+    /// Whether the artifact carries a hierarchy (a flat table has none).
+    tree_served: bool,
     store: Store,
     tree: Tree,
     text: TextIndex,
@@ -241,7 +246,12 @@ impl ClassificationProvider {
                 title: (!manifest.title.is_empty()).then_some(manifest.title),
                 version_needed: false,
             },
-            declaration: declaration(&keys, manifest.languages),
+            declaration: declaration(
+                &keys,
+                manifest.languages,
+                manifest.hierarchy_meaning.is_some(),
+            ),
+            tree_served: manifest.hierarchy_meaning.is_some(),
             store,
             tree: Tree { graph, children },
             text,
@@ -420,25 +430,27 @@ impl CodeSystemProvider for ClassificationProvider {
                 });
             }
         }
-        for value in self.codes(self.tree.parents(concept))? {
-            out.push(Property {
-                code: String::from("parent"),
-                value,
-                ..Property::default()
-            });
-        }
-        for value in self.codes(self.tree.children(concept))? {
-            out.push(Property {
-                code: String::from("child"),
-                value,
-                ..Property::default()
-            });
+        if self.tree_served {
+            for value in self.codes(self.tree.parents(concept))? {
+                out.push(Property {
+                    code: String::from("parent"),
+                    value,
+                    ..Property::default()
+                });
+            }
+            for value in self.codes(self.tree.children(concept))? {
+                out.push(Property {
+                    code: String::from("child"),
+                    value,
+                    ..Property::default()
+                });
+            }
         }
         Ok(out)
     }
 
     fn hierarchy(&self) -> Option<&dyn Hierarchy> {
-        Some(&self.tree)
+        self.tree_served.then_some(&self.tree as &dyn Hierarchy)
     }
 
     fn all(&self) -> Result<ConceptSet, ProviderError> {
@@ -464,21 +476,25 @@ impl CodeSystemProvider for ClassificationProvider {
 /// What the provider declares: `kind`, `usage`, `valid`, `parent`, `child`,
 /// and every note kind as properties; `kind`, `usage`, `valid`, and the note
 /// kinds as filters.
-fn declaration(keys: &BTreeMap<u32, String>, languages: Vec<String>) -> Declaration {
-    let mut properties = vec![
-        PropertyDefinition {
-            code: String::from("parent"),
-            uri: None,
-            description: Some(String::from("The class this one is classified under")),
-            kind: PropertyKind::Code,
-        },
-        PropertyDefinition {
-            code: String::from("child"),
-            uri: None,
-            description: Some(String::from("A class classified under this one")),
-            kind: PropertyKind::Code,
-        },
-    ];
+fn declaration(keys: &BTreeMap<u32, String>, languages: Vec<String>, tree: bool) -> Declaration {
+    let mut properties = if tree {
+        vec![
+            PropertyDefinition {
+                code: String::from("parent"),
+                uri: None,
+                description: Some(String::from("The class this one is classified under")),
+                kind: PropertyKind::Code,
+            },
+            PropertyDefinition {
+                code: String::from("child"),
+                uri: None,
+                description: Some(String::from("A class classified under this one")),
+                kind: PropertyKind::Code,
+            },
+        ]
+    } else {
+        Vec::new()
+    };
     let mut filters = Vec::new();
     for name in keys.values() {
         let (kind, operators, value, description) = match name.as_str() {
@@ -531,11 +547,15 @@ fn declaration(keys: &BTreeMap<u32, String>, languages: Vec<String>) -> Declarat
     Declaration {
         content: ContentMode::NotPresent,
         case_sensitive: true,
-        hierarchy_meaning: Some(HierarchyMeaning::ClassifiedWith),
+        hierarchy_meaning: tree.then_some(HierarchyMeaning::ClassifiedWith),
         compositional: false,
         languages,
         properties,
         filters,
-        capabilities: BTreeSet::from([Capability::Subsumption, Capability::Enumeration]),
+        capabilities: if tree {
+            BTreeSet::from([Capability::Subsumption, Capability::Enumeration])
+        } else {
+            BTreeSet::from([Capability::Enumeration])
+        },
     }
 }

@@ -9,6 +9,7 @@
 
 mod archive;
 mod classification;
+mod dhd;
 mod fixture;
 mod icd11;
 mod local_edition;

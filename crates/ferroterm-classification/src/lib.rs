@@ -17,8 +17,20 @@ mod xml;
 /// The rubric kind of a class's title.
 pub const PREFERRED: &str = "preferred";
 
+/// The rubric kinds a build indexes as designations when a classification
+/// names none of its own.
+pub const DEFAULT_DESIGNATION_KINDS: [&str; 5] = [
+    "preferred",
+    "preferredLong",
+    "inclusion",
+    "inclusionTerm",
+    "short",
+];
+/// The `hierarchyMeaning` of a classification tree.
+pub const CLASSIFIED_WITH: &str = "classified-with";
+
 /// A classification: the classes of one release, in document order.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Classification {
     /// The classification's name as the source states it (`Title@name`).
     pub name: String,
@@ -32,10 +44,33 @@ pub struct Classification {
     pub kinds: Vec<String>,
     /// The classes.
     pub classes: Vec<Class>,
+    /// The rubric kinds that are designations (searchable texts); every other
+    /// kind is a property.
+    pub designation_kinds: Vec<String>,
+    /// The `hierarchyMeaning` of the parent edges, `None` for a flat table.
+    pub hierarchy: Option<String>,
+}
+
+impl Default for Classification {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            title: String::new(),
+            version: None,
+            language: String::new(),
+            kinds: Vec::new(),
+            classes: Vec::new(),
+            designation_kinds: DEFAULT_DESIGNATION_KINDS
+                .iter()
+                .map(|k| (*k).to_owned())
+                .collect(),
+            hierarchy: Some(CLASSIFIED_WITH.to_owned()),
+        }
+    }
 }
 
 /// One class: a chapter, block, category, or subcategory.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Class {
     /// The code, with the period where the code has four or more characters.
     pub code: String,
@@ -47,8 +82,24 @@ pub struct Class {
     pub usage: Option<String>,
     /// Whether the code is valid for use as a code, when the source says.
     pub valid: Option<bool>,
+    /// Whether the class is current; an ended class is served inactive.
+    pub active: bool,
     /// The rubrics: the title (`preferred`) and the notes, by kind.
     pub rubrics: Vec<Rubric>,
+}
+
+impl Default for Class {
+    fn default() -> Self {
+        Self {
+            code: String::new(),
+            kind: String::new(),
+            parent: None,
+            usage: None,
+            valid: None,
+            active: true,
+            rubrics: Vec::new(),
+        }
+    }
 }
 
 /// One rubric: a text of a kind, in a language.

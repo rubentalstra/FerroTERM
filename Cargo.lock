@@ -563,6 +563,8 @@ dependencies = [
  "anyhow",
  "clap",
  "ferroterm-classification",
+ "ferroterm-dhd",
+ "ferroterm-fhir",
  "ferroterm-graph",
  "ferroterm-icd11",
  "ferroterm-loinc",
@@ -585,6 +587,17 @@ dependencies = [
  "csv",
  "ferroterm-testkit",
  "quick-xml",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
+name = "ferroterm-dhd"
+version = "0.0.6"
+dependencies = [
+ "csv",
+ "ferroterm-classification",
+ "ferroterm-testkit",
  "tempfile",
  "thiserror",
 ]
@@ -706,6 +719,7 @@ version = "0.0.6"
 dependencies = [
  "criterion",
  "csv",
+ "ferroterm-dhd",
  "ferroterm-fhir",
  "ferroterm-graph",
  "ferroterm-icd11",
@@ -732,6 +746,7 @@ version = "0.0.6"
 dependencies = [
  "ferroterm-build",
  "ferroterm-classification",
+ "ferroterm-dhd",
  "ferroterm-graph",
  "ferroterm-icd11",
  "ferroterm-loinc",

@@ -198,23 +198,11 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
     zip_dir(&claml_dir, &claml_zip);
     let out = tempfile::tempdir().expect("tempdir");
     let report = ferroterm_build::run(&ferroterm_build::Cli {
-        rf2: None,
-        loinc: None,
-        loinc_version: None,
         claml: Some(claml_zip),
         system: Some(CLAML_SYSTEM.to_owned()),
         claml_version: Some(String::from("2022")),
-        icd10cm: Vec::new(),
-        rxnorm: None,
-        rxnorm_version: None,
-        icd11: None,
-        icd11_api: None,
-        icd11_release: None,
-        icd11_languages: Vec::new(),
-        atc: None,
-        atc_version: None,
-        rxnorm_sources: Vec::new(),
         out: out.path().to_path_buf(),
+        ..no_input()
     })
     .expect("builds");
     let ferroterm_build::Report::Classification(report) = report else {
@@ -238,23 +226,9 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
     zip_dir(&order_dir, &order_zip);
     let out = tempfile::tempdir().expect("tempdir");
     let report = ferroterm_build::run(&ferroterm_build::Cli {
-        rf2: None,
-        loinc: None,
-        loinc_version: None,
-        claml: None,
-        system: None,
-        claml_version: None,
         icd10cm: vec![tables_zip, order_zip.clone()],
-        rxnorm: None,
-        rxnorm_version: None,
-        icd11: None,
-        icd11_api: None,
-        icd11_release: None,
-        icd11_languages: Vec::new(),
-        atc: None,
-        atc_version: None,
-        rxnorm_sources: Vec::new(),
         out: out.path().to_path_buf(),
+        ..no_input()
     })
     .expect("builds from two zips");
     let ferroterm_build::Report::Classification(report) = report else {
@@ -265,26 +239,36 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
     assert!(
         matches!(
             ferroterm_build::run(&ferroterm_build::Cli {
-                rf2: None,
-                loinc: None,
-                loinc_version: None,
-                claml: None,
-                system: None,
-                claml_version: None,
                 icd10cm: vec![order_zip],
-                rxnorm: None,
-                rxnorm_version: None,
-                icd11: None,
-                icd11_api: None,
-                icd11_release: None,
-                icd11_languages: Vec::new(),
-                atc: None,
-                atc_version: None,
-                rxnorm_sources: Vec::new(),
                 out: out.path().to_path_buf(),
+                ..no_input()
             }),
             Err(ferroterm_build::RunError::Icd10cm(_))
         ),
         "the order file alone lacks the tabular list"
     );
+}
+
+fn no_input() -> ferroterm_build::Cli {
+    ferroterm_build::Cli {
+        rf2: None,
+        loinc: None,
+        loinc_version: None,
+        claml: None,
+        system: None,
+        claml_version: None,
+        icd10cm: Vec::new(),
+        rxnorm: None,
+        rxnorm_version: None,
+        icd11: None,
+        icd11_api: None,
+        icd11_release: None,
+        icd11_languages: Vec::new(),
+        atc: None,
+        atc_version: None,
+        dhd: None,
+        dhd_version: None,
+        rxnorm_sources: Vec::new(),
+        out: std::path::PathBuf::new(),
+    }
 }
