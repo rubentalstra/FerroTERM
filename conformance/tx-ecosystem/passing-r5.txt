@@ -85,6 +85,7 @@ simple-cases/simple-expand-child-of
 simple-cases/simple-expand-regex-none
 simple-cases/simple-expand-regexp-prop
 simple-cases/simple-expand-repeating-prop
+simple-cases/simple-lookup-1
 tho/validate-child-of-child
 tho/validate-descendent-of-child
 tho/validate-descendent-of-deep

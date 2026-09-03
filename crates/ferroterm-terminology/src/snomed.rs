@@ -322,6 +322,7 @@ impl SnomedProvider {
                 url: SYSTEM.to_owned(),
                 version: manifest.version,
                 title: Some(String::from("SNOMED CT")),
+                name: None,
                 // NOTE: the canonical R4B CodeSystem for SNOMED CT declares
                 // versionNeeded = false (<https://hl7.org/fhir/R4B/snomedct.html>).
                 version_needed: false,

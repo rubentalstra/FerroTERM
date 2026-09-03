@@ -94,6 +94,52 @@ fn lookup_property_selects_properties_and_lang_x_selects_designations() {
 }
 
 #[test]
+fn lookup_property_star_asks_for_every_property_and_the_designations() {
+    let registry = registry();
+    let input = LookupInput {
+        system: Some(URL.to_owned()),
+        code: Some(String::from("cat")),
+        properties: vec![String::from("*")],
+        ..LookupInput::default()
+    };
+    let outcome = lookup(&registry, &Invocation::Type, &input).expect("looks up");
+    let codes: Vec<&str> = outcome.properties.iter().map(|p| p.code.as_str()).collect();
+    assert_eq!(codes, ["legs", "kingdom"]);
+    let values: Vec<&str> = outcome
+        .designations
+        .iter()
+        .map(|d| d.value.as_str())
+        .collect();
+    assert_eq!(
+        values,
+        ["Cat", "Kat"],
+        "the display is already a designation, so it is not repeated"
+    );
+}
+
+#[test]
+fn lookup_naming_other_properties_only_leaves_the_designations_out() {
+    let registry = registry();
+    let input = LookupInput {
+        system: Some(URL.to_owned()),
+        code: Some(String::from("cat")),
+        properties: vec![String::from("legs")],
+        ..LookupInput::default()
+    };
+    let outcome = lookup(&registry, &Invocation::Type, &input).expect("looks up");
+    let codes: Vec<&str> = outcome.properties.iter().map(|p| p.code.as_str()).collect();
+    assert_eq!(codes, ["legs"]);
+    assert!(outcome.designations.is_empty());
+    let input = LookupInput {
+        properties: vec![String::from("designation")],
+        ..input
+    };
+    let outcome = lookup(&registry, &Invocation::Type, &input).expect("looks up");
+    assert!(outcome.properties.is_empty());
+    assert_eq!(outcome.designations.len(), 2);
+}
+
+#[test]
 fn lookup_refusals_carry_their_issue_code_and_status() {
     let registry = registry();
     let run = |input: LookupInput| lookup(&registry, &Invocation::Type, &input).err();

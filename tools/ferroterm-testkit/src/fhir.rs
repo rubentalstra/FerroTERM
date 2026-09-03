@@ -36,7 +36,7 @@ pub const CM_FALLBACK: &str = "http://example.org/fhir/ConceptMap/fallback";
 /// in English and German, one declared property and filter.
 fn animals() -> serde_json::Value {
     serde_json::json!({
-      "resourceType": "CodeSystem",
+      "resourceType": "CodeSystem", "language": "en",
       "url": ANIMALS, "version": "2.0", "name": "Animals", "title": "Animals (synthetic)",
       "status": "active", "content": "complete", "caseSensitive": true,
       "hierarchyMeaning": "is-a", "compositional": false, "versionNeeded": false,
