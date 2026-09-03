@@ -61,7 +61,12 @@ fn from_query<'a>(
     headers: &HeaderMap,
     query: &[(String, String)],
 ) -> Result<(Scope<'a>, Parameters), Failure> {
-    let parameters = wire::parameters_from_query(operation, query)?;
+    let own: Vec<(String, String)> = query
+        .iter()
+        .filter(|(name, _)| name != crate::scope::UUID)
+        .cloned()
+        .collect();
+    let parameters = wire::parameters_from_query(operation, &own)?;
     Ok((scope_of(state, headers, Vec::new())?, parameters))
 }
 

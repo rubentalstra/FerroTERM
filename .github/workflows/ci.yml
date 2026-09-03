@@ -318,6 +318,42 @@ jobs:
       # (reads the workspace `rust-version`).
       - run: cargo hack check --rust-version --workspace --locked --all-targets
 
+  # The HL7 terminology ecosystem suite against a release build, with the
+  # committed pass list as the gate (conformance/tx-ecosystem/README.md). The
+  # runner is the FHIR Validator, a JVM in CI only; the server never has one.
+  tx-ecosystem:
+    name: tx-ecosystem
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: tx-ecosystem
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: cargo build --release --locked -p ferroterm-server
+      - run: scripts/checks/tx-ecosystem.sh
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: tx-ecosystem-report
+          path: |
+            target/tx-ecosystem/out/report.json
+            target/tx-ecosystem/out/runner.log
+            target/tx-ecosystem/out/passing.txt
+            target/tx-ecosystem/out/expected
+            target/tx-ecosystem/out/actual
+          retention-days: 14
+
   dependency-review:
     name: dependency-review
     needs: detect
@@ -364,6 +400,7 @@ jobs:
       - cargo-deny
       - codegen-drift
       - msrv
+      - tx-ecosystem
       - dependency-review
     if: always()
     runs-on: ubuntu-latest

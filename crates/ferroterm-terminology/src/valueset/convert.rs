@@ -30,6 +30,11 @@ fn filter(
     })
 }
 
+/// The cross-version extension an R4 resource carries an R5 filter operator in
+/// (<https://hl7.org/fhir/versions.html#extensions>).
+const FILTER_OP_EXTENSION: &str =
+    "http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.compose.include.filter.op";
+
 macro_rules! convert_value_set {
     (@value required, $f:ident) => {
         $f.value.value.as_deref()
@@ -49,9 +54,16 @@ macro_rules! convert_value_set {
             fn include(source: &ValueSetComposeInclude) -> Result<Include, ModelError> {
                 let mut filters = Vec::with_capacity(source.filter.len());
                 for f in &source.filter {
+                    // NOTE: an R4 resource converted from R5 carries `child-of` and
+                    // `descendent-leaf` in the cross-version extension on `op`
+                    // (<https://hl7.org/fhir/versions.html#extensions>).
+                    let extended = f.op.extension.iter().find(|x| x.url == super::FILTER_OP_EXTENSION).and_then(|x| match &x.value {
+                        Some(ferroterm_fhir::$module::extension::ExtensionValue::Code(c)) => c.value.as_deref(),
+                        _ => None,
+                    });
                     filters.push(super::filter(
                         f.property.value.as_deref(),
-                        f.op.value.as_deref(),
+                        f.op.value.as_deref().or(extended),
                         convert_value_set!(@value $value, f),
                     )?);
                 }
@@ -83,11 +95,12 @@ macro_rules! convert_value_set {
             ///
             /// # Errors
             ///
-            /// Returns [`ModelError`] for a resource without a `url` or a filter
-            /// with an unknown operator.
+            /// Returns [`ModelError`] for a filter with an unknown operator.
             pub fn convert(resource: &ValueSet) -> Result<ValueSetModel, ModelError> {
+                // NOTE: `ValueSet.url` is 0..1 (<https://hl7.org/fhir/R4B/valueset.html>);
+                // an inline value set may have none, a stored one must (the loader checks).
                 let url = text(resource.url.as_ref().and_then(|u| u.value.as_deref()))
-                    .ok_or(ModelError::NoUrl)?;
+                    .unwrap_or_default();
                 let mut compose = Compose::default();
                 if let Some(source) = &resource.compose {
                     compose.inactive = source.inactive.as_ref().and_then(|b| b.value);
