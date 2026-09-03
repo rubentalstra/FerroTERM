@@ -78,7 +78,8 @@ pub fn lookup_input(request: &CodeSystemLookupRequest) -> LookupInput {
 }
 
 /// The `$lookup` outcome as the R5 response: `name`, `version`, `display`,
-/// `definition`, `designation`, and `property` with its `subproperty` parts.
+/// `definition`, `designation`, and `property` with its `subproperty` parts,
+/// then the ecosystem's `code`, `system`, and `abstract`.
 #[must_use]
 pub fn lookup_response(outcome: LookupOutcome) -> CodeSystemLookupResponse {
     CodeSystemLookupResponse {
@@ -111,10 +112,9 @@ pub fn lookup_response(outcome: LookupOutcome) -> CodeSystemLookupResponse {
                     .collect(),
             })
             .collect(),
-        // TODO(#163): answer the located code, its system, and abstract.
-        code: None,
-        system: None,
-        r#abstract: None,
+        code: Some(outcome.code.into()),
+        system: Some(outcome.system.into()),
+        r#abstract: Some(outcome.abstract_concept.into()),
     }
 }
 

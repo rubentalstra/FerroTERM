@@ -433,6 +433,22 @@ fn lookup_answers_the_display_as_a_designation_in_the_system_language() {
 }
 
 #[test]
+fn lookup_answers_the_code_the_system_and_abstract() {
+    let (_dir, providers) = load_all();
+    let registry = registry_of(take(providers, ANIMALS));
+    let cat = lookup_cat(&registry, &[]);
+    assert_eq!((cat.code.as_str(), cat.system.as_str()), ("cat", ANIMALS));
+    assert!(!cat.abstract_concept);
+    let input = lookup::LookupInput {
+        system: Some(ANIMALS.to_owned()),
+        code: Some(String::from("living")),
+        ..lookup::LookupInput::default()
+    };
+    let living = lookup::lookup(&registry, &Invocation::Type, &input).expect("looks up");
+    assert!(living.abstract_concept, "notSelectable = true is abstract");
+}
+
+#[test]
 fn lookup_name_is_the_code_system_name_then_the_title_then_the_url() {
     let (_dir, providers) = load_all();
     let animals = take(providers, ANIMALS);

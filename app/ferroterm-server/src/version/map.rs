@@ -83,7 +83,8 @@ macro_rules! map {
             }
 
             /// The `$lookup` outcome as the version's response: `name`, `version`, `display`,
-            /// `designation`, and `property` with its `subproperty` parts.
+            /// `designation`, and `property` with its `subproperty` parts, then the
+            /// ecosystem's `code`, `system`, and `abstract`.
             #[must_use]
             pub fn lookup_response(outcome: LookupOutcome) -> CodeSystemLookupResponse {
                 CodeSystemLookupResponse {
@@ -109,10 +110,9 @@ macro_rules! map {
                                 .collect(),
                         })
                         .collect(),
-                    // TODO(#163): answer the located code, its system, and abstract.
-                    code: None,
-                    system: None,
-                    r#abstract: None,
+                    code: Some(outcome.code.into()),
+                    system: Some(outcome.system.into()),
+                    r#abstract: Some(outcome.abstract_concept.into()),
                 }
             }
 
