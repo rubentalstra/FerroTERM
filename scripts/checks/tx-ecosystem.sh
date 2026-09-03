@@ -108,6 +108,13 @@ if [ "$total" = 0 ]; then
   tail -n 5 "$work/server.log" >&2 2>/dev/null || true
   exit 1
 fi
+# The committed total feeds the conformance badges (conformance-badges.sh); a
+# suite bump that changes it is recorded in the same change.
+committed_total=$(tr -d '[:space:]' < conformance/tx-ecosystem/total.txt)
+if [ "$committed_total" != "$total" ]; then
+  echo "tx-ecosystem: the suite ran $total tests but conformance/tx-ecosystem/total.txt says $committed_total; update it in this change" >&2
+  exit 1
+fi
 jq -r '.test[] | select(.action[0].operation.result == "pass") | .name' "$report" | sort > "$out/passing.txt"
 passed=$(wc -l < "$out/passing.txt" | tr -d ' ')
 echo "tx-ecosystem: $passed of $total $mode tests pass on /$fhir ($(grep -a -o 'tests v[0-9.]*' "$out/runner.log" | head -1), runner $VALIDATOR_VERSION)"
