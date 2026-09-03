@@ -17,6 +17,7 @@ ferroterm-rf2.workspace = true
 ferroterm-store.workspace = true
 ferroterm-text.workspace = true
 http.workspace = true
+quick-xml.workspace = true
 jiff.workspace = true
 csv.workspace = true
 regex.workspace = true

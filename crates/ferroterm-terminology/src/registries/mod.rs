@@ -12,3 +12,4 @@ pub mod bcp47;
 pub mod interned;
 pub mod iso3166;
 pub mod subtags;
+pub mod ucum;

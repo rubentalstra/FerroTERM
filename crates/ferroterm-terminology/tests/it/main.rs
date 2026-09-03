@@ -21,4 +21,5 @@ mod registries;
 mod registry;
 mod snomed;
 mod supplement;
+mod ucum;
 mod value_set;

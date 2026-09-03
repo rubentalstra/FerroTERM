@@ -41,6 +41,8 @@ ariadne = "0.6.0"
 # RF2 (tab-delimited, streamed); releases arrive zipped.
 csv = "1.4.0"
 zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+# The UCUM essence (unit definitions) is XML.
+quick-xml = "0.42.0"
 # Serde and formats.
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["arbitrary_precision"] }

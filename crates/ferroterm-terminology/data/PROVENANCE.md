@@ -25,3 +25,11 @@ ISO 3166); never edit a file here, re-run `scripts/vendor/registries.sh`.
 - CLDR version: 48
 - Fetched: 2026-09-03
 - License: Unicode License v3 (`cldr/LICENSE`)
+
+## UCUM essence
+
+- Files: `ucum/ucum-essence.xml` (the unit definitions), `ucum/LICENSE.md`
+- Source: <https://github.com/ucum-org/ucum>, ref `main` at commit `ef4c31cd7d3bc81de1a1bf2cc8414bf502b6304f`
+- UCUM version: 2.2
+- Fetched: 2026-09-03
+- License: the UCUM licence (`ucum/LICENSE.md`), verbatim redistribution with the notice

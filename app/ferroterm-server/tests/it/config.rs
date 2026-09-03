@@ -15,7 +15,7 @@ fn the_state_loads_every_named_artifact_and_names_its_instances() {
     let state = AppState::load(&config).expect("loads");
     let instances: Vec<(String, String, String)> = state
         .instances()
-        .filter(|(_, url, _)| !url.starts_with("urn:"))
+        .filter(|(_, url, _)| !url.starts_with("urn:") && *url != "http://unitsofmeasure.org")
         .map(|(a, b, c)| (a.to_owned(), b.to_owned(), c.to_owned()))
         .collect();
     assert_eq!(
@@ -35,8 +35,8 @@ fn the_state_loads_every_named_artifact_and_names_its_instances() {
     let summaries = state.summaries().expect("summarises");
     assert_eq!(
         summaries.len(),
-        4,
-        "the edition and the three registry systems"
+        5,
+        "the edition and the four registry systems"
     );
     let snomed = summaries
         .iter()
@@ -78,7 +78,9 @@ fn a_missing_or_duplicate_artifact_refuses_to_start() {
     ));
     let empty = AppState::load(&Config::default()).expect("no artifacts is a valid server");
     assert!(
-        empty.instances().all(|(_, url, _)| url.starts_with("urn:")),
+        empty
+            .instances()
+            .all(|(_, url, _)| url.starts_with("urn:") || url == "http://unitsofmeasure.org"),
         "only the registry systems are served without an index"
     );
 }
@@ -105,7 +107,7 @@ fn code_system_directories_load_and_supplements_apply() {
     let urls: Vec<&str> = state
         .instances()
         .map(|(_, url, _)| url)
-        .filter(|url| !url.starts_with("urn:"))
+        .filter(|url| !url.starts_with("urn:") && *url != "http://unitsofmeasure.org")
         .collect();
     assert_eq!(
         urls,

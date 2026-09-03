@@ -153,6 +153,14 @@ engine. Each row is a tracker issue under the program issue.
   enumeration. `octofhir-ucum` (Apache-2.0, tested against the official
   UCUM suite) is the shortlisted dependency for the parser; the choice is made
   when the provider is built.
+- **Served.** The provider parses expressions against the RFC-style grammar
+  of the specification over the vendored `ucum-essence.xml` (2.2), reduces
+  them to a magnitude over the seven base units, and interns each valid
+  expression as its own code (case sensitive, the expression is its display,
+  an English name composed from the essence as a designation). `$subsumes`
+  answers `equivalent` for the same unit (dimensions, magnitude, special
+  function) and `not-subsumed` otherwise; `canonical` and `property` are
+  answered as properties and filters; enumeration is refused.
 - **FHIR-defined behaviour.** Filters `property =` (base-unit property of the
   canonical form) and `canonical = | in` (comparable expressions). Implicit
   value sets `http://unitsofmeasure.org/vs` and
@@ -285,7 +293,8 @@ engine. Each row is a tracker issue under the program issue.
   The providers validate by grammar (and the IANA registries) and refuse
   enumeration. R5 no longer lists either on the systems page; THO lists BCP 47
   only.
-- **Served.** All three ship with the server and need no configuration:
+- **Served.** All four ship with the server and need no configuration (UCUM
+  is below):
   BCP 47 validates a tag by the RFC 5646 grammar and the IANA Language Subtag
   Registry (well-formed with an unregistered subtag is not a code), BCP 13 by
   the RFC 6838 grammar with `registered` and `base` filters and subsumption by
