@@ -5,7 +5,7 @@ resolver = "3"
 members = ["crates/*", "app/*", "tools/*"]
 
 [workspace.package]
-version = "0.0.7"
+version = "0.0.8"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
@@ -67,21 +67,21 @@ criterion = "0.8.2"
 divan = "0.1.21"
 tempfile = "3.27.0"
 # Workspace-internal crates (path dependencies, versioned with the workspace).
-ferroterm-fhir = { path = "crates/ferroterm-fhir", version = "0.0.7" }
-ferroterm-rf2 = { path = "crates/ferroterm-rf2", version = "0.0.7" }
-ferroterm-loinc = { path = "crates/ferroterm-loinc", version = "0.0.7" }
-ferroterm-classification = { path = "crates/ferroterm-classification", version = "0.0.7" }
-ferroterm-dhd = { path = "crates/ferroterm-dhd", version = "0.0.7" }
-ferroterm-gstandaard = { path = "crates/ferroterm-gstandaard", version = "0.0.7" }
-ferroterm-icd11 = { path = "crates/ferroterm-icd11", version = "0.0.7" }
-ferroterm-rrf = { path = "crates/ferroterm-rrf", version = "0.0.7" }
-ferroterm-graph = { path = "crates/ferroterm-graph", version = "0.0.7" }
-ferroterm-store = { path = "crates/ferroterm-store", version = "0.0.7" }
-ferroterm-text = { path = "crates/ferroterm-text", version = "0.0.7" }
-ferroterm-ecl = { path = "crates/ferroterm-ecl", version = "0.0.7" }
-ferroterm-terminology = { path = "crates/ferroterm-terminology", version = "0.0.7" }
-ferroterm-testkit = { path = "tools/ferroterm-testkit", version = "0.0.7" }
-ferroterm-build = { path = "tools/ferroterm-build", version = "0.0.7" }
+ferroterm-fhir = { path = "crates/ferroterm-fhir", version = "0.0.8" }
+ferroterm-rf2 = { path = "crates/ferroterm-rf2", version = "0.0.8" }
+ferroterm-loinc = { path = "crates/ferroterm-loinc", version = "0.0.8" }
+ferroterm-classification = { path = "crates/ferroterm-classification", version = "0.0.8" }
+ferroterm-dhd = { path = "crates/ferroterm-dhd", version = "0.0.8" }
+ferroterm-gstandaard = { path = "crates/ferroterm-gstandaard", version = "0.0.8" }
+ferroterm-icd11 = { path = "crates/ferroterm-icd11", version = "0.0.8" }
+ferroterm-rrf = { path = "crates/ferroterm-rrf", version = "0.0.8" }
+ferroterm-graph = { path = "crates/ferroterm-graph", version = "0.0.8" }
+ferroterm-store = { path = "crates/ferroterm-store", version = "0.0.8" }
+ferroterm-text = { path = "crates/ferroterm-text", version = "0.0.8" }
+ferroterm-ecl = { path = "crates/ferroterm-ecl", version = "0.0.8" }
+ferroterm-terminology = { path = "crates/ferroterm-terminology", version = "0.0.8" }
+ferroterm-testkit = { path = "tools/ferroterm-testkit", version = "0.0.8" }
+ferroterm-build = { path = "tools/ferroterm-build", version = "0.0.8" }
 
 # The reliability bar (.claude/rules/reliability.md). Groups sit at priority -1
 # so every named lint below overrides its group.

@@ -1,7 +1,7 @@
 # Hardware sizing
 
 FerroTERM is built to run an edition on ordinary hardware. This page gives
-measurements of v0.0.7 and where the memory goes.
+measurements of v0.0.8 and where the memory goes.
 
 > [!NOTE]
 > The figures were taken on a laptop over the licensed Dutch SNOMED CT edition
@@ -16,7 +16,7 @@ measurements of v0.0.7 and where the memory goes.
 | What | Figure |
 |---|---|
 | Build the Dutch edition from the release zip | 49 s |
-| The Dutch edition on disk | 591 MB (`store.redb`, `hierarchy.bin`, `text.bin`) |
+| The Dutch edition on disk | 637 MB (`store.redb`, `hierarchy.bin`, `text.bin`, `refsets.bin`, `attributes.bin`, `members.bin`) |
 | ICD-10-CM FY2026 (98,827 codes) | 8 s to build, 38 MB |
 | RxNorm prescribable subset (81,468 concepts, 1.13 million edges) | 11 s to build, 68 MB |
 | Server start with the three indexes | 0.5 s |

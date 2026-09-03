@@ -13,6 +13,15 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-09-03
+
+The ECL release: the SNOMED CT Expression Constraint Language 2.2, parsed
+from the official grammar and evaluated as set algebra over the closure, the
+attribute graph, and the reference set tables, behind `?fhir_vs=ecl/` and the
+`constraint` filter; the artifact gains the attribute, member, and identifier
+files the evaluator reads; LOINC's class parts and axes are served as the
+release defines them.
+
 ### Added
 
 - ECL: `ferroterm-ecl` parses the Expression Constraint Language 2.2 with a
@@ -451,7 +460,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.7...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.8...HEAD
+[0.0.8]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.8
 [0.0.7]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.7
 [0.0.6]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.6
 [0.0.5]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.5
