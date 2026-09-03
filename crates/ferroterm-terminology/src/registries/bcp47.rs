@@ -527,6 +527,7 @@ impl CodeSystemProvider for Bcp47Provider {
                 out.push(Property {
                     code: name.to_owned(),
                     value: PropertyValue::Code(value.to_owned()),
+                    ..Property::default()
                 });
             }
         }

@@ -11,14 +11,14 @@
 use ferroterm_fhir::r4b::coding::Coding;
 use ferroterm_fhir::r4b::operations::code_system_lookup::{
     CodeSystemLookupRequest, CodeSystemLookupResponse, CodeSystemLookupResponseDesignation,
-    CodeSystemLookupResponseProperty,
+    CodeSystemLookupResponseProperty, CodeSystemLookupResponsePropertySubproperty,
 };
 use ferroterm_fhir::r4b::parameters::ParametersParameterValue;
 
 use super::{
     Invocation, OperationError, code_text, coding_parts, locate, resolve, string_text, uri_text,
 };
-use crate::provider::{Designation, PropertyValue};
+use crate::provider::{CodeSystemProvider, Concept, Designation, PropertyValue};
 use crate::registry::Registry;
 
 /// The property names R4B lists for every code system, answered outside the
@@ -103,6 +103,27 @@ pub fn lookup(
         })
         .map(designation)
         .collect();
+    let properties = properties(provider.as_ref(), concept, &wanted)?;
+    Ok(CodeSystemLookupResponse {
+        name: identity
+            .title
+            .clone()
+            .unwrap_or_else(|| identity.url.clone())
+            .into(),
+        version: Some(identity.version.as_str().into()),
+        display: display.into(),
+        designation: designations,
+        property: properties,
+    })
+}
+
+/// The `property` parts: the definition and every provider property, all of
+/// them when `wanted` is empty, else the named ones.
+fn properties(
+    provider: &dyn CodeSystemProvider,
+    concept: Concept,
+    wanted: &[&str],
+) -> Result<Vec<CodeSystemLookupResponseProperty>, OperationError> {
     let mut properties = Vec::new();
     let all = wanted.is_empty();
     let asked = |name: &str| all || wanted.contains(&name);
@@ -123,21 +144,19 @@ pub fn lookup(
         properties.push(CodeSystemLookupResponseProperty {
             code: property.code.as_str().into(),
             value: Some(value(&property.value)),
-            description: None,
-            subproperty: Vec::new(),
+            description: property.description.as_deref().map(Into::into),
+            subproperty: property
+                .subproperties
+                .iter()
+                .map(|part| CodeSystemLookupResponsePropertySubproperty {
+                    code: part.code.as_str().into(),
+                    value: value(&part.value),
+                    description: part.description.as_deref().map(Into::into),
+                })
+                .collect(),
         });
     }
-    Ok(CodeSystemLookupResponse {
-        name: identity
-            .title
-            .clone()
-            .unwrap_or_else(|| identity.url.clone())
-            .into(),
-        version: Some(identity.version.as_str().into()),
-        display: display.into(),
-        designation: designations,
-        property: properties,
-    })
+    Ok(properties)
 }
 
 fn designation(d: Designation) -> CodeSystemLookupResponseDesignation {
@@ -154,10 +173,12 @@ fn designation(d: Designation) -> CodeSystemLookupResponseDesignation {
 }
 
 /// A property value as the `value[x]` the R4B definition admits
-/// (`code`, `Coding`, `string`, `integer`, `boolean`, `dateTime`, `decimal`).
+/// (`code`, `Coding`, `string`, `integer`, `boolean`, `dateTime`, `decimal`);
+/// a `uri` rides on the `Parameters` value, the form the ICD-11 test cases use.
 pub(crate) fn value(value: &PropertyValue) -> ParametersParameterValue {
     match value {
         PropertyValue::Code(c) => ParametersParameterValue::Code(c.as_str().into()),
+        PropertyValue::Uri(u) => ParametersParameterValue::Uri(u.as_str().into()),
         PropertyValue::Coding {
             system,
             code,

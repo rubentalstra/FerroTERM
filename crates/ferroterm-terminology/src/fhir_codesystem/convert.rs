@@ -166,6 +166,7 @@ macro_rules! convert_code_system {
                         properties.push(Property {
                             code: property_code,
                             value,
+                            ..Property::default()
                         });
                     }
                     out.push(ConceptEntry {

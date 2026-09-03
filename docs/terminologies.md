@@ -249,9 +249,29 @@ engine. Each row is a tracker issue under the program issue.
   over 100,000 index terms (<https://icd.who.int/en/docs/icd11factsheet_en.pdf>).
 - **FHIR-defined behaviour.** None beyond identity. The tx-ecosystem suite has
   an `icd-11` mode (50 tests) that a provider should pass.
-- **FerroTERM plan.** A loader over the local-deployment API output or the
-  spreadsheet export, once ICD-10 is served; the cluster syntax is a
-  compositional grammar the provider must declare.
+- **Served.** `ferroterm-build --icd11 <cache> --icd11-api http://127.0.0.1:80
+  [--icd11-release 2026-01] [--icd11-languages en,fr]` walks a local
+  deployment of the ICD-API (`docker run -e acceptLicense=true -e
+  include=2026-01_en whoicd/icd-api`, no authentication) into a cache of the
+  entity JSON it serves (the MMS from 29 calls for the ids and one per entity
+  and language) and builds `<out>/mms`, `<out>/icf`, and `<out>/entity`: three
+  artifacts, one per code system, each entity a concept keyed by its short
+  code or, without one, its URI, with a key table for the URI forms, the
+  parent edges as the graph (the Foundation a polyhierarchy), titles, fully
+  specified names, inclusions, and index terms as designations by language,
+  `id`, `classKind`, `notSelectable`, `definition`, `exclusion`, `source`, and
+  `browserUrl` as properties, and the postcoordination scales beside the
+  store. The provider follows the HL7 terminology ecosystem cases for ICD-11:
+  a code is a short code, an entity URI in the unversioned or versioned form,
+  or a postcoordination expression (`1A00&XN8P1`, `1D01.0Y/1G41/1G40`, the
+  ICF `d5409.qp3`, the URI form), validated against the stem's axes (an
+  unfilled axis first, then a required one, then WHO's order; a `/` member
+  that fits an unfilled axis is a value, else a new stem) with `stem` and
+  `postcoordinationValues` reporting the binding; `parent` and `child` are
+  URIs; a stem's scale is the implicit value set
+  `<uri>/postcoordinationScale/<axis>`; `$subsumes` follows the tree. The
+  cache and the artifacts stay local under the CC BY-ND terms.
+
 
 ## ATC/DDD (WHO)
 

@@ -3,7 +3,7 @@
 use ferroterm_build::rxnorm::{self, RXNORM, SAB_KEY, STY_KEY, SYSTEM, TTY_KEY};
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::relations::Relations;
-use ferroterm_rrf::atoms::Atoms;
+use ferroterm_store::keys::KeyTable;
 use ferroterm_store::record::PropertyValue;
 use ferroterm_store::store::{Store, Vocabulary};
 use ferroterm_testkit::rxnorm::{
@@ -155,14 +155,14 @@ fn the_relationships_and_atoms_sit_beside_the_store() {
         relations.targets(branded, tradename_of).collect::<Vec<_>>(),
         [tablet]
     );
-    let atoms = Atoms::read_from(
+    let atoms = KeyTable::read_from(
         &mut std::fs::read(out.path().join("atoms.bin"))
             .expect("atoms")
             .as_slice(),
     )
     .expect("reads");
     assert_eq!(
-        atoms.concept(ASPIRIN_SYNONYM_ATOM.parse().expect("number")),
+        atoms.get(ASPIRIN_SYNONYM_ATOM.parse().expect("number")),
         Some(aspirin.index())
     );
 }

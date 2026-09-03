@@ -10,6 +10,7 @@
 mod archive;
 mod classification;
 mod fixture;
+mod icd11;
 mod local_edition;
 mod loinc;
 mod pipeline;

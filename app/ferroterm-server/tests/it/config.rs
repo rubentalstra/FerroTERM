@@ -241,3 +241,28 @@ fn an_rxnorm_artifact_is_served_beside_the_others() {
     assert_eq!(summary.version, ferroterm_testkit::rxnorm::VERSION);
     assert_eq!(summary.concepts, Some(6));
 }
+
+#[test]
+fn the_three_icd11_artifacts_are_served_by_their_manifest_kind() {
+    let out = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::icd11::write_artifacts(out.path()).expect("builds");
+    let config = Config {
+        index: vec![
+            out.path().join("mms"),
+            out.path().join("icf"),
+            out.path().join("entity"),
+        ],
+        ..Config::default()
+    };
+    let state = AppState::load(&config).expect("loads");
+    let summaries = state.summaries().expect("summarises");
+    for (url, concepts) in [
+        ("http://id.who.int/icd/release/11/mms", 12),
+        ("http://id.who.int/icd/release/11/icf", 5),
+        ("http://id.who.int/icd/entity", 3),
+    ] {
+        let summary = summaries.iter().find(|s| s.url == url).expect(url);
+        assert_eq!(summary.version, ferroterm_testkit::icd11::RELEASE);
+        assert_eq!(summary.concepts, Some(concepts));
+    }
+}

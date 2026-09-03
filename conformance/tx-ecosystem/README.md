@@ -9,3 +9,10 @@ there) and fails when a listed test stops passing. A test that starts passing
 is printed by the script; add it to the list in the same change that earns it.
 The remaining failures and their adjudication are recorded on the tracker
 (issue #89).
+
+`passing-icd-11.txt` is the same list for the suite's `icd-11` mode, run by
+hand over the three ICD-11 artifacts built from the WHO ICD-API local
+deployment (`scripts/checks/tx-ecosystem.sh --mode icd-11 --index
+<mms>:<icf>:<entity>`); the artifacts need the WHO container and its licence,
+so this mode does not run in CI. The failures and their clusters are recorded
+on issue #18.

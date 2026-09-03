@@ -10,3 +10,5 @@
 - [Post-release verification pause](post-release-verification-pause.md), after the v0.0.3 cut, stop and verify binaries, image, L3 provenance, SBOMs, signatures as a consumer before new work; the owner wants the supply chain proven
 - [Milestone autonomy](milestone-autonomy.md), owner directive: work milestones v0.0.4 through v0.0.7 end to end without pausing, cut each release when it empties, move stragglers forward, file new milestones for new issues; only the signed tag is the owner's
 - [Performance bar](performance-bar.md), point reads and operations under 1 ms, NL ingest under 60 s, measured with criterion; never call a millisecond figure fine (#77)
+- [ICD-11 local deployment](icd11-local-deployment.md), the WHO ICD-API container flags, which language bundles exist per release, cache under data/icd11, artifacts under artifacts/icd11, clean up the containers afterwards
+- [Perl edit pitfalls](perl-edit-pitfalls.md), heredoc-quoted literals only, re-read after rustfmt, cargo clean -p on a stale rmeta

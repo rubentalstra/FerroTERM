@@ -25,6 +25,20 @@ fn main() -> anyhow::Result<()> {
             report.words,
             cli.out.display()
         ),
+        ferroterm_build::Report::Icd11(reports) => {
+            for report in reports {
+                println!(
+                    "{} {}: {} concepts, {} designations, {} postcoordination scales, {} words, written to {}",
+                    report.system,
+                    report.version,
+                    report.concepts,
+                    report.designations,
+                    report.scales,
+                    report.words,
+                    report.dir.display()
+                );
+            }
+        }
         ferroterm_build::Report::RxNorm(report) => println!(
             "RxNorm {}: {} concepts, {} atoms, {} relationships, {} words, written to {}",
             report.version,

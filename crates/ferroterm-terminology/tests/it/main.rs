@@ -17,6 +17,7 @@ mod concept_map;
 mod fhir_codesystem;
 mod filter;
 mod fixture;
+mod icd11;
 mod loinc;
 mod operations;
 mod registries;

@@ -66,6 +66,14 @@ pub enum OperationError {
         /// The code.
         code: String,
     },
+    /// The code is malformed for the code system's grammar.
+    #[error("code `{code}` is invalid: {reason}")]
+    InvalidCode {
+        /// The code as given.
+        code: String,
+        /// Why it is not a code.
+        reason: String,
+    },
     /// The value set is not known.
     #[error("value set `{0}` is not known")]
     UnknownValueSet(String),
@@ -92,6 +100,7 @@ impl OperationError {
     pub const fn issue_code(&self) -> &'static str {
         match self {
             Self::Required(_) => "required",
+            Self::InvalidCode { .. } => "code-invalid",
             Self::Invalid(_) | Self::ValueSetInvalid(_) => "invalid",
             Self::NotSupported(_) | Self::CannotDetermine(_) => "not-supported",
             Self::UnknownSystem(_)
@@ -115,7 +124,7 @@ impl OperationError {
             | Self::UnknownVersion { .. }
             | Self::UnknownValueSet(_)
             | Self::UnknownConceptMap(_) => "not-found",
-            Self::UnknownCode { .. } => "invalid-code",
+            Self::UnknownCode { .. } | Self::InvalidCode { .. } => "invalid-code",
             Self::ValueSetInvalid(_) => "vs-invalid",
             Self::TooCostly(_) => "too-costly",
             Self::CannotDetermine(_) => "cannot-determine",
@@ -133,6 +142,7 @@ impl OperationError {
             Self::Required(_)
             | Self::Invalid(_)
             | Self::UnknownCode { .. }
+            | Self::InvalidCode { .. }
             | Self::NotSupported(_) => StatusCode::BAD_REQUEST,
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
@@ -172,6 +182,7 @@ impl From<ProviderError> for OperationError {
             | ProviderError::Regex(_)
             | ProviderError::UnknownCode(_) => Self::ValueSetInvalid(error.to_string()),
             ProviderError::CannotDetermine(_) => Self::CannotDetermine(error.to_string()),
+            ProviderError::InvalidCode { code, reason } => Self::InvalidCode { code, reason },
             other => Self::Provider(other),
         }
     }

@@ -19,10 +19,10 @@ use std::path::{Path, PathBuf};
 
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::relations::{Relations, RelationsError};
-use ferroterm_rrf::atoms::{Atoms, AtomsError};
 use ferroterm_rrf::row::Atom;
 use ferroterm_rrf::{Release, RrfError};
 use ferroterm_store::builder::{BuildError, PreferredRule, StoreBuilder};
+use ferroterm_store::keys::{KeyTable, KeyTableError};
 use ferroterm_store::record::{Concept, Designation, PropertyValue};
 use ferroterm_store::store::Vocabulary;
 use ferroterm_store::tables;
@@ -92,7 +92,7 @@ pub enum Error {
     Relations(#[from] RelationsError),
     /// The atom table cannot be written.
     #[error(transparent)]
-    Atoms(#[from] AtomsError),
+    Atoms(#[from] KeyTableError),
     /// The text index cannot be built.
     #[error(transparent)]
     Text(#[from] ferroterm_text::index::BuildError),
@@ -401,7 +401,7 @@ pub fn build(
     relations.write_to(&mut relation_bytes)?;
     let relations_path = out.join(RELATIONS_FILE);
     std::fs::write(&relations_path, &relation_bytes).map_err(io_error(&relations_path))?;
-    let atoms = Atoms::new(atom_pairs);
+    let atoms = KeyTable::new(atom_pairs);
     let mut atom_bytes = Vec::new();
     atoms.write_to(&mut atom_bytes)?;
     let atoms_path = out.join(ATOMS_FILE);

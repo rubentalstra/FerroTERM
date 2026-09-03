@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::relations::{Relations, RelationsError};
-use ferroterm_rrf::atoms::{Atoms, AtomsError};
+use ferroterm_store::keys::{KeyTable, KeyTableError};
 use ferroterm_store::record;
 use ferroterm_store::store::{Store, StoreError, Vocabulary};
 use ferroterm_store::tables;
@@ -81,7 +81,7 @@ pub enum OpenError {
     Relations(#[from] RelationsError),
     /// The atom table does not read.
     #[error("cannot read the atom table")]
-    Atoms(#[from] AtomsError),
+    Atoms(#[from] KeyTableError),
     /// The concept count meta entry is missing or malformed.
     #[error("the store's concept count is `{0:?}`")]
     ConceptCount(Option<String>),
@@ -112,7 +112,7 @@ pub struct RxNormProvider {
     store: Store,
     text: TextIndex,
     relations: Relations,
-    atoms: Atoms,
+    atoms: KeyTable,
     concepts: u32,
     /// The code of every concept by ordinal, so a property listing hundreds
     /// of relationship targets stays a point read.
@@ -196,7 +196,7 @@ impl RxNormProvider {
         };
         let text = ferroterm_text::persist::read_from(&mut read(&manifest.text)?.as_slice())?;
         let relations = Relations::read_from(&mut read(&manifest.relations)?.as_slice())?;
-        let atoms = Atoms::read_from(&mut read(&manifest.atoms)?.as_slice())?;
+        let atoms = KeyTable::read_from(&mut read(&manifest.atoms)?.as_slice())?;
         let concepts = store.meta(tables::META_CONCEPTS)?;
         let concepts: u32 = concepts
             .as_deref()
@@ -302,7 +302,7 @@ impl RxNormProvider {
                     .parse()
                     .map_err(|_| invalid("the AUI is not a number"))?;
                 self.atoms
-                    .concept(id)
+                    .get(id)
                     .map(Ordinal::new)
                     .ok_or_else(|| ProviderError::UnknownCode(value.to_owned()))
             }
@@ -404,6 +404,7 @@ impl CodeSystemProvider for RxNormProvider {
         let mut out = vec![Property {
             code: String::from("inactive"),
             value: PropertyValue::Boolean(!record.active),
+            ..Property::default()
         }];
         for (key, values) in self.store.properties(ordinal).map_err(storage)? {
             let Some(name) = self.keys.get(&key) else {
@@ -414,6 +415,7 @@ impl CodeSystemProvider for RxNormProvider {
                     out.push(Property {
                         code: name.clone(),
                         value,
+                        ..Property::default()
                     });
                 }
             }
@@ -431,6 +433,7 @@ impl CodeSystemProvider for RxNormProvider {
             out.push(Property {
                 code: name.clone(),
                 value: PropertyValue::Code(code.clone()),
+                ..Property::default()
             });
         }
         Ok(out)
