@@ -40,6 +40,9 @@ fn lookup_by_system_and_code_returns_name_version_display_designations_propertie
     assert_eq!(outcome.name, "Fixture");
     assert_eq!(outcome.version.as_deref(), Some("2025"));
     assert_eq!(outcome.display, "Cat");
+    assert_eq!(outcome.code, "cat");
+    assert_eq!(outcome.system, URL);
+    assert!(!outcome.abstract_concept);
     let languages: Vec<&str> = outcome
         .designations
         .iter()

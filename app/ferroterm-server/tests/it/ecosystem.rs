@@ -237,3 +237,42 @@ async fn an_unknown_system_is_a_false_result_naming_the_system_on_every_version(
         );
     }
 }
+
+#[tokio::test]
+async fn lookup_answers_code_system_and_abstract_on_every_version() {
+    let server = Server::start_with_resources();
+    for version in VERSIONS {
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/CodeSystem/$lookup?system={ANIMALS}&code=living"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "code").unwrap()["valueCode"],
+            "living",
+            "{version}"
+        );
+        assert_eq!(
+            parameter(&body, "system").unwrap()["valueUri"],
+            ANIMALS,
+            "{version}"
+        );
+        assert_eq!(
+            parameter(&body, "abstract").unwrap()["valueBoolean"],
+            true,
+            "{version}"
+        );
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/CodeSystem/$lookup?system={ANIMALS}&code=cat"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "abstract").unwrap()["valueBoolean"],
+            false,
+            "{version}"
+        );
+    }
+}

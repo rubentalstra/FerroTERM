@@ -50,6 +50,13 @@ pub struct LookupInput {
 /// The outcome of `$lookup`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LookupOutcome {
+    /// The code as the system spells it (`code`, the ecosystem's output).
+    pub code: String,
+    /// The code system URI (`system`, the ecosystem's output).
+    pub system: String,
+    /// Whether the concept is abstract, `notSelectable` (`abstract`, the
+    /// ecosystem's output).
+    pub abstract_concept: bool,
     /// The code system's name, else its title, else its URI.
     pub name: String,
     /// The version served.
@@ -174,7 +181,11 @@ pub fn lookup(
         Vec::new()
     };
     let properties = properties(provider.as_ref(), concept, &asked)?;
+    let abstract_concept = provider.status(concept)?.abstract_concept;
     Ok(LookupOutcome {
+        code: located.code.clone(),
+        system: identity.url.clone(),
+        abstract_concept,
         name: identity
             .name
             .clone()
