@@ -13,6 +13,15 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-09-03
+
+The ICD-10 and RxNorm release: a ClaML classification (WHO ICD-10, ICD-10-NL,
+or any other) and the NCHS ICD-10-CM release build into the artifact layout
+and are served with the FHIR ICD page's conventions, and an RxNorm release
+(the full release or the Current Prescribable Content) is served with the five
+FHIR filters over typed relationship edges.
+
+
 ### Added
 
 - The ICD-10 family: `ferroterm-build --claml <xml|zip> --system <uri>` builds
@@ -305,7 +314,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.6...HEAD
+[0.0.6]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.6
 [0.0.5]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.5
 [0.0.4]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.4
 [0.0.3]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.3
