@@ -53,6 +53,11 @@ pub struct ValidationOutcome {
     /// The canonicals of the systems the server does not serve
     /// (`x-caused-by-unknown-system`, the terminology ecosystem's output).
     pub unknown_systems: Vec<String>,
+    /// The systems a `CodeableConcept`'s codings name that the server does not
+    /// serve (`x-unknown-system`, the ecosystem's output for that input).
+    pub x_unknown_systems: Vec<String>,
+    /// The `codeableConcept` input, echoed (an R5 output, pre-adopted).
+    pub codeable_concept: Option<Vec<CodingRef>>,
 }
 
 /// The `result = false` outcome for a system or version the server does not
@@ -61,9 +66,9 @@ fn unserved(
     url: &str,
     version: Option<&str>,
     code: Option<&str>,
-    expression: &'static str,
+    expression: &str,
 ) -> ValidationOutcome {
-    let (canonical, issue) = super::unknown_system(url, version, expression);
+    let (canonical, issue) = super::unknown_system(url, version, super::at(expression, "system"));
     ValidationOutcome {
         result: false,
         message: Some(issue.text.clone()),
@@ -73,6 +78,8 @@ fn unserved(
         version: version.map(str::to_owned),
         issues: vec![issue],
         unknown_systems: vec![canonical],
+        x_unknown_systems: Vec::new(),
+        codeable_concept: None,
     }
 }
 
@@ -84,7 +91,7 @@ fn resolve_for(
     url: Option<&str>,
     version: Option<&str>,
     code: Option<&str>,
-    expression: &'static str,
+    expression: &str,
 ) -> Result<Result<super::Resolved, ValidationOutcome>, OperationError> {
     match resolve(registry, invocation, url, version) {
         Ok(resolved) => Ok(Ok(resolved)),
@@ -178,7 +185,9 @@ pub fn validate_code(
         Ok(resolved) => resolved,
         Err(unserved) => return Ok(unserved),
     };
-    check_codeable_concept(&resolved.provider, codings, language)
+    let mut outcome = check_codeable_concept(&resolved.provider, codings, language)?;
+    outcome.codeable_concept = Some(codings.clone());
+    Ok(outcome)
 }
 
 /// Validates the codings of a `CodeableConcept` that name the system: the
@@ -192,7 +201,7 @@ fn check_codeable_concept(
     let target = identity.url.clone();
     let mut messages = Vec::new();
     let mut any = false;
-    for coding in codings {
+    for (index, coding) in codings.iter().enumerate() {
         if coding.system.as_deref().is_some_and(|s| s != target) {
             continue;
         }
@@ -200,13 +209,8 @@ fn check_codeable_concept(
             continue;
         };
         any = true;
-        let outcome = check(
-            provider,
-            code,
-            coding.display.as_deref(),
-            language,
-            "codeableConcept",
-        )?;
+        let base = format!("CodeableConcept.coding[{index}]");
+        let outcome = check(provider, code, coding.display.as_deref(), language, &base)?;
         if outcome.result {
             return Ok(outcome);
         }
@@ -231,9 +235,11 @@ fn check_codeable_concept(
             code: "code-invalid",
             kind: "invalid-code",
             text: message,
-            expression: Some("codeableConcept"),
+            expression: None,
         }],
         unknown_systems: Vec::new(),
+        x_unknown_systems: Vec::new(),
+        codeable_concept: None,
     })
 }
 
@@ -244,7 +250,7 @@ fn check(
     code: &str,
     display: Option<&str>,
     language: Option<&str>,
-    expression: &'static str,
+    expression: &str,
 ) -> Result<ValidationOutcome, OperationError> {
     let identity = provider.identity();
     let Some(located) = provider.locate(code)? else {
@@ -264,9 +270,11 @@ fn check(
                 code: "code-invalid",
                 kind: "invalid-code",
                 text,
-                expression: Some(expression),
+                expression: super::at(expression, "code"),
             }],
             unknown_systems: Vec::new(),
+            x_unknown_systems: Vec::new(),
+            codeable_concept: None,
         });
     };
     let concept = located.concept;
@@ -308,7 +316,7 @@ fn check(
                 code: "invalid",
                 kind: "invalid-display",
                 text,
-                expression: Some(expression),
+                expression: super::at(expression, "display"),
             });
         }
     }
@@ -336,5 +344,7 @@ fn check(
         version: Some(identity.version.clone()),
         issues,
         unknown_systems: Vec::new(),
+        x_unknown_systems: Vec::new(),
+        codeable_concept: None,
     })
 }

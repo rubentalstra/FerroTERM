@@ -213,13 +213,26 @@ pub fn validate_code_response(outcome: ValidationOutcome) -> CodeSystemValidateC
         code: outcome.code.map(Into::into),
         system: outcome.system.map(Into::into),
         version: outcome.version.map(Into::into),
-        codeable_concept: None,
+        codeable_concept: outcome.codeable_concept.as_deref().map(concept_of),
         issues: issues(&outcome.issues),
         x_caused_by_unknown_system: outcome
             .unknown_systems
             .into_iter()
             .map(Into::into)
             .collect(),
+        x_unknown_system: outcome
+            .x_unknown_systems
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+    }
+}
+
+/// A neutral `codeableConcept` echoed as the R5 `CodeableConcept`.
+fn concept_of(codings: &[CodingRef]) -> CodeableConcept {
+    CodeableConcept {
+        coding: codings.iter().map(coding_of).collect(),
+        ..Default::default()
     }
 }
 
@@ -249,7 +262,12 @@ fn issues(list: &[Issue]) -> Option<OperationOutcome> {
                     text: Some(issue.text.as_str().into()),
                     ..Default::default()
                 }),
-                expression: issue.expression.map(Into::into).into_iter().collect(),
+                expression: issue
+                    .expression
+                    .as_deref()
+                    .map(Into::into)
+                    .into_iter()
+                    .collect(),
                 ..Default::default()
             })
             .collect(),
@@ -317,10 +335,15 @@ pub fn value_set_validation_parameters(validation: &Validation) -> Parameters {
         code: validation.code.as_deref().map(Into::into),
         system: validation.system.as_deref().map(Into::into),
         version: validation.version.as_deref().map(Into::into),
-        codeable_concept: None,
+        codeable_concept: validation.codeable_concept.as_deref().map(concept_of),
         issues: issues(&validation.issues),
         x_caused_by_unknown_system: validation
             .unknown_systems
+            .iter()
+            .map(|s| s.as_str().into())
+            .collect(),
+        x_unknown_system: validation
+            .x_unknown_systems
             .iter()
             .map(|s| s.as_str().into())
             .collect(),

@@ -90,6 +90,10 @@ pub struct CodeSystemValidateCodeResponse {
     /// The version of the system of the code that was validated
     pub version: Option<super::super::primitives::String>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
+    /// codeableConcept containing codings for all the validated codes
+    pub codeable_concept: Option<super::super::codeable_concept::CodeableConcept>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
     /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
     /// List of itemised issues with paths constrained to simple FHIRPath.
     /// Examples are CodeableConcept, CodeableConcept.coding\[0\],
@@ -101,6 +105,13 @@ pub struct CodeSystemValidateCodeResponse {
     /// one parameter per system, so a validator can tell the user which
     /// resources are missing.
     pub x_caused_by_unknown_system: Vec<super::super::primitives::Canonical>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. A code system a coding of the
+    /// \`codeableConcept\` names that the server does not serve, one parameter
+    /// per system (the ecosystem's twin of \`x-caused-by-unknown-system\` for
+    /// that input).
+    pub x_unknown_system: Vec<super::super::primitives::Canonical>,
 }
 
 impl CodeSystemValidateCodeRequest {
@@ -610,9 +621,12 @@ impl CodeSystemValidateCodeResponse {
         let mut field_code: Option<super::super::primitives::Code> = None;
         let mut field_system: Option<super::super::primitives::Uri> = None;
         let mut field_version: Option<super::super::primitives::String> = None;
+        let mut field_codeable_concept: Option<super::super::codeable_concept::CodeableConcept> =
+            None;
         let mut field_issues: Option<super::super::operation_outcome::OperationOutcome> = None;
         let mut field_x_caused_by_unknown_system: Vec<super::super::primitives::Canonical> =
             Vec::new();
+        let mut field_x_unknown_system: Vec<super::super::primitives::Canonical> = Vec::new();
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -800,6 +814,38 @@ impl CodeSystemValidateCodeResponse {
                         }
                     });
                 }
+                "codeableConcept" => {
+                    if field_codeable_concept.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "codeableConcept",
+                        });
+                    }
+                    field_codeable_concept = Some(match &parameter.value {
+                        Some(
+                            super::super::parameters::ParametersParameterValue::CodeableConcept(
+                                value,
+                            ),
+                        ) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "codeableConcept",
+                                    expected: "CodeableConcept",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "codeableConcept",
+                                },
+                            );
+                        }
+                    });
+                }
                 "issues" => {
                     if field_issues.is_some() {
                         return Err(super::super::super::operation::ParametersError::Repeated {
@@ -854,6 +900,30 @@ impl CodeSystemValidateCodeResponse {
                         }
                     });
                 }
+                "x-unknown-system" => {
+                    field_x_unknown_system.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "x-unknown-system",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "x-unknown-system",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -876,8 +946,10 @@ impl CodeSystemValidateCodeResponse {
             code: field_code,
             system: field_system,
             version: field_version,
+            codeable_concept: field_codeable_concept,
             issues: field_issues,
             x_caused_by_unknown_system: field_x_caused_by_unknown_system,
+            x_unknown_system: field_x_unknown_system,
         })
     }
     /// Writes the fields as a parameter list.
@@ -939,6 +1011,17 @@ impl CodeSystemValidateCodeResponse {
                 ..Default::default()
             });
         }
+        if let Some(value) = &self.codeable_concept {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "codeableConcept".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(
+                        value.clone(),
+                    ),
+                ),
+                ..Default::default()
+            });
+        }
         if let Some(value) = &self.issues {
             out.push(super::super::parameters::ParametersParameter {
                 name: "issues".into(),
@@ -951,6 +1034,15 @@ impl CodeSystemValidateCodeResponse {
         for value in &self.x_caused_by_unknown_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "x-caused-by-unknown-system".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        for value in &self.x_unknown_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "x-unknown-system".into(),
                 value: Some(
                     super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
                 ),
@@ -1164,6 +1256,18 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 parts: &[],
             },
             super::super::super::operation::Parameter {
+                name: "codeableConcept",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("CodeableConcept"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
                 name: "issues",
                 usage: super::super::super::operation::ParameterUse::Out,
                 cardinality: super::super::super::operation::Cardinality {
@@ -1177,6 +1281,15 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
             },
             super::super::super::operation::Parameter {
                 name: "x-caused-by-unknown-system",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "x-unknown-system",
                 usage: super::super::super::operation::ParameterUse::Out,
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),

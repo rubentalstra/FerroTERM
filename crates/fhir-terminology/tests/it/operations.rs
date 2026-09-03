@@ -595,7 +595,7 @@ fn validate_code_names_an_unknown_system_or_version_instead_of_failing() {
     assert!(!version.result);
     assert_eq!(version.unknown_systems, [format!("{URL}|1999")]);
     assert_eq!(version.version.as_deref(), Some("1999"));
-    assert_eq!(version.issues[0].expression, Some("coding"));
+    assert_eq!(version.issues[0].expression.as_deref(), Some("coding"));
     assert!(
         version
             .message
@@ -626,7 +626,7 @@ fn validate_code_itemises_its_issues() {
     assert_eq!(unknown.issues[0].severity, "error");
     assert_eq!(unknown.issues[0].code, "code-invalid");
     assert_eq!(unknown.issues[0].kind, "invalid-code");
-    assert_eq!(unknown.issues[0].expression, Some("code"));
+    assert_eq!(unknown.issues[0].expression.as_deref(), Some("code"));
     let wrong = validate_code(
         &registry,
         &Invocation::Type,
@@ -642,7 +642,7 @@ fn validate_code_itemises_its_issues() {
     .expect("validates");
     assert_eq!(wrong.issues.len(), 1);
     assert_eq!(wrong.issues[0].kind, "invalid-display");
-    assert_eq!(wrong.issues[0].expression, Some("coding"));
+    assert_eq!(wrong.issues[0].expression.as_deref(), Some("coding"));
     assert!(
         wrong.issues[0].text.contains("`Cat`"),
         "{}",

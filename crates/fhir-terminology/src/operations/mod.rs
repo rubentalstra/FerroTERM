@@ -386,7 +386,7 @@ pub struct Issue {
     /// `issue.details.text`.
     pub text: String,
     /// `issue.expression`: the parameter at fault.
-    pub expression: Option<&'static str>,
+    pub expression: Option<String>,
 }
 
 /// A system the server does not serve, as `x-caused-by-unknown-system` names it.
@@ -399,7 +399,7 @@ pub struct Issue {
 pub fn unknown_system(
     url: &str,
     version: Option<&str>,
-    expression: &'static str,
+    expression: Option<String>,
 ) -> (String, Issue) {
     let (canonical, text) = match version {
         Some(version) => (
@@ -422,7 +422,21 @@ pub fn unknown_system(
             code: "not-found",
             kind: "not-found",
             text,
-            expression: Some(expression),
+            expression,
         },
     )
+}
+
+/// The `issue.expression` for `leaf` of the element at `base`.
+///
+/// A coding inside a `CodeableConcept` is addressed by its index and the part
+/// at fault (`CodeableConcept.coding[1].display`), the ecosystem's shape; a
+/// bare parameter is named as itself.
+#[must_use]
+pub fn at(base: &str, leaf: &str) -> Option<String> {
+    if base.starts_with("CodeableConcept.coding[") {
+        Some(format!("{base}.{leaf}"))
+    } else {
+        Some(base.to_owned())
+    }
 }

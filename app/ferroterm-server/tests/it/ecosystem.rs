@@ -8,7 +8,7 @@ use ferroterm_testkit::fhir::{
     ANIMALS, CM_ANIMALS_COLOURS, COLOURS, VS_ALL, VS_ENUMERATED, VS_PETS, VS_PETS_REF,
 };
 use http::StatusCode;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::fixture::{Server, parameter};
 
@@ -413,6 +413,71 @@ async fn a_wildcard_system_version_names_the_greatest_matching_version() {
         assert_eq!(
             parameter(&body, "x-caused-by-unknown-system").unwrap()["valueCanonical"],
             format!("{ANIMALS}|3.x"),
+            "{version}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_codeable_concept_is_echoed_and_its_unknown_systems_named_on_every_version() {
+    let server = Server::start_with_resources();
+    for version in VERSIONS {
+        let request = json!({"resourceType": "Parameters", "parameter": [
+            {"name": "url", "valueUri": VS_ENUMERATED},
+            {"name": "codeableConcept", "valueCodeableConcept": {"coding": [
+                {"system": COLOURS, "code": "blue"},
+                {"system": ANIMALS, "code": "cat"}
+            ]}}
+        ]});
+        let (status, body) = server
+            .post(&format!("/{version}/ValueSet/$validate-code"), &request)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{version}: {body}"
+        );
+        assert_eq!(
+            parameter(&body, "code").unwrap()["valueCode"],
+            "cat",
+            "{version}"
+        );
+        let echoed = &parameter(&body, "codeableConcept").expect("echo")["valueCodeableConcept"];
+        assert_eq!(echoed["coding"][1]["code"], "cat", "{version}: {body}");
+        let issue = &parameter(&body, "issues").unwrap()["resource"]["issue"][0];
+        assert_eq!(issue["severity"], "information", "{version}");
+        assert_eq!(
+            issue["expression"][0], "CodeableConcept.coding[0].code",
+            "{version}"
+        );
+        let request = json!({"resourceType": "Parameters", "parameter": [
+            {"name": "url", "valueUri": VS_ENUMERATED},
+            {"name": "codeableConcept", "valueCodeableConcept": {"coding": [
+                {"system": "http://example.org/none", "code": "x"}
+            ]}}
+        ]});
+        let (status, body) = server
+            .post(&format!("/{version}/ValueSet/$validate-code"), &request)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            false,
+            "{version}"
+        );
+        assert!(
+            parameter(&body, "code").is_none(),
+            "{version}: no coding answers the code"
+        );
+        assert_eq!(
+            parameter(&body, "x-unknown-system").unwrap()["valueCanonical"],
+            "http://example.org/none",
+            "{version}: {body}"
+        );
+        let issue = &parameter(&body, "issues").unwrap()["resource"]["issue"][1];
+        assert_eq!(
+            issue["expression"][0], "CodeableConcept.coding[0].system",
             "{version}"
         );
     }
