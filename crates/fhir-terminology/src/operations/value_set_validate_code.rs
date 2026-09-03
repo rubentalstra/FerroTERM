@@ -142,23 +142,19 @@ fn prepare(
     Ok((model, negotiation))
 }
 
-/// Refuses the ecosystem overlay's inputs whose semantics are not implemented
-/// yet, so an accepted parameter is never silently ignored.
-fn refuse_unimplemented(input: &ValueSetValidateInput) -> Result<(), OperationError> {
-    // TODO(#161): implement `inferSystem` and `lenient-display-validation`.
-    let flags = [
-        ("inferSystem", input.infer_system),
-        (
-            "lenient-display-validation",
-            input.lenient_display_validation,
-        ),
-    ];
-    if let Some((name, _)) = flags.iter().find(|(_, value)| *value == Some(true)) {
-        return Err(OperationError::NotSupported(format!(
-            "`{name}` is accepted on `ValueSet/$validate-code` but not implemented yet"
-        )));
-    }
-    Ok(())
+/// How one validation judges what it finds.
+#[derive(Debug, Clone, Copy)]
+struct Policy<'a> {
+    /// The language of the display (a BCP 47 range list).
+    language: Option<&'a str>,
+    /// `abstract`: whether an abstract code may be selected.
+    abstract_ok: bool,
+    /// `lenient-display-validation`: a wrong display is a warning, and the
+    /// result stays true (pre-adopted from R6).
+    lenient_display: bool,
+    /// `inferSystem`: find the system of a bare code by its membership in the
+    /// value set (pre-adopted from R6).
+    infer_system: bool,
 }
 
 struct Subject<'a> {
@@ -190,12 +186,15 @@ pub fn validate_code(
             "`date` is not supported: codes are validated against the versions served now",
         )));
     }
-    refuse_unimplemented(input)?;
     let (model, negotiation) = prepare(sources, input)?;
-    let language = input.display_language.as_deref();
     let resolver =
         Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
-    let abstract_ok = input.abstract_ok.unwrap_or(true);
+    let policy = Policy {
+        language: input.display_language.as_deref(),
+        abstract_ok: input.abstract_ok.unwrap_or(true),
+        lenient_display: input.lenient_display_validation.unwrap_or(false),
+        infer_system: input.infer_system.unwrap_or(false),
+    };
     let check = |subject: &Subject<'_>| -> Result<Validation, OperationError> {
         let version =
             negotiation.system_version(subject.system.unwrap_or_default(), subject.version)?;
@@ -203,7 +202,7 @@ pub fn validate_code(
             version: version.as_deref(),
             ..*subject
         };
-        check(sources, &model, &resolver, &subject, language, abstract_ok)
+        check(sources, &model, &resolver, &subject, &policy)
     };
     let inputs = usize::from(input.code.is_some())
         + usize::from(input.coding.is_some())
@@ -280,29 +279,21 @@ fn check(
     model: &ValueSetModel,
     resolver: &Resolver<'_>,
     subject: &Subject<'_>,
-    language: Option<&str>,
-    abstract_ok: bool,
+    policy: &Policy<'_>,
 ) -> Result<Validation, OperationError> {
-    let Some(system) = subject
-        .system
-        .map(str::to_owned)
-        .or_else(|| infer_system(model))
-    else {
-        return Ok(failed(
-            None,
-            None,
-            Issue {
-                severity: "error",
-                code: "invalid",
-                kind: "cannot-infer",
-                text: format!(
-                    "the code `{}` names no system, and the value set `{}` draws on more than one",
-                    subject.code,
-                    model.canonical()
-                ),
-                expression: Some(subject.expression),
-            },
-        ));
+    let language = policy.language;
+    let system = if let Some(system) = subject.system {
+        system.to_owned()
+    } else {
+        let inferred = if policy.infer_system {
+            infer_by_membership(sources, model, resolver, subject, language)?
+        } else {
+            infer_system(model)
+        };
+        match inferred {
+            Some(system) => system,
+            None => return Ok(cannot_infer(model, subject)),
+        }
     };
     let served = match sources.registry.resolve(&system, subject.version) {
         Ok(served) => served,
@@ -360,7 +351,7 @@ fn check(
             subject.expression,
         ));
     };
-    let issues = assess(provider, &located, &item, subject, language, abstract_ok)?;
+    let issues = assess(provider, &located, &item, subject, policy)?;
     let display = provider.display(
         located.concept,
         language::for_provider(provider.as_ref(), language).as_deref(),
@@ -390,11 +381,11 @@ fn assess(
     located: &crate::provider::Located,
     item: &Item,
     subject: &Subject<'_>,
-    language: Option<&str>,
-    abstract_ok: bool,
+    policy: &Policy<'_>,
 ) -> Result<Vec<Issue>, OperationError> {
+    let language = policy.language;
     let mut issues = Vec::new();
-    if item.abstract_concept && !abstract_ok {
+    if item.abstract_concept && !policy.abstract_ok {
         issues.push(Issue {
             severity: "error",
             code: "business-rule",
@@ -435,8 +426,14 @@ fn assess(
                 item.system, located.code
             ),
         };
+        // NOTE: under `lenient-display-validation` a wrong display does not fail the
+        // result (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
         issues.push(Issue {
-            severity: "error",
+            severity: if policy.lenient_display {
+                "warning"
+            } else {
+                "error"
+            },
             code: "invalid",
             kind: "invalid-display",
             text,
@@ -484,6 +481,76 @@ fn infer_system(model: &ValueSetModel) -> Option<String> {
         [one] => Some((*one).to_owned()),
         _ => None,
     }
+}
+
+/// The one system of the value set whose code `subject.code` is in the value
+/// set (`inferSystem`); `None` when none or several are.
+fn infer_by_membership(
+    sources: &Sources<'_>,
+    model: &ValueSetModel,
+    resolver: &Resolver<'_>,
+    subject: &Subject<'_>,
+    language: Option<&str>,
+) -> Result<Option<String>, OperationError> {
+    let mut systems: Vec<&str> = model
+        .compose
+        .include
+        .iter()
+        .filter_map(|include| include.system.as_ref().map(|s| s.url.as_str()))
+        .collect();
+    systems.sort_unstable();
+    systems.dedup();
+    let mut matches = Vec::new();
+    for system in systems {
+        let Ok(served) = sources.registry.resolve(system, None) else {
+            continue;
+        };
+        let Some(located) = served.provider.locate(subject.code)? else {
+            continue;
+        };
+        let contained = resolver.contains_compose(
+            &model.canonical(),
+            &model.compose,
+            system,
+            None,
+            &located.code,
+            language,
+        );
+        match contained {
+            Ok(Some(_)) => matches.push(system.to_owned()),
+            Ok(None) | Err(crate::compose::ComposeError::UnknownValueSet(_)) => {}
+            Err(error) => return Err(error.into()),
+        }
+    }
+    Ok(match matches.as_slice() {
+        [one] => Some(one.clone()),
+        _ => None,
+    })
+}
+
+/// The failed validation of a bare code whose system cannot be determined:
+/// not in the value set, and the system unknown (the ecosystem's wording).
+fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
+    let text = format!(
+        "The System URI could not be determined for the code '{}' in the ValueSet '{}'",
+        subject.code,
+        model.canonical()
+    );
+    let mut validation = failed(
+        None,
+        None,
+        not_in_vs(model, &system_code("", subject.code), subject.expression),
+    );
+    validation.message = Some(text.clone());
+    validation.issues.push(Issue {
+        severity: "error",
+        code: "not-found",
+        kind: "cannot-infer",
+        text,
+        expression: Some(subject.expression),
+    });
+    validation.code = Some(subject.code.to_owned());
+    validation
 }
 
 fn system_code(system: &str, code: &str) -> String {

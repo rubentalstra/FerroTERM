@@ -100,6 +100,8 @@ validation/validation-simple-code-good
 validation/validation-simple-code-good-display
 validation/validation-simple-code-good-language
 validation/validation-simple-code-good-regex
+validation/validation-simple-code-implied-bad-code
+validation/validation-simple-code-implied-good
 validation/validation-simple-code-regex-none
 validation/validation-simple-codeableconcept-bad-valueSet
 validation/validation-simple-coding-bad-valueSet
