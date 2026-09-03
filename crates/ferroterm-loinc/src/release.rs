@@ -39,7 +39,7 @@ pub enum ReleaseError {
         /// The column name.
         column: &'static str,
     },
-    /// A code fails its check digit.
+    /// A code is not shaped like a LOINC code.
     #[error("{path}: `{code}` is not a LOINC code")]
     Code {
         /// The path.
@@ -94,7 +94,9 @@ impl Release {
         &self.root
     }
 
-    /// The one file named `name` (compared without case), wherever it sits.
+    /// The file named `name` (compared without case) nearest the root: the
+    /// term table is `LoincTable/Loinc.csv`, and the panels folder carries a
+    /// file of the same name that is not it.
     ///
     /// # Errors
     ///
@@ -111,11 +113,12 @@ impl Release {
     pub fn optional(&self, name: &str) -> Option<&Path> {
         self.files
             .iter()
-            .find(|p| {
+            .filter(|p| {
                 p.file_name()
                     .and_then(|f| f.to_str())
                     .is_some_and(|f| f.eq_ignore_ascii_case(name))
             })
+            .min_by_key(|p| p.components().count())
             .map(PathBuf::as_path)
     }
 

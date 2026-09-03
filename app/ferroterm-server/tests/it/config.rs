@@ -42,7 +42,7 @@ fn the_state_loads_every_named_artifact_and_names_its_instances() {
         .iter()
         .find(|s| s.url == "http://snomed.info/sct")
         .expect("snomed");
-    assert_eq!(snomed.concepts, Some(9));
+    assert_eq!(snomed.concepts, Some(13));
     assert_eq!(snomed.languages, ["en", "nl"]);
     assert_eq!(snomed.path.as_deref(), Some(dir.path()));
     let registries: Vec<&str> = summaries

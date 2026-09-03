@@ -4,20 +4,27 @@ use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use ferroterm_graph::attributes::{self, Attributes, AttributesError};
 use ferroterm_graph::closure::{Closure, ClosureError};
 use ferroterm_graph::csr::{Csr, CsrError};
+use ferroterm_graph::identifiers::{Identifiers, IdentifiersError};
 use ferroterm_graph::members::{MembersError, Memberships};
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::persist::Hierarchy;
+use ferroterm_graph::refsets::{self, MemberRow, RefsetMembers, RefsetsError};
 use ferroterm_rf2::component::{
-    Concept, ConcreteRelationship, ConcreteValue, Description, Relationship, Rows,
+    AlternateIdentifier, Concept, ConcreteRelationship, ConcreteValue, Description, Relationship,
+    Rows,
 };
 use ferroterm_rf2::constants;
 use ferroterm_rf2::edition::{Edition, EditionError};
-use ferroterm_rf2::file::{ContentType, Release, ReleaseError, ReleaseType};
+use ferroterm_rf2::file::{ContentType, FieldKind, Release, ReleaseError, ReleaseType};
 use ferroterm_rf2::id::{ConceptId, DescriptionId, RefsetId};
 use ferroterm_rf2::reader::Rf2Error;
-use ferroterm_rf2::refset::{LanguageMember, Members, ModuleDependencyMember, ViewError};
+use ferroterm_rf2::refset::{
+    FieldValue, LanguageMember, Members, ModuleDependencyMember, ViewError,
+};
+use ferroterm_rf2::time::EffectiveTime;
 use ferroterm_store::builder::{BuildError, PreferredRule, StoreBuilder};
 use ferroterm_store::record;
 use ferroterm_store::store::Vocabulary;
@@ -37,6 +44,12 @@ pub const HIERARCHY_FILE: &str = "hierarchy.bin";
 pub const TEXT_FILE: &str = "text.bin";
 /// The reference set memberships file beside the store.
 pub const REFSETS_FILE: &str = "refsets.bin";
+/// The attribute relationships with their role groups and concrete values.
+pub const ATTRIBUTES_FILE: &str = "attributes.bin";
+/// The reference set member rows with their fields.
+pub const MEMBERS_FILE: &str = "members.bin";
+/// The alternate identifiers.
+pub const IDENTIFIERS_FILE: &str = "identifiers.bin";
 
 /// The fixed property keys the SNOMED loader writes, by ordinal; every
 /// attribute type found in the release follows, keyed by its SCTID.
@@ -113,6 +126,15 @@ pub enum Error {
     /// The reference set memberships cannot be serialized.
     #[error("cannot serialize the reference set memberships")]
     Members(#[from] MembersError),
+    /// The attribute relationships cannot be built or serialized.
+    #[error("cannot build the attribute relationships")]
+    Attributes(#[from] AttributesError),
+    /// The reference set member rows cannot be built or serialized.
+    #[error("cannot build the reference set member rows")]
+    Refsets(#[from] RefsetsError),
+    /// The alternate identifiers cannot be serialized.
+    #[error("cannot serialize the alternate identifiers")]
+    Identifiers(#[from] IdentifiersError),
     /// The output directory or manifest cannot be written.
     #[error("cannot write {path}")]
     Io {
@@ -150,6 +172,12 @@ pub struct Report {
     pub is_a_edges: u64,
     /// Reference sets with at least one active concept member.
     pub refsets: u64,
+    /// Active attribute relationships (every inferred relationship that is not is-a).
+    pub attributes: u64,
+    /// Active reference set member rows kept with their fields.
+    pub member_rows: u64,
+    /// Alternate identifiers.
+    pub identifiers: u64,
     /// Distinct words in the designation index.
     pub words: u64,
     /// The designation languages present (RF2 `languageCode`), sorted.
@@ -188,6 +216,9 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
     let designations = read_designations(&release, &ordinals)?;
     let (refsets, acceptabilities) = read_acceptabilities(&release, &designations)?;
     let memberships = read_memberships(&release, &ordinals)?;
+    let member_tables = read_member_tables(&release, &ordinals)?;
+    let identifiers = read_identifiers(&release, &ordinals)?;
+    let attribute_graph = relationships.graph(ordinal_of(concepts.len(), "concepts")?)?;
 
     let store_path = out.join(STORE_FILE);
     let version_uri = edition.version_uri();
@@ -218,6 +249,7 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
     memberships.write_to(&mut member_bytes)?;
     let refsets_path = out.join(REFSETS_FILE);
     std::fs::write(&refsets_path, &member_bytes).map_err(io_error(&refsets_path))?;
+    write_ecl_files(out, &attribute_graph, &member_tables, &identifiers)?;
     builder.finish(&PreferredRule { preferred: 0 })?;
 
     let manifest_path = out.join(MANIFEST_FILE);
@@ -232,11 +264,17 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         "hierarchy": HIERARCHY_FILE,
         "text": TEXT_FILE,
         "refsets": REFSETS_FILE,
+        "attributes": ATTRIBUTES_FILE,
+        "members": MEMBERS_FILE,
+        "identifiers": IDENTIFIERS_FILE,
         "concepts": concepts.len(),
         "designations": designation_count,
         "isAEdges": is_a_edges,
         "referenceSets": memberships.len(),
         "memberships": memberships.total(),
+        "attributeRows": attribute_graph.edges(),
+        "memberRows": member_tables.total(),
+        "alternateIdentifiers": identifiers.len(),
         "words": words,
         "languages": languages,
     });
@@ -257,6 +295,9 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         designations: designation_count,
         is_a_edges,
         refsets: u64::try_from(memberships.len()).unwrap_or(u64::MAX),
+        attributes: u64::try_from(attribute_graph.edges()).unwrap_or(u64::MAX),
+        member_rows: member_tables.total(),
+        identifiers: u64::try_from(identifiers.len()).unwrap_or(u64::MAX),
         words,
         languages,
     })
@@ -299,6 +340,29 @@ struct Relationships {
     attribute_types: Vec<ConceptId>,
     /// Per source ordinal, per attribute type, the values in file order.
     attributes: BTreeMap<(Ordinal, ConceptId), Vec<record::PropertyValue>>,
+    /// Every attribute row with its role group, for the graph.
+    edges: Vec<(Ordinal, u32, ConceptId, attributes::Value)>,
+}
+
+impl Relationships {
+    /// The attribute graph: the rows keyed by the sorted type list.
+    fn graph(&self, nodes: u32) -> Result<Attributes, Error> {
+        let types: Vec<u64> = self.attribute_types.iter().map(|t| t.value()).collect();
+        let mut edges = Vec::with_capacity(self.edges.len());
+        for (source, group, type_id, value) in &self.edges {
+            let kind = self
+                .attribute_types
+                .binary_search(type_id)
+                .map_err(|_| Error::TooMany("attribute types"))?;
+            edges.push(attributes::Edge {
+                source: *source,
+                group: *group,
+                kind: ordinal_of(kind, "attribute types")?,
+                value: value.clone(),
+            });
+        }
+        Ok(Attributes::build(nodes, types, edges)?)
+    }
 }
 
 fn read_relationships(
@@ -308,6 +372,7 @@ fn read_relationships(
     let mut is_a = Vec::new();
     let mut attributes: BTreeMap<(Ordinal, ConceptId), Vec<record::PropertyValue>> =
         BTreeMap::new();
+    let mut edges = Vec::new();
     let lookup = |relationship: &str, concept: ConceptId| {
         ordinals
             .get(&concept)
@@ -333,6 +398,12 @@ fn read_relationships(
                     .entry((source, relationship.type_id))
                     .or_default()
                     .push(record::PropertyValue::Concept(destination));
+                edges.push((
+                    source,
+                    relationship.relationship_group,
+                    relationship.type_id,
+                    attributes::Value::Concept(destination),
+                ));
             }
         }
     }
@@ -346,14 +417,26 @@ fn read_relationships(
             let source = lookup(&id, relationship.source_id)?;
             // NOTE: RF2 spells a numeric concrete value with a `#` prefix and a
             // string one in quotes; the reader strips both and keeps the kind.
-            let value = match relationship.value {
-                ConcreteValue::Number(number) => record::PropertyValue::Decimal(number),
-                ConcreteValue::String(text) => record::PropertyValue::String(text),
+            let (value, edge) = match relationship.value {
+                ConcreteValue::Number(number) => (
+                    record::PropertyValue::Decimal(number.clone()),
+                    attributes::Value::Number(number),
+                ),
+                ConcreteValue::String(text) => (
+                    record::PropertyValue::String(text.clone()),
+                    attributes::Value::String(text),
+                ),
             };
             attributes
                 .entry((source, relationship.type_id))
                 .or_default()
                 .push(value);
+            edges.push((
+                source,
+                relationship.relationship_group,
+                relationship.type_id,
+                edge,
+            ));
         }
     }
     is_a.sort_unstable();
@@ -365,6 +448,7 @@ fn read_relationships(
         is_a,
         attribute_types,
         attributes,
+        edges,
     })
 }
 
@@ -512,6 +596,116 @@ fn read_memberships(
     Ok(memberships)
 }
 
+/// The `YYYYMMDD` of an effective time as a number.
+fn compact_time(time: EffectiveTime) -> u32 {
+    time.compact().parse().unwrap_or_default()
+}
+
+/// The fields and rows of one reference set before they become a table.
+type PendingTable = (Vec<(String, refsets::FieldKind)>, Vec<MemberRow>);
+
+/// The active members of every concept-referencing reference set, with their
+/// fields; the language reference sets live in the store as acceptability and
+/// the OWL axiom reference sets carry text no ECL filter reads.
+fn read_member_tables(
+    release: &Release,
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+) -> Result<RefsetMembers, Error> {
+    let mut tables: BTreeMap<u64, PendingTable> = BTreeMap::new();
+    for file in release
+        .refsets()
+        .filter(|f| f.name.summary != "Language" && !f.name.summary.starts_with("OWL"))
+    {
+        let ContentType::Refset(kinds) = &file.name.content_type else {
+            continue;
+        };
+        for member in Members::open(&file.path, kinds)? {
+            let member = member?;
+            if !member.active {
+                continue;
+            }
+            let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
+                continue;
+            };
+            let Some(&ordinal) = ordinals.get(&concept) else {
+                continue;
+            };
+            let entry = tables
+                .entry(member.refset_id.concept().value())
+                .or_insert_with(|| {
+                    let fields = member
+                        .fields
+                        .iter()
+                        .zip(kinds)
+                        .map(|((name, _), kind)| {
+                            (
+                                name.clone(),
+                                match kind {
+                                    FieldKind::Component => refsets::FieldKind::Component,
+                                    FieldKind::Integer => refsets::FieldKind::Integer,
+                                    FieldKind::String => refsets::FieldKind::String,
+                                },
+                            )
+                        })
+                        .collect();
+                    (fields, Vec::new())
+                });
+            let values = member
+                .fields
+                .into_iter()
+                .map(|(_, value)| match value {
+                    FieldValue::Component(id) => ConceptId::try_from(id)
+                        .ok()
+                        .and_then(|c| ordinals.get(&c))
+                        .map_or(refsets::FieldValue::Component(id.value()), |o| {
+                            refsets::FieldValue::Concept(*o)
+                        }),
+                    FieldValue::Integer(value) => refsets::FieldValue::Integer(value),
+                    FieldValue::String(text) => refsets::FieldValue::String(text),
+                })
+                .collect();
+            entry.1.push(MemberRow {
+                concept: ordinal,
+                effective_time: compact_time(member.effective_time),
+                module: member.module_id.concept().value(),
+                values,
+            });
+        }
+    }
+    let mut members = RefsetMembers::new();
+    for (refset, (fields, rows)) in tables {
+        members.insert(refset, &fields, rows)?;
+    }
+    Ok(members)
+}
+
+/// The active alternate identifiers of the release's concepts.
+fn read_identifiers(
+    release: &Release,
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+) -> Result<Identifiers, Error> {
+    let mut entries = Vec::new();
+    for file in release.of_type(&ContentType::Identifier) {
+        for identifier in Rows::<_, AlternateIdentifier>::open(&file.path)? {
+            let identifier = identifier?;
+            if !identifier.base.active {
+                continue;
+            }
+            let Ok(concept) = ConceptId::try_from(identifier.referenced_component_id) else {
+                continue;
+            };
+            if let Some(&ordinal) = ordinals.get(&concept) {
+                entries.push((
+                    identifier.identifier_scheme_id.value(),
+                    identifier.alternate_identifier,
+                    ordinal,
+                ));
+            }
+        }
+    }
+    Ok(Identifiers::new(entries))
+}
+
 fn write_vocabularies(
     builder: &mut StoreBuilder,
     refsets: &[RefsetId],
@@ -622,6 +816,28 @@ fn write_designations(builder: &mut StoreBuilder, designations: &[Placed]) -> Re
         builder.designation(placed.ordinal, placed.index, &placed.record)?;
     }
     Ok(u64::try_from(designations.len()).unwrap_or(u64::MAX))
+}
+
+/// Writes the files the ECL evaluator reads beside the store.
+fn write_ecl_files(
+    out: &Path,
+    attributes: &Attributes,
+    members: &RefsetMembers,
+    identifiers: &Identifiers,
+) -> Result<(), Error> {
+    let mut bytes = Vec::new();
+    attributes.write_to(&mut bytes)?;
+    let path = out.join(ATTRIBUTES_FILE);
+    std::fs::write(&path, &bytes).map_err(io_error(&path))?;
+    bytes.clear();
+    members.write_to(&mut bytes)?;
+    let path = out.join(MEMBERS_FILE);
+    std::fs::write(&path, &bytes).map_err(io_error(&path))?;
+    bytes.clear();
+    identifiers.write_to(&mut bytes)?;
+    let path = out.join(IDENTIFIERS_FILE);
+    std::fs::write(&path, &bytes).map_err(io_error(&path))?;
+    Ok(())
 }
 
 fn build_hierarchy(concepts: &[Concept], is_a: &[(Ordinal, Ordinal)]) -> Result<Hierarchy, Error> {

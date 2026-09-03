@@ -15,10 +15,13 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+use ferroterm_graph::attributes::{Attributes, AttributesError};
 use ferroterm_graph::csr::{Csr, CsrError};
+use ferroterm_graph::identifiers::{Identifiers, IdentifiersError};
 use ferroterm_graph::members::{MembersError, Memberships};
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::persist::Hierarchy as GraphHierarchy;
+use ferroterm_graph::refsets::{RefsetMembers, RefsetsError};
 use ferroterm_rf2::constants;
 use ferroterm_rf2::id::ConceptId;
 use ferroterm_store::record;
@@ -104,6 +107,15 @@ pub enum OpenError {
     /// The reference set memberships file does not read.
     #[error("cannot read the reference set memberships")]
     Members(#[from] MembersError),
+    /// The attribute relationships file does not read.
+    #[error("cannot read the attribute relationships")]
+    Attributes(#[from] AttributesError),
+    /// The reference set member rows file does not read.
+    #[error("cannot read the reference set member rows")]
+    Refsets(#[from] RefsetsError),
+    /// The alternate identifiers file does not read.
+    #[error("cannot read the alternate identifiers")]
+    Identifiers(#[from] IdentifiersError),
     /// The store's metadata is incomplete.
     #[error("the store's metadata has no `{0}`")]
     MissingMeta(&'static str),
@@ -126,6 +138,15 @@ struct Manifest {
     /// written has none.
     #[serde(default)]
     refsets: Option<String>,
+    /// The attribute relationships, the reference set member rows, and the
+    /// alternate identifiers the ECL evaluator reads; an artifact built before
+    /// they were written has none.
+    #[serde(default)]
+    attributes: Option<String>,
+    #[serde(default)]
+    members: Option<String>,
+    #[serde(default)]
+    identifiers: Option<String>,
     #[serde(default)]
     languages: Vec<String>,
 }
@@ -190,6 +211,9 @@ pub struct SnomedProvider {
     hierarchy: SnomedHierarchy,
     text: TextIndex,
     memberships: Memberships,
+    attributes: Attributes,
+    member_tables: RefsetMembers,
+    identifiers: Identifiers,
     /// The inactive concepts, read once on the first request that needs them.
     inactive: OnceLock<ConceptSet>,
     identity: Identity,
@@ -262,6 +286,7 @@ impl SnomedProvider {
             Some(name) => Memberships::read_from(&mut read(name)?.as_slice())?,
             None => Memberships::new(),
         };
+        let (attributes, member_tables, identifiers) = Self::read_ecl_files(dir, &manifest)?;
         let concepts = store
             .meta(tables::META_CONCEPTS)?
             .ok_or(OpenError::MissingMeta(tables::META_CONCEPTS))?;
@@ -289,6 +314,9 @@ impl SnomedProvider {
             hierarchy: SnomedHierarchy { graph, children },
             text,
             memberships,
+            attributes,
+            member_tables,
+            identifiers,
             inactive: OnceLock::new(),
             identity: Identity {
                 url: SYSTEM.to_owned(),
@@ -393,6 +421,48 @@ impl SnomedProvider {
             definition,
             refsets,
         })
+    }
+
+    /// The files the ECL evaluator reads, when the artifact has them.
+    fn read_ecl_files(
+        dir: &Path,
+        manifest: &Manifest,
+    ) -> Result<(Attributes, RefsetMembers, Identifiers), OpenError> {
+        let read = |name: &str| {
+            let path = dir.join(name);
+            std::fs::read(&path).map_err(|source| OpenError::Io { path, source })
+        };
+        let attributes = match &manifest.attributes {
+            Some(name) => Attributes::read_from(&mut read(name)?.as_slice())?,
+            None => Attributes::default(),
+        };
+        let member_tables = match &manifest.members {
+            Some(name) => RefsetMembers::read_from(&mut read(name)?.as_slice())?,
+            None => RefsetMembers::new(),
+        };
+        let identifiers = match &manifest.identifiers {
+            Some(name) => Identifiers::read_from(&mut read(name)?.as_slice())?,
+            None => Identifiers::default(),
+        };
+        Ok((attributes, member_tables, identifiers))
+    }
+
+    /// The attribute relationships of the edition, with their role groups.
+    #[must_use]
+    pub fn attributes(&self) -> &Attributes {
+        &self.attributes
+    }
+
+    /// The active reference set member rows of the edition, with their fields.
+    #[must_use]
+    pub fn member_tables(&self) -> &RefsetMembers {
+        &self.member_tables
+    }
+
+    /// The alternate identifiers of the edition.
+    #[must_use]
+    pub fn identifiers(&self) -> &Identifiers {
+        &self.identifiers
     }
 
     /// The language reference sets of the edition, as SCTIDs.

@@ -283,3 +283,74 @@ fn the_reference_set_memberships_are_written_beside_the_store() {
     assert!(members.contains(cat.index()) && members.contains(dog.index()));
     assert!(!members.contains(fish.index()));
 }
+
+#[test]
+fn the_attribute_graph_member_tables_and_identifiers_are_written_beside_the_store() {
+    let release = tempfile::tempdir().expect("tempdir");
+    fixture::write_release(release.path());
+    let out = tempfile::tempdir().expect("tempdir");
+    let report = pipeline::build(release.path(), out.path()).expect("builds");
+    assert_eq!(
+        report.attributes, 2,
+        "the cat's covering and leg count; the dog's inactive one is not"
+    );
+    assert_eq!(
+        report.member_rows, 2,
+        "the active simple reference set members"
+    );
+    assert_eq!(report.identifiers, 0, "the fixture has no identifier file");
+    let manifest: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(out.path().join("manifest.json")).expect("manifest"),
+    )
+    .expect("json");
+    assert_eq!(manifest["attributes"], pipeline::ATTRIBUTES_FILE);
+    assert_eq!(manifest["members"], pipeline::MEMBERS_FILE);
+    assert_eq!(manifest["identifiers"], pipeline::IDENTIFIERS_FILE);
+    assert_eq!(manifest["attributeRows"], 2);
+    let store = Store::open(&report.store).expect("opens");
+    let ordinal = |item: u32| {
+        store
+            .ordinal(&fixture::concept(item))
+            .expect("read")
+            .expect("concept")
+    };
+    let (cat, fur) = (ordinal(3), ordinal(7));
+    let attributes = ferroterm_graph::attributes::Attributes::read_from(
+        &mut fs::read(out.path().join(pipeline::ATTRIBUTES_FILE))
+            .expect("attributes")
+            .as_slice(),
+    )
+    .expect("reads");
+    let covering: u64 = fixture::concept(6).parse().expect("number");
+    let legs: u64 = fixture::concept(8).parse().expect("number");
+    let covering_kind = attributes.kind(covering).expect("covering type");
+    let legs_kind = attributes.kind(legs).expect("leg count type");
+    let rows: Vec<_> = attributes.rows(cat).collect();
+    assert_eq!(rows.len(), 2);
+    assert!(rows.iter().any(|r| {
+        r.kind == covering_kind && r.value == ferroterm_graph::attributes::ValueRef::Concept(fur)
+    }));
+    assert!(rows.iter().any(|r| {
+        r.kind == legs_kind
+            && r.group == 2
+            && r.value == ferroterm_graph::attributes::ValueRef::Number("4")
+    }));
+    assert_eq!(attributes.sources(covering_kind, fur), [cat.index()]);
+    let members = ferroterm_graph::refsets::RefsetMembers::read_from(
+        &mut fs::read(out.path().join(pipeline::MEMBERS_FILE))
+            .expect("members")
+            .as_slice(),
+    )
+    .expect("reads");
+    let table = members.table(legs).expect("the simple reference set table");
+    assert_eq!(table.len(), 2);
+    assert!(table.fields().is_empty());
+    assert!(table.members().contains(cat.index()));
+    let identifiers = ferroterm_graph::identifiers::Identifiers::read_from(
+        &mut fs::read(out.path().join(pipeline::IDENTIFIERS_FILE))
+            .expect("identifiers")
+            .as_slice(),
+    )
+    .expect("reads");
+    assert!(identifiers.is_empty());
+}

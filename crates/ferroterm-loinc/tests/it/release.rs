@@ -77,11 +77,30 @@ fn a_release_without_the_term_table_or_with_a_bad_code_is_refused() {
     let path = dir.path().join("LoincTable/Loinc.csv");
     let text = std::fs::read_to_string(&path)
         .expect("reads")
-        .replace(&code(GLUCOSE), "90001-0");
+        .replace(&code(GLUCOSE), "9000X-0");
     std::fs::write(&path, text).expect("writes");
     let release = Release::open(dir.path()).expect("opens");
     assert!(matches!(
         term::read(&release),
         Err(ferroterm_loinc::release::ReleaseError::Code { .. })
     ));
+}
+
+#[test]
+fn the_term_table_nearest_the_root_wins_over_the_panels_copy() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_release(dir.path()).expect("writes");
+    let panels = dir.path().join("AccessoryFiles/PanelsAndForms");
+    std::fs::create_dir_all(&panels).expect("creates");
+    std::fs::write(
+        panels.join("Loinc.csv"),
+        "LOINC_NUM,LONG_COMMON_NAME\n11491-6,not a term\n",
+    )
+    .expect("writes");
+    let release = Release::open(dir.path()).expect("opens");
+    assert_eq!(
+        release.file("Loinc.csv").expect("term table"),
+        dir.path().join("LoincTable/Loinc.csv")
+    );
+    assert_eq!(term::read(&release).expect("terms").rows.len(), 4);
 }
