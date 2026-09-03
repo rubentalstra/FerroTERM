@@ -12,7 +12,7 @@ run.
 
 ## Where the project is
 
-v0.0.6 is the current release. It ships as Linux binaries for `x86_64` and
+v0.0.7 is the current release. It ships as Linux binaries for `x86_64` and
 `aarch64` (glibc and musl), as a container image for `linux/amd64` and
 `linux/arm64`, and as a Compose file, all built with signed provenance. The
 server answers FHIR R4B under `/r4b`; the CI lane runs the HL7 terminology

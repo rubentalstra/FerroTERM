@@ -67,7 +67,7 @@ clinical data repository by the same author. FerroTERM is independent of it.
 
 ## What is not built yet
 
-The build order is the tracker's milestones. As of v0.0.6:
+The build order is the tracker's milestones. As of v0.0.7:
 
 - ECL (`?fhir_vs=ecl/…` and the `constraint` filter) is v0.0.8; the other
   SNOMED implicit value sets (`?fhir_vs`, `isa/`, `refset`, `refset/`) are

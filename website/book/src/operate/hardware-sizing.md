@@ -1,7 +1,7 @@
 # Hardware sizing
 
 FerroTERM is built to run an edition on ordinary hardware. This page gives
-measurements of v0.0.6 and where the memory goes.
+measurements of v0.0.7 and where the memory goes.
 
 > [!NOTE]
 > The figures were taken on a laptop over the licensed Dutch SNOMED CT edition

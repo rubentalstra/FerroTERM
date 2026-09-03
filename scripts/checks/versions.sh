@@ -68,6 +68,34 @@ else
   note "no Cargo.toml yet — skipped (CITATION.cff version: ${cff_ver:-none})"
 fi
 
+# --- No stale product version anywhere the release is named -------------------
+# Every file that names the release (the README, the landing page, the book,
+# the compose file, the citation file, the version matrix) must name the
+# current one. A version below the workspace version is stale; a higher one is
+# the roadmap and is allowed. The changelog and the lock file keep history.
+echo "== stale product versions (README, website, docs <-> Cargo.toml)"
+if [ -f Cargo.toml ]; then
+  current="$(awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/[" ]/,""); sub(/^version=/,""); print; exit}' Cargo.toml || true)"
+  if [ -n "$current" ]; then
+    stale=0
+    while IFS= read -r hit; do
+      [ -n "$hit" ] || continue
+      found="${hit##*:}"
+      lowest="$(printf '%s\n%s\n' "$found" "$current" | sort -V | head -n1)"
+      if [ "$found" != "$current" ] && [ "$lowest" = "$found" ]; then
+        bad "stale version $found (current is $current) at ${hit%:*}"
+        stale=1
+      fi
+    done < <(git grep -n -o -E '(^|[^0-9.])0\.0\.[0-9]+([^0-9.]|$)' -- README.md CITATION.cff compose.yaml docs website/landing website/book/src \
+      | sed -E 's/^([^:]+:[0-9]+):.*[^0-9.]?(0\.0\.[0-9]+).*$/\1:\2/' || true)
+    [ "$stale" -eq 0 ] && note "OK: every release mention is $current or a later milestone"
+  else
+    note "Cargo.toml has no [workspace.package] version yet — skipped"
+  fi
+else
+  note "no Cargo.toml yet — skipped"
+fi
+
 # --- rust-toolchain.toml present (sanity; channel recorded in VERSIONS.md) -----
 echo "== rust toolchain"
 if [ -f rust-toolchain.toml ]; then
