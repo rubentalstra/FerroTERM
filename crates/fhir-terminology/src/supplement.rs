@@ -29,6 +29,29 @@ pub struct Supplement {
     pub concepts: BTreeMap<String, Additions>,
 }
 
+impl Supplement {
+    /// The supplement a `CodeSystem` with `content = supplement` describes:
+    /// its designations and properties keyed by the supplemented codes.
+    #[must_use]
+    pub fn from_code_system(model: &crate::fhir_codesystem::model::CodeSystemModel) -> Self {
+        let mut concepts = BTreeMap::new();
+        for entry in &model.concepts {
+            concepts.insert(
+                entry.code.clone(),
+                Additions {
+                    designations: entry.designations.clone(),
+                    properties: entry.properties.clone(),
+                },
+            );
+        }
+        Self {
+            url: model.url.clone(),
+            version: Some(model.version.clone()).filter(|v| !v.is_empty()),
+            concepts,
+        }
+    }
+}
+
 /// A provider with supplements layered on.
 #[derive(Debug)]
 pub struct Supplemented {

@@ -156,6 +156,12 @@ pub fn lookup(
     };
     // NOTE: the R4B definition says "If a code is provided, a system must be
     // provided"; the shared resolver reports the missing system.
+    let layered = if input.use_supplement.is_empty() {
+        None
+    } else {
+        Some(registry.with_supplements(&input.use_supplement)?)
+    };
+    let registry = layered.as_ref().unwrap_or(registry);
     let resolved = resolve(registry, invocation, system, version)?;
     let provider = &resolved.provider;
     let located = locate(provider, code)?;

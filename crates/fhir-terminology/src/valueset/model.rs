@@ -10,6 +10,9 @@ pub struct ValueSetModel {
     pub url: String,
     /// `version`.
     pub version: Option<String>,
+    /// The supplements the value set asks for (`valueset-supplement`
+    /// extension, canonicals).
+    pub supplements: Vec<String>,
     /// `name`.
     pub name: Option<String>,
     /// `title`.

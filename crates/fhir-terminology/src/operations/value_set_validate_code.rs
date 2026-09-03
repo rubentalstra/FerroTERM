@@ -64,8 +64,7 @@ pub struct ValueSetValidateInput {
     pub value_set_version: Option<String>,
     /// The inline `valueSet`, converted by the wire layer of its version.
     pub inline_value_set: Option<Result<ValueSetModel, ModelError>>,
-    /// `useSupplement` (R5): the supplements named; every supplied supplement
-    /// is layered on its system already, so the names are accepted as is.
+    /// `useSupplement` (R5): the loaded supplements to apply, by canonical.
     pub use_supplement: Vec<String>,
     /// Whether `context` was given; not supported.
     pub context: bool,
@@ -191,6 +190,13 @@ pub fn validate_code(
         )));
     }
     let (model, negotiation) = prepare(sources, input)?;
+    let mut wanted = input.use_supplement.clone();
+    wanted.extend(model.supplements.iter().cloned());
+    let registry = sources.with_supplements(&wanted)?;
+    let sources = &Sources {
+        registry: &registry,
+        ..*sources
+    };
     let resolver =
         Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
     let policy = Policy {
@@ -830,6 +836,31 @@ fn vs_invalid(severity: &'static str, text: String, expression: &str) -> Issue {
     }
 }
 
+/// The failed validation of a subject whose system is a supplement, which
+/// defines no codes of its own (the ecosystem's `bad-supplement-url` case).
+fn supplement_as_system(system: &str, version: Option<&str>, subject: &Subject<'_>) -> Validation {
+    let canonical = match version {
+        Some(version) => format!("{system}|{version}"),
+        None => system.to_owned(),
+    };
+    let mut validation = failed(
+        Some(system.to_owned()),
+        None,
+        Issue {
+            severity: "error",
+            code: "invalid",
+            kind: "invalid-data",
+            text: format!(
+                "CodeSystem {canonical} is a supplement, so can't be used as a value in Coding.system"
+            ),
+            expression: super::at(subject.expression, "system"),
+        },
+    );
+    validation.code = Some(subject.code.to_owned());
+    validation.unknown_systems.push(system.to_owned());
+    validation
+}
+
 /// The failed validation of a subject whose system or version the server does
 /// not serve at all.
 fn unserved_subject(
@@ -838,6 +869,9 @@ fn unserved_subject(
     subject: &Subject<'_>,
     valid: &[String],
 ) -> Validation {
+    if let Some(supplement_version) = registry.supplement_named(system) {
+        return supplement_as_system(system, supplement_version.as_deref(), subject);
+    }
     let version = subject
         .version
         .filter(|_| registry.resolve(system, None).is_ok());

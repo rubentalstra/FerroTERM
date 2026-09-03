@@ -61,6 +61,10 @@ pub enum OperationError {
     /// uses (the ecosystem's `version-error`, an `exception`).
     #[error("{0}")]
     VersionCheck(String),
+    /// A `useSupplement` (or a value set's `valueset-supplement`) names no
+    /// loaded supplement.
+    #[error(transparent)]
+    UnknownSupplement(#[from] crate::registry::UnknownSupplement),
     /// The operation or a parameter combination is not supported here.
     #[error("{0}")]
     NotSupported(String),
@@ -127,6 +131,7 @@ impl OperationError {
             | Self::UnknownVersion { .. }
             | Self::UnknownCode { .. }
             | Self::UnknownValueSet(_)
+            | Self::UnknownSupplement(_)
             | Self::UnknownConceptMap(_) => "not-found",
             Self::TooCostly(_) => "too-costly",
             Self::VersionCheck(_) | Self::Provider(_) => "exception",
@@ -143,6 +148,7 @@ impl OperationError {
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
             | Self::UnknownValueSet(_)
+            | Self::UnknownSupplement(_)
             | Self::UnknownConceptMap(_) => "not-found",
             Self::UnknownCode { .. } | Self::InvalidCode { .. } => "invalid-code",
             Self::ValueSetInvalid(_) => "vs-invalid",
@@ -169,6 +175,7 @@ impl OperationError {
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
             | Self::UnknownValueSet(_)
+            | Self::UnknownSupplement(_)
             | Self::UnknownConceptMap(_) => StatusCode::NOT_FOUND,
             // NOTE: 422 is the status for a resource that breaks the server's
             // rules (<https://hl7.org/fhir/R4B/http.html#status-codes>); a compose
@@ -330,7 +337,26 @@ pub struct Sources<'a> {
     pub concept_maps: &'a crate::conceptmap::store::ConceptMapStore,
 }
 
-impl Sources<'_> {
+impl<'a> Sources<'a> {
+    /// These sources with the dormant supplements `wanted` names layered over
+    /// their systems, when any is named; the borrowed sources otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OperationError::UnknownSupplement`] for a name no loaded
+    /// supplement answers to.
+    pub fn with_supplements(
+        &self,
+        wanted: &[String],
+    ) -> Result<std::borrow::Cow<'a, Registry>, OperationError> {
+        if wanted.is_empty() {
+            return Ok(std::borrow::Cow::Borrowed(self.registry));
+        }
+        Ok(std::borrow::Cow::Owned(
+            self.registry.with_supplements(wanted)?,
+        ))
+    }
+
     /// The value set an operation names: inline, stored by `url` (and
     /// `version`), or a provider's implicit form.
     ///
@@ -364,6 +390,7 @@ impl Sources<'_> {
                     Some(Ok(compose)) => Ok(Arc::new(crate::valueset::model::ValueSetModel {
                         url: url.to_owned(),
                         version: None,
+                        supplements: Vec::new(),
                         name: None,
                         title: None,
                         status: String::from("active"),

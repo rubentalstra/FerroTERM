@@ -445,20 +445,21 @@ fn the_overlay_pre_adopts_the_r6_parameters_every_earlier_version_lacks() {
             .filter(|f| f.source == ParameterSource::PreAdopted)
             .map(|f| f.fhir_name.as_str())
             .collect();
-        assert_eq!(
-            pre_adopted,
-            [
-                "lenient-display-validation",
-                "inferSystem",
-                "system-version",
-                "check-system-version",
-                "force-system-version",
-                "default-valueset-version",
-                "check-valueset-version",
-                "force-valueset-version",
-            ],
-            "{module}: the R6 order"
-        );
+        // R5 declares `useSupplement` itself; the R4 family pre-adopts it.
+        let mut expected_inputs = vec![
+            "lenient-display-validation",
+            "inferSystem",
+            "system-version",
+            "check-system-version",
+            "force-system-version",
+            "default-valueset-version",
+            "check-valueset-version",
+            "force-valueset-version",
+        ];
+        if module != "r5" {
+            expected_inputs.insert(0, "useSupplement");
+        }
+        assert_eq!(pre_adopted, expected_inputs, "{module}: the R6 order");
         let outputs: Vec<(&str, ParameterSource)> = validate
             .outputs
             .iter()
@@ -513,15 +514,15 @@ fn the_overlay_pre_adopts_the_r6_parameters_every_earlier_version_lacks() {
             .filter(|f| f.source != ParameterSource::Version)
             .map(|f| f.fhir_name.as_str())
             .collect();
-        assert_eq!(
-            adopted,
-            [
-                "default-valueset-version",
-                "check-valueset-version",
-                "force-valueset-version",
-            ],
-            "{module}"
-        );
+        let mut expected_expand = vec![
+            "default-valueset-version",
+            "check-valueset-version",
+            "force-valueset-version",
+        ];
+        if module != "r5" {
+            expected_expand.insert(0, "useSupplement");
+        }
+        assert_eq!(adopted, expected_expand, "{module}");
         let subsumes = find(&contracts, "CodeSystem", "subsumes");
         assert!(
             subsumes

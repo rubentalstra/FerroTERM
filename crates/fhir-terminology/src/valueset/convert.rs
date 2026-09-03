@@ -117,9 +117,21 @@ macro_rules! convert_value_set {
                 let flag = |value: &Option<fhir_types::$module::primitives::Boolean>| {
                     value.as_ref().and_then(|b| b.value)
                 };
+                // NOTE: `valueset-supplement` names the supplements a value set needs
+                // (<https://hl7.org/fhir/R4B/extension-valueset-supplement.html>).
+                let supplements = resource
+                    .extension
+                    .iter()
+                    .filter(|x| x.url == "http://hl7.org/fhir/StructureDefinition/valueset-supplement")
+                    .filter_map(|x| match &x.value {
+                        Some(fhir_types::$module::extension::ExtensionValue::Canonical(c)) => c.value.clone(),
+                        _ => None,
+                    })
+                    .collect();
                 Ok(ValueSetModel {
                     url,
                     version: string(&resource.version),
+                    supplements,
                     name: string(&resource.name),
                     title: string(&resource.title),
                     status: text(resource.status.value.as_deref()).unwrap_or_default(),

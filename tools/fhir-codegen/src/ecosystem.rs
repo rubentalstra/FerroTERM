@@ -110,6 +110,9 @@ const PRE_ADOPTED: &[(&str, ParameterUse, &str)] = &[
     ),
     (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceSystem"),
     (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceVersion"),
+    (CODE_SYSTEM_LOOKUP, ParameterUse::In, "useSupplement"),
+    (VALUE_SET_VALIDATE_CODE, ParameterUse::In, "useSupplement"),
+    (VALUE_SET_EXPAND, ParameterUse::In, "useSupplement"),
     (
         VALUE_SET_EXPAND,
         ParameterUse::In,

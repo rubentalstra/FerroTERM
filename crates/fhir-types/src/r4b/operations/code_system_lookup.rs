@@ -40,6 +40,14 @@ pub struct CodeSystemLookupRequest {
     /// in named parameters (when the names match), and the rest (except for
     /// lang.X) in the property parameter group
     pub property: Vec<super::super::primitives::Code>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Supplements to take into account when performing the $lookup operation.
+    /// The supplements must be for the same CodeSystem. By default, supplements
+    /// for the code system are not automatically included except where they
+    /// provide additional designations that may be indicated by, for example,
+    /// the displayLanguage parameter
+    pub use_supplement: Vec<super::super::primitives::Canonical>,
 }
 
 /// The `out` parameters of `CodeSystem/$lookup`.
@@ -147,6 +155,7 @@ impl CodeSystemLookupRequest {
         let mut field_date: Option<super::super::primitives::DateTime> = None;
         let mut field_display_language: Option<super::super::primitives::Code> = None;
         let mut field_property: Vec<super::super::primitives::Code> = Vec::new();
+        let mut field_use_supplement: Vec<super::super::primitives::Canonical> = Vec::new();
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -358,6 +367,30 @@ impl CodeSystemLookupRequest {
                         }
                     });
                 }
+                "useSupplement" => {
+                    field_use_supplement.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "useSupplement",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "useSupplement",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -376,6 +409,7 @@ impl CodeSystemLookupRequest {
             date: field_date,
             display_language: field_display_language,
             property: field_property,
+            use_supplement: field_use_supplement,
         })
     }
     /// Writes the fields as a parameter list.
@@ -442,6 +476,15 @@ impl CodeSystemLookupRequest {
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
                     value.clone(),
                 )),
+                ..Default::default()
+            });
+        }
+        for value in &self.use_supplement {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "useSupplement".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
                 ..Default::default()
             });
         }
@@ -1361,6 +1404,15 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 type_code: Some("code"),
                 scope: &[],
                 source: super::super::super::operation::ParameterSource::Version,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "useSupplement",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
