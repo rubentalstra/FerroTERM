@@ -133,19 +133,21 @@ fn snapshot_root(name: &Path) -> Option<PathBuf> {
 }
 
 /// The files of a LOINC release the build reads, by file name.
-const LOINC_FILES: [&str; 5] = [
+const LOINC_FILES: [&str; 6] = [
     "Loinc.csv",
     "Part.csv",
     "ComponentHierarchyBySystem.csv",
+    "LoincPartLink_Primary.csv",
     "AnswerList.csv",
     "LoincAnswerListLink.csv",
 ];
 
 /// Unpacks the tables of the LOINC release zip at `zip_path` under `into`.
 ///
-/// Returns the directory to read as the release: the term table, the parts
-/// and hierarchy, the answer lists and links, and every linguistic variant;
-/// the part-link tables (hundreds of megabytes) stay in the zip.
+/// Returns the directory to read as the release: the term table, the parts,
+/// the hierarchy, the primary part links, the answer lists and links, and
+/// every linguistic variant; the supplementary part links (a quarter of a
+/// gigabyte) stay in the zip.
 ///
 /// # Errors
 ///

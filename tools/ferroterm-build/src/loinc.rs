@@ -10,7 +10,7 @@
 //! LOINC specification governs the artifact layout: our own design, shared
 //! with the SNOMED CT build.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -144,12 +144,47 @@ struct Placed {
 struct Numbered {
     ordinals: BTreeMap<String, Ordinal>,
     concepts: Vec<(Ordinal, Concept, &'static str)>,
+    /// The class parts only the hierarchy names.
+    hierarchy_only: BTreeSet<String>,
+}
+
+/// The column of `Loinc.csv` a link axis fills, or the axis name itself.
+fn axis_key(axis: &str) -> &str {
+    match axis {
+        "TIME" => "TIME_ASPCT",
+        "SCALE" => "SCALE_TYP",
+        "METHOD" => "METHOD_TYP",
+        other => other,
+    }
+}
+
+/// Per term code, per axis key, the linked part ordinals.
+fn link_parts<'a>(
+    links: &'a [part::Link],
+    numbered: &Numbered,
+) -> BTreeMap<&'a str, BTreeMap<String, Vec<Ordinal>>> {
+    let mut out: BTreeMap<&str, BTreeMap<String, Vec<Ordinal>>> = BTreeMap::new();
+    for link in links {
+        let Some(&part) = numbered.ordinals.get(&link.part.to_ascii_uppercase()) else {
+            continue;
+        };
+        let parts = out
+            .entry(link.code.as_str())
+            .or_default()
+            .entry(axis_key(&link.axis).to_owned())
+            .or_default();
+        if !parts.contains(&part) {
+            parts.push(part);
+        }
+    }
+    out
 }
 
 fn number(
     terms: &term::Terms,
     parts: &[part::Part],
     lists: &BTreeMap<String, answer::AnswerList>,
+    edges: &[part::Edge],
 ) -> Result<Numbered, Error> {
     let mut codes: Vec<(String, bool, &'static str)> = Vec::new();
     let mut term_codes: Vec<_> = terms
@@ -181,6 +216,19 @@ fn number(
     answers.sort();
     answers.dedup();
     codes.extend(answers);
+    let known: BTreeSet<String> = codes
+        .iter()
+        .map(|(c, _, _)| c.to_ascii_uppercase())
+        .collect();
+    let mut hierarchy_only: BTreeSet<String> = BTreeSet::new();
+    for edge in edges {
+        for code in std::iter::once(&edge.code).chain(edge.parent.iter()) {
+            if !known.contains(&code.to_ascii_uppercase()) {
+                hierarchy_only.insert(code.clone());
+            }
+        }
+    }
+    codes.extend(hierarchy_only.iter().map(|c| (c.clone(), true, "part")));
     let mut ordinals = BTreeMap::new();
     let mut concepts = Vec::with_capacity(codes.len());
     for (code, active, kind) in codes {
@@ -200,7 +248,11 @@ fn number(
             kind,
         ));
     }
-    Ok(Numbered { ordinals, concepts })
+    Ok(Numbered {
+        ordinals,
+        concepts,
+        hierarchy_only,
+    })
 }
 
 /// Builds the artifacts for the release under `root` into `out`.
@@ -219,6 +271,7 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
     let parts = part::read_parts(&release)?;
     let edges = part::read_hierarchy(&release)?;
     let lists = answer::read(&release)?;
+    let links = part::read_links(&release)?;
     let variants = variant::read(&release)?;
     let version = match version {
         Some(v) => v.to_owned(),
@@ -231,7 +284,7 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
             .ok_or(Error::NoVersion)?,
     };
     std::fs::create_dir_all(out).map_err(io_error(out))?;
-    let numbered = number(&terms, &parts, &lists)?;
+    let numbered = number(&terms, &parts, &lists, &edges)?;
     let store_path = out.join(STORE_FILE);
     let mut builder = StoreBuilder::create(&store_path, SYSTEM, &version)?;
     for (i, name) in DESIGNATION_USES.iter().enumerate() {
@@ -240,6 +293,14 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
     let mut keys: BTreeMap<String, u32> = BTreeMap::new();
     let mut key_names: Vec<String> = terms.columns.clone();
     key_names.extend([COPYRIGHT_KEY, ANSWER_LIST_KEY, ANSWERS_KEY, KIND_KEY].map(str::to_owned));
+    // The linked axes: the six of `Loinc.csv` under their column names, every
+    // other link type under its own name.
+    let linked = link_parts(&links, &numbered);
+    for axis in linked.values().flat_map(|by_axis| by_axis.keys()) {
+        if !key_names.iter().any(|k| k == axis) {
+            key_names.push(axis.clone());
+        }
+    }
     for name in &key_names {
         let key = ordinal(keys.len())?.index();
         keys.insert(name.clone(), key);
@@ -303,12 +364,25 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
                 }
             }
         }
+        let term_links = linked.get(term.code.as_str());
         for (column, value) in &term.fields {
-            builder.properties(
-                ordinal,
-                key(column)?,
-                &[PropertyValue::String(value.clone())],
-            )?;
+            let values = match term_links.and_then(|by_axis| by_axis.get(column.as_str())) {
+                // NOTE: the FHIR LOINC page types the six axes as Coding
+                // (<https://terminology.hl7.org/LOINC.html>): the part is the value.
+                Some(parts) => parts.iter().map(|p| PropertyValue::Concept(*p)).collect(),
+                None => vec![PropertyValue::String(value.clone())],
+            };
+            builder.properties(ordinal, key(column)?, &values)?;
+        }
+        if let Some(by_axis) = term_links {
+            for (axis, parts) in by_axis {
+                if term.fields.contains_key(axis.as_str()) {
+                    continue;
+                }
+                let values: Vec<PropertyValue> =
+                    parts.iter().map(|p| PropertyValue::Concept(*p)).collect();
+                builder.properties(ordinal, key(axis)?, &values)?;
+            }
         }
         let copyright = if term.external_copyright.is_some() {
             "3rdParty"
@@ -349,6 +423,22 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
             key(COPYRIGHT_KEY)?,
             &[PropertyValue::Code(String::from("LOINC"))],
         )?;
+    }
+    // The class parts only the hierarchy names, with its text as their name.
+    let mut named: BTreeSet<&str> = BTreeSet::new();
+    for edge in &edges {
+        if numbered.hierarchy_only.contains(&edge.code)
+            && named.insert(edge.code.as_str())
+            && let Some(&ordinal) = numbered.ordinals.get(&edge.code.to_ascii_uppercase())
+        {
+            let mut index = 0;
+            place(ordinal, &mut index, &edge.text, "en", 3);
+            builder.properties(
+                ordinal,
+                key(COPYRIGHT_KEY)?,
+                &[PropertyValue::Code(String::from("LOINC"))],
+            )?;
+        }
     }
     for list in lists.values() {
         let Some(&ordinal) = numbered.ordinals.get(&list.code.to_ascii_uppercase()) else {

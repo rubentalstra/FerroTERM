@@ -113,7 +113,14 @@ fn properties_carry_every_field_and_the_hierarchy() {
         .map(|p| format!("{}={}", p.code, p.value.as_text()))
         .collect();
     assert!(props.contains(&String::from("CLASS=CHEM")));
-    assert!(props.contains(&String::from("COMPONENT=Glucose")));
+    assert!(
+        props.contains(&format!("COMPONENT={}", code(GLUCOSE_PART))),
+        "the axis is the linked part (a Coding on the FHIR LOINC page): {props:?}"
+    );
+    assert!(
+        props.contains(&String::from("PROPERTY=MCnc")),
+        "an axis without a link keeps its text"
+    );
     assert!(props.contains(&String::from("copyright=LOINC")));
     assert!(props.contains(&format!("parent={}", code(GLUCOSE_PART))));
     assert!(props.contains(&String::from("inactive=false")));
@@ -189,8 +196,8 @@ fn filters_follow_the_fhir_page() {
         .expect("filters");
     assert_eq!(
         ancestor.len(),
-        4,
-        "the glucose part and the three terms under chemistry"
+        5,
+        "the glucose part, the sodium class part, and the three terms under chemistry"
     );
     assert!(matches!(
         provider.filter(&filter("ancestor", FilterOperator::Equal, "LP99999-9")),
@@ -198,7 +205,7 @@ fn filters_follow_the_fhir_page() {
     ));
     assert_eq!(
         provider.all().expect("all").len(),
-        10,
+        11,
         "4 terms, 3 parts, 1 list, 2 answers"
     );
     let hits = provider.search("bloed", Some("nl")).expect("searches");
@@ -255,4 +262,65 @@ fn implicit_value_sets_cover_all_answer_lists_and_parts() {
         LoincProvider::open(dir.path()),
         Err(OpenError::NotLoinc(_))
     ));
+}
+
+#[test]
+fn axis_filters_reach_the_linked_parts_and_class_parts_carry_their_terms() {
+    let (_dir, provider) = provider();
+    let filter = |property: &str, op: FilterOperator, value: &str| Filter {
+        property: property.to_owned(),
+        op,
+        value: value.to_owned(),
+    };
+    let mut glucoses = vec![code(GLUCOSE), code(OLD_GLUCOSE)];
+    glucoses.sort();
+    let by_code = provider
+        .filter(&filter(
+            "COMPONENT",
+            FilterOperator::Equal,
+            &code(GLUCOSE_PART),
+        ))
+        .expect("filters");
+    assert_eq!(codes(&provider, by_code), glucoses, "the part code");
+    let by_name = provider
+        .filter(&filter("COMPONENT", FilterOperator::Equal, "Glucose"))
+        .expect("filters");
+    assert_eq!(codes(&provider, by_name), glucoses, "the part name");
+    let by_text = provider
+        .filter(&filter("COMPONENT", FilterOperator::Equal, "Sodium"))
+        .expect("filters");
+    assert_eq!(
+        codes(&provider, by_text),
+        [code(SODIUM)],
+        "an unlinked term keeps its column text"
+    );
+    let regex = provider
+        .filter(&filter("COMPONENT", FilterOperator::Regex, "^S"))
+        .expect("filters");
+    assert_eq!(codes(&provider, regex), [code(SODIUM)]);
+    let class = provider
+        .locate(&code(ferroterm_testkit::loinc::SODIUM_CLASS))
+        .expect("reads")
+        .expect("the class part only the hierarchy names");
+    assert_eq!(
+        provider
+            .display(class.concept, None)
+            .expect("reads")
+            .as_deref(),
+        Some("Sodium | Serum or Plasma | Chemistry")
+    );
+    let under_class = provider
+        .filter(&filter(
+            "concept",
+            FilterOperator::IsA,
+            &code(ferroterm_testkit::loinc::SODIUM_CLASS),
+        ))
+        .expect("filters");
+    let mut expected = vec![code(ferroterm_testkit::loinc::SODIUM_CLASS), code(SODIUM)];
+    expected.sort();
+    assert_eq!(
+        codes(&provider, under_class),
+        expected,
+        "the term hangs under the class part"
+    );
 }

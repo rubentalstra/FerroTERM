@@ -55,6 +55,9 @@ pub const TERMS: &str = "Loinc.csv";
 pub const PARTS: &str = "Part.csv";
 /// The multiaxial hierarchy, `ComponentHierarchyBySystem.csv`.
 pub const HIERARCHY: &str = "ComponentHierarchyBySystem.csv";
+/// The primary part links, `LoincPartLink_Primary.csv`: each term's part per
+/// axis.
+pub const LINKS: &str = "LoincPartLink_Primary.csv";
 /// The answer lists and their answers, `AnswerList.csv`.
 pub const ANSWER_LISTS: &str = "AnswerList.csv";
 /// The links from terms to answer lists, `LoincAnswerListLink.csv`.

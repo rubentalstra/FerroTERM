@@ -12,12 +12,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use ferroterm_graph::csr::{Csr, CsrError};
-use ferroterm_graph::ordinal::Ordinal;
+use ferroterm_graph::ordinal::{Ordinal, to_usize};
 use ferroterm_graph::persist::Hierarchy as GraphHierarchy;
 use ferroterm_store::record;
 use ferroterm_store::store::{Store, StoreError, Vocabulary};
 use ferroterm_store::tables;
 use ferroterm_text::index::{Query, TextIndex};
+use regex::Regex;
 use serde::Deserialize;
 
 use crate::compose::{Compose, ConceptRef, Include, SystemRef};
@@ -323,6 +324,110 @@ impl LoincProvider {
     }
 
     /// The part codes a `parent`/`ancestor` filter names, as concepts.
+    /// The parts a filter value names: by code, or by an English name.
+    fn parts_matching(&self, wanted: &[&str]) -> Result<ConceptSet, ProviderError> {
+        let mut parts = ConceptSet::new();
+        for value in wanted {
+            if let Some(ordinal) = self
+                .store
+                .ordinal(&value.to_ascii_uppercase())
+                .map_err(storage)?
+            {
+                parts.insert(ordinal.index());
+            }
+            for designation in self.text.matches(&Query {
+                text: (*value).to_owned(),
+                active_only: true,
+                ..Query::default()
+            }) {
+                let Some(entry) = self.text.entry(designation) else {
+                    continue;
+                };
+                let named = self
+                    .store
+                    .designations(entry.concept)
+                    .map_err(storage)?
+                    .get(to_usize(entry.index))
+                    .is_some_and(|d| d.term.eq_ignore_ascii_case(value));
+                if named {
+                    parts.insert(entry.concept.index());
+                }
+            }
+        }
+        Ok(parts)
+    }
+
+    /// An axis filter: with `=` or `in`, the terms whose linked part is one
+    /// the value names (by code or by name) or whose column text is the
+    /// value; with `regex`, the terms whose part name or code, or column text,
+    /// matches (the FHIR LOINC page: any `Loinc.csv` field with `=` or
+    /// `regex`).
+    fn axis_filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
+        let wanted: Vec<&str> = filter
+            .value
+            .split(',')
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .collect();
+        let regex = if filter.op == FilterOperator::Regex {
+            Some(Regex::new(&filter.value)?)
+        } else {
+            None
+        };
+        let parts = if regex.is_some() {
+            ConceptSet::new()
+        } else {
+            self.parts_matching(&wanted)?
+        };
+        let Some(key) = self.key_of(&filter.property) else {
+            return Ok(ConceptSet::new());
+        };
+        let mut part_names: BTreeMap<u32, String> = BTreeMap::new();
+        let mut set = ConceptSet::new();
+        for index in 0..self.concepts {
+            let ordinal = Ordinal::new(index);
+            let properties = self.store.properties(ordinal).map_err(storage)?;
+            let Some((_, values)) = properties.iter().find(|(k, _)| *k == key) else {
+                continue;
+            };
+            let mut hit = false;
+            for value in values {
+                hit = match (value, &regex) {
+                    (record::PropertyValue::Concept(part), None) => parts.contains(part.index()),
+                    (record::PropertyValue::Concept(part), Some(regex)) => {
+                        let name = if let Some(name) = part_names.get(&part.index()) {
+                            name.clone()
+                        } else {
+                            let name = self
+                                .choose_display(*part, None)
+                                .map_err(|e| ProviderError::Storage(Box::new(e)))?
+                                .unwrap_or_default();
+                            part_names.insert(part.index(), name.clone());
+                            name
+                        };
+                        let code = self
+                            .store
+                            .concept(*part)
+                            .map_err(storage)?
+                            .map(|c| c.code)
+                            .unwrap_or_default();
+                        regex.is_match(&name) || regex.is_match(&code)
+                    }
+                    (record::PropertyValue::String(text), None) => wanted.iter().any(|w| w == text),
+                    (record::PropertyValue::String(text), Some(regex)) => regex.is_match(text),
+                    _ => false,
+                };
+                if hit {
+                    break;
+                }
+            }
+            if hit {
+                set.insert(index);
+            }
+        }
+        Ok(set)
+    }
+
     fn parts_named(&self, filter: &Filter) -> Result<Vec<Concept>, ProviderError> {
         let mut out = Vec::new();
         for code in filter.value.split(',') {
@@ -558,10 +663,17 @@ impl CodeSystemProvider for LoincProvider {
         Ok(concepts)
     }
 
-    /// `parent` and `ancestor` over the multiaxial hierarchy; every other
+    /// `parent` and `ancestor` over the multiaxial hierarchy; an axis property
+    /// (`COMPONENT`, `PROPERTY`, `TIME_ASPCT`, `SYSTEM`, `SCALE_TYP`,
+    /// `METHOD_TYP`) with `=` or `in` matches the linked part by its code or
+    /// its name, or the column text of a term without a link; every other
     /// filter is the generic evaluation over the stored fields.
     fn filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
         match (filter.property.as_str(), filter.op) {
+            (
+                "COMPONENT" | "PROPERTY" | "TIME_ASPCT" | "SYSTEM" | "SCALE_TYP" | "METHOD_TYP",
+                FilterOperator::Equal | FilterOperator::In | FilterOperator::Regex,
+            ) => self.axis_filter(filter),
             ("parent" | "ancestor", FilterOperator::Equal | FilterOperator::In) => {
                 let mut set = ConceptSet::new();
                 for part in self.parts_named(filter)? {

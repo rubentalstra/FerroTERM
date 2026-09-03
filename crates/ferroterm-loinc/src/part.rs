@@ -1,9 +1,13 @@
-//! The parts (`Part.csv`) and the multiaxial hierarchy
-//! (`ComponentHierarchyBySystem.csv`): parts are the branches, terms the
-//! leaves, and a code may sit under more than one parent.
+//! The parts, the multiaxial hierarchy, and the primary part links.
+//!
+//! `Part.csv` lists the parts; `ComponentHierarchyBySystem.csv` places parts
+//! as branches and terms as leaves (a code may sit under more than one parent),
+//! and names class parts that `Part.csv` does not list, which are parts all
+//! the same with the hierarchy's text as their name; `LoincPartLink_Primary.csv`
+//! gives the part of each term on each axis.
 
 use crate::id;
-use crate::release::{HIERARCHY, PARTS, Release, ReleaseError, Table, csv_at, field};
+use crate::release::{HIERARCHY, LINKS, PARTS, Release, ReleaseError, Table, csv_at, field};
 
 /// One part.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,6 +90,48 @@ pub fn read_hierarchy(release: &Release) -> Result<Vec<Edge>, ReleaseError> {
             code: field(&record, code_at).to_owned(),
             parent: (!parent.is_empty()).then(|| parent.to_owned()),
             text: field(&record, text_at).to_owned(),
+        });
+    }
+    Ok(rows)
+}
+
+/// One primary link: the part of a term on one axis.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Link {
+    /// The term code.
+    pub code: String,
+    /// The part code.
+    pub part: String,
+    /// The part name, as the link file spells it.
+    pub part_name: String,
+    /// The axis (`PartTypeName`: `COMPONENT`, `PROPERTY`, `TIME`, `SYSTEM`,
+    /// `SCALE`, `METHOD`, or another attribute name).
+    pub axis: String,
+}
+
+/// Reads the primary part links; a release without the file has none.
+///
+/// # Errors
+///
+/// Returns [`ReleaseError`] when the file does not parse or lacks a column.
+pub fn read_links(release: &Release) -> Result<Vec<Link>, ReleaseError> {
+    let Some(path) = release.optional(LINKS) else {
+        return Ok(Vec::new());
+    };
+    let mut table = Table::open(path)?;
+    let code_at = table.column("LoincNumber")?;
+    let part_at = table.column("PartNumber")?;
+    let name_at = table.column("PartName")?;
+    let axis_at = table.column("PartTypeName")?;
+    let mut rows = Vec::new();
+    let path = table.path.clone();
+    for record in table.reader.records() {
+        let record = record.map_err(|e| csv_at(&path, e))?;
+        rows.push(Link {
+            code: field(&record, code_at).to_owned(),
+            part: field(&record, part_at).to_owned(),
+            part_name: field(&record, name_at).to_owned(),
+            axis: field(&record, axis_at).to_owned(),
         });
     }
     Ok(rows)
