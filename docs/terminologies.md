@@ -67,8 +67,13 @@ engine. Each row is a tracker issue under the program issue.
 - **Size.** International edition: about 360,000 concepts, 1.2 million
   descriptions, 1.5 million relationships.
 - **Served.** `ferroterm-build --rf2 <release zip|dir> --out <dir>` builds the
-  Snapshot into the artifact layout, the reference set memberships of every
-  concept-referencing reference set beside it (`refsets.bin`). The provider
+  Snapshot into the artifact layout, and beside it the reference set
+  memberships of every concept-referencing reference set (`refsets.bin`), the
+  attribute relationships with their role groups and concrete values
+  (`attributes.bin`), the active member rows of those reference sets with
+  their fields (`members.bin`, the OWL axiom reference sets left out), and the
+  alternate identifiers (`identifiers.bin`), which the ECL evaluator reads. The
+  provider
   answers the implicit value sets `?fhir_vs`, `?fhir_vs=isa/[sctid]`,
   `?fhir_vs=refset`, and `?fhir_vs=refset/[sctid]` on the system, edition, or
   version URI, and the `concept is-a`, `descendent-of`, and `in` (reference

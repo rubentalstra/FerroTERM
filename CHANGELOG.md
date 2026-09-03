@@ -23,6 +23,22 @@ fresh link reference.
   constructs; its `Display` prints a canonical form that parses back to the
   same tree; a malformed expression is a typed error with the byte offset and
   the token class expected there. Evaluation follows in the next change.
+- SNOMED CT: `ferroterm-build --rf2` writes three more files beside the store
+  for the ECL evaluator: `attributes.bin` (every active inferred relationship
+  that is not is-a, with its role group and its concept, number, or string
+  value, plus an inverted index by type and value), `members.bin` (the active
+  member rows of every concept-referencing reference set with their fields,
+  the OWL axiom reference sets left out), and `identifiers.bin` (the alternate
+  identifiers of the RF2 identifier file). The provider opens them when the
+  manifest names them; an older artifact still opens.
+
+### Fixed
+
+- LOINC: the release zip's `AccessoryFiles/PanelsAndForms/Loinc.csv` is no
+  longer mistaken for the term table, and a published code whose check digit
+  does not follow the Mod 10 algorithm (`11491-6`, deprecated, in 2.83) is
+  read as the table lists it; the check digit still applies to codes a client
+  submits.
 
 ## [0.0.7] - 2026-09-03
 

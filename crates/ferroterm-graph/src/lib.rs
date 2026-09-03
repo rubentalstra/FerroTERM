@@ -9,10 +9,13 @@
 //! (`docs/architecture.md` decisions 1 and 3).
 #![doc(test(attr(deny(warnings))))]
 
+pub mod attributes;
 pub mod closure;
 pub mod csr;
+pub mod identifiers;
 pub mod members;
 pub mod ordinal;
 pub mod persist;
+pub mod refsets;
 pub mod relations;
 pub mod subsumption;

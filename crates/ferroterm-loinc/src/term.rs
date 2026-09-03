@@ -53,7 +53,7 @@ pub struct Terms {
 /// # Errors
 ///
 /// Returns [`ReleaseError`] when the file is missing, does not parse, lacks
-/// `LOINC_NUM`, or a code fails its check digit.
+/// `LOINC_NUM`, or a code is not shaped like a LOINC code.
 pub fn read(release: &Release) -> Result<Terms, ReleaseError> {
     let mut table = Table::open(release.file(TERMS)?)?;
     let code_at = table.column("LOINC_NUM")?;
@@ -69,7 +69,7 @@ pub fn read(release: &Release) -> Result<Terms, ReleaseError> {
     for record in table.reader.records() {
         let record = record.map_err(|e| csv_at(&path, e))?;
         let code = field(&record, code_at).to_owned();
-        if !id::is_valid(&code) {
+        if !id::is_well_formed(&code) {
             return Err(ReleaseError::Code {
                 path: table.path.clone(),
                 code,

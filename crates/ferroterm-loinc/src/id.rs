@@ -57,6 +57,27 @@ pub fn is_valid(code: &str) -> bool {
     }
 }
 
+/// Whether `code` has the shape of a LOINC code: an optional `LP`, `LL`, or
+/// `LA` prefix, digits, a hyphen, and one digit, whatever that digit is.
+///
+/// The published term table is the authority on which codes exist, and it
+/// carries deprecated codes whose check digit does not follow the algorithm
+/// (`11491-6` in LOINC 2.83), so a reader of the table checks shape only and
+/// leaves the check digit to [`is_valid`] on codes a client submits.
+#[must_use]
+pub fn is_well_formed(code: &str) -> bool {
+    let Some((head, check)) = code.rsplit_once('-') else {
+        return false;
+    };
+    let body = head.trim_start_matches(|c: char| c.is_ascii_uppercase());
+    let prefix = head.strip_suffix(body).unwrap_or_default();
+    matches!(prefix, "" | "LP" | "LL" | "LA")
+        && !body.is_empty()
+        && body.bytes().all(|b| b.is_ascii_digit())
+        && check.len() == 1
+        && check.bytes().all(|b| b.is_ascii_digit())
+}
+
 /// `body` with its check digit appended.
 #[must_use]
 pub fn with_check_digit(body: &str) -> Option<String> {
@@ -65,7 +86,7 @@ pub fn with_check_digit(body: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{check_digit, is_valid, with_check_digit};
+    use super::{check_digit, is_valid, is_well_formed, with_check_digit};
 
     #[test]
     fn the_users_guide_example_and_published_codes_check() {
@@ -78,6 +99,12 @@ mod tests {
         assert!(!is_valid("2345-8"));
         assert!(!is_valid("2345"));
         assert!(!is_valid("XX2345-7"));
+        assert!(
+            is_well_formed("11491-6"),
+            "a published code with a failing check digit"
+        );
+        assert!(!is_well_formed("11491-66"));
+        assert!(!is_well_formed("XX2345-7"));
         assert_eq!(with_check_digit("2345").as_deref(), Some("2345-7"));
     }
 }

@@ -174,7 +174,12 @@ pub fn unpack_loinc(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveErro
             .iter()
             .any(|f| f.eq_ignore_ascii_case(file_name))
             || file_name.ends_with("LinguisticVariant.csv");
-        if entry.is_dir() || !wanted {
+        // The panels and forms folder carries its own `Loinc.csv`, a subset the
+        // build must not read as the term table.
+        let panels = name
+            .components()
+            .any(|c| c.as_os_str().eq_ignore_ascii_case("PanelsAndForms"));
+        if entry.is_dir() || !wanted || panels {
             continue;
         }
         found_terms |= file_name.eq_ignore_ascii_case("Loinc.csv");

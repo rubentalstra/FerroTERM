@@ -13,7 +13,8 @@ use ferroterm_terminology::snomed::{OpenError, SYSTEM, SnomedProvider};
 
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
-    ANIMAL, CAT, COVERING, DOG, EDITION, FISH, FUR, LEGS, PETS, TOP, VERSION, item, sctid,
+    ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, LEGS, PETS, SAME_AS, SCHEME, TOP,
+    VERSION, item, sctid,
 };
 
 fn provider() -> (tempfile::TempDir, SnomedProvider) {
@@ -52,7 +53,7 @@ fn identity_and_declaration_follow_the_manifest() {
     assert!(codes.contains(&sctid(item(COVERING)).as_str()));
     assert!(codes.contains(&sctid(item(LEGS)).as_str()));
     assert_eq!(p.language_refsets(), [snomed::GB_REFSET, snomed::NL_REFSET]);
-    assert_eq!(p.all().expect("all").len(), 9);
+    assert_eq!(p.all().expect("all").len(), 13);
 }
 
 #[test]
@@ -221,7 +222,9 @@ fn the_hierarchy_answers_subsumption_and_the_filters_from_the_closure() {
         .expect("filters");
     assert_eq!(
         leaves.iter().collect::<Vec<_>>(),
-        [CAT, DOG, FUR, COVERING, LEGS, PETS]
+        [
+            CAT, DOG, FUR, COVERING, LEGS, PETS, CODES_MAP, SAME_AS, SCHEME
+        ]
     );
 }
 
@@ -334,8 +337,17 @@ fn the_implicit_value_sets_follow_the_snomed_ct_page() {
         .implicit_value_set(&format!("{base}?fhir_vs=refset"))
         .expect("implicit")
         .expect("compose");
-    assert_eq!(refsets.include[0].concepts.len(), 1);
-    assert_eq!(refsets.include[0].concepts[0].code, sctid(item(PETS)));
+    assert_eq!(
+        refsets.include[0].concepts.len(),
+        3,
+        "every reference set with concept members"
+    );
+    assert!(
+        refsets.include[0]
+            .concepts
+            .iter()
+            .any(|c| c.code == sctid(item(PETS)))
+    );
     let members = p
         .implicit_value_set(&format!("{base}?fhir_vs=refset/{}", sctid(item(PETS))))
         .expect("implicit")

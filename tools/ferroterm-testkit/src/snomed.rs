@@ -6,11 +6,14 @@
 
 use std::path::Path;
 
+use ferroterm_graph::attributes::{self, Attributes};
 use ferroterm_graph::closure::Closure;
 use ferroterm_graph::csr::Csr;
+use ferroterm_graph::identifiers::Identifiers;
 use ferroterm_graph::members::Memberships;
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::persist::Hierarchy;
+use ferroterm_graph::refsets::{self, RefsetMembers};
 use ferroterm_rf2::constants;
 use ferroterm_rf2::id::with_check_digit;
 use ferroterm_store::builder::{PreferredRule, StoreBuilder};
@@ -53,6 +56,18 @@ pub const COVERING: u32 = 6;
 pub const LEGS: u32 = 7;
 /// A reference set concept whose members are the cat and the dog.
 pub const PETS: u32 = 8;
+/// A map reference set (`mapGroup`, `mapTarget`) whose members are the cat and the dog.
+pub const CODES_MAP: u32 = 9;
+/// The historical association reference set root (a published SCTID, metadata only).
+pub const HISTORICAL: u32 = 10;
+/// The SAME AS association reference set (a published SCTID); the fish is SAME AS the cat.
+pub const SAME_AS: u32 = 11;
+/// An identifier scheme whose alias is `ZOO`; the cat is `ZOO#cat-1`, the dog `ZOO#dog-1`.
+pub const SCHEME: u32 = 12;
+/// The published SCTID of the historical association reference set root.
+pub const HISTORICAL_SCTID: &str = "900000000000522004";
+/// The published SCTID of the SAME AS association reference set.
+pub const SAME_AS_SCTID: &str = "900000000000527005";
 
 /// The item number behind each ordinal, so `sctid(item(CAT))` is the cat's code.
 #[must_use]
@@ -67,6 +82,8 @@ type DesignationRow = (&'static str, &'static str, u32, bool, LanguageMembership
 
 struct Row {
     ordinal: u32,
+    /// A published code instead of the invented one.
+    code: Option<&'static str>,
     active: bool,
     defined: bool,
     designations: Vec<DesignationRow>,
@@ -115,7 +132,7 @@ impl From<std::io::Error> for FixtureError {
     }
 }
 
-/// Writes the edition under `dir` (`store.redb`, `hierarchy.bin`, `text.bin`, and `manifest.json`).
+/// Writes the edition under `dir` (`store.redb`, `hierarchy.bin`, `text.bin`, `refsets.bin`, `attributes.bin`, `members.bin`, `identifiers.bin`, and `manifest.json`).
 ///
 /// # Errors
 ///
@@ -134,6 +151,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     let rows = [
         Row {
             ordinal: TOP,
+            code: None,
             active: true,
             defined: false,
             designations: vec![
@@ -149,6 +167,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         },
         Row {
             ordinal: ANIMAL,
+            code: None,
             active: true,
             defined: false,
             designations: vec![
@@ -159,6 +178,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         },
         Row {
             ordinal: CAT,
+            code: None,
             active: true,
             defined: true,
             designations: vec![
@@ -171,6 +191,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         },
         Row {
             ordinal: DOG,
+            code: None,
             active: true,
             defined: true,
             designations: vec![
@@ -181,6 +202,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         },
         Row {
             ordinal: FISH,
+            code: None,
             active: false,
             defined: false,
             designations: vec![
@@ -190,6 +212,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         },
         Row {
             ordinal: FUR,
+            code: None,
             active: true,
             defined: false,
             designations: vec![
@@ -199,6 +222,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         },
         Row {
             ordinal: COVERING,
+            code: None,
             active: true,
             defined: false,
             designations: vec![
@@ -214,6 +238,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         },
         Row {
             ordinal: LEGS,
+            code: None,
             active: true,
             defined: false,
             designations: vec![
@@ -229,6 +254,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         },
         Row {
             ordinal: PETS,
+            code: None,
             active: true,
             defined: false,
             designations: vec![
@@ -242,6 +268,89 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
                 ("Pets reference set", "en", syn, true, vec![(gb, preferred)]),
             ],
         },
+        Row {
+            ordinal: CODES_MAP,
+            code: None,
+            active: true,
+            defined: false,
+            designations: vec![
+                (
+                    "Codes map reference set (foundation metadata concept)",
+                    "en",
+                    fsn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+                (
+                    "Codes map reference set",
+                    "en",
+                    syn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+            ],
+        },
+        Row {
+            ordinal: HISTORICAL,
+            code: Some(HISTORICAL_SCTID),
+            active: true,
+            defined: false,
+            designations: vec![
+                (
+                    "Historical association reference set (foundation metadata concept)",
+                    "en",
+                    fsn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+                (
+                    "Historical association reference set",
+                    "en",
+                    syn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+            ],
+        },
+        Row {
+            ordinal: SAME_AS,
+            code: Some(SAME_AS_SCTID),
+            active: true,
+            defined: false,
+            designations: vec![
+                (
+                    "SAME AS association reference set (foundation metadata concept)",
+                    "en",
+                    fsn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+                (
+                    "SAME AS association reference set",
+                    "en",
+                    syn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+            ],
+        },
+        Row {
+            ordinal: SCHEME,
+            code: None,
+            active: true,
+            defined: false,
+            designations: vec![
+                (
+                    "Zoo code system (identifier scheme)",
+                    "en",
+                    fsn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+                ("Zoo code system", "en", syn, true, vec![(gb, preferred)]),
+                ("ZOO", "en", syn, true, vec![(gb, acceptable)]),
+            ],
+        },
     ];
     let is_a = [
         (ANIMAL, TOP),
@@ -251,7 +360,15 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         (COVERING, TOP),
         (LEGS, TOP),
         (PETS, TOP),
+        (CODES_MAP, TOP),
+        (HISTORICAL, TOP),
+        (SAME_AS, HISTORICAL),
+        (SCHEME, TOP),
     ];
+    let code_of = |row: &Row| {
+        row.code
+            .map_or_else(|| sctid(item(row.ordinal)), str::to_owned)
+    };
 
     let mut builder =
         StoreBuilder::create(&dir.join("store.redb"), "http://snomed.info/sct", VERSION)?;
@@ -299,7 +416,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         builder.concept(
             ordinal,
             &Concept {
-                code: sctid(item(row.ordinal)),
+                code: code_of(row),
                 active: row.active,
                 effective_time: Some(String::from("20260101")),
                 module: None,
@@ -351,17 +468,69 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
             .map_err(|e| FixtureError::Text(e.to_string()))?;
         }
     }
-    // The cat has covering fur and four legs.
-    builder.properties(
-        Ordinal::new(CAT),
-        attribute_key(COVERING),
-        &[PropertyValue::Concept(Ordinal::new(FUR))],
-    )?;
-    builder.properties(
-        Ordinal::new(CAT),
-        attribute_key(LEGS),
-        &[PropertyValue::Decimal(String::from("4"))],
-    )?;
+    // The cat and the dog have covering fur and four legs; the cat states both
+    // in one role group, the dog in two.
+    for animal in [CAT, DOG] {
+        builder.properties(
+            Ordinal::new(animal),
+            attribute_key(COVERING),
+            &[PropertyValue::Concept(Ordinal::new(FUR))],
+        )?;
+        builder.properties(
+            Ordinal::new(animal),
+            attribute_key(LEGS),
+            &[PropertyValue::Decimal(String::from("4"))],
+        )?;
+    }
+    let graph_error = |e: &dyn std::fmt::Display| FixtureError::Graph(e.to_string());
+    let attribute_types = {
+        let mut types: Vec<u64> = [COVERING, LEGS]
+            .iter()
+            .map(|o| sctid(item(*o)).parse().unwrap_or_default())
+            .collect();
+        types.sort_unstable();
+        types
+    };
+    let kind = |ordinal: u32| -> u32 {
+        let code: u64 = sctid(item(ordinal)).parse().unwrap_or_default();
+        ord(attribute_types
+            .iter()
+            .position(|t| *t == code)
+            .unwrap_or_default())
+    };
+    let edge =
+        |source: u32, group: u32, attribute: u32, value: attributes::Value| attributes::Edge {
+            source: Ordinal::new(source),
+            group,
+            kind: kind(attribute),
+            value,
+        };
+    let attributes = Attributes::build(
+        ord(rows.len()),
+        attribute_types.clone(),
+        vec![
+            edge(
+                CAT,
+                1,
+                COVERING,
+                attributes::Value::Concept(Ordinal::new(FUR)),
+            ),
+            edge(CAT, 1, LEGS, attributes::Value::Number(String::from("4"))),
+            edge(
+                DOG,
+                1,
+                COVERING,
+                attributes::Value::Concept(Ordinal::new(FUR)),
+            ),
+            edge(DOG, 2, LEGS, attributes::Value::Number(String::from("4"))),
+        ],
+    )
+    .map_err(|e| graph_error(&e))?;
+    let mut attribute_bytes = Vec::new();
+    attributes
+        .write_to(&mut attribute_bytes)
+        .map_err(|e| graph_error(&e))?;
+    std::fs::write(dir.join("attributes.bin"), &attribute_bytes)?;
 
     let csr = Csr::build(
         ord(rows.len()),
@@ -384,11 +553,83 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         .map_err(|e| FixtureError::Text(e.to_string()))?;
     std::fs::write(dir.join("text.bin"), &text_bytes)?;
     let mut memberships = Memberships::new();
-    let refset: u64 = sctid(item(PETS))
-        .parse()
-        .map_err(|e| FixtureError::Graph(format!("refset id: {e}")))?;
-    memberships.insert(refset, Ordinal::new(CAT));
-    memberships.insert(refset, Ordinal::new(DOG));
+    let refset_id = |ordinal: u32| -> Result<u64, FixtureError> {
+        rows.iter()
+            .find(|r| r.ordinal == ordinal)
+            .map(code_of)
+            .and_then(|code| code.parse().ok())
+            .ok_or_else(|| FixtureError::Graph(String::from("refset id")))
+    };
+    let (pets, codes_map, same_as) = (refset_id(PETS)?, refset_id(CODES_MAP)?, refset_id(SAME_AS)?);
+    memberships.insert(pets, Ordinal::new(CAT));
+    memberships.insert(pets, Ordinal::new(DOG));
+    memberships.insert(codes_map, Ordinal::new(CAT));
+    memberships.insert(codes_map, Ordinal::new(DOG));
+    memberships.insert(same_as, Ordinal::new(FISH));
+    let module_id: u64 = module.parse().unwrap_or_default();
+    let member = |concept: u32, values: Vec<refsets::FieldValue>| refsets::MemberRow {
+        concept: Ordinal::new(concept),
+        effective_time: 20_260_101,
+        module: module_id,
+        values,
+    };
+    let mut tables = RefsetMembers::new();
+    tables
+        .insert(pets, &[], vec![member(CAT, vec![]), member(DOG, vec![])])
+        .map_err(|e| graph_error(&e))?;
+    tables
+        .insert(
+            codes_map,
+            &[
+                (String::from("mapGroup"), refsets::FieldKind::Integer),
+                (String::from("mapTarget"), refsets::FieldKind::String),
+            ],
+            vec![
+                member(
+                    CAT,
+                    vec![
+                        refsets::FieldValue::Integer(1),
+                        refsets::FieldValue::String(String::from("C01")),
+                    ],
+                ),
+                member(
+                    DOG,
+                    vec![
+                        refsets::FieldValue::Integer(1),
+                        refsets::FieldValue::String(String::from("D01")),
+                    ],
+                ),
+            ],
+        )
+        .map_err(|e| graph_error(&e))?;
+    tables
+        .insert(
+            same_as,
+            &[(
+                String::from("targetComponentId"),
+                refsets::FieldKind::Component,
+            )],
+            vec![member(
+                FISH,
+                vec![refsets::FieldValue::Concept(Ordinal::new(CAT))],
+            )],
+        )
+        .map_err(|e| graph_error(&e))?;
+    let mut table_bytes = Vec::new();
+    tables
+        .write_to(&mut table_bytes)
+        .map_err(|e| graph_error(&e))?;
+    std::fs::write(dir.join("members.bin"), &table_bytes)?;
+    let scheme: u64 = sctid(item(SCHEME)).parse().unwrap_or_default();
+    let identifiers = Identifiers::new(vec![
+        (scheme, String::from("cat-1"), Ordinal::new(CAT)),
+        (scheme, String::from("dog-1"), Ordinal::new(DOG)),
+    ]);
+    let mut identifier_bytes = Vec::new();
+    identifiers
+        .write_to(&mut identifier_bytes)
+        .map_err(|e| graph_error(&e))?;
+    std::fs::write(dir.join("identifiers.bin"), &identifier_bytes)?;
     let mut member_bytes = Vec::new();
     memberships
         .write_to(&mut member_bytes)
@@ -407,6 +648,9 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         "hierarchy": "hierarchy.bin",
         "text": "text.bin",
         "refsets": "refsets.bin",
+        "attributes": "attributes.bin",
+        "members": "members.bin",
+        "identifiers": "identifiers.bin",
         "concepts": rows.len(),
         "languages": ["en", "nl"],
     });
