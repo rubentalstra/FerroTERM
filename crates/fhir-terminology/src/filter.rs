@@ -179,6 +179,12 @@ fn values(value: &str) -> impl Iterator<Item = &str> {
     value.split(',').map(str::trim).filter(|v| !v.is_empty())
 }
 
+// NOTE: `regex` matches the whole property value ("matches the regex specified",
+// <https://hl7.org/fhir/R4B/codesystem-filter-operator.html>), so the pattern is anchored.
+fn anchored(value: &str) -> Result<Regex, regex::Error> {
+    Regex::new(&format!("^(?:{value})$"))
+}
+
 fn boolean(filter: &Filter) -> Result<bool, ProviderError> {
     match filter.value.trim() {
         "true" => Ok(true),
@@ -212,7 +218,7 @@ fn on_code<P: CodeSystemProvider + ?Sized>(
             }
         }
         FilterOperator::Regex => {
-            let regex = Regex::new(&filter.value)?;
+            let regex = anchored(&filter.value)?;
             for index in provider.all()? {
                 if provider
                     .code(Concept::new(index))?
@@ -267,7 +273,7 @@ fn on_property<P: CodeSystemProvider + ?Sized>(
         return Err(unsupported(filter));
     }
     let regex = if filter.op == FilterOperator::Regex {
-        Some(Regex::new(&filter.value)?)
+        Some(anchored(&filter.value)?)
     } else {
         None
     };

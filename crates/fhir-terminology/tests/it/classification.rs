@@ -212,7 +212,7 @@ fn subsumption_and_the_generic_filters_answer_from_the_tree() {
         .expect("filters");
     assert_eq!(codes(&provider, daggers), [BILE_DUCT]);
     let with_exclusion = provider
-        .filter(&filter("exclusion", FilterOperator::Regex, "C78"))
+        .filter(&filter("exclusion", FilterOperator::Regex, ".*C78.*"))
         .expect("filters");
     assert_eq!(codes(&provider, with_exclusion), [LIVER]);
     assert!(matches!(

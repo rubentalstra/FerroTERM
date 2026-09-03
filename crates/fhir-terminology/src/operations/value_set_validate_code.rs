@@ -144,6 +144,7 @@ fn prepare(
         version.as_deref(),
     )?;
     let model = Arc::new(ValueSetModel {
+        expansion_parameters: Vec::new(),
         compose: negotiation.pin_lenient(&model.compose),
         ..(*model).clone()
     });
@@ -570,7 +571,8 @@ fn value_set_notes(
 
 /// The version of `system` (among `candidates`, the ones the value set
 /// includes) that has `code` in the value set, the greatest first, for a
-/// subject that names no version (the ecosystem's `overload` cases).
+/// subject that names no version (the ecosystem's `overload` cases); the
+/// greatest version when none has it.
 fn containing_version(
     model: &ValueSetModel,
     resolver: &Resolver<'_>,
@@ -583,26 +585,30 @@ fn containing_version(
     candidates.sort_by(|a, b| {
         crate::versioned::version_order(&b.identity().version, &a.identity().version)
     });
-    candidates.into_iter().find(|candidate| {
-        candidate
-            .locate(code)
-            .ok()
-            .flatten()
-            .is_some_and(|located| {
-                resolver
-                    .contains_compose(
-                        &model.canonical(),
-                        &model.compose,
-                        system,
-                        Some(&candidate.identity().version),
-                        &located.code,
-                        language,
-                    )
-                    .ok()
-                    .flatten()
-                    .is_some()
-            })
-    })
+    candidates
+        .iter()
+        .find(|candidate| {
+            candidate
+                .locate(code)
+                .ok()
+                .flatten()
+                .is_some_and(|located| {
+                    resolver
+                        .contains_compose(
+                            &model.canonical(),
+                            &model.compose,
+                            system,
+                            Some(&candidate.identity().version),
+                            &located.code,
+                            language,
+                        )
+                        .ok()
+                        .flatten()
+                        .is_some()
+                })
+        })
+        .or_else(|| candidates.first())
+        .cloned()
 }
 
 /// The version a subject is validated against and what the choice cost.
@@ -626,12 +632,19 @@ struct Target {
 /// issue only when no other error explains it; a warning when there is no
 /// error.
 fn message_of(issues: &[Issue]) -> Option<String> {
+    // NOTE: with no error or warning, only a display note reaches `message`
+    // (the ecosystem's `language2` cases); status and code-rule notes stay issues.
     const ORDER: [&str; 3] = ["not-found", "vs-invalid", "version-error"];
     let errors: Vec<&Issue> = issues.iter().filter(|i| i.severity == "error").collect();
     if errors.is_empty() {
         return issues
             .iter()
             .find(|i| i.severity == "warning")
+            .or_else(|| {
+                issues
+                    .iter()
+                    .find(|i| i.severity == "information" && i.kind == "invalid-display")
+            })
             .map(|i| i.text.clone());
     }
     let mut ordered: Vec<&str> = Vec::new();
@@ -983,6 +996,10 @@ fn unserved_subject(
         ),
     );
     validation.message = Some(not_found.text.clone());
+    if let Some(local) = local_system(system, subject.expression) {
+        validation.message = Some(format!("{}; {}", not_found.text, local.text));
+        validation.issues.push(local);
+    }
     validation.issues.push(not_found);
     validation.code = Some(subject.code.to_owned());
     let referenced = model
@@ -997,6 +1014,20 @@ fn unserved_subject(
         validation.x_unknown_systems.push(canonical);
     }
     validation
+}
+
+/// The `invalid-data` issue for a system that is a local reference: a
+/// `Coding.system` must be an absolute URI (`Coding` in the FHIR data types,
+/// <https://hl7.org/fhir/R4B/datatypes.html#Coding>).
+fn local_system(system: &str, expression: &str) -> Option<Issue> {
+    let absolute = system.contains(':');
+    (!absolute).then(|| Issue {
+        severity: "error",
+        code: "invalid",
+        kind: "invalid-data",
+        text: String::from("Coding.system must be an absolute reference, not a local reference"),
+        expression: super::at(expression, "system"),
+    })
 }
 
 /// The failed validation over an include whose version the server does not
@@ -1314,4 +1345,24 @@ fn outside_value_set(
     validation.code = Some(located.code.clone());
     validation.display = display.map(str::to_owned);
     validation
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_message_falls_back_to_the_first_information_issue() {
+        let issues = [Issue {
+            severity: "information",
+            code: "invalid",
+            kind: "invalid-display",
+            text: String::from("There are no valid display names found"),
+            expression: None,
+        }];
+        assert_eq!(
+            message_of(&issues).as_deref(),
+            Some("There are no valid display names found")
+        );
+    }
 }

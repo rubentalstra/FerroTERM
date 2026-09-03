@@ -25,7 +25,7 @@ pub const EXPANSION_LIMIT: u64 = 1000;
 
 /// The input of `$expand`: the union of the parameters the served versions
 /// declare.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ExpandInput {
     /// The value set URL (`url`).
     pub url: Option<String>,
@@ -187,6 +187,7 @@ pub fn expand(
         url.as_deref(),
         version.as_deref(),
     )?;
+    let input = &with_defaults(input, &model);
     let compose = pinned_compose(&model.compose, input, &negotiation)?;
     let options = options(input)?;
     let mut wanted = input.use_supplement.clone();
@@ -222,6 +223,31 @@ pub fn expand(
         properties,
         model,
     })
+}
+
+/// The request with the value set's default expansion parameters filled in
+/// where the client named none (`valueset-expansion-parameter`,
+/// <https://hl7.org/fhir/R4B/extension-valueset-expansion-parameter.html>).
+fn with_defaults(input: &ExpandInput, model: &ValueSetModel) -> ExpandInput {
+    let mut input = input.clone();
+    for default in &model.expansion_parameters {
+        match default.name.as_str() {
+            "displayLanguage" if input.display_language.is_none() => {
+                input.display_language = Some(default.value.clone());
+            }
+            "activeOnly" if input.active_only.is_none() => {
+                input.active_only = Some(default.value == "true");
+            }
+            "excludeNested" if input.exclude_nested.is_none() => {
+                input.exclude_nested = Some(default.value == "true");
+            }
+            "includeDesignations" if input.include_designations.is_none() => {
+                input.include_designations = Some(default.value == "true");
+            }
+            _ => {}
+        }
+    }
+    input
 }
 
 fn refuse_unsupported(input: &ExpandInput) -> Result<(), OperationError> {

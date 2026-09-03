@@ -207,12 +207,27 @@ macro_rules! render_value_set {
                         ..Default::default()
                     })
                     .collect();
+                // NOTE: `contains.version` is populated when the expansion draws one
+                // system from several versions, so the codes stay distinguishable
+                // (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.expansion.contains.version>).
+                let mut versions: std::collections::BTreeMap<&str, std::collections::BTreeSet<&str>> =
+                    std::collections::BTreeMap::new();
+                for item in &outcome.contains {
+                    versions
+                        .entry(item.system.as_str())
+                        .or_default()
+                        .insert(item.version.as_str());
+                }
                 let contains = outcome
                     .contains
                     .iter()
                     .map(|item| {
                         let entry = ValueSetExpansionContains {
                             system: Some(item.system.as_str().into()),
+                            version: versions
+                                .get(item.system.as_str())
+                                .filter(|v| v.len() > 1)
+                                .map(|_| item.version.as_str().into()),
                             r#abstract: item.abstract_concept.then_some(true.into()),
                             inactive: item.inactive.then_some(true.into()),
                             code: Some(item.code.as_str().into()),
