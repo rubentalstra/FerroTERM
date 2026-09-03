@@ -151,6 +151,22 @@ thesaurus to SNOMED CT and to ICD-10); point `FERROTERM_CODESYSTEMS` at that
 directory to serve them with `$translate`. Pass `--dhd-version` when the zip
 name does not carry the version.
 
+## Loading the G-Standaard product ladder
+
+A Z-Index subscriber builds the GPK, PRK, HPK, and article code systems from
+the monthly release directory in one run; the release is the version:
+
+```console
+$ ferroterm-build --gstandaard /path/to/g-standaard/202609 --gstandaard-version 202609 \
+    --out /path/to/gstandaard
+```
+
+Four artifact directories appear under the output (`gpk`, `prk`, `hpk`,
+`artikel`), one `urn:oid` system each; list them all in `FERROTERM_INDEX`.
+Each is a flat table: the full name from the names file is the display, the
+short and label names are designations, and the rungs above a concept (`gpk`,
+`prk`, `hpk`), the ATC code, form, route, brand, and firm are properties.
+
 ## Loading RxNorm
 
 The "Current Prescribable Content" subset needs no licence

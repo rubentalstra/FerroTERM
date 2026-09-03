@@ -68,6 +68,7 @@ pages cover every system and the binary distribution.
 | RxNorm | the RRF release, or the licence-free prescribable subset | the FHIR `STY`, `SAB`, `TTY`, `REL`, and `RELA` filters over typed edges |
 | ATC/DDD | the WHO index as CSV, or the G-Standaard `BST801T` file | the five levels as a tree, DDDs as properties |
 | DHD thesauri | the Uitleverformaat 5.0 delivery zip | a flat table with SNOMED CT, ICD-10, DBC, and ZA links as properties and concept maps |
+| G-Standaard | the monthly release directory (`BSTnnnT` files) | GPK, PRK, HPK, and article systems, the ladder as properties |
 | Any FHIR `CodeSystem`, `ValueSet`, `ConceptMap` | a FHIR package or a directory of JSON | HL7 Terminology's 900+ systems load this way; supplements apply to loaded systems |
 | UCUM, BCP 47, BCP 13, ISO 3166-1 | nothing | grammar and registry systems vendored into the binary |
 

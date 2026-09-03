@@ -57,6 +57,19 @@ fn main() -> anyhow::Result<()> {
             report.words,
             cli.out.display()
         ),
+        ferroterm_build::Report::Classifications(reports) => {
+            for report in reports {
+                println!(
+                    "{} {}: {} concepts, {} designations, {} words, written to {}",
+                    report.system,
+                    report.version,
+                    report.concepts,
+                    report.designations,
+                    report.words,
+                    report.store.display()
+                );
+            }
+        }
     }
     Ok(())
 }

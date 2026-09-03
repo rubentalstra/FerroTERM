@@ -29,8 +29,8 @@ pub struct Cli {
     #[arg(
         long,
         value_name = "DIR_OR_ZIP",
-        conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc", "dhd"],
-        required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc", "dhd"]
+        conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc", "dhd", "gstandaard"],
+        required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc", "dhd", "gstandaard"]
     )]
     pub rf2: Option<PathBuf>,
     /// The LOINC release: the unpacked `Loinc_<version>` directory, or the release zip.
@@ -81,6 +81,12 @@ pub struct Cli {
     /// The thesaurus version to record when the delivery name does not carry it (`2.27`).
     #[arg(long, value_name = "VERSION", requires = "dhd")]
     pub dhd_version: Option<String>,
+    /// A G-Standaard release directory (the `BSTnnnT` files); builds the GPK, PRK, HPK, and article systems under `<out>/{gpk,prk,hpk,artikel}`.
+    #[arg(long, value_name = "DIR", requires = "gstandaard_version", conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc", "dhd"])]
+    pub gstandaard: Option<PathBuf>,
+    /// The G-Standaard release to record (`202609`); required, the files carry none.
+    #[arg(long, value_name = "RELEASE", requires = "gstandaard")]
+    pub gstandaard_version: Option<String>,
     /// The `RxNorm` sources (`SAB`) whose names are kept beside the unrestricted `RXNORM` and `MTHSPL` (a full release under a UMLS licence).
     #[arg(long, value_name = "SAB", value_delimiter = ',', action = clap::ArgAction::Append, requires = "rxnorm")]
     pub rxnorm_sources: Vec<String>,
@@ -101,6 +107,19 @@ pub struct Cli {
 /// Returns [`RunError`] when the zip does not unpack, the release does not
 /// read, the edition cannot be identified, or an artifact cannot be written.
 pub fn run(cli: &Cli) -> Result<Report, RunError> {
+    if let (Some(dir), Some(version)) = (&cli.gstandaard, &cli.gstandaard_version) {
+        let ladder = ferroterm_gstandaard::read(dir, version)?;
+        let mut reports = Vec::new();
+        for (name, system, classification) in ladder.rungs() {
+            reports.push(classification::build(
+                classification,
+                system,
+                Some(version),
+                &cli.out.join(name),
+            )?);
+        }
+        return Ok(Report::Classifications(reports));
+    }
     if let Some(report) = run_classification(cli)? {
         return Ok(Report::Classification(report));
     }
@@ -282,6 +301,8 @@ pub enum Report {
     Loinc(loinc::Report),
     /// A classification: a `ClaML` document or the ICD-10-CM release.
     Classification(classification::Report),
+    /// The G-Standaard product ladder: GPK, PRK, HPK, and article reports.
+    Classifications(Vec<classification::Report>),
     /// An `RxNorm` release.
     RxNorm(rxnorm::Report),
     /// The ICD-11 code systems, one report each.
@@ -293,7 +314,7 @@ pub enum Report {
 pub enum RunError {
     /// No input was given.
     #[error(
-        "give `--rf2`, `--loinc`, `--claml`, `--icd10cm`, `--rxnorm`, `--icd11`, `--atc`, or `--dhd`"
+        "give `--rf2`, `--loinc`, `--claml`, `--icd10cm`, `--rxnorm`, `--icd11`, `--atc`, `--dhd`, or `--gstandaard`"
     )]
     NoInput,
     /// `--atc` without `--atc-version`.
@@ -332,6 +353,9 @@ pub enum RunError {
     /// The DHD concept maps cannot be written.
     #[error(transparent)]
     DhdMaps(#[from] dhd::MapError),
+    /// The G-Standaard files do not read.
+    #[error(transparent)]
+    GStandaard(#[from] ferroterm_gstandaard::GStandaardError),
     /// The classification build failed.
     #[error(transparent)]
     Classification(#[from] classification::Error),
