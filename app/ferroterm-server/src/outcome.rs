@@ -8,8 +8,10 @@
 use axum::body::Body;
 use axum::response::{IntoResponse, Response};
 use ferroterm_fhir::codec::Json;
+use ferroterm_fhir::r4b::codeable_concept::CodeableConcept;
 use ferroterm_fhir::r4b::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
 use ferroterm_terminology::operations::OperationError;
+use ferroterm_terminology::operations::value_set_validate_code::tx_issue_coding;
 use http::StatusCode;
 use http::header::CONTENT_TYPE;
 
@@ -23,8 +25,10 @@ pub struct Failure {
     pub status: StatusCode,
     /// The `issue.code`.
     pub code: &'static str,
-    /// The `issue.diagnostics`.
+    /// The `issue.diagnostics` and `issue.details.text`.
     pub diagnostics: String,
+    /// The `tx-issue-type` code in `issue.details.coding`, when one applies.
+    pub kind: Option<&'static str>,
 }
 
 impl Failure {
@@ -35,16 +39,33 @@ impl Failure {
             status,
             code,
             diagnostics: diagnostics.into(),
+            kind: None,
         }
     }
 
+    /// This failure with a `tx-issue-type` coding.
+    #[must_use]
+    pub fn kind(mut self, kind: &'static str) -> Self {
+        self.kind = Some(kind);
+        self
+    }
+
     /// The `OperationOutcome` resource.
+    ///
+    /// The issue carries `details.text` and, when known, a `tx-issue-type`
+    /// coding, the classification validators read
+    /// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
     #[must_use]
     pub fn outcome(&self) -> OperationOutcome {
         OperationOutcome {
             issue: vec![OperationOutcomeIssue {
                 severity: "error".into(),
                 code: self.code.into(),
+                details: Some(CodeableConcept {
+                    coding: self.kind.map(tx_issue_coding).into_iter().collect(),
+                    text: Some(self.diagnostics.as_str().into()),
+                    ..Default::default()
+                }),
                 diagnostics: Some(self.diagnostics.as_str().into()),
                 ..Default::default()
             }],
@@ -55,7 +76,7 @@ impl Failure {
 
 impl From<OperationError> for Failure {
     fn from(error: OperationError) -> Self {
-        Self::new(error.status(), error.issue_code(), error.to_string())
+        Self::new(error.status(), error.issue_code(), error.to_string()).kind(error.tx_issue_type())
     }
 }
 

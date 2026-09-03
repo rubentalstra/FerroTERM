@@ -440,8 +440,8 @@ fn validate_code_answers_the_membership_the_echo_and_the_issues() {
     assert_eq!(validation.issues[0].code, "code-invalid");
     assert_eq!(
         validation.code.as_deref(),
-        None,
-        "a code outside the set is not echoed"
+        Some("dog"),
+        "a valid code outside the set is still echoed"
     );
     let unknown_code = ValueSetValidateCodeRequest {
         url: Some(VS_PETS.into()),

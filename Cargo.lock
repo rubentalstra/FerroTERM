@@ -548,6 +548,7 @@ name = "ferroterm-terminology"
 version = "0.0.3"
 dependencies = [
  "criterion",
+ "csv",
  "ferroterm-fhir",
  "ferroterm-graph",
  "ferroterm-rf2",

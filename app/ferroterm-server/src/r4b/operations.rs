@@ -163,7 +163,6 @@ fn validation_parameters(validation: &Validation) -> Parameters {
                     text: Some(issue.text.as_str().into()),
                     ..Default::default()
                 }),
-                location: issue.expression.map(Into::into).into_iter().collect(),
                 expression: issue.expression.map(Into::into).into_iter().collect(),
                 ..Default::default()
             })

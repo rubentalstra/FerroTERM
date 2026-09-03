@@ -25,6 +25,9 @@ use crate::valueset::store::Resolver;
 use crate::valueset::{convert, render};
 use crate::versioned::Versioned;
 
+/// The largest expansion returned without `count`.
+pub const EXPANSION_LIMIT: u64 = 1000;
+
 /// Runs `$expand`.
 ///
 /// # Errors
@@ -45,6 +48,16 @@ pub fn expand(
     let options = options(request)?;
     let resolver = Resolver::new(sources.registry, sources.value_sets);
     let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;
+    // NOTE: `too-costly` is the issue type for an expansion the server declines to
+    // return whole (<https://hl7.org/fhir/R4B/valueset-issue-type.html>); the
+    // size at which it declines is our own design.
+    if options.count.is_none() && expansion.total > EXPANSION_LIMIT {
+        return Err(OperationError::TooCostly(format!(
+            "the expansion of `{}` has {} concepts; page it with `count` (and `offset`) to fetch it",
+            model.canonical(),
+            expansion.total
+        )));
+    }
     let contains = contains(sources, &expansion, request, options.language.as_deref())?;
     let total = i32::try_from(expansion.total).map_err(|_| {
         OperationError::NotSupported(String::from(
@@ -64,7 +77,8 @@ pub fn expand(
         identifier: Some(format!("urn:uuid:{}", uuid::Uuid::new_v4()).as_str().into()),
         timestamp: jiff::Timestamp::now().to_string().as_str().into(),
         total: Some(Integer::from(total)),
-        offset: Some(Integer::from(offset)),
+        offset: (request.offset.is_some() || request.count.is_some())
+            .then_some(Integer::from(offset)),
         parameter: parameters(request, &expansion),
         contains,
         ..Default::default()
@@ -255,7 +269,7 @@ fn parameters(
         push(
             "used-codesystem",
             ValueSetExpansionParameterValue::Uri(
-                format!("{}|{}", used.url, used.version).as_str().into(),
+                canonical(&used.url, &used.version).as_str().into(),
             ),
         );
     }
@@ -352,4 +366,13 @@ fn designations_of(
 /// or an unknown filter operator.
 pub fn model_of(value_set: &ValueSet) -> Result<ValueSetModel, OperationError> {
     convert::r4b::convert(value_set).map_err(|e| OperationError::ValueSetInvalid(e.to_string()))
+}
+
+/// `url|version`, or `url` alone for a system without a version.
+fn canonical(url: &str, version: &str) -> String {
+    if version.is_empty() {
+        url.to_owned()
+    } else {
+        format!("{url}|{version}")
+    }
 }

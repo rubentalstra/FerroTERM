@@ -285,6 +285,15 @@ engine. Each row is a tracker issue under the program issue.
   The providers validate by grammar (and the IANA registries) and refuse
   enumeration. R5 no longer lists either on the systems page; THO lists BCP 47
   only.
+- **Served.** All three ship with the server and need no configuration:
+  BCP 47 validates a tag by the RFC 5646 grammar and the IANA Language Subtag
+  Registry (well-formed with an unregistered subtag is not a code), BCP 13 by
+  the RFC 6838 grammar with `registered` and `base` filters and subsumption by
+  parameters (`text/plain` subsumes `text/plain; charset=utf-8`), and ISO
+  3166-1 as a table from Unicode CLDR (alpha-2 codes, English names, `alpha3`
+  and `numeric` properties, the user-assigned ranges displayed as
+  `User-assigned`). The registry data is vendored under
+  `crates/ferroterm-terminology/data/` with provenance.
 - **ISO 3166** (`urn:iso:std:iso:3166`, `:-2`, `:-3`): codes upper case, compared
   case-insensitively; one filter, `code regex`; version is the year
   (<https://terminology.hl7.org/ISO3166.html>). A small table provider.

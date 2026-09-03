@@ -16,7 +16,7 @@ use ferroterm_fhir::r4b::operations::value_set_validate_code::{
 };
 
 use super::{OperationError, Sources, code_text, coding_parts, string_text, uri_text};
-use crate::compose::{Expansion, Item, Options};
+use crate::compose::Item;
 use crate::provider::CodeSystemProvider;
 use crate::valueset::convert;
 use crate::valueset::model::ValueSetModel;
@@ -38,7 +38,7 @@ pub struct Issue {
     pub kind: &'static str,
     /// `issue.details.text`.
     pub text: String,
-    /// `issue.expression` and `issue.location`: the parameter at fault.
+    /// `issue.expression`: the parameter at fault.
     pub expression: Option<&'static str>,
 }
 
@@ -93,14 +93,7 @@ pub fn validate_code(
         string_text(request.value_set_version.as_ref()),
     )?;
     let language = code_text(request.display_language.as_ref());
-    let expansion = Resolver::new(sources.registry, sources.value_sets).expand_compose(
-        &model.canonical(),
-        &model.compose,
-        &Options {
-            language: language.map(str::to_owned),
-            ..Options::default()
-        },
-    )?;
+    let resolver = Resolver::new(sources.registry, sources.value_sets);
     let abstract_ok = request
         .r#abstract
         .as_ref()
@@ -122,7 +115,7 @@ pub fn validate_code(
             display: string_text(request.display.as_ref()),
             expression: "code",
         };
-        return check(sources, &model, &expansion, &subject, language, abstract_ok);
+        return check(sources, &model, &resolver, &subject, language, abstract_ok);
     }
     if let Some(coding) = &request.coding {
         let (system, version, code, display) = coding_parts(coding);
@@ -135,7 +128,7 @@ pub fn validate_code(
             display: display.or(string_text(request.display.as_ref())),
             expression: "coding",
         };
-        return check(sources, &model, &expansion, &subject, language, abstract_ok);
+        return check(sources, &model, &resolver, &subject, language, abstract_ok);
     }
     let concept = request
         .codeable_concept
@@ -159,7 +152,7 @@ pub fn validate_code(
             display,
             expression: "codeableConcept",
         };
-        let validation = check(sources, &model, &expansion, &subject, language, abstract_ok)?;
+        let validation = check(sources, &model, &resolver, &subject, language, abstract_ok)?;
         if validation.response.result.value == Some(true) {
             return Ok(validation);
         }
@@ -170,11 +163,11 @@ pub fn validate_code(
     })
 }
 
-/// Validates one subject against the expansion.
+/// Validates one subject against the value set.
 fn check(
     sources: &Sources<'_>,
     model: &ValueSetModel,
-    expansion: &Expansion,
+    resolver: &Resolver<'_>,
     subject: &Subject<'_>,
     language: Option<&str>,
     abstract_ok: bool,
@@ -182,7 +175,7 @@ fn check(
     let Some(system) = subject
         .system
         .map(str::to_owned)
-        .or_else(|| infer_system(model, expansion))
+        .or_else(|| infer_system(model))
     else {
         return Ok(failed(
             None,
@@ -200,8 +193,8 @@ fn check(
             },
         ));
     };
-    let resolved = match sources.registry.resolve(&system, subject.version) {
-        Ok(resolved) => resolved,
+    let served = match sources.registry.resolve(&system, subject.version) {
+        Ok(served) => served,
         Err(error) => {
             return Ok(failed(
                 Some(system.clone()),
@@ -216,48 +209,31 @@ fn check(
             ));
         }
     };
-    let provider: &Arc<dyn CodeSystemProvider> = &resolved.provider;
+    let provider: &Arc<dyn CodeSystemProvider> = &served.provider;
     let version = provider.identity().version.clone();
     let Some(located) = provider.locate(subject.code)? else {
-        let unknown = Issue {
-            severity: "error",
-            code: "code-invalid",
-            kind: "invalid-code",
-            text: format!(
-                "unknown code `{}` in the code system `{system}` version `{version}`",
-                subject.code
-            ),
-            expression: Some(subject.expression),
-        };
-        let mut validation = failed(
-            Some(system.clone()),
-            Some(version),
-            not_in_vs(
-                model,
-                &system_code(&system, subject.code),
-                subject.expression,
-            ),
-        );
-        validation.response.message = Some(unknown.text.as_str().into());
-        validation.issues.push(unknown);
-        return Ok(validation);
+        return Ok(unknown_code(model, &system, version, subject));
     };
-    let item = expansion
-        .items
-        .iter()
-        .find(|item| item.system == system && item.code == located.code && item.version == version);
-    let Some(item) = item else {
-        return Ok(failed(
-            Some(system.clone()),
-            Some(version),
-            not_in_vs(
-                model,
-                &system_code(&system, &located.code),
-                subject.expression,
-            ),
+    let Some(item) = resolver.contains_compose(
+        &model.canonical(),
+        &model.compose,
+        &system,
+        subject.version,
+        &located.code,
+        language,
+    )?
+    else {
+        let display = provider.display(located.concept, language)?;
+        return Ok(outside_value_set(
+            model,
+            &system,
+            version,
+            &located,
+            display.as_deref(),
+            subject.expression,
         ));
     };
-    let issues = assess(provider, &located, item, subject, language, abstract_ok)?;
+    let issues = assess(provider, &located, &item, subject, language, abstract_ok)?;
     let display = provider.display(located.concept, language)?;
     let result = !issues.iter().any(|issue| issue.severity == "error");
     let message = issues
@@ -272,7 +248,7 @@ fn check(
             display: display.as_deref().map(Into::into),
         },
         system: Some(system),
-        version: Some(version),
+        version: Some(version).filter(|v| !v.is_empty()),
         code: Some(located.code),
         issues,
     })
@@ -363,13 +339,12 @@ fn display_matches(
 }
 
 /// The one system a value set draws on, when there is exactly one.
-fn infer_system(model: &ValueSetModel, expansion: &Expansion) -> Option<String> {
+fn infer_system(model: &ValueSetModel) -> Option<String> {
     let mut systems: Vec<&str> = model
         .compose
         .include
         .iter()
         .filter_map(|include| include.system.as_ref().map(|s| s.url.as_str()))
-        .chain(expansion.versions.iter().map(|v| v.url.as_str()))
         .collect();
     systems.sort_unstable();
     systems.dedup();
@@ -399,6 +374,7 @@ fn not_in_vs(model: &ValueSetModel, system_code: &str, expression: &'static str)
 
 /// A `result = false` validation carrying `issue`.
 fn failed(system: Option<String>, version: Option<String>, issue: Issue) -> Validation {
+    let version = version.filter(|v| !v.is_empty());
     Validation {
         response: ValueSetValidateCodeResponse {
             result: false.into(),
@@ -420,4 +396,56 @@ pub fn tx_issue_coding(kind: &str) -> Coding {
         code: Some(kind.into()),
         ..Default::default()
     }
+}
+
+/// The failed validation of a code the system does not have: not in the value
+/// set, and unknown in the system.
+fn unknown_code(
+    model: &ValueSetModel,
+    system: &str,
+    version: String,
+    subject: &Subject<'_>,
+) -> Validation {
+    let unknown = Issue {
+        severity: "error",
+        code: "code-invalid",
+        kind: "invalid-code",
+        text: format!(
+            "unknown code `{}` in the code system `{system}` version `{version}`",
+            subject.code
+        ),
+        expression: Some(subject.expression),
+    };
+    let mut validation = failed(
+        Some(system.to_owned()),
+        Some(version),
+        not_in_vs(
+            model,
+            &system_code(system, subject.code),
+            subject.expression,
+        ),
+    );
+    validation.response.message = Some(unknown.text.as_str().into());
+    validation.issues.push(unknown);
+    validation
+}
+
+/// The failed validation of a code the system has but the value set does
+/// not: the code and its display are still echoed.
+fn outside_value_set(
+    model: &ValueSetModel,
+    system: &str,
+    version: String,
+    located: &crate::provider::Located,
+    display: Option<&str>,
+    expression: &'static str,
+) -> Validation {
+    let mut validation = failed(
+        Some(system.to_owned()),
+        Some(version),
+        not_in_vs(model, &system_code(system, &located.code), expression),
+    );
+    validation.code = Some(located.code.clone());
+    validation.response.display = display.map(Into::into);
+    validation
 }

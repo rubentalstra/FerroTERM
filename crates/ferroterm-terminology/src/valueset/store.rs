@@ -4,7 +4,7 @@
 use std::cell::RefCell;
 
 use super::model::ValueSetModel;
-use crate::compose::{Compose, ComposeError, Expander, Expansion, Options, ValueSetResolver};
+use crate::compose::{Compose, ComposeError, Expander, Expansion, Item, Options, ValueSetResolver};
 use crate::registry::Registry;
 use crate::versioned::VersionedStore;
 
@@ -84,8 +84,40 @@ impl<'a> Resolver<'a> {
     }
 }
 
+impl Resolver<'_> {
+    /// Whether `compose`, named `url` for cycle detection, contains `code` of
+    /// `system`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ComposeError`] for a cycle or a failure to evaluate.
+    pub fn contains_compose(
+        &self,
+        url: &str,
+        compose: &Compose,
+        system: &str,
+        version: Option<&str>,
+        code: &str,
+        language: Option<&str>,
+    ) -> Result<Option<Item>, ComposeError> {
+        if self.active.borrow().iter().any(|active| active == url) {
+            return Err(ComposeError::Cycle(url.to_owned()));
+        }
+        self.active.borrow_mut().push(url.to_owned());
+        let result = Expander::with_resolver(self.registry, self)
+            .contains(compose, system, version, code, language);
+        self.active.borrow_mut().pop();
+        result
+    }
+}
+
 impl ValueSetResolver for Resolver<'_> {
     fn expand(&self, url: &str) -> Result<Expansion, ComposeError> {
         self.expand_with(url, &Options::default())
+    }
+
+    fn contains(&self, url: &str, system: &str, code: &str) -> Result<Option<Item>, ComposeError> {
+        let compose = self.compose(url)?;
+        self.contains_compose(url, &compose, system, None, code, None)
     }
 }

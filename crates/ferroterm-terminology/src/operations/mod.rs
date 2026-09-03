@@ -75,6 +75,12 @@ pub enum OperationError {
     /// The value set cannot be expanded as defined.
     #[error("{0}")]
     ValueSetInvalid(String),
+    /// The expansion is larger than the server returns without paging.
+    #[error("{0}")]
+    TooCostly(String),
+    /// The system cannot decide the relationship asked of it.
+    #[error("{0}")]
+    CannotDetermine(String),
     /// The provider failed.
     #[error("the code system provider failed")]
     Provider(#[source] ProviderError),
@@ -87,13 +93,32 @@ impl OperationError {
         match self {
             Self::Required(_) => "required",
             Self::Invalid(_) | Self::ValueSetInvalid(_) => "invalid",
-            Self::NotSupported(_) => "not-supported",
+            Self::NotSupported(_) | Self::CannotDetermine(_) => "not-supported",
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
             | Self::UnknownCode { .. }
             | Self::UnknownValueSet(_)
             | Self::UnknownConceptMap(_) => "not-found",
+            Self::TooCostly(_) => "too-costly",
             Self::Provider(_) => "exception",
+        }
+    }
+
+    /// The `tx-issue-type` code of the failure, for `issue.details.coding`
+    /// (<https://build.fhir.org/ig/FHIR/fhir-tools-ig/CodeSystem-tx-issue-type.html>).
+    #[must_use]
+    pub const fn tx_issue_type(&self) -> &'static str {
+        match self {
+            Self::Required(_) | Self::Invalid(_) => "invalid-data",
+            Self::NotSupported(_) | Self::Provider(_) => "not-supported",
+            Self::UnknownSystem(_)
+            | Self::UnknownVersion { .. }
+            | Self::UnknownValueSet(_)
+            | Self::UnknownConceptMap(_) => "not-found",
+            Self::UnknownCode { .. } => "invalid-code",
+            Self::ValueSetInvalid(_) => "vs-invalid",
+            Self::TooCostly(_) => "too-costly",
+            Self::CannotDetermine(_) => "cannot-determine",
         }
     }
 
@@ -116,7 +141,9 @@ impl OperationError {
             // NOTE: 422 is the status for a resource that breaks the server's
             // rules (<https://hl7.org/fhir/R4B/http.html#status-codes>); a compose
             // the layer cannot evaluate is that resource.
-            Self::ValueSetInvalid(_) => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::ValueSetInvalid(_) | Self::TooCostly(_) | Self::CannotDetermine(_) => {
+                StatusCode::UNPROCESSABLE_ENTITY
+            }
             Self::Provider(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -144,6 +171,7 @@ impl From<ProviderError> for OperationError {
             | ProviderError::InvalidFilterValue { .. }
             | ProviderError::Regex(_)
             | ProviderError::UnknownCode(_) => Self::ValueSetInvalid(error.to_string()),
+            ProviderError::CannotDetermine(_) => Self::CannotDetermine(error.to_string()),
             other => Self::Provider(other),
         }
     }
@@ -246,6 +274,12 @@ impl From<crate::compose::ComposeError> for OperationError {
         use crate::compose::ComposeError;
         match error {
             ComposeError::Resolve(error) => error.into(),
+            ComposeError::Provider {
+                system,
+                source: ProviderError::NotEnumerable,
+            } => Self::NotSupported(format!(
+                "The code system '{system}' cannot be expanded because its codes cannot be iterated or enumerated in any meaningful sense"
+            )),
             ComposeError::Provider { source, .. } => source.into(),
             ComposeError::UnknownValueSet(url) => Self::UnknownValueSet(url),
             ComposeError::UnknownCode { .. }
