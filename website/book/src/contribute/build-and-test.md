@@ -1,57 +1,80 @@
 # Build and test
 
-This page is a short pointer for contributors. The deeper design and the working
-discipline live in the repository, and this book keeps to what you need to get
-building.
+This page is a short pointer for contributors. The deeper design and the
+working discipline live in the repository, and this book keeps to what you need
+to get building.
 
 <!-- toc -->
 
 ## Read these first
 
 - [`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md):
-  the design authority, with citations to the terminology-server and
-  graph-reachability literature.
+  the design authority, with citations.
+- [`docs/terminologies.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/terminologies.md):
+  every code system, its FHIR page, its licence, and what the provider serves.
 - [`CONTRIBUTING.md`](https://github.com/rubentalstra/FerroTERM/blob/main/CONTRIBUTING.md):
   the contribution rules, branches, commit signing, and pull-request checklist.
 
+## The workspace
+
+One Cargo workspace, Rust 1.98, edition 2024: `crates/*` are the libraries
+(`ferroterm-fhir` generated; `ferroterm-rf2`, `ferroterm-loinc`,
+`ferroterm-classification`, `ferroterm-rrf`, `ferroterm-icd11` the release
+readers; `ferroterm-graph`, `ferroterm-store`, `ferroterm-text` the
+substrates; `ferroterm-terminology` the engine and providers), `app/ferroterm-server`
+is the axum server, and `tools/*` are the code generator, the offline build,
+and the synthetic test fixtures. Every crate carries a `CLAUDE.md` with its
+local discipline.
+
 ## The local gates
 
-Once the Cargo workspace exists, the local gates mirror CI exactly. Run them
-before you open a pull request:
+The local gates mirror CI. Run them before you open a pull request:
 
 ```console
 $ cargo fmt --all --check
 $ cargo clippy --workspace --all-targets --all-features -- -D warnings
 $ cargo nextest run --workspace --locked
-$ cargo test --doc --workspace --locked
-$ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features --document-private-items
+$ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --document-private-items
 $ cargo deny check
+$ scripts/checks/comment-style.sh --all
 ```
 
-Scope any command to a crate with `-p <crate>` while you iterate, then run the
-full `--workspace` gates before you push. Every cargo invocation uses `--locked`,
-and `Cargo.lock` is committed.
+Scope a command to a crate with `-p <crate>` while you iterate, then run the
+full `--workspace` gates before you push. `Cargo.lock` is committed and CI
+builds with `--locked`. Shell scripts stay clean at `shellcheck`; workflows at
+`actionlint` and `zizmor`.
 
-The workflow lanes that check shell and YAML (`actionlint`, `zizmor`,
-`shellcheck`) run on every change, including before any Rust exists. If you edit a
-shell script, keep it clean at `shellcheck --severity=style`.
+## Conformance in CI
+
+`scripts/checks/tx-ecosystem.sh` runs the HL7 terminology ecosystem suite
+against a release build of the server with the FHIR Validator's `txTests`
+mode (the one place a JVM runs, in CI, never in the server) and compares the
+result with the committed pass list under `conformance/tx-ecosystem/`. A
+listed test that fails is a regression; a test that starts passing is added in
+the same change. `--mode icd-11 --index <dirs>` runs a code system mode by
+hand over local artifacts.
 
 ## The two layers
 
-- `crates/ferroterm-fhir` is generated from the vendored FHIR specs. Never hand-edit
-  a `// @generated` file. See [The codegen model](codegen.md).
-- The SNOMED engine and the server are hand-written, idiomatic Rust, with the
-  FHIR and SNOMED specifications as the authority.
+- `crates/ferroterm-fhir` is generated from the vendored FHIR packages. Never
+  hand-edit a `// @generated` file. See [The codegen model](codegen.md).
+- Everything else is hand-written, idiomatic Rust, with the FHIR and SNOMED
+  specifications as the authority: a conformance-facing test cites the spec
+  clause it asserts, and a decision the specs leave open is marked as the
+  project's own.
 
-## No SNOMED CT content in the repository
+## No code system content in the repository
 
-Tests use shaped, synthetic content only. Never commit real SNOMED CT concepts
-from a release, and never commit an RF2 file. See
-[Loading a SNOMED CT edition](../operate/loading-snomed.md) for the licensing
-rule.
+Tests use shaped, synthetic content only: the testkit writes a small
+SNOMED-shaped edition, a LOINC-shaped release, ICD-shaped ClaML and CMS files,
+an RxNorm-shaped RRF release, and an ICD-11-shaped API cache, all with
+invented identifiers. Never commit a real release or content extracted from
+one. See [Loading code systems](../operate/loading-snomed.md) for the
+licensing rule; a licensed release for local runs lives under the gitignored
+`data/` directory.
 
-## Correctness oracle
+## Correctness oracles
 
-Terminology answers are checked against Snowstorm as the reference server over the
-same edition, and the ECL evaluator is tested against the published ECL grammar as
-its own layer before the value-set surface depends on it.
+The specifications are the oracle. Reference servers (Snowstorm, the Dutch
+national server, tx.fhir.org) settle edge cases the specifications leave
+silent, and a divergence from them is investigated, never adopted blindly.

@@ -1,59 +1,71 @@
-# Implicit value sets and ECL
+# Value sets, implicit value sets, and ECL
 
-SNOMED CT defines implicit value sets: value sets you name by a URL convention
-rather than by storing a ValueSet resource. FerroTERM expands them with SNOMED's
-Expression Constraint Language (ECL). This page explains the URL convention and
-how ECL drives an expansion.
-
-> [!NOTE]
-> ECL is the hard part of the server and its main risk, so it is built and tested
-> as its own layer against the published ECL grammar before the value-set surface
-> depends on it. Correctness is measured against Snowstorm.
+A value set names a set of codes. FerroTERM answers value sets defined as FHIR
+resources, brought with the request, or implied by a URL a code system
+defines. This page covers what is answered today and what the ECL milestone
+adds.
 
 <!-- toc -->
 
-## The implicit value set convention
+## Implicit value sets today
 
-SNOMED CT on FHIR lets you name a value set by an ECL expression in the value
-set's URL, using the `fhir_vs` convention:
+Several code systems define value sets by URL convention, without a stored
+resource, and their providers answer them:
 
-```text
-http://snomed.info/sct?fhir_vs=ecl/<expression>
+| Code system | URL | Members |
+|---|---|---|
+| LOINC | `http://loinc.org/vs` | every code |
+| LOINC | `http://loinc.org/vs/LL…` | the answers of the answer list |
+| LOINC | `http://loinc.org/vs/LP…` | everything under the part in the multiaxial hierarchy |
+| UCUM | `http://unitsofmeasure.org/vs` | every valid unit (validation only; it cannot be enumerated) |
+| RxNorm | `http://www.nlm.nih.gov/research/umls/rxnorm/vs` | every RXCUI |
+| ICD-11 | `<entity URI>/postcoordinationScale/<axis>` | the values a stem takes on that axis |
+
+Pass the URL as `url` to `ValueSet/$expand` or `ValueSet/$validate-code`.
+
+## A SNOMED CT value set today
+
+The FHIR SNOMED CT page defines `http://snomed.info/sct?fhir_vs` (all
+concepts), `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, `?fhir_vs=refset/[sctid]`,
+and `?fhir_vs=ecl/[expression]`, with an optional edition base. FerroTERM does
+not answer these URLs yet; the first four are tracked for the current
+milestone and `ecl/` for v0.0.8. Until then a SNOMED CT value set is a
+`compose` with the filters the provider declares, sent inline or as a loaded
+resource:
+
+```json
+{
+  "resourceType": "ValueSet",
+  "status": "active",
+  "compose": {
+    "include": [{
+      "system": "http://snomed.info/sct",
+      "filter": [{ "property": "concept", "op": "is-a", "value": "404684003" }]
+    }]
+  }
+}
 ```
 
-You pass that URL as the value set to `ValueSet/$expand`, and the server expands
-the ECL expression against the loaded edition. The plain `?fhir_vs` (with no
-`ecl/`) names the implicit value set of all SNOMED CT concepts, and `?fhir_vs=isa/<code>`
-names the value set of a concept and its descendants.
+The `is-a`, `descendent-of`, `is-not-a`, `generalizes`, `in`, `not-in`, and
+`regex` filters over `concept` are answered from the transitive closure and the
+store; a display language selects the preferred term from the language
+reference set.
 
-## What ECL expresses
+## What ECL adds (v0.0.8)
 
-Every ECL expression returns a set of concepts. The core operators over the is-a
-hierarchy:
-
-| ECL | Meaning |
-|---|---|
-| `<< X` | X and all its descendants |
-| `< X` | the descendants of X, not X itself |
-| `>> X` | X and all its ancestors |
-| `> X` | the ancestors of X, not X itself |
-
-Refinement narrows a set by attribute values, for example `< 404684003 : 363698007 = << 39057004`
-reads as the descendants of one concept that have a given attribute pointing into
-a given subtree. ECL also supports conjunction, disjunction, exclusion, attribute
-groups, and cardinality.
-
-## How FerroTERM evaluates it
-
-FerroTERM compiles an ECL expression to set algebra over the precomputed structures.
-A `<<` or `>>` set is a precomputed bitmap returned directly, a refinement is a
-bitmap intersection or union over the per-attribute adjacency, and conjunction
-and disjunction are bitmap AND and OR. There is no live graph traversal on this
-path, which is what keeps a descendant expansion of a high-level concept fast.
+Every ECL expression returns a set of concepts, and the evaluator compiles it
+to set algebra over the precomputed bitmaps: `<< X` is the descendant bitmap
+plus `X`, a refinement such as `< 404684003 : 363698007 = << 39057004`
+intersects with the attribute adjacency, and `AND`, `OR`, and `MINUS` are
+bitmap operations. The parser follows the official ANTLR grammar for ECL 2.2
+rule for rule and is tested against the published valid and invalid corpus;
+the evaluator is checked against Snowstorm over the same edition. The three
+issues of the milestone are the parser, the evaluator, and `?fhir_vs=ecl/`
+together with the `constraint` filter.
 
 ## Paging a large expansion
 
-A broad expansion can name a large set, so `$expand` pages its results with the
-FHIR `count` and `offset` parameters, bounded by the server's configured maximum
-page size (see [Configuration](../operate/configuration.md)). Request a page at a
-time rather than an unbounded expansion.
+A broad expansion names a large set, so `$expand` pages with `count` and
+`offset` and refuses an unpaged expansion beyond 1,000 members with
+`too-costly`. `expansion.total` reports the full size, `expansion.offset` the
+page, and the order is deterministic across calls.

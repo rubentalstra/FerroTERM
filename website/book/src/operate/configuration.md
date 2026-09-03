@@ -1,8 +1,10 @@
 # Configuration
 
 The server reads its configuration from environment variables at start. There
-is no configuration file and no command-line flag today; a container sets the
-variables, a host sets them in the service unit.
+is no configuration file and no command-line flag; a container sets the
+variables, a host sets them in the service unit. `ValueSet/$expand` returns
+at most 1,000 members without `count` and asks for paging beyond that
+(`too-costly`); the limit is not configurable.
 
 <!-- toc -->
 
@@ -49,15 +51,9 @@ FHIR id alphabet. An instance-level operation is
 `[base]/r4b/CodeSystem/<id>/$validate-code`. The id is stable for a given
 version and is listed at startup and in `GET /r4b/metadata?mode=terminology`.
 
-## Planned settings
-
-The served FHIR versions (R4B today; R5, R4, and R6 follow) and the
-`ValueSet/$expand` page limits get their variables when those surfaces land;
-they are recorded here when they do.
-
 ## What you do not configure
 
 You do not configure a database connection, a search cluster, or a JVM heap.
-FerroTERM has none of these. The one input the server needs is the built index, and
-you build that offline with the release-loading tool described in
-[Loading a SNOMED CT edition](loading-snomed.md).
+FerroTERM has none of these. The inputs the server needs are the built indexes and any
+FHIR resource directories, and you build the indexes offline with
+`ferroterm-build` as described in [Loading code systems](loading-snomed.md).

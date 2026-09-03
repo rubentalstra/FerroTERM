@@ -12,14 +12,14 @@
 
 - [Install and run](operate/install.md)
 - [Configuration](operate/configuration.md)
-- [Loading a SNOMED CT edition](operate/loading-snomed.md)
+- [Loading code systems](operate/loading-snomed.md)
 - [Hardware sizing](operate/hardware-sizing.md)
 - [Verifying releases](operate/verifying-releases.md)
 
 # Integrate
 
 - [The FHIR terminology API](integrate/fhir-api.md)
-- [Implicit value sets and ECL](integrate/ecl-value-sets.md)
+- [Value sets, implicit value sets, and ECL](integrate/ecl-value-sets.md)
 - [FHIR versions](integrate/fhir-versions.md)
 - [Worked examples](integrate/examples.md)
 
