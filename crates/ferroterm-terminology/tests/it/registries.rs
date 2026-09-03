@@ -4,13 +4,13 @@
 use std::sync::Arc;
 
 use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
-use ferroterm_fhir::r4b::operations::value_set_validate_code::ValueSetValidateCodeRequest;
 use ferroterm_fhir::r4b::value_set::{
     ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeFilter,
 };
 use ferroterm_graph::subsumption::Outcome;
 use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::filter::{Filter, FilterOperator};
+use ferroterm_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use ferroterm_terminology::operations::{
     Invocation, OperationError, Sources, expand, subsumes, value_set_validate_code,
 };
@@ -450,46 +450,48 @@ fn the_grammar_systems_validate_by_membership_and_decline_undetermined_subsumpti
         value_sets: &value_sets,
         concept_maps: &concept_maps,
     };
-    let member = ValueSetValidateCodeRequest {
-        value_set: Some(inline(bcp13::URL, vec![("base", "=", "text")])),
-        code: Some("text/plain; charset=utf-8".into()),
-        system: Some(bcp13::URL.into()),
-        ..Default::default()
+    let member = ValueSetValidateInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(bcp13::URL, vec![("base", "=", "text")]),
+        )),
+        code: Some(String::from("text/plain; charset=utf-8")),
+        system: Some(bcp13::URL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&sources, &member).expect("validates");
-    assert_eq!(validation.response.result.value, Some(true));
+    assert!(validation.result);
     assert_eq!(
         validation.code.as_deref(),
         Some("text/plain; charset=utf-8")
     );
-    let outsider = ValueSetValidateCodeRequest {
-        value_set: Some(inline(bcp13::URL, vec![("base", "=", "text")])),
-        code: Some("application/json".into()),
-        system: Some(bcp13::URL.into()),
-        ..Default::default()
+    let outsider = ValueSetValidateInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(bcp13::URL, vec![("base", "=", "text")]),
+        )),
+        code: Some(String::from("application/json")),
+        system: Some(bcp13::URL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&sources, &outsider).expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     assert_eq!(validation.issues[0].kind, "not-in-vs");
-    let english = ValueSetValidateCodeRequest {
-        value_set: Some(inline(
-            bcp47::URL,
-            vec![("language", "=", "en"), ("region", "=", "US")],
+    let english = ValueSetValidateInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &inline(
+                bcp47::URL,
+                vec![("language", "=", "en"), ("region", "=", "US")],
+            ),
         )),
-        code: Some("en-us".into()),
-        system: Some(bcp47::URL.into()),
-        ..Default::default()
+        code: Some(String::from("en-us")),
+        system: Some(bcp47::URL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&sources, &english).expect("validates");
-    assert_eq!(validation.response.result.value, Some(true));
+    assert!(validation.result);
     assert_eq!(validation.code.as_deref(), Some("en-US"));
     assert_eq!(
-        validation
-            .response
-            .display
-            .as_ref()
-            .and_then(|d| d.value.as_deref()),
+        validation.display.as_deref(),
         Some("English (United States)")
     );
     let subsumes_request = subsumes::SubsumesInput {

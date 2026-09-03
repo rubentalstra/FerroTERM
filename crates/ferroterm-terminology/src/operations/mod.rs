@@ -286,17 +286,6 @@ pub(crate) fn uri_text(value: Option<&ferroterm_fhir::r4b::primitives::Uri>) -> 
 }
 
 /// A `Coding`'s system, version, code, and display as text.
-pub(crate) fn coding_parts(
-    coding: &ferroterm_fhir::r4b::coding::Coding,
-) -> (Option<&str>, Option<&str>, Option<&str>, Option<&str>) {
-    (
-        uri_text(coding.system.as_ref()),
-        string_text(coding.version.as_ref()),
-        code_text(coding.code.as_ref()),
-        string_text(coding.display.as_ref()),
-    )
-}
-
 impl From<crate::compose::ComposeError> for OperationError {
     fn from(error: crate::compose::ComposeError) -> Self {
         use crate::compose::ComposeError;

@@ -5,13 +5,13 @@
 //! issue carries `severity`, `code` from the issue-type value set, and
 //! `diagnostics`; the status is the one the operation layer chose.
 
+use crate::r4b::map::tx_issue_coding;
 use axum::body::Body;
 use axum::response::{IntoResponse, Response};
 use ferroterm_fhir::codec::Json;
 use ferroterm_fhir::r4b::codeable_concept::CodeableConcept;
 use ferroterm_fhir::r4b::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
 use ferroterm_terminology::operations::OperationError;
-use ferroterm_terminology::operations::value_set_validate_code::tx_issue_coding;
 use http::StatusCode;
 use http::header::CONTENT_TYPE;
 

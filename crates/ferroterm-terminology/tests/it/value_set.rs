@@ -4,13 +4,13 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::coding::Coding;
 use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
-use ferroterm_fhir::r4b::operations::value_set_validate_code::ValueSetValidateCodeRequest;
 use ferroterm_fhir::r4b::value_set::{ValueSet, ValueSetCompose, ValueSetComposeInclude};
 use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir};
 use ferroterm_terminology::fhir_codesystem::provider::FhirCodeSystem;
+use ferroterm_terminology::operations::CodingRef;
+use ferroterm_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use ferroterm_terminology::operations::{OperationError, Sources, expand, value_set_validate_code};
 use ferroterm_terminology::registry::Registry;
 use ferroterm_terminology::valueset;
@@ -390,51 +390,40 @@ fn an_unknown_filter_operator_is_refused_at_load() {
 #[test]
 fn validate_code_answers_the_membership_the_echo_and_the_issues() {
     let world = World::load();
-    let good = ValueSetValidateCodeRequest {
-        url: Some(VS_PETS.into()),
-        code: Some("kitten".into()),
-        system: Some(ANIMALS.into()),
-        ..Default::default()
+    let good = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &good).expect("validates");
-    assert_eq!(validation.response.result.value, Some(true));
-    assert_eq!(
-        validation
-            .response
-            .display
-            .as_ref()
-            .and_then(|d| d.value.as_deref()),
-        Some("Kitten")
-    );
+    assert!(validation.result);
+    assert_eq!(validation.display.as_deref(), Some("Kitten"));
     assert_eq!(validation.system.as_deref(), Some(ANIMALS));
     assert_eq!(validation.version.as_deref(), Some("2.0"));
     assert_eq!(validation.code.as_deref(), Some("kitten"));
     assert!(validation.issues.is_empty());
-    let inferred = ValueSetValidateCodeRequest {
-        url: Some(VS_PETS.into()),
-        code: Some("kitten".into()),
-        ..Default::default()
+    let inferred = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("kitten")),
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &inferred).expect("validates");
-    assert_eq!(
-        validation.response.result.value,
-        Some(true),
-        "one system: inferred"
-    );
-    let outside = ValueSetValidateCodeRequest {
-        url: Some(VS_PETS.into()),
-        coding: Some(Coding {
-            system: Some(ANIMALS.into()),
-            code: Some("dog".into()),
-            ..Default::default()
+    assert!(validation.result, "one system: inferred");
+    let outside = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        coding: Some(CodingRef {
+            system: Some(ANIMALS.to_owned()),
+            code: Some(String::from("dog")),
+            ..CodingRef::default()
         }),
-        ..Default::default()
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &outside).expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     assert_eq!(validation.issues.len(), 1);
     assert_eq!(validation.issues[0].kind, "not-in-vs");
     assert_eq!(validation.issues[0].code, "code-invalid");
@@ -443,159 +432,143 @@ fn validate_code_answers_the_membership_the_echo_and_the_issues() {
         Some("dog"),
         "a valid code outside the set is still echoed"
     );
-    let unknown_code = ValueSetValidateCodeRequest {
-        url: Some(VS_PETS.into()),
-        code: Some("unicorn".into()),
-        system: Some(ANIMALS.into()),
-        ..Default::default()
+    let unknown_code = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("unicorn")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &unknown_code).expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
     assert_eq!(kinds, ["not-in-vs", "invalid-code"]);
-    let unknown_system = ValueSetValidateCodeRequest {
-        url: Some(VS_PETS.into()),
-        code: Some("kitten".into()),
-        system: Some("http://example.org/fhir/CodeSystem/nowhere".into()),
-        ..Default::default()
+    let unknown_system = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(String::from("http://example.org/fhir/CodeSystem/nowhere")),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&world.sources(), &unknown_system)
         .expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     assert_eq!(validation.issues[0].kind, "not-found");
 }
 
 #[test]
 fn validate_code_checks_display_case_and_inactive_codes() {
     let world = World::load();
-    let wrong_display = ValueSetValidateCodeRequest {
-        url: Some(VS_ALL.into()),
-        code: Some("cat".into()),
-        system: Some(ANIMALS.into()),
-        display: Some("Hamster".into()),
-        ..Default::default()
+    let wrong_display = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("cat")),
+        system: Some(ANIMALS.to_owned()),
+        display: Some(String::from("Hamster")),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&world.sources(), &wrong_display)
         .expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     assert_eq!(validation.issues[0].kind, "invalid-display");
-    assert_eq!(
-        validation
-            .response
-            .display
-            .as_ref()
-            .and_then(|d| d.value.as_deref()),
-        Some("Cat")
-    );
-    let synonym = ValueSetValidateCodeRequest {
-        url: Some(VS_ALL.into()),
-        code: Some("cat".into()),
-        system: Some(ANIMALS.into()),
-        display: Some("domestic  CAT".into()),
-        ..Default::default()
+    assert_eq!(validation.display.as_deref(), Some("Cat"));
+    let synonym = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("cat")),
+        system: Some(ANIMALS.to_owned()),
+        display: Some(String::from("domestic  CAT")),
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &synonym).expect("validates");
-    assert_eq!(
-        validation.response.result.value,
-        Some(true),
+    assert!(
+        validation.result,
         "a designation, whitespace and case folded"
     );
-    let case = ValueSetValidateCodeRequest {
-        url: Some(VS_ENUMERATED.into()),
-        code: Some("red".into()),
-        system: Some(COLOURS.into()),
-        ..Default::default()
+    let case = ValueSetValidateInput {
+        url: Some(VS_ENUMERATED.to_owned()),
+        code: Some(String::from("red")),
+        system: Some(COLOURS.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &case).expect("validates");
-    assert_eq!(
-        validation.response.result.value,
-        Some(true),
-        "colours is case-insensitive"
-    );
+    assert!(validation.result, "colours is case-insensitive");
     assert_eq!(
         validation.code.as_deref(),
         Some("RED"),
         "the system's spelling is echoed"
     );
-    let inactive = ValueSetValidateCodeRequest {
-        url: Some(VS_ALL.into()),
-        value_set_version: Some("1.0".into()),
-        code: Some("dodo".into()),
-        system: Some(ANIMALS.into()),
-        ..Default::default()
+    let inactive = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        value_set_version: Some(String::from("1.0")),
+        code: Some(String::from("dodo")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &inactive).expect("validates");
-    assert_eq!(
-        validation.response.result.value,
-        Some(true),
-        "inactive is not invalid"
-    );
+    assert!(validation.result, "inactive is not invalid");
     assert_eq!(validation.issues[0].kind, "status-check");
     assert_eq!(validation.issues[0].severity, "warning");
-    let abstract_refused = ValueSetValidateCodeRequest {
-        url: Some(VS_ALL.into()),
-        code: Some("pet".into()),
-        system: Some(ANIMALS.into()),
-        r#abstract: Some(false.into()),
-        ..Default::default()
+    let abstract_refused = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("pet")),
+        system: Some(ANIMALS.to_owned()),
+        abstract_ok: Some(false),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&world.sources(), &abstract_refused)
         .expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     assert_eq!(validation.issues[0].kind, "code-rule");
 }
 
 #[test]
 fn validate_code_refuses_malformed_requests() {
     let world = World::load();
-    let none = ValueSetValidateCodeRequest {
-        url: Some(VS_ALL.into()),
-        ..Default::default()
+    let none = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     assert!(matches!(
         value_set_validate_code::validate_code(&world.sources(), &none),
         Err(OperationError::Invalid(_))
     ));
-    let two = ValueSetValidateCodeRequest {
-        url: Some(VS_ALL.into()),
-        code: Some("cat".into()),
-        coding: Some(Coding::default()),
-        ..Default::default()
+    let two = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("cat")),
+        coding: Some(CodingRef::default()),
+        ..ValueSetValidateInput::default()
     };
     assert!(matches!(
         value_set_validate_code::validate_code(&world.sources(), &two),
         Err(OperationError::Invalid(_))
     ));
-    let no_value_set = ValueSetValidateCodeRequest {
-        code: Some("cat".into()),
-        system: Some(ANIMALS.into()),
-        ..Default::default()
+    let no_value_set = ValueSetValidateInput {
+        code: Some(String::from("cat")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     assert!(matches!(
         value_set_validate_code::validate_code(&world.sources(), &no_value_set),
         Err(OperationError::Required(_))
     ));
-    let unknown = ValueSetValidateCodeRequest {
-        url: Some("http://example.org/fhir/ValueSet/nowhere".into()),
-        code: Some("cat".into()),
-        system: Some(ANIMALS.into()),
-        ..Default::default()
+    let unknown = ValueSetValidateInput {
+        url: Some(String::from("http://example.org/fhir/ValueSet/nowhere")),
+        code: Some(String::from("cat")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     assert!(matches!(
         value_set_validate_code::validate_code(&world.sources(), &unknown),
         Err(OperationError::UnknownValueSet(_))
     ));
-    let ambiguous = ValueSetValidateCodeRequest {
-        url: Some(VS_ENUMERATED.into()),
-        code: Some("cat".into()),
-        ..Default::default()
+    let ambiguous = ValueSetValidateInput {
+        url: Some(VS_ENUMERATED.to_owned()),
+        code: Some(String::from("cat")),
+        ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &ambiguous).expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     assert_eq!(validation.issues[0].kind, "cannot-infer");
 }

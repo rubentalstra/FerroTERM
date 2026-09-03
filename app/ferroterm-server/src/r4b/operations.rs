@@ -10,8 +10,6 @@ use std::sync::Arc;
 use axum::body::Bytes;
 use axum::extract::{Path as UrlPath, Query, State};
 use axum::response::{IntoResponse, Response};
-use ferroterm_fhir::r4b::codeable_concept::CodeableConcept;
-use ferroterm_fhir::r4b::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
 use ferroterm_fhir::r4b::operations::code_system_lookup::{
     CODE_SYSTEM_LOOKUP, CodeSystemLookupRequest,
 };
@@ -28,12 +26,9 @@ use ferroterm_fhir::r4b::operations::value_set_expand::{VALUE_SET_EXPAND, ValueS
 use ferroterm_fhir::r4b::operations::value_set_validate_code::{
     VALUE_SET_VALIDATE_CODE, ValueSetValidateCodeRequest,
 };
-use ferroterm_fhir::r4b::parameters::{Parameters, ParametersParameter, ParametersParameterValue};
-use ferroterm_fhir::r4b::resource::Resource;
-use ferroterm_terminology::operations::translate::{self, Translation};
-use ferroterm_terminology::operations::value_set_validate_code::{Validation, tx_issue_coding};
+use ferroterm_fhir::r4b::parameters::Parameters;
 use ferroterm_terminology::operations::{
-    Invocation, expand, lookup, subsumes, validate_code, value_set_validate_code,
+    Invocation, expand, lookup, subsumes, translate, validate_code, value_set_validate_code,
 };
 use http::{HeaderMap, StatusCode};
 
@@ -123,116 +118,18 @@ fn run_expand(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
 fn run_value_set_validate_code(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
     let request = ValueSetValidateCodeRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let validation = value_set_validate_code::validate_code(&scope.sources(), &request)?;
-    wire::respond(&validation_parameters(&validation))
-}
-
-/// The R4B response plus the outputs a general-purpose terminology server
-/// returns beside it.
-///
-/// `system`, `version`, `code`, and `issues` are R5 output parameters and
-/// ecosystem requirements the R4B definition does not declare; they are
-/// appended deliberately for validators that read them
-/// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
-fn validation_parameters(validation: &Validation) -> Parameters {
-    let mut parameters = validation.response.to_parameters();
-    let mut push = |name: &str, value: ParametersParameterValue| {
-        parameters.parameter.push(ParametersParameter {
-            name: name.into(),
-            value: Some(value),
-            ..Default::default()
-        });
-    };
-    if let Some(system) = &validation.system {
-        push(
-            "system",
-            ParametersParameterValue::Uri(system.as_str().into()),
-        );
-    }
-    if let Some(version) = &validation.version {
-        push(
-            "version",
-            ParametersParameterValue::String(version.as_str().into()),
-        );
-    }
-    if let Some(code) = &validation.code {
-        push("code", ParametersParameterValue::Code(code.as_str().into()));
-    }
-    if !validation.issues.is_empty() {
-        let issue = validation
-            .issues
-            .iter()
-            .map(|issue| OperationOutcomeIssue {
-                severity: issue.severity.into(),
-                code: issue.code.into(),
-                details: Some(CodeableConcept {
-                    coding: vec![tx_issue_coding(issue.kind)],
-                    text: Some(issue.text.as_str().into()),
-                    ..Default::default()
-                }),
-                expression: issue.expression.map(Into::into).into_iter().collect(),
-                ..Default::default()
-            })
-            .collect();
-        parameters.parameter.push(ParametersParameter {
-            name: "issues".into(),
-            resource: Some(Resource::OperationOutcome(Box::new(OperationOutcome {
-                issue,
-                ..Default::default()
-            }))),
-            ..Default::default()
-        });
-    }
-    parameters
+    let validation = value_set_validate_code::validate_code(
+        &scope.sources(),
+        &map::value_set_validate_input(&request),
+    )?;
+    wire::respond(&map::value_set_validation_parameters(&validation))
 }
 
 fn run_translate(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
     let request = ConceptMapTranslateRequest::from_parameters(parameters)
         .map_err(|e| wire::parameters_failure(&e))?;
-    let translation = translate::translate(&scope.sources(), &request)?;
-    wire::respond(&translation_parameters(&translation))
-}
-
-/// The R4B response with, per `match`, the parts a general-purpose
-/// terminology server adds: `originMap`, `sourceConcept`, `sourceComment`,
-/// and `noMap`. Ecosystem outputs beside the declared ones, appended
-/// deliberately (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
-fn translation_parameters(translation: &Translation) -> Parameters {
-    let mut parameters = translation.response.to_parameters();
-    let mut origins = translation.origins.iter();
-    for parameter in &mut parameters.parameter {
-        if parameter.name.value.as_deref() != Some("match") {
-            continue;
-        }
-        let Some(origin) = origins.next() else { break };
-        let mut part = |name: &str, value: ParametersParameterValue| {
-            parameter.part.push(ParametersParameter {
-                name: name.into(),
-                value: Some(value),
-                ..Default::default()
-            });
-        };
-        part(
-            "originMap",
-            ParametersParameterValue::Canonical(origin.origin_map.as_str().into()),
-        );
-        if let Some(concept) = &origin.source_concept {
-            part(
-                "sourceConcept",
-                ParametersParameterValue::Coding(concept.clone()),
-            );
-        }
-        if let Some(comment) = &origin.source_comment {
-            part(
-                "sourceComment",
-                ParametersParameterValue::String(comment.as_str().into()),
-            );
-        }
-        if origin.no_map {
-            part("noMap", ParametersParameterValue::Boolean(true.into()));
-        }
-    }
-    parameters
+    let translation = translate::translate(&scope.sources(), &map::translate_input(&request))?;
+    wire::respond(&map::translation_parameters(&translation))
 }
 
 fn finish(handled: Handled) -> Response {

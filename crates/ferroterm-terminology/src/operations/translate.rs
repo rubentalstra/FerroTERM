@@ -1,5 +1,7 @@
-//! `ConceptMap/$translate` on R4B
-//! (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>).
+//! `ConceptMap/$translate` in the terms every served FHIR version shares.
+//!
+//! The operation pages: <https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>
+//! and <https://hl7.org/fhir/R5/conceptmap-operation-translate.html>.
 //!
 //! The map is inline, named by `url`, or chosen: every stored map whose
 //! scopes fit `source` and `target` and whose groups map the code's system
@@ -11,16 +13,9 @@
 
 use std::sync::Arc;
 
-use ferroterm_fhir::r4b::coding::Coding;
-use ferroterm_fhir::r4b::operations::concept_map_translate::{
-    ConceptMapTranslateRequest, ConceptMapTranslateResponse, ConceptMapTranslateResponseMatch,
-    ConceptMapTranslateResponseMatchProduct,
-};
-
-use super::{OperationError, Sources, code_text, coding_parts, string_text, uri_text};
-use crate::conceptmap::convert;
+use super::{CodingRef, OperationError, Sources};
 use crate::conceptmap::model::{
-    ConceptMapModel, DependsOn, Element, Group, Relationship, Target, UnmappedMode,
+    ConceptMapModel, DependsOn, Element, Group, ModelError, Relationship, Target, UnmappedMode,
 };
 use crate::versioned::Versioned;
 
@@ -35,7 +30,7 @@ pub struct MatchOrigin {
     /// The canonical of the map (`url|version`).
     pub origin_map: String,
     /// The source concept the match is for.
-    pub source_concept: Option<Coding>,
+    pub source_concept: Option<CodingRef>,
     /// The element's comment.
     pub source_comment: Option<String>,
     /// `noMap`: the element is explicitly not mapped.
@@ -45,10 +40,68 @@ pub struct MatchOrigin {
 /// The outcome of a translation: the R4B response and, per match, its origin.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Translation {
-    /// `result`, `message`, and `match`.
-    pub response: ConceptMapTranslateResponse,
-    /// One origin per entry of `response.match`, in order.
-    pub origins: Vec<MatchOrigin>,
+    /// Whether some match translates the code (a relationship other than `unmatched` or `disjoint`).
+    pub result: bool,
+    /// Why nothing translated, when nothing did.
+    pub message: Option<String>,
+    /// The matches, in the order the maps and groups were read.
+    pub matches: Vec<Match>,
+}
+
+/// One match of the translation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Match {
+    /// The relationship between the source and the target.
+    pub relationship: Relationship,
+    /// The target concept, absent for an element without a target.
+    pub concept: Option<CodingRef>,
+    /// The other elements the match depends on (`product`).
+    pub products: Vec<Product>,
+    /// The canonical of the map the match came from (`source`).
+    pub source: Option<String>,
+    /// Where the match came from, beyond what every version declares.
+    pub origin: MatchOrigin,
+}
+
+/// One `product` of a match: an attribute and the concept it depends on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Product {
+    /// The attribute (`element`).
+    pub element: String,
+    /// The concept.
+    pub concept: CodingRef,
+}
+
+/// The input of `$translate`: the union of the parameters the served versions
+/// declare.
+#[derive(Debug, Default)]
+pub struct TranslateInput {
+    /// The concept map URL (`url`).
+    pub url: Option<String>,
+    /// The concept map version (`conceptMapVersion`).
+    pub concept_map_version: Option<String>,
+    /// The inline `conceptMap`, converted by the wire layer of its version.
+    pub inline_concept_map: Option<Result<ConceptMapModel, ModelError>>,
+    /// The code.
+    pub code: Option<String>,
+    /// The code system URI (`system`).
+    pub system: Option<String>,
+    /// The code system version.
+    pub version: Option<String>,
+    /// The coding, instead of `code`.
+    pub coding: Option<CodingRef>,
+    /// The codings of a `codeableConcept`, instead of `code`.
+    pub codeable_concept: Option<Vec<CodingRef>>,
+    /// The source value set (`source`, R4B) or scope (`sourceScope`, R5).
+    pub source: Option<String>,
+    /// The target value set (`target`, R4B) or scope (`targetScope`, R5).
+    pub target: Option<String>,
+    /// The target code system (`targetsystem`, R4B; `targetSystem`, R5).
+    pub target_system: Option<String>,
+    /// Whether the groups are read the other way.
+    pub reverse: Option<bool>,
+    /// Whether `dependency` was given; not supported.
+    pub dependency: bool,
 }
 
 /// The code under translation.
@@ -68,39 +121,31 @@ struct Subject {
 /// `conceptMap`, an unknown or invalid map, or `dependency`.
 pub fn translate(
     sources: &Sources<'_>,
-    request: &ConceptMapTranslateRequest,
+    input: &TranslateInput,
 ) -> Result<Translation, OperationError> {
-    if !request.dependency.is_empty() {
+    if input.dependency {
         return Err(OperationError::NotSupported(String::from(
             "`dependency` is not supported",
         )));
     }
-    let maps = candidate_maps(sources, request)?;
-    let reverse = request
-        .reverse
-        .as_ref()
-        .and_then(|b| b.value)
-        .unwrap_or(false);
-    let target_system = uri_text(request.targetsystem.as_ref());
-    let subjects = subjects(request)?;
+    let maps = candidate_maps(sources, input)?;
+    let reverse = input.reverse.unwrap_or(false);
+    let target_system = input.target_system.as_deref();
+    let subjects = subjects(input)?;
     let mut matches = Vec::new();
-    let mut origins = Vec::new();
     for subject in &subjects {
         for map in &maps {
-            let found = matches_in(sources, map, subject, target_system, reverse, 0)?;
-            for (found, origin) in found {
-                matches.push(found);
-                origins.push(origin);
-            }
+            matches.extend(matches_in(
+                sources,
+                map,
+                subject,
+                target_system,
+                reverse,
+                0,
+            )?);
         }
     }
-    let result = matches.iter().any(|m| {
-        m.equivalence
-            .as_ref()
-            .and_then(|e| e.value.as_deref())
-            .and_then(Relationship::from_equivalence)
-            .is_some_and(Relationship::translates)
-    });
+    let result = matches.iter().any(|m| m.relationship.translates());
     let message = if result {
         None
     } else {
@@ -113,52 +158,48 @@ pub fn translate(
         })
     };
     Ok(Translation {
-        response: ConceptMapTranslateResponse {
-            result: result.into(),
-            message: message.as_deref().map(Into::into),
-            r#match: matches,
-        },
-        origins,
+        result,
+        message,
+        matches,
     })
 }
 
 /// The codes to translate: the one `code`/`system`, the `coding`, or every
 /// `codeableConcept.coding` with a system.
-fn subjects(request: &ConceptMapTranslateRequest) -> Result<Vec<Subject>, OperationError> {
-    let inputs = usize::from(request.code.is_some())
-        + usize::from(request.coding.is_some())
-        + usize::from(request.codeable_concept.is_some());
+fn subjects(input: &TranslateInput) -> Result<Vec<Subject>, OperationError> {
+    let inputs = usize::from(input.code.is_some())
+        + usize::from(input.coding.is_some())
+        + usize::from(input.codeable_concept.is_some());
     if inputs != 1 {
         return Err(OperationError::Invalid(String::from(
             "provide one and only one of `code`, `coding`, or `codeableConcept`",
         )));
     }
-    if let Some(code) = code_text(request.code.as_ref()) {
-        let system = uri_text(request.system.as_ref()).ok_or_else(|| {
+    if let Some(code) = input.code.as_deref() {
+        let system = input.system.as_deref().ok_or_else(|| {
             OperationError::Required(String::from("`system` is required with `code`"))
         })?;
         return Ok(vec![Subject {
             system: system.to_owned(),
-            version: string_text(request.version.as_ref()).map(str::to_owned),
+            version: input.version.clone(),
             code: code.to_owned(),
         }]);
     }
-    let codings: Vec<&Coding> = match (&request.coding, &request.codeable_concept) {
+    let codings: Vec<&CodingRef> = match (&input.coding, &input.codeable_concept) {
         (Some(coding), _) => vec![coding],
-        (None, Some(concept)) => concept.coding.iter().collect(),
+        (None, Some(concept)) => concept.iter().collect(),
         (None, None) => Vec::new(),
     };
     let mut subjects = Vec::new();
     for coding in codings {
-        let (system, version, code, _) = coding_parts(coding);
-        let (Some(system), Some(code)) = (system, code) else {
+        let (Some(system), Some(code)) = (coding.system.as_deref(), coding.code.as_deref()) else {
             return Err(OperationError::Required(String::from(
                 "a coding to translate needs `system` and `code`",
             )));
         };
         subjects.push(Subject {
             system: system.to_owned(),
-            version: version.map(str::to_owned),
+            version: coding.version.clone(),
             code: code.to_owned(),
         });
     }
@@ -174,18 +215,20 @@ fn subjects(request: &ConceptMapTranslateRequest) -> Result<Vec<Subject>, Operat
 /// map whose scopes fit `source` and `target`.
 fn candidate_maps(
     sources: &Sources<'_>,
-    request: &ConceptMapTranslateRequest,
+    input: &TranslateInput,
 ) -> Result<Vec<Arc<ConceptMapModel>>, OperationError> {
-    let url = uri_text(request.url.as_ref());
-    match (&request.concept_map, url) {
+    let url = input.url.as_deref();
+    match (&input.inline_concept_map, url) {
         (Some(_), Some(_)) => Err(OperationError::Invalid(String::from(
             "provide either `url` or an inline `conceptMap`, not both",
         ))),
         (Some(inline), None) => Ok(vec![Arc::new(
-            convert::r4b::convert(inline).map_err(|e| OperationError::Invalid(e.to_string()))?,
+            inline
+                .clone()
+                .map_err(|e| OperationError::Invalid(e.to_string()))?,
         )]),
         (None, Some(url)) => {
-            let version = string_text(request.concept_map_version.as_ref());
+            let version = input.concept_map_version.as_deref();
             sources
                 .concept_maps
                 .resolve(url, version)
@@ -198,8 +241,8 @@ fn candidate_maps(
                 })
         }
         (None, None) => {
-            let source = uri_text(request.source.as_ref());
-            let target = uri_text(request.target.as_ref());
+            let source = input.source.as_deref();
+            let target = input.target.as_deref();
             Ok(sources
                 .concept_maps
                 .iter()
@@ -221,7 +264,7 @@ fn matches_in(
     target_system: Option<&str>,
     reverse: bool,
     depth: usize,
-) -> Result<Vec<(ConceptMapTranslateResponseMatch, MatchOrigin)>, OperationError> {
+) -> Result<Vec<Match>, OperationError> {
     let mut out = Vec::new();
     for group in &map.groups {
         let (from, from_version, to, to_version) = if reverse {
@@ -252,10 +295,10 @@ fn matches_in(
         }
         let origin = |element: Option<&Element>| MatchOrigin {
             origin_map: map.canonical(),
-            source_concept: Some(Coding {
-                system: Some(subject.system.as_str().into()),
-                code: Some(subject.code.as_str().into()),
-                ..Default::default()
+            source_concept: Some(CodingRef {
+                system: Some(subject.system.clone()),
+                code: Some(subject.code.clone()),
+                ..CodingRef::default()
             }),
             source_comment: element.and_then(|e| e.comment.clone()),
             no_map: element.is_some_and(|e| e.no_map),
@@ -264,32 +307,27 @@ fn matches_in(
         for (element, targets) in element_targets(group, subject, reverse) {
             found = true;
             if targets.is_empty() {
-                out.push((
-                    ConceptMapTranslateResponseMatch {
-                        equivalence: Some(Relationship::Unmatched.equivalence().into()),
-                        concept: None,
-                        product: Vec::new(),
-                        source: Some(map.canonical().as_str().into()),
-                    },
-                    origin(Some(element)),
-                ));
+                out.push(Match {
+                    relationship: Relationship::Unmatched,
+                    concept: None,
+                    products: Vec::new(),
+                    source: Some(map.canonical()),
+                    origin: origin(Some(element)),
+                });
             }
             for (code, display, relationship, product) in targets {
-                out.push((
-                    ConceptMapTranslateResponseMatch {
-                        equivalence: Some(relationship.equivalence().into()),
-                        concept: Some(Coding {
-                            system: to.as_deref().map(Into::into),
-                            version: to_version.as_deref().map(Into::into),
-                            code: code.as_deref().map(Into::into),
-                            display: display.as_deref().map(Into::into),
-                            ..Default::default()
-                        }),
-                        product: product.iter().map(product_of).collect(),
-                        source: Some(map.canonical().as_str().into()),
-                    },
-                    origin(Some(element)),
-                ));
+                out.push(Match {
+                    relationship,
+                    concept: Some(CodingRef {
+                        system: to.clone(),
+                        version: to_version.clone(),
+                        code: code.clone(),
+                        display: display.clone(),
+                    }),
+                    products: product.iter().map(product_of).collect(),
+                    source: Some(map.canonical()),
+                    origin: origin(Some(element)),
+                });
             }
         }
         if !found
@@ -377,33 +415,28 @@ fn unmapped_matches(
     subject: &Subject,
     target_system: Option<&str>,
     depth: usize,
-) -> Result<Vec<(ConceptMapTranslateResponseMatch, MatchOrigin)>, OperationError> {
+) -> Result<Vec<Match>, OperationError> {
     let origin = MatchOrigin {
         origin_map: map.canonical(),
-        source_concept: Some(Coding {
-            system: Some(subject.system.as_str().into()),
-            code: Some(subject.code.as_str().into()),
-            ..Default::default()
+        source_concept: Some(CodingRef {
+            system: Some(subject.system.clone()),
+            code: Some(subject.code.clone()),
+            ..CodingRef::default()
         }),
         source_comment: None,
         no_map: false,
     };
-    let fixed = |code: Option<&str>, display: Option<&str>, relationship: Relationship| {
-        (
-            ConceptMapTranslateResponseMatch {
-                equivalence: Some(relationship.equivalence().into()),
-                concept: Some(Coding {
-                    system: group.target.as_deref().map(Into::into),
-                    version: group.target_version.as_deref().map(Into::into),
-                    code: code.map(Into::into),
-                    display: display.map(Into::into),
-                    ..Default::default()
-                }),
-                product: Vec::new(),
-                source: Some(map.canonical().as_str().into()),
-            },
-            origin.clone(),
-        )
+    let fixed = |code: Option<&str>, display: Option<&str>, relationship: Relationship| Match {
+        relationship,
+        concept: Some(CodingRef {
+            system: group.target.clone(),
+            version: group.target_version.clone(),
+            code: code.map(str::to_owned),
+            display: display.map(str::to_owned),
+        }),
+        products: Vec::new(),
+        source: Some(map.canonical()),
+        origin: origin.clone(),
     };
     Ok(match unmapped.mode {
         // NOTE: R4B's `provided` says "use the code as provided", so the target is
@@ -444,14 +477,14 @@ fn unmapped_matches(
     })
 }
 
-fn product_of(d: &DependsOn) -> ConceptMapTranslateResponseMatchProduct {
-    ConceptMapTranslateResponseMatchProduct {
-        element: Some(d.attribute.as_str().into()),
-        concept: Some(Coding {
-            system: d.system.as_deref().map(Into::into),
-            code: Some(d.value.as_str().into()),
-            display: d.display.as_deref().map(Into::into),
-            ..Default::default()
-        }),
+fn product_of(d: &DependsOn) -> Product {
+    Product {
+        element: d.attribute.clone(),
+        concept: CodingRef {
+            system: d.system.clone(),
+            version: None,
+            code: Some(d.value.clone()),
+            display: d.display.clone(),
+        },
     }
 }

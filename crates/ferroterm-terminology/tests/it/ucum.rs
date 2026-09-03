@@ -4,13 +4,13 @@
 use std::sync::Arc;
 
 use ferroterm_fhir::r4b::operations::value_set_expand::ValueSetExpandRequest;
-use ferroterm_fhir::r4b::operations::value_set_validate_code::ValueSetValidateCodeRequest;
 use ferroterm_fhir::r4b::value_set::{
     ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeFilter,
 };
 use ferroterm_graph::subsumption::Outcome;
 use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::filter::{Filter, FilterOperator};
+use ferroterm_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use ferroterm_terminology::operations::{
     Invocation, OperationError, Sources, expand, subsumes, value_set_validate_code,
 };
@@ -326,32 +326,36 @@ fn ucum_validates_by_canonical_membership_and_refuses_expansion() {
         value_sets: &value_sets,
         concept_maps: &concept_maps,
     };
-    let good = ValueSetValidateCodeRequest {
-        value_set: Some(canonical_value_set("g")),
-        code: Some("kg".into()),
-        system: Some(URL.into()),
-        ..Default::default()
+    let good = ValueSetValidateInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &canonical_value_set("g"),
+        )),
+        code: Some(String::from("kg")),
+        system: Some(URL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&sources, &good).expect("validates");
-    assert_eq!(validation.response.result.value, Some(true));
+    assert!(validation.result);
     assert_eq!(validation.version.as_deref(), Some("2.2"));
-    let bad = ValueSetValidateCodeRequest {
-        value_set: Some(canonical_value_set("g")),
-        code: Some("mL".into()),
-        system: Some(URL.into()),
-        ..Default::default()
+    let bad = ValueSetValidateInput {
+        inline_value_set: Some(ferroterm_terminology::valueset::convert::r4b::convert(
+            &canonical_value_set("g"),
+        )),
+        code: Some(String::from("mL")),
+        system: Some(URL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&sources, &bad).expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     assert_eq!(validation.issues[0].kind, "not-in-vs");
-    let unknown = ValueSetValidateCodeRequest {
-        url: Some("http://unitsofmeasure.org/vs".into()),
-        code: Some("kgXX".into()),
-        system: Some(URL.into()),
-        ..Default::default()
+    let unknown = ValueSetValidateInput {
+        url: Some(String::from("http://unitsofmeasure.org/vs")),
+        code: Some(String::from("kgXX")),
+        system: Some(URL.to_owned()),
+        ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&sources, &unknown).expect("validates");
-    assert_eq!(validation.response.result.value, Some(false));
+    assert!(!validation.result);
     let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
     assert_eq!(kinds, ["not-in-vs", "invalid-code"]);
     let all = ValueSetExpandRequest {
