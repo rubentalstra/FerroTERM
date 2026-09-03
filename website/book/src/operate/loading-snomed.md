@@ -80,3 +80,33 @@ are unpacked to a temporary directory; the part-link tables are not read. The
 version is taken from the release name (`Loinc_2.82`), else pass
 `--loinc-version`. Point `FERROTERM_INDEX` at the directory beside your SNOMED
 CT index; the server opens each by the system its manifest names.
+
+## Loading ICD-10 and ICD-10-CM
+
+The same tool builds the ICD-10 family. A ClaML document (WHO ICD-10 from
+your WHO licence, the Dutch translation from the WHO-FIC Collaborating Centre
+at RIVM, or any other ClaML classification) is served under the system URI
+you name:
+
+```console
+$ ferroterm-build --claml /path/to/icd10nl-2021.xml \
+    --system http://hl7.org/fhir/sid/icd-10-nl --out /path/to/icd10nl-index
+```
+
+The version comes from the document's `Title`; pass `--claml-version` when
+the title has none. A zip is accepted; its largest `.xml` entry is the
+document.
+
+ICD-10-CM is a free download from CMS
+(<https://www.cms.gov/medicare/coding-billing/icd-10-codes>): the "Code
+Descriptions in Tabular Order" zip holds the order file and the "Code Tables,
+Tabular and Index" zip holds the tabular XML. Give both:
+
+```console
+$ ferroterm-build --icd10cm 2026-code-descriptions-tabular-order.zip \
+    --icd10cm 2026-code-tables-tabular-and-index.zip --out /path/to/icd10cm-index
+```
+
+Codes come out with the period (`A00.0`, `S02.0XXA`); chapters are named by
+their range (`A00-B99`); the order file's header flag is the `valid`
+property. Point `FERROTERM_INDEX` at each directory as for LOINC.

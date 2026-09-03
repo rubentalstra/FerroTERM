@@ -12,6 +12,7 @@
 
 pub mod artifact;
 pub mod capabilities;
+pub mod classification;
 pub mod compose;
 pub mod conceptmap;
 pub mod fhir_codesystem;

@@ -11,6 +11,7 @@
 )]
 
 mod capabilities;
+mod classification;
 mod compose;
 mod concept_map;
 mod fhir_codesystem;

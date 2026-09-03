@@ -39,6 +39,14 @@ pub enum ArchiveError {
         /// The zip.
         path: PathBuf,
     },
+    /// The zip holds no entry of the kind wanted.
+    #[error("{path} holds no {wanted}")]
+    NoEntry {
+        /// The zip.
+        path: PathBuf,
+        /// What was looked for.
+        wanted: &'static str,
+    },
     /// More than one release folder carries a `Snapshot/` tree.
     #[error("{path} holds several Snapshot/ trees")]
     SeveralSnapshots {
@@ -185,6 +193,103 @@ pub fn unpack_loinc(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveErro
     if !found_terms {
         return Err(ArchiveError::NoSnapshot {
             path: zip_path.to_path_buf(),
+        });
+    }
+    Ok(into.to_path_buf())
+}
+
+/// Unpacks the entries of `zip_path` that `wanted` accepts under `into`,
+/// returning how many were written.
+fn unpack_matching(
+    zip_path: &Path,
+    into: &Path,
+    wanted: &dyn Fn(&str) -> bool,
+) -> Result<Vec<PathBuf>, ArchiveError> {
+    let read = |source| ArchiveError::Read {
+        path: zip_path.to_path_buf(),
+        source,
+    };
+    let file = File::open(zip_path).map_err(|source| ArchiveError::Read {
+        path: zip_path.to_path_buf(),
+        source: zip::result::ZipError::Io(source),
+    })?;
+    let mut archive = zip::ZipArchive::new(file).map_err(read)?;
+    let mut written = Vec::new();
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).map_err(read)?;
+        let Some(name) = entry.enclosed_name() else {
+            continue;
+        };
+        let Some(file_name) = name.file_name().and_then(|f| f.to_str()) else {
+            continue;
+        };
+        if entry.is_dir() || !wanted(file_name) {
+            continue;
+        }
+        let target = into.join(&name);
+        let entry_name = entry.name().to_owned();
+        let unpack = |source| ArchiveError::Unpack {
+            entry: entry_name.clone(),
+            source,
+        };
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent).map_err(unpack)?;
+        }
+        let mut out = File::create(&target).map_err(unpack)?;
+        io::copy(&mut entry, &mut out).map_err(unpack)?;
+        written.push(target);
+    }
+    Ok(written)
+}
+
+/// Unpacks the `ClaML` document of the zip at `zip_path` under `into`,
+/// returning the XML file (the largest `.xml` entry when there are several).
+///
+/// # Errors
+///
+/// Returns [`ArchiveError`] when the zip does not read, an entry cannot be
+/// written, or the zip holds no `.xml` entry.
+pub fn unpack_claml(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveError> {
+    let written = unpack_matching(zip_path, into, &|name| {
+        Path::new(name)
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("xml"))
+    })?;
+    written
+        .into_iter()
+        .max_by_key(|p| std::fs::metadata(p).map(|m| m.len()).unwrap_or_default())
+        .ok_or(ArchiveError::NoEntry {
+            path: zip_path.to_path_buf(),
+            wanted: "ClaML `.xml` document",
+        })
+}
+
+/// Unpacks the tabular XML and the order file of an ICD-10-CM zip at
+/// `zip_path` under `into`, returning `into`.
+///
+/// Either file may be absent from one zip (CMS ships them in two); the
+/// reader finds them across every root it is given.
+///
+/// # Errors
+///
+/// Returns [`ArchiveError`] when the zip does not read, an entry cannot be
+/// written, or the zip holds neither file.
+pub fn unpack_icd10cm(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveError> {
+    let written = unpack_matching(zip_path, into, &|name| {
+        let lower = name.to_ascii_lowercase();
+        let extension = |e: &str| {
+            Path::new(name)
+                .extension()
+                .is_some_and(|x| x.eq_ignore_ascii_case(e))
+        };
+        (lower.starts_with(ferroterm_classification::icd10cm::TABULAR_PREFIX) && extension("xml"))
+            || (lower.starts_with(ferroterm_classification::icd10cm::ORDER_PREFIX)
+                && extension("txt"))
+    })?;
+    if written.is_empty() {
+        return Err(ArchiveError::NoEntry {
+            path: zip_path.to_path_buf(),
+            wanted: "icd10cm_tabular_<year>.xml or icd10cm_order_<year>.txt",
         });
     }
     Ok(into.to_path_buf())
