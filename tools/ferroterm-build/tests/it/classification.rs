@@ -211,6 +211,8 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
         icd11_api: None,
         icd11_release: None,
         icd11_languages: Vec::new(),
+        atc: None,
+        atc_version: None,
         rxnorm_sources: Vec::new(),
         out: out.path().to_path_buf(),
     })
@@ -249,6 +251,8 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
         icd11_api: None,
         icd11_release: None,
         icd11_languages: Vec::new(),
+        atc: None,
+        atc_version: None,
         rxnorm_sources: Vec::new(),
         out: out.path().to_path_buf(),
     })
@@ -274,6 +278,8 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
                 icd11_api: None,
                 icd11_release: None,
                 icd11_languages: Vec::new(),
+                atc: None,
+                atc_version: None,
                 rxnorm_sources: Vec::new(),
                 out: out.path().to_path_buf(),
             }),

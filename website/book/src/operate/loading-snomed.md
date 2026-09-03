@@ -109,6 +109,27 @@ Codes come out with the period (`A00.0`, `S02.0XXA`); chapters are named by
 their range (`A00-B99`); the order file's header flag is the `valid`
 property. Point `FERROTERM_INDEX` at each directory as for LOINC.
 
+## Loading ATC
+
+The WHO Collaborating Centre sells the ATC/DDD index as a spreadsheet; export
+it to CSV (any of comma, semicolon, or tab) with its columns `ATC code`,
+`ATC level name`, `DDD`, `U`, `Adm.R`, and `Note`, and build it with the index
+year as the version:
+
+```console
+$ ferroterm-build --atc /path/to/atc-index-2026.csv --atc-version 2026 --out /path/to/atc-index
+```
+
+A G-Standaard subscriber builds the same tree from the `BST801T` file (the
+Dutch and English names, no DDDs):
+
+```console
+$ ferroterm-build --atc /path/to/BST801T --atc-version 2026 --out /path/to/atc-index
+```
+
+The system is `http://www.whocc.no/atc`; the five levels are the `kind`
+property and filter; every DDD is a `ddd` property.
+
 ## Loading RxNorm
 
 The "Current Prescribable Content" subset needs no licence

@@ -284,3 +284,41 @@ fn the_icd10cm_artifact_serves_valid_and_the_seventh_character_codes() {
         Err(OpenError::NotClassification(_))
     ));
 }
+
+#[test]
+fn the_atc_artifact_serves_the_five_levels_with_ddds_as_properties() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::atc::write_artifact(dir.path()).expect("builds");
+    let provider = ClassificationProvider::open(dir.path()).expect("opens");
+    assert_eq!(provider.identity().url, "http://www.whocc.no/atc");
+    assert_eq!(provider.identity().version, ferroterm_testkit::atc::VERSION);
+    let substance = located(&provider, ferroterm_testkit::atc::SUBSTANCE);
+    assert_eq!(
+        provider.display(substance, None).expect("reads").as_deref(),
+        Some("metforminoid")
+    );
+    let p: Vec<String> = provider
+        .properties(substance)
+        .expect("reads")
+        .into_iter()
+        .map(|p| format!("{}={}", p.code, p.value.as_text()))
+        .collect();
+    assert!(p.contains(&String::from("kind=chemical-substance")));
+    assert!(p.contains(&String::from("ddd=2 g O")));
+    assert!(p.contains(&String::from("ddd=1 g P; parenteral form")));
+    assert!(p.contains(&format!("parent={}", ferroterm_testkit::atc::CHEMICAL)));
+    let group = located(&provider, ferroterm_testkit::atc::GROUP);
+    let hierarchy = provider.hierarchy().expect("tree");
+    assert_eq!(hierarchy.subsumes(group, substance), Outcome::Subsumes);
+    let substances = provider
+        .filter(&filter("kind", FilterOperator::Equal, "chemical-substance"))
+        .expect("filters");
+    assert_eq!(substances.len(), 2);
+    let with_ddd = provider
+        .filter(&filter("ddd", FilterOperator::Exists, "true"))
+        .expect("filters");
+    assert_eq!(
+        codes(&provider, with_ddd),
+        [ferroterm_testkit::atc::SUBSTANCE]
+    );
+}
