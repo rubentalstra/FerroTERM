@@ -99,8 +99,9 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --signer-workflow "${GITHUB_REPOSITORY}/.github/workflows/release-build.yml"
             mkdir -p "dist/linux/${arch}"
-            tar -C "dist/linux/${arch}" -xzf "$tarball" ferroterm
+            tar -C "dist/linux/${arch}" -xzf "$tarball" ferroterm ferroterm-build
             test -x "dist/linux/${arch}/ferroterm"
+            test -x "dist/linux/${arch}/ferroterm-build"
           done
 
       # The docker-container driver builds both platforms; no QEMU, because

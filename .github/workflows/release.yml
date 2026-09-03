@@ -260,12 +260,16 @@ jobs:
               ".tar.gz.sha256sum" \
               ".tar.gz.sigstore.json" \
               ".tar.gz.sbom.sigstore.json" \
+              ".tar.gz.build-sbom.sigstore.json" \
               ".tar.gz.intoto.jsonl" \
               ".cdx.json"; do
               printf '%s\n' "$assets" \
                 | grep -Fxq "ferroterm-${TAG}-${target}${suffix}" \
                 || missing="$missing ferroterm-${TAG}-${target}${suffix}"
             done
+            printf '%s\n' "$assets" \
+              | grep -Fxq "ferroterm-build-${TAG}-${target}.cdx.json" \
+              || missing="$missing ferroterm-build-${TAG}-${target}.cdx.json"
           done
           printf '%s\n' "$assets" | grep -Fxq "compose.yaml" || missing="$missing compose.yaml"
           [ -z "$missing" ] || {

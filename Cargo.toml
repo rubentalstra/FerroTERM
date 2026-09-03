@@ -38,8 +38,9 @@ logos = "0.16.1"
 winnow = "1.0.4"
 miette = "7.6.0"
 ariadne = "0.6.0"
-# RF2 (tab-delimited, streamed).
+# RF2 (tab-delimited, streamed); releases arrive zipped.
 csv = "1.4.0"
+zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 # Serde and formats.
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["arbitrary_precision"] }

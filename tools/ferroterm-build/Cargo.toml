@@ -25,7 +25,9 @@ ferroterm-rf2.workspace = true
 ferroterm-store.workspace = true
 ferroterm-text.workspace = true
 serde_json.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
+zip.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

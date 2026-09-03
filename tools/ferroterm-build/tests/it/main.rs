@@ -7,6 +7,7 @@
     reason = "test assertions"
 )]
 
+mod archive;
 mod fixture;
 mod local_edition;
 mod pipeline;

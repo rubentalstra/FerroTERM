@@ -15,6 +15,16 @@ fresh link reference.
 
 ### Added
 
+- `ferroterm-build --rf2` takes the SNOMED CT release zip as distributed, not
+  only the unpacked directory: the `Snapshot/` tree is unpacked to a temporary
+  directory removed with the build, and the bytes written equal those of a
+  build from the directory. The tool ships in every release tarball beside
+  `ferroterm` (with its own CycloneDX SBOM and attestation) and in the
+  container image at `/usr/local/bin/ferroterm-build`; `compose.yaml` gains a
+  one-shot `build` service under the `build` profile, so the quickstart is
+  `FERROTERM_RF2=<release.zip> docker compose run --rm build` then
+  `docker compose up`.
+
 - `ConceptMap/$translate` on R4B, type level. A map is inline (`conceptMap`),
   loaded from a `FERROTERM_CODESYSTEMS` directory (`url` and
   `conceptMapVersion`), or chosen by `source` and `target` scope and
