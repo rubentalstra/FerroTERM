@@ -87,9 +87,13 @@ pub fn lookup_response(outcome: LookupOutcome) -> CodeSystemLookupResponse {
         display: outcome.display.into(),
         definition: outcome.definition.map(Into::into),
         designation: outcome.designations.into_iter().map(designation).collect(),
+        // NOTE: R5 answers `definition` as its own output parameter, and a property
+        // with a named parameter's name is returned there, not in `property`
+        // (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
         property: outcome
             .properties
             .into_iter()
+            .filter(|property| property.code != "definition")
             .map(|property| CodeSystemLookupResponseProperty {
                 code: property.code.into(),
                 value: Some(parameter_value(&property.value)),

@@ -60,6 +60,19 @@ async fn lookup_answers_definition_under_r5_only() {
         parameter(&body, "definition").unwrap()["valueString"],
         "A living thing that is not a plant."
     );
+    let property_codes = |body: &serde_json::Value| -> Vec<String> {
+        body["parameter"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|p| p["name"] == "property")
+            .map(|p| p["part"][0]["valueCode"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    assert!(
+        !property_codes(&body).contains(&String::from("definition")),
+        "R5 answers definition once, as the named output: {body}"
+    );
     let (status, body) = server
         .get(&format!(
             "/r4b/CodeSystem/$lookup?system={ANIMALS}&code=animal"
@@ -69,6 +82,10 @@ async fn lookup_answers_definition_under_r5_only() {
     assert!(
         parameter(&body, "definition").is_none(),
         "R4B declares definition as a property, not an output: {body}"
+    );
+    assert!(
+        property_codes(&body).contains(&String::from("definition")),
+        "R4B answers definition in the property group: {body}"
     );
     let (status, body) = server
         .get(&format!(
