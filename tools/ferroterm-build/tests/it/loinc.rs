@@ -1,15 +1,15 @@
 //! The LOINC build over the testkit's release-shaped fixture.
 
+use concept_graph::persist::Hierarchy;
+use concept_store::record::PropertyValue;
+use concept_store::store::{Store, Vocabulary};
+use designation_index::index::Query;
+use designation_index::persist::read_from;
 use ferroterm_build::loinc::{self, ANSWER_LIST_KEY, COPYRIGHT_KEY, KIND_KEY, SYSTEM};
-use ferroterm_graph::persist::Hierarchy;
-use ferroterm_store::record::PropertyValue;
-use ferroterm_store::store::{Store, Vocabulary};
 use ferroterm_testkit::loinc::{
     ANSWER_LIST, GLUCOSE, GLUCOSE_PART, OLD_GLUCOSE, ROOT_PART, SODIUM, SURVEY, VERSION, YES, code,
     write_release,
 };
-use ferroterm_text::index::Query;
-use ferroterm_text::persist::read_from;
 
 #[test]
 fn the_loinc_release_builds_an_artifact_the_store_graph_and_text_open() {

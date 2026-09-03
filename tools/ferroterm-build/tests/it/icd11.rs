@@ -1,9 +1,9 @@
 //! The ICD-11 build over the testkit's API-shaped cache.
 
+use concept_graph::persist::Hierarchy;
+use concept_store::keys::KeyTable;
+use concept_store::store::Store;
 use ferroterm_build::icd11::{self, KIND, StoredScale};
-use ferroterm_graph::persist::Hierarchy;
-use ferroterm_store::keys::KeyTable;
-use ferroterm_store::store::Store;
 use ferroterm_testkit::icd11::{BLOCK, CHAPTER, CHOLERA, RELEASE, RESIDUAL, VIBRIO, write_cache};
 
 #[test]
@@ -15,14 +15,14 @@ fn the_cache_builds_three_artifacts_with_keys_and_scales() {
     assert_eq!(reports.len(), 3);
     let mms = reports
         .iter()
-        .find(|r| r.system == ferroterm_icd11::MMS)
+        .find(|r| r.system == ::icd11::MMS)
         .expect("mms");
     assert_eq!(mms.version, RELEASE);
     assert_eq!(mms.concepts, 12);
     assert_eq!(mms.scales, 4);
     let foundation = reports
         .iter()
-        .find(|r| r.system == ferroterm_icd11::FOUNDATION)
+        .find(|r| r.system == ::icd11::FOUNDATION)
         .expect("foundation");
     assert_eq!(
         foundation.version, RELEASE,
@@ -42,7 +42,7 @@ fn the_cache_builds_three_artifacts_with_keys_and_scales() {
     let store = Store::open(&mms.dir.join("store.redb")).expect("opens");
     let cholera = store.ordinal("1A00").expect("read").expect("cholera");
     let block = store
-        .ordinal(&format!("{}/{BLOCK}", ferroterm_icd11::MMS))
+        .ordinal(&format!("{}/{BLOCK}", ::icd11::MMS))
         .expect("read")
         .expect("a block is keyed by its URI");
     assert_eq!(
@@ -57,11 +57,11 @@ fn the_cache_builds_three_artifacts_with_keys_and_scales() {
     )
     .expect("reads");
     assert_eq!(
-        keys.get(ferroterm_icd11::Linearization::key_of(CHOLERA).expect("key")),
+        keys.get(::icd11::Linearization::key_of(CHOLERA).expect("key")),
         Some(cholera.index())
     );
     assert_eq!(
-        keys.get(ferroterm_icd11::Linearization::key_of(RESIDUAL).expect("key")),
+        keys.get(::icd11::Linearization::key_of(RESIDUAL).expect("key")),
         Some(
             store
                 .ordinal("1A0Y")

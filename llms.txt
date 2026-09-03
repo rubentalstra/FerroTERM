@@ -20,7 +20,7 @@
 - [spec-adherence.md](.claude/rules/spec-adherence.md): the FHIR and SNOMED CT / ECL specifications are the oracle; strictness and citation.
 - [fhir-terminology.md](.claude/rules/fhir-terminology.md): FHIR wire conformance for the terminology operations, versioning, and paging.
 - [snomed-terminology.md](.claude/rules/snomed-terminology.md): the SNOMED URI standard, implicit value sets and concept maps, ECL, and RF2 handling.
-- [codegen.md](.claude/rules/codegen.md): the generated `ferroterm-fhir` layer; never hand-edit a `// @generated` file.
+- [codegen.md](.claude/rules/codegen.md): the generated `fhir-types` layer; never hand-edit a `// @generated` file.
 - [testing.md](.claude/rules/testing.md): test discipline, and the acceptance oracles (the HL7 `fhir-tx-ecosystem-ig` cases, and differential testing against Snowstorm and Hermes).
 - [reliability.md](.claude/rules/reliability.md): the machine-enforced safety rules (no `unsafe`, typed errors, deny-tier lints).
 - [rust-style.md](.claude/rules/rust-style.md): idiomatic Rust style and import discipline.

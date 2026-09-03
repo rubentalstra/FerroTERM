@@ -13,9 +13,9 @@ macro_rules! parameters {
 
             use axum::body::Bytes;
             use axum::response::Response;
-            use ferroterm_fhir::codec::{Json, Path, expect_object};
-            use ferroterm_fhir::operation::{Operation, ParameterUse, ParametersError};
-            use ferroterm_fhir::$fhir::parameters::{Parameters, ParametersParameter, ParametersParameterValue};
+            use fhir_types::codec::{Json, Path, expect_object};
+            use fhir_types::operation::{Operation, ParameterUse, ParametersError};
+            use fhir_types::$fhir::parameters::{Parameters, ParametersParameter, ParametersParameterValue};
             use http::{HeaderMap, StatusCode};
 
             use crate::outcome::{Failure, fhir_json};

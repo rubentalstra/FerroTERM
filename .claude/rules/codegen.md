@@ -1,22 +1,22 @@
 ---
-paths: ["crates/ferroterm-fhir/**", "tools/ferroterm-fhir-codegen/**"]
+paths: ["crates/fhir-types/**", "tools/fhir-codegen/**"]
 ---
 
-# Code generation: the `ferroterm-fhir` discipline
+# Code generation: the `fhir-types` discipline
 
 The FHIR layer is GENERATED, not hand-written. HL7 publishes the whole type
 system and every operation as machine-readable `StructureDefinition` and
-`OperationDefinition` resources, in versioned packages. `crates/ferroterm-fhir` is
-produced deterministically from those packages by `tools/ferroterm-fhir-codegen`;
+`OperationDefinition` resources, in versioned packages. `crates/fhir-types` is
+produced deterministically from those packages by `tools/fhir-codegen`;
 the engine consumes the generated types as its FHIR model.
 
 ## The pipeline
 
-vendored, pinned FHIR packages (`tools/ferroterm-fhir-codegen/vendor/`, verbatim,
-provenance-stamped, `vendored-inputs.md`) → `ferroterm-fhir-codegen` (loader +
-emitter) → `crates/ferroterm-fhir`, one module per version (R4 / R4B / R5 / R6).
+vendored, pinned FHIR packages (`tools/fhir-codegen/vendor/`, verbatim,
+provenance-stamped, `vendored-inputs.md`) → `fhir-codegen` (loader +
+emitter) → `crates/fhir-types`, one module per version (R4 / R4B / R5 / R6).
 
-- **Regenerate:** `cargo run -p ferroterm-fhir-codegen -- emit` (and the
+- **Regenerate:** `cargo run -p fhir-codegen -- emit` (and the
   operation-contract emit). A `codegen-drift` check re-runs the generator in
   CI and fails on any diff, so the generated tree is always in sync with the
   vendored packages + the current emitter.
@@ -32,7 +32,7 @@ emitter) → `crates/ferroterm-fhir`, one module per version (R4 / R4B / R5 / R6
   a `// @generated … DO NOT EDIT` banner. To change output, edit the emitter
   (or its override map), then regenerate, never the output. A doc defect, a
   wrong field type, a missing variant in a generated file is a
-  `ferroterm-fhir-codegen` fix + regeneration.
+  `fhir-codegen` fix + regeneration.
 - **The emission scope is a DECLARED root-set closure, and it is emitted
   COMPLETE, never trimmed inside that closure.** FerroTERM is a terminology
   server, not a full FHIR server, so the generator does NOT emit all ~150
@@ -50,9 +50,9 @@ emitter) → `crates/ferroterm-fhir`, one module per version (R4 / R4B / R5 / R6
   generation-side defect discovered en route is FIXED in the generator in the
   same change, not worked around.
 - **Fix the emitter, never the consumer.** When engine code hits a shape in
-  `ferroterm-fhir` that is wrong or insufficient versus the vendored package (a
+  `fhir-types` that is wrong or insufficient versus the vendored package (a
   missing field, a type too narrow, a per-version parameter absent), the fix
-  is a `ferroterm-fhir-codegen` emitter/override change + regeneration, NEVER a
+  is a `fhir-codegen` emitter/override change + regeneration, NEVER a
   shadow type, a duplicate model, an adapter/re-modeling layer, a placeholder
   value, or a "temporary" local FHIR representation in the consumer. A
   consumer-side workaround silently forks the FHIR model and defeats the whole
@@ -80,7 +80,7 @@ emitter) → `crates/ferroterm-fhir`, one module per version (R4 / R4B / R5 / R6
 
 ## Where the boundary sits
 
-`ferroterm-fhir` is the ONLY generated crate. Everything else (RF2 loading, the
+`fhir-types` is the ONLY generated crate. Everything else (RF2 loading, the
 materialized graph, the store/text indexes, ECL, the terminology engine, the
 server) is hand-written idiomatic Rust of our own design (`rust-style.md`),
 consuming the generated FHIR types directly. The prior art for the generator

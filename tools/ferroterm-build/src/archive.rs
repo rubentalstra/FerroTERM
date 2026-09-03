@@ -289,9 +289,8 @@ pub fn unpack_icd10cm(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveEr
                 .extension()
                 .is_some_and(|x| x.eq_ignore_ascii_case(e))
         };
-        (lower.starts_with(ferroterm_classification::icd10cm::TABULAR_PREFIX) && extension("xml"))
-            || (lower.starts_with(ferroterm_classification::icd10cm::ORDER_PREFIX)
-                && extension("txt"))
+        (lower.starts_with(::classification::icd10cm::TABULAR_PREFIX) && extension("xml"))
+            || (lower.starts_with(::classification::icd10cm::ORDER_PREFIX) && extension("txt"))
     })?;
     if written.is_empty() {
         return Err(ArchiveError::NoEntry {
@@ -312,10 +311,10 @@ pub fn unpack_icd10cm(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveEr
 pub fn unpack_rxnorm(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveError> {
     let written = unpack_matching(zip_path, into, &|name| {
         [
-            ferroterm_rrf::CONSO,
-            ferroterm_rrf::REL,
-            ferroterm_rrf::SAT,
-            ferroterm_rrf::STY,
+            rxnorm_rrf::CONSO,
+            rxnorm_rrf::REL,
+            rxnorm_rrf::SAT,
+            rxnorm_rrf::STY,
         ]
         .iter()
         .any(|f| f.eq_ignore_ascii_case(name))
@@ -327,7 +326,7 @@ pub fn unpack_rxnorm(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveErr
     let has_conso = written.iter().any(|p| {
         p.file_name()
             .and_then(|f| f.to_str())
-            .is_some_and(|f| f.eq_ignore_ascii_case(ferroterm_rrf::CONSO))
+            .is_some_and(|f| f.eq_ignore_ascii_case(rxnorm_rrf::CONSO))
     });
     if !has_conso {
         return Err(ArchiveError::NoEntry {

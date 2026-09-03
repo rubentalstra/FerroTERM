@@ -10,7 +10,11 @@ edition = "2024"
 rust-version = "1.98"
 license = "Apache-2.0"
 repository = "https://github.com/rubentalstra/FerroTERM"
+homepage = "https://ferroterm.eu"
 authors = ["Ruben Talstra"]
+# The server and the tools are never published; the `crates/*` members set
+# `publish = true` and carry their own lockstep version line
+# (.claude/rules/crates-publishing.md).
 publish = false
 
 # The authoritative third-party set. A crate takes a dependency with
@@ -66,22 +70,26 @@ wiremock = "0.6.5"
 criterion = "0.8.2"
 divan = "0.1.21"
 tempfile = "3.27.0"
-# Workspace-internal crates (path dependencies, versioned with the workspace).
-ferroterm-fhir = { path = "crates/ferroterm-fhir", version = "0.0.8" }
-ferroterm-rf2 = { path = "crates/ferroterm-rf2", version = "0.0.8" }
-ferroterm-loinc = { path = "crates/ferroterm-loinc", version = "0.0.8" }
-ferroterm-classification = { path = "crates/ferroterm-classification", version = "0.0.8" }
-ferroterm-dhd = { path = "crates/ferroterm-dhd", version = "0.0.8" }
-ferroterm-gstandaard = { path = "crates/ferroterm-gstandaard", version = "0.0.8" }
-ferroterm-icd11 = { path = "crates/ferroterm-icd11", version = "0.0.8" }
-ferroterm-rrf = { path = "crates/ferroterm-rrf", version = "0.0.8" }
-ferroterm-graph = { path = "crates/ferroterm-graph", version = "0.0.8" }
-ferroterm-store = { path = "crates/ferroterm-store", version = "0.0.8" }
-ferroterm-text = { path = "crates/ferroterm-text", version = "0.0.8" }
-ferroterm-ecl = { path = "crates/ferroterm-ecl", version = "0.0.8" }
-ferroterm-terminology = { path = "crates/ferroterm-terminology", version = "0.0.8" }
-ferroterm-testkit = { path = "tools/ferroterm-testkit", version = "0.0.8" }
-ferroterm-build = { path = "tools/ferroterm-build", version = "0.0.8" }
+# Workspace-internal crates. The `crates/*` members carry the published crate
+# line (lockstep, bumped with their packaged content, never the product
+# version); the tools stay on the workspace version.
+fhir-types = { path = "crates/fhir-types", version = "0.1.0" }
+rf2 = { path = "crates/rf2", version = "0.1.0" }
+loinc = { path = "crates/loinc", version = "0.1.0" }
+classification = { path = "crates/classification", version = "0.1.0" }
+dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.0" }
+gstandaard = { path = "crates/gstandaard", version = "0.1.0" }
+icd11 = { path = "crates/icd11", version = "0.1.0" }
+rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.0" }
+concept-graph = { path = "crates/concept-graph", version = "0.1.0" }
+concept-store = { path = "crates/concept-store", version = "0.1.0" }
+designation-index = { path = "crates/designation-index", version = "0.1.0" }
+sct-ecl = { path = "crates/sct-ecl", version = "0.1.0" }
+fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.0" }
+# Path-only, with no `version`: cargo then strips the dev-dependency from a
+# packaged crates/* manifest instead of looking it up on crates.io.
+ferroterm-testkit = { path = "tools/ferroterm-testkit" }
+ferroterm-build = { path = "tools/ferroterm-build" }
 
 # The reliability bar (.claude/rules/reliability.md). Groups sit at priority -1
 # so every named lint below overrides its group.

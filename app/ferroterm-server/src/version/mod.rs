@@ -4,7 +4,7 @@
 //! parameters and the same `CapabilityStatement`, `TerminologyCapabilities`,
 //! `ValueSet`, and `Parameters` elements this server fills, so one set of
 //! macros produces each version's modules from the generated
-//! `ferroterm_fhir::<version>` types: `surface!(r4b, "4.3.0", "R4B", to_r4b)`
+//! `fhir_types::<version>` types: `surface!(r4b, "4.3.0", "R4B", to_r4b)`
 //! expands to `parameters`, `resources`, `map`, `metadata`, `system`,
 //! `operations`, and `router()`. A version that declares a different shape
 //! (R5 and later) gets its own modules.

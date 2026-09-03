@@ -14,18 +14,18 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 use std::path::{Path, PathBuf};
 
-use ferroterm_graph::closure::{Closure, ClosureError};
-use ferroterm_graph::csr::{Csr, CsrError};
-use ferroterm_graph::ordinal::Ordinal;
-use ferroterm_graph::persist::Hierarchy;
-use ferroterm_icd11::Linearization;
-use ferroterm_icd11::cache::{self, CacheError, Cached};
-use ferroterm_store::builder::{BuildError, PreferredRule, StoreBuilder};
-use ferroterm_store::keys::{KeyTable, KeyTableError};
-use ferroterm_store::record::{Concept, Designation, PropertyValue};
-use ferroterm_store::store::Vocabulary;
-use ferroterm_store::tables;
-use ferroterm_text::index::{IndexBuilder, Input};
+use ::icd11::Linearization;
+use ::icd11::cache::{self, CacheError, Cached};
+use concept_graph::closure::{Closure, ClosureError};
+use concept_graph::csr::{Csr, CsrError};
+use concept_graph::ordinal::Ordinal;
+use concept_graph::persist::Hierarchy;
+use concept_store::builder::{BuildError, PreferredRule, StoreBuilder};
+use concept_store::keys::{KeyTable, KeyTableError};
+use concept_store::record::{Concept, Designation, PropertyValue};
+use concept_store::store::Vocabulary;
+use concept_store::tables;
+use designation_index::index::{IndexBuilder, Input};
 use serde::Serialize;
 use serde_json::json;
 
@@ -104,16 +104,16 @@ pub enum Error {
     Closure(#[from] ClosureError),
     /// The hierarchy cannot be written.
     #[error(transparent)]
-    Graph(#[from] ferroterm_graph::persist::PersistError),
+    Graph(#[from] concept_graph::persist::PersistError),
     /// The key table cannot be written.
     #[error(transparent)]
     Keys(#[from] KeyTableError),
     /// The text index cannot be built.
     #[error(transparent)]
-    Text(#[from] ferroterm_text::index::BuildError),
+    Text(#[from] designation_index::index::BuildError),
     /// The text index cannot be written.
     #[error(transparent)]
-    TextPersist(#[from] ferroterm_text::persist::PersistError),
+    TextPersist(#[from] designation_index::persist::PersistError),
     /// A file cannot be written.
     #[error("cannot write {path}")]
     Io {
@@ -217,7 +217,7 @@ pub fn build(cached: &Cached, release: Option<&str>, out: &Path) -> Result<Repor
             }
         }
         let mut index = 0u32;
-        let mut place = |texts: &[ferroterm_icd11::entity::Text], use_ordinal: u32| {
+        let mut place = |texts: &[::icd11::entity::Text], use_ordinal: u32| {
             for text in texts {
                 languages.insert(text.language.clone());
                 placed.push(Placed {
@@ -327,7 +327,7 @@ pub fn build(cached: &Cached, release: Option<&str>, out: &Path) -> Result<Repor
     }
     let index = index.build()?;
     let mut text_bytes = Vec::new();
-    ferroterm_text::persist::write_to(&index, &mut text_bytes)?;
+    designation_index::persist::write_to(&index, &mut text_bytes)?;
     let text_path = out.join(TEXT_FILE);
     std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
     let table = KeyTable::new(keys);

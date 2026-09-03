@@ -10,11 +10,11 @@ design; the architecture is recorded, with citations, in
 
 ## The two layers
 
-- `crates/ferroterm-fhir` is **generated** from the vendored machine-readable FHIR
+- `crates/fhir-types` is **generated** from the vendored machine-readable FHIR
   specs. Never hand-edit a file marked `// @generated`; change the generator
-  (`tools/ferroterm-fhir-codegen`) and regenerate.
-- The SNOMED engine (`ferroterm-rf2`, `ferroterm-graph`, `ferroterm-store`, `ferroterm-text`,
-  `ferroterm-ecl`, `ferroterm-terminology`) and the server (`app/ferroterm-server`) are
+  (`tools/fhir-codegen`) and regenerate.
+- The SNOMED engine (`rf2`, `concept-graph`, `concept-store`, `designation-index`,
+  `sct-ecl`, `fhir-terminology`) and the server (`app/ferroterm-server`) are
   **hand-written**, modern idiomatic Rust; the FHIR and SNOMED specifications
   are the authority.
 

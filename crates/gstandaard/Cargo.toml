@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "gstandaard"
+description = "G-Standaard (Z-Index) product ladder reader: GPK, PRK, HPK, and article files"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation = "https://docs.rs/gstandaard"
+readme = "README.md"
+keywords = ["g-standaard", "medication", "dutch", "healthcare", "z-index"]
+categories = ["parser-implementations", "science"]
+# The crate line is published on crates.io (.claude/rules/crates-publishing.md);
+# `include` is the packaged content the bump rule watches.
+publish = true
+include = ["src/**", "README.md", "LICENSE"]
+
+[dependencies]
+classification.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+ferroterm-testkit.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

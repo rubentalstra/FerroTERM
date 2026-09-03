@@ -6,21 +6,21 @@
 
 use std::path::Path;
 
-use ferroterm_graph::attributes::{self, Attributes};
-use ferroterm_graph::closure::Closure;
-use ferroterm_graph::csr::Csr;
-use ferroterm_graph::identifiers::Identifiers;
-use ferroterm_graph::members::Memberships;
-use ferroterm_graph::ordinal::Ordinal;
-use ferroterm_graph::persist::Hierarchy;
-use ferroterm_graph::refsets::{self, RefsetMembers};
-use ferroterm_rf2::constants;
-use ferroterm_rf2::id::with_check_digit;
-use ferroterm_store::builder::{PreferredRule, StoreBuilder};
-use ferroterm_store::record::{Concept, Designation, PropertyValue};
-use ferroterm_store::store::Vocabulary;
-use ferroterm_store::tables;
-use ferroterm_text::index::{IndexBuilder, Input};
+use concept_graph::attributes::{self, Attributes};
+use concept_graph::closure::Closure;
+use concept_graph::csr::Csr;
+use concept_graph::identifiers::Identifiers;
+use concept_graph::members::Memberships;
+use concept_graph::ordinal::Ordinal;
+use concept_graph::persist::Hierarchy;
+use concept_graph::refsets::{self, RefsetMembers};
+use concept_store::builder::{PreferredRule, StoreBuilder};
+use concept_store::record::{Concept, Designation, PropertyValue};
+use concept_store::store::Vocabulary;
+use concept_store::tables;
+use designation_index::index::{IndexBuilder, Input};
+use rf2::constants;
+use rf2::id::with_check_digit;
 
 const NAMESPACE: &str = "1234567";
 /// The edition URI of the synthetic edition.
@@ -98,7 +98,7 @@ fn ord(index: usize) -> u32 {
 #[derive(Debug)]
 pub enum FixtureError {
     /// The store could not be written.
-    Store(ferroterm_store::builder::BuildError),
+    Store(concept_store::builder::BuildError),
     /// The hierarchy could not be built or serialized.
     Graph(String),
     /// The text index could not be built or serialized.
@@ -120,8 +120,8 @@ impl std::fmt::Display for FixtureError {
 
 impl std::error::Error for FixtureError {}
 
-impl From<ferroterm_store::builder::BuildError> for FixtureError {
-    fn from(e: ferroterm_store::builder::BuildError) -> Self {
+impl From<concept_store::builder::BuildError> for FixtureError {
+    fn from(e: concept_store::builder::BuildError) -> Self {
         Self::Store(e)
     }
 }
@@ -549,7 +549,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         .build()
         .map_err(|e| FixtureError::Text(e.to_string()))?;
     let mut text_bytes = Vec::new();
-    ferroterm_text::persist::write_to(&index, &mut text_bytes)
+    designation_index::persist::write_to(&index, &mut text_bytes)
         .map_err(|e| FixtureError::Text(e.to_string()))?;
     std::fs::write(dir.join("text.bin"), &text_bytes)?;
     let mut memberships = Memberships::new();

@@ -7,9 +7,9 @@ macro_rules! resources {
             //! the models the request scope layers
             //! (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
 
-            use ferroterm_fhir::$fhir::parameters::Parameters;
-            use ferroterm_fhir::$fhir::resource::Resource;
-            use ferroterm_terminology::{conceptmap, fhir_codesystem, valueset};
+            use fhir_types::$fhir::parameters::Parameters;
+            use fhir_types::$fhir::resource::Resource;
+            use fhir_terminology::{conceptmap, fhir_codesystem, valueset};
             use http::StatusCode;
 
             use crate::outcome::Failure;

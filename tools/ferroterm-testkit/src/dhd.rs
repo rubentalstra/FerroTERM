@@ -157,10 +157,10 @@ pub fn write_delivery(dir: &Path) -> std::io::Result<std::path::PathBuf> {
 pub fn write_artifact(dir: &Path) -> std::io::Result<()> {
     let release = tempfile::tempdir()?;
     let root = write_delivery(release.path())?;
-    let thesaurus = ferroterm_dhd::read(&root, None).map_err(std::io::Error::other)?;
+    let thesaurus = ::dhd_thesaurus::read(&root, None).map_err(std::io::Error::other)?;
     let report = ferroterm_build::classification::build(
         &thesaurus.classification,
-        ferroterm_dhd::SYSTEM,
+        ::dhd_thesaurus::SYSTEM,
         None,
         dir,
     )

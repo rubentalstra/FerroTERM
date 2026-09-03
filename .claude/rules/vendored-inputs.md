@@ -1,5 +1,5 @@
 ---
-paths: ["scripts/vendor/*.sh", "tools/ferroterm-fhir-codegen/vendor/**", "crates/ferroterm-ecl/vendor/**", "crates/**/tests/fixtures/**"]
+paths: ["scripts/vendor/*.sh", "tools/fhir-codegen/vendor/**", "crates/sct-ecl/vendor/**", "crates/**/tests/fixtures/**"]
 ---
 
 # Vendored inputs (FHIR packages) and the SNOMED content rule
@@ -16,7 +16,7 @@ The pinned FHIR packages are the codegen input (`codegen.md`). Every one is:
   into the tree, never hand-edit a vendored file, never paste a package in
   from a chat transcript. To refresh or extend: change the script, re-run it,
   commit the result.
-- **Vendored verbatim** under `tools/ferroterm-fhir-codegen/vendor/<package>/`,
+- **Vendored verbatim** under `tools/fhir-codegen/vendor/<package>/`,
   byte-for-byte as HL7 publishes it.
 - **Stamped with a `PROVENANCE.md`** recording the source (the FHIR package
   registry, <https://www.hl7.org/fhir/packages.html>), the exact package
@@ -25,12 +25,12 @@ The pinned FHIR packages are the codegen input (`codegen.md`). Every one is:
 
 | input | script | destination |
 |---|---|---|
-| `hl7.fhir.r4.core` 4.0.1 | `scripts/vendor/fhir-packages.sh` | `tools/ferroterm-fhir-codegen/vendor/hl7.fhir.r4.core/` |
-| `hl7.fhir.r4b.core` 4.3.0 | `scripts/vendor/fhir-packages.sh` | `tools/ferroterm-fhir-codegen/vendor/hl7.fhir.r4b.core/` |
-| `hl7.fhir.r5.core` 5.0.0 | `scripts/vendor/fhir-packages.sh` | `tools/ferroterm-fhir-codegen/vendor/hl7.fhir.r5.core/` |
-| `hl7.fhir.r6.core` 6.0.0-ballot5 | `scripts/vendor/fhir-packages.sh` | `tools/ferroterm-fhir-codegen/vendor/hl7.fhir.r6.core/` |
-| `hl7.terminology` (THO) | `scripts/vendor/fhir-packages.sh` | `tools/ferroterm-fhir-codegen/vendor/hl7.terminology/` |
-| The ECL grammar and example corpus (IHTSDO, Apache 2.0), tag pinned in `docs/VERSIONS.md` | `scripts/vendor/ecl-grammar.sh` | `crates/ferroterm-ecl/vendor/` |
+| `hl7.fhir.r4.core` 4.0.1 | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.fhir.r4.core/` |
+| `hl7.fhir.r4b.core` 4.3.0 | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.fhir.r4b.core/` |
+| `hl7.fhir.r5.core` 5.0.0 | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.fhir.r5.core/` |
+| `hl7.fhir.r6.core` 6.0.0-ballot5 | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.fhir.r6.core/` |
+| `hl7.terminology` (THO) | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.terminology/` |
+| The ECL grammar and example corpus (IHTSDO, Apache 2.0), tag pinned in `docs/VERSIONS.md` | `scripts/vendor/ecl-grammar.sh` | `crates/sct-ecl/vendor/` |
 
 The `PreToolUse` guard blocks a hand-edit of any file carrying an
 `// @generated` marker; the vendored packages are protected by discipline +

@@ -52,6 +52,12 @@ CI fails on lockfile drift, never on registry drift. Commit `Cargo.lock`.
 - **Releases are immutable** (draft → attach all assets → verify the set →
   publish last; the platform freezes on publish). The fix for a bad cut is a new
   patch version, never a retag.
+- **The `crates/*` members publish to crates.io through Trusted Publishing
+  (OIDC), per crate, in dependency order, approval-gated by the `crates-io`
+  environment** (`crates-publishing.md`): the `crates` leg of `release.yml`
+  and the `publish-crates.yml` dispatch lane share
+  `scripts/release/publish-crates.sh`; the `crate-version-guard` and
+  `publish-dry-run` CI jobs keep the line publishable on every PR.
 - **Version pins have a single source of truth** (`docs/VERSIONS.md`);
   `scripts/checks/versions.sh` (the `versions` CI job) fails on cross-file drift
   (`CITATION.cff` ↔ `Cargo.toml`, vendored `PROVENANCE.md` ↔ the pin table).

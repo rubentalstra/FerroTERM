@@ -15,30 +15,30 @@ macro_rules! operations {
             use axum::body::Bytes;
             use axum::extract::{Path as UrlPath, Query, State};
             use axum::response::{IntoResponse, Response};
-            use ferroterm_fhir::$fhir::operations::code_system_lookup::{
-                CODE_SYSTEM_LOOKUP, CodeSystemLookupRequest,
-            };
-            use ferroterm_fhir::$fhir::operations::code_system_subsumes::{
-                CODE_SYSTEM_SUBSUMES, CodeSystemSubsumesRequest,
-            };
-            use ferroterm_fhir::$fhir::operations::code_system_validate_code::{
-                CODE_SYSTEM_VALIDATE_CODE, CodeSystemValidateCodeRequest,
-            };
-            use ferroterm_fhir::$fhir::operations::concept_map_translate::{
-                CONCEPT_MAP_TRANSLATE, ConceptMapTranslateRequest,
-            };
-            use ferroterm_fhir::$fhir::operations::value_set_expand::{
-                VALUE_SET_EXPAND, ValueSetExpandRequest,
-            };
-            use ferroterm_fhir::$fhir::operations::value_set_validate_code::{
-                VALUE_SET_VALIDATE_CODE, ValueSetValidateCodeRequest,
-            };
-            use ferroterm_fhir::$fhir::parameters::Parameters;
-            use ferroterm_terminology::operations::{
+            use fhir_terminology::operations::{
                 Invocation, expand, lookup, subsumes, translate, validate_code,
                 value_set_validate_code,
             };
-            use ferroterm_terminology::valueset::render;
+            use fhir_terminology::valueset::render;
+            use fhir_types::$fhir::operations::code_system_lookup::{
+                CODE_SYSTEM_LOOKUP, CodeSystemLookupRequest,
+            };
+            use fhir_types::$fhir::operations::code_system_subsumes::{
+                CODE_SYSTEM_SUBSUMES, CodeSystemSubsumesRequest,
+            };
+            use fhir_types::$fhir::operations::code_system_validate_code::{
+                CODE_SYSTEM_VALIDATE_CODE, CodeSystemValidateCodeRequest,
+            };
+            use fhir_types::$fhir::operations::concept_map_translate::{
+                CONCEPT_MAP_TRANSLATE, ConceptMapTranslateRequest,
+            };
+            use fhir_types::$fhir::operations::value_set_expand::{
+                VALUE_SET_EXPAND, ValueSetExpandRequest,
+            };
+            use fhir_types::$fhir::operations::value_set_validate_code::{
+                VALUE_SET_VALIDATE_CODE, ValueSetValidateCodeRequest,
+            };
+            use fhir_types::$fhir::parameters::Parameters;
             use http::{HeaderMap, StatusCode};
 
             use super::resources::split_resources;
@@ -62,7 +62,7 @@ macro_rules! operations {
             /// A `GET` invocation: the query parameters, in the scope the headers name.
             fn from_query<'a>(
                 state: &'a AppState,
-                operation: &ferroterm_fhir::operation::Operation,
+                operation: &fhir_types::operation::Operation,
                 headers: &HeaderMap,
                 query: &[(String, String)],
             ) -> Result<(Scope<'a>, Parameters), Failure> {
@@ -80,7 +80,7 @@ macro_rules! operations {
             /// the scope those resources and the headers form.
             fn from_body<'a>(
                 state: &'a AppState,
-                operation: &ferroterm_fhir::operation::Operation,
+                operation: &fhir_types::operation::Operation,
                 headers: &HeaderMap,
                 body: &Bytes,
             ) -> Result<(Scope<'a>, Parameters), Failure> {

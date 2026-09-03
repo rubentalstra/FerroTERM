@@ -10,9 +10,19 @@ discovery-phase repo.
 ## Product and citation version
 
 - The product version is the workspace `version` in the root `Cargo.toml`
-  (inherited by the crates), currently **0.0.8** (pre-release).
+  (inherited by the server and the tools), currently **0.0.8** (pre-release).
 - `CITATION.cff` `version` tracks it exactly. The version guard fails if they
   disagree once `Cargo.toml` exists.
+
+## Crate line (crates.io)
+
+- The `crates/*` members carry their own lockstep version, currently
+  **0.1.0**, in each member's `Cargo.toml` and in every internal requirement
+  of the root `[workspace.dependencies]` table. It moves with the crates'
+  packaged content (`.claude/rules/crates-publishing.md`), never with the
+  product version. `scripts/checks/crate-version-guard.sh` enforces the bump
+  and the lockstep; `scripts/checks/versions.sh` checks the members' metadata
+  (README, LICENSE, `publish = true`).
 
 ## Language and runtime
 
@@ -30,7 +40,7 @@ FerroTERM is a FHIR/SNOMED project; it has no openEHR pins.
 ## FHIR
 
 Machine-generated per version from the vendored, pinned HL7 FHIR packages
-(`tools/ferroterm-fhir-codegen/vendor/`, once vendored, see
+(`tools/fhir-codegen/vendor/`, once vendored, see
 `.claude/rules/vendored-inputs.md`). Each vendored package carries a
 `PROVENANCE.md`; the guard checks it against this table.
 
@@ -47,7 +57,7 @@ Machine-generated per version from the vendored, pinned HL7 FHIR packages
 
 | Item | Pin |
 |---|---|
-| ECL | 2.2 (the tag of the official grammar repository; `ECL.g4` and the example corpus vendored under `crates/ferroterm-ecl/vendor/` by `scripts/vendor/ecl-grammar.sh`) |
+| ECL | 2.2 (the tag of the official grammar repository; `ECL.g4` and the example corpus vendored under `crates/sct-ecl/vendor/` by `scripts/vendor/ecl-grammar.sh`) |
 | SNOMED CT content | **not pinned in-repo**: licence-gated, bring-your-own RF2 (International edition); the loaded edition+version is a runtime/deployment fact (`.claude/rules/snomed-terminology.md`) |
 
 ## Rust dependency pins

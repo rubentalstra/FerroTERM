@@ -1,9 +1,9 @@
 //! The offline build: an RF2 release in, the served artifacts out.
 //!
 //! Runs once per SNOMED CT edition, outside the server process. It reads the
-//! RF2 Snapshot through `ferroterm-rf2` and writes one `redb` store holding the
+//! RF2 Snapshot through `rf2` and writes one `redb` store holding the
 //! concepts, designations, acceptabilities, and properties, with the hierarchy
-//! (`ferroterm-graph`) and the designation index (`ferroterm-text`) in its blob
+//! (`concept-graph`) and the designation index (`designation-index`) in its blob
 //! slots, plus a manifest naming the edition the store was built from. Two runs
 //! over the same release write byte-identical files: every collection is
 //! sorted by identifier before it is numbered, and nothing records a clock.
@@ -108,7 +108,7 @@ pub struct Cli {
 /// read, the edition cannot be identified, or an artifact cannot be written.
 pub fn run(cli: &Cli) -> Result<Report, RunError> {
     if let (Some(dir), Some(version)) = (&cli.gstandaard, &cli.gstandaard_version) {
-        let ladder = ferroterm_gstandaard::read(dir, version)?;
+        let ladder = ::gstandaard::read(dir, version)?;
         let mut reports = Vec::new();
         for (name, system, classification) in ladder.rungs() {
             reports.push(classification::build(
@@ -200,7 +200,7 @@ fn run_classification(cli: &Cli) -> Result<Option<classification::Report>, RunEr
         } else {
             claml.clone()
         };
-        let classification = ferroterm_classification::claml::read_file(&file)?;
+        let classification = ::classification::claml::read_file(&file)?;
         return Ok(Some(classification::build(
             &classification,
             system,
@@ -220,10 +220,10 @@ fn run_classification(cli: &Cli) -> Result<Option<classification::Report>, RunEr
         } else {
             dhd.clone()
         };
-        let thesaurus = ferroterm_dhd::read(&root, cli.dhd_version.as_deref())?;
+        let thesaurus = ::dhd_thesaurus::read(&root, cli.dhd_version.as_deref())?;
         let report = classification::build(
             &thesaurus.classification,
-            ferroterm_dhd::SYSTEM,
+            ::dhd_thesaurus::SYSTEM,
             cli.dhd_version.as_deref(),
             &cli.out,
         )?;
@@ -232,10 +232,10 @@ fn run_classification(cli: &Cli) -> Result<Option<classification::Report>, RunEr
     }
     if let Some(atc) = &cli.atc {
         let version = cli.atc_version.as_deref().ok_or(RunError::NoAtcVersion)?;
-        let classification = ferroterm_classification::atc::read(atc, Some(version))?;
+        let classification = ::classification::atc::read(atc, Some(version))?;
         return Ok(Some(classification::build(
             &classification,
-            ferroterm_classification::atc::SYSTEM,
+            ::classification::atc::SYSTEM,
             Some(version),
             &cli.out,
         )?));
@@ -253,8 +253,8 @@ fn run_classification(cli: &Cli) -> Result<Option<classification::Report>, RunEr
             roots.push(path.clone());
         }
     }
-    let files = ferroterm_classification::icd10cm::locate(&roots)?;
-    let classification = ferroterm_classification::icd10cm::read(&files)?;
+    let files = ::classification::icd10cm::locate(&roots)?;
+    let classification = ::classification::icd10cm::read(&files)?;
     Ok(Some(classification::build(
         &classification,
         classification::ICD10CM_SYSTEM,
@@ -269,7 +269,7 @@ fn fetch_icd11(cache: &std::path::Path, api: &str, cli: &Cli) -> Result<(), RunE
     let release = if let Some(release) = &cli.icd11_release {
         release.clone()
     } else {
-        let probe = ferroterm_icd11::api::Client::new(api, "")?;
+        let probe = ::icd11::api::Client::new(api, "")?;
         let root = probe.get(
             &format!("{}/icd/release/11/mms", api.trim_end_matches('/')),
             "en",
@@ -279,13 +279,13 @@ fn fetch_icd11(cache: &std::path::Path, api: &str, cli: &Cli) -> Result<(), RunE
             .and_then(|uri| uri.rsplit('/').nth(1).map(str::to_owned))
             .ok_or(RunError::NoRelease)?
     };
-    let client = ferroterm_icd11::api::Client::new(api, &release)?;
+    let client = ::icd11::api::Client::new(api, &release)?;
     let languages: Vec<String> = if cli.icd11_languages.is_empty() {
         vec![String::from("en")]
     } else {
         cli.icd11_languages.clone()
     };
-    for linearization in ferroterm_icd11::Linearization::ALL {
+    for linearization in ::icd11::Linearization::ALL {
         let ids = client.ids(linearization)?;
         client.download(cache, linearization, &ids, &languages, 8)?;
     }
@@ -340,22 +340,22 @@ pub enum RunError {
     Loinc(#[from] loinc::Error),
     /// The `ClaML` document does not read.
     #[error(transparent)]
-    Claml(#[from] ferroterm_classification::claml::ClamlError),
+    Claml(#[from] ::classification::claml::ClamlError),
     /// The ICD-10-CM release does not read.
     #[error(transparent)]
-    Icd10cm(#[from] ferroterm_classification::icd10cm::Icd10cmError),
+    Icd10cm(#[from] ::classification::icd10cm::Icd10cmError),
     /// The ATC table does not read.
     #[error(transparent)]
-    Atc(#[from] ferroterm_classification::atc::AtcError),
+    Atc(#[from] ::classification::atc::AtcError),
     /// The DHD delivery does not read.
     #[error(transparent)]
-    Dhd(#[from] ferroterm_dhd::DhdError),
+    Dhd(#[from] ::dhd_thesaurus::DhdError),
     /// The DHD concept maps cannot be written.
     #[error(transparent)]
     DhdMaps(#[from] dhd::MapError),
     /// The G-Standaard files do not read.
     #[error(transparent)]
-    GStandaard(#[from] ferroterm_gstandaard::GStandaardError),
+    GStandaard(#[from] ::gstandaard::GStandaardError),
     /// The classification build failed.
     #[error(transparent)]
     Classification(#[from] classification::Error),
@@ -364,7 +364,7 @@ pub enum RunError {
     RxNorm(#[from] rxnorm::Error),
     /// The ICD-API could not be walked.
     #[error(transparent)]
-    Icd11Api(#[from] ferroterm_icd11::api::ApiError),
+    Icd11Api(#[from] ::icd11::api::ApiError),
     /// The ICD-11 build failed.
     #[error(transparent)]
     Icd11(#[from] icd11::Error),

@@ -128,7 +128,7 @@ chapters, and the Clippy book.
 - **Every public item: documented, `Debug`, with concrete
   `# Errors`/`# Panics` sections** (C-DOC, C-DEBUG, C-FAILURE):
   `missing_docs`, `missing_debug_implementations`, `missing_errors_doc` /
-  `missing_panics_doc`. The generated `ferroterm-fhir` crate gets its docs from
+  `missing_panics_doc`. The generated `fhir-types` crate gets its docs from
   the emitter; never hand-edit a `// @generated` file to document it.
 - **Visibility is deliberate** (C-STRUCT-PRIVATE): private by default, scoped
   visibility only at real module boundaries, zero re-exports (every import

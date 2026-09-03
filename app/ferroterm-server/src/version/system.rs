@@ -19,10 +19,10 @@ macro_rules! system {
             use axum::body::Bytes;
             use axum::extract::{Path as UrlPath, Query, State};
             use axum::response::{IntoResponse, Response};
-            use ferroterm_fhir::$fhir::bundle::{Bundle, BundleEntry, BundleEntrySearch};
-            use ferroterm_fhir::$fhir::parameters::{Parameters, ParametersParameter, ParametersParameterValue};
-            use ferroterm_fhir::$fhir::resource::Resource;
-            use ferroterm_terminology::valueset::render;
+            use fhir_types::$fhir::bundle::{Bundle, BundleEntry, BundleEntrySearch};
+            use fhir_types::$fhir::parameters::{Parameters, ParametersParameter, ParametersParameterValue};
+            use fhir_types::$fhir::resource::Resource;
+            use fhir_terminology::valueset::render;
             use http::{HeaderMap, StatusCode};
 
             use crate::outcome::Failure;

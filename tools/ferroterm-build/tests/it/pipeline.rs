@@ -3,12 +3,12 @@
 
 use std::fs;
 
+use concept_graph::persist::Hierarchy;
+use concept_store::store::{Store, Vocabulary};
+use concept_store::tables;
+use designation_index::index::Query;
+use designation_index::persist::read_from;
 use ferroterm_build::pipeline::{self, MANIFEST_FILE, STORE_FILE};
-use ferroterm_graph::persist::Hierarchy;
-use ferroterm_store::store::{Store, Vocabulary};
-use ferroterm_store::tables;
-use ferroterm_text::index::Query;
-use ferroterm_text::persist::read_from;
 use serde_json::Value;
 
 use crate::fixture::{self, DATE, GB_LANGUAGE_REFSET, NL_LANGUAGE_REFSET, concept};
@@ -134,9 +134,7 @@ fn the_store_graph_and_text_crates_open_what_the_build_wrote() {
     };
     assert_eq!(
         parents(cat),
-        Some(vec![ferroterm_store::record::PropertyValue::Concept(
-            animal
-        )])
+        Some(vec![concept_store::record::PropertyValue::Concept(animal)])
     );
     assert!(parents(fish).is_none(), "the inactive edge is not a parent");
 
@@ -156,11 +154,11 @@ fn the_store_graph_and_text_crates_open_what_the_build_wrote() {
     let fur = store.ordinal(&concept(7)).expect("read").expect("fur");
     assert_eq!(
         property(cat, &concept(6)),
-        Some(vec![ferroterm_store::record::PropertyValue::Concept(fur)])
+        Some(vec![concept_store::record::PropertyValue::Concept(fur)])
     );
     assert_eq!(
         property(cat, &concept(8)),
-        Some(vec![ferroterm_store::record::PropertyValue::Decimal(
+        Some(vec![concept_store::record::PropertyValue::Decimal(
             String::from("4")
         )])
     );
@@ -258,7 +256,7 @@ fn the_reference_set_memberships_are_written_beside_the_store() {
     assert_eq!(manifest["refsets"], pipeline::REFSETS_FILE);
     assert_eq!(manifest["referenceSets"], 1);
     assert_eq!(manifest["memberships"], 2, "the inactive member is not one");
-    let memberships = ferroterm_graph::members::Memberships::read_from(
+    let memberships = concept_graph::members::Memberships::read_from(
         &mut fs::read(out.path().join(pipeline::REFSETS_FILE))
             .expect("refsets")
             .as_slice(),
@@ -315,7 +313,7 @@ fn the_attribute_graph_member_tables_and_identifiers_are_written_beside_the_stor
             .expect("concept")
     };
     let (cat, fur) = (ordinal(3), ordinal(7));
-    let attributes = ferroterm_graph::attributes::Attributes::read_from(
+    let attributes = concept_graph::attributes::Attributes::read_from(
         &mut fs::read(out.path().join(pipeline::ATTRIBUTES_FILE))
             .expect("attributes")
             .as_slice(),
@@ -328,15 +326,15 @@ fn the_attribute_graph_member_tables_and_identifiers_are_written_beside_the_stor
     let rows: Vec<_> = attributes.rows(cat).collect();
     assert_eq!(rows.len(), 2);
     assert!(rows.iter().any(|r| {
-        r.kind == covering_kind && r.value == ferroterm_graph::attributes::ValueRef::Concept(fur)
+        r.kind == covering_kind && r.value == concept_graph::attributes::ValueRef::Concept(fur)
     }));
     assert!(rows.iter().any(|r| {
         r.kind == legs_kind
             && r.group == 2
-            && r.value == ferroterm_graph::attributes::ValueRef::Number("4")
+            && r.value == concept_graph::attributes::ValueRef::Number("4")
     }));
     assert_eq!(attributes.sources(covering_kind, fur), [cat.index()]);
-    let members = ferroterm_graph::refsets::RefsetMembers::read_from(
+    let members = concept_graph::refsets::RefsetMembers::read_from(
         &mut fs::read(out.path().join(pipeline::MEMBERS_FILE))
             .expect("members")
             .as_slice(),
@@ -346,7 +344,7 @@ fn the_attribute_graph_member_tables_and_identifiers_are_written_beside_the_stor
     assert_eq!(table.len(), 2);
     assert!(table.fields().is_empty());
     assert!(table.members().contains(cat.index()));
-    let identifiers = ferroterm_graph::identifiers::Identifiers::read_from(
+    let identifiers = concept_graph::identifiers::Identifiers::read_from(
         &mut fs::read(out.path().join(pipeline::IDENTIFIERS_FILE))
             .expect("identifiers")
             .as_slice(),

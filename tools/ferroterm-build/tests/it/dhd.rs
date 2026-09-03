@@ -2,11 +2,11 @@
 
 use std::io::Write;
 
-use ferroterm_fhir::codec::{Json, Path};
-use ferroterm_fhir::r4b::concept_map::ConceptMap;
 use ferroterm_testkit::dhd::{
     DIRECTORY, FRACTURE, FRACTURE_SCTID, SPRAIN, VERSION, write_delivery,
 };
+use fhir_types::codec::{Json, Path};
+use fhir_types::r4b::concept_map::ConceptMap;
 
 fn cli(
     dhd: std::path::PathBuf,
@@ -54,7 +54,7 @@ fn the_delivery_builds_from_a_directory_or_a_zip_with_its_concept_maps() {
     let ferroterm_build::Report::Classification(report) = report else {
         panic!("a classification report");
     };
-    assert_eq!(report.system, ferroterm_dhd::SYSTEM);
+    assert_eq!(report.system, ::dhd_thesaurus::SYSTEM);
     assert_eq!(report.version, VERSION, "from the directory name");
     assert_eq!(report.concepts, 4);
     let manifest: serde_json::Value = serde_json::from_str(

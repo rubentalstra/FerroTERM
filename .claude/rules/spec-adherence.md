@@ -8,7 +8,7 @@ The conformance authority for this project is the published specifications:
 the HL7 FHIR specification (per version) and the SNOMED CT / ECL
 specifications, not Snowstorm, not Hermes, not memory, not intuition. The
 FHIR type system and every operation are pinned as machine-readable packages
-under `tools/ferroterm-fhir-codegen/vendor/` (the codegen input;
+under `tools/fhir-codegen/vendor/` (the codegen input;
 `vendored-inputs.md`); the normative text lives at the URLs cited below.
 
 ## Hard rules
@@ -30,7 +30,7 @@ under `tools/ferroterm-fhir-codegen/vendor/` (the codegen input;
     on #154, 2026-09-03) adds, on every version, the parameters the ecosystem
     requires (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>):
     the R6 ones pre-adopted from the vendored R6 package, the ecosystem-only
-    ones declared in the generator (`tools/ferroterm-fhir-codegen/src/ecosystem.rs`),
+    ones declared in the generator (`tools/fhir-codegen/src/ecosystem.rs`),
     each marked with its source in the generated descriptor. The overlay
     extends a version's definition; it never contradicts it.
   - **ECL:** the SNOMED Expression Constraint Language specification
@@ -89,7 +89,7 @@ under `tools/ferroterm-fhir-codegen/vendor/` (the codegen input;
 FerroTERM serves R4, R4B, R5, and R6 from one server. The correct behaviour for
 each version is what THAT version's spec and package define: a single code
 path may back several versions only where the versions genuinely agree, and
-every per-version difference is driven by the generated `ferroterm-fhir` model
+every per-version difference is driven by the generated `fhir-types` model
 (`codegen.md`), never by a hand-maintained per-version conditional that can
 drift from the package. R6 is ballot-tracking; a behaviour grounded only in
 the ballot is marked as such and re-verified when R6 publishes.

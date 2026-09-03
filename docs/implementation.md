@@ -136,7 +136,7 @@ sequence, not a scope limit; the server serves every version.
 
 ## Engine and storage
 
-- [ ] `ferroterm-fhir` generated per version from the vendored packages; drift check
+- [ ] `fhir-types` generated per version from the vendored packages; drift check
 - [ ] CSR adjacency (is-a and per-attribute) and roaring transitive-closure
   bitmaps; resident at query time
 - [ ] `redb` persistence of the built artifacts

@@ -10,42 +10,42 @@ macro_rules! map {
             //! its `OperationDefinition`s declare. R4 (4.0.1) and R4B (4.3.0) declare the
             //! same parameters, so one macro serves both.
 
-            use ferroterm_fhir::$fhir::coding::Coding;
-            use ferroterm_fhir::$fhir::operations::code_system_lookup::{
+            use concept_graph::subsumption::Outcome;
+            use fhir_terminology::operations::CodingRef;
+            use fhir_terminology::operations::expand::ExpandInput;
+            use fhir_terminology::operations::lookup::{LookupInput, LookupOutcome};
+            use fhir_terminology::operations::subsumes::SubsumesInput;
+            use fhir_terminology::operations::translate::{TranslateInput, Translation};
+            use fhir_terminology::operations::validate_code::{
+                ValidateCodeInput, ValidationOutcome,
+            };
+            use fhir_terminology::operations::value_set_validate_code::{
+                Validation, ValueSetValidateInput,
+            };
+            use fhir_terminology::provider::{Designation, PropertyValue};
+            use fhir_terminology::valueset::convert;
+            use fhir_types::$fhir::coding::Coding;
+            use fhir_types::$fhir::operations::code_system_lookup::{
                 CodeSystemLookupRequest, CodeSystemLookupResponse,
                 CodeSystemLookupResponseDesignation, CodeSystemLookupResponseProperty,
                 CodeSystemLookupResponsePropertySubproperty,
             };
-            use ferroterm_fhir::$fhir::operations::code_system_subsumes::{
+            use fhir_types::$fhir::operations::code_system_subsumes::{
                 CodeSystemSubsumesRequest, CodeSystemSubsumesResponse,
             };
-            use ferroterm_fhir::$fhir::operations::code_system_validate_code::{
+            use fhir_types::$fhir::operations::code_system_validate_code::{
                 CodeSystemValidateCodeRequest, CodeSystemValidateCodeResponse,
             };
-            use ferroterm_fhir::$fhir::operations::concept_map_translate::{
+            use fhir_types::$fhir::operations::concept_map_translate::{
                 ConceptMapTranslateRequest, ConceptMapTranslateResponse,
                 ConceptMapTranslateResponseMatch, ConceptMapTranslateResponseMatchProduct,
             };
-            use ferroterm_fhir::$fhir::operations::value_set_expand::ValueSetExpandRequest;
-            use ferroterm_fhir::$fhir::operations::value_set_validate_code::{
+            use fhir_types::$fhir::operations::value_set_expand::ValueSetExpandRequest;
+            use fhir_types::$fhir::operations::value_set_validate_code::{
                 ValueSetValidateCodeRequest, ValueSetValidateCodeResponse,
             };
-            use ferroterm_fhir::$fhir::parameters::Parameters;
-            use ferroterm_fhir::$fhir::parameters::ParametersParameterValue;
-            use ferroterm_graph::subsumption::Outcome;
-            use ferroterm_terminology::operations::CodingRef;
-            use ferroterm_terminology::operations::expand::ExpandInput;
-            use ferroterm_terminology::operations::lookup::{LookupInput, LookupOutcome};
-            use ferroterm_terminology::operations::subsumes::SubsumesInput;
-            use ferroterm_terminology::operations::translate::{TranslateInput, Translation};
-            use ferroterm_terminology::operations::validate_code::{
-                ValidateCodeInput, ValidationOutcome,
-            };
-            use ferroterm_terminology::operations::value_set_validate_code::{
-                Validation, ValueSetValidateInput,
-            };
-            use ferroterm_terminology::provider::{Designation, PropertyValue};
-            use ferroterm_terminology::valueset::convert;
+            use fhir_types::$fhir::parameters::Parameters;
+            use fhir_types::$fhir::parameters::ParametersParameterValue;
 
             /// A generated `Coding` as the engine names one.
             #[must_use]
@@ -314,7 +314,7 @@ macro_rules! map {
                     inline_concept_map: request
                         .concept_map
                         .as_ref()
-                        .map(ferroterm_terminology::conceptmap::convert::$fhir::convert),
+                        .map(fhir_terminology::conceptmap::convert::$fhir::convert),
                     code: request.code.as_ref().and_then(|v| v.value.clone()),
                     system: request
                         .system
@@ -371,7 +371,7 @@ macro_rules! map {
             }
 
             /// The canonicals of a repeated `canonical` parameter, as text.
-            fn canonicals(list: &[ferroterm_fhir::$fhir::primitives::Canonical]) -> Vec<String> {
+            fn canonicals(list: &[fhir_types::$fhir::primitives::Canonical]) -> Vec<String> {
                 list.iter().filter_map(|c| c.value.clone()).collect()
             }
 
@@ -380,10 +380,10 @@ macro_rules! map {
             /// `useSupplement`, so those stay empty.
             #[must_use]
             pub fn expand_input(request: &ValueSetExpandRequest) -> ExpandInput {
-                let flag = |b: &Option<ferroterm_fhir::$fhir::primitives::Boolean>| {
+                let flag = |b: &Option<fhir_types::$fhir::primitives::Boolean>| {
                     b.as_ref().and_then(|b| b.value)
                 };
-                let number = |i: &Option<ferroterm_fhir::$fhir::primitives::Integer>| {
+                let number = |i: &Option<fhir_types::$fhir::primitives::Integer>| {
                     i.as_ref().and_then(|i| i.value).map(i64::from)
                 };
                 ExpandInput {

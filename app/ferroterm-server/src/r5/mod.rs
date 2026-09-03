@@ -1,4 +1,4 @@
-//! FHIR R5 (5.0.0) under `/r5`: the generated `ferroterm_fhir::r5` contracts
+//! FHIR R5 (5.0.0) under `/r5`: the generated `fhir_types::r5` contracts
 //! over the engine (<https://hl7.org/fhir/R5/terminology-service.html>).
 //!
 //! R5 declares shapes the R4 family does not (`$validate-code` `issues` and

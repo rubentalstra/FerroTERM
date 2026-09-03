@@ -3,7 +3,7 @@
 # Comment-style guard (.claude/rules/comments.md — RFC 505 / RFC 1574).
 #
 # Checks HAND-WRITTEN .rs files (files carrying the `@generated` marker are
-# skipped — their comments are fixed in the ferroterm-fhir-codegen emitter):
+# skipped — their comments are fixed in the fhir-codegen emitter):
 #
 #   1. block comments      `/* … */` is banned; line comments only (RFC 505).
 #   2. TODO form           every TODO names its issue: `TODO(#NNNN):`.

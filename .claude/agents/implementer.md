@@ -28,11 +28,11 @@ Non-negotiables (violations are rejected at review):
   question from memory or from Snowstorm/Hermes behaviour; flag ambiguity back
   to the orchestrator via a `// NOTE:` and say so in your final message
   (`.claude/rules/spec-adherence.md`).
-- **Never hand-edit a `// @generated` file:** the FHIR crate `ferroterm-fhir` is
-  produced by `ferroterm-fhir-codegen`; change the emitter and regenerate. Never
+- **Never hand-edit a `// @generated` file:** the FHIR crate `fhir-types` is
+  produced by `fhir-codegen`; change the emitter and regenerate. Never
   shadow a generated shape with a hand-written type in a consumer
   (`.claude/rules/codegen.md`).
-- **Consume the generated `ferroterm-fhir` types directly**; never re-model or
+- **Consume the generated `fhir-types` types directly**; never re-model or
   re-serialize FHIR by hand. Use the pinned workspace crates (`dep.workspace =
   true`); never hand-roll what `axum`/`redb`/`roaring`/`fst`/`logos`/`csv`/etc.
   provide. Verify any new crate version against crates.io/docs.rs at the moment

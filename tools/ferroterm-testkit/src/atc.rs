@@ -98,10 +98,10 @@ pub fn write_artifact(dir: &Path) -> std::io::Result<()> {
     let csv = release.path().join("atc-index.csv");
     write_index(&csv)?;
     let classification =
-        ferroterm_classification::atc::read(&csv, Some(VERSION)).map_err(std::io::Error::other)?;
+        ::classification::atc::read(&csv, Some(VERSION)).map_err(std::io::Error::other)?;
     ferroterm_build::classification::build(
         &classification,
-        ferroterm_classification::atc::SYSTEM,
+        ::classification::atc::SYSTEM,
         Some(VERSION),
         dir,
     )

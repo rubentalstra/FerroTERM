@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "sct-ecl"
+description = "The SNOMED CT Expression Constraint Language lexer, parser, and evaluator"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation = "https://docs.rs/sct-ecl"
+readme = "README.md"
+keywords = ["snomed", "ecl", "parser", "terminology", "healthcare"]
+categories = ["parser-implementations", "science"]
+# The crate line is published on crates.io (.claude/rules/crates-publishing.md);
+# `include` is the packaged content the bump rule watches.
+publish = true
+include = ["src/**", "README.md", "LICENSE"]
+
+[dependencies]
+concept-graph.workspace = true
+logos.workspace = true
+roaring.workspace = true
+thiserror.workspace = true
+winnow.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

@@ -27,14 +27,14 @@ The generator reads vendored, pinned FHIR packages:
 | `hl7.fhir.r6.core` | 6.0.0-ballot5 |
 | `hl7.terminology` | the HL7 Terminology release pinned in `docs/VERSIONS.md` |
 
-The packages are vendored verbatim under `tools/ferroterm-fhir-codegen/vendor/`, each
+The packages are vendored verbatim under `tools/fhir-codegen/vendor/`, each
 with a `PROVENANCE.md`, and fetched by a script. You never hand-edit a vendored
 package. Change the fetcher and re-run it.
 
 ## The rules
 
 - **Never hand-edit a `// @generated` file.** To change the output, change the
-  generator (`tools/ferroterm-fhir-codegen`) or its override map, then regenerate.
+  generator (`tools/fhir-codegen`) or its override map, then regenerate.
 - **The generator emits the complete model within its declared closure.** A
   terminology server touches a small root set of resources, so the generator's
   root set is the terminology surface (`CodeSystem`, `ValueSet`, `ConceptMap`,
@@ -49,7 +49,7 @@ package. Change the fetcher and re-run it.
 ## Regenerate
 
 ```console
-$ cargo run -p ferroterm-fhir-codegen -- emit
+$ cargo run -p fhir-codegen -- emit
 ```
 
 Then run the drift check. If consuming code needs a shape the generated crate

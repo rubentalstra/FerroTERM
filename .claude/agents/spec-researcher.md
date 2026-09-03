@@ -2,7 +2,7 @@
 name: spec-researcher
 description: >
   Answers FHIR, SNOMED CT, and ECL specification questions from the pinned,
-  vendored FHIR packages (tools/ferroterm-fhir-codegen/vendor/) and the published
+  vendored FHIR packages (tools/fhir-codegen/vendor/) and the published
   SNOMED CT / ECL specifications, returning the requirements with exact
   citations (the FHIR operation page + section, the OperationDefinition in the
   vendored package, the ECL grammar rule, the SNOMED doc + section). Use
@@ -21,7 +21,7 @@ CT, LOINC, and other clinical code systems (see `CLAUDE.md` and
 order:
 
 1. **The pinned, vendored FHIR packages** at
-   `tools/ferroterm-fhir-codegen/vendor/`: the `StructureDefinition` and
+   `tools/fhir-codegen/vendor/`: the `StructureDefinition` and
    `OperationDefinition` resources are the machine-readable authority for what
    each version's types and operations look like. The parameter set a version
    admits is exactly what its `OperationDefinition` declares.

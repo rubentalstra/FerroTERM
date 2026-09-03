@@ -24,7 +24,7 @@ fresh link reference.
   endpoints now emit only the outputs their own OperationDefinitions declare.
   The tx-ecosystem suite runs against `/r5` in CI too
   (`conformance/tx-ecosystem/passing-r5.txt`).
-- FHIR R4 (4.0.1) is served under `/r4` from the generated `ferroterm_fhir::r4`
+- FHIR R4 (4.0.1) is served under `/r4` from the generated `fhir_types::r4`
   module: every terminology operation with R4's own `OperationDefinition`
   parameter set, `GET /r4/metadata` and `?mode=terminology` as R4 resources,
   `$versions`, `$cache-control`, and the `ValueSet` read and search. One set
@@ -52,7 +52,7 @@ release defines them.
 
 ### Added
 
-- ECL: `ferroterm-ecl` parses the Expression Constraint Language 2.2 with a
+- ECL: `sct-ecl` parses the Expression Constraint Language 2.2 with a
   lexer and a parser that follow the official ANTLR grammar rule for rule
   (<https://github.com/IHTSDO/snomed-expression-constraint-language>, the tag
   pinned in `docs/VERSIONS.md`, vendored with the example corpus by
@@ -68,9 +68,9 @@ release defines them.
   the OWL axiom reference sets left out), and `identifiers.bin` (the alternate
   identifiers of the RF2 identifier file). The provider opens them when the
   manifest names them; an older artifact still opens.
-- ECL: `ferroterm-ecl` evaluates a parsed expression constraint against an
+- ECL: `sct-ecl` evaluates a parsed expression constraint against an
   edition as set algebra over the closure, the attribute graph, and the
-  reference set tables (`ferroterm_ecl::eval`): every constraint operator
+  reference set tables (`sct_ecl::eval`): every constraint operator
   (`<`, `<<`, `<!`, `<<!`, `>`, `>>`, `>!`, `>>!`, `!!>`, `!!<`), member of
   with field selection, refinements with attribute and group cardinalities,
   the reverse flag, dotted attributes, concrete values, conjunction,
@@ -361,12 +361,12 @@ zip with a tool that ships in the release and the image.
   so two systems at version `1` do not collide.
 
 - The generated FHIR layer covers R4: `hl7.fhir.r4.core` 4.0.1 is vendored with
-  provenance and `ferroterm-fhir` gains the `r4` module (131 root-set types,
+  provenance and `fhir-types` gains the `r4` module (131 root-set types,
   the terminology operation contracts, the JSON codec, and the `Parameters`
   conversions), with every terminology resource of the package round-tripping.
 - The generated FHIR layer tracks the R6 ballot: `hl7.fhir.r6.core`
   6.0.0-ballot5 (published on packages2.fhir.org) is vendored with provenance
-  and `ferroterm-fhir` gains the `r6` module (161 root-set types, the
+  and `fhir-types` gains the `r6` module (161 root-set types, the
   operation contracts including the new `tx-resource` parameters, the codec,
   and the `Parameters` conversions). Ballot content: every R6-only behaviour
   is re-verified when R6 publishes.
@@ -455,7 +455,7 @@ binary answers `GET /health` only.
 - Project foundation: architecture, `.claude/` project configuration (rules,
   agents, hooks, skills, memory), CI/CD + supply-chain scaffolding, the tracker
   work-style, and citation/funding metadata.
-- `ferroterm-fhir-codegen` and the generated `ferroterm-fhir` crate: the
+- `fhir-codegen` and the generated `fhir-types` crate: the
   vendored, pinned `hl7.fhir.r4b.core` 4.3.0 and `hl7.fhir.r5.core` 5.0.0
   packages (with provenance), the terminology root-set types per version (133
   for R4B, 154 for R5), the operation contracts (`$lookup`, `$validate-code`,
@@ -463,14 +463,14 @@ binary answers `GET /health` only.
   version's `OperationDefinition` declares them, and a JSON codec that
   round-trips every terminology resource in both packages. A CI drift check
   regenerates and fails on any diff.
-- `ferroterm-rf2`: the SNOMED CT RF2 Snapshot loader and typed component model
+- `rf2`: the SNOMED CT RF2 Snapshot loader and typed component model
   (SCTID check digits and partitions, file-name grammar, concepts,
   descriptions, relationships, concrete values, reference sets with typed
   views, module dependencies resolved to an edition URI).
-- `ferroterm-graph`: integer-keyed CSR adjacency and roaring transitive-closure
+- `concept-graph`: integer-keyed CSR adjacency and roaring transitive-closure
   bitmaps over the inferred is-a hierarchy, the `$subsumes` outcome over them,
   and a versioned artifact layout.
-- `ferroterm-store`: the read-only `redb` concept and designation store with
+- `concept-store`: the read-only `redb` concept and designation store with
   point reads, precomputed preferred designations per language reference set,
   typed properties, and blob slots for the graph and text artifacts.
 

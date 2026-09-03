@@ -1,18 +1,18 @@
 //! The classification build over the testkit's `ClaML` and ICD-10-CM fixtures.
 
+use ::classification::claml::read;
+use concept_graph::persist::Hierarchy;
+use concept_store::record::PropertyValue;
+use concept_store::store::{Store, Vocabulary};
+use designation_index::index::Query;
+use designation_index::persist::read_from;
 use ferroterm_build::classification::{
     self, HIERARCHY_MEANING, ICD10CM_SYSTEM, KIND, KIND_KEY, USAGE_KEY, VALID_KEY,
 };
-use ferroterm_classification::claml::read;
-use ferroterm_graph::persist::Hierarchy;
-use ferroterm_store::record::PropertyValue;
-use ferroterm_store::store::{Store, Vocabulary};
 use ferroterm_testkit::classification::{
     BILE_DUCT, BLOCK, CHAPTER, CLAML_SYSTEM, CLAML_VERSION, CLASSICAL, CM_CHAPTER, CM_VERSION,
     LIVER, LIVER_CELL, VAULT_CLOSED, claml, write_icd10cm_artifact,
 };
-use ferroterm_text::index::Query;
-use ferroterm_text::persist::read_from;
 
 #[test]
 fn the_claml_classification_builds_an_artifact_the_store_graph_and_text_open() {

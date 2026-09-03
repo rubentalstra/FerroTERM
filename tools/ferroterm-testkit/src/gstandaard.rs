@@ -215,8 +215,7 @@ pub fn write_release(dir: &Path) -> std::io::Result<()> {
 pub fn write_artifacts(dir: &Path) -> std::io::Result<()> {
     let release = tempfile::tempdir()?;
     write_release(release.path())?;
-    let ladder =
-        ferroterm_gstandaard::read(release.path(), VERSION).map_err(std::io::Error::other)?;
+    let ladder = ::gstandaard::read(release.path(), VERSION).map_err(std::io::Error::other)?;
     for (name, system, classification) in ladder.rungs() {
         ferroterm_build::classification::build(
             classification,

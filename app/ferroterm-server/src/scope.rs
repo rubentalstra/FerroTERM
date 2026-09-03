@@ -15,16 +15,16 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
-use ferroterm_terminology::conceptmap::model::ConceptMapModel;
-use ferroterm_terminology::conceptmap::store::ConceptMapStore;
-use ferroterm_terminology::fhir_codesystem::model::CodeSystemModel;
-use ferroterm_terminology::fhir_codesystem::provider::FhirCodeSystem;
-use ferroterm_terminology::operations::Sources;
-use ferroterm_terminology::provider::ContentMode;
-use ferroterm_terminology::registry::Registry;
-use ferroterm_terminology::supplement::Supplemented;
-use ferroterm_terminology::valueset::model::ValueSetModel;
-use ferroterm_terminology::valueset::store::ValueSetStore;
+use fhir_terminology::conceptmap::model::ConceptMapModel;
+use fhir_terminology::conceptmap::store::ConceptMapStore;
+use fhir_terminology::fhir_codesystem::model::CodeSystemModel;
+use fhir_terminology::fhir_codesystem::provider::FhirCodeSystem;
+use fhir_terminology::operations::Sources;
+use fhir_terminology::provider::ContentMode;
+use fhir_terminology::registry::Registry;
+use fhir_terminology::supplement::Supplemented;
+use fhir_terminology::valueset::model::ValueSetModel;
+use fhir_terminology::valueset::store::ValueSetStore;
 use http::{HeaderMap, StatusCode};
 
 use crate::outcome::Failure;

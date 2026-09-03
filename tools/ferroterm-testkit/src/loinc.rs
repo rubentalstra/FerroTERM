@@ -1,4 +1,4 @@
-//! A synthetic LOINC-shaped release: the files `ferroterm-loinc` reads, laid
+//! A synthetic LOINC-shaped release: the files `loinc` reads, laid
 //! out as the release archive lays them out, with invented codes carrying
 //! valid check digits.
 //!
@@ -8,7 +8,7 @@
 
 use std::path::Path;
 
-use ferroterm_loinc::id::with_check_digit;
+use ::loinc::id::with_check_digit;
 
 /// The release version the fixture claims.
 pub const VERSION: &str = "2.99";

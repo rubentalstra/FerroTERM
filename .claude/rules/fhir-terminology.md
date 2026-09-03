@@ -1,7 +1,7 @@
 ---
 paths:
-  - "crates/ferroterm-fhir/**"
-  - "crates/ferroterm-terminology/**"
+  - "crates/fhir-types/**"
+  - "crates/fhir-terminology/**"
   - "app/ferroterm-server/**"
 ---
 
