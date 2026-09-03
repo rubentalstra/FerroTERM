@@ -53,6 +53,19 @@ fresh link reference.
 
 ### Fixed
 
+- LOINC: the class parts that only the Component Hierarchy by System names
+  (42,554 in 2.83, such as `LP442038-8 |Bacteria | Abscess | Microbiology|`)
+  are concepts with the hierarchy's text as their name, so `concept is-a` and
+  `ancestor` over a part reach the terms under it (they were dropped with their
+  terms before). The six axes (`COMPONENT`, `PROPERTY`, `TIME_ASPCT`,
+  `SYSTEM`, `SCALE_TYP`, `METHOD_TYP`) carry the part the primary part links
+  name, as the FHIR LOINC page types them; a filter on an axis matches the
+  part's code or its name with `=` and `in`, and its name, code, or column
+  text with `regex`. `ferroterm-build --loinc` reads `LoincPartLink_Primary.csv`
+  from the zip.
+- LOINC: a part displays its `PartName` (`PANEL.HL7.CYTOGEN`), as the
+  reference servers do where the FHIR page names no display; `PartDisplayName`
+  follows as a synonym.
 - `TerminologyCapabilities.codeSystem.version.language` lists the designation
   languages as `CommonLanguages` codes (a tag outside the set by its primary
   subtag, or left out): R4B binds the element to nothing, but the FHIR

@@ -151,11 +151,14 @@ engine. Each row is a tracker issue under the program issue.
   `DOCUMENT_SECTION`, and the version. Translations are designations.
 - **Served.** `ferroterm-build --loinc <Loinc_x.yy.zip|dir> --out <dir>` reads
   the release by column name (`Loinc.csv`, `Part.csv`, the Component
-  Hierarchy by System, the answer lists and links, every linguistic variant)
-  into the same artifact layout as SNOMED CT: terms, parts, answer lists, and
-  answers are the codes (compared without case), the multiaxial hierarchy is
-  the graph, every table field is a property and a filter (`=`, `regex`), and
-  the names and translations are designations indexed for search. The
+  Hierarchy by System, the primary part links, the answer lists and links,
+  every linguistic variant) into the same artifact layout as SNOMED CT: terms,
+  parts (the class parts only the hierarchy names among them, with its text as
+  their name), answer lists, and answers are the codes (compared without case),
+  the multiaxial hierarchy is the graph, every table field is a property and a
+  filter (`=`, `regex`), the six axes carry their linked part as the value
+  (the page types them as `Coding`) and match a filter by the part's code or
+  name, and the names and translations are designations indexed for search. The
   provider answers `copyright`, `parent`, and `ancestor`, the three implicit
   value set forms, and `LONG_COMMON_NAME` as the display (a translation when
   the language asks for one); `STATUS = DEPRECATED` is inactive. The server

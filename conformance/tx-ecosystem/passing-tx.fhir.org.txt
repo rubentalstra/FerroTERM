@@ -1,4 +1,7 @@
 UCUM/validate-all-canonical-good
 UCUM/validate-ucum-canonical-good
+tx.fhir.org/loinc-expand-enum
 tx.fhir.org/loinc-expand-parent
 tx.fhir.org/loinc-expand-prop-method
+tx.fhir.org/loinc-validate-enum-good
+tx.fhir.org/loinc-validate-filter-prop-component-good

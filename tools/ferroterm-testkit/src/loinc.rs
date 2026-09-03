@@ -26,6 +26,8 @@ pub const ROOT_PART: &str = "LP70001";
 pub const CHEMISTRY_PART: &str = "LP70002";
 /// The glucose component part under chemistry.
 pub const GLUCOSE_PART: &str = "LP70003";
+/// A class part only the hierarchy names (`Sodium | Serum or Plasma | Chemistry`).
+pub const SODIUM_CLASS: &str = "LP70005";
 /// The answer list.
 pub const ANSWER_LIST: &str = "LL70001";
 /// The first answer.
@@ -242,6 +244,43 @@ pub fn write_release(root: &Path) -> std::io::Result<()> {
             ),
         ),
         (
+            "PartFile/LoincPartLink_Primary.csv",
+            csv(
+                &[
+                    "LoincNumber",
+                    "LongCommonName",
+                    "PartNumber",
+                    "PartName",
+                    "PartCodeSystem",
+                    "PartTypeName",
+                    "LinkTypeName",
+                    "Property",
+                ],
+                &[
+                    s(&[
+                        &code(GLUCOSE),
+                        "Glucose [Mass/volume] in Blood",
+                        &code(GLUCOSE_PART),
+                        "Glucose",
+                        "http://loinc.org",
+                        "COMPONENT",
+                        "Primary",
+                        "http://loinc.org/property/COMPONENT",
+                    ]),
+                    s(&[
+                        &code(OLD_GLUCOSE),
+                        "Glucose [Mass/volume] in Blood (superseded)",
+                        &code(GLUCOSE_PART),
+                        "Glucose",
+                        "http://loinc.org",
+                        "COMPONENT",
+                        "Primary",
+                        "http://loinc.org/property/COMPONENT",
+                    ]),
+                ],
+            ),
+        ),
+        (
             "ComponentHierarchyBySystem/ComponentHierarchyBySystem.csv",
             csv(
                 &[
@@ -295,6 +334,18 @@ pub fn write_release(root: &Path) -> std::io::Result<()> {
                         &format!("{}.{}", code(ROOT_PART), code(CHEMISTRY_PART)),
                         "2",
                         &code(CHEMISTRY_PART),
+                        &code(SODIUM_CLASS),
+                        "Sodium | Serum or Plasma | Chemistry",
+                    ]),
+                    s(&[
+                        &format!(
+                            "{}.{}.{}",
+                            code(ROOT_PART),
+                            code(CHEMISTRY_PART),
+                            code(SODIUM_CLASS)
+                        ),
+                        "1",
+                        &code(SODIUM_CLASS),
                         &code(SODIUM),
                         "Sodium [Moles/volume] in Serum or Plasma",
                     ]),
