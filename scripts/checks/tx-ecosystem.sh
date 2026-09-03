@@ -62,7 +62,10 @@ fi
 started=""
 if [ -z "$server" ]; then
   server=http://127.0.0.1:8098/r4b
-  FERROTERM_INDEX="$index" FERROTERM_LISTEN=127.0.0.1:8098 FERROTERM_LOG_FORMAT=json target/release/ferroterm > "$work/server.log" 2>&1 &
+  if [ -n "$index" ]; then
+    export FERROTERM_INDEX="$index"
+  fi
+  FERROTERM_LISTEN=127.0.0.1:8098 FERROTERM_LOG_FORMAT=json target/release/ferroterm > "$work/server.log" 2>&1 &
   started=$!
   trap 'kill "$started" 2>/dev/null || true' EXIT
   for _ in $(seq 1 50); do
@@ -87,8 +90,14 @@ if [ ! -f "$report" ]; then
   exit 1
 fi
 
+total=$(jq '(.test // []) | length' "$report")
+if [ "$total" = 0 ]; then
+  echo "the runner ran no test; see $out/runner.log and $work/server.log" >&2
+  tail -n 20 "$out/runner.log" >&2
+  tail -n 5 "$work/server.log" >&2 2>/dev/null || true
+  exit 1
+fi
 jq -r '.test[] | select(.action[0].operation.result == "pass") | .name' "$report" | sort > "$out/passing.txt"
-total=$(jq '.test | length' "$report")
 passed=$(wc -l < "$out/passing.txt" | tr -d ' ')
 echo "tx-ecosystem: $passed of $total $mode tests pass ($(grep -a -o 'tests v[0-9.]*' "$out/runner.log" | head -1), runner $VALIDATOR_VERSION)"
 
