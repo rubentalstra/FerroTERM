@@ -1,7 +1,7 @@
 //! Writing an artifact, offline, in one transaction.
 //!
 //! The build tool feeds concepts, designations, acceptability, properties, and
-//! the hierarchy blob; `finish` computes the preferred designations and
+//! nothing else; `finish` computes the preferred designations and
 //! commits. Two builds from the same input produce the same bytes.
 
 use std::collections::BTreeMap;
@@ -81,7 +81,6 @@ pub struct StoreBuilder {
     acceptability: BTreeMap<(u32, u32, u32), u32>,
     designation_uses: BTreeMap<(u32, u32), u32>,
     properties: BTreeMap<(u32, u32), Vec<u8>>,
-    blobs: BTreeMap<String, Vec<u8>>,
 }
 
 impl std::fmt::Debug for StoreBuilder {
@@ -124,7 +123,6 @@ impl StoreBuilder {
             acceptability: BTreeMap::new(),
             designation_uses: BTreeMap::new(),
             properties: BTreeMap::new(),
-            blobs: BTreeMap::new(),
         })
     }
 
@@ -224,16 +222,6 @@ impl StoreBuilder {
         Ok(())
     }
 
-    /// Stores a named blob (the hierarchy, the text index).
-    ///
-    /// # Errors
-    ///
-    /// Cannot fail today; the signature keeps the door open for a full buffer.
-    pub fn blob(&mut self, name: &str, bytes: &[u8]) -> Result<(), BuildError> {
-        self.blobs.insert(name.to_owned(), bytes.to_vec());
-        Ok(())
-    }
-
     /// Writes every buffered row in key order, computes the preferred
     /// designations per language reference set and use, records the concept
     /// count, and commits.
@@ -281,12 +269,6 @@ impl StoreBuilder {
             let mut properties = txn.open_table(tables::PROPERTIES)?;
             for (key, bytes) in &self.properties {
                 properties.insert(*key, bytes.as_slice())?;
-            }
-        }
-        {
-            let mut blobs = txn.open_table(tables::BLOBS)?;
-            for (name, bytes) in &self.blobs {
-                blobs.insert(name.as_str(), bytes.as_slice())?;
             }
         }
         for table_def in [

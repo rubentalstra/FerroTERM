@@ -13,6 +13,14 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- The artifact layout: `ferroterm-build` writes the hierarchy closure and the
+  designation index as `hierarchy.bin` and `text.bin` beside `store.redb`
+  instead of as blobs inside it (manifest version 2, store layout 2), which
+  removes the large-value pages and their fragmentation from the database.
+  Artifacts built before this change must be rebuilt.
+
 ## [0.0.4] - 2026-09-03
 
 The multi-terminology release: any FHIR `CodeSystem`, `ValueSet`, and

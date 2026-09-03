@@ -112,7 +112,7 @@ impl From<std::io::Error> for FixtureError {
     }
 }
 
-/// Writes the edition under `dir` (`store.redb` and `manifest.json`).
+/// Writes the edition under `dir` (`store.redb`, `hierarchy.bin`, `text.bin`, and `manifest.json`).
 ///
 /// # Errors
 ///
@@ -356,24 +356,26 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     hierarchy
         .write_to(&mut graph_bytes)
         .map_err(|e| FixtureError::Graph(e.to_string()))?;
-    builder.blob(tables::BLOB_HIERARCHY, &graph_bytes)?;
+    std::fs::write(dir.join("hierarchy.bin"), &graph_bytes)?;
     let index = text
         .build()
         .map_err(|e| FixtureError::Text(e.to_string()))?;
     let mut text_bytes = Vec::new();
     ferroterm_text::persist::write_to(&index, &mut text_bytes)
         .map_err(|e| FixtureError::Text(e.to_string()))?;
-    builder.blob(tables::BLOB_TEXT, &text_bytes)?;
+    std::fs::write(dir.join("text.bin"), &text_bytes)?;
     builder.finish(&PreferredRule { preferred })?;
 
     let manifest = serde_json::json!({
-        "manifest": 1,
+        "manifest": 2,
         "system": "http://snomed.info/sct",
         "edition": EDITION,
         "version": VERSION,
         "releaseDate": "20260101",
         "store": "store.redb",
         "storeLayout": tables::LAYOUT_VERSION,
+        "hierarchy": "hierarchy.bin",
+        "text": "text.bin",
         "concepts": rows.len(),
         "languages": ["en", "nl"],
     });

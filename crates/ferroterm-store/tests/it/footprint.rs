@@ -44,7 +44,12 @@ fn the_local_artifact_footprint_by_table() {
         panic!("no artifact under artifacts/nl/");
     };
     let size = std::fs::metadata(&path).expect("metadata").len();
-    println!("file {} MiB", mib(size));
+    println!("store.redb {} MiB", mib(size));
+    for side in ["hierarchy.bin", "text.bin"] {
+        if let Ok(meta) = std::fs::metadata(path.with_file_name(side)) {
+            println!("{side} {} MiB", mib(meta.len()));
+        }
+    }
     let db = ReadOnlyDatabase::open(&path).expect("opens");
     let txn = db.begin_read().expect("read txn");
     report(&txn, tables::META);
@@ -58,7 +63,6 @@ fn the_local_artifact_footprint_by_table() {
     report(&txn, tables::DESIGNATION_USES);
     report(&txn, tables::LANGUAGE_REFSETS);
     report(&txn, tables::ACCEPTABILITIES);
-    report(&txn, tables::BLOBS);
 }
 
 /// Bytes as whole mebibytes.
