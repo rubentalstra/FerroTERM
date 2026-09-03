@@ -10,4 +10,5 @@
 mod archive;
 mod fixture;
 mod local_edition;
+mod loinc;
 mod pipeline;

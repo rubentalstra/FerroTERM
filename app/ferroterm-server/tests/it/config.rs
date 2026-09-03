@@ -64,7 +64,7 @@ fn a_missing_or_duplicate_artifact_refuses_to_start() {
     };
     assert!(matches!(
         AppState::load(&missing),
-        Err(LoadError::Open { .. })
+        Err(LoadError::Artifact { .. })
     ));
     let dir = tempfile::tempdir().expect("tempdir");
     ferroterm_testkit::snomed::write(dir.path()).expect("writes");
@@ -156,5 +156,40 @@ fn a_supplement_without_its_system_refuses_to_start() {
     assert!(matches!(
         AppState::load(&config),
         Err(LoadError::SupplementTarget { .. })
+    ));
+}
+
+#[test]
+fn a_loinc_artifact_is_served_beside_the_edition() {
+    let snomed = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::snomed::write(snomed.path()).expect("writes");
+    let loinc = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::loinc::write_artifact(loinc.path()).expect("builds");
+    let config = Config {
+        index: vec![snomed.path().to_path_buf(), loinc.path().to_path_buf()],
+        ..Config::default()
+    };
+    let state = AppState::load(&config).expect("loads");
+    let loinc_summary = state
+        .summaries()
+        .expect("summarises")
+        .into_iter()
+        .find(|s| s.url == "http://loinc.org")
+        .expect("loinc");
+    assert_eq!(loinc_summary.version, ferroterm_testkit::loinc::VERSION);
+    assert_eq!(loinc_summary.concepts, Some(10));
+    assert_eq!(loinc_summary.path.as_deref(), Some(loinc.path()));
+    let empty = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+        empty.path().join("manifest.json"),
+        r#"{"manifest":2,"system":"http://example.org/other","version":"1"}"#,
+    )
+    .expect("writes");
+    assert!(matches!(
+        AppState::load(&Config {
+            index: vec![empty.path().to_path_buf()],
+            ..Config::default()
+        }),
+        Err(LoadError::UnknownArtifact { .. })
     ));
 }

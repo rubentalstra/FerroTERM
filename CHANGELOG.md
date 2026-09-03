@@ -13,6 +13,20 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- LOINC: `ferroterm-build --loinc <release zip or directory>` builds a LOINC
+  release into the artifact layout (terms, parts, answer lists, and answers as
+  codes; the Component Hierarchy by System as the graph; every `Loinc.csv`
+  field as a property; long common names, short names, consumer names, part
+  and answer texts, and every linguistic variant as designations), and the
+  server serves it from `FERROTERM_INDEX` beside SNOMED CT, the manifest
+  naming the system. The provider follows the FHIR LOINC page: codes compared
+  without case, `LONG_COMMON_NAME` (or a translation) as the display,
+  `STATUS = DEPRECATED` inactive, `=` and `regex` on every field, `copyright`,
+  `parent`, and `ancestor` over the hierarchy, and the implicit value sets
+  `http://loinc.org/vs`, `/vs/[LL id]`, and `/vs/[part code]`.
+
 ### Changed
 
 - The artifact layout: `ferroterm-build` writes the hierarchy closure and the

@@ -7,4 +7,5 @@
 #![recursion_limit = "256"]
 
 pub mod fhir;
+pub mod loinc;
 pub mod snomed;

@@ -10,11 +10,13 @@
 //! (<https://hl7.org/fhir/R4B/codesystem.html>).
 #![doc(test(attr(deny(warnings))))]
 
+pub mod artifact;
 pub mod capabilities;
 pub mod compose;
 pub mod conceptmap;
 pub mod fhir_codesystem;
 pub mod filter;
+pub mod loinc;
 pub mod operations;
 pub mod provider;
 pub mod registries;

@@ -63,3 +63,20 @@ server against it.
 FerroTERM's own tests use shaped, synthetic content only. They never contain real
 SNOMED CT concepts extracted from a release, which keeps the licence line clean
 in the repository itself.
+
+## Loading LOINC
+
+The same tool builds a LOINC release into the same artifact layout. Download
+the release from <https://loinc.org/downloads/> (a free account; the licence
+allows use and redistribution with the LOINC copyright notice, and the
+repository ships no release) and build it:
+
+```console
+$ ferroterm-build --loinc /path/to/Loinc_2.82.zip --out /path/to/loinc-index
+```
+
+The zip's term table, parts, hierarchy, answer lists, and linguistic variants
+are unpacked to a temporary directory; the part-link tables are not read. The
+version is taken from the release name (`Loinc_2.82`), else pass
+`--loinc-version`. Point `FERROTERM_INDEX` at the directory beside your SNOMED
+CT index; the server opens each by the system its manifest names.

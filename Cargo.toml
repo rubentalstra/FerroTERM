@@ -69,12 +69,14 @@ tempfile = "3.27.0"
 # Workspace-internal crates (path dependencies, versioned with the workspace).
 ferroterm-fhir = { path = "crates/ferroterm-fhir", version = "0.0.4" }
 ferroterm-rf2 = { path = "crates/ferroterm-rf2", version = "0.0.4" }
+ferroterm-loinc = { path = "crates/ferroterm-loinc", version = "0.0.4" }
 ferroterm-graph = { path = "crates/ferroterm-graph", version = "0.0.4" }
 ferroterm-store = { path = "crates/ferroterm-store", version = "0.0.4" }
 ferroterm-text = { path = "crates/ferroterm-text", version = "0.0.4" }
 ferroterm-ecl = { path = "crates/ferroterm-ecl", version = "0.0.4" }
 ferroterm-terminology = { path = "crates/ferroterm-terminology", version = "0.0.4" }
 ferroterm-testkit = { path = "tools/ferroterm-testkit", version = "0.0.4" }
+ferroterm-build = { path = "tools/ferroterm-build", version = "0.0.4" }
 
 # The reliability bar (.claude/rules/reliability.md). Groups sit at priority -1
 # so every named lint below overrides its group.
