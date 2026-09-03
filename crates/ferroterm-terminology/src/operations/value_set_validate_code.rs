@@ -78,6 +78,63 @@ pub struct ValueSetValidateInput {
     pub display_language: Option<String>,
     /// `abstract`: whether an abstract code may be selected; the default is true.
     pub abstract_ok: Option<bool>,
+    /// `system-version`: the version to use for a system the value set does
+    /// not pin, as `[system]|[version]` canonicals (pre-adopted from R6).
+    pub default_system_version: Vec<String>,
+    /// `check-system-version`: a version a differing value set is refused
+    /// against (pre-adopted from R6).
+    pub check_system_version: Vec<String>,
+    /// `force-system-version`: a version that overrides the value set's
+    /// (pre-adopted from R6).
+    pub force_system_version: Vec<String>,
+    /// `default-valueset-version`: the version to use for a value set
+    /// reference that names none (pre-adopted from R6).
+    pub default_valueset_version: Vec<String>,
+    /// `check-valueset-version`: a value set version a differing reference is
+    /// refused against (pre-adopted from R6).
+    pub check_valueset_version: Vec<String>,
+    /// `force-valueset-version`: a value set version that overrides the
+    /// reference's (pre-adopted from R6).
+    pub force_valueset_version: Vec<String>,
+    /// `inferSystem`: find the system of a bare `code` in the value set
+    /// (pre-adopted from R6).
+    pub infer_system: Option<bool>,
+    /// `lenient-display-validation`: a wrong display is a warning, not a
+    /// failure (pre-adopted from R6).
+    pub lenient_display_validation: Option<bool>,
+}
+
+/// Refuses the ecosystem overlay's inputs whose semantics are not implemented
+/// yet, so an accepted parameter is never silently ignored.
+fn refuse_unimplemented(input: &ValueSetValidateInput) -> Result<(), OperationError> {
+    // TODO(#160): apply the version negotiation instead of refusing it.
+    let negotiation = [
+        ("system-version", &input.default_system_version),
+        ("check-system-version", &input.check_system_version),
+        ("force-system-version", &input.force_system_version),
+        ("default-valueset-version", &input.default_valueset_version),
+        ("check-valueset-version", &input.check_valueset_version),
+        ("force-valueset-version", &input.force_valueset_version),
+    ];
+    if let Some((name, _)) = negotiation.iter().find(|(_, values)| !values.is_empty()) {
+        return Err(OperationError::NotSupported(format!(
+            "`{name}` is accepted on `ValueSet/$validate-code` but not implemented yet"
+        )));
+    }
+    // TODO(#161): implement `inferSystem` and `lenient-display-validation`.
+    let flags = [
+        ("inferSystem", input.infer_system),
+        (
+            "lenient-display-validation",
+            input.lenient_display_validation,
+        ),
+    ];
+    if let Some((name, _)) = flags.iter().find(|(_, value)| *value == Some(true)) {
+        return Err(OperationError::NotSupported(format!(
+            "`{name}` is accepted on `ValueSet/$validate-code` but not implemented yet"
+        )));
+    }
+    Ok(())
 }
 
 struct Subject<'a> {
@@ -109,6 +166,7 @@ pub fn validate_code(
             "`date` is not supported: codes are validated against the versions served now",
         )));
     }
+    refuse_unimplemented(input)?;
     let model = sources.value_set(
         input.inline_value_set.clone(),
         input.url.as_deref(),

@@ -106,6 +106,10 @@ macro_rules! map {
                                 .collect(),
                         })
                         .collect(),
+                    // TODO(#163): answer the located code, its system, and abstract.
+                    code: None,
+                    system: None,
+                    r#abstract: None,
                 }
             }
 
@@ -198,8 +202,7 @@ macro_rules! map {
             }
 
             /// The `CodeSystem/$validate-code` outcome as the version's response: `result`,
-            /// `message`, and `display` (4.0.1 and 4.3.0 declare no `code`, `system`, or
-            /// `version` output).
+            /// `message`, and `display`; the ecosystem overlay's outputs follow.
             #[must_use]
             pub fn validate_code_response(
                 outcome: ValidationOutcome,
@@ -208,6 +211,13 @@ macro_rules! map {
                     result: outcome.result.into(),
                     message: outcome.message.map(Into::into),
                     display: outcome.display.map(Into::into),
+                    // TODO(#162): answer the validated code, system, version, and issues,
+                    // and the systems not served.
+                    code: None,
+                    system: None,
+                    version: None,
+                    issues: None,
+                    x_caused_by_unknown_system: Vec::new(),
                 }
             }
 
@@ -244,20 +254,35 @@ macro_rules! map {
                         .as_ref()
                         .and_then(|v| v.value.clone()),
                     abstract_ok: request.r#abstract.as_ref().and_then(|b| b.value),
+                    default_system_version: canonicals(&request.system_version_canonical),
+                    check_system_version: canonicals(&request.check_system_version),
+                    force_system_version: canonicals(&request.force_system_version),
+                    default_valueset_version: canonicals(&request.default_valueset_version),
+                    check_valueset_version: canonicals(&request.check_valueset_version),
+                    force_valueset_version: canonicals(&request.force_valueset_version),
+                    infer_system: request.infer_system.as_ref().and_then(|b| b.value),
+                    lenient_display_validation: request
+                        .lenient_display_validation
+                        .as_ref()
+                        .and_then(|b| b.value),
                 }
             }
 
-            /// The `ValueSet/$validate-code` outcome as the version's `Parameters`.
-            ///
-            /// The declared `result`, `message`, and `display`, nothing beside them
-            /// (R5 declares the validated `code`, `system`, `version`, and `issues`;
-            /// 4.0.1 and 4.3.0 do not).
+            /// The `ValueSet/$validate-code` outcome as the version's `Parameters`:
+            /// `result`, `message`, and `display`; the ecosystem overlay's outputs follow.
             #[must_use]
             pub fn value_set_validation_parameters(validation: &Validation) -> Parameters {
                 let response = ValueSetValidateCodeResponse {
                     result: validation.result.into(),
                     message: validation.message.as_deref().map(Into::into),
                     display: validation.display.as_deref().map(Into::into),
+                    // TODO(#162): answer the validated code, system, version, and issues,
+                    // and the systems not served.
+                    code: None,
+                    system: None,
+                    version: None,
+                    issues: None,
+                    x_caused_by_unknown_system: Vec::new(),
                 };
                 response.to_parameters()
             }
@@ -273,8 +298,11 @@ macro_rules! map {
                 }
             }
 
-            /// The `$translate` request as the engine's input; an inline `conceptMap` is
-            /// converted as a resource of the version.
+            /// The `$translate` request as the engine's input.
+            ///
+            /// An inline `conceptMap` is converted as a resource of the version. The R6
+            /// names `sourceSystem` and `sourceVersion` (pre-adopted) are accepted beside
+            /// `system` and `version`.
             #[must_use]
             pub fn translate_input(request: &ConceptMapTranslateRequest) -> TranslateInput {
                 TranslateInput {
@@ -288,8 +316,16 @@ macro_rules! map {
                         .as_ref()
                         .map(ferroterm_terminology::conceptmap::convert::$fhir::convert),
                     code: request.code.as_ref().and_then(|v| v.value.clone()),
-                    system: request.system.as_ref().and_then(|v| v.value.clone()),
-                    version: request.version.as_ref().and_then(|v| v.value.clone()),
+                    system: request
+                        .system
+                        .as_ref()
+                        .or(request.source_system.as_ref())
+                        .and_then(|v| v.value.clone()),
+                    version: request
+                        .version
+                        .as_ref()
+                        .or(request.source_version.as_ref())
+                        .and_then(|v| v.value.clone()),
                     coding: request.coding.as_ref().map(coding_ref),
                     codeable_concept: request
                         .codeable_concept

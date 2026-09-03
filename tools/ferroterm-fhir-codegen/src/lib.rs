@@ -13,6 +13,7 @@
 #![doc(test(attr(deny(warnings))))]
 
 pub mod closure;
+pub mod ecosystem;
 pub mod emit;
 pub mod fhir;
 pub mod lower;

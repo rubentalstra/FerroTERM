@@ -66,7 +66,8 @@ expectations and the reference servers, NOT a bespoke conformance runner.
 - **The FHIR terminology operations are tested against the operation
   definitions** in the vendored, pinned FHIR packages (per version): the set
   of parameters a version admits is exactly what the `OperationDefinition`
-  declares (`spec-adherence.md`).
+  declares plus the terminology ecosystem overlay, each overlaid parameter
+  tested per version (`spec-adherence.md`).
 - **Classification parity** (when a reasoner is added): the inferred
   hierarchy is checked against SNOMED's shipped inferred-relationship and
   transitive-closure files.

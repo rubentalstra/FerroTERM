@@ -69,6 +69,20 @@ pub struct CodeSystemLookupResponse {
     /// code, including status. For complex terminologies (e.g. SNOMED CT,
     /// LOINC, medications), these properties serve to decompose the code
     pub property: Vec<CodeSystemLookupResponseProperty>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. The code that was looked up, as the code
+    /// system spells it.
+    pub code: Option<super::super::primitives::Code>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. The code system the code was looked up in.
+    pub system: Option<super::super::primitives::Uri>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. Whether the concept is abstract
+    /// (\`notSelectable\`), a grouper that is not itself selected as a value.
+    pub r#abstract: Option<super::super::primitives::Boolean>,
 }
 
 /// The parts of the `designation` parameter.
@@ -528,6 +542,9 @@ impl CodeSystemLookupResponse {
         let mut field_definition: Option<super::super::primitives::String> = None;
         let mut field_designation: Vec<CodeSystemLookupResponseDesignation> = Vec::new();
         let mut field_property: Vec<CodeSystemLookupResponseProperty> = Vec::new();
+        let mut field_code: Option<super::super::primitives::Code> = None;
+        let mut field_system: Option<super::super::primitives::Uri> = None;
+        let mut field_abstract: Option<super::super::primitives::Boolean> = None;
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -665,6 +682,96 @@ impl CodeSystemLookupResponse {
                         &parameter.part,
                     )?);
                 }
+                "code" => {
+                    if field_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "code",
+                        });
+                    }
+                    field_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "code",
+                                },
+                            );
+                        }
+                    });
+                }
+                "system" => {
+                    if field_system.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "system",
+                        });
+                    }
+                    field_system = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "system",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "system",
+                                },
+                            );
+                        }
+                    });
+                }
+                "abstract" => {
+                    if field_abstract.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "abstract",
+                        });
+                    }
+                    field_abstract = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "abstract",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "abstract",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -690,6 +797,9 @@ impl CodeSystemLookupResponse {
             definition: field_definition,
             designation: field_designation,
             property: field_property,
+            code: field_code,
+            system: field_system,
+            r#abstract: field_abstract,
         })
     }
     /// Writes the fields as a parameter list.
@@ -745,6 +855,33 @@ impl CodeSystemLookupResponse {
             out.push(super::super::parameters::ParametersParameter {
                 name: "property".into(),
                 part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.code {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "system".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.r#abstract {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "abstract".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
                 ..Default::default()
             });
         }
@@ -1370,6 +1507,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1381,6 +1519,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1392,6 +1531,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1403,6 +1543,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("Coding"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1414,6 +1555,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("dateTime"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1425,6 +1567,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1433,6 +1576,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1441,6 +1585,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1452,6 +1597,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1463,6 +1609,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1474,6 +1621,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1485,6 +1633,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1493,6 +1642,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: None,
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[
                     super::super::super::operation::Parameter {
                         name: "language",
@@ -1503,6 +1653,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                         },
                         type_code: Some("code"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1514,6 +1665,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                         },
                         type_code: Some("Coding"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1525,6 +1677,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                         },
                         type_code: Some("Coding"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1536,6 +1689,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                         },
                         type_code: Some("string"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                 ],
@@ -1546,6 +1700,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: None,
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[
                     super::super::super::operation::Parameter {
                         name: "code",
@@ -1556,6 +1711,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                         },
                         type_code: Some("code"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1567,6 +1723,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                         },
                         type_code: Some("Element"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1578,6 +1735,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                         },
                         type_code: Some("string"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1589,6 +1747,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                         },
                         type_code: Some("canonical"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1600,6 +1759,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                         },
                         type_code: None,
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[
                             super::super::super::operation::Parameter {
                                 name: "code",
@@ -1610,6 +1770,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("code"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                             super::super::super::operation::Parameter {
@@ -1621,6 +1782,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("Element"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                             super::super::super::operation::Parameter {
@@ -1632,6 +1794,7 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("string"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                             super::super::super::operation::Parameter {
@@ -1643,11 +1806,48 @@ pub const CODE_SYSTEM_LOOKUP: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("canonical"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                         ],
                     },
                 ],
+            },
+            super::super::super::operation::Parameter {
+                name: "code",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("code"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "system",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("uri"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "abstract",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("boolean"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
+                parts: &[],
             },
         ],
     };

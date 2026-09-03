@@ -111,27 +111,11 @@ pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
     let mut versions: Vec<&VersionInput> = options.versions.iter().collect();
     versions.sort_by(|a, b| a.module.cmp(&b.module));
 
-    let mut models = Vec::with_capacity(versions.len());
+    let mut packages = Vec::with_capacity(versions.len());
     for version in &versions {
-        let package = Package::open(&version.package_dir)?;
-        let roots = RootSet::select(&package)?;
-        let closure = TypeClosure::compute(&package, &roots)?;
-        let mut model = VersionModule::lower(
-            &closure,
-            &version.module,
-            &package.manifest().name,
-            &package.manifest().version,
-        )?;
-        let mut contracts = Vec::new();
-        for operation in roots.operations.values() {
-            for resource in &operation.resource {
-                contracts.push(OperationContract::lower(operation, resource, &model)?);
-            }
-        }
-        contracts.sort_by(|a, b| a.module.cmp(&b.module));
-        model.operations = contracts;
-        models.push(model);
+        packages.push(Package::open(&version.package_dir)?);
     }
+    let models = lower_models(&versions, &packages)?;
 
     let mut files = BTreeMap::new();
     files.insert(String::from("lib.rs"), render_lib(&models)?);
@@ -203,6 +187,48 @@ pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
             .collect(),
         files: formatted.keys().cloned().collect(),
     })
+}
+
+/// Lowers every version's module and operation contracts, the terminology
+/// ecosystem overlay applied.
+fn lower_models(
+    versions: &[&VersionInput],
+    packages: &[Package],
+) -> Result<Vec<VersionModule>, EmitError> {
+    let mut root_sets = Vec::with_capacity(packages.len());
+    for package in packages {
+        root_sets.push(RootSet::select(package)?);
+    }
+    // NOTE: the overlay pre-adopts R6 parameters into every earlier version
+    // (`crate::ecosystem`); the R6 module is the source, named `r6`.
+    let r6 = versions
+        .iter()
+        .zip(&root_sets)
+        .find(|(version, _)| version.module == "r6")
+        .map(|(_, roots)| roots);
+    let mut models = Vec::with_capacity(versions.len());
+    for ((version, package), roots) in versions.iter().zip(packages).zip(&root_sets) {
+        let closure = TypeClosure::compute(package, roots)?;
+        let mut model = VersionModule::lower(
+            &closure,
+            &version.module,
+            &package.manifest().name,
+            &package.manifest().version,
+        )?;
+        let mut contracts = Vec::new();
+        for (url, operation) in &roots.operations {
+            let source = r6.and_then(|roots| roots.operations.get(url).copied());
+            for resource in &operation.resource {
+                contracts.push(OperationContract::lower_overlaid(
+                    operation, resource, &model, source,
+                )?);
+            }
+        }
+        contracts.sort_by(|a, b| a.module.cmp(&b.module));
+        model.operations = contracts;
+        models.push(model);
+    }
+    Ok(models)
 }
 
 fn write_tree(root: &Path, files: &BTreeMap<String, String>) -> Result<(), EmitError> {

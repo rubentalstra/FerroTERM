@@ -6,10 +6,13 @@
 //! multi-part parameter, and a `const` describing the exact parameter set the
 //! version declares (<https://hl7.org/fhir/R4B/operationdefinition.html>), so
 //! a server can refuse what the version does not define
-//! (`spec-adherence.md`).
+//! (`spec-adherence.md`). The terminology ecosystem overlay
+//! (`crate::ecosystem`) adds its parameters before lowering, each marked
+//! with its source.
 
 use std::fmt::{self, Write};
 
+use crate::ecosystem::{self, ParameterSource};
 use crate::fhir::{OperationDefinition, OperationParameter, ParameterUse};
 use crate::lower::{Cardinality, VersionModule};
 use crate::naming::{field_name, module_name, type_name};
@@ -103,6 +106,8 @@ pub struct ContractField {
     /// Whether the field's type derives `Default` (so a required field of it
     /// does not stop the owning struct from deriving `Default`).
     pub defaultable: bool,
+    /// Where the parameter comes from: the version, or the ecosystem overlay.
+    pub source: ParameterSource,
 }
 
 /// One operation's contract.
@@ -182,6 +187,32 @@ impl OperationContract {
             inputs,
             outputs,
         })
+    }
+
+    /// Lowers `definition` with the terminology ecosystem overlay applied
+    /// (`r6` is the R6 definition of the same operation, the source of the
+    /// pre-adopted parameters), marking each added field with its source.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OperationError`] as [`Self::lower`] does.
+    pub fn lower_overlaid(
+        definition: &OperationDefinition,
+        resource: &str,
+        module: &VersionModule,
+        r6: Option<&OperationDefinition>,
+    ) -> Result<Self, OperationError> {
+        let (overlaid, added) = ecosystem::overlay(definition, r6);
+        let mut contract = Self::lower(&overlaid, resource, module)?;
+        for field in contract.inputs.iter_mut().chain(&mut contract.outputs) {
+            if let Some(entry) = added
+                .iter()
+                .find(|a| a.usage == field.usage && a.name == field.fhir_name)
+            {
+                field.source = entry.source;
+            }
+        }
+        Ok(contract)
     }
 }
 
@@ -263,6 +294,7 @@ fn lower_field(
         part_struct,
         kind,
         defaultable,
+        source: ParameterSource::Version,
     })
 }
 
@@ -324,9 +356,11 @@ pub fn render_descriptor_module(banner: &str) -> String {
     out.push_str(
         r"//! Runtime descriptors of the terminology operations.
 //!
-//! The exact parameter set each FHIR version declares, so a server accepts
-//! nothing more and nothing less
-//! (<https://hl7.org/fhir/R4B/operationdefinition.html>).
+//! The exact parameter set each FHIR version declares
+//! (<https://hl7.org/fhir/R4B/operationdefinition.html>) plus the terminology
+//! ecosystem overlay (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>),
+//! each parameter marked with its source, so a server accepts nothing more
+//! and nothing less.
 
 /// The direction of an operation parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -335,6 +369,17 @@ pub enum ParameterUse {
     In,
     /// An output parameter.
     Out,
+}
+
+/// Where a declared parameter comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParameterSource {
+    /// The version's own `OperationDefinition`.
+    Version,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem.
+    PreAdopted,
+    /// Defined by the terminology ecosystem alone.
+    Ecosystem,
 }
 
 /// How many values a parameter takes.
@@ -373,6 +418,8 @@ pub struct Parameter {
     pub scope: &'static [&'static str],
     /// The nested parts.
     pub parts: &'static [Parameter],
+    /// Where the parameter comes from.
+    pub source: ParameterSource,
 }
 
 impl Parameter {
@@ -919,6 +966,11 @@ fn render_parameter(out: &mut String, field: &ContractField, d: &str, depth: usi
     }
     let scope: Vec<String> = field.scope.iter().map(|s| format!("{s:?}")).collect();
     writeln!(out, "{pad}    scope: &[{}],", scope.join(", "))?;
+    writeln!(
+        out,
+        "{pad}    source: {d}::ParameterSource::{},",
+        field.source.variant()
+    )?;
     if field.parts.is_empty() {
         writeln!(out, "{pad}    parts: &[],")?;
     } else {

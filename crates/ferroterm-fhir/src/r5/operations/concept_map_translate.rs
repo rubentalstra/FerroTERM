@@ -80,6 +80,18 @@ pub struct ConceptMapTranslateRequest {
     pub target_system: Option<super::super::primitives::Uri>,
     /// Data from another attribute that may help produce the correct mapping
     pub dependency: Vec<ConceptMapTranslateRequestDependency>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The system for the sourceCode to be translated. Note: the previous name
+    /// of this input parameter was \`system\`, and servers MAY choose to still
+    /// accept that name
+    pub source_system: Option<super::super::primitives::Uri>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The version for the system of the sourceCode to be translated. Note: the
+    /// previous name of this input parameter was \`version\`, and servers MAY
+    /// choose to still accept that name.
+    pub source_version: Option<super::super::primitives::String>,
 }
 
 /// The parts of the `dependency` parameter.
@@ -206,6 +218,8 @@ impl ConceptMapTranslateRequest {
         let mut field_target_scope: Option<super::super::primitives::Uri> = None;
         let mut field_target_system: Option<super::super::primitives::Uri> = None;
         let mut field_dependency: Vec<ConceptMapTranslateRequestDependency> = Vec::new();
+        let mut field_source_system: Option<super::super::primitives::Uri> = None;
+        let mut field_source_version: Option<super::super::primitives::String> = None;
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -640,6 +654,66 @@ impl ConceptMapTranslateRequest {
                         ConceptMapTranslateRequestDependency::from_parameter_list(&parameter.part)?,
                     );
                 }
+                "sourceSystem" => {
+                    if field_source_system.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "sourceSystem",
+                        });
+                    }
+                    field_source_system = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "sourceSystem",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "sourceSystem",
+                                },
+                            );
+                        }
+                    });
+                }
+                "sourceVersion" => {
+                    if field_source_version.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "sourceVersion",
+                        });
+                    }
+                    field_source_version = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "sourceVersion",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "sourceVersion",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -666,6 +740,8 @@ impl ConceptMapTranslateRequest {
             target_scope: field_target_scope,
             target_system: field_target_system,
             dependency: field_dependency,
+            source_system: field_source_system,
+            source_version: field_source_version,
         })
     }
     /// Writes the fields as a parameter list.
@@ -804,6 +880,24 @@ impl ConceptMapTranslateRequest {
             out.push(super::super::parameters::ParametersParameter {
                 name: "dependency".into(),
                 part: value.to_parameter_list(),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.source_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "sourceSystem".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.source_version {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "sourceVersion".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
                 ..Default::default()
             });
         }
@@ -1639,6 +1733,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1650,6 +1745,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("ConceptMap"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1661,6 +1757,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1672,6 +1769,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1683,6 +1781,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1694,6 +1793,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1705,6 +1805,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1716,6 +1817,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("Coding"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1727,6 +1829,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("CodeableConcept"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1738,6 +1841,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1749,6 +1853,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1760,6 +1865,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1771,6 +1877,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1782,6 +1889,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1790,6 +1898,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: None,
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[
                     super::super::super::operation::Parameter {
                         name: "attribute",
@@ -1800,6 +1909,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                         },
                         type_code: Some("uri"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1811,9 +1921,34 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                         },
                         type_code: Some("Element"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                 ],
+            },
+            super::super::super::operation::Parameter {
+                name: "sourceSystem",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("uri"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "sourceVersion",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("string"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
             },
             super::super::super::operation::Parameter {
                 name: "result",
@@ -1824,6 +1959,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1835,6 +1971,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1843,6 +1980,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: None,
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[
                     super::super::super::operation::Parameter {
                         name: "relationship",
@@ -1853,6 +1991,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                         },
                         type_code: Some("code"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1864,6 +2003,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                         },
                         type_code: Some("Coding"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                     super::super::super::operation::Parameter {
@@ -1875,6 +2015,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                         },
                         type_code: None,
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[
                             super::super::super::operation::Parameter {
                                 name: "uri",
@@ -1885,6 +2026,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("uri"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                             super::super::super::operation::Parameter {
@@ -1896,6 +2038,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("Element"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                         ],
@@ -1909,6 +2052,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                         },
                         type_code: None,
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[
                             super::super::super::operation::Parameter {
                                 name: "attribute",
@@ -1919,6 +2063,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("uri"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                             super::super::super::operation::Parameter {
@@ -1930,6 +2075,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("Element"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                         ],
@@ -1943,6 +2089,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                         },
                         type_code: None,
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[
                             super::super::super::operation::Parameter {
                                 name: "attribute",
@@ -1953,6 +2100,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("uri"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                             super::super::super::operation::Parameter {
@@ -1964,6 +2112,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                                 },
                                 type_code: Some("Element"),
                                 scope: &[],
+                                source: super::super::super::operation::ParameterSource::Version,
                                 parts: &[],
                             },
                         ],
@@ -1977,6 +2126,7 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                         },
                         type_code: Some("uri"),
                         scope: &[],
+                        source: super::super::super::operation::ParameterSource::Version,
                         parts: &[],
                     },
                 ],

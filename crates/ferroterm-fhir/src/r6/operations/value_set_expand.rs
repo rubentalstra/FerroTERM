@@ -1554,6 +1554,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1565,6 +1566,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("ValueSet"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1576,6 +1578,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1587,6 +1590,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1598,6 +1602,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1609,6 +1614,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1617,6 +1623,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1628,6 +1635,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("dateTime"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1639,6 +1647,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("integer"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1650,6 +1659,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("integer"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1661,6 +1671,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1669,6 +1680,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1680,6 +1692,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1691,6 +1704,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1699,6 +1713,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1710,6 +1725,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1721,6 +1737,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1732,6 +1749,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1743,6 +1761,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1751,6 +1770,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("string"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1762,6 +1782,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("boolean"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1770,6 +1791,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1778,6 +1800,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1786,6 +1809,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1794,6 +1818,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1802,6 +1827,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1810,6 +1836,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1818,6 +1845,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1829,6 +1857,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("canonical"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1837,6 +1866,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("Resource"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -1848,6 +1878,7 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 },
                 type_code: Some("ValueSet"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
         ],

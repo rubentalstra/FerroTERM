@@ -111,6 +111,10 @@ pub fn lookup_response(outcome: LookupOutcome) -> CodeSystemLookupResponse {
                     .collect(),
             })
             .collect(),
+        // TODO(#163): answer the located code, its system, and abstract.
+        code: None,
+        system: None,
+        r#abstract: None,
     }
 }
 
@@ -211,6 +215,8 @@ pub fn validate_code_response(outcome: ValidationOutcome) -> CodeSystemValidateC
         version: outcome.version.map(Into::into),
         codeable_concept: None,
         issues: issues(&outcome.issues),
+        // TODO(#162): answer the systems not served.
+        x_caused_by_unknown_system: Vec::new(),
     }
 }
 
@@ -282,6 +288,17 @@ pub fn value_set_validate_input(request: &ValueSetValidateCodeRequest) -> ValueS
             .as_ref()
             .and_then(|v| v.value.clone()),
         abstract_ok: request.r#abstract.as_ref().and_then(|b| b.value),
+        default_system_version: canonicals(&request.system_version_canonical),
+        check_system_version: canonicals(&request.check_system_version),
+        force_system_version: canonicals(&request.force_system_version),
+        default_valueset_version: canonicals(&request.default_valueset_version),
+        check_valueset_version: canonicals(&request.check_valueset_version),
+        force_valueset_version: canonicals(&request.force_valueset_version),
+        infer_system: request.infer_system.as_ref().and_then(|b| b.value),
+        lenient_display_validation: request
+            .lenient_display_validation
+            .as_ref()
+            .and_then(|b| b.value),
     }
 }
 
@@ -299,6 +316,8 @@ pub fn value_set_validation_parameters(validation: &Validation) -> Parameters {
         version: validation.version.as_deref().map(Into::into),
         codeable_concept: None,
         issues: issues(&validation.issues),
+        // TODO(#162): answer the systems not served.
+        x_caused_by_unknown_system: Vec::new(),
     }
     .to_parameters()
 }
@@ -339,8 +358,16 @@ pub fn translate_input(request: &ConceptMapTranslateRequest) -> TranslateInput {
             .as_ref()
             .and_then(|v| v.value.clone())
             .or_else(|| target_code.clone()),
-        system: request.system.as_ref().and_then(|v| v.value.clone()),
-        version: request.version.as_ref().and_then(|v| v.value.clone()),
+        system: request
+            .system
+            .as_ref()
+            .or(request.source_system.as_ref())
+            .and_then(|v| v.value.clone()),
+        version: request
+            .version
+            .as_ref()
+            .or(request.source_version.as_ref())
+            .and_then(|v| v.value.clone()),
         coding: request.source_coding.as_ref().map(coding_ref),
         codeable_concept: request
             .source_codeable_concept

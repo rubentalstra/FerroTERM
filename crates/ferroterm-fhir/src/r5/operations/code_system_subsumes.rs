@@ -473,6 +473,7 @@ pub const CODE_SYSTEM_SUBSUMES: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -484,6 +485,7 @@ pub const CODE_SYSTEM_SUBSUMES: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -495,6 +497,7 @@ pub const CODE_SYSTEM_SUBSUMES: super::super::super::operation::Operation =
                 },
                 type_code: Some("uri"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -506,6 +509,7 @@ pub const CODE_SYSTEM_SUBSUMES: super::super::super::operation::Operation =
                 },
                 type_code: Some("string"),
                 scope: &["type"],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -517,6 +521,7 @@ pub const CODE_SYSTEM_SUBSUMES: super::super::super::operation::Operation =
                 },
                 type_code: Some("Coding"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -528,6 +533,7 @@ pub const CODE_SYSTEM_SUBSUMES: super::super::super::operation::Operation =
                 },
                 type_code: Some("Coding"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
             super::super::super::operation::Parameter {
@@ -539,6 +545,7 @@ pub const CODE_SYSTEM_SUBSUMES: super::super::super::operation::Operation =
                 },
                 type_code: Some("code"),
                 scope: &[],
+                source: super::super::super::operation::ParameterSource::Version,
                 parts: &[],
             },
         ],
