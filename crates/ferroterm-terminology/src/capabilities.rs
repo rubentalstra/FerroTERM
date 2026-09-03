@@ -6,7 +6,7 @@
 //! renders it into its generated type, and the R5-only `codeSystem.content`
 //! is a generated difference, not a hand-written conditional.
 
-use ferroterm_fhir::{r4b, r5};
+use ferroterm_fhir::r5;
 
 use crate::filter::FilterOperator;
 use crate::provider::{Capability, ContentMode};
@@ -127,78 +127,6 @@ impl Summary {
         Self { systems }
     }
 
-    /// The R4B resource; `date` is the statement's `dateTime`.
-    #[must_use]
-    pub fn to_r4b(&self, date: &str) -> r4b::terminology_capabilities::TerminologyCapabilities {
-        use r4b::terminology_capabilities::{
-            TerminologyCapabilities, TerminologyCapabilitiesCodeSystem,
-            TerminologyCapabilitiesCodeSystemVersion,
-            TerminologyCapabilitiesCodeSystemVersionFilter, TerminologyCapabilitiesExpansion,
-            TerminologyCapabilitiesExpansionParameter,
-        };
-        TerminologyCapabilities {
-            status: "active".into(),
-            date: date.into(),
-            kind: "instance".into(),
-            code_system: self
-                .systems
-                .iter()
-                .map(|system| TerminologyCapabilitiesCodeSystem {
-                    uri: Some(system.url.as_str().into()),
-                    version: system
-                        .versions
-                        .iter()
-                        .map(|version| TerminologyCapabilitiesCodeSystemVersion {
-                            code: Some(version.code.as_str().into()),
-                            is_default: Some(version.is_default.into()),
-                            compositional: Some(version.compositional.into()),
-                            language: common_languages(&version.languages)
-                                .into_iter()
-                                .map(Into::into)
-                                .collect(),
-                            filter: version
-                                .filters
-                                .iter()
-                                .map(|filter| TerminologyCapabilitiesCodeSystemVersionFilter {
-                                    code: filter.code.as_str().into(),
-                                    op: filter
-                                        .operators
-                                        .iter()
-                                        .map(|op| op.code().into())
-                                        .collect(),
-                                    ..Default::default()
-                                })
-                                .collect(),
-                            property: version
-                                .properties
-                                .iter()
-                                .map(|p| p.as_str().into())
-                                .collect(),
-                            ..Default::default()
-                        })
-                        .collect(),
-                    subsumption: Some(system.subsumption.into()),
-                    ..Default::default()
-                })
-                .collect(),
-            expansion: Some(TerminologyCapabilitiesExpansion {
-                hierarchical: Some(false.into()),
-                paging: Some(true.into()),
-                incomplete: Some(false.into()),
-                text_filter: Some(TEXT_FILTER.into()),
-                parameter: EXPANSION_PARAMETERS
-                    .iter()
-                    .map(|name| TerminologyCapabilitiesExpansionParameter {
-                        name: (*name).into(),
-                        ..Default::default()
-                    })
-                    .collect(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        }
-    }
-
     /// The R5 resource; `date` is the statement's `dateTime`.
     #[must_use]
     pub fn to_r5(&self, date: &str) -> r5::terminology_capabilities::TerminologyCapabilities {
@@ -264,6 +192,94 @@ impl Summary {
         }
     }
 }
+
+// NOTE: R4 (4.0.1) and R4B (4.3.0) declare the same TerminologyCapabilities
+// elements this render fills, so one macro produces both methods.
+macro_rules! terminology_capabilities {
+    ($module:ident, $name:ident) => {
+        impl Summary {
+            /// The resource of the version; `date` is the statement's `dateTime`.
+            #[must_use]
+            pub fn $name(
+                &self,
+                date: &str,
+            ) -> ferroterm_fhir::$module::terminology_capabilities::TerminologyCapabilities {
+                use ferroterm_fhir::$module::terminology_capabilities::{
+                    TerminologyCapabilities, TerminologyCapabilitiesCodeSystem,
+                    TerminologyCapabilitiesCodeSystemVersion,
+                    TerminologyCapabilitiesCodeSystemVersionFilter,
+                    TerminologyCapabilitiesExpansion, TerminologyCapabilitiesExpansionParameter,
+                };
+                TerminologyCapabilities {
+                    status: "active".into(),
+                    date: date.into(),
+                    kind: "instance".into(),
+                    code_system: self
+                        .systems
+                        .iter()
+                        .map(|system| TerminologyCapabilitiesCodeSystem {
+                            uri: Some(system.url.as_str().into()),
+                            version: system
+                                .versions
+                                .iter()
+                                .map(|version| TerminologyCapabilitiesCodeSystemVersion {
+                                    code: Some(version.code.as_str().into()),
+                                    is_default: Some(version.is_default.into()),
+                                    compositional: Some(version.compositional.into()),
+                                    language: common_languages(&version.languages)
+                                        .into_iter()
+                                        .map(Into::into)
+                                        .collect(),
+                                    filter: version
+                                        .filters
+                                        .iter()
+                                        .map(|filter| {
+                                            TerminologyCapabilitiesCodeSystemVersionFilter {
+                                                code: filter.code.as_str().into(),
+                                                op: filter
+                                                    .operators
+                                                    .iter()
+                                                    .map(|op| op.code().into())
+                                                    .collect(),
+                                                ..Default::default()
+                                            }
+                                        })
+                                        .collect(),
+                                    property: version
+                                        .properties
+                                        .iter()
+                                        .map(|p| p.as_str().into())
+                                        .collect(),
+                                    ..Default::default()
+                                })
+                                .collect(),
+                            subsumption: Some(system.subsumption.into()),
+                            ..Default::default()
+                        })
+                        .collect(),
+                    expansion: Some(TerminologyCapabilitiesExpansion {
+                        hierarchical: Some(false.into()),
+                        paging: Some(true.into()),
+                        incomplete: Some(false.into()),
+                        text_filter: Some(TEXT_FILTER.into()),
+                        parameter: EXPANSION_PARAMETERS
+                            .iter()
+                            .map(|name| TerminologyCapabilitiesExpansionParameter {
+                                name: (*name).into(),
+                                ..Default::default()
+                            })
+                            .collect(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }
+            }
+        }
+    };
+}
+
+terminology_capabilities!(r4, to_r4);
+terminology_capabilities!(r4b, to_r4b);
 
 /// The `$expand` parameters the server evaluates, for
 /// `expansion.parameter`; `tx-resource` is the terminology ecosystem's

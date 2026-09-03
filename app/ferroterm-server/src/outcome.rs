@@ -1,17 +1,20 @@
 //! `OperationOutcome` responses
-//! (<https://hl7.org/fhir/R4B/operationoutcome.html>).
+//! (<https://hl7.org/fhir/R4B/operationoutcome.html>). R4, R4B, and R5 declare
+//! the same `issue` elements a failure fills, so one render serves every
+//! version.
 //!
 //! Every failure a client can cause answers with an `OperationOutcome` whose
 //! issue carries `severity`, `code` from the issue-type value set, and
 //! `diagnostics`; the status is the one the operation layer chose.
 
-use crate::r4b::map::tx_issue_coding;
 use axum::body::Body;
 use axum::response::{IntoResponse, Response};
 use ferroterm_fhir::codec::Json;
 use ferroterm_fhir::r4b::codeable_concept::CodeableConcept;
+use ferroterm_fhir::r4b::coding::Coding;
 use ferroterm_fhir::r4b::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
 use ferroterm_terminology::operations::OperationError;
+use ferroterm_terminology::operations::value_set_validate_code::TX_ISSUE_TYPE;
 use http::StatusCode;
 use http::header::CONTENT_TYPE;
 
@@ -71,6 +74,14 @@ impl Failure {
             }],
             ..Default::default()
         }
+    }
+}
+
+fn tx_issue_coding(kind: &str) -> Coding {
+    Coding {
+        system: Some(TX_ISSUE_TYPE.into()),
+        code: Some(kind.into()),
+        ..Default::default()
     }
 }
 

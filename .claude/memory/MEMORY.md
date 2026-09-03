@@ -15,3 +15,4 @@
 - [Licence: BUSL 1.1](license-busl.md), the owner changed the project licence from MIT to the Business Source License 1.1 on 2026-09-03 (no hosted-service offering, no for-fee resale, Apache 2.0 after four years); the versions guard fails on stale MIT claims
 - [Multi-version program](multi-version-program.md), v0.0.9 plan decided 2026-09-03: neutral-core refactor of the operations (#146) first, then R4, then R5 (the LOINC suite cases need R5 shapes), then R6 and XML
 - [Licence: Apache 2.0](license-apache.md), MIT until 2026-09-03, a BUSL 1.1 change (#147) merged and was reverted the same day for Apache 2.0 (#150); the versions guard fails on stale MIT claims
+- [Auto-merge follow-ups](auto-merge-follow-ups.md), never push a follow-up to an auto-merge PR unless it is still BLOCKED; one PR per slice, branch from origin/main; check for UU after stash pop

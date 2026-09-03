@@ -13,6 +13,17 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- FHIR R4 (4.0.1) is served under `/r4` from the generated `ferroterm_fhir::r4`
+  module: every terminology operation with R4's own `OperationDefinition`
+  parameter set, `GET /r4/metadata` and `?mode=terminology` as R4 resources,
+  `$versions`, `$cache-control`, and the `ValueSet` read and search. One set
+  of macros instantiates the wire per version, so R4 and R4B cannot drift; a
+  cache started on one version serves the other. The tx-ecosystem suite runs
+  against `/r4` in CI too (`scripts/checks/tx-ecosystem.sh --fhir r4`,
+  `conformance/tx-ecosystem/passing-r4.txt`).
+
 ### Changed
 
 - The licence of the project's own code is the Apache License 2.0 (`LICENSE`,

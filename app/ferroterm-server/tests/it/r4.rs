@@ -1,0 +1,255 @@
+//! FHIR R4 under `/r4`: the 4.0.1 resources and operation shapes over the same
+//! engine as `/r4b` (<https://hl7.org/fhir/R4/terminology-service.html>).
+
+use axum::body::Body;
+use ferroterm_fhir::codec::{Json, Path, expect_object};
+use ferroterm_testkit::fhir::{ANIMALS, CM_ANIMALS_COLOURS, VS_PETS};
+use ferroterm_testkit::snomed::{ANIMAL, CAT, VERSION, item, sctid};
+use http::{Request, StatusCode};
+use serde_json::{Value, json};
+use tower::ServiceExt;
+
+use crate::fixture::{Server, json as read_json, parameter};
+
+const SCT: &str = "http://snomed.info/sct";
+const INLINE_CS: &str = "http://example.org/fhir/CodeSystem/inline-r4";
+const INLINE_VS: &str = "http://example.org/fhir/ValueSet/inline-r4";
+
+#[tokio::test]
+async fn the_capability_statement_is_an_r4_resource() {
+    let server = Server::start();
+    let (status, body) = server.get("/r4/metadata").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["resourceType"], "CapabilityStatement");
+    assert_eq!(body["fhirVersion"], "4.0.1");
+    assert_eq!(
+        body["url"],
+        "https://ferroterm.eu/fhir/CapabilityStatement/ferroterm-r4"
+    );
+    assert_eq!(body["title"], "FerroTERM terminology server (R4)");
+    let names: Vec<&str> = body["rest"][0]["resource"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|r| r["operation"].as_array().unwrap())
+        .map(|o| o["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        names,
+        [
+            "lookup",
+            "validate-code",
+            "subsumes",
+            "expand",
+            "validate-code",
+            "translate"
+        ]
+    );
+    // The resource decodes through the generated 4.0.1 codec.
+    let mut path = Path::root("CapabilityStatement");
+    let object = expect_object(&body, &path).expect("object");
+    let decoded =
+        ferroterm_fhir::r4::capability_statement::CapabilityStatement::from_json(object, &mut path)
+            .expect("an R4 CapabilityStatement");
+    assert_eq!(decoded.fhir_version.value.as_deref(), Some("4.0.1"));
+    assert_eq!(Value::Object(decoded.to_json().expect("encodes")), body);
+}
+
+#[tokio::test]
+async fn the_terminology_capabilities_are_an_r4_resource() {
+    let server = Server::start();
+    let (status, body) = server.get("/r4/metadata?mode=terminology").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["resourceType"], "TerminologyCapabilities");
+    assert_eq!(body["title"], "FerroTERM terminology capabilities (R4)");
+    assert_eq!(body["codeSystem"][0]["uri"], SCT);
+    assert_eq!(body["codeSystem"][0]["version"][0]["code"], VERSION);
+    let mut path = Path::root("TerminologyCapabilities");
+    let object = expect_object(&body, &path).expect("object");
+    let decoded = ferroterm_fhir::r4::terminology_capabilities::TerminologyCapabilities::from_json(
+        object, &mut path,
+    )
+    .expect("an R4 TerminologyCapabilities");
+    assert_eq!(Value::Object(decoded.to_json().expect("encodes")), body);
+    // The same registry, rendered for each version, differs only in the
+    // version-specific texts.
+    let (_, r4b) = server.get("/r4b/metadata?mode=terminology").await;
+    assert_eq!(body["codeSystem"], r4b["codeSystem"]);
+    assert_eq!(body["expansion"], r4b["expansion"]);
+}
+
+#[tokio::test]
+async fn versions_names_r4() {
+    let server = Server::start();
+    let (status, body) = server.get("/r4/$versions").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(parameter(&body, "version").unwrap()["valueCode"], "4.0");
+    assert_eq!(parameter(&body, "default").unwrap()["valueCode"], "4.0");
+}
+
+#[tokio::test]
+async fn the_code_system_operations_answer_under_r4() {
+    let server = Server::start();
+    let cat = sctid(item(CAT));
+    let animal = sctid(item(ANIMAL));
+    let (status, body) = server
+        .get(&format!(
+            "/r4/CodeSystem/$lookup?system={SCT}&code={cat}&displayLanguage=nl"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(parameter(&body, "display").unwrap()["valueString"], "Kat");
+    assert_eq!(parameter(&body, "version").unwrap()["valueString"], VERSION);
+
+    let (status, body) = server
+        .post(
+            "/r4/CodeSystem/$validate-code",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": SCT},
+                {"name": "code", "valueCode": cat},
+                {"name": "display", "valueString": "Cat"}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], true);
+
+    let id = server.snomed_id();
+    let (status, body) = server
+        .get(&format!(
+            "/r4/CodeSystem/{id}/$subsumes?codeA={animal}&codeB={cat}"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        parameter(&body, "outcome").unwrap()["valueCode"],
+        "subsumes"
+    );
+}
+
+#[tokio::test]
+async fn the_value_set_and_concept_map_operations_answer_under_r4() {
+    let server = Server::start_with_resources();
+    let (status, body) = server
+        .get(&format!(
+            "/r4/ValueSet/$expand?url={VS_PETS}&includeDesignations=true"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["resourceType"], "ValueSet");
+    let codes: Vec<&str> = body["expansion"]["contains"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|c| c["code"].as_str())
+        .collect();
+    assert_eq!(codes, ["kitten", "pet"]);
+    let mut path = Path::root("ValueSet");
+    let object = expect_object(&body, &path).expect("object");
+    ferroterm_fhir::r4::value_set::ValueSet::from_json(object, &mut path).expect("an R4 ValueSet");
+
+    let (status, body) = server
+        .get(&format!(
+            "/r4/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], true);
+
+    let (status, body) = server
+        .get(&format!(
+            "/r4/ConceptMap/$translate?url={CM_ANIMALS_COLOURS}&system={ANIMALS}&code=cat"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], true);
+    assert_eq!(
+        parameter(&body, "match").unwrap()["part"][0]["name"],
+        "equivalence"
+    );
+
+    let (status, body) = server.get("/r4/ValueSet").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["resourceType"], "Bundle");
+    let mut path = Path::root("Bundle");
+    let object = expect_object(&body, &path).expect("object");
+    ferroterm_fhir::r4::bundle::Bundle::from_json(object, &mut path).expect("an R4 Bundle");
+}
+
+// NOTE: R4 `ValueSet/$expand` declares neither `property` nor `useSupplement`
+// (<https://hl7.org/fhir/R4/valueset-operation-expand.html>); R5 adds both.
+#[tokio::test]
+async fn an_r5_only_parameter_is_refused_under_r4() {
+    let server = Server::start_with_resources();
+    for parameter_name in ["property", "useSupplement"] {
+        let (status, body) = server
+            .get(&format!(
+                "/r4/ValueSet/$expand?url={VS_PETS}&{parameter_name}=x"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        assert_eq!(body["resourceType"], "OperationOutcome");
+        assert_eq!(body["issue"][0]["code"], "invalid");
+        let diagnostics = body["issue"][0]["diagnostics"].as_str().unwrap();
+        assert!(
+            diagnostics.contains(&format!("does not declare a parameter `{parameter_name}`")),
+            "{diagnostics}"
+        );
+    }
+    let (status, body) = server
+        .post(
+            "/r4/ValueSet/$expand",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": VS_PETS},
+                {"name": "property", "valueCode": "x"}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["issue"][0]["code"], "invalid");
+}
+
+#[tokio::test]
+async fn a_cache_started_on_one_version_serves_another() {
+    let server = Server::start();
+    let (status, body) = server
+        .post(
+            "/r4/$cache-control?mode=start",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "tx-resource", "resource": {
+                    "resourceType": "CodeSystem", "url": INLINE_CS, "status": "active",
+                    "content": "complete", "concept": [{"code": "x", "display": "X"}]}},
+                {"name": "tx-resource", "resource": {
+                    "resourceType": "ValueSet", "url": INLINE_VS, "status": "active",
+                    "compose": {"include": [{"system": INLINE_CS, "concept": [{"code": "x"}]}]}}}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let id = parameter(&body, "cache-id").unwrap()["valueId"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    for root in ["/r4", "/r4b"] {
+        let request = Request::post(format!("{root}/ValueSet/$validate-code"))
+            .header(http::header::CONTENT_TYPE, "application/fhir+json")
+            .header("X-Cache-Id", &id)
+            .body(Body::from(
+                json!({"resourceType": "Parameters", "parameter": [
+                    {"name": "url", "valueUri": INLINE_VS},
+                    {"name": "code", "valueCode": "x"},
+                    {"name": "system", "valueUri": INLINE_CS}
+                ]})
+                .to_string(),
+            ))
+            .expect("request");
+        let (status, body) =
+            read_json(server.router().oneshot(request).await.expect("response")).await;
+        assert_eq!(status, StatusCode::OK, "{root}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{root}"
+        );
+    }
+}

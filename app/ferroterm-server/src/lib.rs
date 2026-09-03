@@ -6,7 +6,7 @@
 //! [`serve`] runs it on a bound listener until the process is asked to stop.
 //! `main.rs` only reads the environment and calls in.
 //!
-//! Every served FHIR version has its own path prefix (`/r4b`), and within it
+//! Every served FHIR version has its own path prefix (`/r4`, `/r4b`), and within it
 //! the resource and operation URLs the FHIR REST API defines
 //! (<https://hl7.org/fhir/R4B/http.html>, <https://hl7.org/fhir/R4B/operations.html>).
 #![doc(test(attr(deny(warnings))))]
@@ -14,11 +14,13 @@
 pub mod banner;
 pub mod config;
 pub mod outcome;
+pub mod r4;
 pub mod r4b;
 pub mod request_log;
 pub mod scope;
 pub mod state;
 pub mod telemetry;
+pub mod version;
 
 use std::future::Future;
 use std::sync::Arc;
@@ -38,6 +40,7 @@ use crate::state::AppState;
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health", get(health))
+        .nest("/r4", r4::router())
         .nest("/r4b", r4b::router())
         .fallback(outcome::not_found)
         .layer(axum::middleware::from_fn(request_log::log))
