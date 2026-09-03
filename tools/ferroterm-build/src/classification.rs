@@ -35,14 +35,9 @@ pub const KIND: &str = "classification";
 pub const HIERARCHY_MEANING: &str = "classified-with";
 /// The ICD-10-CM system URI (<https://hl7.org/fhir/R4B/icd.html>).
 pub const ICD10CM_SYSTEM: &str = "http://hl7.org/fhir/sid/icd-10-cm";
-/// The rubric kinds stored as designations, by use ordinal.
-pub const DESIGNATION_KINDS: [&str; 5] = [
-    "preferred",
-    "preferredLong",
-    "inclusion",
-    "inclusionTerm",
-    "short",
-];
+/// The rubric kinds stored as designations by default, by use ordinal
+/// (a classification may name its own).
+pub const DESIGNATION_KINDS: [&str; 5] = ferroterm_classification::DEFAULT_DESIGNATION_KINDS;
 /// The property that carries the class kind (`chapter`, `block`, ...).
 pub const KIND_KEY: &str = "kind";
 /// The property that carries the usage mark (`dagger`, `aster`).
@@ -136,10 +131,10 @@ struct Placed {
     record: Designation,
 }
 
-fn use_ordinal(kind: &str) -> Option<u32> {
-    DESIGNATION_KINDS
+fn use_ordinal(kinds: &[String], kind: &str) -> Option<u32> {
+    kinds
         .iter()
-        .position(|k| *k == kind)
+        .position(|k| k == kind)
         .and_then(|i| u32::try_from(i).ok())
 }
 
@@ -161,7 +156,7 @@ fn property_keys(classification: &Classification) -> Vec<String> {
     let mut rubric_kinds: BTreeSet<&str> = BTreeSet::new();
     for class in &classification.classes {
         for rubric in &class.rubrics {
-            if use_ordinal(&rubric.kind).is_none() {
+            if use_ordinal(&classification.designation_kinds, &rubric.kind).is_none() {
                 rubric_kinds.insert(rubric.kind.as_str());
             }
         }
@@ -197,7 +192,7 @@ pub fn build(
     std::fs::create_dir_all(out).map_err(io_error(out))?;
     let store_path = out.join(STORE_FILE);
     let mut builder = StoreBuilder::create(&store_path, system, &version)?;
-    for (i, name) in DESIGNATION_KINDS.iter().enumerate() {
+    for (i, name) in classification.designation_kinds.iter().enumerate() {
         builder.vocabulary(Vocabulary::DesignationUses, ordinal(i)?.index(), name)?;
     }
     let mut keys: BTreeMap<String, u32> = BTreeMap::new();
@@ -222,7 +217,7 @@ pub fn build(
             ordinal,
             &Concept {
                 code: class.code.clone(),
-                active: true,
+                active: class.active,
                 effective_time: None,
                 module: None,
             },
@@ -250,7 +245,7 @@ pub fn build(
         }
         for rubric in &class.rubrics {
             languages.insert(rubric.language.clone());
-            match use_ordinal(&rubric.kind) {
+            match use_ordinal(&classification.designation_kinds, &rubric.kind) {
                 Some(use_ordinal) => {
                     placed.push(Placed {
                         ordinal,
@@ -319,7 +314,7 @@ pub fn build(
         "version": version,
         "name": classification.name,
         "title": classification.title,
-        "hierarchyMeaning": HIERARCHY_MEANING,
+        "hierarchyMeaning": classification.hierarchy,
         "language": classification.language,
         "store": STORE_FILE,
         "storeLayout": tables::LAYOUT_VERSION,

@@ -30,6 +30,8 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rrf/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-rrf/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-terminology/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-dhd/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ferroterm-dhd/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/artifacts" />

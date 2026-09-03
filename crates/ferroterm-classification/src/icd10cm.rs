@@ -325,6 +325,7 @@ impl Tabular {
             parent,
             usage: None,
             valid: None,
+            active: true,
             rubrics,
         });
     }
@@ -384,6 +385,7 @@ pub fn read_tabular(text: &str, language: &str) -> Result<Classification, Icd10c
         language: language.to_owned(),
         kinds: KINDS.iter().map(|k| (*k).to_owned()).collect(),
         classes: tabular.classes,
+        ..Classification::default()
     })
 }
 
@@ -502,6 +504,7 @@ pub fn merge(classification: &mut Classification, order: &[OrderLine]) {
             parent,
             usage: None,
             valid: Some(line.valid),
+            active: true,
             rubrics,
         });
     }

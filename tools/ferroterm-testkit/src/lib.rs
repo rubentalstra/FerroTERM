@@ -8,6 +8,7 @@
 
 pub mod atc;
 pub mod classification;
+pub mod dhd;
 pub mod fhir;
 pub mod icd11;
 pub mod loinc;

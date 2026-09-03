@@ -36,6 +36,7 @@ The server exposes the FHIR terminology API on R4B:
 | ICD-11 (MMS, ICF, the Foundation) | a local deployment of the WHO ICD-API | short codes, entity URIs, postcoordination expressions validated against the axes, the scale value sets |
 | RxNorm | the RRF release or the prescribable subset | the FHIR `STY`, `SAB`, `TTY`, `REL`, and `RELA` filters over typed edges, `/vs` |
 | ATC/DDD | the WHO index as CSV, or the G-Standaard `BST801T` file | the five levels as a `classified-with` tree, DDDs as properties |
+| DHD thesauri | the Uitleverformaat 5.0 delivery zip | a flat table with the SNOMED CT, ICD-10, DBC, and ZA links as properties and as concept maps |
 | FHIR `CodeSystem`, `ValueSet`, `ConceptMap` | a FHIR package or a directory of JSON | hierarchy, filters, properties, and supplements as the resources declare them |
 | UCUM, BCP 47, BCP 13, ISO 3166-1 | nothing | grammar and registry validation, vendored into the binary |
 

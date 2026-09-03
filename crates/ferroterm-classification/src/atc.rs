@@ -142,6 +142,7 @@ impl Table {
             parent: parent_of(code),
             usage: None,
             valid: None,
+            active: true,
             rubrics: Vec::new(),
         });
         self.classes
@@ -172,6 +173,7 @@ impl Table {
             language: language.to_owned(),
             kinds: KINDS.iter().map(|k| (*k).to_owned()).collect(),
             classes: self.classes,
+            ..Classification::default()
         })
     }
 }

@@ -130,6 +130,27 @@ $ ferroterm-build --atc /path/to/BST801T --atc-version 2026 --out /path/to/atc-i
 The system is `http://www.whocc.no/atc`; the five levels are the `kind`
 property and filter; every DDD is a `ddd` property.
 
+## Loading the DHD thesauri
+
+A DHD licensee receives the Diagnosethesaurus and the Verrichtingenthesaurus
+as zips of CSV tables ("Uitleverformaat 5.0"). Build a delivery as it comes;
+the version is read from the zip name:
+
+```console
+$ ferroterm-build --dhd 20260901_120000_Diagnosethesaurus_2.40_uitleverformaat_5.0.zip \
+    --out /path/to/dhd-diagnoses
+```
+
+The system is `urn:oid:2.16.840.1.113883.2.4.3.120.5.1`, a flat table: the
+preferred term is the display, synonyms and patient-friendly terms are
+designations, and the SNOMED CT identifier, the ICD-10, DBC, and ZA
+derivations, the roles, and the umbrella terms are properties. Concepts ended
+before the delivery date are served inactive. The build also writes two
+`ConceptMap` resources under `conceptmaps/` in the output directory (the
+thesaurus to SNOMED CT and to ICD-10); point `FERROTERM_CODESYSTEMS` at that
+directory to serve them with `$translate`. Pass `--dhd-version` when the zip
+name does not carry the version.
+
 ## Loading RxNorm
 
 The "Current Prescribable Content" subset needs no licence

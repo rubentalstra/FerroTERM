@@ -458,6 +458,7 @@ fn modified(leaf: &Class, modifier: &ModifierClass, default_language: &str) -> C
         parent: Some(leaf.code.clone()),
         usage: leaf.usage.clone(),
         valid: leaf.valid,
+        active: true,
         rubrics,
     }
 }

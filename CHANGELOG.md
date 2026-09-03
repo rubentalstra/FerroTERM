@@ -45,6 +45,17 @@ fresh link reference.
   into the classification layout under `http://www.whocc.no/atc`: the five
   levels as `kind`, the tree from the code prefixes, the names as
   designations by language, every DDD a `ddd` property.
+- DHD thesauri: `ferroterm-build --dhd <delivery.zip|dir> [--dhd-version <v>]`
+  builds a Diagnosethesaurus or Verrichtingenthesaurus delivery
+  (Uitleverformaat 5.0 CSV tables) into a flat classification under
+  `urn:oid:2.16.840.1.113883.2.4.3.120.5.1`: the terms as designations by
+  type and language, the SNOMED CT identifier, the ICD-10, DBC, and ZA
+  derivations, roles, code mappings, replacements, splits, and umbrella terms
+  as properties, ended concepts inactive. The build writes
+  `conceptmaps/dhd-to-snomed.json` and `dhd-to-icd10.json` (FHIR R4B
+  `ConceptMap`) for `FERROTERM_CODESYSTEMS`. A classification without a tree
+  (no `hierarchyMeaning`) is served without `parent`/`child` properties and
+  without subsumption.
 
 ### Changed
 

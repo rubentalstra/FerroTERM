@@ -409,8 +409,22 @@ each has a clear provider shape.
   DBC, and ZA derivations; exchanged as the SNOMED refset `31000147101` and
   delivered to licensees as CSV zips ("Uitleverformaat 5.0", two-monthly)
   (<https://www.dhd.nl/assets/uploads/Uitleverformaat-Thesauri-5.0-v1.0.pdf>).
-  Provider shape: the refset through the SNOMED provider; the CSV as a table
-  provider with derivations as properties.
+  **Served.** `ferroterm-build --dhd <delivery.zip|dir> [--dhd-version <v>]
+  --out <dir>` reads the Uitleverformaat 5.0 tables (`ThesaurusConcept`,
+  `ThesaurusTerm`, `ThesaurusConceptRelaties`, `ThesaurusConceptRol`,
+  `Parapluterm`, `AfleidingICD10`, `AfleidingDBC`, `AfleidingZA`,
+  `CodeMapping`; found by their table suffix, the version from the delivery
+  name) into the classification layout as a flat table under
+  `urn:oid:2.16.840.1.113883.2.4.3.120.5.1`: the concept type as `kind`,
+  the preferred term, synonyms, patient-friendly terms, fully specified names,
+  and search terms as designations by language, concepts and terms ended
+  before the delivery date inactive or skipped, and the SNOMED CT identifier,
+  the ICD-10, DBC, and ZA derivations, the roles, the code mappings,
+  replacements, splits, and umbrella terms as properties. The build also
+  writes `conceptmaps/dhd-to-snomed.json` and `dhd-to-icd10.json` (FHIR R4B
+  `ConceptMap`, `equivalent` and `wider`) for `FERROTERM_CODESYSTEMS`, so
+  `$translate` answers the links. The refset `31000147101` rides on the SNOMED
+  provider as `?fhir_vs=refset/31000147101`.
 - **G-Standaard (Z-Index).** The Dutch medication database: about 80
   ASCII fixed-length files, monthly, paid subscription; the product ladder GPK,
   PRK, HPK, artikel (OIDs `2.16.840.1.113883.2.4.4.1`, `.10`, `.7`, `.8`) plus
