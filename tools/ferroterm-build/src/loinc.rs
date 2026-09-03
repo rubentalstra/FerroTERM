@@ -407,12 +407,12 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
             continue;
         };
         let mut index = 0;
-        let name = if part.display_name.is_empty() {
-            &part.name
-        } else {
-            &part.display_name
-        };
-        place(ordinal, &mut index, name, "en", 3);
+        // NOTE: the FHIR LOINC page names no display for a part; the reference
+        // servers show `PartName`, and `PartDisplayName` follows as a synonym.
+        place(ordinal, &mut index, &part.name, "en", 3);
+        if !part.display_name.is_empty() && part.display_name != part.name {
+            place(ordinal, &mut index, &part.display_name, "en", 3);
+        }
         builder.properties(
             ordinal,
             key("STATUS")?,

@@ -63,6 +63,9 @@ fresh link reference.
   part's code or its name with `=` and `in`, and its name, code, or column
   text with `regex`. `ferroterm-build --loinc` reads `LoincPartLink_Primary.csv`
   from the zip.
+- LOINC: a part displays its `PartName` (`PANEL.HL7.CYTOGEN`), as the
+  reference servers do where the FHIR page names no display; `PartDisplayName`
+  follows as a synonym.
 - `TerminologyCapabilities.codeSystem.version.language` lists the designation
   languages as `CommonLanguages` codes (a tag outside the set by its primary
   subtag, or left out): R4B binds the element to nothing, but the FHIR
