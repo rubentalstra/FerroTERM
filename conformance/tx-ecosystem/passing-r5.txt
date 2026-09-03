@@ -117,6 +117,7 @@ overload/validate-v1code2-wrongdisplay
 parameters/parameters-expand-enum-active
 parameters/parameters-expand-supplement-bad
 parameters/parameters-lookup-supplement-bad
+parameters/parameters-lookup-supplement-none
 parameters/parameters-validate-supplement-bad
 parameters/parameters-validate-supplement-good
 parameters/parameters-validate-supplement-none
@@ -168,15 +169,25 @@ simple-cases/simple-expand-repeating-prop
 simple-cases/simple-lookup-1
 simple-cases/simple-lookup-2
 tho/validate-child-of-child
+tho/validate-child-of-grandchild
+tho/validate-child-of-self
 tho/validate-descendent-of-child
 tho/validate-descendent-of-deep
+tho/validate-descendent-of-self
 tho/validate-isa-child
 tho/validate-isa-deep
+tho/validate-isa-parent
+tho/validate-isa-second-parent
+tho/validate-isa-second-parent-out
 tho/validate-isa-self
+tho/validate-isnota-descendant
+tho/validate-isnota-other-branch
 tho/validate-isnota-parent
+tho/validate-isnota-self
 validation/validation-cs-code-bad-code
 validation/validation-cs-code-good
 validation/validation-simple-child-of-child
+validation/validation-simple-child-of-grandchild
 validation/validation-simple-code-bad-code
 validation/validation-simple-code-bad-display-lenient
 validation/validation-simple-code-bad-display-notlenient
@@ -184,6 +195,7 @@ validation/validation-simple-code-bad-display-warning
 validation/validation-simple-code-bad-import
 validation/validation-simple-code-bad-language
 validation/validation-simple-code-bad-language-none
+validation/validation-simple-code-bad-system
 validation/validation-simple-code-bad-valueSet
 validation/validation-simple-code-good
 validation/validation-simple-code-good-display
@@ -226,6 +238,7 @@ version/code-v10-vs1wb-check
 version/code-v10-vs1wb-default
 version/code-v10-vs1wb-force
 version/code-v10-vs20
+version/code-v10-vs20-check
 version/code-v10-vs20-default
 version/code-v10-vs20-force
 version/code-v10-vsbb
@@ -233,6 +246,7 @@ version/code-v10-vsbb-check
 version/code-v10-vsbb-default
 version/code-v10-vsbb-force
 version/code-v10-vsnn
+version/code-v10-vsnn-check
 version/code-v10-vsnn-default
 version/code-v10-vsnn-force
 version/code-vbb-vs10
@@ -305,6 +319,7 @@ version/coding-v10-vs1wb-check
 version/coding-v10-vs1wb-default
 version/coding-v10-vs1wb-force
 version/coding-v10-vs20
+version/coding-v10-vs20-check
 version/coding-v10-vs20-default
 version/coding-v10-vs20-force
 version/coding-v10-vsbb
@@ -312,6 +327,7 @@ version/coding-v10-vsbb-check
 version/coding-v10-vsbb-default
 version/coding-v10-vsbb-force
 version/coding-v10-vsnn
+version/coding-v10-vsnn-check
 version/coding-v10-vsnn-default
 version/coding-v10-vsnn-force
 version/coding-vbb-vs10

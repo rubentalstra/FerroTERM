@@ -292,17 +292,13 @@ fn in_value_set(validation: &Validation) -> bool {
     })
 }
 
-/// The systems a failed coding named that the server does not serve, split
-/// between an unknown system (`x-unknown-system`) and an unknown version of a
-/// served one (`x-caused-by-unknown-system`).
+/// The systems a failed coding named that the server does not serve, kept
+/// apart as the coding's own judgement left them.
 fn take_unknown(from: &Validation, into: &mut Validation) {
-    for canonical in &from.unknown_systems {
-        if canonical.contains('|') {
-            into.unknown_systems.push(canonical.clone());
-        } else {
-            into.x_unknown_systems.push(canonical.clone());
-        }
-    }
+    into.unknown_systems
+        .extend(from.unknown_systems.iter().cloned());
+    into.x_unknown_systems
+        .extend(from.x_unknown_systems.iter().cloned());
 }
 
 /// The `information` issue that a coding is not in the value set.
@@ -625,28 +621,38 @@ struct Target {
     unknown_systems: Vec<String>,
 }
 
-/// The `message` of a validation: the not-found and value set issues first
-/// (the ecosystem's order), else every other error.
+/// The `message` of a validation: every error joined in the ecosystem's order
+/// (not-found, vs-invalid, version-error, then the rest), the membership
+/// issue only when no other error explains it; a warning when there is no
+/// error.
 fn message_of(issues: &[Issue]) -> Option<String> {
-    let errors = |pick: &dyn Fn(&Issue) -> bool| -> Vec<&str> {
-        issues
-            .iter()
-            .filter(|i| i.severity == "error" && pick(i))
-            .map(|i| i.text.as_str())
-            .collect()
-    };
-    let mut primary = errors(&|i| i.kind == "not-found");
-    primary.extend(errors(&|i| i.kind == "vs-invalid"));
-    if primary.is_empty() {
-        if let Some(first) = errors(&|_| true).first() {
-            return Some((*first).to_owned());
-        }
+    const ORDER: [&str; 3] = ["not-found", "vs-invalid", "version-error"];
+    let errors: Vec<&Issue> = issues.iter().filter(|i| i.severity == "error").collect();
+    if errors.is_empty() {
         return issues
             .iter()
             .find(|i| i.severity == "warning")
             .map(|i| i.text.clone());
     }
-    Some(primary.join("; "))
+    let mut ordered: Vec<&str> = Vec::new();
+    for kind in ORDER {
+        ordered.extend(
+            errors
+                .iter()
+                .filter(|i| i.kind == kind)
+                .map(|i| i.text.as_str()),
+        );
+    }
+    ordered.extend(
+        errors
+            .iter()
+            .filter(|i| !ORDER.contains(&i.kind) && i.kind != "not-in-vs")
+            .map(|i| i.text.as_str()),
+    );
+    if ordered.is_empty() {
+        ordered.extend(errors.iter().map(|i| i.text.as_str()));
+    }
+    Some(ordered.join("; "))
 }
 
 /// The version of `system` the value set uses for this subject, negotiated,
@@ -693,7 +699,15 @@ fn resolve_target(
     let mut unknown_systems = Vec::new();
     let expression = subject.expression;
     let Some(resolved) = resolved else {
-        return unresolvable_include(registry, system, subject, subject_served, literal, &valid);
+        return unresolvable_include(
+            registry,
+            model,
+            system,
+            subject,
+            subject_served,
+            literal,
+            &valid,
+        );
     };
     let version = resolved.provider.identity().version.clone();
     if let Err(error) = negotiation.check_system(system, &version) {
@@ -841,6 +855,7 @@ fn disagreement(
 /// when served, else the default, and the validation fails regardless.
 fn unresolvable_include(
     registry: &crate::registry::Registry,
+    model: &ValueSetModel,
     system: &str,
     subject: &Subject<'_>,
     subject_served: bool,
@@ -853,7 +868,9 @@ fn unresolvable_include(
         |v| registry.resolve(system, Some(v)),
     );
     let Ok(fallback) = fallback else {
-        return Err(Box::new(unserved_subject(registry, system, subject, valid)));
+        return Err(Box::new(unserved_subject(
+            registry, model, system, subject, valid,
+        )));
     };
     let bad = literal.unwrap_or_default();
     let mut issues = Vec::new();
@@ -934,6 +951,7 @@ fn supplement_as_system(system: &str, version: Option<&str>, subject: &Subject<'
 /// not serve at all.
 fn unserved_subject(
     registry: &crate::registry::Registry,
+    model: &ValueSetModel,
     system: &str,
     subject: &Subject<'_>,
     valid: &[String],
@@ -944,15 +962,40 @@ fn unserved_subject(
     let version = subject
         .version
         .filter(|_| registry.resolve(system, None).is_ok());
-    let (canonical, issue) = super::unknown_system(
+    let (canonical, not_found) = super::unknown_system(
         system,
         version,
         super::at(subject.expression, "system"),
         valid,
     );
-    let mut validation = failed(Some(system.to_owned()), version.map(str::to_owned), issue);
+    // NOTE: the ecosystem's shape: the membership issue first, then the missing
+    // system; the system is "caused by" the value set only when the value set
+    // names it, else it is the input's own unknown system (`x-unknown-system`).
+    let mut validation = failed(
+        Some(system.to_owned()),
+        version.map(str::to_owned),
+        not_in_vs(
+            model,
+            system,
+            subject.code,
+            subject.display,
+            subject.expression,
+        ),
+    );
+    validation.message = Some(not_found.text.clone());
+    validation.issues.push(not_found);
     validation.code = Some(subject.code.to_owned());
-    validation.unknown_systems.push(canonical);
+    let referenced = model
+        .compose
+        .include
+        .iter()
+        .chain(&model.compose.exclude)
+        .any(|i| i.system.as_ref().is_some_and(|s| s.url == system));
+    if referenced || version.is_some() {
+        validation.unknown_systems.push(canonical);
+    } else {
+        validation.x_unknown_systems.push(canonical);
+    }
     validation
 }
 
