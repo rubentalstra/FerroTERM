@@ -43,6 +43,13 @@ fresh link reference.
   is a typed error, and a construct the artifact cannot answer (a description
   module or effective time filter, a filter on inactive members) is refused
   as unsupported.
+- SNOMED CT: `?fhir_vs=ecl/[ecl]` (the expression URI-encoded, on the
+  system, edition, or version URI) and the `constraint` filter of
+  `ValueSet.compose` evaluate the expression constraint
+  (<https://hl7.org/fhir/R4B/snomedct.html>); the `expressions` filter accepts
+  `false` and refuses `true` as not supported. Malformed ECL is an
+  `OperationOutcome` `invalid` with the byte offset, an identifier the
+  edition lacks is `code-invalid`. Parsed expressions are cached.
 
 ### Fixed
 

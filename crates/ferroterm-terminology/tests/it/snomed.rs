@@ -380,7 +380,7 @@ fn malformed_and_unknown_implicit_value_sets_are_refused() {
         Err(ProviderError::MalformedImplicitValueSet { .. })
     ));
     assert!(matches!(
-        p.implicit_value_set(&format!("{base}?fhir_vs=ecl/<<{}", sctid(item(ANIMAL))))
+        p.implicit_value_set(&format!("{base}?fhir_vs=ecl/%3C%3C%20"))
             .expect("implicit"),
         Err(ProviderError::MalformedImplicitValueSet { .. })
     ));
@@ -413,4 +413,108 @@ fn malformed_and_unknown_implicit_value_sets_are_refused() {
         .find(|f| f.code == "concept")
         .expect("the concept filter is declared");
     assert!(declared.operators.contains(&FilterOperator::In));
+}
+
+#[test]
+fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
+    let (_dir, p) = provider();
+    let animals = sctid(item(ANIMAL));
+    let filter = |value: &str| Filter {
+        property: String::from("constraint"),
+        op: FilterOperator::Equal,
+        value: value.to_owned(),
+    };
+    assert_eq!(
+        p.filter(&filter(&format!("< {animals}")))
+            .expect("evaluates")
+            .iter()
+            .collect::<Vec<_>>(),
+        [CAT, DOG]
+    );
+    assert!(
+        matches!(
+            p.filter(&filter("<< ")),
+            Err(ProviderError::InvalidFilterValue { reason, .. }) if reason.contains("byte 3")
+        ),
+        "malformed ECL names the position"
+    );
+    assert!(
+        matches!(
+            p.filter(&filter("<< 999999999")),
+            Err(ProviderError::InvalidCode { code, .. }) if code == "999999999"
+        ),
+        "an unknown identifier in valid ECL is an invalid code"
+    );
+    assert!(matches!(
+        p.filter(&filter("* {{ D moduleId = 900000000000207008 }}")),
+        Err(ProviderError::UnsupportedFilter { .. })
+    ));
+    let expressions = |value: &str| Filter {
+        property: String::from("expressions"),
+        op: FilterOperator::Equal,
+        value: value.to_owned(),
+    };
+    assert_eq!(p.filter(&expressions("false")).expect("all").len(), 13);
+    assert!(matches!(
+        p.filter(&expressions("true")),
+        Err(ProviderError::UnsupportedFilter { .. })
+    ));
+    assert!(matches!(
+        p.filter(&expressions("maybe")),
+        Err(ProviderError::InvalidFilterValue { .. })
+    ));
+    let codes: Vec<&str> = p
+        .declaration()
+        .filters
+        .iter()
+        .map(|f| f.code.as_str())
+        .collect();
+    assert_eq!(codes, ["concept", "constraint", "expressions"]);
+
+    // The implicit value set carries the URI-encoded expression
+    // (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets").
+    let encoded = format!("%3C%20{animals}%20%7Canimal%7C");
+    for base in ["http://snomed.info/sct", EDITION, VERSION] {
+        let compose = p
+            .implicit_value_set(&format!("{base}?fhir_vs=ecl/{encoded}"))
+            .expect("implicit")
+            .expect("compose");
+        let include = &compose.include[0];
+        assert_eq!(include.filters.len(), 1);
+        assert_eq!(include.filters[0].property, "constraint");
+        assert_eq!(include.filters[0].op, FilterOperator::Equal);
+        assert_eq!(include.filters[0].value, format!("< {animals} |animal|"));
+        assert_eq!(
+            include.system.as_ref().and_then(|s| s.version.as_deref()),
+            (base != "http://snomed.info/sct").then_some(VERSION)
+        );
+        assert_eq!(
+            p.filter(&include.filters[0])
+                .expect("evaluates")
+                .iter()
+                .collect::<Vec<_>>(),
+            [CAT, DOG]
+        );
+    }
+    assert!(
+        matches!(
+            p.implicit_value_set("http://snomed.info/sct?fhir_vs=ecl/%3C%3C%20"),
+            Some(Err(ProviderError::MalformedImplicitValueSet { reason, .. })) if reason.contains("byte")
+        ),
+        "malformed ECL is a malformed implicit value set"
+    );
+    assert!(
+        matches!(
+            p.implicit_value_set("http://snomed.info/sct?fhir_vs=ecl/%3"),
+            Some(Err(ProviderError::MalformedImplicitValueSet { .. }))
+        ),
+        "a stray percent is malformed"
+    );
+    assert!(
+        matches!(
+            p.implicit_value_set(&format!("http://snomed.info/sct?fhir_vs=ecl/{animals}")),
+            Some(Ok(_))
+        ),
+        "an expression without reserved characters needs no encoding"
+    );
 }

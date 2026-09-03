@@ -163,3 +163,104 @@ async fn the_capability_statement_lists_the_value_set_operations() {
         .collect();
     assert_eq!(names, ["expand", "validate-code"]);
 }
+
+/// `?fhir_vs=ecl/[ecl]` on the wire, the expression URI-encoded inside the
+/// `url` parameter (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value
+/// Sets"), on the system, edition, and version URIs.
+#[tokio::test]
+async fn expand_and_validate_code_answer_an_ecl_implicit_value_set() {
+    use ferroterm_testkit::snomed::{ANIMAL, CAT, DOG, EDITION, VERSION, item, sctid};
+    let server = Server::start();
+    let animals = sctid(item(ANIMAL));
+    let ecl = format!("%3C%20{animals}");
+    for base in ["http://snomed.info/sct", EDITION, VERSION] {
+        let url = format!("{base}?fhir_vs=ecl/{ecl}");
+        let encoded = url
+            .replace(':', "%3A")
+            .replace('/', "%2F")
+            .replace('?', "%3F")
+            .replace('=', "%3D")
+            .replace('%', "%25")
+            .replace("%253A", "%3A")
+            .replace("%252F", "%2F")
+            .replace("%253F", "%3F")
+            .replace("%253D", "%3D");
+        let (status, body) = server
+            .get(&format!("/r4b/ValueSet/$expand?url={encoded}"))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{base}: {body}");
+        let mut codes: Vec<String> = body["expansion"]["contains"]
+            .as_array()
+            .expect("contains")
+            .iter()
+            .filter_map(|c| c["code"].as_str().map(str::to_owned))
+            .collect();
+        codes.sort();
+        let mut expected = vec![sctid(item(CAT)), sctid(item(DOG))];
+        expected.sort();
+        assert_eq!(codes, expected, "{base}");
+        assert_eq!(body["expansion"]["total"], 2);
+    }
+    let url = format!("http://snomed.info/sct?fhir_vs=ecl/{ecl}");
+    let (status, body) = server
+        .post(
+            "/r4b/ValueSet/$validate-code",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": url},
+                {"name": "system", "valueUri": "http://snomed.info/sct"},
+                {"name": "code", "valueCode": sctid(item(CAT))}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        param(&body, "result").and_then(|p| p["valueBoolean"].as_bool()),
+        Some(true)
+    );
+    let (status, body) = server
+        .post(
+            "/r4b/ValueSet/$validate-code",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": url},
+                {"name": "system", "valueUri": "http://snomed.info/sct"},
+                {"name": "code", "valueCode": animals}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        param(&body, "result").and_then(|p| p["valueBoolean"].as_bool()),
+        Some(false),
+        "the focus is not a descendant"
+    );
+    // Malformed ECL is an OperationOutcome, never a 500; an unknown identifier
+    // in valid ECL is an invalid code.
+    let (status, body) = server
+        .post(
+            "/r4b/ValueSet/$expand",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": "http://snomed.info/sct?fhir_vs=ecl/%3C%3C%20"}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(body["resourceType"], "OperationOutcome");
+    assert_eq!(body["issue"][0]["code"], "invalid");
+    assert!(
+        body["issue"][0]["details"]["text"]
+            .as_str()
+            .is_some_and(|t| t.contains("byte")),
+        "{body}"
+    );
+    let (status, body) = server
+        .post(
+            "/r4b/ValueSet/$expand",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": "http://snomed.info/sct?fhir_vs=ecl/%3C%3C%20999999999"}
+            ]}),
+        )
+        .await;
+    assert_ne!(status, StatusCode::INTERNAL_SERVER_ERROR, "{body}");
+    assert_eq!(body["resourceType"], "OperationOutcome");
+    assert_eq!(body["issue"][0]["code"], "code-invalid", "{body}");
+}

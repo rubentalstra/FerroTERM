@@ -77,7 +77,9 @@ engine. Each row is a tracker issue under the program issue.
   answers the implicit value sets `?fhir_vs`, `?fhir_vs=isa/[sctid]`,
   `?fhir_vs=refset`, and `?fhir_vs=refset/[sctid]` on the system, edition, or
   version URI, and the `concept is-a`, `descendent-of`, and `in` (reference
-  set membership) filters; `ecl/` and `?fhir_cm=` wait for their issues.
+  set membership) filters, `?fhir_vs=ecl/[ecl]` and the `constraint` filter
+  through the ECL evaluator (`crates/ferroterm-ecl`); `?fhir_cm=` waits for
+  its issue.
 
 ## FHIR `CodeSystem` resources (HL7 Terminology and custom systems)
 

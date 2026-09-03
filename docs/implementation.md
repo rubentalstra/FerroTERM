@@ -104,7 +104,7 @@ sequence, not a scope limit; the server serves every version.
 
 ## ECL (Expression Constraint Language 2.2)
 
-- [ ] Parser faithful to the official ANTLR `ECL.g4`; malformed ECL is an
+- [x] Parser faithful to the official ANTLR `ECL.g4`; malformed ECL is an
   `OperationOutcome(invalid)`
 - [x] Operators: `<`, `<<`, `>`, `>>`, `*`, `^` (memberOf), `.` (dotted
   attribute), `:` refinement with attribute groups and cardinality, reverse `R`,

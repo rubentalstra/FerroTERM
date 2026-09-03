@@ -16,3 +16,9 @@ deployment (`scripts/checks/tx-ecosystem.sh --mode icd-11 --index
 <mms>:<icf>:<entity>`); the artifacts need the WHO container and its licence,
 so this mode does not run in CI. The failures and their clusters are recorded
 on issue #18.
+
+`passing-tx.fhir.org.txt` is the list for the suite's `tx.fhir.org` mode,
+which holds the LOINC cases; run by hand over a LOINC artifact
+(`scripts/checks/tx-ecosystem.sh --mode tx.fhir.org --index <loinc>`), since
+the release needs a LOINC account. The failures and their classes are recorded
+on issue #13.
