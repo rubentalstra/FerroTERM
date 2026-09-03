@@ -54,3 +54,23 @@ fn unknown_systems_versions_and_duplicates_are_typed_errors() {
     assert_eq!(registry.systems().collect::<Vec<_>>(), vec![URL, FLAT_URL]);
     assert_eq!(registry.versions(URL).count(), 2);
 }
+
+// NOTE: `x` segments in a requested version name the greatest matching served
+// version, the ecosystem's form (spec-silent, #174); a bare prefix names nothing.
+#[test]
+fn a_wildcard_version_resolves_to_the_greatest_match() {
+    let registry = registry();
+    let latest = registry.resolve(URL, Some("x")).expect("resolves");
+    assert_eq!(latest.provider.identity().version, "2025");
+    assert!(!latest.defaulted, "a pattern is a request, not a default");
+    let exact = registry.resolve(URL, Some("2024")).expect("resolves");
+    assert_eq!(exact.provider.identity().version, "2024");
+    assert!(matches!(
+        registry.resolve(URL, Some("20")),
+        Err(ResolveError::UnknownVersion { .. })
+    ));
+    assert!(matches!(
+        registry.resolve(URL, Some("3.x")),
+        Err(ResolveError::UnknownVersion { .. })
+    ));
+}

@@ -148,13 +148,15 @@ impl Registry {
                 true,
             ),
         };
-        let provider = system
-            .versions
-            .get(wanted)
-            .ok_or_else(|| ResolveError::UnknownVersion {
-                url: url.to_owned(),
-                version: wanted.to_owned(),
-            })?;
+        // NOTE: `1.0.x` and `1.x.x` name the greatest matching version, the
+        // ecosystem's form (`crate::versioned::version_matches`).
+        let provider =
+            crate::versioned::select_version(system.versions.keys().map(String::as_str), wanted)
+                .and_then(|v| system.versions.get(v))
+                .ok_or_else(|| ResolveError::UnknownVersion {
+                    url: url.to_owned(),
+                    version: wanted.to_owned(),
+                })?;
         Ok(Resolved {
             provider: Arc::clone(provider),
             defaulted,

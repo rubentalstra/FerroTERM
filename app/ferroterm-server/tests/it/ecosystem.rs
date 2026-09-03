@@ -378,3 +378,42 @@ async fn lookup_answers_code_system_and_abstract_on_every_version() {
         );
     }
 }
+
+#[tokio::test]
+async fn a_wildcard_system_version_names_the_greatest_matching_version() {
+    let server = Server::start_with_resources();
+    for version in VERSIONS {
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&system-version={ANIMALS}|2.x"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{version}"
+        );
+        assert_eq!(
+            parameter(&body, "version").unwrap()["valueString"],
+            "2.0",
+            "{version}"
+        );
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&force-system-version={ANIMALS}|3.x"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            false,
+            "{version}"
+        );
+        assert_eq!(
+            parameter(&body, "x-caused-by-unknown-system").unwrap()["valueCanonical"],
+            format!("{ANIMALS}|3.x"),
+            "{version}"
+        );
+    }
+}

@@ -816,3 +816,75 @@ fn validate_code_infers_the_system_by_membership_and_can_be_lenient_on_displays(
     assert_eq!(lenient.issues[0].kind, "invalid-display");
     assert_eq!(lenient.display.as_deref(), Some("Kitten"));
 }
+
+// NOTE: an include naming a version the server does not serve fails the
+// validation as an invalid value set naming the system (the ecosystem's test
+// cases, `version/coding-v10-vs1wb`); `$expand` keeps refusing it.
+#[test]
+fn validate_code_fails_over_an_include_the_server_cannot_resolve_and_names_the_system() {
+    let world = World::load();
+    let inline = ValueSet {
+        url: Some("http://example.org/inline-bad-version".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                version: Some("9".into()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let input = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("a false result");
+    assert!(!validation.result);
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["vs-invalid", "not-found"]);
+    assert_eq!(validation.unknown_systems, [format!("{ANIMALS}|9")]);
+    assert_eq!(validation.code.as_deref(), Some("kitten"));
+    assert_eq!(validation.display.as_deref(), Some("Kitten"));
+    assert_eq!(
+        validation.version.as_deref(),
+        Some("2.0"),
+        "the subject's served version"
+    );
+    let expand = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        ..ExpandInput::default()
+    };
+    assert!(matches!(
+        expand::expand(&world.sources(), &expand),
+        Err(OperationError::UnknownVersion { .. })
+    ));
+    // A wildcard include version names the greatest match.
+    let wild = ValueSet {
+        url: Some("http://example.org/inline-wild".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                version: Some("2.x".into()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let input = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&wild)),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(validation.result);
+    assert_eq!(validation.version.as_deref(), Some("2.0"));
+}
