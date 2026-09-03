@@ -45,5 +45,5 @@ LABEL org.opencontainers.image.title="FerroTERM" \
       org.opencontainers.image.documentation="https://ferroterm.eu/docs/" \
       org.opencontainers.image.source="https://github.com/rubentalstra/FerroTERM" \
       org.opencontainers.image.vendor="FerroTERM" \
-      org.opencontainers.image.licenses="BUSL-1.1" \
+      org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.base.name="gcr.io/distroless/static-debian13:nonroot"

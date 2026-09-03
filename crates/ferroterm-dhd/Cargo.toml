@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MIT
 [package]
 name = "ferroterm-dhd"
 description = "DHD Diagnosethesaurus and Verrichtingenthesaurus delivery (uitleverformaat 5.0) reader"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MIT
 # .claude/hooks/rust_fmt_clippy.sh
 #
 # Claude Code PostToolUse hook (matcher: Write|Edit).

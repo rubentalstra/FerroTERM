@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MIT
 # scripts/vendor/ecl-grammar.sh
 #
 # Vendors the official SNOMED CT Expression Constraint Language grammar and

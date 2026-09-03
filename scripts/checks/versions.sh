@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MIT
 # scripts/checks/versions.sh
 #
 # Version-drift guard: docs/VERSIONS.md is the single source of truth, and this
@@ -113,25 +113,6 @@ if [ -f "$ecl_prov" ]; then
   fi
 else
   note "no vendored ECL grammar yet — skipped"
-fi
-
-# --- One licence everywhere the project names its own ------------------------
-# The project's own code is BUSL-1.1 (LICENSE); a header, manifest, badge, or
-# image label still saying MIT is a stale claim. Third-party files keep theirs.
-echo "== licence (LICENSE <-> SPDX headers, manifests, badges, labels)"
-if [ -f LICENSE ]; then
-  stale=0
-  if ! grep -q 'Business Source License 1.1' LICENSE; then
-    bad "LICENSE is not the Business Source License 1.1"; stale=1
-  fi
-  while IFS= read -r hit; do
-    [ -n "$hit" ] || continue
-    bad "stale MIT licence claim at $hit"; stale=1
-  done < <(git grep -n -E 'SPDX-License-Identifier: MIT|License-MIT|^license = "MIT"|^license: MIT|image\.licenses="?MIT' \
-    -- ':!tools/ferroterm-fhir-codegen/vendor' ':!scripts/checks/versions.sh' ':!crates/ferroterm-ecl/vendor' ':!crates/ferroterm-fhir/src' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
-  [ "$stale" -eq 0 ] && note "OK: the project's own files name BUSL-1.1"
-else
-  note "no LICENSE yet — skipped"
 fi
 
 # --- rust-toolchain.toml present (sanity; channel recorded in VERSIONS.md) -----

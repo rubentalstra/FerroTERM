@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MIT
 
 # Normalize line endings: Git stores text with LF and checks it out with LF on
 # every platform.

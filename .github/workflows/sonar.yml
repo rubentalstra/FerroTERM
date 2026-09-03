@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MIT
 
 # SonarQube Cloud analysis — the machine opinion beside CodeQL. Findings are
 # ADVISORY: they never outrank the specs, the project rules, or the local

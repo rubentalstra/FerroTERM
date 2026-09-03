@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MIT
 
 # Docs — build and deploy the documentation site (mdBook) to GitHub Pages.
 #

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MIT
 name: Feature request
 description: Propose a new capability or an improvement.
 labels: [enhancement]

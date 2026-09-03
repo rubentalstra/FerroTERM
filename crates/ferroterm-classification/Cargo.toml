@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MIT
 [package]
 name = "ferroterm-classification"
 description = "ClaML and ICD-10-CM tabular readers into one classification model"

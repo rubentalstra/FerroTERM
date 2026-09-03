@@ -13,16 +13,6 @@ fresh link reference.
 
 ## [Unreleased]
 
-### Changed
-
-- The licence of the project's own code is the Business Source License 1.1
-  (`LICENSE`): production use is allowed, including inside products and
-  services you operate; offering the software to third parties as a hosted or
-  managed service, or selling it as a product in its own right, is not; each
-  version becomes Apache 2.0 four years after its release. Every SPDX header,
-  manifest, badge, image label, and page that named MIT follows; releases up
-  to v0.0.8 stay under the MIT terms they were published with.
-
 ## [0.0.8] - 2026-09-03
 
 The ECL release: the SNOMED CT Expression Constraint Language 2.2, parsed

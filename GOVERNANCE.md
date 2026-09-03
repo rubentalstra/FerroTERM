@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: BUSL-1.1 -->
+<!-- SPDX-License-Identifier: MIT -->
 
 # Governance
 
@@ -111,10 +111,8 @@ Recorded here so the questions do not have to be re-litigated in each pull
 request:
 
 - **No contributor licence agreement, and no copyright assignment.** You keep
-  your copyright; contributions are licensed under the project's Business
-  Source License 1.1 for everyone including the maintainer, and become
-  Apache 2.0 on each version's Change Date. This is a deliberate position, not
-  an oversight.
+  your copyright; the licence stays MIT for everyone including the maintainer.
+  This is a deliberate position, not an oversight.
 - **No re-modelling of the FHIR type system or operations by hand.** The FHIR
   crate is generated from the machine-readable packages; a change goes into
   the generator.
