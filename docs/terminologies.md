@@ -211,10 +211,24 @@ engine. Each row is a tracker issue under the program issue.
 - **FHIR-defined behaviour.** No filters and no implicit value sets are
   defined ("No need ... identified yet"), so the provider offers the generic
   filters only, with `is-a` and `descendent-of` over the classification tree.
-- **FerroTERM plan.** One ClaML loader serves WHO ICD-10, ICD-10-NL, and (ClaML
-  permitting) ICPC-2e; a tab-delimited loader serves ICD-10-CM. The Nictiz
-  terminology server serves ICD-10 licence-free, which makes it the reference
-  for the Dutch variant.
+- **Served.** One reader for ClaML (`ferroterm-build --claml <xml|zip> --system
+  <uri> [--claml-version <v>]`, WHO ICD-10, ICD-10-NL, and any other ClaML
+  classification) and one for the NCHS release (`ferroterm-build --icd10cm
+  <dir|zip> [--icd10cm <dir|zip>]`, the tabular XML and the order file across
+  the given paths) produce the same artifact layout as SNOMED CT and LOINC.
+  Chapters, blocks, categories, and subcategories are the codes, with the
+  period; the single-parent tree is the graph (`classified-with`); titles,
+  inclusion terms, and the ICD-10-CM short descriptions are designations
+  indexed for search; every other rubric or note kind (`exclusion`,
+  `excludes1`, `codeFirst`, ...) is a property and a filter beside `kind`,
+  `usage` (dagger, asterisk), and `valid` (the order file's header flag).
+  ClaML modifiers expand onto the leaves they apply to (`S02.0` with the
+  open/closed modifier gives `S02.00` and `S02.01`); the seventh-character
+  codes of ICD-10-CM hang under their stem. The provider answers the generic
+  filters over the tree, `$subsumes` from the closure, and the title in the
+  requested language as the display. The Nictiz terminology server serves
+  ICD-10 licence-free, which makes it the reference for the Dutch variant.
+
 
 ## ICD-11
 

@@ -193,3 +193,32 @@ fn a_loinc_artifact_is_served_beside_the_edition() {
         Err(LoadError::UnknownArtifact { .. })
     ));
 }
+
+#[test]
+fn a_classification_artifact_is_served_by_its_manifest_kind() {
+    let claml = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::classification::write_claml_artifact(claml.path()).expect("builds");
+    let cm = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::classification::write_icd10cm_artifact(cm.path()).expect("builds");
+    let config = Config {
+        index: vec![claml.path().to_path_buf(), cm.path().to_path_buf()],
+        ..Config::default()
+    };
+    let state = AppState::load(&config).expect("loads");
+    let summaries = state.summaries().expect("summarises");
+    let nl = summaries
+        .iter()
+        .find(|s| s.url == ferroterm_testkit::classification::CLAML_SYSTEM)
+        .expect("icd-10-nl");
+    assert_eq!(nl.version, ferroterm_testkit::classification::CLAML_VERSION);
+    assert_eq!(nl.concepts, Some(12));
+    let cm_summary = summaries
+        .iter()
+        .find(|s| s.url == "http://hl7.org/fhir/sid/icd-10-cm")
+        .expect("icd-10-cm");
+    assert_eq!(
+        cm_summary.version,
+        ferroterm_testkit::classification::CM_VERSION
+    );
+    assert_eq!(cm_summary.concepts, Some(12));
+}

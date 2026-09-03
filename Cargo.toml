@@ -70,6 +70,7 @@ tempfile = "3.27.0"
 ferroterm-fhir = { path = "crates/ferroterm-fhir", version = "0.0.5" }
 ferroterm-rf2 = { path = "crates/ferroterm-rf2", version = "0.0.5" }
 ferroterm-loinc = { path = "crates/ferroterm-loinc", version = "0.0.5" }
+ferroterm-classification = { path = "crates/ferroterm-classification", version = "0.0.5" }
 ferroterm-graph = { path = "crates/ferroterm-graph", version = "0.0.5" }
 ferroterm-store = { path = "crates/ferroterm-store", version = "0.0.5" }
 ferroterm-text = { path = "crates/ferroterm-text", version = "0.0.5" }

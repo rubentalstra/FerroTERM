@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use ferroterm_terminology::artifact::{self, ArtifactError};
+use ferroterm_terminology::classification::{self, ClassificationProvider};
 use ferroterm_terminology::conceptmap;
 use ferroterm_terminology::conceptmap::store::ConceptMapStore;
 use ferroterm_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
@@ -47,6 +48,15 @@ pub enum LoadError {
         /// The cause.
         #[source]
         source: Box<loinc::OpenError>,
+    },
+    /// A classification artifact directory does not open.
+    #[error("cannot open the classification artifact at {path}")]
+    OpenClassification {
+        /// The directory.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: Box<classification::OpenError>,
     },
     /// An artifact's manifest does not say which system it serves.
     #[error("cannot read the artifact at {path}")]
@@ -168,10 +178,11 @@ impl AppState {
     pub fn load(config: &Config) -> Result<Self, LoadError> {
         let mut loaded = Vec::new();
         for path in &config.index {
-            let system = artifact::system_of(path).map_err(|source| LoadError::Artifact {
+            let described = artifact::describe(path).map_err(|source| LoadError::Artifact {
                 path: path.clone(),
                 source,
             })?;
+            let system = described.system;
             let provider: Arc<dyn CodeSystemProvider> =
                 match system.as_str() {
                     snomed::SYSTEM => Arc::new(
@@ -188,6 +199,14 @@ impl AppState {
                             source: Box::new(source),
                         }
                     })?),
+                    _ if described.kind.as_deref() == Some(classification::KIND) => {
+                        Arc::new(ClassificationProvider::open(path).map_err(|source| {
+                            LoadError::OpenClassification {
+                                path: path.clone(),
+                                source: Box::new(source),
+                            }
+                        })?)
+                    }
                     other => {
                         return Err(LoadError::UnknownArtifact {
                             path: path.clone(),

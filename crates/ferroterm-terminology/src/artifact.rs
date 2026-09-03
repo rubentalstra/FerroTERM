@@ -31,12 +31,21 @@ pub enum ArtifactError {
     },
 }
 
-/// The code system URI the artifact under `dir` serves, from its manifest.
+/// What a manifest says about its artifact before a provider opens it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Description {
+    /// The code system URI served.
+    pub system: String,
+    /// The pipeline that built it (`classification`), when the manifest says.
+    pub kind: Option<String>,
+}
+
+/// The system and kind of the artifact under `dir`, from its manifest.
 ///
 /// # Errors
 ///
 /// Returns [`ArtifactError`] when the manifest does not read or names no system.
-pub fn system_of(dir: &Path) -> Result<String, ArtifactError> {
+pub fn describe(dir: &Path) -> Result<Description, ArtifactError> {
     let path = dir.join("manifest.json");
     let text = std::fs::read_to_string(&path).map_err(|source| ArtifactError::Io {
         path: path.clone(),
@@ -47,9 +56,16 @@ pub fn system_of(dir: &Path) -> Result<String, ArtifactError> {
             path: path.clone(),
             source,
         })?;
-    value
+    let system = value
         .get("system")
         .and_then(serde_json::Value::as_str)
         .map(str::to_owned)
-        .ok_or(ArtifactError::NoSystem { path })
+        .ok_or(ArtifactError::NoSystem { path })?;
+    Ok(Description {
+        system,
+        kind: value
+            .get("kind")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned),
+    })
 }

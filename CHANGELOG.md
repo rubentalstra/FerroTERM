@@ -13,6 +13,24 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- The ICD-10 family: `ferroterm-build --claml <xml|zip> --system <uri>` builds
+  a ClaML classification (WHO ICD-10, ICD-10-NL, or any other) and
+  `ferroterm-build --icd10cm <dir|zip>...` builds the NCHS ICD-10-CM release
+  (the tabular XML and the order file) into the artifact layout, and the
+  server serves them from `FERROTERM_INDEX` beside SNOMED CT and LOINC.
+  Chapters, blocks, categories, and subcategories are the codes with the
+  period the FHIR ICD page requires; the single-parent tree is the graph
+  (`classified-with`); titles, inclusion terms, and short descriptions are
+  designations; every other note kind is a property and a filter beside
+  `kind`, `usage`, and `valid`; ClaML modifiers expand onto their leaves and
+  the ICD-10-CM seventh-character codes hang under their stem. The provider
+  answers the generic filters over the tree and `$subsumes` from the closure;
+  the ICD page defines no filters and no implicit value sets, so there are
+  none.
+
+
 ## [0.0.5] - 2026-09-03
 
 The LOINC release: a LOINC release builds into the same artifact layout as a

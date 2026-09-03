@@ -8,6 +8,7 @@
 )]
 
 mod archive;
+mod classification;
 mod fixture;
 mod local_edition;
 mod loinc;

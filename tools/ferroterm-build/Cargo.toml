@@ -20,6 +20,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+ferroterm-classification.workspace = true
 ferroterm-graph.workspace = true
 ferroterm-loinc.workspace = true
 ferroterm-rf2.workspace = true

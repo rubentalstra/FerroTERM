@@ -10,6 +10,7 @@
 #![doc(test(attr(deny(warnings))))]
 
 pub mod archive;
+pub mod classification;
 pub mod loinc;
 pub mod pipeline;
 
@@ -25,16 +26,33 @@ pub struct Cli {
     #[arg(
         long,
         value_name = "DIR_OR_ZIP",
-        conflicts_with = "loinc",
-        required_unless_present = "loinc"
+        conflicts_with_all = ["loinc", "claml", "icd10cm"],
+        required_unless_present_any = ["loinc", "claml", "icd10cm"]
     )]
     pub rf2: Option<PathBuf>,
     /// The LOINC release: the unpacked `Loinc_<version>` directory, or the release zip.
-    #[arg(long, value_name = "DIR_OR_ZIP")]
+    #[arg(long, value_name = "DIR_OR_ZIP", conflicts_with_all = ["claml", "icd10cm"])]
     pub loinc: Option<PathBuf>,
     /// The LOINC version to record when the release does not say (`2.82`).
     #[arg(long, value_name = "VERSION", requires = "loinc")]
     pub loinc_version: Option<String>,
+    /// A `ClaML` classification (WHO ICD-10, a national ICD-10, ICPC-2): the XML file, or a zip holding it.
+    #[arg(
+        long,
+        value_name = "XML_OR_ZIP",
+        conflicts_with = "icd10cm",
+        requires = "system"
+    )]
+    pub claml: Option<PathBuf>,
+    /// The code system URI the `ClaML` classification is served as (`http://hl7.org/fhir/sid/icd-10`).
+    #[arg(long, value_name = "URI", requires = "claml")]
+    pub system: Option<String>,
+    /// The version to record when the `ClaML` title does not say (`2021`).
+    #[arg(long, value_name = "VERSION", requires = "claml")]
+    pub claml_version: Option<String>,
+    /// The ICD-10-CM release: the directories or zips holding the tabular XML and the order file (repeatable).
+    #[arg(long, value_name = "DIR_OR_ZIP", action = clap::ArgAction::Append)]
+    pub icd10cm: Vec<PathBuf>,
     /// The directory to write the artifacts into.
     #[arg(long, value_name = "DIR")]
     pub out: PathBuf,
@@ -43,14 +61,55 @@ pub struct Cli {
 /// Runs the build the CLI describes.
 ///
 /// A zip is unpacked (the Snapshot tree of an RF2 release, the tables of a
-/// LOINC release) to a temporary directory that is removed when the build
-/// ends; a directory is read in place.
+/// LOINC release, the XML of a `ClaML` classification, the two files of an
+/// ICD-10-CM release) to a temporary directory that is removed when the
+/// build ends; a directory is read in place.
 ///
 /// # Errors
 ///
 /// Returns [`RunError`] when the zip does not unpack, the release does not
 /// read, the edition cannot be identified, or an artifact cannot be written.
 pub fn run(cli: &Cli) -> Result<Report, RunError> {
+    if let Some(claml) = &cli.claml {
+        let system = cli.system.as_deref().ok_or(RunError::NoSystem)?;
+        let scratch;
+        let file = if claml
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
+        {
+            scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+            archive::unpack_claml(claml, scratch.path())?
+        } else {
+            claml.clone()
+        };
+        let classification = ferroterm_classification::claml::read_file(&file)?;
+        return Ok(Report::Classification(classification::build(
+            &classification,
+            system,
+            cli.claml_version.as_deref(),
+            &cli.out,
+        )?));
+    }
+    if !cli.icd10cm.is_empty() {
+        let scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+        let mut roots = Vec::new();
+        for (i, path) in cli.icd10cm.iter().enumerate() {
+            if path.is_file() {
+                let into = scratch.path().join(i.to_string());
+                roots.push(archive::unpack_icd10cm(path, &into)?);
+            } else {
+                roots.push(path.clone());
+            }
+        }
+        let files = ferroterm_classification::icd10cm::locate(&roots)?;
+        let classification = ferroterm_classification::icd10cm::read(&files)?;
+        return Ok(Report::Classification(classification::build(
+            &classification,
+            classification::ICD10CM_SYSTEM,
+            None,
+            &cli.out,
+        )?));
+    }
     if let Some(loinc) = &cli.loinc {
         let scratch;
         let root = if loinc.is_file() {
@@ -87,14 +146,19 @@ pub enum Report {
     Snomed(pipeline::Report),
     /// A LOINC release.
     Loinc(loinc::Report),
+    /// A classification: a `ClaML` document or the ICD-10-CM release.
+    Classification(classification::Report),
 }
 
 /// A failure of the command as a whole.
 #[derive(Debug, thiserror::Error)]
 pub enum RunError {
-    /// Neither `--rf2` nor `--loinc` was given.
-    #[error("give `--rf2` or `--loinc`")]
+    /// No input was given.
+    #[error("give `--rf2`, `--loinc`, `--claml`, or `--icd10cm`")]
     NoInput,
+    /// `--claml` without `--system`.
+    #[error("`--claml` needs `--system`")]
+    NoSystem,
     /// The release zip does not unpack.
     #[error(transparent)]
     Archive(#[from] archive::ArchiveError),
@@ -107,4 +171,13 @@ pub enum RunError {
     /// The LOINC build failed.
     #[error(transparent)]
     Loinc(#[from] loinc::Error),
+    /// The `ClaML` document does not read.
+    #[error(transparent)]
+    Claml(#[from] ferroterm_classification::claml::ClamlError),
+    /// The ICD-10-CM release does not read.
+    #[error(transparent)]
+    Icd10cm(#[from] ferroterm_classification::icd10cm::Icd10cmError),
+    /// The classification build failed.
+    #[error(transparent)]
+    Classification(#[from] classification::Error),
 }

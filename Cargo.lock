@@ -453,6 +453,7 @@ version = "0.0.5"
 dependencies = [
  "anyhow",
  "clap",
+ "ferroterm-classification",
  "ferroterm-graph",
  "ferroterm-loinc",
  "ferroterm-rf2",
@@ -463,6 +464,16 @@ dependencies = [
  "tempfile",
  "thiserror",
  "zip",
+]
+
+[[package]]
+name = "ferroterm-classification"
+version = "0.0.5"
+dependencies = [
+ "ferroterm-testkit",
+ "quick-xml",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -584,6 +595,7 @@ name = "ferroterm-testkit"
 version = "0.0.5"
 dependencies = [
  "ferroterm-build",
+ "ferroterm-classification",
  "ferroterm-graph",
  "ferroterm-loinc",
  "ferroterm-rf2",

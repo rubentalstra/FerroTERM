@@ -6,6 +6,7 @@
 // The synthetic CodeSystem literals nest deeper than the default macro budget.
 #![recursion_limit = "256"]
 
+pub mod classification;
 pub mod fhir;
 pub mod loinc;
 pub mod snomed;
