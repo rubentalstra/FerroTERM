@@ -502,6 +502,25 @@ pub(crate) fn write_release(root: &Path) {
             ]),
         ],
     );
+    // A simple reference set (concept(8)) with the cat and the dog as active
+    // members and the fish as an inactive one.
+    write(
+        root,
+        &format!("Snapshot/Refset/Content/der2_Refset_SimpleSnapshot_XX{NAMESPACE}_{DATE}.txt"),
+        &[
+            "id",
+            "effectiveTime",
+            "active",
+            "moduleId",
+            "refsetId",
+            "referencedComponentId",
+        ],
+        &[
+            s(&[&member(20), DATE, "1", &module, &concept(8), &cat]),
+            s(&[&member(21), DATE, "1", &module, &concept(8), &dog]),
+            s(&[&member(22), DATE, "0", &module, &concept(8), &fish]),
+        ],
+    );
     write(
         root,
         &format!(

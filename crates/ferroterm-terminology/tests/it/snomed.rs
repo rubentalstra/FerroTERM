@@ -5,13 +5,15 @@ use std::sync::Arc;
 use ferroterm_graph::subsumption::Outcome;
 use ferroterm_terminology::capabilities::Summary;
 use ferroterm_terminology::filter::{Filter, FilterOperator};
-use ferroterm_terminology::provider::{Capability, CodeSystemProvider, Concept, PropertyValue};
+use ferroterm_terminology::provider::{
+    Capability, CodeSystemProvider, Concept, PropertyValue, ProviderError,
+};
 use ferroterm_terminology::registry::Registry;
 use ferroterm_terminology::snomed::{OpenError, SYSTEM, SnomedProvider};
 
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
-    ANIMAL, CAT, COVERING, DOG, EDITION, FISH, FUR, LEGS, TOP, VERSION, item, sctid,
+    ANIMAL, CAT, COVERING, DOG, EDITION, FISH, FUR, LEGS, PETS, TOP, VERSION, item, sctid,
 };
 
 fn provider() -> (tempfile::TempDir, SnomedProvider) {
@@ -50,7 +52,7 @@ fn identity_and_declaration_follow_the_manifest() {
     assert!(codes.contains(&sctid(item(COVERING)).as_str()));
     assert!(codes.contains(&sctid(item(LEGS)).as_str()));
     assert_eq!(p.language_refsets(), [snomed::GB_REFSET, snomed::NL_REFSET]);
-    assert_eq!(p.all().expect("all").len(), 8);
+    assert_eq!(p.all().expect("all").len(), 9);
 }
 
 #[test]
@@ -219,7 +221,7 @@ fn the_hierarchy_answers_subsumption_and_the_filters_from_the_closure() {
         .expect("filters");
     assert_eq!(
         leaves.iter().collect::<Vec<_>>(),
-        [CAT, DOG, FUR, COVERING, LEGS]
+        [CAT, DOG, FUR, COVERING, LEGS, PETS]
     );
 }
 
@@ -288,4 +290,115 @@ fn a_foreign_or_broken_artifact_is_refused() {
         SnomedProvider::open(dir.path(), "en"),
         Err(OpenError::ManifestVersion(1))
     ));
+}
+
+#[test]
+fn the_implicit_value_sets_follow_the_snomed_ct_page() {
+    let (_dir, p) = provider();
+    let base = "http://snomed.info/sct";
+    let all = p
+        .implicit_value_set(&format!("{base}?fhir_vs"))
+        .expect("implicit")
+        .expect("compose");
+    assert_eq!(all.include.len(), 1);
+    assert!(all.include[0].filters.is_empty() && all.include[0].concepts.is_empty());
+    assert_eq!(
+        all.include[0]
+            .system
+            .as_ref()
+            .and_then(|s| s.version.as_deref()),
+        None,
+        "the bare URI leaves the version to the registry"
+    );
+    let isa = p
+        .implicit_value_set(&format!("{EDITION}?fhir_vs=isa/{}", sctid(item(ANIMAL))))
+        .expect("implicit")
+        .expect("compose");
+    assert_eq!(isa.include[0].filters[0].op, FilterOperator::IsA);
+    assert_eq!(isa.include[0].filters[0].value, sctid(item(ANIMAL)));
+    assert_eq!(
+        isa.include[0]
+            .system
+            .as_ref()
+            .and_then(|s| s.version.as_deref()),
+        Some(VERSION),
+        "an edition base pins the served version"
+    );
+    assert!(
+        p.implicit_value_set(&format!("{VERSION}?fhir_vs=isa/{}", sctid(item(ANIMAL))))
+            .expect("implicit")
+            .is_ok(),
+        "the version URI is a base too"
+    );
+    let refsets = p
+        .implicit_value_set(&format!("{base}?fhir_vs=refset"))
+        .expect("implicit")
+        .expect("compose");
+    assert_eq!(refsets.include[0].concepts.len(), 1);
+    assert_eq!(refsets.include[0].concepts[0].code, sctid(item(PETS)));
+    let members = p
+        .implicit_value_set(&format!("{base}?fhir_vs=refset/{}", sctid(item(PETS))))
+        .expect("implicit")
+        .expect("compose");
+    assert_eq!(members.include[0].filters[0].op, FilterOperator::In);
+    let selected = p.filter(&members.include[0].filters[0]).expect("filters");
+    assert_eq!(selected.iter().collect::<Vec<_>>(), [CAT, DOG]);
+}
+
+#[test]
+fn malformed_and_unknown_implicit_value_sets_are_refused() {
+    let (_dir, p) = provider();
+    let base = "http://snomed.info/sct";
+    assert!(
+        matches!(
+            p.implicit_value_set(&format!("{base}?fhir_vs=refset/{}", sctid(item(FUR))))
+                .expect("implicit"),
+            Err(ProviderError::UnknownCode(_))
+        ),
+        "a concept that is not a reference set"
+    );
+    assert!(matches!(
+        p.implicit_value_set(&format!("{base}?fhir_vs=isa/{}", sctid(77)))
+            .expect("implicit"),
+        Err(ProviderError::UnknownCode(_))
+    ));
+    assert!(matches!(
+        p.implicit_value_set(&format!("{base}?fhir_vs=isa/abc"))
+            .expect("implicit"),
+        Err(ProviderError::MalformedImplicitValueSet { .. })
+    ));
+    assert!(matches!(
+        p.implicit_value_set(&format!("{base}?fhir_vs=ecl/<<{}", sctid(item(ANIMAL))))
+            .expect("implicit"),
+        Err(ProviderError::MalformedImplicitValueSet { .. })
+    ));
+    assert!(matches!(
+        p.implicit_value_set(&format!("{base}?fhir_vs=nope"))
+            .expect("implicit"),
+        Err(ProviderError::MalformedImplicitValueSet { .. })
+    ));
+    assert!(
+        matches!(
+            p.implicit_value_set("http://snomed.info/sct/999?fhir_vs")
+                .expect("implicit"),
+            Err(ProviderError::MalformedImplicitValueSet { .. })
+        ),
+        "another edition"
+    );
+    assert!(p.implicit_value_set(&format!("{base}?fhir_cm=1")).is_none());
+    assert!(matches!(
+        p.filter(&Filter {
+            property: String::from("concept"),
+            op: FilterOperator::In,
+            value: String::from("abc"),
+        }),
+        Err(ProviderError::InvalidFilterValue { .. })
+    ));
+    let declared = p
+        .declaration()
+        .filters
+        .iter()
+        .find(|f| f.code == "concept")
+        .expect("the concept filter is declared");
+    assert!(declared.operators.contains(&FilterOperator::In));
 }

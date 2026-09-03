@@ -15,6 +15,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use ferroterm_graph::csr::{Csr, CsrError};
+use ferroterm_graph::members::{MembersError, Memberships};
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::persist::Hierarchy as GraphHierarchy;
 use ferroterm_rf2::constants;
@@ -25,10 +26,12 @@ use ferroterm_store::tables;
 use ferroterm_text::index::{Query, TextIndex};
 use serde::Deserialize;
 
+use crate::compose::{Compose, ConceptRef, Include, SystemRef};
+use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
     Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
-    DesignationUse, Hierarchy, HierarchyMeaning, Identity, Located, Property, PropertyDefinition,
-    PropertyKind, PropertyValue, ProviderError, Status,
+    DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located, Property,
+    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
 };
 
 /// The SNOMED CT system URI.
@@ -97,6 +100,9 @@ pub enum OpenError {
         /// The missing entry.
         name: String,
     },
+    /// The reference set memberships file does not read.
+    #[error("cannot read the reference set memberships")]
+    Members(#[from] MembersError),
     /// The store's metadata is incomplete.
     #[error("the store's metadata has no `{0}`")]
     MissingMeta(&'static str),
@@ -115,6 +121,10 @@ struct Manifest {
     store: String,
     hierarchy: String,
     text: String,
+    /// The reference set memberships; an artifact built before they were
+    /// written has none.
+    #[serde(default)]
+    refsets: Option<String>,
     #[serde(default)]
     languages: Vec<String>,
 }
@@ -178,6 +188,7 @@ pub struct SnomedProvider {
     store: Store,
     hierarchy: SnomedHierarchy,
     text: TextIndex,
+    memberships: Memberships,
     identity: Identity,
     declaration: Declaration,
     keys: Keys,
@@ -244,6 +255,10 @@ impl SnomedProvider {
         let children = graph.is_a.transpose()?;
         let text_bytes = read(&manifest.text)?;
         let text = ferroterm_text::persist::read_from(&mut text_bytes.as_slice())?;
+        let memberships = match &manifest.refsets {
+            Some(name) => Memberships::read_from(&mut read(name)?.as_slice())?,
+            None => Memberships::new(),
+        };
         let concepts = store
             .meta(tables::META_CONCEPTS)?
             .ok_or(OpenError::MissingMeta(tables::META_CONCEPTS))?;
@@ -270,6 +285,7 @@ impl SnomedProvider {
             store,
             hierarchy: SnomedHierarchy { graph, children },
             text,
+            memberships,
             identity: Identity {
                 url: SYSTEM.to_owned(),
                 version: manifest.version,
@@ -287,8 +303,25 @@ impl SnomedProvider {
                 compositional: true,
                 languages: manifest.languages,
                 properties,
-                filters: Vec::new(),
-                capabilities: BTreeSet::from([Capability::Subsumption, Capability::Enumeration]),
+                // NOTE: the FHIR SNOMED CT page defines `concept is-a` and `concept in`
+                // (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties").
+                filters: vec![FilterDefinition {
+                    code: String::from("concept"),
+                    description: Some(String::from(
+                        "`is-a`: the concept and its descendants; `descendent-of`: its descendants; `in`: the members of the reference set",
+                    )),
+                    operators: vec![
+                        FilterOperator::IsA,
+                        FilterOperator::DescendentOf,
+                        FilterOperator::In,
+                    ],
+                    value: String::from("an SCTID"),
+                }],
+                capabilities: BTreeSet::from([
+                    Capability::Subsumption,
+                    Capability::Enumeration,
+                    Capability::ImplicitValueSets,
+                ]),
             },
             keys,
             edition: manifest.edition,
@@ -435,6 +468,55 @@ impl SnomedProvider {
             return Ok(Some(fsn.term.clone()));
         }
         Ok(designations.first().map(|d| d.term.clone()))
+    }
+
+    /// The concept named by `text`, as the store spells it.
+    fn sctid_of(&self, url: &str, text: &str) -> Result<String, ProviderError> {
+        match self.locate(text)? {
+            Some(located) => Ok(located.code),
+            None => Err(match ConceptId::parse(text) {
+                Ok(_) => ProviderError::UnknownCode(text.to_owned()),
+                Err(_) => ProviderError::MalformedImplicitValueSet {
+                    url: url.to_owned(),
+                    reason: format!("`{text}` is not an SCTID"),
+                },
+            }),
+        }
+    }
+
+    /// The filter behind an `isa/[sctid]` or `refset/[sctid]` form of `url`.
+    fn implicit_filter(&self, url: &str, form: &str) -> Result<Filter, ProviderError> {
+        let malformed = |reason: String| ProviderError::MalformedImplicitValueSet {
+            url: url.to_owned(),
+            reason,
+        };
+        let (kind, argument) = form.split_once('/').unwrap_or((form, ""));
+        match kind {
+            "isa" => Ok(Filter {
+                property: String::from("concept"),
+                op: FilterOperator::IsA,
+                value: self.sctid_of(url, argument)?,
+            }),
+            "refset" => {
+                let refset = self.sctid_of(url, argument)?;
+                if ConceptId::parse(&refset)
+                    .ok()
+                    .and_then(|id| self.memberships.members(id.value()))
+                    .is_none()
+                {
+                    return Err(ProviderError::UnknownCode(refset));
+                }
+                Ok(Filter {
+                    property: String::from("concept"),
+                    op: FilterOperator::In,
+                    value: refset,
+                })
+            }
+            "ecl" => Err(malformed(String::from(
+                "ECL expressions are not evaluated yet; `isa/`, `refset`, and `refset/` are",
+            ))),
+            _ => Err(malformed(format!("`{form}` is not a `fhir_vs` form"))),
+        }
     }
 
     fn codes(
@@ -624,6 +706,104 @@ impl CodeSystemProvider for SnomedProvider {
         Some(&self.hierarchy)
     }
 
+    /// `concept in [sctid]` is reference set membership
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties"); every
+    /// other filter is the generic evaluation over the closure and the store.
+    fn filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
+        if filter.property != "concept" || filter.op != FilterOperator::In {
+            return crate::filter::evaluate(self, filter);
+        }
+        let mut set = ConceptSet::new();
+        for value in filter
+            .value
+            .split(',')
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+        {
+            let refset =
+                ConceptId::parse(value).map_err(|_| ProviderError::InvalidFilterValue {
+                    property: filter.property.clone(),
+                    value: value.to_owned(),
+                    reason: String::from("not an SCTID"),
+                })?;
+            let members = self
+                .memberships
+                .members(refset.value())
+                .ok_or_else(|| ProviderError::UnknownCode(value.to_owned()))?;
+            set |= members;
+        }
+        Ok(set)
+    }
+
+    /// The implicit value sets of the FHIR SNOMED CT page
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets"):
+    /// `?fhir_vs`, `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, and
+    /// `?fhir_vs=refset/[sctid]`, on the bare system URI or on this edition's
+    /// edition or version URI. `ecl/` waits for the evaluator.
+    fn implicit_value_set(&self, url: &str) -> Option<Result<Compose, ProviderError>> {
+        let (base, form) = implicit_parts(url)?;
+        let malformed = |reason: String| ProviderError::MalformedImplicitValueSet {
+            url: url.to_owned(),
+            reason,
+        };
+        let version = if base == SYSTEM {
+            None
+        } else if base == self.edition || base == self.identity.version {
+            Some(self.identity.version.clone())
+        } else {
+            return Some(Err(malformed(format!(
+                "`{base}` is not the served edition `{}`",
+                self.identity.version
+            ))));
+        };
+        let system = SystemRef {
+            url: SYSTEM.to_owned(),
+            version,
+        };
+        let include = match form {
+            "" => Include {
+                system: Some(system),
+                ..Include::default()
+            },
+            "refset" => {
+                let mut concepts = Vec::new();
+                for refset in self.memberships.refsets() {
+                    if let Ok(Some(located)) = self.locate(&refset.to_string()) {
+                        concepts.push(ConceptRef {
+                            code: located.code,
+                            display: None,
+                        });
+                    }
+                }
+                if concepts.is_empty() {
+                    return Some(Err(malformed(String::from(
+                        "the edition has no reference sets with concept members",
+                    ))));
+                }
+                Include {
+                    system: Some(system),
+                    concepts,
+                    ..Include::default()
+                }
+            }
+            other => {
+                let filter = match self.implicit_filter(url, other) {
+                    Ok(filter) => filter,
+                    Err(error) => return Some(Err(error)),
+                };
+                Include {
+                    system: Some(system),
+                    filters: vec![filter],
+                    ..Include::default()
+                }
+            }
+        };
+        Some(Ok(Compose {
+            include: vec![include],
+            ..Compose::default()
+        }))
+    }
+
     fn all(&self) -> Result<ConceptSet, ProviderError> {
         Ok((0..self.concepts).collect())
     }
@@ -644,14 +824,43 @@ impl CodeSystemProvider for SnomedProvider {
     }
 }
 
+/// The base (the system, edition, or version URI) and the `fhir_vs` form of
+/// an implicit value set URL, when `url` has the shape.
+fn implicit_parts(url: &str) -> Option<(&str, &str)> {
+    let (base, query) = url.split_once('?')?;
+    let form = match query.strip_prefix("fhir_vs")? {
+        "" => "",
+        rest => rest.strip_prefix('=')?,
+    };
+    (base == SYSTEM || base.starts_with("http://snomed.info/sct/")).then_some((base, form))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::primary_subtag;
+    use super::{implicit_parts, primary_subtag};
 
     #[test]
     fn the_primary_subtag_is_the_language() {
         assert_eq!(primary_subtag("en-GB"), "en");
         assert_eq!(primary_subtag("nl"), "nl");
         assert_eq!(primary_subtag("EN_us"), "en");
+    }
+
+    #[test]
+    fn implicit_urls_split_into_base_and_form() {
+        assert_eq!(
+            implicit_parts("http://snomed.info/sct?fhir_vs"),
+            Some(("http://snomed.info/sct", ""))
+        );
+        assert_eq!(
+            implicit_parts("http://snomed.info/sct/11000146104/version/20260630?fhir_vs=isa/1"),
+            Some((
+                "http://snomed.info/sct/11000146104/version/20260630",
+                "isa/1"
+            ))
+        );
+        assert_eq!(implicit_parts("http://snomed.info/sct?fhir_cm=1"), None);
+        assert_eq!(implicit_parts("http://loinc.org/vs"), None);
+        assert_eq!(implicit_parts("http://snomed.info/sct?fhir_vsx"), None);
     }
 }

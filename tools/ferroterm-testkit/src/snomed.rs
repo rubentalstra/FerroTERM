@@ -8,6 +8,7 @@ use std::path::Path;
 
 use ferroterm_graph::closure::Closure;
 use ferroterm_graph::csr::Csr;
+use ferroterm_graph::members::Memberships;
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::persist::Hierarchy;
 use ferroterm_rf2::constants;
@@ -50,6 +51,8 @@ pub const FUR: u32 = 5;
 pub const COVERING: u32 = 6;
 /// The leg-count attribute type (concrete values).
 pub const LEGS: u32 = 7;
+/// A reference set concept whose members are the cat and the dog.
+pub const PETS: u32 = 8;
 
 /// The item number behind each ordinal, so `sctid(item(CAT))` is the cat's code.
 #[must_use]
@@ -58,9 +61,9 @@ pub fn item(ordinal: u32) -> u32 {
 }
 
 /// (refset ordinal, acceptability ordinal).
-type Memberships = Vec<(u32, u32)>;
+type LanguageMemberships = Vec<(u32, u32)>;
 /// (term, language, use ordinal, active, memberships).
-type DesignationRow = (&'static str, &'static str, u32, bool, Memberships);
+type DesignationRow = (&'static str, &'static str, u32, bool, LanguageMemberships);
 
 struct Row {
     ordinal: u32,
@@ -224,6 +227,21 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
                 ("Leg count", "en", syn, true, vec![(gb, preferred)]),
             ],
         },
+        Row {
+            ordinal: PETS,
+            active: true,
+            defined: false,
+            designations: vec![
+                (
+                    "Pets reference set (foundation metadata concept)",
+                    "en",
+                    fsn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+                ("Pets reference set", "en", syn, true, vec![(gb, preferred)]),
+            ],
+        },
     ];
     let is_a = [
         (ANIMAL, TOP),
@@ -232,6 +250,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         (FUR, TOP),
         (COVERING, TOP),
         (LEGS, TOP),
+        (PETS, TOP),
     ];
 
     let mut builder =
@@ -364,6 +383,17 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     ferroterm_text::persist::write_to(&index, &mut text_bytes)
         .map_err(|e| FixtureError::Text(e.to_string()))?;
     std::fs::write(dir.join("text.bin"), &text_bytes)?;
+    let mut memberships = Memberships::new();
+    let refset: u64 = sctid(item(PETS))
+        .parse()
+        .map_err(|e| FixtureError::Graph(format!("refset id: {e}")))?;
+    memberships.insert(refset, Ordinal::new(CAT));
+    memberships.insert(refset, Ordinal::new(DOG));
+    let mut member_bytes = Vec::new();
+    memberships
+        .write_to(&mut member_bytes)
+        .map_err(|e| FixtureError::Graph(e.to_string()))?;
+    std::fs::write(dir.join("refsets.bin"), &member_bytes)?;
     builder.finish(&PreferredRule { preferred })?;
 
     let manifest = serde_json::json!({
@@ -376,6 +406,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         "storeLayout": tables::LAYOUT_VERSION,
         "hierarchy": "hierarchy.bin",
         "text": "text.bin",
+        "refsets": "refsets.bin",
         "concepts": rows.len(),
         "languages": ["en", "nl"],
     });

@@ -1,0 +1,1360 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>FerroTERM</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Documentation for FerroTERM, a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical code systems.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-e784f28f.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-39b5351b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroTERM</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/rubentalstra/FerroTERM" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>FerroTERM is a pure-Rust FHIR terminology server. It serves SNOMED CT, LOINC,
+ICD-10, ICD-11, RxNorm, UCUM, and any FHIR <code>CodeSystem</code> through the HL7 FHIR
+terminology API from one static binary, over a memory-mapped index built once
+per code system release. There is no JVM, no Elasticsearch, and no database to
+run.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The name: Ferro for the Rust family FerroTERM shares with FerroEHR, TERM for
+terminology. The site is <a href="https://ferroterm.eu">https://ferroterm.eu</a>.</p>
+</blockquote>
+<h2 id="where-the-project-is"><a class="header" href="#where-the-project-is">Where the project is</a></h2>
+<p>v0.0.6 is the current release. It ships as Linux binaries for <code>x86_64</code> and
+<code>aarch64</code> (glibc and musl), as a container image for <code>linux/amd64</code> and
+<code>linux/arm64</code>, and as a Compose file, all built with signed provenance. The
+server answers FHIR R4B under <code>/r4b</code>; the CI lane runs the HL7 terminology
+ecosystem suite against every change and holds a committed pass list.</p>
+<p>Some of what a mature terminology server does is still on the roadmap, and
+this book says so where it matters: ECL and the SNOMED implicit value sets
+(v0.0.8), the R4, R5, and R6 endpoints and XML (v0.0.9), hierarchical
+expansion, persisted client resources, <code>Bundle</code> batch, and <code>$closure</code>
+(v0.0.10). Each is an issue with acceptance criteria on the tracker; the
+milestones are the roadmap.</p>
+<h2 id="who-each-part-of-this-book-is-for"><a class="header" href="#who-each-part-of-this-book-is-for">Who each part of this book is for</a></h2>
+<ul>
+<li><strong><a href="#what-ferroterm-is">Evaluate</a></strong> is for anyone deciding whether
+FerroTERM fits: what it serves, why it exists, the architecture at a glance,
+and how it compares to Snowstorm, Ontoserver, and Hermes.</li>
+<li><strong><a href="#install-and-run">Operate</a></strong> is for operators: installing and running
+the server, configuration, building an index from each code system’s
+release, hardware sizing, and verifying a release before you run it.</li>
+<li><strong><a href="#the-fhir-terminology-api">Integrate</a></strong> is for API consumers: the FHIR
+terminology operations, the implicit value sets, the served FHIR version,
+and worked request and response examples captured from a running server.</li>
+<li><strong><a href="#build-and-test">Contribute</a></strong> is for contributors: building
+and testing, the FHIR code generation model, and where the deeper design
+lives.</li>
+</ul>
+<h2 id="two-things-that-are-always-true"><a class="header" href="#two-things-that-are-always-true">Two things that are always true</a></h2>
+<p>You bring your own code system content, and the software is open source under
+the MIT license. SNOMED CT is licensed by SNOMED International, LOINC by the
+Regenstrief Institute, ICD by the WHO, and RxNorm by the NLM; this repository
+and every build of FerroTERM ship none of their content. You load a release you
+are licensed for, and the server serves it. See
+<a href="#loading-code-systems">Loading code systems</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="what-ferroterm-is"><a class="header" href="#what-ferroterm-is">What FerroTERM is</a></h1>
+<p>FerroTERM is a read-oriented FHIR terminology server for clinical code
+systems. It answers the HL7 FHIR terminology operations over the code systems
+you load, and every code system reaches the operations through the same
+provider seam, so LOINC, ICD-10, RxNorm, and the rest are loaders and
+providers, never special cases in an operation.</p>
+<ul>
+<li><a href="#what-it-does">What it does</a></li>
+<li><a href="#what-it-serves">What it serves</a></li>
+<li><a href="#why-it-exists">Why it exists</a></li>
+<li><a href="#who-uses-it">Who uses it</a></li>
+<li><a href="#what-is-not-built-yet">What is not built yet</a></li>
+</ul>
+<h2 id="what-it-does"><a class="header" href="#what-it-does">What it does</a></h2>
+<p>The server exposes the FHIR terminology API on R4B:</p>
+<ul>
+<li><code>CodeSystem/$lookup</code>: a concept’s display, designations by language, and
+properties.</li>
+<li><code>CodeSystem/$subsumes</code>: whether one concept subsumes another, from the
+transitive closure.</li>
+<li><code>CodeSystem/$validate-code</code> and <code>ValueSet/$validate-code</code>: whether a code is
+valid, whether its display is right (the correct one comes back when it is
+not), and, for a value set, whether the code is a member.</li>
+<li><code>ValueSet/$expand</code>: the members of a value set, paged, filtered by text,
+with version pins, over loaded, inline, and request-scoped value sets.</li>
+<li><code>ConceptMap/$translate</code>: the targets a code maps to, from loaded or inline
+maps.</li>
+<li><code>metadata</code> and <code>metadata?mode=terminology</code>: what this deployment serves.</li>
+</ul>
+<h2 id="what-it-serves"><a class="header" href="#what-it-serves">What it serves</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Code system</th><th>What you provide</th><th>What the provider answers</th></tr>
+</thead>
+<tbody>
+<tr><td>SNOMED CT, any edition</td><td>the RF2 release zip</td><td>the inferred hierarchy, preferred terms per language reference set, inactive concepts marked, the edition and version URI as <code>version</code>, the <code>is-a</code> and <code>in</code> filters</td></tr>
+<tr><td>LOINC</td><td><code>Loinc_x.yy.zip</code></td><td>terms, parts, answer lists, and answers as codes; the FHIR LOINC properties and filters; <code>/vs</code>, <code>/vs/[LL…]</code>, <code>/vs/[LP…]</code></td></tr>
+<tr><td>ICD-10 (WHO and national translations), ICPC-2</td><td>a ClaML document</td><td>the <code>classified-with</code> tree, modifiers expanded onto their leaves, inclusion and exclusion notes as properties</td></tr>
+<tr><td>ICD-10-CM</td><td>the CMS tabular XML and order file</td><td>codes with the period, seventh-character codes under their stem, the <code>valid</code> flag</td></tr>
+<tr><td>ICD-11 (MMS, ICF, the Foundation)</td><td>a local deployment of the WHO ICD-API</td><td>short codes, entity URIs, postcoordination expressions validated against the axes, the scale value sets</td></tr>
+<tr><td>RxNorm</td><td>the RRF release or the prescribable subset</td><td>the FHIR <code>STY</code>, <code>SAB</code>, <code>TTY</code>, <code>REL</code>, and <code>RELA</code> filters over typed edges, <code>/vs</code></td></tr>
+<tr><td>FHIR <code>CodeSystem</code>, <code>ValueSet</code>, <code>ConceptMap</code></td><td>a FHIR package or a directory of JSON</td><td>hierarchy, filters, properties, and supplements as the resources declare them</td></tr>
+<tr><td>UCUM, BCP 47, BCP 13, ISO 3166-1</td><td>nothing</td><td>grammar and registry validation, vendored into the binary</td></tr>
+</tbody>
+</table>
+</div>
+<p><a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/terminologies.md"><code>docs/terminologies.md</code></a>
+records each system’s FHIR page, its licence, and exactly what the provider
+implements.</p>
+<h2 id="why-it-exists"><a class="header" href="#why-it-exists">Why it exists</a></h2>
+<p>Most SNOMED CT terminology servers run on the JVM, and the reference server,
+Snowstorm, runs on Elasticsearch. That stack works, and it asks for a lot of
+memory: a machine serving an edition wants 16 to 32 GB of RAM, most of it
+Elasticsearch heap, plus a search cluster to operate.</p>
+<p>The data is smaller than that. The Dutch edition is 548,949 concepts, active
+and inactive; FerroTERM builds it into a 591 MB index in 49 seconds and serves
+it from one process that started in half a second. The goal is plain: run a
+clinical terminology server on hardware you already have.</p>
+<h2 id="who-uses-it"><a class="header" href="#who-uses-it">Who uses it</a></h2>
+<p>FerroTERM speaks the FHIR terminology API, so any FHIR client can use it: a
+validator, an IG publisher, a clinical application resolving value set
+bindings. One such client is
+<a href="https://github.com/rubentalstra/FerroEHR">FerroEHR</a>, a pure-Rust openEHR
+clinical data repository by the same author. FerroTERM is independent of it.</p>
+<h2 id="what-is-not-built-yet"><a class="header" href="#what-is-not-built-yet">What is not built yet</a></h2>
+<p>The build order is the tracker’s milestones. As of v0.0.6:</p>
+<ul>
+<li>ECL and the SNOMED implicit value sets (<code>?fhir_vs=…</code>) are v0.0.8; today a
+SNOMED value set is a <code>compose</code> with <code>is-a</code> or <code>in</code> filters.</li>
+<li>R4, R5, and R6 endpoints and the XML wire format are v0.0.9; the server
+answers R4B JSON.</li>
+<li>Hierarchical (nested) expansion, persisted client resources, <code>Bundle</code>
+batch, <code>ConceptMap/$closure</code>, and the SNOMED implicit concept maps are
+v0.0.10.</li>
+<li>MRCM validation of postcoordinated SNOMED expressions is not scheduled.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="architecture-at-a-glance"><a class="header" href="#architecture-at-a-glance">Architecture at a glance</a></h1>
+<p>This page is a short tour of the design as built. The full design authority,
+with citations to the terminology-server and graph-reachability literature, is
+<a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md"><code>docs/architecture.md</code></a>
+in the repository.</p>
+<ul>
+<li><a href="#offline-once-online-from-precomputed-structures">Offline once, online from precomputed structures</a></li>
+<li><a href="#an-index-materialized-graph-not-a-graph-database">An index-materialized graph, not a graph database</a></li>
+<li><a href="#the-artifact-layout">The artifact layout</a></li>
+<li><a href="#the-provider-seam">The provider seam</a></li>
+<li><a href="#fhir-support-is-machine-generated">FHIR support is machine-generated</a></li>
+<li><a href="#text-search-is-a-separate-index">Text search is a separate index</a></li>
+</ul>
+<h2 id="offline-once-online-from-precomputed-structures"><a class="header" href="#offline-once-online-from-precomputed-structures">Offline once, online from precomputed structures</a></h2>
+<p>A code system release is turned into served structures once, by
+<code>ferroterm-build</code>, and the server opens them read-only:</p>
+<pre class="mermaid">graph TD
+    R["A release (RF2, LOINC, ClaML, RRF, the ICD-API cache, ...)"] --&gt; BUILD["ferroterm-build, once per release"]
+    BUILD --&gt; IDX["store.redb + hierarchy.bin + text.bin + manifest.json"]
+    IDX --&gt; SRV["ferroterm, read-only, memory-mapped"]
+    SRV --&gt; API["FHIR terminology API (R4B today)"]
+</pre>
+
+<p>For SNOMED CT the hierarchy a client queries is the inferred one, a reasoner
+output SNOMED ships in its inferred relationship file; the build computes its
+transitive closure once and persists it. The server never re-derives
+inference and never parses a release at request time.</p>
+<h2 id="an-index-materialized-graph-not-a-graph-database"><a class="header" href="#an-index-materialized-graph-not-a-graph-database">An index-materialized graph, not a graph database</a></h2>
+<p>The hierarchy is stored as integer-keyed compressed sparse-row (CSR)
+adjacency plus roaring bitmaps holding the transitive closure in both
+directions. A subsumption test is a bitmap membership test, a descendant set is
+a bitmap returned directly, and set operations over value sets are bitmap AND,
+OR, and difference. Typed relationships (RxNorm’s <code>has_ingredient</code>, for one)
+are a second adjacency with the type on each edge, both directions
+materialized.</p>
+<p>A general-purpose graph database is rejected on the evidence: no production
+terminology server uses one (Ontoserver is Postgres plus Lucene, Snowstorm is
+Elasticsearch, Hermes a memory-mapped store plus Lucene), and graph databases
+degrade on exactly the deep multi-hop neighbourhoods a descendant expansion
+produces.</p>
+<h2 id="the-artifact-layout"><a class="header" href="#the-artifact-layout">The artifact layout</a></h2>
+<p>Every code system builds into the same four files, so the server opens each
+by its manifest and nothing downstream knows which file format it came from:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>Holds</th></tr>
+</thead>
+<tbody>
+<tr><td><code>store.redb</code></td><td>concepts, designations with language and use, typed properties, the vocabularies; a pure-Rust, memory-mapped, ACID embedded engine</td></tr>
+<tr><td><code>hierarchy.bin</code></td><td>the CSR is-a adjacency and the roaring closure bitmaps</td></tr>
+<tr><td><code>text.bin</code></td><td>the <code>fst</code> word dictionary and roaring postings of every designation, by language</td></tr>
+<tr><td><code>manifest.json</code></td><td>the system, version, languages, counts, and the files above</td></tr>
+</tbody>
+</table>
+</div>
+<p>Some systems add a file: RxNorm’s typed edges (<code>relations.bin</code>) and atom
+identifiers (<code>atoms.bin</code>), ICD-11’s entity keys (<code>keys.bin</code>) and
+postcoordination scales (<code>scales.json</code>). No FHIR or SNOMED specification
+governs this layout; it is the project’s own design.</p>
+<h2 id="the-provider-seam"><a class="header" href="#the-provider-seam">The provider seam</a></h2>
+<p>The operations talk to a <code>CodeSystemProvider</code> trait and nothing else: locate a
+code, its display and designations by language, its status and properties, the
+hierarchy when the system has one, search, enumeration, filters, implicit value
+sets, and subsumption. Each code system implements the seam over its artifact
+(or, for the registry systems, over a grammar and a vendored table), and
+declares its capabilities, filters, and properties for
+<code>TerminologyCapabilities</code>. The compose layer (include, exclude, filters,
+paging, <code>total</code>) sits once above every provider.</p>
+<h2 id="fhir-support-is-machine-generated"><a class="header" href="#fhir-support-is-machine-generated">FHIR support is machine-generated</a></h2>
+<p>HL7 publishes the whole type system and every operation as machine-readable
+<code>StructureDefinition</code> and <code>OperationDefinition</code> resources, in versioned
+packages. FerroTERM vendors and pins those packages (R4 4.0.1, R4B 4.3.0, R5
+5.0.0, R6 ballot 5, HL7 Terminology) and generates per-version Rust modules
+from them, so a parameter R5 adds appears in the R5 module and is absent from
+R4B. Every generated file is marked <code>// @generated</code>, and a drift check
+regenerates it in CI. The server mounts the R4B module today; the R4, R5, and
+R6 modules exist and are the v0.0.9 milestone.</p>
+<h2 id="text-search-is-a-separate-index"><a class="header" href="#text-search-is-a-separate-index">Text search is a separate index</a></h2>
+<p>Description search is its own concern. A word index maps each folded word to a
+roaring postings list of designations, with an <code>fst</code> dictionary for prefix
+lookup, per language. A <code>filter</code> on <code>$expand</code> intersects the matching words’
+postings and the value set’s members.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="how-it-compares"><a class="header" href="#how-it-compares">How it compares</a></h1>
+<p>FerroTERM serves the same FHIR terminology API as the established servers. The
+difference is the runtime footprint, the stack it needs to operate, and how
+far along the feature set is. This page sets FerroTERM beside Snowstorm,
+Ontoserver, and Hermes.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The numbers for the other servers come from their own documentation and
+published work, cited in
+<a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md"><code>docs/architecture.md</code></a>.
+FerroTERM’s own figures are measurements of v0.0.6 over the licensed Dutch
+SNOMED CT edition on a laptop; see <a href="#hardware-sizing">Hardware sizing</a>.</p>
+</blockquote>
+<h2 id="the-servers"><a class="header" href="#the-servers">The servers</a></h2>
+<ul>
+<li><strong>Snowstorm</strong> (SNOMED International): Java on Elasticsearch. The reference
+server and FerroTERM’s behavioural oracle. Full-featured, and a full
+International edition deployment wants 16 to 32 GB of RAM plus a search
+cluster.</li>
+<li><strong>Snowstorm Lite</strong> (SNOMED International): drops Elasticsearch for a single
+Lucene index and runs the International edition in about 500 MB.</li>
+<li><strong>Ontoserver</strong> (CSIRO): Postgres plus Lucene. A production FHIR terminology
+server, index-materialized rather than a graph database; the Dutch national
+terminology server runs it.</li>
+<li><strong>Hermes</strong> (Mark Wardle): Clojure, a memory-mapped store plus Lucene. It
+serves subsumption in tens of microseconds from a materialized structure,
+the design point FerroTERM follows in pure Rust.</li>
+</ul>
+<h2 id="side-by-side"><a class="header" href="#side-by-side">Side by side</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Server</th><th>Language / runtime</th><th>Store</th><th>Edition footprint</th><th>Deploys as</th></tr>
+</thead>
+<tbody>
+<tr><td>Snowstorm</td><td>Java (JVM)</td><td>Elasticsearch</td><td>16 to 32 GB RAM</td><td>JVM plus a search cluster</td></tr>
+<tr><td>Snowstorm Lite</td><td>Java (JVM)</td><td>Lucene</td><td>about 500 MB</td><td>JVM service</td></tr>
+<tr><td>Ontoserver</td><td>Java (JVM)</td><td>Postgres plus Lucene</td><td>server plus database</td><td>JVM plus Postgres</td></tr>
+<tr><td>Hermes</td><td>Clojure (JVM)</td><td>memory-mapped store plus Lucene</td><td>modest</td><td>JVM service</td></tr>
+<tr><td>FerroTERM 0.0.6</td><td>Rust</td><td><code>redb</code>, memory-mapped</td><td>591 MB on disk, 420 to 580 MB resident with two more systems loaded</td><td>one static binary or a distroless image</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="what-ferroterm-trades"><a class="header" href="#what-ferroterm-trades">What FerroTERM trades</a></h2>
+<p>FerroTERM is younger. The mature servers carry features that are still on
+FerroTERM’s roadmap: ECL and the SNOMED implicit value sets (v0.0.8), the R4,
+R5, and R6 endpoints and XML (v0.0.9), hierarchical expansion, persisted client
+resources, batch, and <code>$closure</code> (v0.0.10), and MRCM validation of
+postcoordinated expressions (unscheduled). What it serves, it serves from one
+binary with signed provenance, over more code systems than the SNOMED-only
+servers, and with its conformance measured by the HL7 terminology ecosystem
+suite on every change.</p>
+<p>Every production server in this list converges on a materialized index rather
+than live graph traversal. FerroTERM takes the same shape in pure Rust, with a
+machine-generated FHIR layer across four versions.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="install-and-run"><a class="header" href="#install-and-run">Install and run</a></h1>
+<p>FerroTERM ships as a single static binary and as a container image. Both carry
+the whole server and the build tool: there is no JVM to install, no
+Elasticsearch to run, and no database to provision. The registry systems
+(UCUM, BCP 47, BCP 13, ISO 3166-1) are inside the binary; every other code
+system is an index you build from a release you are licensed for
+(<a href="#loading-code-systems">Loading code systems</a>).</p>
+<ul>
+<li><a href="#the-first-call-with-nothing-to-load">The first call, with nothing to load</a></li>
+<li><a href="#run-with-docker-compose">Run with Docker Compose</a></li>
+<li><a href="#run-the-container-by-hand">Run the container by hand</a></li>
+<li><a href="#run-the-binary">Run the binary</a></li>
+<li><a href="#check-that-it-is-serving">Check that it is serving</a></li>
+</ul>
+<h2 id="the-first-call-with-nothing-to-load"><a class="header" href="#the-first-call-with-nothing-to-load">The first call, with nothing to load</a></h2>
+<pre><code class="language-console">$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.0.6
+$ curl 'http://localhost:8080/r4b/CodeSystem/$lookup?system=http://unitsofmeasure.org&amp;code=mg/dL'
+</code></pre>
+<p>The server starts with no index, serves the four registry systems, and answers
+the lookup with the unit’s canonical form. <code>GET /r4b/metadata?mode=terminology</code>
+lists what a deployment serves.</p>
+<h2 id="run-with-docker-compose"><a class="header" href="#run-with-docker-compose">Run with Docker Compose</a></h2>
+<p>Every release attaches a <code>compose.yaml</code>. With it and a SNOMED CT release zip
+(a licensed download from SNOMED International or your national release
+centre), the whole path is two commands: build the index once, then serve it.</p>
+<pre><code class="language-console">$ curl -LO https://github.com/rubentalstra/FerroTERM/releases/latest/download/compose.yaml
+$ FERROTERM_RF2=/path/to/SnomedCT_Release.zip docker compose run --rm build
+$ docker compose up
+</code></pre>
+<p>The <code>build</code> service runs <code>ferroterm-build</code> from the same image with the zip
+mounted read-only and writes the index to <code>./index</code> (or <code>FERROTERM_INDEX_DIR</code>);
+the Snapshot is unpacked to the container’s tmpfs and gone with it. It sits
+under the <code>build</code> profile, so <code>docker compose up</code> never starts it. To serve an
+index you built elsewhere, or several (the variable takes <code>:</code>-separated
+directories inside the container), skip the first command and point at it:</p>
+<pre><code class="language-console">$ FERROTERM_INDEX_DIR=/path/to/ferroterm-index docker compose up
+</code></pre>
+<p>The file pulls the image of the release it shipped with, mounts the index
+read-only at <code>/data/index</code>, publishes port 8080 on the loopback interface, and
+runs the container with every capability dropped and a read-only root
+filesystem. <code>FERROTERM_BIND_HOST</code>, <code>FERROTERM_PORT</code>, <code>FERROTERM_LOG_FORMAT</code>,
+<code>FERROTERM_DEFAULT_LANGUAGE</code>, and <code>RUST_LOG</code> are variables you set on the
+command line.</p>
+<h2 id="run-the-container-by-hand"><a class="header" href="#run-the-container-by-hand">Run the container by hand</a></h2>
+<p>The image is <code>ghcr.io/rubentalstra/ferroterm</code>, published for <code>linux/amd64</code> and
+<code>linux/arm64</code> with every release. It holds the static <code>ferroterm</code> and
+<code>ferroterm-build</code> binaries on a distroless base: no shell, no package manager,
+a numeric non-root user (<code>65532</code>), and the listen address preset to
+<code>0.0.0.0:8080</code>.</p>
+<pre><code class="language-console">$ docker run --rm -p 8080:8080 \
+    -v /path/to/ferroterm-index:/data/index:ro \
+    -e FERROTERM_INDEX=/data/index \
+    ghcr.io/rubentalstra/ferroterm:0.0.6
+</code></pre>
+<p>Mount the index read-only. The server writes nothing while serving, so the
+container runs with a read-only root filesystem. Tags are <code>&lt;version&gt;</code>,
+<code>&lt;major.minor&gt;</code>, and <code>latest</code>; a deployment pins the digest and verifies its
+provenance first (see <a href="#verifying-releases">Verifying releases</a>):</p>
+<pre><code class="language-console">$ gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:0.0.6 \
+    -R rubentalstra/FerroTERM \
+    --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-image.yml
+</code></pre>
+<p>The image carries no <code>HEALTHCHECK</code>; in Kubernetes, point the readiness and
+liveness probes at <code>GET /health</code>, set <code>runAsNonRoot: true</code>,
+<code>readOnlyRootFilesystem: true</code>, and drop every capability. The server stops
+cleanly on <code>SIGTERM</code>.</p>
+<h2 id="run-the-binary"><a class="header" href="#run-the-binary">Run the binary</a></h2>
+<p>Each release carries a tarball per target (<code>x86_64</code> and <code>aarch64</code>, glibc and
+musl) holding <code>ferroterm</code> and <code>ferroterm-build</code>, with a checksum, a CycloneDX
+SBOM, and Sigstore attestations beside it. Download, verify, unpack, run:</p>
+<pre><code class="language-console">$ gh release download v0.0.6 -R rubentalstra/FerroTERM -p 'ferroterm-v0.0.6-x86_64-unknown-linux-musl.tar.gz*'
+$ gh attestation verify ferroterm-v0.0.6-x86_64-unknown-linux-musl.tar.gz -R rubentalstra/FerroTERM \
+    --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
+$ tar xzf ferroterm-v0.0.6-x86_64-unknown-linux-musl.tar.gz
+$ FERROTERM_INDEX=/path/to/ferroterm-index ./ferroterm
+</code></pre>
+<p>The server opens each index read-only, refuses to start on a missing or
+damaged one, and listens on <code>127.0.0.1:8080</code>. The listen address, the index
+directories, the FHIR resource directories, and the default display language
+are environment variables described in <a href="#configuration">Configuration</a>.</p>
+<h2 id="check-that-it-is-serving"><a class="header" href="#check-that-it-is-serving">Check that it is serving</a></h2>
+<pre><code class="language-console">$ curl http://localhost:8080/health
+$ curl 'http://localhost:8080/r4b/metadata?mode=terminology'
+</code></pre>
+<p>The <code>TerminologyCapabilities</code> names every code system and version this
+deployment serves, with its filters and properties. See
+<a href="#the-fhir-terminology-api">The FHIR terminology API</a> for the operations.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
+<p>The server reads its configuration from environment variables at start. There
+is no configuration file and no command-line flag; a container sets the
+variables, a host sets them in the service unit. <code>ValueSet/$expand</code> returns
+at most 1,000 members without <code>count</code> and asks for paging beyond that
+(<code>too-costly</code>); the limit is not configurable.</p>
+<ul>
+<li><a href="#the-variables">The variables</a></li>
+<li><a href="#what-the-server-logs">What the server logs</a></li>
+<li><a href="#the-registry-systems">The registry systems</a></li>
+<li><a href="#what-a-code-system-version-is-served-as">What a code system version is served as</a></li>
+<li><a href="#what-you-do-not-configure">What you do not configure</a></li>
+</ul>
+<h2 id="the-variables"><a class="header" href="#the-variables">The variables</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Meaning</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td><code>FERROTERM_INDEX</code></td><td>The artifact directories to serve, one per code system version (a SNOMED CT edition, a LOINC release, an ICD-10 classification, an RxNorm release, or one of the three ICD-11 code systems; the manifest says which), separated by the platform’s path separator (<code>:</code> on Linux). Each holds the <code>store.redb</code>, <code>hierarchy.bin</code>, <code>text.bin</code>, and <code>manifest.json</code> that <code>ferroterm-build</code> wrote. The server opens them read-only and refuses to start when one is missing, damaged, or duplicates another’s system version.</td><td>none (the server starts with no code systems)</td></tr>
+<tr><td><code>FERROTERM_CODESYSTEMS</code></td><td>Directories of FHIR <code>CodeSystem</code> resources to serve, separated by the platform’s path separator: a FHIR package’s <code>package/</code> directory (HL7 Terminology, for example) or a directory of <code>CodeSystem</code> JSON files. Files are read in the FHIR version the directory’s <code>package.json</code> declares, or as R4B when there is none. A resource with <code>content = supplement</code> is applied to the system it <code>supplements</code> and is not served as an instance; the server refuses to start when that system is not loaded. <code>ValueSet</code> resources in the same directories are served by <code>url</code> and <code>version</code> for <code>ValueSet/$expand</code> and <code>ValueSet/$validate-code</code> (without a version, the greatest version answers).</td><td>none</td></tr>
+<tr><td><code>FERROTERM_LISTEN</code></td><td>The socket address to bind.</td><td><code>127.0.0.1:8080</code> (the container image sets <code>0.0.0.0:8080</code>)</td></tr>
+<tr><td><code>FERROTERM_DEFAULT_LANGUAGE</code></td><td>The BCP 47 language used for <code>display</code> when a request names none.</td><td><code>en</code></td></tr>
+<tr><td><code>FERROTERM_LOG_FORMAT</code></td><td><code>auto</code>, <code>json</code>, or <code>pretty</code>. <code>json</code> writes one object per line (<code>timestamp</code>, <code>level</code>, <code>message</code>, and the fields) for a log pipeline; <code>pretty</code> writes aligned human lines with colour; <code>auto</code> picks <code>pretty</code> when stdout is a terminal and <code>json</code> otherwise. The startup banner prints only with <code>pretty</code>.</td><td><code>auto</code></td></tr>
+<tr><td><code>RUST_LOG</code></td><td>The <code>tracing</code> filter.</td><td><code>info,hyper=warn,tower=warn,h2=warn</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="what-the-server-logs"><a class="header" href="#what-the-server-logs">What the server logs</a></h2>
+<p>At start: the banner (pretty only), one <code>ferroterm starting</code> line with the
+version and the count of code systems, one <code>serving code system</code> line per
+loaded version (<code>id</code>, <code>system</code>, <code>version</code>, <code>concepts</code>, <code>languages</code>, <code>path</code>),
+and one <code>listening</code> line with the address and the base path. Per request: one
+<code>request</code> line with <code>method</code>, <code>route</code>, <code>status</code>, <code>latency_ms</code>, and the
+<code>system</code>, <code>url</code>, <code>version</code>, <code>code</code>, <code>codeA</code>, <code>codeB</code> query parameters the
+request named (<code>named</code>); bodies and free-text parameters are never logged. A
+client error logs at <code>warn</code>, a server error at <code>error</code>. On <code>SIGTERM</code> or
+<code>SIGINT</code>: the signal, then <code>ferroterm stopped</code>. A refused start is one
+<code>cannot start</code> line with the reason.</p>
+<h2 id="the-registry-systems"><a class="header" href="#the-registry-systems">The registry systems</a></h2>
+<p>Four systems ship with the server and are served without configuration: BCP
+47 language tags (<code>urn:ietf:bcp:47</code>), BCP 13 media types (<code>urn:ietf:bcp:13</code>),
+UCUM units (<code>http://unitsofmeasure.org</code>), and ISO 3166-1 country codes
+(<code>urn:iso:std:iso:3166</code>). The first three are grammars over their registries
+and cannot be expanded; the fourth is a table from Unicode CLDR. Their data
+is vendored in the binary.</p>
+<h2 id="what-a-code-system-version-is-served-as"><a class="header" href="#what-a-code-system-version-is-served-as">What a code system version is served as</a></h2>
+<p>Each loaded code system version becomes one <code>CodeSystem</code> instance. The id is
+the version URI when that URI carries the system (a SNOMED CT edition is
+<code>snomed.info-sct-&lt;module&gt;-version-&lt;YYYYMMDD&gt;</code>), otherwise the system URL and
+the version (<code>terminology.hl7.org-CodeSystem-v2-0001-2.0.0</code>), reduced to the
+FHIR id alphabet. An instance-level operation is
+<code>[base]/r4b/CodeSystem/&lt;id&gt;/$validate-code</code>. The id is stable for a given
+version and is listed at startup and in <code>GET /r4b/metadata?mode=terminology</code>.</p>
+<h2 id="what-you-do-not-configure"><a class="header" href="#what-you-do-not-configure">What you do not configure</a></h2>
+<p>You do not configure a database connection, a search cluster, or a JVM heap.
+FerroTERM has none of these. The inputs the server needs are the built indexes and any
+FHIR resource directories, and you build the indexes offline with
+<code>ferroterm-build</code> as described in <a href="#loading-code-systems">Loading code systems</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="loading-code-systems"><a class="header" href="#loading-code-systems">Loading code systems</a></h1>
+<p>FerroTERM serves the code systems you load. Each arrives as the release its
+owner distributes, turned once into an index by <code>ferroterm-build</code>, and served
+read-only. This page covers the licensing rule, the build step, and the
+command for every supported source; the sections below name each system.</p>
+<ul>
+<li><a href="#you-bring-your-own-content">You bring your own content</a></li>
+<li><a href="#the-offline-build">The offline build</a></li>
+<li><a href="#loading-a-snomed-ct-edition">Loading a SNOMED CT edition</a></li>
+<li><a href="#loading-loinc">Loading LOINC</a></li>
+<li><a href="#loading-icd-10-and-icd-10-cm">Loading ICD-10 and ICD-10-CM</a></li>
+<li><a href="#loading-rxnorm">Loading RxNorm</a></li>
+<li><a href="#loading-icd-11">Loading ICD-11</a></li>
+<li><a href="#test-content">Test content</a></li>
+</ul>
+<h2 id="you-bring-your-own-content"><a class="header" href="#you-bring-your-own-content">You bring your own content</a></h2>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>This repository ships no code system content, and no build of FerroTERM
+contains any. SNOMED CT is licensed by SNOMED International, LOINC by
+Regenstrief, ICD by the WHO, RxNorm by the NLM. You must hold whatever
+licence the release you load requires.</p>
+</blockquote>
+<p>The split is firm: the software in this repository is open source under the
+MIT license, and the code system content is the property of its owner and is
+not distributed here. A SNOMED CT licence is free within member countries, the
+Netherlands among them, and available under the affiliate licence elsewhere;
+LOINC needs a free account; ICD-10-CM and the RxNorm prescribable subset are
+public downloads; ICD-11 comes through the WHO’s own container under its
+licence.</p>
+<h2 id="the-offline-build"><a class="header" href="#the-offline-build">The offline build</a></h2>
+<p>The running server never parses a release. <code>ferroterm-build</code> turns it into the
+memory-mapped index once, and the server opens the index read-only. The tool
+ships in every release tarball beside <code>ferroterm</code> and in the container image.</p>
+<pre class="mermaid">graph LR
+    REL["A release you are licensed for"] --&gt; BUILD["ferroterm-build (offline)"]
+    BUILD --&gt; IDX["index: store.redb + hierarchy.bin + text.bin + manifest.json"]
+    IDX --&gt; SRV["ferroterm (read-only)"]
+</pre>
+
+<p>Every source builds into the same layout, and the manifest names the system,
+so <code>FERROTERM_INDEX</code> takes any mix of them. When a new release arrives, rebuild
+its index and restart the server against it.</p>
+<h2 id="loading-a-snomed-ct-edition"><a class="header" href="#loading-a-snomed-ct-edition">Loading a SNOMED CT edition</a></h2>
+<p>The command takes the release zip as SNOMED International or your national
+release centre distributes it, or the unpacked release directory, and writes
+the index:</p>
+<pre><code class="language-console">$ ferroterm-build --rf2 /path/to/SnomedCT_Release.zip --out /path/to/ferroterm-index
+</code></pre>
+<p>From a zip, only the <code>Snapshot/</code> tree is unpacked, to a temporary directory
+that is removed when the build ends; the Full and Delta trees are never read.
+With the container image the same build is one compose command (see
+<a href="#install-and-run">Install and run</a>). The build reads the concepts, descriptions,
+language reference sets, and inferred relationships, computes the transitive
+closure, and writes the store, the hierarchy, and the text index. The Dutch
+edition of June 2026 takes 49 s and 591 MB.</p>
+<p>The edition and version come from the release itself (the module and
+effective time), and <code>$lookup</code> returns them as the version URI
+(<code>http://snomed.info/sct/11000146104/version/20260630</code>).</p>
+<h2 id="loading-loinc"><a class="header" href="#loading-loinc">Loading LOINC</a></h2>
+<p>The same tool builds a LOINC release into the same artifact layout. Download
+the release from <a href="https://loinc.org/downloads/">https://loinc.org/downloads/</a> (a free account; the licence
+allows use and redistribution with the LOINC copyright notice, and the
+repository ships no release) and build it:</p>
+<pre><code class="language-console">$ ferroterm-build --loinc /path/to/Loinc_2.82.zip --out /path/to/loinc-index
+</code></pre>
+<p>The zip’s term table, parts, hierarchy, answer lists, and linguistic variants
+are unpacked to a temporary directory; the part-link tables are not read. The
+version is taken from the release name (<code>Loinc_2.82</code>), else pass
+<code>--loinc-version</code>. Point <code>FERROTERM_INDEX</code> at the directory beside your SNOMED
+CT index; the server opens each by the system its manifest names.</p>
+<h2 id="loading-icd-10-and-icd-10-cm"><a class="header" href="#loading-icd-10-and-icd-10-cm">Loading ICD-10 and ICD-10-CM</a></h2>
+<p>The same tool builds the ICD-10 family. A ClaML document (WHO ICD-10 from
+your WHO licence, the Dutch translation from the WHO-FIC Collaborating Centre
+at RIVM, or any other ClaML classification) is served under the system URI
+you name:</p>
+<pre><code class="language-console">$ ferroterm-build --claml /path/to/icd10nl-2021.xml \
+    --system http://hl7.org/fhir/sid/icd-10-nl --out /path/to/icd10nl-index
+</code></pre>
+<p>The version comes from the document’s <code>Title</code>; pass <code>--claml-version</code> when
+the title has none. A zip is accepted; its largest <code>.xml</code> entry is the
+document.</p>
+<p>ICD-10-CM is a free download from CMS
+(<a href="https://www.cms.gov/medicare/coding-billing/icd-10-codes">https://www.cms.gov/medicare/coding-billing/icd-10-codes</a>): the “Code
+Descriptions in Tabular Order” zip holds the order file and the “Code Tables,
+Tabular and Index” zip holds the tabular XML. Give both:</p>
+<pre><code class="language-console">$ ferroterm-build --icd10cm 2026-code-descriptions-tabular-order.zip \
+    --icd10cm 2026-code-tables-tabular-and-index.zip --out /path/to/icd10cm-index
+</code></pre>
+<p>Codes come out with the period (<code>A00.0</code>, <code>S02.0XXA</code>); chapters are named by
+their range (<code>A00-B99</code>); the order file’s header flag is the <code>valid</code>
+property. Point <code>FERROTERM_INDEX</code> at each directory as for LOINC.</p>
+<h2 id="loading-rxnorm"><a class="header" href="#loading-rxnorm">Loading RxNorm</a></h2>
+<p>The “Current Prescribable Content” subset needs no licence
+(<a href="https://www.nlm.nih.gov/research/umls/rxnorm/docs/prescribe.html">https://www.nlm.nih.gov/research/umls/rxnorm/docs/prescribe.html</a>); the
+full monthly release needs a UMLS licence. Both have the same shape:</p>
+<pre><code class="language-console">$ ferroterm-build --rxnorm RxNorm_full_prescribe_09082026.zip --out /path/to/rxnorm-index
+</code></pre>
+<p>The version is the release date from the readme inside the zip (<code>09082026</code>);
+pass <code>--rxnorm-version</code> when the release has none. The build keeps the names
+of the unrestricted sources (<code>RXNORM</code>, <code>MTHSPL</code>). A full release carries
+sources the UMLS licence restricts by category; name the ones your licence
+covers with <code>--rxnorm-sources MSH,VANDF</code> to serve their names too. Point
+<code>FERROTERM_INDEX</code> at the directory as for LOINC.</p>
+<h2 id="loading-icd-11"><a class="header" href="#loading-icd-11">Loading ICD-11</a></h2>
+<p>ICD-11 comes from the WHO ICD-API. Run the local deployment WHO publishes
+(<a href="https://icd.who.int/icdapi">https://icd.who.int/icdapi</a>; the licence, CC BY-ND 3.0 IGO, allows the
+local copy but not passing it on), then let the build walk it into a cache
+and build the three code systems:</p>
+<pre><code class="language-console">$ docker run -d -p 8080:80 -e acceptLicense=true -e saveAnalytics=false \
+    -e include=2026-01_en whoicd/icd-api
+$ ferroterm-build --icd11 /path/to/icd11-cache --icd11-api http://127.0.0.1:8080 \
+    --icd11-release 2026-01 --icd11-languages en --out /path/to/icd11-index
+</code></pre>
+<p>The cache holds one JSON file per entity and language (about 110,000 files
+for the MMS, the ICF, and the Foundation) and is reused by later builds, so
+the API is only needed once per release. The build writes
+<code>icd11-index/mms</code>, <code>icd11-index/icf</code>, and <code>icd11-index/entity</code>; point
+<code>FERROTERM_INDEX</code> at each of the three. Languages beyond English need the
+deployment to include them (<code>include=2026-01_fr</code>); the build records every
+language the cache holds.</p>
+<h2 id="test-content"><a class="header" href="#test-content">Test content</a></h2>
+<p>FerroTERM’s own tests use shaped, synthetic content only. They never contain real
+content extracted from a release, which keeps the licence line clean in the
+repository itself.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="hardware-sizing"><a class="header" href="#hardware-sizing">Hardware sizing</a></h1>
+<p>FerroTERM is built to run an edition on ordinary hardware. This page gives
+measurements of v0.0.6 and where the memory goes.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The figures were taken on a laptop over the licensed Dutch SNOMED CT edition
+of June 2026 (548,949 concepts, active and inactive), with the public
+ICD-10-CM FY2026 release and the RxNorm prescribable subset loaded beside it.
+Your numbers vary with the edition and the machine; the shape holds.</p>
+</blockquote>
+<ul>
+<li><a href="#measured">Measured</a></li>
+<li><a href="#where-the-memory-goes">Where the memory goes</a></li>
+<li><a href="#disk-and-cpu">Disk and CPU</a></li>
+</ul>
+<h2 id="measured"><a class="header" href="#measured">Measured</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What</th><th>Figure</th></tr>
+</thead>
+<tbody>
+<tr><td>Build the Dutch edition from the release zip</td><td>49 s</td></tr>
+<tr><td>The Dutch edition on disk</td><td>591 MB (<code>store.redb</code>, <code>hierarchy.bin</code>, <code>text.bin</code>)</td></tr>
+<tr><td>ICD-10-CM FY2026 (98,827 codes)</td><td>8 s to build, 38 MB</td></tr>
+<tr><td>RxNorm prescribable subset (81,468 concepts, 1.13 million edges)</td><td>11 s to build, 68 MB</td></tr>
+<tr><td>Server start with the three indexes</td><td>0.5 s</td></tr>
+<tr><td>Resident memory after start, all three</td><td>578 MB</td></tr>
+<tr><td>Resident memory after 200 lookups and two expansions</td><td>423 MB</td></tr>
+<tr><td><code>$lookup</code> of a SNOMED CT concept, end to end with <code>curl</code></td><td>about 2.5 ms</td></tr>
+<tr><td><code>$lookup</code> of an ICD-10-CM code</td><td>about 0.6 ms</td></tr>
+</tbody>
+</table>
+</div>
+<p>The resident figure is mostly the memory-mapped files the kernel has paged in;
+it moves with the page cache and shrinks under pressure. The design target for
+point reads is under 1 ms; the millisecond-scale figures above are measured
+over HTTP with <code>curl</code> on the same machine and are tracked as a performance
+issue, not called done.</p>
+<h2 id="where-the-memory-goes"><a class="header" href="#where-the-memory-goes">Where the memory goes</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Structure</th><th>Held</th><th>Rough size for the Dutch edition</th></tr>
+</thead>
+<tbody>
+<tr><td>Transitive closure, both directions, as roaring bitmaps</td><td>resident after the first touch</td><td>the larger part of <code>hierarchy.bin</code></td></tr>
+<tr><td>CSR is-a adjacency</td><td>resident</td><td>tens of MB</td></tr>
+<tr><td><code>fst</code> word dictionary and postings</td><td>memory-mapped</td><td><code>text.bin</code></td></tr>
+<tr><td>Concepts, designations, properties</td><td>memory-mapped <code>redb</code>, paged on demand</td><td>most of <code>store.redb</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Both directions of the closure are stored on purpose: subsumption needs one
+direction, and a descendant set is returned directly from the other. Roaring
+compresses SNOMED-shaped sets heavily, which is why the closure of half a
+million concepts fits in hundreds of megabytes rather than the gigabytes a plain
+bitset would need.</p>
+<h2 id="disk-and-cpu"><a class="header" href="#disk-and-cpu">Disk and CPU</a></h2>
+<p>Size the disk for the indexes you load; the table above gives the shape. The
+offline build is the CPU-heavy step, once per release, in <code>ferroterm-build</code>.
+Serving is a point read or a bitmap operation, so a modest CPU handles it: a
+2 to 4 GB box with two cores serves an edition beside other services. A large
+<code>$expand</code> that materializes a big set is the exception; paging it is the
+client’s side of the bargain, and the server’s side is tracked on the
+performance issues.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="verifying-releases"><a class="header" href="#verifying-releases">Verifying releases</a></h1>
+<p>Every FerroTERM release artifact carries a signed provenance attestation.
+Verify it before you run a binary or pull an image, so you know the artifact
+was built by the project’s own release workflow and not tampered with. The
+pipeline and its rationale are in
+<a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/ci-cd.md"><code>docs/ci-cd.md</code></a>.</p>
+<ul>
+<li><a href="#what-a-release-carries">What a release carries</a></li>
+<li><a href="#verify-the-provenance">Verify the provenance</a></li>
+<li><a href="#check-the-checksum">Check the checksum</a></li>
+</ul>
+<h2 id="what-a-release-carries"><a class="header" href="#what-a-release-carries">What a release carries</a></h2>
+<p>For each target (<code>x86_64</code> and <code>aarch64</code>, glibc and musl), the release holds:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>File</th><th>What it is</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ferroterm-&lt;tag&gt;-&lt;target&gt;.tar.gz</code></td><td><code>ferroterm</code> and <code>ferroterm-build</code>, built with <code>cargo auditable</code> so the dependency list is embedded in the binary</td></tr>
+<tr><td><code>….tar.gz.sha256sum</code></td><td>the checksum</td></tr>
+<tr><td><code>….tar.gz.sigstore.json</code> and <code>….tar.gz.intoto.jsonl</code></td><td>the SLSA provenance, signed keyless through Sigstore by the release workflow’s identity</td></tr>
+<tr><td><code>ferroterm-&lt;tag&gt;-&lt;target&gt;.cdx.json</code> and <code>ferroterm-build-&lt;tag&gt;-&lt;target&gt;.cdx.json</code></td><td>CycloneDX SBOMs of the two binaries</td></tr>
+<tr><td><code>….tar.gz.sbom.sigstore.json</code> and <code>….tar.gz.build-sbom.sigstore.json</code></td><td>the SBOMs’ attestations</td></tr>
+<tr><td><code>compose.yaml</code></td><td>the quickstart, pinned to the release’s image tag</td></tr>
+</tbody>
+</table>
+</div>
+<p>The container image carries the same provenance and SBOM attestations per
+platform.</p>
+<h2 id="verify-the-provenance"><a class="header" href="#verify-the-provenance">Verify the provenance</a></h2>
+<pre><code class="language-console">$ gh attestation verify ferroterm-v0.0.6-x86_64-unknown-linux-musl.tar.gz \
+    -R rubentalstra/FerroTERM \
+    --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
+$ gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:0.0.6 \
+    -R rubentalstra/FerroTERM \
+    --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-image.yml
+</code></pre>
+<p>The <code>--signer-workflow</code> flag is the point of the check. It requires that the
+attestation was produced by that exact reusable workflow in this repository, so
+a signature from any other workflow or repository fails. FerroTERM builds its
+releases in reusable workflows to reach SLSA Build Level 3, where the signing
+identity is not reachable by user build steps.</p>
+<h2 id="check-the-checksum"><a class="header" href="#check-the-checksum">Check the checksum</a></h2>
+<pre><code class="language-console">$ sha256sum -c ferroterm-v0.0.6-x86_64-unknown-linux-musl.tar.gz.sha256sum
+</code></pre>
+<p>Run both checks. The checksum tells you the bytes are intact, and the
+attestation tells you where the bytes came from.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="the-fhir-terminology-api"><a class="header" href="#the-fhir-terminology-api">The FHIR terminology API</a></h1>
+<p>FerroTERM speaks the HL7 FHIR terminology API. If your client already talks to
+a FHIR terminology server, it talks to FerroTERM. The base is <code>/r4b</code>; the
+<a href="#worked-examples">Worked examples</a> page shows requests and the responses a running
+server gave.</p>
+<ul>
+<li><a href="#the-operations">The operations</a></li>
+<li><a href="#value-sets">Value sets</a></li>
+<li><a href="#request-scoped-resources">Request-scoped resources</a></li>
+<li><a href="#code-system-identity-and-versions">Code system identity and versions</a></li>
+<li><a href="#languages">Languages</a></li>
+</ul>
+<h2 id="the-operations"><a class="header" href="#the-operations">The operations</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Answers</th><th>How</th></tr>
+</thead>
+<tbody>
+<tr><td><code>CodeSystem/$lookup</code></td><td>a concept’s display, designations, and properties</td><td>a point read in the store; <code>property</code> narrows, <code>displayLanguage</code> picks the language</td></tr>
+<tr><td><code>CodeSystem/$validate-code</code></td><td>whether the code exists and the display is right</td><td>the store; the right display comes back when the given one is wrong; inactive codes validate with a message</td></tr>
+<tr><td><code>CodeSystem/$subsumes</code></td><td><code>subsumes</code>, <code>subsumed-by</code>, <code>equivalent</code>, or <code>not-subsumed</code></td><td>a bitmap membership test in the closure</td></tr>
+<tr><td><code>ValueSet/$expand</code></td><td>the members of a value set, paged</td><td>the compose layer over the providers’ filters and bitmaps</td></tr>
+<tr><td><code>ValueSet/$validate-code</code></td><td>whether a code is a member, and its display</td><td>membership without enumerating the set</td></tr>
+<tr><td><code>ConceptMap/$translate</code></td><td>the targets a code maps to, with the relationship</td><td>loaded, inline, or request-scoped maps</td></tr>
+<tr><td><code>$versions</code></td><td>the FHIR version of the base (<code>4.3</code>)</td><td></td></tr>
+<tr><td><code>$cache-control</code></td><td>a cache of request-scoped resources</td><td>below</td></tr>
+<tr><td><code>metadata</code>, <code>metadata?mode=terminology</code></td><td>the <code>CapabilityStatement</code> and the <code>TerminologyCapabilities</code> listing every served code system with its filters and properties</td><td></td></tr>
+</tbody>
+</table>
+</div>
+<p>Every operation accepts <code>GET</code> with query parameters and <code>POST</code> with a
+<code>Parameters</code> resource, at the type level (<code>ValueSet/$expand?url=…</code>) and at
+the instance level (<code>CodeSystem/{id}/$validate-code</code>). <code>$expand</code> returns the
+expanded <code>ValueSet</code>; the others return <code>Parameters</code>. Every failure is an
+<code>OperationOutcome</code> whose issue carries <code>severity</code>, <code>code</code>, <code>details.text</code>, and
+a <code>details.coding</code> from <code>http://hl7.org/fhir/tools/CodeSystem/tx-issue-type</code>
+(<code>invalid-code</code>, <code>not-found</code>, <code>vs-invalid</code>, <code>too-costly</code>, …), never a bare
+500. The parameter set of each operation is exactly what the R4B
+<code>OperationDefinition</code> declares; a parameter another version defines is refused.</p>
+<h2 id="value-sets"><a class="header" href="#value-sets">Value sets</a></h2>
+<p>A value set reaches <code>$expand</code> and <code>ValueSet/$validate-code</code> in four ways:</p>
+<ul>
+<li><strong>Loaded</strong>: a <code>ValueSet</code> JSON under <code>FERROTERM_CODESYSTEMS</code>, named by <code>url</code>
+(and <code>version</code>; without one the greatest version answers). Loaded value sets
+are readable at <code>GET ValueSet/{id}</code> and <code>GET ValueSet?url=…&amp;version=…</code>.</li>
+<li><strong>Inline</strong>: the <code>valueSet</code> parameter of a <code>POST</code>.</li>
+<li><strong>Request-scoped</strong>: <code>tx-resource</code> parameters, see below.</li>
+<li><strong>Implicit</strong>: a URL a code system defines, answered by its provider without
+a resource: LOINC’s <code>http://loinc.org/vs</code>, <code>/vs/[answer list]</code>, and
+<code>/vs/[part]</code>; UCUM’s <code>/vs</code> and <code>/vs/[unit]</code>; RxNorm’s <code>/vs</code>; ICD-11’s
+<code>&lt;entity&gt;/postcoordinationScale/&lt;axis&gt;</code>. SNOMED CT’s <code>?fhir_vs=</code> forms are
+on the roadmap (<a href="#value-sets-implicit-value-sets-and-ecl">Value sets and ECL</a>).</li>
+</ul>
+<p>A <code>compose</code> may include whole systems, enumerated concepts, and filters. The
+filters a system answers are the ones its provider declares in
+<code>TerminologyCapabilities</code>: the generic <code>concept is-a</code>, <code>descendent-of</code>,
+<code>is-not-a</code>, <code>generalizes</code>, <code>in</code>, <code>not-in</code>, <code>regex</code>, and <code>exists</code> over any
+system with a hierarchy, plus each system’s own (LOINC’s <code>parent</code> and
+<code>ancestor</code> and its table fields, RxNorm’s <code>STY</code>, <code>SAB</code>, <code>TTY</code>, <code>REL</code>, and
+<code>RELA</code>, UCUM’s <code>canonical</code> and <code>property</code>, ICD-10’s note kinds). <code>$expand</code>
+honours <code>count</code> and <code>offset</code> (at most 1,000 members without <code>count</code>), <code>filter</code>
+(word-prefix text search over designations), <code>activeOnly</code>,
+<code>includeDesignations</code>, <code>displayLanguage</code>, <code>system-version</code>,
+<code>check-system-version</code>, <code>force-system-version</code>, and <code>exclude-system</code>, and
+echoes every effective parameter plus one <code>used-codesystem</code> per system version
+the expansion drew on. Expansions are flat today; nested <code>contains</code> is the
+v0.0.10 milestone.</p>
+<h2 id="request-scoped-resources"><a class="header" href="#request-scoped-resources">Request-scoped resources</a></h2>
+<p>A client can bring its own <code>CodeSystem</code>, <code>ValueSet</code>, and <code>ConceptMap</code>
+resources for one request: each <code>tx-resource</code> parameter of a <code>POST</code> carries
+one, and the operation sees them layered over the loaded resources (a resource
+with the same <code>url</code> and <code>version</code> as a loaded one shadows it for that request).
+A supplement in a <code>tx-resource</code> applies to the system it names. Any other
+resource type is refused with <code>not-supported</code>. This is what the HL7 terminology
+ecosystem runner sends; <code>tx-resource</code> is a declared parameter in R6 and an
+ecosystem extension on R4B
+(<a href="https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html">https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html</a>).</p>
+<p>To avoid resending the same resources, start a cache:</p>
+<pre><code class="language-text">POST [base]/$cache-control?mode=start   (Parameters of tx-resource)
+→ Parameters { cache-id }
+</code></pre>
+<p>Then name it with the <code>X-Cache-Id</code> header on later requests; their own
+<code>tx-resource</code>s stack on top. <code>POST [base]/$cache-control?mode=end</code> with the
+header (or a <code>cache-id</code> parameter) releases it. A cache unused for 30 minutes
+expires, and an unknown id answers <code>404</code>.</p>
+<h2 id="code-system-identity-and-versions"><a class="header" href="#code-system-identity-and-versions">Code system identity and versions</a></h2>
+<p><code>system</code> is the code system’s canonical URI (<code>http://snomed.info/sct</code>,
+<code>http://loinc.org</code>, <code>http://hl7.org/fhir/sid/icd-10-cm</code>, …). Each loaded
+version is one <code>CodeSystem</code> instance; without a <code>version</code> the server resolves
+its default and echoes the version it used in every response. For SNOMED CT
+the version is the edition and version URI of the SNOMED CT URI standard
+(<code>http://snomed.info/sct/11000146104/version/20260630</code>), never a bare date.</p>
+<h2 id="languages"><a class="header" href="#languages">Languages</a></h2>
+<p><code>displayLanguage</code> selects the display and, on <code>$expand</code>, the displays of the
+members; designations carry their BCP 47 language and their use. A language the
+code system does not carry falls back to the system’s own (English for LOINC
+and ICD-11, the classification’s language for a ClaML document, the default
+language for SNOMED CT), and the response states what it used. The
+<code>Accept-Language</code> header is not read yet (tracked on the tracker).</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="value-sets-implicit-value-sets-and-ecl"><a class="header" href="#value-sets-implicit-value-sets-and-ecl">Value sets, implicit value sets, and ECL</a></h1>
+<p>A value set names a set of codes. FerroTERM answers value sets defined as FHIR
+resources, brought with the request, or implied by a URL a code system
+defines. This page covers what is answered today and what the ECL milestone
+adds.</p>
+<ul>
+<li><a href="#implicit-value-sets-today">Implicit value sets today</a></li>
+<li><a href="#a-snomed-ct-value-set-today">A SNOMED CT value set today</a></li>
+<li><a href="#what-ecl-adds-v008">What ECL adds (v0.0.8)</a></li>
+<li><a href="#paging-a-large-expansion">Paging a large expansion</a></li>
+</ul>
+<h2 id="implicit-value-sets-today"><a class="header" href="#implicit-value-sets-today">Implicit value sets today</a></h2>
+<p>Several code systems define value sets by URL convention, without a stored
+resource, and their providers answer them:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Code system</th><th>URL</th><th>Members</th></tr>
+</thead>
+<tbody>
+<tr><td>LOINC</td><td><code>http://loinc.org/vs</code></td><td>every code</td></tr>
+<tr><td>LOINC</td><td><code>http://loinc.org/vs/LL…</code></td><td>the answers of the answer list</td></tr>
+<tr><td>LOINC</td><td><code>http://loinc.org/vs/LP…</code></td><td>everything under the part in the multiaxial hierarchy</td></tr>
+<tr><td>UCUM</td><td><code>http://unitsofmeasure.org/vs</code></td><td>every valid unit (validation only; it cannot be enumerated)</td></tr>
+<tr><td>RxNorm</td><td><code>http://www.nlm.nih.gov/research/umls/rxnorm/vs</code></td><td>every RXCUI</td></tr>
+<tr><td>ICD-11</td><td><code>&lt;entity URI&gt;/postcoordinationScale/&lt;axis&gt;</code></td><td>the values a stem takes on that axis</td></tr>
+</tbody>
+</table>
+</div>
+<p>Pass the URL as <code>url</code> to <code>ValueSet/$expand</code> or <code>ValueSet/$validate-code</code>.</p>
+<h2 id="a-snomed-ct-value-set-today"><a class="header" href="#a-snomed-ct-value-set-today">A SNOMED CT value set today</a></h2>
+<p>The FHIR SNOMED CT page defines <code>http://snomed.info/sct?fhir_vs</code> (all
+concepts), <code>?fhir_vs=isa/[sctid]</code>, <code>?fhir_vs=refset</code>, <code>?fhir_vs=refset/[sctid]</code>,
+and <code>?fhir_vs=ecl/[expression]</code>, with an optional edition base. FerroTERM does
+not answer these URLs yet; the first four are tracked for the current
+milestone and <code>ecl/</code> for v0.0.8. Until then a SNOMED CT value set is a
+<code>compose</code> with the filters the provider declares, sent inline or as a loaded
+resource:</p>
+<pre><code class="language-json">{
+  "resourceType": "ValueSet",
+  "status": "active",
+  "compose": {
+    "include": [{
+      "system": "http://snomed.info/sct",
+      "filter": [{ "property": "concept", "op": "is-a", "value": "404684003" }]
+    }]
+  }
+}
+</code></pre>
+<p>The <code>is-a</code>, <code>descendent-of</code>, <code>is-not-a</code>, <code>generalizes</code>, <code>in</code>, <code>not-in</code>, and
+<code>regex</code> filters over <code>concept</code> are answered from the transitive closure and the
+store; a display language selects the preferred term from the language
+reference set.</p>
+<h2 id="what-ecl-adds-v008"><a class="header" href="#what-ecl-adds-v008">What ECL adds (v0.0.8)</a></h2>
+<p>Every ECL expression returns a set of concepts, and the evaluator compiles it
+to set algebra over the precomputed bitmaps: <code>&lt;&lt; X</code> is the descendant bitmap
+plus <code>X</code>, a refinement such as <code>&lt; 404684003 : 363698007 = &lt;&lt; 39057004</code>
+intersects with the attribute adjacency, and <code>AND</code>, <code>OR</code>, and <code>MINUS</code> are
+bitmap operations. The parser follows the official ANTLR grammar for ECL 2.2
+rule for rule and is tested against the published valid and invalid corpus;
+the evaluator is checked against Snowstorm over the same edition. The three
+issues of the milestone are the parser, the evaluator, and <code>?fhir_vs=ecl/</code>
+together with the <code>constraint</code> filter.</p>
+<h2 id="paging-a-large-expansion"><a class="header" href="#paging-a-large-expansion">Paging a large expansion</a></h2>
+<p>A broad expansion names a large set, so <code>$expand</code> pages with <code>count</code> and
+<code>offset</code> and refuses an unpaged expansion beyond 1,000 members with
+<code>too-costly</code>. <code>expansion.total</code> reports the full size, <code>expansion.offset</code> the
+page, and the order is deterministic across calls.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="fhir-versions"><a class="header" href="#fhir-versions">FHIR versions</a></h1>
+<p>FerroTERM answers FHIR R4B today, under <code>/r4b</code>. The R4, R5, and R6 modules are
+generated and the endpoints that serve them are the v0.0.9 milestone.</p>
+<ul>
+<li><a href="#why-one-server-can-serve-four-versions">Why one server can serve four versions</a></li>
+<li><a href="#version-status">Version status</a></li>
+<li><a href="#what-this-means-for-you">What this means for you</a></li>
+</ul>
+<h2 id="why-one-server-can-serve-four-versions"><a class="header" href="#why-one-server-can-serve-four-versions">Why one server can serve four versions</a></h2>
+<p>HL7 publishes the whole type system and every operation as machine-readable
+resources, in versioned packages. FerroTERM vendors and pins those packages and
+generates per-version Rust modules from them, so each version’s operation
+surface is correct by construction. An operation parameter that R5 adds appears
+in the R5 module and is absent from R4B, because the generator emits what each
+package declares. The engine beneath is version-neutral; a version’s endpoint
+maps the engine’s answers into that version’s shapes.</p>
+<h2 id="version-status"><a class="header" href="#version-status">Version status</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Version</th><th>Package</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>R4B</td><td><code>hl7.fhir.r4b.core</code> 4.3.0</td><td>served under <code>/r4b</code></td></tr>
+<tr><td>R5</td><td><code>hl7.fhir.r5.core</code> 5.0.0</td><td>generated; the <code>/r5</code> endpoint is v0.0.9</td></tr>
+<tr><td>R4</td><td><code>hl7.fhir.r4.core</code> 4.0.1</td><td>generated; the <code>/r4</code> endpoint is v0.0.9</td></tr>
+<tr><td>R6</td><td><code>hl7.fhir.r6.core</code> 6.0.0-ballot5</td><td>generated; the <code>/r6</code> endpoint is v0.0.9, marked ballot-tracking</td></tr>
+</tbody>
+</table>
+</div>
+<p>R4B is the current stable release of the R4 line and a near-superset of R4,
+so the R4B endpoint already serves the R4-family terminology surface to
+clients that accept 4.3 shapes. The R5 shapes matter most to validators and IG
+tooling (<code>$validate-code</code> <code>issues</code>, <code>$lookup</code> <code>subproperty</code>, <code>$expand</code>
+<code>property</code>), which is why the R5 endpoint is first in that milestone.</p>
+<h2 id="what-this-means-for-you"><a class="header" href="#what-this-means-for-you">What this means for you</a></h2>
+<p>Send R4B requests to <code>/r4b</code>. <code>GET /r4b/$versions</code> names the version of the
+base (<code>4.3</code>), <code>GET /r4b/metadata</code> is the R4B <code>CapabilityStatement</code>, and a
+parameter R4B does not declare is refused with an <code>OperationOutcome</code> rather
+than absorbed. When the other endpoints land, each answers in its own version’s
+shapes at its own base.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="worked-examples"><a class="header" href="#worked-examples">Worked examples</a></h1>
+<p>The requests below were sent to v0.0.6 serving the public ICD-10-CM FY2026
+release, the RxNorm prescribable subset, and the built-in UCUM; the responses
+are what the server returned, trimmed only where marked. Substitute the code
+system you load.</p>
+<ul>
+<li><a href="#lookup-a-concept">$lookup a concept</a></li>
+<li><a href="#subsumes-two-concepts">$subsumes two concepts</a></li>
+<li><a href="#validate-code-with-a-wrong-display">$validate-code with a wrong display</a></li>
+<li><a href="#expand-an-inline-value-set-with-a-code-system-filter">$expand an inline value set with a code system filter</a></li>
+<li><a href="#lookup-a-unit-with-nothing-loaded">$lookup a unit, with nothing loaded</a></li>
+<li><a href="#an-error">An error</a></li>
+</ul>
+<h2 id="lookup-a-concept"><a class="header" href="#lookup-a-concept">$lookup a concept</a></h2>
+<pre><code class="language-http">GET /r4b/CodeSystem/$lookup?system=http://hl7.org/fhir/sid/icd-10-cm&amp;code=E11.9&amp;property=parent
+</code></pre>
+<pre><code class="language-json">{
+  "resourceType": "Parameters",
+  "parameter": [
+    { "name": "name", "valueString": "International Classification of Diseases, Tenth Revision, Clinical Modification" },
+    { "name": "version", "valueString": "2026" },
+    { "name": "display", "valueString": "Type 2 diabetes mellitus without complications" },
+    { "name": "designation", "part": [
+      { "name": "language", "valueCode": "en" },
+      { "name": "use", "valueCoding": { "system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "preferred" } },
+      { "name": "value", "valueString": "Type 2 diabetes mellitus without complications" } ] },
+    { "name": "property", "part": [
+      { "name": "code", "valueCode": "parent" },
+      { "name": "value", "valueCode": "E11" } ] }
+  ]
+}
+</code></pre>
+<p>Without <code>property</code> every property comes back: the class kind, the notes
+(<code>excludes1</code>, <code>codeAlso</code>, …), <code>parent</code>, <code>child</code>, and <code>valid</code>.</p>
+<h2 id="subsumes-two-concepts"><a class="header" href="#subsumes-two-concepts">$subsumes two concepts</a></h2>
+<pre><code class="language-http">GET /r4b/CodeSystem/$subsumes?system=http://hl7.org/fhir/sid/icd-10-cm&amp;codeA=E11&amp;codeB=E11.9
+</code></pre>
+<pre><code class="language-json">{ "resourceType": "Parameters", "parameter": [ { "name": "outcome", "valueCode": "subsumes" } ] }
+</code></pre>
+<h2 id="validate-code-with-a-wrong-display"><a class="header" href="#validate-code-with-a-wrong-display">$validate-code with a wrong display</a></h2>
+<pre><code class="language-http">GET /r4b/CodeSystem/$validate-code?url=http://hl7.org/fhir/sid/icd-10-cm&amp;code=E11.9&amp;display=Diabetes
+</code></pre>
+<pre><code class="language-json">{
+  "resourceType": "Parameters",
+  "parameter": [
+    { "name": "result", "valueBoolean": false },
+    { "name": "message", "valueString": "the display `Diabetes` is not a designation of `E11.9`" },
+    { "name": "display", "valueString": "Type 2 diabetes mellitus without complications" }
+  ]
+}
+</code></pre>
+<h2 id="expand-an-inline-value-set-with-a-code-system-filter"><a class="header" href="#expand-an-inline-value-set-with-a-code-system-filter">$expand an inline value set with a code system filter</a></h2>
+<p>The drugs containing aspirin (RXCUI 1191), through RxNorm’s <code>has_ingredient</code>
+filter, two at a time:</p>
+<pre><code class="language-http">POST /r4b/ValueSet/$expand
+Content-Type: application/fhir+json
+</code></pre>
+<pre><code class="language-json">{
+  "resourceType": "Parameters",
+  "parameter": [
+    { "name": "valueSet", "resource": {
+      "resourceType": "ValueSet", "status": "active",
+      "compose": { "include": [ {
+        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "filter": [ { "property": "has_ingredient", "op": "=", "value": "CUI:1191" } ] } ] } } },
+    { "name": "count", "valueInteger": 2 }
+  ]
+}
+</code></pre>
+<p>The response is the expanded <code>ValueSet</code> (metadata trimmed):</p>
+<pre><code class="language-json">{
+  "resourceType": "ValueSet",
+  "expansion": {
+    "total": 93,
+    "parameter": [
+      { "name": "count", "valueInteger": 2 },
+      { "name": "used-codesystem", "valueUri": "http://www.nlm.nih.gov/research/umls/rxnorm|09082026" }
+    ],
+    "contains": [
+      { "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "1153231", "display": "aspirin / caffeine / orphenadrine Oral Product" },
+      { "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "1153232", "display": "aspirin / caffeine / orphenadrine Pill" }
+    ]
+  }
+}
+</code></pre>
+<h2 id="lookup-a-unit-with-nothing-loaded"><a class="header" href="#lookup-a-unit-with-nothing-loaded">$lookup a unit, with nothing loaded</a></h2>
+<pre><code class="language-http">GET /r4b/CodeSystem/$lookup?system=http://unitsofmeasure.org&amp;code=mg/dL
+</code></pre>
+<pre><code class="language-json">{
+  "resourceType": "Parameters",
+  "parameter": [
+    { "name": "name", "valueString": "Unified Code for Units of Measure (UCUM)" },
+    { "name": "version", "valueString": "2.2" },
+    { "name": "display", "valueString": "mg/dL" },
+    { "name": "designation", "part": [
+      { "name": "language", "valueCode": "en" },
+      { "name": "value", "valueString": "milligram per deciliter" } ] },
+    { "name": "property", "part": [
+      { "name": "code", "valueCode": "canonical" },
+      { "name": "value", "valueCode": "m-3.g" } ] }
+  ]
+}
+</code></pre>
+<h2 id="an-error"><a class="header" href="#an-error">An error</a></h2>
+<p>An ICD-10-CM code without its period is not a code (the FHIR ICD page
+requires the period), so the server answers <code>400</code> with an <code>OperationOutcome</code>:</p>
+<pre><code class="language-http">GET /r4b/CodeSystem/$lookup?system=http://hl7.org/fhir/sid/icd-10-cm&amp;code=E119
+</code></pre>
+<pre><code class="language-json">{
+  "resourceType": "OperationOutcome",
+  "issue": [ {
+    "severity": "error",
+    "code": "not-found",
+    "details": {
+      "coding": [ { "system": "http://hl7.org/fhir/tools/CodeSystem/tx-issue-type", "code": "invalid-code" } ],
+      "text": "code `E119` is not in code system `http://hl7.org/fhir/sid/icd-10-cm` version `2026`"
+    }
+  } ]
+}
+</code></pre>
+<p>See <a href="#the-fhir-terminology-api">The FHIR terminology API</a> for the operation list and
+<a href="#value-sets-implicit-value-sets-and-ecl">Value sets and ECL</a> for the implicit value set URLs.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="build-and-test"><a class="header" href="#build-and-test">Build and test</a></h1>
+<p>This page is a short pointer for contributors. The deeper design and the
+working discipline live in the repository, and this book keeps to what you need
+to get building.</p>
+<ul>
+<li><a href="#read-these-first">Read these first</a></li>
+<li><a href="#the-workspace">The workspace</a></li>
+<li><a href="#the-local-gates">The local gates</a></li>
+<li><a href="#conformance-in-ci">Conformance in CI</a></li>
+<li><a href="#the-two-layers">The two layers</a></li>
+<li><a href="#no-code-system-content-in-the-repository">No code system content in the repository</a></li>
+<li><a href="#correctness-oracles">Correctness oracles</a></li>
+</ul>
+<h2 id="read-these-first"><a class="header" href="#read-these-first">Read these first</a></h2>
+<ul>
+<li><a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md"><code>docs/architecture.md</code></a>:
+the design authority, with citations.</li>
+<li><a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/terminologies.md"><code>docs/terminologies.md</code></a>:
+every code system, its FHIR page, its licence, and what the provider serves.</li>
+<li><a href="https://github.com/rubentalstra/FerroTERM/blob/main/CONTRIBUTING.md"><code>CONTRIBUTING.md</code></a>:
+the contribution rules, branches, commit signing, and pull-request checklist.</li>
+</ul>
+<h2 id="the-workspace"><a class="header" href="#the-workspace">The workspace</a></h2>
+<p>One Cargo workspace, Rust 1.98, edition 2024: <code>crates/*</code> are the libraries
+(<code>ferroterm-fhir</code> generated; <code>ferroterm-rf2</code>, <code>ferroterm-loinc</code>,
+<code>ferroterm-classification</code>, <code>ferroterm-rrf</code>, <code>ferroterm-icd11</code> the release
+readers; <code>ferroterm-graph</code>, <code>ferroterm-store</code>, <code>ferroterm-text</code> the
+substrates; <code>ferroterm-terminology</code> the engine and providers), <code>app/ferroterm-server</code>
+is the axum server, and <code>tools/*</code> are the code generator, the offline build,
+and the synthetic test fixtures. Every crate carries a <code>CLAUDE.md</code> with its
+local discipline.</p>
+<h2 id="the-local-gates"><a class="header" href="#the-local-gates">The local gates</a></h2>
+<p>The local gates mirror CI. Run them before you open a pull request:</p>
+<pre><code class="language-console">$ cargo fmt --all --check
+$ cargo clippy --workspace --all-targets --all-features -- -D warnings
+$ cargo nextest run --workspace --locked
+$ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --document-private-items
+$ cargo deny check
+$ scripts/checks/comment-style.sh --all
+</code></pre>
+<p>Scope a command to a crate with <code>-p &lt;crate&gt;</code> while you iterate, then run the
+full <code>--workspace</code> gates before you push. <code>Cargo.lock</code> is committed and CI
+builds with <code>--locked</code>. Shell scripts stay clean at <code>shellcheck</code>; workflows at
+<code>actionlint</code> and <code>zizmor</code>.</p>
+<h2 id="conformance-in-ci"><a class="header" href="#conformance-in-ci">Conformance in CI</a></h2>
+<p><code>scripts/checks/tx-ecosystem.sh</code> runs the HL7 terminology ecosystem suite
+against a release build of the server with the FHIR Validator’s <code>txTests</code>
+mode (the one place a JVM runs, in CI, never in the server) and compares the
+result with the committed pass list under <code>conformance/tx-ecosystem/</code>. A
+listed test that fails is a regression; a test that starts passing is added in
+the same change. <code>--mode icd-11 --index &lt;dirs&gt;</code> runs a code system mode by
+hand over local artifacts.</p>
+<h2 id="the-two-layers"><a class="header" href="#the-two-layers">The two layers</a></h2>
+<ul>
+<li><code>crates/ferroterm-fhir</code> is generated from the vendored FHIR packages. Never
+hand-edit a <code>// @generated</code> file. See <a href="#the-codegen-model">The codegen model</a>.</li>
+<li>Everything else is hand-written, idiomatic Rust, with the FHIR and SNOMED
+specifications as the authority: a conformance-facing test cites the spec
+clause it asserts, and a decision the specs leave open is marked as the
+project’s own.</li>
+</ul>
+<h2 id="no-code-system-content-in-the-repository"><a class="header" href="#no-code-system-content-in-the-repository">No code system content in the repository</a></h2>
+<p>Tests use shaped, synthetic content only: the testkit writes a small
+SNOMED-shaped edition, a LOINC-shaped release, ICD-shaped ClaML and CMS files,
+an RxNorm-shaped RRF release, and an ICD-11-shaped API cache, all with
+invented identifiers. Never commit a real release or content extracted from
+one. See <a href="#loading-code-systems">Loading code systems</a> for the
+licensing rule; a licensed release for local runs lives under the gitignored
+<code>data/</code> directory.</p>
+<h2 id="correctness-oracles"><a class="header" href="#correctness-oracles">Correctness oracles</a></h2>
+<p>The specifications are the oracle. Reference servers (Snowstorm, the Dutch
+national server, tx.fhir.org) settle edge cases the specifications leave
+silent, and a divergence from them is investigated, never adopted blindly.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="the-codegen-model"><a class="header" href="#the-codegen-model">The codegen model</a></h1>
+<p>The FHIR layer of FerroTERM is generated, not hand-written. This page explains the
+model at the level a contributor needs. The mechanics live in the generator crate
+and its rules in the repository.</p>
+<ul>
+<li><a href="#why-generate-the-fhir-layer">Why generate the FHIR layer</a></li>
+<li><a href="#the-pinned-inputs">The pinned inputs</a></li>
+<li><a href="#the-rules">The rules</a></li>
+<li><a href="#regenerate">Regenerate</a></li>
+</ul>
+<h2 id="why-generate-the-fhir-layer"><a class="header" href="#why-generate-the-fhir-layer">Why generate the FHIR layer</a></h2>
+<p>HL7 publishes the whole FHIR type system and every operation as machine-readable
+<code>StructureDefinition</code> and <code>OperationDefinition</code> resources, in versioned packages.
+FerroTERM vendors the packages and generates per-version Rust modules from
+them. Each version’s
+operation surface is then correct by construction: a parameter that R5 adds
+appears in the R5 module because the R5 package declares it.</p>
+<h2 id="the-pinned-inputs"><a class="header" href="#the-pinned-inputs">The pinned inputs</a></h2>
+<p>The generator reads vendored, pinned FHIR packages:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Package</th><th>Version</th></tr>
+</thead>
+<tbody>
+<tr><td><code>hl7.fhir.r4.core</code></td><td>4.0.1</td></tr>
+<tr><td><code>hl7.fhir.r4b.core</code></td><td>4.3.0</td></tr>
+<tr><td><code>hl7.fhir.r5.core</code></td><td>5.0.0</td></tr>
+<tr><td><code>hl7.fhir.r6.core</code></td><td>6.0.0-ballot5</td></tr>
+<tr><td><code>hl7.terminology</code></td><td>the HL7 Terminology release pinned in <code>docs/VERSIONS.md</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The packages are vendored verbatim under <code>tools/ferroterm-fhir-codegen/vendor/</code>, each
+with a <code>PROVENANCE.md</code>, and fetched by a script. You never hand-edit a vendored
+package. Change the fetcher and re-run it.</p>
+<h2 id="the-rules"><a class="header" href="#the-rules">The rules</a></h2>
+<ul>
+<li><strong>Never hand-edit a <code>// @generated</code> file.</strong> To change the output, change the
+generator (<code>tools/ferroterm-fhir-codegen</code>) or its override map, then regenerate.</li>
+<li><strong>The generator emits the complete model within its declared closure.</strong> A
+terminology server touches a small root set of resources, so the generator’s
+root set is the terminology surface (<code>CodeSystem</code>, <code>ValueSet</code>, <code>ConceptMap</code>,
+<code>Parameters</code>, <code>OperationOutcome</code>, <code>CapabilityStatement</code>,
+<code>TerminologyCapabilities</code>, <code>Bundle</code>, and the terminology operations), and it
+emits the complete transitive closure of the datatypes those roots reference. It
+never trims inside that closure to quiet a diff, and it never adds a
+hand-written shape outside it.</li>
+<li><strong>A drift check regenerates in CI and fails on any diff</strong>, so the generated
+layer stays in step with the vendored inputs.</li>
+</ul>
+<h2 id="regenerate"><a class="header" href="#regenerate">Regenerate</a></h2>
+<pre><code class="language-console">$ cargo run -p ferroterm-fhir-codegen -- emit
+</code></pre>
+<p>Then run the drift check. If consuming code needs a shape the generated crate
+lacks, fix the emitter rather than shadowing it with a hand-written type.</p>
+<p>The generator design follows the sibling project
+<a href="https://github.com/rubentalstra/FerroEHR">FerroEHR</a>, which generates its openEHR
+model from vendored machine-readable specs the same way.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid-eefea253.min.js"></script>
+        <script src="mermaid-init-ccf746f1.js"></script>
+
+        <script>
+        window.addEventListener('load', function() {
+            MathJax.Hub.Register.StartupHook('End', function() {
+                window.setTimeout(window.print, 100);
+            });
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>

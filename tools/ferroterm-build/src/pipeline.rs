@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use ferroterm_graph::closure::{Closure, ClosureError};
 use ferroterm_graph::csr::{Csr, CsrError};
+use ferroterm_graph::members::{MembersError, Memberships};
 use ferroterm_graph::ordinal::Ordinal;
 use ferroterm_graph::persist::Hierarchy;
 use ferroterm_rf2::component::{
@@ -34,6 +35,8 @@ pub const MANIFEST_VERSION: u32 = 2;
 pub const HIERARCHY_FILE: &str = "hierarchy.bin";
 /// The designation index (`ferroterm-text`), beside the store.
 pub const TEXT_FILE: &str = "text.bin";
+/// The reference set memberships file beside the store.
+pub const REFSETS_FILE: &str = "refsets.bin";
 
 /// The fixed property keys the SNOMED loader writes, by ordinal; every
 /// attribute type found in the release follows, keyed by its SCTID.
@@ -107,6 +110,9 @@ pub enum Error {
     /// The text index cannot be serialized.
     #[error("cannot serialize the designation index")]
     TextPersist(#[from] ferroterm_text::persist::PersistError),
+    /// The reference set memberships cannot be serialized.
+    #[error("cannot serialize the reference set memberships")]
+    Members(#[from] MembersError),
     /// The output directory or manifest cannot be written.
     #[error("cannot write {path}")]
     Io {
@@ -142,6 +148,8 @@ pub struct Report {
     pub designations: u64,
     /// Active inferred is-a edges.
     pub is_a_edges: u64,
+    /// Reference sets with at least one active concept member.
+    pub refsets: u64,
     /// Distinct words in the designation index.
     pub words: u64,
     /// The designation languages present (RF2 `languageCode`), sorted.
@@ -179,6 +187,7 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
     let relationships = read_relationships(&release, &ordinals)?;
     let designations = read_designations(&release, &ordinals)?;
     let (refsets, acceptabilities) = read_acceptabilities(&release, &designations)?;
+    let memberships = read_memberships(&release, &ordinals)?;
 
     let store_path = out.join(STORE_FILE);
     let version_uri = edition.version_uri();
@@ -205,6 +214,10 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
     languages.dedup();
     let text_path = out.join(TEXT_FILE);
     std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
+    let mut member_bytes = Vec::new();
+    memberships.write_to(&mut member_bytes)?;
+    let refsets_path = out.join(REFSETS_FILE);
+    std::fs::write(&refsets_path, &member_bytes).map_err(io_error(&refsets_path))?;
     builder.finish(&PreferredRule { preferred: 0 })?;
 
     let manifest_path = out.join(MANIFEST_FILE);
@@ -218,9 +231,12 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         "storeLayout": tables::LAYOUT_VERSION,
         "hierarchy": HIERARCHY_FILE,
         "text": TEXT_FILE,
+        "refsets": REFSETS_FILE,
         "concepts": concepts.len(),
         "designations": designation_count,
         "isAEdges": is_a_edges,
+        "referenceSets": memberships.len(),
+        "memberships": memberships.total(),
         "words": words,
         "languages": languages,
     });
@@ -240,6 +256,7 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         concepts: u64::try_from(concepts.len()).unwrap_or(u64::MAX),
         designations: designation_count,
         is_a_edges,
+        refsets: u64::try_from(memberships.len()).unwrap_or(u64::MAX),
         words,
         languages,
     })
@@ -462,6 +479,37 @@ fn read_acceptabilities(
             .push((refset_ordinal, acceptability));
     }
     Ok((refsets, acceptabilities))
+}
+
+/// The active concept members of every reference set that references
+/// concepts: the simple, association, attribute value, and map reference
+/// sets, whatever their content; the language reference sets reference
+/// descriptions and are read as acceptabilities instead.
+fn read_memberships(
+    release: &Release,
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+) -> Result<Memberships, Error> {
+    let mut memberships = Memberships::new();
+    for file in release.refsets().filter(|f| f.name.summary != "Language") {
+        let ContentType::Refset(kinds) = &file.name.content_type else {
+            continue;
+        };
+        for member in Members::open(&file.path, kinds)? {
+            let member = member?;
+            if !member.active {
+                continue;
+            }
+            // NOTE: a member referencing a description or a relationship is not a
+            // concept membership; that is "absent" here, not a defect of the file.
+            let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
+                continue;
+            };
+            if let Some(ordinal) = ordinals.get(&concept) {
+                memberships.insert(member.refset_id.concept().value(), *ordinal);
+            }
+        }
+    }
+    Ok(memberships)
 }
 
 fn write_vocabularies(

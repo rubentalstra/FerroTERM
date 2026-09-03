@@ -240,3 +240,46 @@ fn a_release_without_module_dependencies_is_refused() {
         Err(pipeline::Error::MissingFile(_))
     ));
 }
+
+#[test]
+fn the_reference_set_memberships_are_written_beside_the_store() {
+    let release = tempfile::tempdir().expect("tempdir");
+    fixture::write_release(release.path());
+    let out = tempfile::tempdir().expect("tempdir");
+    let report = pipeline::build(release.path(), out.path()).expect("builds");
+    assert_eq!(
+        report.refsets, 1,
+        "the simple reference set; the language ones are acceptabilities"
+    );
+    let manifest: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(out.path().join("manifest.json")).expect("manifest"),
+    )
+    .expect("json");
+    assert_eq!(manifest["refsets"], pipeline::REFSETS_FILE);
+    assert_eq!(manifest["referenceSets"], 1);
+    assert_eq!(manifest["memberships"], 2, "the inactive member is not one");
+    let memberships = ferroterm_graph::members::Memberships::read_from(
+        &mut fs::read(out.path().join(pipeline::REFSETS_FILE))
+            .expect("refsets")
+            .as_slice(),
+    )
+    .expect("reads");
+    let refset: u64 = fixture::concept(8).parse().expect("number");
+    assert_eq!(memberships.refsets().collect::<Vec<_>>(), [refset]);
+    let store = Store::open(&report.store).expect("opens");
+    let cat = store
+        .ordinal(&fixture::concept(3))
+        .expect("read")
+        .expect("cat");
+    let dog = store
+        .ordinal(&fixture::concept(4))
+        .expect("read")
+        .expect("dog");
+    let fish = store
+        .ordinal(&fixture::concept(5))
+        .expect("read")
+        .expect("fish");
+    let members = memberships.members(refset).expect("members");
+    assert!(members.contains(cat.index()) && members.contains(dog.index()));
+    assert!(!members.contains(fish.index()));
+}
