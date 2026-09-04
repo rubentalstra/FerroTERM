@@ -255,7 +255,7 @@ async fn a_cache_started_on_one_version_serves_another() {
     }
 }
 
-// NOTE: <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html> requires `property`
+// NOTE: <https://hl7.org/fhir/uv/tx-ecosystem/requirements.html> requires `property`
 // on every version, and R4 lacks `expansion.property`, so the answer is the R5
 // cross-version extension (<https://hl7.org/fhir/R5/versions.html#extensions>).
 #[tokio::test]

@@ -3,7 +3,7 @@
 //!
 //! The HL7 terminology ecosystem requires servers to accept and answer
 //! parameters the earlier FHIR versions never declared
-//! (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>). Where the
+//! (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>). Where the
 //! R6 ballot declares one, its definition is pre-adopted verbatim from the
 //! vendored R6 package; the rest the ecosystem alone defines, and this module
 //! declares them. The overlay is applied to a version's definition before
@@ -15,7 +15,7 @@ use std::fmt;
 use crate::fhir::{OperationDefinition, OperationParameter, ParameterUse};
 
 /// The requirements page the overlay rests on.
-pub const IG_REQUIREMENTS: &str = "https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html";
+pub const IG_REQUIREMENTS: &str = "https://hl7.org/fhir/uv/tx-ecosystem/requirements.html";
 
 /// Where a contract parameter comes from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

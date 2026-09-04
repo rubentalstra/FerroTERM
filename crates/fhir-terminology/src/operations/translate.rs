@@ -146,7 +146,7 @@ pub fn translate(
         for map in &maps {
             for found in matches_in(sources, map, subject, target_system, reverse, 0, &mut used)? {
                 // NOTE: the same target reached through two maps is one match, the
-                // ecosystem's shape (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/>).
+                // ecosystem's shape (<https://hl7.org/fhir/uv/tx-ecosystem/>).
                 let seen = found.concept.is_some()
                     && matches.iter().any(|m| {
                         m.concept == found.concept && m.relationship == found.relationship
@@ -159,7 +159,7 @@ pub fn translate(
     }
     // NOTE: every match is an answer, a `noMap` or `not-related-to` one too, so
     // `result` is true whenever a match exists (the ecosystem's `translate-2b`
-    // and `translate-4` cases, <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/>).
+    // and `translate-4` cases, <https://hl7.org/fhir/uv/tx-ecosystem/>).
     if input.target_input {
         // NOTE: a `target*` request reports the source concept as `sourceConcept`
         // and the target as `concept`, the map's own direction

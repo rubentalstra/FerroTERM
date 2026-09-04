@@ -130,7 +130,7 @@ impl<'a> Scope<'a> {
             })?;
             // NOTE: a supplied supplement is dormant like a loaded one: a request
             // applies it by naming it in `useSupplement`, or through the value set's
-            // `valueset-supplement` (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+            // `valueset-supplement` (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
             registry.register_supplement(target.clone(), supplement_of(model));
         }
         Ok(Self {

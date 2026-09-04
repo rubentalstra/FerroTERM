@@ -134,7 +134,7 @@ async fn validate_code_itemises_issues_under_r5_and_under_the_overlay_on_r4b() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], false);
     // NOTE: R4B declares none of these; the terminology ecosystem overlay pre-adopts
-    // them from R6 (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+    // them from R6 (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
     for adopted in ["code", "system", "version", "issues"] {
         assert!(
             parameter(&body, adopted).is_some(),

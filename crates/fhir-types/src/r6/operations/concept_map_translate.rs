@@ -112,14 +112,14 @@ pub struct ConceptMapTranslateResponse {
     /// that there is no translation
     pub r#match: Vec<ConceptMapTranslateResponseMatch>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. A concept map the translation consulted
-    /// beyond the ones its matches name, one parameter per map.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. A concept map the translation consulted beyond the
+    /// ones its matches name, one parameter per map.
     pub used_conceptmap: Vec<super::super::primitives::Uri>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. A code system version the translation drew
-    /// on, one parameter per system.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. A code system version the translation drew on, one
+    /// parameter per system.
     pub used_system: Vec<super::super::primitives::Uri>,
 }
 
@@ -146,21 +146,20 @@ pub struct ConceptMapTranslateResponseMatch {
     /// from
     pub origin_map: Option<super::super::primitives::Canonical>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The source concept the match translates.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The source concept the match translates.
     pub source_concept: Option<super::super::coding::Coding>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The comment on the source element.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The comment on the source element.
     pub source_comment: Option<super::super::primitives::String>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The comment on the target.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The comment on the target.
     pub target_comment: Option<super::super::primitives::String>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. Whether the source element is explicitly
-    /// not mapped.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. Whether the source element is explicitly not mapped.
     pub no_map: Option<super::super::primitives::Boolean>,
 }
 

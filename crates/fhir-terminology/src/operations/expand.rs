@@ -413,7 +413,7 @@ fn parameters(
         );
     }
     // NOTE: the value sets an expansion drew on, the ecosystem's `used-valueset`
-    // (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, `$expand parameters`).
+    // (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>, `$expand parameters`).
     for used in used_value_sets {
         push("used-valueset", ParameterValue::Uri(used.clone()));
     }
@@ -436,7 +436,7 @@ fn contains(
         };
         // NOTE: an inactive concept carries its status property unasked, the
         // ecosystem's shape ("in expansions, the status property SHALL be populated",
-        // <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+        // <https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
         let mut asked = input.property.clone();
         if item.inactive && !asked.iter().any(|p| p == "status" || p == "*") {
             asked.push(String::from("status"));

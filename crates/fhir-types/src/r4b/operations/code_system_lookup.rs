@@ -41,7 +41,7 @@ pub struct CodeSystemLookupRequest {
     /// lang.X) in the property parameter group
     pub property: Vec<super::super::primitives::Code>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>).
     /// Supplements to take into account when performing the $lookup operation.
     /// The supplements must be for the same CodeSystem. By default, supplements
     /// for the code system are not automatically included except where they
@@ -66,18 +66,18 @@ pub struct CodeSystemLookupResponse {
     /// LOINC, medications), these properties serve to decompose the code
     pub property: Vec<CodeSystemLookupResponseProperty>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The code that was looked up, as the request
-    /// spelled it.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The code that was looked up, as the request spelled
+    /// it.
     pub code: Option<super::super::primitives::Code>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The code system the code was looked up in.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The code system the code was looked up in.
     pub system: Option<super::super::primitives::Uri>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. Whether the concept is abstract
-    /// (\`notSelectable\`), a grouper that is not itself selected as a value.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. Whether the concept is abstract (\`notSelectable\`),
+    /// a grouper that is not itself selected as a value.
     pub r#abstract: Option<super::super::primitives::Boolean>,
 }
 

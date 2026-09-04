@@ -70,58 +70,58 @@ pub struct ConceptMapTranslateRequest {
     /// source and target parameters
     pub reverse: Option<super::super::primitives::Boolean>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// The code that is to be translated. If a code is provided, a system must
-    /// be provided
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). The code
+    /// that is to be translated. If a code is provided, a system must be
+    /// provided
     pub source_code: Option<super::super::primitives::Code>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// The system for the sourceCode to be translated. Note: the previous name
-    /// of this input parameter was \`system\`, and servers MAY choose to still
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). The
+    /// system for the sourceCode to be translated. Note: the previous name of
+    /// this input parameter was \`system\`, and servers MAY choose to still
     /// accept that name
     pub source_system: Option<super::super::primitives::Uri>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// The version for the system of the sourceCode to be translated. Note: the
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). The
+    /// version for the system of the sourceCode to be translated. Note: the
     /// previous name of this input parameter was \`version\`, and servers MAY
     /// choose to still accept that name.
     pub source_version: Option<super::super::primitives::String>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// Limits the scope of the $translate operation to source codes
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). Limits
+    /// the scope of the $translate operation to source codes
     /// (ConceptMap.group.element.code) that are members of this value set.
     pub source_scope: Option<super::super::primitives::Uri>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
-    /// coding to translate
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). A coding
+    /// to translate
     pub source_coding: Option<super::super::coding::Coding>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
-    /// full codeableConcept to validate. The server can translate any of the
-    /// coding values (e.g. existing translations) as it chooses
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). A full
+    /// codeableConcept to validate. The server can translate any of the coding
+    /// values (e.g. existing translations) as it chooses
     pub source_codeable_concept: Option<super::super::codeable_concept::CodeableConcept>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// The target code that is to be translated to. If a code is provided, a
-    /// system must be provided
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). The
+    /// target code that is to be translated to. If a code is provided, a system
+    /// must be provided
     pub target_code: Option<super::super::primitives::Code>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
-    /// target coding to translate to
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). A target
+    /// coding to translate to
     pub target_coding: Option<super::super::coding::Coding>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
-    /// full codeableConcept to validate. The server can translate any of the
-    /// coding values (e.g. existing translations) as it chooses
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). A full
+    /// codeableConcept to validate. The server can translate any of the coding
+    /// values (e.g. existing translations) as it chooses
     pub target_codeable_concept: Option<super::super::codeable_concept::CodeableConcept>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// Limits the scope of the $translate operation to target codes
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). Limits
+    /// the scope of the $translate operation to target codes
     /// (ConceptMap.group.element.target.code) that are members of this value
     /// set.
     pub target_scope: Option<super::super::primitives::Uri>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>).
     /// identifies a target code system in which a mapping is sought. This
     /// parameter is an alternative to the targetScope parameter - only one is
     /// required. Searching for any translation to a target code system
@@ -156,14 +156,14 @@ pub struct ConceptMapTranslateResponse {
     /// matches may include equivalence values that mean that there is no match
     pub r#match: Vec<ConceptMapTranslateResponseMatch>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. A concept map the translation consulted
-    /// beyond the ones its matches name, one parameter per map.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. A concept map the translation consulted beyond the
+    /// ones its matches name, one parameter per map.
     pub used_conceptmap: Vec<super::super::primitives::Uri>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. A code system version the translation drew
-    /// on, one parameter per system.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. A code system version the translation drew on, one
+    /// parameter per system.
     pub used_system: Vec<super::super::primitives::Uri>,
 }
 
@@ -180,31 +180,30 @@ pub struct ConceptMapTranslateResponseMatch {
     /// Another element that is the product of this mapping
     pub product: Vec<ConceptMapTranslateResponseMatchProduct>,
     /// Typed as the terminology ecosystem answers it
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// The canonical reference to the concept map from which this mapping comes
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). The
+    /// canonical reference to the concept map from which this mapping comes
     /// from
     pub source: Option<super::super::primitives::Canonical>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// The canonical reference to the concept map from which this mapping comes
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). The
+    /// canonical reference to the concept map from which this mapping comes
     /// from
     pub origin_map: Option<super::super::primitives::Canonical>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The source concept the match translates.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The source concept the match translates.
     pub source_concept: Option<super::super::coding::Coding>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The comment on the source element.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The comment on the source element.
     pub source_comment: Option<super::super::primitives::String>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The comment on the target.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The comment on the target.
     pub target_comment: Option<super::super::primitives::String>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. Whether the source element is explicitly
-    /// not mapped.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. Whether the source element is explicitly not mapped.
     pub no_map: Option<super::super::primitives::Boolean>,
 }
 

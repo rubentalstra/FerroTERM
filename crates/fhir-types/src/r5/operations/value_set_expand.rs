@@ -157,7 +157,7 @@ pub struct ValueSetExpandRequest {
     /// expansion parameters
     pub force_system_version: Vec<super::super::primitives::Canonical>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>).
     /// Specifies a version to use for a valueset, if the reference to the value
     /// set does not specify which version to use. The format is the same as a
     /// canonical URL: \[system\]|\[version\] - e.g.
@@ -165,17 +165,17 @@ pub struct ValueSetExpandRequest {
     /// to the force-system-version parameter but applied to valuesets
     pub default_valueset_version: Vec<super::super::primitives::Canonical>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// Edge Case: Specifies a version to use for a valueset. If a reference to
-    /// a value set specifies a different version, an error is returned instead
-    /// of the expansion. The format is the same as a canonical URL:
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). Edge
+    /// Case: Specifies a version to use for a valueset. If a reference to a
+    /// value set specifies a different version, an error is returned instead of
+    /// the expansion. The format is the same as a canonical URL:
     /// \[system\]|\[version\] - e.g.
     /// <http://example.org/ValueSet/example|1.0.0>. Note that this is similar
     /// to the force-system-version parameter but applied to valuesets
     pub check_valueset_version: Vec<super::super::primitives::Canonical>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
-    /// Edge Case: Specifies a version to use for a valueset. This parameter
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>). Edge
+    /// Case: Specifies a version to use for a valueset. This parameter
     /// overrides any specified version in the reference to the value set (and
     /// any it depends on). The format is the same as a canonical URL:
     /// \[system\]|\[version\] - e.g.

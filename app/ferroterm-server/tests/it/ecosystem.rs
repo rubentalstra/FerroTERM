@@ -1,6 +1,6 @@
 //! The terminology ecosystem overlay on the wire: every served version accepts
 //! the pre-adopted and ecosystem-defined parameters
-//! (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>), refuses
+//! (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>), refuses
 //! the ones whose semantics are not implemented yet with `not-supported`, and
 //! documents the overlay in its `CapabilityStatement`.
 
@@ -211,7 +211,7 @@ async fn the_capability_statement_documents_the_overlay_per_operation() {
             "{version}: {validate}"
         );
         assert!(
-            validate.contains("https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html"),
+            validate.contains("https://hl7.org/fhir/uv/tx-ecosystem/requirements.html"),
             "{version}: {validate}"
         );
         let lookup = documentation("lookup");

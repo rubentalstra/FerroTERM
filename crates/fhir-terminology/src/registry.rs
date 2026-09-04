@@ -114,7 +114,7 @@ impl Registry {
     /// `url|version` canonical) dormant until a request names it.
     ///
     /// No FHIR version says when a supplement applies; the terminology
-    /// ecosystem does (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>):
+    /// ecosystem does (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>):
     /// when the request names it in `useSupplement`, supplies it, or the
     /// value set asks for it, never by default.
     pub fn register_supplement(

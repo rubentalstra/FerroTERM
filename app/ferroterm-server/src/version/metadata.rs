@@ -45,7 +45,7 @@ macro_rules! metadata {
             pub const FHIR_VERSION: &str = $fhir_version;
             /// `rest.security.service`: the authentication in front of the server, which
             /// the terminology ecosystem requires a server to populate
-            /// (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, Metadata).
+            /// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>, Metadata).
             ///
             /// The deployment declares it (`FERROTERM_SECURITY_SERVICE`); the server itself
             /// authenticates nobody, and the binding is extensible, so a deployment that
@@ -91,7 +91,7 @@ macro_rules! metadata {
             /// The application-feature extension (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>).
             const FEATURE: &str = "http://hl7.org/fhir/uv/application-feature/StructureDefinition/feature";
             /// The terminology ecosystem requirements the overlay rests on.
-            const ECOSYSTEM_REQUIREMENTS: &str = "https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html";
+            const ECOSYSTEM_REQUIREMENTS: &str = "https://hl7.org/fhir/uv/tx-ecosystem/requirements.html";
             /// The release date of this version from the changelog (`build.rs`), `None`
             /// for an unreleased version.
             const RELEASE_DATE: Option<&str> = option_env!("FERROTERM_RELEASE_DATE");
