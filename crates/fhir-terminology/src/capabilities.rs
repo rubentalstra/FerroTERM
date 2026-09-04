@@ -126,11 +126,9 @@ impl Summary {
     }
 }
 
-// NOTE: R5 (5.0.0) and the R6 ballot (6.0.0-ballot5) declare the same
-// TerminologyCapabilities elements this render fills, except that R6 makes
-// `codeSystem.content` optional and renames `version.code` to `version.value`
-// (<https://hl7.org/fhir/6.0.0-ballot5/terminologycapabilities.html>), so one
-// macro with a flavour arm produces both methods.
+// NOTE: <https://hl7.org/fhir/6.0.0-ballot5/terminologycapabilities.html>: R6 differs from
+// R5 only in an optional `codeSystem.content` and `version.value` for `version.code`, so
+// one macro with a flavour arm renders both.
 macro_rules! r5_family_capabilities {
     ($module:ident, $name:ident, $flavour:ident) => {
         impl Summary {
@@ -197,13 +195,15 @@ macro_rules! r5_family_capabilities {
                         paging: Some(true.into()),
                         incomplete: Some(false.into()),
                         text_filter: Some(TEXT_FILTER.into()),
-                        parameter: EXPANSION_PARAMETERS
-                            .iter()
-                            .map(|name| TerminologyCapabilitiesExpansionParameter {
-                                name: (*name).into(),
-                                ..Default::default()
-                            })
-                            .collect(),
+                        parameter: expansion_parameters(
+                            &fhir_types::$module::operations::value_set_expand::VALUE_SET_EXPAND,
+                        )
+                        .into_iter()
+                        .map(|name| TerminologyCapabilitiesExpansionParameter {
+                            name: name.into(),
+                            ..Default::default()
+                        })
+                        .collect(),
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -297,13 +297,15 @@ macro_rules! terminology_capabilities {
                         paging: Some(true.into()),
                         incomplete: Some(false.into()),
                         text_filter: Some(TEXT_FILTER.into()),
-                        parameter: EXPANSION_PARAMETERS
-                            .iter()
-                            .map(|name| TerminologyCapabilitiesExpansionParameter {
-                                name: (*name).into(),
-                                ..Default::default()
-                            })
-                            .collect(),
+                        parameter: expansion_parameters(
+                            &fhir_types::$module::operations::value_set_expand::VALUE_SET_EXPAND,
+                        )
+                        .into_iter()
+                        .map(|name| TerminologyCapabilitiesExpansionParameter {
+                            name: name.into(),
+                            ..Default::default()
+                        })
+                        .collect(),
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -315,6 +317,30 @@ macro_rules! terminology_capabilities {
 
 terminology_capabilities!(r4, to_r4);
 terminology_capabilities!(r4b, to_r4b);
+
+/// The `$expand` parameters a version advertises in `expansion.parameter`:
+/// the names of [`EXPANSION_PARAMETERS`] its generated `ValueSet/$expand`
+/// contract declares as `in` parameters, plus the resource parameters, sorted.
+/// A version never advertises a parameter its endpoint refuses.
+fn expansion_parameters(operation: &fhir_types::operation::Operation) -> Vec<&'static str> {
+    let mut names: Vec<&str> = operation
+        .parameters
+        .iter()
+        .filter(|parameter| {
+            parameter.usage == fhir_types::operation::ParameterUse::In
+                && EXPANSION_PARAMETERS.contains(&parameter.name)
+        })
+        .map(|parameter| parameter.name)
+        .chain(RESOURCE_PARAMETERS)
+        .collect();
+    names.sort_unstable();
+    names
+}
+
+/// The `$expand` parameters the terminology ecosystem carries as resources in
+/// the request `Parameters`, outside every version's `OperationDefinition`
+/// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+const RESOURCE_PARAMETERS: [&str; 1] = ["tx-resource"];
 
 /// The `$expand` parameters the server evaluates, for
 /// `expansion.parameter`; `tx-resource` is the terminology ecosystem's

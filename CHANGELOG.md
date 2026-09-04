@@ -15,6 +15,7 @@ fresh link reference.
 
 ### Added
 
+- `property` on `ValueSet/$expand` on R4 and R4B, pre-adopted from R6 through the ecosystem overlay as the terminology ecosystem requires; the requested properties travel as the R5 cross-version extensions `extension-ValueSet.expansion.property` and `extension-ValueSet.expansion.contains.property`, since those versions have no `property` element. Each version's `TerminologyCapabilities.expansion.parameter` is derived from the parameters its generated `$expand` contract declares, so a version never advertises a parameter it refuses.
 - `normalized-code` on both `$validate-code` operations (the terminology ecosystem's output): the code as the system spells it when the request spelled it otherwise, with a `code-rule` note for an alternate form; `code` echoes the request's spelling, on `$lookup` too. `$expand` keeps the compose's spelling of an enumerated code. The capability statements list `property` among the expansion parameters on every version and name the release date of a released build.
 
 ### Fixed

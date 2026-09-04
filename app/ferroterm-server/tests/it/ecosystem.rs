@@ -668,6 +668,28 @@ async fn expand_flags_inactive_concepts_with_their_status_on_every_version() {
                 fish["property"][0]["valueCode"], "retired",
                 "{version}: {fish}"
             );
+        } else {
+            // R4 and R4B carry `contains.property` as the R5 cross-version extension
+            // (<https://hl7.org/fhir/R5/versions.html#extensions>).
+            let property = &fish["extension"][0];
+            assert_eq!(
+                property["url"],
+                "http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property",
+                "{version}: {fish}"
+            );
+            assert_eq!(property["extension"][0]["url"], "code", "{version}: {fish}");
+            assert_eq!(
+                property["extension"][0]["valueCode"], "status",
+                "{version}: {fish}"
+            );
+            assert_eq!(
+                property["extension"][1]["url"], "value",
+                "{version}: {fish}"
+            );
+            assert_eq!(
+                property["extension"][1]["valueCode"], "retired",
+                "{version}: {fish}"
+            );
         }
     }
 }

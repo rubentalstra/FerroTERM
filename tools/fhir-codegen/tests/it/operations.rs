@@ -526,8 +526,9 @@ fn the_overlay_pre_adopts_the_r6_parameters_every_earlier_version_lacks() {
             "{module}: {:?}",
             documented.documentation
         );
-        // $expand pre-adopts the value set version trio and nothing else;
-        // $subsumes gets nothing.
+        // $expand pre-adopts the value set version trio, and `property` where the
+        // version lacks it (the ecosystem requires it on every version); $subsumes
+        // gets nothing.
         let expand = find(&contracts, "ValueSet", "expand");
         let adopted: Vec<&str> = expand
             .inputs
@@ -543,6 +544,7 @@ fn the_overlay_pre_adopts_the_r6_parameters_every_earlier_version_lacks() {
         ];
         if module != "r5" {
             expected_expand.insert(0, "useSupplement");
+            expected_expand.insert(1, "property");
         }
         assert_eq!(adopted, expected_expand, "{module}");
         let subsumes = find(&contracts, "CodeSystem", "subsumes");

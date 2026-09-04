@@ -198,13 +198,20 @@ async fn expand_returns_properties_under_r5() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert!(body["expansion"].get("property").is_none(), "{body}");
-    // R4B declares no `property` on $expand.
+    // R4B declares no `property` on $expand; the ecosystem overlay pre-adopts it, and the
+    // R4B resource has no `expansion.property` element, so the answer travels as the
+    // cross-version extension (<https://hl7.org/fhir/R5/versions.html#extensions>).
     let (status, body) = server
         .get(&format!(
             "/r4b/ValueSet/$expand?url={VS_PETS}&property=legs"
         ))
         .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(body["expansion"].get("property").is_none(), "{body}");
+    assert_eq!(
+        body["expansion"]["extension"][0]["url"],
+        "http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.property"
+    );
 }
 
 #[tokio::test]
