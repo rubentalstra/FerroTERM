@@ -30,6 +30,7 @@ fn concepts(codes: &[&str]) -> Vec<ConceptRef> {
     codes
         .iter()
         .map(|code| ConceptRef {
+            deprecated: false,
             code: (*code).to_owned(),
             display: None,
         })
@@ -232,6 +233,7 @@ fn order_is_system_then_version_then_code_and_displays_can_be_overridden() {
                     version: None,
                 }),
                 concepts: vec![ConceptRef {
+                    deprecated: false,
                     code: String::from("cat"),
                     display: Some(String::from("Tabby")),
                 }],

@@ -50,6 +50,9 @@ fn candidates(
         });
     }
     for designation in provider.designations(concept, None)? {
+        if designation.standards_status.is_some() {
+            continue;
+        }
         let duplicate = out
             .iter()
             .any(|c| c.text == designation.value && c.language == designation.language);
@@ -110,16 +113,51 @@ pub fn judge(
     asserted: Asserted<'_>,
     expression: Option<String>,
 ) -> Result<Option<Issue>, ProviderError> {
-    let Some((severity, text)) = judgement(provider, concept, asserted)? else {
+    let Some((severity, kind, text)) = judgement(provider, concept, asserted)? else {
         return Ok(None);
     };
     Ok(Some(Issue {
         severity,
         code: "invalid",
-        kind: "invalid-display",
+        kind,
         text,
         expression,
     }))
+}
+
+/// The `display-comment` for a display that matches a designation the system
+/// has withdrawn or deprecated (the ecosystem's `INACTIVE_DISPLAY_FOUND`):
+/// a warning under lenient validation, an error otherwise.
+fn retired_designation(
+    provider: &Arc<dyn CodeSystemProvider>,
+    concept: Concept,
+    asserted: Asserted<'_>,
+) -> Result<Option<(&'static str, &'static str, String)>, ProviderError> {
+    let wanted = fold(asserted.given);
+    let retired = provider
+        .designations(concept, None)?
+        .into_iter()
+        .find(|d| d.standards_status.is_some() && fold(&d.value) == wanted);
+    let Some(retired) = retired else {
+        return Ok(None);
+    };
+    let preferred = provider
+        .display(
+            concept,
+            language::for_provider(provider.as_ref(), asserted.requested).as_deref(),
+        )?
+        .unwrap_or_default();
+    let severity = if asserted.lenient { "warning" } else { "error" };
+    Ok(Some((
+        severity,
+        "display-comment",
+        format!(
+            "'{}' is no longer considered a correct display for code '{}' (status = {}). The correct display is '{preferred}'",
+            asserted.given,
+            asserted.code,
+            retired.standards_status.unwrap_or_default()
+        ),
+    )))
 }
 
 /// The severity and text of a wrong display, `None` for a right one.
@@ -127,7 +165,10 @@ fn judgement(
     provider: &Arc<dyn CodeSystemProvider>,
     concept: Concept,
     asserted: Asserted<'_>,
-) -> Result<Option<(&'static str, String)>, ProviderError> {
+) -> Result<Option<(&'static str, &'static str, String)>, ProviderError> {
+    if let Some(retired) = retired_designation(provider, concept, asserted)? {
+        return Ok(Some(retired));
+    }
     let Asserted {
         system,
         code,
@@ -146,6 +187,7 @@ fn judgement(
         let valid: Vec<&Candidate> = all.iter().collect();
         return Ok(Some((
             severity,
+            "invalid-display",
             format!(
                 "Wrong Display Name '{given}' for {system}#{code}. {} (for the language(s) '--')",
                 valid_display(&valid)
@@ -174,6 +216,7 @@ fn judgement(
         }
         return Ok(Some((
             severity,
+            "invalid-display",
             format!(
                 "Wrong Display Name '{given}' for {system}#{code}. {} (for the language(s) '{requested}')",
                 valid_display(&in_language)
@@ -183,6 +226,7 @@ fn judgement(
     if all.iter().any(|c| matches(&c)) {
         return Ok(Some((
             "information",
+            "invalid-display",
             format!(
                 "There are no valid display names found for the code {system}#{code} for language(s) '{requested}'. The display is '{given}' which is a valid display for the default language"
             ),
@@ -196,6 +240,7 @@ fn judgement(
         .unwrap_or_default();
     Ok(Some((
         severity,
+        "invalid-display",
         format!(
             "Wrong Display Name '{given}' for {system}#{code}. There are no valid display names found for language(s) '{requested}'. Default display is '{default}'"
         ),

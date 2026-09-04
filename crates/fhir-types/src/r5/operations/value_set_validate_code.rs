@@ -167,6 +167,11 @@ pub struct ValueSetValidateCodeRequest {
     /// represented in the expansion parameters. Note that this is similar to
     /// the force-system-version parameter but applied to valuesets.
     pub force_valueset_version: Vec<super::super::primitives::Canonical>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. Whether an inactive concept is refused as
+    /// outside the value set.
+    pub active_only: Option<super::super::primitives::Boolean>,
 }
 
 /// The `out` parameters of `ValueSet/$validate-code`.
@@ -271,6 +276,7 @@ impl ValueSetValidateCodeRequest {
             Vec::new();
         let mut field_check_valueset_version: Vec<super::super::primitives::Canonical> = Vec::new();
         let mut field_force_valueset_version: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_active_only: Option<super::super::primitives::Boolean> = None;
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -288,6 +294,34 @@ impl ValueSetValidateCodeRequest {
                     field_url = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -318,6 +352,34 @@ impl ValueSetValidateCodeRequest {
                     field_context = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -379,6 +441,27 @@ impl ValueSetValidateCodeRequest {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -439,6 +522,34 @@ impl ValueSetValidateCodeRequest {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -469,6 +580,27 @@ impl ValueSetValidateCodeRequest {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -499,6 +631,27 @@ impl ValueSetValidateCodeRequest {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -898,6 +1051,36 @@ impl ValueSetValidateCodeRequest {
                         }
                     });
                 }
+                "activeOnly" => {
+                    if field_active_only.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "activeOnly",
+                        });
+                    }
+                    field_active_only = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "activeOnly",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "activeOnly",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -931,6 +1114,7 @@ impl ValueSetValidateCodeRequest {
             default_valueset_version: field_default_valueset_version,
             check_valueset_version: field_check_valueset_version,
             force_valueset_version: field_force_valueset_version,
+            active_only: field_active_only,
         })
     }
     /// Writes the fields as a parameter list.
@@ -1137,6 +1321,15 @@ impl ValueSetValidateCodeRequest {
                 ..Default::default()
             });
         }
+        if let Some(value) = &self.active_only {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "activeOnly".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
         out
     }
 }
@@ -1232,6 +1425,27 @@ impl ValueSetValidateCodeResponse {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1262,6 +1476,27 @@ impl ValueSetValidateCodeResponse {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1322,6 +1557,34 @@ impl ValueSetValidateCodeResponse {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1352,6 +1615,27 @@ impl ValueSetValidateCodeResponse {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1941,6 +2225,18 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
                 type_code: Some("canonical"),
                 scope: &[],
                 source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "activeOnly",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("boolean"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
                 parts: &[],
             },
             super::super::super::operation::Parameter {

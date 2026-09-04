@@ -248,8 +248,8 @@ fn ecosystem_parameter(
     }
 }
 
-/// The parameters the ecosystem alone defines, by operation URL.
-fn ecosystem_parameters(url: &str) -> Vec<OperationParameter> {
+/// The outputs the ecosystem alone defines on both validate-code operations.
+fn validation_outputs() -> Vec<OperationParameter> {
     let unknown_system = || {
         ecosystem_parameter(
             "x-caused-by-unknown-system",
@@ -286,14 +286,40 @@ fn ecosystem_parameters(url: &str) -> Vec<OperationParameter> {
             "The status of the validated concept when its code system states one (`retired`, `deprecated`, …).",
         )
     };
+    vec![
+        unknown_system(),
+        unknown_system_of_concept(),
+        inactive(),
+        status(),
+    ]
+}
+
+/// The parameters the ecosystem alone defines, by operation URL.
+fn ecosystem_parameters(url: &str) -> Vec<OperationParameter> {
     match url {
-        CODE_SYSTEM_VALIDATE_CODE | VALUE_SET_VALIDATE_CODE => {
-            vec![
-                unknown_system(),
-                unknown_system_of_concept(),
-                inactive(),
-                status(),
-            ]
+        CODE_SYSTEM_VALIDATE_CODE => vec![
+            ecosystem_parameter(
+                "lenient-display-validation",
+                ParameterUse::In,
+                "1",
+                "boolean",
+                "Whether a wrong display is a warning and the result stays true; R6 declares this on ValueSet/$validate-code only.",
+            ),
+        ]
+        .into_iter()
+        .chain(validation_outputs())
+        .collect(),
+        VALUE_SET_VALIDATE_CODE => {
+            vec![ecosystem_parameter(
+                "activeOnly",
+                ParameterUse::In,
+                "1",
+                "boolean",
+                "Whether an inactive concept is refused as outside the value set.",
+            )]
+            .into_iter()
+            .chain(validation_outputs())
+            .collect()
         }
         CONCEPT_MAP_TRANSLATE => vec![
             ecosystem_parameter(

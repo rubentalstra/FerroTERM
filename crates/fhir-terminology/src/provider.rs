@@ -239,6 +239,9 @@ impl Default for Standing {
 /// The status of a concept, for `inactive` and `abstract` on the wire.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Status {
+    /// The concept's `structuredefinition-standards-status` code, when set
+    /// (`deprecated`, `withdrawn`, ...): a note beside an active concept.
+    pub standards_status: Option<String>,
     /// Whether the concept is active.
     pub active: bool,
     /// Why it is inactive, as the system states it.
@@ -267,6 +270,10 @@ pub struct Designation {
     pub use_: Option<DesignationUse>,
     /// The text.
     pub value: String,
+    /// The designation's `structuredefinition-standards-status` code, when
+    /// set: a `withdrawn` or `deprecated` designation is no longer a correct
+    /// display.
+    pub standards_status: Option<String>,
 }
 
 /// A typed property value (`Parameters.parameter.part.value[x]` of `$lookup`).

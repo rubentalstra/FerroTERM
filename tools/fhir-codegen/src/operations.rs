@@ -108,6 +108,10 @@ pub struct ContractField {
     pub defaultable: bool,
     /// Where the parameter comes from: the version, or the ecosystem overlay.
     pub source: ParameterSource,
+    /// The other primitive variants a value of this field is read from: the
+    /// primitives that specialize the declared one and share its scalar
+    /// (`code` for a `string` parameter, `canonical` for a `uri` one).
+    pub accepts: Vec<String>,
 }
 
 /// One operation's contract.
@@ -289,6 +293,10 @@ fn lower_field(
         FieldKind::OpenType | FieldKind::AnyResource => false,
         FieldKind::Parts => derives_default(&parts),
     };
+    let accepts = match &kind {
+        FieldKind::Value(name) => specializations(module, name),
+        _ => Vec::new(),
+    };
     Ok(ContractField {
         name: field_name(&parameter.name),
         fhir_name: parameter.name.clone(),
@@ -304,7 +312,48 @@ fn lower_field(
         kind,
         defaultable,
         source: ParameterSource::Version,
+        accepts,
     })
+}
+
+/// The primitives of `module` that specialize `name` (through their
+/// `baseDefinition` chain) and carry the same scalar, so a value sent as one
+/// of them reads as `name`: a `code` is a `string`, a `canonical` is a `uri`
+/// (<https://hl7.org/fhir/R5/datatypes.html#primitive>).
+fn specializations(module: &VersionModule, name: &str) -> Vec<String> {
+    let Some(base) = module.types.get(name).filter(|t| t.is_primitive) else {
+        return Vec::new();
+    };
+    let code = |rust: &str| {
+        let mut chars = rust.chars();
+        chars
+            .next()
+            .map(|c| c.to_ascii_lowercase().to_string() + chars.as_str())
+            .unwrap_or_default()
+    };
+    let scalar = crate::lower::scalar_for(&code(&base.name));
+    module
+        .types
+        .values()
+        .filter(|t| t.is_primitive && t.name != name)
+        .filter(|t| {
+            let mut current = t.base.as_deref();
+            let mut hops = 0;
+            while let Some(step) = current {
+                if step == name {
+                    return true;
+                }
+                hops += 1;
+                if hops > 8 {
+                    break;
+                }
+                current = module.types.get(step).and_then(|b| b.base.as_deref());
+            }
+            false
+        })
+        .filter(|t| crate::lower::scalar_for(&code(&t.name)) == scalar)
+        .map(|t| t.name.clone())
+        .collect()
 }
 
 /// Whether a struct of `fields` derives `Default`: every required field's
@@ -849,9 +898,28 @@ fn render_to_list(out: &mut String, fields: &[ContractField]) -> fmt::Result {
 fn render_extract(field: &ContractField, path: &str) -> String {
     let (p, e) = (P, E);
     match &field.kind {
-        FieldKind::Value(variant) => format!(
-            "match &parameter.value {{ Some({p}::{OPEN_TYPE_ENUM}::{variant}(value)) => value.clone(), Some(_) => return Err({e}::WrongType {{ operation: OPERATION, name: {path:?}, expected: {variant:?} }}), None => return Err({e}::MissingValue {{ operation: OPERATION, name: {path:?} }}) }}"
-        ),
+        FieldKind::Value(variant) => {
+            // NOTE: a value sent as a specialization of the declared primitive (a
+            // `code` for a `string`, a `canonical` for a `uri`) reads as the
+            // declared one (<https://hl7.org/fhir/R5/datatypes.html#primitive>).
+            let accepted: Vec<String> = field
+                .accepts
+                .iter()
+                .map(|accepted| {
+                    format!(
+                        "Some({p}::{OPEN_TYPE_ENUM}::{accepted}(value)) => {} {{ id: value.id.clone(), extension: value.extension.clone(), value: value.value.clone() }}, ",
+                        field.rust_type
+                    )
+                })
+                .collect();
+            let arms = format!(
+                "Some({p}::{OPEN_TYPE_ENUM}::{variant}(value)) => value.clone(), {}",
+                accepted.join("")
+            );
+            format!(
+                "match &parameter.value {{ {arms}Some(_) => return Err({e}::WrongType {{ operation: OPERATION, name: {path:?}, expected: {variant:?} }}), None => return Err({e}::MissingValue {{ operation: OPERATION, name: {path:?} }}) }}"
+            )
+        }
         FieldKind::Resource(resource) => format!(
             "match &parameter.resource {{ Some(super::super::resource::Resource::{resource}(value)) => (**value).clone(), Some(_) => return Err({e}::WrongType {{ operation: OPERATION, name: {path:?}, expected: {resource:?} }}), None => return Err({e}::MissingValue {{ operation: OPERATION, name: {path:?} }}) }}"
         ),

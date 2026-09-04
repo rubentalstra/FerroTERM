@@ -102,10 +102,12 @@ pub fn code_system() -> Result<CodeSystemModel, DataError> {
             });
         }
         concepts.push(ConceptEntry {
+            standards_status: None,
             code: code.clone(),
             display: Some(display.clone()),
             definition: None,
             designations: vec![Designation {
+                standards_status: None,
                 language: Some(String::from("en")),
                 use_: None,
                 value: display,

@@ -202,6 +202,11 @@ macro_rules! map {
                         .display_language
                         .as_ref()
                         .and_then(|v| v.value.clone()),
+                    lenient_display: request
+                        .lenient_display_validation
+                        .as_ref()
+                        .and_then(|b| b.value)
+                        .unwrap_or(false),
                 }
             }
 
@@ -329,6 +334,7 @@ macro_rules! map {
                     check_valueset_version: canonicals(&request.check_valueset_version),
                     force_valueset_version: canonicals(&request.force_valueset_version),
                     infer_system: request.infer_system.as_ref().and_then(|b| b.value),
+                    active_only: request.active_only.as_ref().and_then(|b| b.value),
                     lenient_display_validation: request
                         .lenient_display_validation
                         .as_ref()

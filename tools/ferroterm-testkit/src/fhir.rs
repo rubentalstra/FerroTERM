@@ -57,10 +57,13 @@ fn animals() -> serde_json::Value {
                 {"language": "en", "use": {"system": "http://snomed.info/sct", "code": "900000000000013009", "display": "Synonym"}, "value": "Domestic cat"},
                 {"language": "de", "value": "Katze"}],
               "property": [{"code": "legs", "valueInteger": 4}]},
-             {"code": "dog", "display": "Dog", "property": [{"code": "legs", "valueInteger": 4}]},
+             {"code": "dog", "display": "Dog", "property": [{"code": "legs", "valueInteger": 4}],
+              "designation": [{"language": "en", "value": "Hound",
+                "extension": [{"url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status", "valueCode": "withdrawn"}]}]},
              {"code": "fish", "display": "Fish", "property": [{"code": "legs", "valueInteger": 0}, {"code": "status", "valueCode": "retired"}]}
            ]},
-          {"code": "plant", "display": "Plant"}
+          {"code": "plant", "display": "Plant",
+           "extension": [{"url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status", "valueCode": "deprecated"}]}
         ]},
         {"code": "pet", "display": "Pet", "property": [{"code": "notSelectable", "valueBoolean": true}]},
         {"code": "kitten", "display": "Kitten", "property": [{"code": "subsumedBy", "valueCode": "cat"}, {"code": "subsumedBy", "valueCode": "pet"}, {"code": "legs", "valueInteger": 4}]},

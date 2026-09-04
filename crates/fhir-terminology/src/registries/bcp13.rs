@@ -350,6 +350,7 @@ impl CodeSystemProvider for Bcp13Provider {
 
     fn status(&self, _concept: Concept) -> Result<Status, ProviderError> {
         Ok(Status {
+            standards_status: None,
             active: true,
             inactive_reason: None,
             abstract_concept: false,

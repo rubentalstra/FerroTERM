@@ -214,6 +214,7 @@ fn display_designation(
 ) -> Designation {
     let (system, code, use_display) = PREFERRED_FOR_LANGUAGE;
     Designation {
+        standards_status: None,
         language: language
             .map(str::to_owned)
             .or_else(|| provider.language().map(str::to_owned)),

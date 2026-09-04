@@ -2,7 +2,7 @@
 //! (<https://hl7.org/fhir/R5/terminology-service.html>), and the R4-family
 //! endpoints staying within their declared outputs.
 
-use ferroterm_testkit::fhir::{ANIMALS, ANIMALS_NL, CM_ANIMALS_COLOURS, COLOURS, VS_PETS};
+use ferroterm_testkit::fhir::{ANIMALS, ANIMALS_NL, CM_ANIMALS_COLOURS, COLOURS, VS_ALL, VS_PETS};
 use ferroterm_testkit::snomed::{CAT, VERSION, item, sctid};
 use fhir_types::codec::{Json, Path, expect_object};
 use http::StatusCode;
@@ -279,4 +279,75 @@ async fn translate_speaks_the_r5_parameter_names() {
         part(m, "equivalence").expect("equivalence")["valueCode"],
         "equivalent"
     );
+}
+
+#[tokio::test]
+async fn expand_reads_a_property_sent_as_a_code() {
+    let server = Server::start_with_resources();
+    // `property` is declared as a string; a `code` specializes `string`
+    // (<https://hl7.org/fhir/R5/datatypes.html#primitive>).
+    let (status, body) = server
+        .post(
+            "/r5/ValueSet/$expand",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueCanonical": VS_ALL},
+                {"name": "property", "valueCode": "legs"}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let cat = body["expansion"]["contains"]
+        .as_array()
+        .expect("contains")
+        .iter()
+        .find(|c| c["code"] == "cat")
+        .expect("cat");
+    assert_eq!(cat["property"][0]["code"], "legs");
+    // An integer sent for a string parameter is still refused.
+    let (status, body) = server
+        .post(
+            "/r5/ValueSet/$expand",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": VS_ALL},
+                {"name": "property", "valueInteger": 4}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+}
+
+#[tokio::test]
+async fn code_system_validate_code_takes_lenient_display_validation() {
+    let server = Server::start_with_resources();
+    let (status, body) = server
+        .get(&format!(
+            "/r5/CodeSystem/$validate-code?url={ANIMALS}&code=dog&display=Hound"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], false);
+    let (status, body) = server
+        .get(&format!(
+            "/r5/CodeSystem/$validate-code?url={ANIMALS}&code=dog&display=Hound&lenient-display-validation=true"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], true);
+    assert_eq!(
+        parameter(&body, "message").unwrap()["valueString"],
+        "'Hound' is no longer considered a correct display for code 'dog' (status = withdrawn). The correct display is 'Dog'"
+    );
+    // A deprecated concept: a `status` output and no `inactive`.
+    let (status, body) = server
+        .get(&format!(
+            "/r5/CodeSystem/$validate-code?url={ANIMALS}&code=plant"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], true);
+    assert_eq!(
+        parameter(&body, "status").unwrap()["valueCode"],
+        "deprecated"
+    );
+    assert!(parameter(&body, "inactive").is_none(), "{body}");
 }

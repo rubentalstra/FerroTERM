@@ -115,6 +115,9 @@ pub struct ValueSetValidateInput {
     /// `lenient-display-validation`: a wrong display is a warning, not a
     /// failure (pre-adopted from R6).
     pub lenient_display_validation: Option<bool>,
+    /// `activeOnly`: an inactive concept is outside the value set (the
+    /// ecosystem's extension of this operation).
+    pub active_only: Option<bool>,
 }
 
 /// The value set at its negotiated version with its systems pinned, and the
@@ -164,6 +167,26 @@ struct Policy<'a> {
     /// `inferSystem`: find the system of a bare code by its membership in the
     /// value set (pre-adopted from R6).
     infer_system: bool,
+    /// What an inactive concept is to the value set.
+    inactive: InactivePolicy,
+}
+
+/// Whether an inactive concept is a member (the default) or refused
+/// (`activeOnly`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InactivePolicy {
+    Member,
+    Refused,
+}
+
+impl InactivePolicy {
+    fn of(active_only: Option<bool>) -> Self {
+        if active_only.unwrap_or(false) {
+            Self::Refused
+        } else {
+            Self::Member
+        }
+    }
 }
 
 struct Subject<'a> {
@@ -210,6 +233,7 @@ pub fn validate_code(
         abstract_ok: input.abstract_ok.unwrap_or(true),
         lenient_display: input.lenient_display_validation.unwrap_or(false),
         infer_system: input.infer_system.unwrap_or(false),
+        inactive: InactivePolicy::of(input.active_only),
     };
     let check = |subject: &Subject<'_>| -> Result<Validation, OperationError> {
         check(sources, &model, &resolver, &negotiation, subject, &policy)
@@ -409,6 +433,35 @@ fn combine(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Valida
 }
 
 /// Validates one subject against the value set.
+/// The subject's system: the one it names, else the one inferred from the
+/// value set (by membership under `inferSystem`, else the value set's only
+/// system); the failed validation when none can be found.
+fn subject_system(
+    sources: &Sources<'_>,
+    model: &ValueSetModel,
+    resolver: &Resolver<'_>,
+    subject: &Subject<'_>,
+    policy: &Policy<'_>,
+) -> Result<Result<String, Box<Validation>>, OperationError> {
+    if let Some(system) = subject.system {
+        return Ok(Ok(system.to_owned()));
+    }
+    // NOTE: a `Coding` without a system has no meaning to validate; only a bare
+    // `code` has its system inferred (<https://hl7.org/fhir/R5/valueset-operation-validate-code.html>).
+    if subject.expression != "code" {
+        return Ok(Err(Box::new(no_system(model, subject))));
+    }
+    let inferred = if policy.infer_system {
+        infer_by_membership(sources, model, resolver, subject, policy.language)?
+    } else {
+        infer_system(model)
+    };
+    Ok(match inferred {
+        Some(system) => Ok(system),
+        None => Err(Box::new(cannot_infer(model, subject))),
+    })
+}
+
 fn check(
     sources: &Sources<'_>,
     model: &ValueSetModel,
@@ -418,18 +471,9 @@ fn check(
     policy: &Policy<'_>,
 ) -> Result<Validation, OperationError> {
     let language = policy.language;
-    let system = if let Some(system) = subject.system {
-        system.to_owned()
-    } else {
-        let inferred = if policy.infer_system {
-            infer_by_membership(sources, model, resolver, subject, language)?
-        } else {
-            infer_system(model)
-        };
-        match inferred {
-            Some(system) => system,
-            None => return Ok(cannot_infer(model, subject)),
-        }
+    let system = match subject_system(sources, model, resolver, subject, policy)? {
+        Ok(system) => system,
+        Err(unresolved) => return Ok(*unresolved),
     };
     let mut target = match resolve_target(sources, model, negotiation, &system, subject) {
         Ok(target) => target,
@@ -449,6 +493,7 @@ fn check(
     let Some(located) = provider.locate(subject.code)? else {
         let mut validation = unknown_code(model, provider, &system, version, subject);
         validation.issues.splice(0..0, target.issues);
+        validation.message = message_of(&validation.issues);
         validation.unknown_systems.extend(target.unknown_systems);
         return Ok(validation);
     };
@@ -491,12 +536,22 @@ fn check(
             subject.expression,
         );
         validation.issues.splice(0..0, target.issues);
+        validation.message = message_of(&validation.issues);
         validation.unknown_systems.extend(target.unknown_systems);
         return Ok(validation);
     };
     let mut issues = target.issues;
     issues.extend(assess(model, provider, &located, &item, subject, policy)?);
     let (inactive, status) = inactive_outputs(&provider.status(located.concept)?);
+    // NOTE: the value set's own deprecation note stays out of `message`, the
+    // ecosystem's shape (its `CONCEPT_DEPRECATED_IN_VALUESET` cases).
+    let message = message_of(&issues);
+    issues.extend(deprecated_in_value_set(
+        model,
+        &item,
+        &located.code,
+        subject,
+    ));
     issues.extend(super::standing_note(
         "CodeSystem",
         &format!("{system}|{version}"),
@@ -506,7 +561,7 @@ fn check(
     let result = !issues.iter().any(|issue| issue.severity == "error");
     Ok(Validation {
         result,
-        message: message_of(&issues),
+        message,
         display,
         system: Some(system),
         version: Some(version).filter(|v| !v.is_empty()),
@@ -522,9 +577,43 @@ fn check(
 
 /// The `inactive` and `status` outputs of a concept: set when it is inactive,
 /// the status only when the system states one beyond the inactive flag.
+/// The `code-comment` warning for a concept the value set lists as deprecated
+/// (`valueset-deprecated`).
+fn deprecated_in_value_set(
+    model: &ValueSetModel,
+    item: &Item,
+    code: &str,
+    subject: &Subject<'_>,
+) -> Option<Issue> {
+    let deprecated = model
+        .compose
+        .include
+        .iter()
+        .filter(|i| i.system.as_ref().is_some_and(|s| s.url == item.system))
+        .flat_map(|i| &i.concepts)
+        .any(|c| c.deprecated && c.code == code);
+    deprecated.then(|| Issue {
+        severity: "warning",
+        code: "business-rule",
+        kind: "code-comment",
+        text: format!(
+            "The presence of the concept '{code}' in the system '{}' in the value set {} is marked with a status of deprecated and its use should be reviewed",
+            item.system,
+            model.canonical()
+        ),
+        expression: super::at(subject.expression, "code"),
+    })
+}
+
 fn inactive_outputs(concept_status: &crate::provider::Status) -> (Option<bool>, Option<String>) {
     if concept_status.active {
-        return (None, None);
+        return (
+            None,
+            concept_status
+                .standards_status
+                .clone()
+                .filter(|s| s == "deprecated"),
+        );
     }
     (
         Some(true),
@@ -627,45 +716,46 @@ struct Target {
     unknown_systems: Vec<String>,
 }
 
-/// The `message` of a validation: every error joined in the ecosystem's order
-/// (not-found, vs-invalid, version-error, then the rest), the membership
-/// issue only when no other error explains it; a warning when there is no
-/// error.
+/// The `message`: the issues that speak for the outcome, joined with `; `.
+///
+/// Every error and the warnings about the data, the display, or the concept's
+/// standing join, in the ecosystem's order (the missing system first, the
+/// membership verdict late); an information about the display speaks alone
+/// when nothing else does. Status notes and code warnings stay issues.
 fn message_of(issues: &[Issue]) -> Option<String> {
-    // NOTE: with no error or warning, only a display note reaches `message`
-    // (the ecosystem's `language2` cases); status and code-rule notes stay issues.
-    const ORDER: [&str; 3] = ["not-found", "vs-invalid", "version-error"];
-    let errors: Vec<&Issue> = issues.iter().filter(|i| i.severity == "error").collect();
-    if errors.is_empty() {
+    const ORDER: [&str; 11] = [
+        "not-found",
+        "invalid-data",
+        "vs-invalid",
+        "version-error",
+        "cannot-infer",
+        "code-comment",
+        "code-rule",
+        "not-in-vs",
+        "invalid-code",
+        "display-comment",
+        "invalid-display",
+    ];
+    const WARNINGS: [&str; 4] = [
+        "invalid-data",
+        "code-comment",
+        "display-comment",
+        "invalid-display",
+    ];
+    let speaks = |issue: &&Issue| {
+        issue.severity == "error" || (issue.severity == "warning" && WARNINGS.contains(&issue.kind))
+    };
+    let rank = |kind: &str| ORDER.iter().position(|k| *k == kind).unwrap_or(ORDER.len());
+    let mut speaking: Vec<&Issue> = issues.iter().filter(speaks).collect();
+    speaking.sort_by_key(|issue| rank(issue.kind));
+    if speaking.is_empty() {
         return issues
             .iter()
-            .find(|i| i.severity == "warning")
-            .or_else(|| {
-                issues
-                    .iter()
-                    .find(|i| i.severity == "information" && i.kind == "invalid-display")
-            })
+            .find(|i| i.severity == "information" && i.kind == "invalid-display")
             .map(|i| i.text.clone());
     }
-    let mut ordered: Vec<&str> = Vec::new();
-    for kind in ORDER {
-        ordered.extend(
-            errors
-                .iter()
-                .filter(|i| i.kind == kind)
-                .map(|i| i.text.as_str()),
-        );
-    }
-    ordered.extend(
-        errors
-            .iter()
-            .filter(|i| !ORDER.contains(&i.kind) && i.kind != "not-in-vs")
-            .map(|i| i.text.as_str()),
-    );
-    if ordered.is_empty() {
-        ordered.extend(errors.iter().map(|i| i.text.as_str()));
-    }
-    Some(ordered.join("; "))
+    let texts: Vec<&str> = speaking.iter().map(|i| i.text.as_str()).collect();
+    Some(texts.join("; "))
 }
 
 /// The version of `system` the value set uses for this subject, negotiated,
@@ -713,7 +803,7 @@ fn resolve_target(
     let expression = subject.expression;
     let Some(resolved) = resolved else {
         return unresolvable_include(
-            registry,
+            sources,
             model,
             system,
             subject,
@@ -867,7 +957,7 @@ fn disagreement(
 /// The target when the include's version is not served: the subject's version
 /// when served, else the default, and the validation fails regardless.
 fn unresolvable_include(
-    registry: &crate::registry::Registry,
+    sources: &Sources<'_>,
     model: &ValueSetModel,
     system: &str,
     subject: &Subject<'_>,
@@ -875,6 +965,7 @@ fn unresolvable_include(
     literal: Option<String>,
     valid: &[String],
 ) -> Result<Target, Box<Validation>> {
+    let registry = sources.registry;
     let expression = subject.expression;
     let fallback = subject.version.filter(|_| subject_served).map_or_else(
         || registry.resolve(system, None),
@@ -882,7 +973,7 @@ fn unresolvable_include(
     );
     let Ok(fallback) = fallback else {
         return Err(Box::new(unserved_subject(
-            registry, model, system, subject, valid,
+            sources, model, system, subject, valid,
         )));
     };
     let bad = literal.unwrap_or_default();
@@ -963,12 +1054,13 @@ fn supplement_as_system(system: &str, version: Option<&str>, subject: &Subject<'
 /// The failed validation of a subject whose system or version the server does
 /// not serve at all.
 fn unserved_subject(
-    registry: &crate::registry::Registry,
+    sources: &Sources<'_>,
     model: &ValueSetModel,
     system: &str,
     subject: &Subject<'_>,
     valid: &[String],
 ) -> Validation {
+    let registry = sources.registry;
     if let Some(supplement_version) = registry.supplement_named(system) {
         return supplement_as_system(system, supplement_version.as_deref(), subject);
     }
@@ -995,12 +1087,26 @@ fn unserved_subject(
             subject.expression,
         ),
     );
-    validation.message = Some(not_found.text.clone());
     if let Some(local) = local_system(system, subject.expression) {
-        validation.message = Some(format!("{}; {}", not_found.text, local.text));
         validation.issues.push(local);
     }
+    // NOTE: a `Coding.system` that names a value set is bad data, and no
+    // missing system (the ecosystem's `bad-system2` case).
+    let names_value_set = sources.value_sets.resolve(system, None).is_some();
+    if names_value_set {
+        validation.issues.push(Issue {
+            severity: "error",
+            code: "invalid",
+            kind: "invalid-data",
+            text: format!("The Coding references a value set, not a code system ('{system}')"),
+            expression: super::at(subject.expression, "system"),
+        });
+        validation.message = message_of(&validation.issues);
+        validation.code = Some(subject.code.to_owned());
+        return validation;
+    }
     validation.issues.push(not_found);
+    validation.message = message_of(&validation.issues);
     validation.code = Some(subject.code.to_owned());
     let referenced = model
         .compose
@@ -1103,12 +1209,34 @@ fn assess(
             subject.expression,
         ));
     }
-    if item.inactive
-        && let Some((note, _)) = super::inactive_note(
-            &located.code,
-            &provider.status(located.concept)?,
-            super::whole(subject.expression),
-        )
+    let status = provider.status(located.concept)?;
+    if item.inactive {
+        // NOTE: `activeOnly`, or a compose that excludes inactive codes
+        // (`compose.inactive = false`), refuses an inactive concept and reports it
+        // outside the value set, the ecosystem's shape (its `inactive` cases).
+        if policy.inactive == InactivePolicy::Refused || model.compose.inactive == Some(false) {
+            issues.push(Issue {
+                severity: "error",
+                code: "business-rule",
+                kind: "code-rule",
+                text: format!("The concept '{}' is valid but is not active", located.code),
+                expression: super::at(subject.expression, "code"),
+            });
+            issues.push(not_in_vs(
+                model,
+                &item.system,
+                &located.code,
+                subject.display,
+                subject.expression,
+            ));
+        }
+        if let Some((note, _)) =
+            super::inactive_note(&located.code, &status, super::whole(subject.expression))
+        {
+            issues.push(note);
+        }
+    } else if let Some((note, _)) =
+        super::deprecated_note(&located.code, &status, super::whole(subject.expression))
     {
         issues.push(note);
     }
@@ -1196,6 +1324,28 @@ fn infer_by_membership(
 
 /// The failed validation of a bare code whose system cannot be determined:
 /// not in the value set, and the system unknown (the ecosystem's wording).
+/// The failed validation of a `Coding` that names no system: the membership
+/// verdict and the data warning (the ecosystem's `no-system` case).
+fn no_system(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
+    let mut validation = failed(
+        None,
+        None,
+        not_in_vs(model, "", subject.code, subject.display, subject.expression),
+    );
+    validation.issues.push(Issue {
+        severity: "warning",
+        code: "invalid",
+        kind: "invalid-data",
+        text: String::from(
+            "Coding has no system. A code with no system has no defined meaning, and it cannot be validated. A system should be provided",
+        ),
+        expression: super::at(subject.expression, "system"),
+    });
+    validation.message = message_of(&validation.issues);
+    validation.code = Some(subject.code.to_owned());
+    validation
+}
+
 fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
     let text = format!(
         "The System URI could not be determined for the code '{}' in the ValueSet '{}'",
@@ -1207,7 +1357,6 @@ fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
         None,
         not_in_vs(model, "", subject.code, subject.display, subject.expression),
     );
-    validation.message = Some(text.clone());
     validation.issues.push(Issue {
         severity: "error",
         code: "not-found",
@@ -1216,6 +1365,7 @@ fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
         expression: super::at(subject.expression, "code"),
     });
     validation.code = Some(subject.code.to_owned());
+    validation.message = message_of(&validation.issues);
     validation
 }
 
@@ -1318,11 +1468,11 @@ fn unknown_code(
             subject.expression,
         ),
     );
-    validation.message = Some(unknown.text.clone());
     validation.issues.push(unknown);
     // NOTE: the submitted code is echoed even when the system does not have it, the
     // shape the ecosystem expects (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>).
     validation.code = Some(subject.code.to_owned());
+    validation.message = message_of(&validation.issues);
     validation
 }
 
@@ -1350,6 +1500,41 @@ fn outside_value_set(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn issue(severity: &'static str, kind: &'static str, text: &str) -> Issue {
+        Issue {
+            severity,
+            code: "invalid",
+            kind,
+            text: text.to_owned(),
+            expression: None,
+        }
+    }
+
+    #[test]
+    fn the_message_orders_the_issues_the_ecosystems_way() {
+        let issues = [
+            issue("error", "not-in-vs", "not in vs"),
+            issue("error", "invalid-code", "unknown code"),
+        ];
+        assert_eq!(
+            message_of(&issues).as_deref(),
+            Some("not in vs; unknown code")
+        );
+        let issues = [
+            issue("error", "not-in-vs", "not in vs"),
+            issue("error", "invalid-data", "bad data"),
+            issue("error", "not-found", "missing"),
+            issue("warning", "vs-invalid", "quiet warning"),
+            issue("information", "status-check", "draft"),
+        ];
+        assert_eq!(
+            message_of(&issues).as_deref(),
+            Some("missing; bad data; not in vs")
+        );
+        let issues = [issue("warning", "invalid-code", "fragment")];
+        assert_eq!(message_of(&issues), None);
+    }
 
     #[test]
     fn the_message_falls_back_to_the_first_information_issue() {

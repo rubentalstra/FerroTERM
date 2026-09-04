@@ -436,10 +436,12 @@ fn validate_code_names_an_unknown_system_and_an_unknown_version() {
         Some("kitten"),
         "the code is echoed"
     );
+    // NOTE: the message joins the missing system and the membership verdict, in
+    // that order (the ecosystem's `bad-system` cases).
     assert_eq!(
         validation.message.as_deref(),
         Some(
-            "A definition for CodeSystem 'http://example.org/fhir/CodeSystem/nowhere' could not be found, so the code cannot be validated"
+            "A definition for CodeSystem 'http://example.org/fhir/CodeSystem/nowhere' could not be found, so the code cannot be validated; The provided code 'http://example.org/fhir/CodeSystem/nowhere#kitten' was not found in the value set 'http://example.org/fhir/ValueSet/pets|1.0'"
         )
     );
     let unknown_version = ValueSetValidateInput {
@@ -941,7 +943,7 @@ fn validate_code_infers_the_system_by_membership_and_can_be_lenient_on_displays(
     assert_eq!(dodo.code.as_deref(), Some("dodo"));
     assert_eq!(
         dodo.message.as_deref(),
-        Some(format!("The System URI could not be determined for the code 'dodo' in the ValueSet '{VS_ENUMERATED}|1.0'").as_str())
+        Some(format!("The System URI could not be determined for the code 'dodo' in the ValueSet '{VS_ENUMERATED}|1.0'; The provided code '#dodo' was not found in the value set '{VS_ENUMERATED}|1.0'").as_str())
     );
     // Without inferSystem a bare code over two systems cannot be placed.
     let ambiguous = value_set_validate_code::validate_code(&world.sources(), &bare("cat", None))
@@ -1283,8 +1285,10 @@ fn validate_code_speaks_the_ecosystems_words_for_codes_membership_abstract_and_c
     assert_eq!(
         abstract_code.message.as_deref(),
         Some(
-            format!("Code '{ANIMALS}#living' is abstract, and not allowed in this context")
-                .as_str()
+            format!(
+                "Code '{ANIMALS}#living' is abstract, and not allowed in this context; The provided code '{ANIMALS}#living' was not found in the value set '{VS_ALL}|2.0'"
+            )
+            .as_str()
         )
     );
     // A case-insensitive system located the code under another spelling: a warning.
@@ -1904,8 +1908,211 @@ fn validate_code_flags_a_local_system_reference() {
     assert_eq!(
         validation.message.as_deref(),
         Some(
-            "A definition for CodeSystem 'Location1' could not be found, so the code cannot be validated; Coding.system must be an absolute reference, not a local reference"
+            "A definition for CodeSystem 'Location1' could not be found, so the code cannot be validated; Coding.system must be an absolute reference, not a local reference; The provided code 'Location1#kitten' was not found in the value set 'http://example.org/fhir/ValueSet/pets|1.0'"
         )
     );
     assert_eq!(validation.x_unknown_systems, ["Location1"]);
+}
+
+#[test]
+fn validate_code_names_a_value_set_used_as_a_system_as_bad_data() {
+    let world = World::load();
+    let input = ValueSetValidateInput {
+        url: Some(VS_PETS.to_owned()),
+        code: Some(String::from("kitten")),
+        system: Some(VS_ALL.to_owned()),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(!validation.result);
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-in-vs", "invalid-data"]);
+    assert_eq!(
+        validation.message.as_deref(),
+        Some(
+            format!(
+                "The Coding references a value set, not a code system ('{VS_ALL}'); The provided code '{VS_ALL}#kitten' was not found in the value set '{VS_PETS}|1.0'"
+            )
+            .as_str()
+        )
+    );
+    assert!(validation.x_unknown_systems.is_empty(), "no missing system");
+    assert!(validation.unknown_systems.is_empty());
+}
+
+#[test]
+fn validate_code_notes_a_concept_the_value_set_deprecates_without_a_message() {
+    let world = World::load();
+    let inline = ValueSet {
+        url: Some("http://example.org/deprecating".into()),
+        version: Some("3".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                concept: vec![ValueSetComposeIncludeConcept {
+                    code: "cat".into(),
+                    extension: vec![Extension {
+                        url: "http://hl7.org/fhir/StructureDefinition/valueset-deprecated".into(),
+                        value: Some(ExtensionValue::Boolean(true.into())),
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let input = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        code: Some(String::from("cat")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(validation.result);
+    let note = validation
+        .issues
+        .iter()
+        .find(|i| i.kind == "code-comment")
+        .expect("the deprecation note");
+    assert_eq!(note.severity, "warning");
+    assert_eq!(
+        note.text,
+        format!(
+            "The presence of the concept 'cat' in the system '{ANIMALS}' in the value set http://example.org/deprecating|3 is marked with a status of deprecated and its use should be reviewed"
+        )
+    );
+    assert_eq!(
+        validation.message, None,
+        "the note stays out of the message"
+    );
+}
+
+#[test]
+fn validate_code_notes_a_deprecated_concept_and_a_withdrawn_display() {
+    let world = World::load();
+    // `plant` carries a `deprecated` standards status: a warning, a `status`
+    // output, and the message, while the concept stays active.
+    let deprecated = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("plant")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &deprecated).expect("validates");
+    assert!(validation.result);
+    assert_eq!(validation.inactive, None);
+    assert_eq!(validation.status.as_deref(), Some("deprecated"));
+    assert_eq!(
+        validation.message.as_deref(),
+        Some("The concept 'plant' is deprecated and its use should be reviewed")
+    );
+    // `Hound` is a withdrawn designation of `dog`: an error, or a warning under
+    // lenient display validation, never a valid display.
+    let withdrawn = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("dog")),
+        system: Some(ANIMALS.to_owned()),
+        display: Some(String::from("Hound")),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &withdrawn).expect("validates");
+    assert!(!validation.result);
+    let issue = &validation.issues[0];
+    assert_eq!((issue.severity, issue.kind), ("error", "display-comment"));
+    assert_eq!(
+        issue.text,
+        "'Hound' is no longer considered a correct display for code 'dog' (status = withdrawn). The correct display is 'Dog'"
+    );
+    assert_eq!(validation.display.as_deref(), Some("Dog"));
+    let lenient = ValueSetValidateInput {
+        lenient_display_validation: Some(true),
+        ..withdrawn
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &lenient).expect("validates");
+    assert!(validation.result);
+    assert_eq!(validation.issues[0].severity, "warning");
+    assert_eq!(
+        validation.message.as_deref(),
+        Some(
+            "'Hound' is no longer considered a correct display for code 'dog' (status = withdrawn). The correct display is 'Dog'"
+        )
+    );
+}
+
+#[test]
+fn validate_code_refuses_an_inactive_concept_under_active_only_and_a_coding_without_a_system() {
+    let world = World::load();
+    // Version 1.0 of the value set keeps the dodo; 2.0 excludes it.
+    let inactive = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        value_set_version: Some(String::from("1.0")),
+        code: Some(String::from("dodo")),
+        system: Some(ANIMALS.to_owned()),
+        active_only: Some(true),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &inactive).expect("validates");
+    assert!(!validation.result);
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["code-rule", "not-in-vs", "code-comment"]);
+    assert_eq!(validation.inactive, Some(true));
+    assert_eq!(
+        validation.message.as_deref(),
+        Some(
+            format!(
+                "The concept 'dodo' has a status of inactive and its use should be reviewed; The concept 'dodo' is valid but is not active; The provided code '{ANIMALS}#dodo' was not found in the value set '{VS_ALL}|1.0'"
+            )
+            .as_str()
+        )
+    );
+    let allowed = ValueSetValidateInput {
+        active_only: None,
+        ..inactive
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &allowed).expect("validates");
+    assert!(
+        validation.result,
+        "inactive codes are members unless refused"
+    );
+    // A coding without a system is not inferred: the membership verdict and a
+    // data warning, no system echo.
+    let no_system = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        coding: Some(CodingRef {
+            code: Some(String::from("cat")),
+            ..CodingRef::default()
+        }),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &no_system).expect("validates");
+    assert!(!validation.result);
+    let kinds: Vec<(&str, &str)> = validation
+        .issues
+        .iter()
+        .map(|i| (i.severity, i.kind))
+        .collect();
+    assert_eq!(kinds, [("error", "not-in-vs"), ("warning", "invalid-data")]);
+    assert_eq!(validation.system, None);
+    assert_eq!(validation.code.as_deref(), Some("cat"));
+    assert_eq!(
+        validation.message.as_deref(),
+        Some(
+            format!(
+                "Coding has no system. A code with no system has no defined meaning, and it cannot be validated. A system should be provided; The provided code '#cat' was not found in the value set '{VS_ALL}|2.0'"
+            )
+            .as_str()
+        )
+    );
 }

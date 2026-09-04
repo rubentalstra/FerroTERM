@@ -517,3 +517,32 @@ fn lookup_carries_the_definition_when_the_system_states_one() {
     .expect("looks up");
     assert_eq!(cat.definition, None);
 }
+
+#[test]
+fn standards_status_marks_deprecated_concepts_and_withdrawn_designations() {
+    let (_dir, providers) = load_all();
+    let animals = find(&providers, ANIMALS);
+    let plant = animals.locate("plant").expect("locates").expect("plant");
+    let status = animals.status(plant.concept).expect("status");
+    assert!(
+        status.active,
+        "a deprecated standards status keeps the concept active"
+    );
+    assert_eq!(status.standards_status.as_deref(), Some("deprecated"));
+    let dog = animals.locate("dog").expect("locates").expect("dog");
+    let designations = animals
+        .designations(dog.concept, None)
+        .expect("designations");
+    let hound = designations
+        .iter()
+        .find(|d| d.value == "Hound")
+        .expect("the withdrawn designation is still listed");
+    assert_eq!(hound.standards_status.as_deref(), Some("withdrawn"));
+    assert_eq!(
+        animals
+            .status(dog.concept)
+            .expect("status")
+            .standards_status,
+        None
+    );
+}

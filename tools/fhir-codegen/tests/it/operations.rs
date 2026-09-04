@@ -140,6 +140,40 @@ fn the_expand_request_is_exactly_what_each_version_declares() {
 }
 
 #[test]
+fn a_primitive_parameter_reads_the_primitives_that_specialize_it() {
+    for (package, module) in [(&*R4B, "r4b"), (&*R5, "r5")] {
+        let contracts = contracts(package, module);
+        let expand = find(&contracts, "ValueSet", "expand");
+        let accepts = |name: &str| -> Vec<String> {
+            let mut list = expand
+                .inputs
+                .iter()
+                .find(|f| f.fhir_name == name)
+                .expect(name)
+                .accepts
+                .clone();
+            list.sort();
+            list
+        };
+        // `code`, `id`, and `markdown` specialize `string`; `canonical`, `oid`,
+        // `url`, and `uuid` specialize `uri`
+        // (<https://hl7.org/fhir/R5/datatypes.html#primitive>).
+        assert_eq!(accepts("filter"), ["Code", "Id", "Markdown"], "{module}");
+        assert_eq!(
+            accepts("url"),
+            ["Canonical", "Oid", "Url", "Uuid"],
+            "{module}"
+        );
+        // An integer parameter takes nothing: `positiveInt` has another scalar.
+        assert!(accepts("count").is_empty(), "{module}");
+        assert!(
+            accepts("includeDesignations").is_empty(),
+            "{module}: boolean"
+        );
+    }
+}
+
+#[test]
 fn multi_part_parameters_nest_and_element_maps_to_the_open_type() {
     let r4b = contracts(&R4B, "r4b");
     let lookup = find(&r4b, "CodeSystem", "lookup");

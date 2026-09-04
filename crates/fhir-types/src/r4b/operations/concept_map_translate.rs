@@ -293,6 +293,34 @@ impl ConceptMapTranslateRequest {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -353,6 +381,27 @@ impl ConceptMapTranslateRequest {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -413,6 +462,34 @@ impl ConceptMapTranslateRequest {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -443,6 +520,27 @@ impl ConceptMapTranslateRequest {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -472,6 +570,34 @@ impl ConceptMapTranslateRequest {
                     field_source = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -565,6 +691,34 @@ impl ConceptMapTranslateRequest {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -594,6 +748,34 @@ impl ConceptMapTranslateRequest {
                     field_targetsystem = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -690,6 +872,34 @@ impl ConceptMapTranslateRequest {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -720,6 +930,27 @@ impl ConceptMapTranslateRequest {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -749,6 +980,34 @@ impl ConceptMapTranslateRequest {
                     field_source_scope = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -934,6 +1193,34 @@ impl ConceptMapTranslateRequest {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -963,6 +1250,34 @@ impl ConceptMapTranslateRequest {
                     field_target_system = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -1279,6 +1594,34 @@ impl ConceptMapTranslateRequestDependency {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1455,6 +1798,27 @@ impl ConceptMapTranslateResponse {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1484,6 +1848,34 @@ impl ConceptMapTranslateResponse {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1507,6 +1899,34 @@ impl ConceptMapTranslateResponse {
                     field_used_system.push(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -1797,6 +2217,27 @@ impl ConceptMapTranslateResponseMatch {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1827,6 +2268,27 @@ impl ConceptMapTranslateResponseMatch {
                         Some(super::super::parameters::ParametersParameterValue::String(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -2015,6 +2477,34 @@ impl ConceptMapTranslateResponseMatchProduct {
                     field_element = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => super::super::primitives::Uri {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(super::super::parameters::ParametersParameterValue::Oid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Url(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Uuid(value)) => {
+                            super::super::primitives::Uri {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(

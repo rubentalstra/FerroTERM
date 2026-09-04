@@ -367,6 +367,7 @@ impl CodeSystemProvider for RxNormProvider {
             .map_err(storage)?;
         let active = record.is_some_and(|c| c.active);
         Ok(Status {
+            standards_status: None,
             active,
             inactive_reason: (!active).then(|| String::from("obsolete")),
             abstract_concept: false,
@@ -390,6 +391,7 @@ impl CodeSystemProvider for RxNormProvider {
                     .is_none_or(|w| primary_subtag(&d.language) == w)
             })
             .map(|d| Designation {
+                standards_status: None,
                 language: Some(d.language.clone()),
                 use_: Some(self.use_coding(d.use_ordinal)),
                 value: d.term,

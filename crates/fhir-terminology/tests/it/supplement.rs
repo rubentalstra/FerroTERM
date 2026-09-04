@@ -18,6 +18,7 @@ fn a_supplement_layers_designations_and_properties_over_the_system() {
             String::from("cat"),
             Additions {
                 designations: vec![Designation {
+                    standards_status: None,
                     language: Some(String::from("de")),
                     use_: None,
                     value: String::from("Katze"),
