@@ -65,6 +65,7 @@ label dependencies 0366d6 "Dependency updates (used by Dependabot)."
 label security     ee0701 "Security fix or hardening."
 label blocked      000000 "Blocked by another open issue (see the dependencies panel)."
 label blocked-upstream 6f42c1 "Waiting on an upstream spec or tool release."
+label on-hold      e4e669 "Parked: waits on an input nobody in the repository can provide (a licence, a file); no milestone."
 label upstream-report  990000 "An outbound report of a defect in the FHIR or SNOMED specs."
 
 echo "done."
