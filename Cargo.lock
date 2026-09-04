@@ -681,6 +681,8 @@ dependencies = [
  "fhir-types",
  "http",
  "jiff",
+ "redb",
+ "serde",
  "serde_json",
  "tempfile",
  "thiserror",

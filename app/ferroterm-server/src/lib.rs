@@ -14,6 +14,7 @@
 pub mod banner;
 pub mod config;
 pub mod outcome;
+pub mod persistence;
 pub mod r4;
 pub mod r4b;
 pub mod r5;

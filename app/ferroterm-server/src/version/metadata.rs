@@ -18,7 +18,8 @@ macro_rules! metadata {
             use fhir_types::$fhir::capability_statement::{
                 CapabilityStatement, CapabilityStatementImplementation, CapabilityStatementRest,
                 CapabilityStatementRestResource, CapabilityStatementRestResourceInteraction,
-                CapabilityStatementRestResourceOperation, CapabilityStatementRestSecurity,
+                CapabilityStatementRestResourceOperation, CapabilityStatementRestResourceSearchParam,
+                CapabilityStatementRestSecurity,
                 CapabilityStatementSoftware,
             };
             use fhir_types::$fhir::codeable_concept::CodeableConcept;
@@ -209,26 +210,99 @@ macro_rules! metadata {
                 }
             }
 
-            /// The `CapabilityStatement` (`kind = instance`) of this server.
-            #[must_use]
-            pub fn capability_statement(state: &AppState) -> CapabilityStatement {
-                let operation = |name: &str, definition: &str| CapabilityStatementRestResourceOperation {
-                    // NOTE: R4B's own example instances name operations without the `$`
-                    // (<https://hl7.org/fhir/R4B/capabilitystatement-example.json.html>);
-                    // the element text mentions the URL form. The bare name is used.
+            /// One operation of the capability statement.
+            ///
+            /// R4B's own example instances name operations without the `$`
+            /// (<https://hl7.org/fhir/R4B/capabilitystatement-example.json.html>);
+            /// the bare name is used.
+            fn operation(name: &str, definition: &str) -> CapabilityStatementRestResourceOperation {
+                CapabilityStatementRestResourceOperation {
                     name: name.into(),
                     definition: definition.into(),
                     documentation: None,
                     ..Default::default()
-                };
-                let declared = |descriptor: &Operation| CapabilityStatementRestResourceOperation {
+                }
+            }
+
+            /// One declared operation, with what the ecosystem overlay adds to it.
+            fn declared(descriptor: &Operation) -> CapabilityStatementRestResourceOperation {
+                CapabilityStatementRestResourceOperation {
                     documentation: overlay_documentation(descriptor).map(Into::into),
                     ..operation(descriptor.code, descriptor.url)
-                };
+                }
+            }
+
+            /// The interactions this deployment answers on every stored resource type.
+            ///
+            /// A deployment that names no resource database refuses every write, so the
+            /// write interactions are declared only where they are answered
+            /// (<https://hl7.org/fhir/R4B/http.html>).
+            fn interactions(state: &AppState) -> Vec<CapabilityStatementRestResourceInteraction> {
                 let interaction = |code: &str| CapabilityStatementRestResourceInteraction {
                     code: code.into(),
                     ..Default::default()
                 };
+                let mut out = vec![interaction("read"), interaction("search-type")];
+                if state.persists() {
+                    out.push(interaction("vread"));
+                    out.push(interaction("create"));
+                    out.push(interaction("update"));
+                    out.push(interaction("delete"));
+                }
+                out
+            }
+
+            /// The search parameters every stored resource type answers.
+            fn search_params() -> Vec<CapabilityStatementRestResourceSearchParam> {
+                let search_param = |name: &str, code: &str| {
+                    CapabilityStatementRestResourceSearchParam {
+                        name: name.into(),
+                        r#type: code.into(),
+                        ..Default::default()
+                    }
+                };
+                vec![search_param("url", "uri"), search_param("version", "token")]
+            }
+
+            /// The three resource types this server serves, with their
+            /// interactions, search parameters, and operations.
+            fn rest_resources(state: &AppState) -> Vec<CapabilityStatementRestResource> {
+                vec![
+                    CapabilityStatementRestResource {
+                        r#type: "CodeSystem".into(),
+                        interaction: interactions(state),
+                        search_param: search_params(),
+                        operation: vec![
+                            declared(&CODE_SYSTEM_LOOKUP),
+                            declared(&CODE_SYSTEM_VALIDATE_CODE),
+                            declared(&CODE_SYSTEM_SUBSUMES),
+                        ],
+                        ..Default::default()
+                    },
+                    CapabilityStatementRestResource {
+                        r#type: "ValueSet".into(),
+                        interaction: interactions(state),
+                        search_param: search_params(),
+                        operation: vec![
+                            declared(&VALUE_SET_EXPAND),
+                            declared(&VALUE_SET_VALIDATE_CODE),
+                        ],
+                        ..Default::default()
+                    },
+                    CapabilityStatementRestResource {
+                        r#type: "ConceptMap".into(),
+                        interaction: interactions(state),
+                        search_param: search_params(),
+                        operation: vec![declared(&CONCEPT_MAP_TRANSLATE)],
+                        ..Default::default()
+                    },
+                ]
+            }
+
+            /// The `CapabilityStatement` (`kind = instance`) of this server.
+            #[must_use]
+            pub fn capability_statement(state: &AppState) -> CapabilityStatement {
+
                 // NOTE: the ecosystem runner reads these features to know what a server
                 // accepts (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
                 let features = vec![
@@ -272,31 +346,7 @@ macro_rules! metadata {
                     rest: vec![CapabilityStatementRest {
                         mode: "server".into(),
                         security: Some(security(state)),
-                        resource: vec![
-                            CapabilityStatementRestResource {
-                                r#type: "CodeSystem".into(),
-                                operation: vec![
-                                    declared(&CODE_SYSTEM_LOOKUP),
-                                    declared(&CODE_SYSTEM_VALIDATE_CODE),
-                                    declared(&CODE_SYSTEM_SUBSUMES),
-                                ],
-                                ..Default::default()
-                            },
-                            CapabilityStatementRestResource {
-                                r#type: "ValueSet".into(),
-                                interaction: vec![interaction("read"), interaction("search-type")],
-                                operation: vec![
-                                    declared(&VALUE_SET_EXPAND),
-                                    declared(&VALUE_SET_VALIDATE_CODE),
-                                ],
-                                ..Default::default()
-                            },
-                            CapabilityStatementRestResource {
-                                r#type: "ConceptMap".into(),
-                                operation: vec![declared(&CONCEPT_MAP_TRANSLATE)],
-                                ..Default::default()
-                            },
-                        ],
+                        resource: rest_resources(state),
                         operation: vec![
                             operation("versions", super::system::VERSIONS_URL),
                             operation("cache-control", super::system::CACHE_CONTROL_URL),
@@ -310,7 +360,8 @@ macro_rules! metadata {
             /// The `TerminologyCapabilities` of this server, from the loaded providers.
             #[must_use]
             pub fn terminology_capabilities(state: &AppState) -> TerminologyCapabilities {
-                let mut capabilities = Summary::of(state.registry()).$capabilities(&now());
+                let layer = state.layer();
+                let mut capabilities = Summary::of(layer.registry()).$capabilities(&now());
                 capabilities.version = Some(state.software_version().into());
                 capabilities.name = Some("FerroTERM".into());
                 capabilities.title = Some(concat!("FerroTERM terminology capabilities (", $label, ")").into());

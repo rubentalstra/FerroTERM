@@ -17,6 +17,7 @@ mod fixture;
 mod health;
 mod metadata;
 mod operations;
+mod persisted;
 mod r4;
 mod r5;
 mod r6;

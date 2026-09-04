@@ -13,6 +13,10 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- Persisted `CodeSystem`, `ValueSet`, and `ConceptMap` resources: a deployment that names a database in `FERROTERM_RESOURCES` accepts create, update, read, version read, search by `url` and `version`, and delete on every served version, with the FHIR status codes and the `ETag` and `Last-Modified` headers. `meta.versionId` starts at `1` and rises with every write, `If-Match` makes a write conditional, a deleted resource reads as `410 Gone` and keeps its history. Every operation sees a persisted resource exactly as it sees one loaded from `FERROTERM_CODESYSTEMS`, on every version, and the resources are served again after a restart. A deployment that names no database refuses every write with a `422` and declares no write interaction in its capability statement.
+
 ## [0.0.10] - 2026-09-04
 
 ### Added

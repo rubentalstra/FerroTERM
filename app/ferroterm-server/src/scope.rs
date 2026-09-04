@@ -10,13 +10,11 @@
 //! served version converts its own generated resources to the models held
 //! here, so a cache started on one version serves every version.
 
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use fhir_terminology::conceptmap::model::ConceptMapModel;
-use fhir_terminology::conceptmap::store::ConceptMapStore;
 use fhir_terminology::fhir_codesystem::model::CodeSystemModel;
 use fhir_terminology::fhir_codesystem::provider::FhirCodeSystem;
 use fhir_terminology::operations::Sources;
@@ -27,7 +25,7 @@ use fhir_terminology::valueset::store::ValueSetStore;
 use http::{HeaderMap, StatusCode};
 
 use crate::outcome::Failure;
-use crate::state::{AppState, supplement_of};
+use crate::state::{AppState, Layer, supplement_of};
 
 /// The parameter that carries a request-scoped resource.
 pub const TX_RESOURCE: &str = "tx-resource";
@@ -52,20 +50,22 @@ pub enum Loaded {
 
 /// The registry, value set store, and concept map store one request sees.
 #[derive(Debug)]
-pub struct Scope<'a> {
-    registry: Cow<'a, Registry>,
-    value_sets: Cow<'a, ValueSetStore>,
-    concept_maps: Cow<'a, ConceptMapStore>,
+pub struct Scope {
+    /// The layer the request started with: the loaded state and the persisted
+    /// client resources.
+    served: Arc<Layer>,
+    /// The same layer with the request's own resources over it, when it sent
+    /// any.
+    layered: Option<Layer>,
 }
 
-impl<'a> Scope<'a> {
-    /// The loaded registry and stores, unchanged.
+impl Scope {
+    /// The served layer, unchanged.
     #[must_use]
-    pub fn base(state: &'a AppState) -> Self {
+    pub fn base(state: &AppState) -> Self {
         Self {
-            registry: Cow::Borrowed(state.registry()),
-            value_sets: Cow::Borrowed(state.value_sets()),
-            concept_maps: Cow::Borrowed(state.concept_maps()),
+            served: state.layer(),
+            layered: None,
         }
     }
 
@@ -78,13 +78,14 @@ impl<'a> Scope<'a> {
     ///
     /// A `CodeSystem` the engine cannot serve is a 400; a supplement whose
     /// target is not loaded is a 404.
-    pub fn layered(state: &'a AppState, resources: &[Loaded]) -> Result<Self, Failure> {
+    pub fn layered(state: &AppState, resources: &[Loaded]) -> Result<Self, Failure> {
         if resources.is_empty() {
             return Ok(Self::base(state));
         }
-        let mut registry = state.registry().clone();
-        let mut value_sets = state.value_sets().clone();
-        let mut concept_maps = state.concept_maps().clone();
+        let served = state.layer();
+        let mut registry = served.registry().clone();
+        let mut value_sets = served.value_sets().clone();
+        let mut concept_maps = served.concept_maps().clone();
         let mut supplements = Vec::new();
         for resource in resources {
             match resource {
@@ -134,32 +135,32 @@ impl<'a> Scope<'a> {
             registry.register_supplement(target.clone(), supplement_of(model));
         }
         Ok(Self {
-            registry: Cow::Owned(registry),
-            value_sets: Cow::Owned(value_sets),
-            concept_maps: Cow::Owned(concept_maps),
+            served,
+            layered: Some(Layer::of(registry, value_sets, concept_maps)),
         })
+    }
+
+    /// The layer this request resolves in.
+    fn view(&self) -> &Layer {
+        self.layered.as_ref().unwrap_or(&self.served)
     }
 
     /// The registry this request resolves systems in.
     #[must_use]
     pub fn registry(&self) -> &Registry {
-        &self.registry
+        self.view().registry()
     }
 
     /// The value sets this request resolves.
     #[must_use]
     pub fn value_sets(&self) -> &ValueSetStore {
-        &self.value_sets
+        self.view().value_sets()
     }
 
     /// The engine's view of this scope.
     #[must_use]
     pub fn sources(&self) -> Sources<'_> {
-        Sources {
-            registry: &self.registry,
-            value_sets: &self.value_sets,
-            concept_maps: &self.concept_maps,
-        }
+        self.view().sources()
     }
 }
 
@@ -169,11 +170,11 @@ impl<'a> Scope<'a> {
 /// # Errors
 ///
 /// A malformed or unknown `X-Cache-Id`, or a resource that cannot be layered.
-pub fn scope_of<'a>(
-    state: &'a AppState,
+pub fn scope_of(
+    state: &AppState,
     headers: &HeaderMap,
     mut resources: Vec<Loaded>,
-) -> Result<Scope<'a>, Failure> {
+) -> Result<Scope, Failure> {
     if let Some(id) = cache_id(headers)? {
         let cached = state.caches().get(&id)?;
         let mut all = Vec::with_capacity(cached.len() + resources.len());

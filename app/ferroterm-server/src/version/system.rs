@@ -17,12 +17,9 @@ macro_rules! system {
             use std::sync::Arc;
 
             use axum::body::Bytes;
-            use axum::extract::{Path as UrlPath, Query, State};
+            use axum::extract::{Query, State};
             use axum::response::{IntoResponse, Response};
-            use fhir_types::$fhir::bundle::{Bundle, BundleEntry, BundleEntrySearch};
             use fhir_types::$fhir::parameters::{Parameters, ParametersParameter, ParametersParameterValue};
-            use fhir_types::$fhir::resource::Resource;
-            use fhir_terminology::valueset::render;
             use http::{HeaderMap, StatusCode};
 
             use crate::outcome::Failure;
@@ -163,99 +160,6 @@ macro_rules! system {
                 }
             }
 
-            /// `GET /ValueSet/{id}`: the stored value set with its `compose`.
-            pub async fn value_set_read(
-                State(state): State<Arc<AppState>>,
-                UrlPath(id): UrlPath<String>,
-                headers: HeaderMap,
-                Query(query): Query<Vec<(String, String)>>,
-            ) -> Response {
-                let wire = match negotiated(&headers, &query) {
-                    Ok(wire) => wire,
-                    Err(failure) => return failure.into_response(),
-                };
-                finish(
-                    match state.value_set_instance(&id) {
-                        Some(model) => parameters::respond_resource(&render::$fhir::value_set(&model, true), wire),
-                        None => Err(Failure::new(
-                            StatusCode::NOT_FOUND,
-                            "not-found",
-                            format!("no ValueSet with id `{id}`"),
-                        )),
-                    },
-                    wire,
-                )
-            }
-
-            /// `GET /ValueSet?url=&version=`: a `searchset` of the stored value sets.
-            pub async fn value_set_search(
-                State(state): State<Arc<AppState>>,
-                headers: HeaderMap,
-                Query(query): Query<Vec<(String, String)>>,
-            ) -> Response {
-                let wire = match negotiated(&headers, &query) {
-                    Ok(wire) => wire,
-                    Err(failure) => return failure.into_response(),
-                };
-                finish(run_value_set_search(&state, &query, wire), wire)
-            }
-
-            fn run_value_set_search(
-                state: &AppState,
-                query: &[(String, String)],
-                wire: Wire,
-            ) -> Result<Response, Failure> {
-                let mut url = None;
-                let mut version = None;
-                for (name, value) in query {
-                    match name.as_str() {
-                        "url" => url = Some(value.as_str()),
-                        "version" => version = Some(value.as_str()),
-                        "_format" => {}
-                        other => {
-                            return Err(Failure::new(
-                                StatusCode::BAD_REQUEST,
-                                "not-supported",
-                                format!("search parameter `{other}` is not supported; use `url` and `version`"),
-                            ));
-                        }
-                    }
-                }
-                let mut entry = Vec::new();
-                for (id, served_url, served_version) in state.value_set_instances() {
-                    if url.is_some_and(|u| u != served_url)
-                        || version.is_some_and(|v| Some(v) != served_version)
-                    {
-                        continue;
-                    }
-                    let Some(model) = state.value_set_instance(id) else {
-                        continue;
-                    };
-                    entry.push(BundleEntry {
-                        full_url: Some(format!("ValueSet/{id}").as_str().into()),
-                        resource: Some(Resource::ValueSet(Box::new(render::$fhir::value_set(&model, true)))),
-                        search: Some(BundleEntrySearch {
-                            mode: Some("match".into()),
-                            ..Default::default()
-                        }),
-                        ..Default::default()
-                    });
-                }
-                let total = u32::try_from(entry.len()).map_err(|_| {
-                    Failure::new(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "too-costly",
-                        "too many value sets to count",
-                    )
-                })?;
-                let bundle = Bundle {
-                    r#type: "searchset".into(),
-                    total: Some(total.into()),
-                    entry,
-                    ..Default::default()
-                };
-                parameters::respond_resource(&bundle, wire)
-            }
         }
     };
 }
