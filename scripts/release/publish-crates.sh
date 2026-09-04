@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 # The crates.io upload of the `crates/*` members, and its read-back, as one
 # implementation shared by the `crates` leg of release.yml (a `v*` tag,
 # approval-gated) and publish-crates.yml (a manual dispatch: the dry-run and

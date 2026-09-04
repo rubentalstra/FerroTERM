@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 # Clippy configuration (.claude/rules/reliability.md). The panicking and
 # stdio lints stay hard in application code and relax inside tests only.
 

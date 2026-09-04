@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- SPDX-License-Identifier: BUSL-1.1 -->
 
 # Contributing to FerroTERM
 
@@ -67,5 +67,6 @@ a public issue for a security problem.
 ## Licensing
 
 By contributing you agree that your contributions are licensed under the
-project's Apache License 2.0 (see [`LICENSE`](LICENSE)), as section 5 of that
-licence provides.
+project's Business Source License 1.1 (see [`LICENSE`](LICENSE)), including
+its Change License, so that each version becomes Apache License 2.0 on its
+Change Date. You keep your copyright.

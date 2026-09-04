@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 # .claude/hooks/no_attribution_guard.sh
 #
 # Claude Code PreToolUse hook (matcher: Bash).

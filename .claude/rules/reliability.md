@@ -162,8 +162,11 @@ chapters, and the Clippy book.
 
 ## Deviations from the API Guidelines (deliberate)
 
-- **C-PERMISSIVE: Apache 2.0 for the project's own code.** SNOMED CT content is
-  licensed separately by SNOMED International and is NEVER distributed here
+- **C-PERMISSIVE is not followed: the Business Source License 1.1 for the
+  project's own code** (the owner's decision, 2026-09-04, as FerroEHR): free
+  for non-production and non-commercial production use, a commercial licence
+  for other production use, Apache 2.0 four years after each version. SNOMED
+  CT content is licensed separately by SNOMED International and is NEVER distributed here
   (`vendored-inputs.md`). The vendored FHIR packages keep their upstream HL7
   terms, vendored verbatim with provenance as codegen input.
 - **C-STABLE: pre-1.0 dependencies are acceptable while the crates are

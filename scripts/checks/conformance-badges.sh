@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 # The conformance badges: one shields.io endpoint JSON per served FHIR version,
 # derived from the committed pass lists of the HL7 terminology ecosystem suite
 # (conformance/tx-ecosystem/, the lists CI gates on every push) and the suite

@@ -1,8 +1,8 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 [package]
 name = "fhir-terminology"
 description = "The FHIR terminology operations over the code system provider seam"
-version = "0.1.20"
+version = "0.1.21"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

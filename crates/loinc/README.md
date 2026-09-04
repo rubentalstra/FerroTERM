@@ -19,6 +19,9 @@ API is pre-1.0 and moves with the FerroTERM release train. Documentation:
 
 ## Licence
 
-Apache License, Version 2.0 (`LICENSE`). Clinical terminology content (SNOMED
+Business Source License 1.1 (`LICENSE`): free to read, build, modify, and
+redistribute, free for non-production use and for non-commercial production
+use; commercial production use needs a licence from the Licensor; each version
+becomes Apache License 2.0 four years after it is published. Clinical terminology content (SNOMED
 CT, LOINC, RxNorm, ICD, the Dutch national code systems) is licensed by its
 publisher and is never part of this crate.

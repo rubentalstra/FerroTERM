@@ -13,6 +13,15 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- The licence of the project's own code is the Business Source License 1.1
+  (`LICENSE`, `NOTICE`), on FerroEHR's terms: free for non-production use and
+  for non-commercial production use, a commercial licence for any other
+  production use, and Apache License 2.0 four years after each version. Every
+  header, manifest, badge, page, and image label names it, and the versions
+  guard fails on a stale Apache 2.0 claim (#221).
+
 ## [0.0.9] - 2026-09-04
 
 The wire release: FHIR R4, R5, and the R6 ballot are served beside R4B from
