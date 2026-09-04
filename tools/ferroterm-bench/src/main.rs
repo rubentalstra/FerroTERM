@@ -86,6 +86,7 @@ struct Machine {
     arch: String,
     cpu: String,
     memory_bytes: u64,
+    container: bool,
 }
 
 /// The ingest measurement.
@@ -141,6 +142,7 @@ fn main() -> anyhow::Result<()> {
         .with_context(|| format!("cannot create {}", cli.out.display()))?;
     let runtime = tokio::runtime::Runtime::new().context("cannot start the runtime")?;
     let machine = machine();
+    let mut failed = Vec::new();
     for system in &config.systems {
         if cli
             .only
@@ -157,7 +159,14 @@ fn main() -> anyhow::Result<()> {
             );
             continue;
         }
-        let record = runtime.block_on(measure(&cli, &config, system, &machine))?;
+        let record = match runtime.block_on(measure(&cli, &config, system, &machine)) {
+            Ok(record) => record,
+            Err(error) => {
+                eprintln!("{}: {error:#}; no record written", system.name);
+                failed.push(system.name.clone());
+                continue;
+            }
+        };
         let path = cli.out.join(format!(
             "{}-{}.json",
             slug(&system.name),
@@ -167,16 +176,20 @@ fn main() -> anyhow::Result<()> {
         std::fs::write(&path, format!("{json}\n"))
             .with_context(|| format!("cannot write {}", path.display()))?;
         println!(
-            "{}: ready {:.2} s, rss {} MB open / {} MB warm, {} operations, written to {}",
+            "{}: ready {}, rss {} open / {} warm, {} operations, written to {}",
             system.name,
-            record.ready_seconds,
-            record.rss_open_bytes.unwrap_or(0).div_euclid(1_000_000),
-            record.rss_warm_bytes.unwrap_or(0).div_euclid(1_000_000),
+            duration_text(record.ready_seconds),
+            bytes_text(record.rss_open_bytes.unwrap_or(0)),
+            bytes_text(record.rss_warm_bytes.unwrap_or(0)),
             record.latency.len(),
             path.display()
         );
     }
-    Ok(())
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        bail!("no record for: {}", failed.join(", "))
+    }
 }
 
 fn slug(name: &str) -> String {
@@ -233,6 +246,7 @@ async fn measure(
             arch: machine.arch.clone(),
             cpu: machine.cpu.clone(),
             memory_bytes: machine.memory_bytes,
+            container: machine.container,
         },
         system: system.name.clone(),
         system_uri: system.uri.clone(),
@@ -319,9 +333,15 @@ async fn time_requests(
     let once = || async {
         let started = Instant::now();
         let response = client.get(url).query(query).send().await?;
-        let status = response.status().as_u16();
-        let _body = response.bytes().await?;
-        Ok::<_, anyhow::Error>((status, started.elapsed()))
+        let status = response.status();
+        let body = response.bytes().await?;
+        if !status.is_success() {
+            bail!(
+                "{url} answered {status}; a record never holds an error response: {}",
+                String::from_utf8_lossy(&body)
+            );
+        }
+        Ok::<_, anyhow::Error>((status.as_u16(), started.elapsed()))
     };
     let (status, cold) = once().await?;
     let mut samples = Vec::with_capacity(warm);
@@ -351,6 +371,33 @@ fn percentile(samples: &[Duration], p: usize) -> Duration {
 
 fn millis(duration: Duration) -> f64 {
     duration.as_secs_f64() * 1000.0
+}
+
+/// A duration in the unit that fits it: seconds, milliseconds, or microseconds.
+fn duration_text(seconds: f64) -> String {
+    if seconds >= 1.0 {
+        format!("{seconds:.2} s")
+    } else if seconds >= 0.001 {
+        format!("{:.2} ms", seconds * 1e3)
+    } else {
+        format!("{:.0} \u{b5}s", seconds * 1e6)
+    }
+}
+
+/// A byte count in the unit that fits it: GB, MB, or KB.
+fn bytes_text(bytes: u64) -> String {
+    if bytes >= 1_000_000_000 {
+        let hundredths = bytes.div_euclid(10_000_000);
+        format!(
+            "{}.{:02} GB",
+            hundredths.div_euclid(100),
+            hundredths.rem_euclid(100)
+        )
+    } else if bytes >= 1_000_000 {
+        format!("{} MB", bytes.div_euclid(1_000_000))
+    } else {
+        format!("{} KB", bytes.div_euclid(1_000))
+    }
 }
 
 /// Times `ferroterm-build` over the release into a scratch directory and reads
@@ -506,7 +553,26 @@ fn machine() -> Machine {
         )
     } else {
         (
-            proc_field("/proc/cpuinfo", "model name").unwrap_or_default(),
+            // An aarch64 /proc/cpuinfo names no model; the implementer and part
+            // fields are what it has.
+            proc_field("/proc/cpuinfo", "model name")
+                .or_else(|| proc_field("/proc/cpuinfo", "Hardware"))
+                .or_else(|| {
+                    let implementer = proc_field("/proc/cpuinfo", "CPU implementer")?;
+                    let vendor = match implementer.as_str() {
+                        "0x41" => "Arm",
+                        "0x51" => "Qualcomm",
+                        "0x61" => "Apple",
+                        "0xc0" => "Ampere",
+                        _ => "unknown vendor",
+                    };
+                    Some(format!(
+                        "{vendor} {} (implementer {implementer}, part {})",
+                        std::env::consts::ARCH,
+                        proc_field("/proc/cpuinfo", "CPU part")?
+                    ))
+                })
+                .unwrap_or_else(|| "unknown".to_owned()),
             proc_field("/proc/meminfo", "MemTotal")
                 .and_then(|m| {
                     m.split_whitespace()
@@ -521,6 +587,7 @@ fn machine() -> Machine {
         arch: std::env::consts::ARCH.to_owned(),
         cpu,
         memory_bytes,
+        container: Path::new("/.dockerenv").exists() || std::env::var_os("container").is_some(),
     }
 }
 

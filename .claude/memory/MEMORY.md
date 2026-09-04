@@ -19,3 +19,4 @@
 - [Repo path FerroTERM](repo-path-ferroterm.md), the clone moved to RustroverProjects/FerroTERM on 2026-09-03; touch the CARGO_MANIFEST_DIR users after a rename or stale test binaries fail
 - [Crate names and publishing](crate-names-and-publishing.md), plain crates.io names since 2026-09-03 (fhir-types, rf2, concept-graph, sct-ecl, fhir-terminology, ...), separate lockstep crate line with a bump guard, Trusted Publishing lanes; new crate names are rate-limited, publish in batches
 - [Sonar MCP triage](sonar-mcp-triage.md), the owner wants every SonarQube finding triaged and fixed through the SonarQube MCP server (#209); advisory, never authority
+- [Benchmark program](benchmark-program.md), trusted per-system benchmarks from container-run records (#212/#213/#214), never hand-typed; #217 audits every claim before v0.1.0
