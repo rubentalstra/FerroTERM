@@ -73,19 +73,19 @@ tempfile = "3.27.0"
 # Workspace-internal crates. The `crates/*` members carry the published crate
 # line (lockstep, bumped with their packaged content, never the product
 # version); the tools stay on the workspace version.
-fhir-types = { path = "crates/fhir-types", version = "0.1.15" }
-rf2 = { path = "crates/rf2", version = "0.1.15" }
-loinc = { path = "crates/loinc", version = "0.1.15" }
-classification = { path = "crates/classification", version = "0.1.15" }
-dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.15" }
-gstandaard = { path = "crates/gstandaard", version = "0.1.15" }
-icd11 = { path = "crates/icd11", version = "0.1.15" }
-rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.15" }
-concept-graph = { path = "crates/concept-graph", version = "0.1.15" }
-concept-store = { path = "crates/concept-store", version = "0.1.15" }
-designation-index = { path = "crates/designation-index", version = "0.1.15" }
-sct-ecl = { path = "crates/sct-ecl", version = "0.1.15" }
-fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.15" }
+fhir-types = { path = "crates/fhir-types", version = "0.1.16" }
+rf2 = { path = "crates/rf2", version = "0.1.16" }
+loinc = { path = "crates/loinc", version = "0.1.16" }
+classification = { path = "crates/classification", version = "0.1.16" }
+dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.16" }
+gstandaard = { path = "crates/gstandaard", version = "0.1.16" }
+icd11 = { path = "crates/icd11", version = "0.1.16" }
+rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.16" }
+concept-graph = { path = "crates/concept-graph", version = "0.1.16" }
+concept-store = { path = "crates/concept-store", version = "0.1.16" }
+designation-index = { path = "crates/designation-index", version = "0.1.16" }
+sct-ecl = { path = "crates/sct-ecl", version = "0.1.16" }
+fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.16" }
 # Path-only, with no `version`: cargo then strips the dev-dependency from a
 # packaged crates/* manifest instead of looking it up on crates.io.
 ferroterm-testkit = { path = "tools/ferroterm-testkit" }

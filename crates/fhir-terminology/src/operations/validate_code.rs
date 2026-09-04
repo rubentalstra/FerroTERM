@@ -99,6 +99,44 @@ fn unserved(
     }
 }
 
+/// The failed validation of a system that is a supplement: bad data, and the
+/// supplement named as the system the client lacks (the ecosystem's
+/// `bad-supplement-url` case).
+fn supplement_as_system(
+    url: &str,
+    version: Option<&str>,
+    code: Option<&str>,
+    expression: &str,
+) -> ValidationOutcome {
+    let canonical = match version {
+        Some(version) => format!("{url}|{version}"),
+        None => url.to_owned(),
+    };
+    let text = format!(
+        "CodeSystem {canonical} is a supplement, so can't be used as a value in Coding.system"
+    );
+    ValidationOutcome {
+        result: false,
+        message: Some(text.clone()),
+        display: None,
+        code: code.map(str::to_owned),
+        system: Some(url.to_owned()),
+        version: None,
+        issues: vec![Issue {
+            severity: "error",
+            code: "invalid",
+            kind: "invalid-data",
+            text,
+            expression: super::at(expression, "system"),
+        }],
+        unknown_systems: vec![url.to_owned()],
+        x_unknown_systems: Vec::new(),
+        codeable_concept: None,
+        inactive: None,
+        status: None,
+    }
+}
+
 /// Resolves the system for a validation; a system or version the server does
 /// not serve is a `false` result, never an error (the ecosystem's rule).
 fn resolve_for(
@@ -112,6 +150,14 @@ fn resolve_for(
     match resolve(registry, invocation, url, version) {
         Ok(resolved) => Ok(Ok(resolved)),
         Err(OperationError::UnknownSystem(url)) => {
+            if let Some(supplement_version) = registry.supplement_named(&url) {
+                return Ok(Err(supplement_as_system(
+                    &url,
+                    supplement_version.as_deref(),
+                    code,
+                    expression,
+                )));
+            }
             Ok(Err(unserved(registry, &url, None, code, expression)))
         }
         Err(OperationError::UnknownVersion { url, version }) => Ok(Err(unserved(

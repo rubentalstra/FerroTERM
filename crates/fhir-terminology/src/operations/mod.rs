@@ -420,6 +420,7 @@ impl<'a> Sources<'a> {
                 match self.registry.implicit_value_set(url) {
                     Some(Ok(compose)) => Ok(Arc::new(crate::valueset::model::ValueSetModel {
                         expansion_parameters: Vec::new(),
+                        language: None,
                         url: url.to_owned(),
                         version: None,
                         supplements: Vec::new(),
@@ -488,6 +489,9 @@ impl Issue {
             }
             "invalid-display" if text.contains("There are no valid display names") => {
                 "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_ERR"
+            }
+            "invalid-display" if text.contains("the whitespace differs") => {
+                "Display_Name_WS_for__should_be_one_of__instead_of"
             }
             "invalid-display" => "Display_Name_for__should_be_one_of__instead_of",
             "not-found" if text.starts_with("Required supplement") => "VALUESET_SUPPLEMENT_MISSING",

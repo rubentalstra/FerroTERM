@@ -459,6 +459,9 @@ fn designations_of(
             return true;
         }
         wanted.iter().any(|w| match w.split_once('|') {
+            // NOTE: `urn:ietf:bcp:47|<lang>` names a language, as the parameter's
+            // definition spells it (<https://hl7.org/fhir/R5/valueset-operation-expand.html>).
+            Some(("urn:ietf:bcp:47", language)) => d.language.as_deref() == Some(language),
             Some((system, code)) => d
                 .use_
                 .as_ref()

@@ -482,6 +482,7 @@ fn the_overlay_pre_adopts_the_r6_parameters_every_earlier_version_lacks() {
         // R5 declares `useSupplement` itself; the R4 family pre-adopts it.
         let mut expected_inputs = vec![
             "lenient-display-validation",
+            "valueset-membership-only",
             "inferSystem",
             "system-version",
             "check-system-version",

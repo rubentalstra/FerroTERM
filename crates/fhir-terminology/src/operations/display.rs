@@ -179,12 +179,24 @@ fn judgement(
     let all = candidates(provider, concept)?;
     let wanted = fold(given);
     let matches = |c: &&Candidate| fold(&c.text) == wanted;
+    // NOTE: a display that differs only in its whitespace is still wrong, and
+    // said so (the ecosystem's `bad-display-ws` case).
+    let exact = |c: &&Candidate| c.text.to_lowercase() == given.to_lowercase();
+    let whitespace = |valid: &[&Candidate]| {
+        format!(
+            "Wrong Display Name '{given}' for {system}#{code}: the whitespace differs. {}",
+            valid_display(valid)
+        )
+    };
     let severity = if lenient { "warning" } else { "error" };
     let Some(requested) = requested else {
-        if all.iter().any(|c| matches(&c)) {
+        if all.iter().any(|c| exact(&c)) {
             return Ok(None);
         }
         let valid: Vec<&Candidate> = all.iter().collect();
+        if all.iter().any(|c| matches(&c)) {
+            return Ok(Some((severity, "invalid-display", whitespace(&valid))));
+        }
         return Ok(Some((
             severity,
             "invalid-display",
@@ -211,8 +223,15 @@ fn judgement(
         })
         .collect();
     if !in_language.is_empty() {
-        if in_language.iter().any(matches) {
+        if in_language.iter().any(exact) {
             return Ok(None);
+        }
+        if in_language.iter().any(matches) {
+            return Ok(Some((
+                severity,
+                "invalid-display",
+                whitespace(&in_language),
+            )));
         }
         return Ok(Some((
             severity,

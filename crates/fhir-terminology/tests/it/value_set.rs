@@ -603,14 +603,30 @@ fn validate_code_checks_display_case_and_inactive_codes() {
         url: Some(VS_ALL.to_owned()),
         code: Some(String::from("cat")),
         system: Some(ANIMALS.to_owned()),
-        display: Some(String::from("domestic  CAT")),
+        display: Some(String::from("domestic CAT")),
         ..ValueSetValidateInput::default()
     };
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &synonym).expect("validates");
+    assert!(validation.result, "a designation, case folded");
+    // NOTE: whitespace is not folded: a display that differs only there is wrong,
+    // and says so (the ecosystem's `bad-display-ws` case).
+    let spaced = ValueSetValidateInput {
+        display: Some(String::from("domestic  CAT")),
+        ..synonym
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &spaced).expect("validates");
+    assert!(!validation.result);
+    assert_eq!(validation.issues[0].kind, "invalid-display");
     assert!(
-        validation.result,
-        "a designation, whitespace and case folded"
+        validation.issues[0].text.contains("the whitespace differs"),
+        "{}",
+        validation.issues[0].text
+    );
+    assert_eq!(
+        validation.issues[0].message_id(),
+        "Display_Name_WS_for__should_be_one_of__instead_of"
     );
     let case = ValueSetValidateInput {
         url: Some(VS_ENUMERATED.to_owned()),
@@ -1161,9 +1177,11 @@ fn validate_code_judges_a_codeable_concept_coding_by_coding() {
     );
     assert_eq!(validation.x_unknown_systems, ["http://example.org/none"]);
     assert!(validation.unknown_systems.is_empty());
+    // The missing system speaks first, then the concept's verdict (the
+    // ecosystem's `codeableconcept-bad-version2` case).
     assert_eq!(
         validation.message.as_deref(),
-        Some(format!("No valid coding was found for the value set '{VS_ENUMERATED}|1.0'").as_str())
+        Some(format!("A definition for CodeSystem 'http://example.org/none' could not be found, so the code cannot be validated; No valid coding was found for the value set '{VS_ENUMERATED}|1.0'").as_str())
     );
 }
 
@@ -2115,4 +2133,198 @@ fn validate_code_refuses_an_inactive_concept_under_active_only_and_a_coding_with
             .as_str()
         )
     );
+}
+
+#[test]
+fn validate_code_judges_displays_in_the_value_sets_language() {
+    let world = World::load();
+    let german = |compose_default: bool| {
+        let mut inline = ValueSet {
+            url: Some("http://example.org/german".into()),
+            version: Some("1".into()),
+            status: "draft".into(),
+            compose: Some(ValueSetCompose {
+                include: vec![ValueSetComposeInclude {
+                    system: Some(ANIMALS.into()),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        if compose_default {
+            // `valueset-expansion-parameter` displayLanguage = de on the compose.
+            inline.compose.as_mut().expect("compose").extension = vec![Extension {
+                url: "http://hl7.org/fhir/StructureDefinition/valueset-expansion-parameter".into(),
+                extension: vec![
+                    Extension {
+                        url: "name".into(),
+                        value: Some(ExtensionValue::Code("displayLanguage".into())),
+                        ..Default::default()
+                    },
+                    Extension {
+                        url: "value".into(),
+                        value: Some(ExtensionValue::Code("de".into())),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            }];
+        } else {
+            inline.language = Some("de".into());
+        }
+        valueset::convert::r4b::convert(&inline)
+    };
+    for compose_default in [false, true] {
+        let english = ValueSetValidateInput {
+            inline_value_set: Some(german(compose_default)),
+            code: Some(String::from("cat")),
+            system: Some(ANIMALS.to_owned()),
+            display: Some(String::from("Cat")),
+            ..ValueSetValidateInput::default()
+        };
+        // NOTE: the value set's language is the one displays are judged in, so
+        // the English display is wrong here (the ecosystem's `bad-language-vs`).
+        let validation =
+            value_set_validate_code::validate_code(&world.sources(), &english).expect("validates");
+        assert!(
+            !validation.result,
+            "compose default {compose_default}: {validation:?}"
+        );
+        assert_eq!(validation.issues[0].kind, "invalid-display");
+        assert_eq!(validation.display.as_deref(), Some("Katze"));
+        let german_display = ValueSetValidateInput {
+            display: Some(String::from("Katze")),
+            ..english
+        };
+        let validation = value_set_validate_code::validate_code(&world.sources(), &german_display)
+            .expect("validates");
+        assert!(validation.result, "compose default {compose_default}");
+        assert!(validation.issues.is_empty(), "{:?}", validation.issues);
+        let requested = ValueSetValidateInput {
+            display_language: Some(String::from("en")),
+            display: Some(String::from("Cat")),
+            ..german_display
+        };
+        let validation = value_set_validate_code::validate_code(&world.sources(), &requested)
+            .expect("validates");
+        assert!(validation.result, "the request's language wins");
+        assert!(validation.issues.is_empty(), "{:?}", validation.issues);
+    }
+}
+
+#[test]
+fn validate_code_checks_membership_only_when_asked() {
+    let world = World::load();
+    let input = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("dodo")),
+        system: Some(ANIMALS.to_owned()),
+        value_set_version: Some(String::from("1.0")),
+        display: Some(String::from("Wrong")),
+        membership_only: Some(true),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(validation.result);
+    assert!(
+        validation.issues.is_empty(),
+        "no display, case, or status notes: {:?}",
+        validation.issues
+    );
+    assert_eq!(validation.inactive, Some(true), "the outputs still tell");
+    let checked = ValueSetValidateInput {
+        membership_only: None,
+        ..input
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &checked).expect("validates");
+    assert!(!validation.result);
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert!(kinds.contains(&"invalid-display"), "{kinds:?}");
+}
+
+#[test]
+fn validate_code_fails_a_codeable_concept_on_an_include_version_the_server_lacks() {
+    let world = World::load();
+    let inline = ValueSet {
+        url: Some("http://example.org/pinned-badly".into()),
+        version: Some("1".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                version: Some("9".into()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let input = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        codeable_concept: Some(vec![CodingRef {
+            system: Some(ANIMALS.to_owned()),
+            code: Some(String::from("cat")),
+            ..CodingRef::default()
+        }]),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(!validation.result);
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-found"], "the concept fails on that alone");
+    assert_eq!(validation.code, None);
+    assert_eq!(validation.system, None);
+    assert_eq!(validation.display.as_deref(), Some("Cat"));
+    assert_eq!(validation.version.as_deref(), Some("2.0"));
+    assert_eq!(validation.unknown_systems, [format!("{ANIMALS}|9")]);
+    assert_eq!(validation.message, Some(validation.issues[0].text.clone()));
+}
+
+#[test]
+fn code_system_validate_code_refuses_a_supplement_as_the_system() {
+    let world = World::load();
+    let input = fhir_terminology::operations::validate_code::ValidateCodeInput {
+        url: Some(ANIMALS_NL.to_owned()),
+        code: Some(String::from("cat")),
+        ..fhir_terminology::operations::validate_code::ValidateCodeInput::default()
+    };
+    let outcome = fhir_terminology::operations::validate_code::validate_code(
+        world.sources().registry,
+        &fhir_terminology::operations::Invocation::Type,
+        &input,
+    )
+    .expect("validates");
+    assert!(!outcome.result);
+    assert_eq!(outcome.issues[0].kind, "invalid-data");
+    assert_eq!(
+        outcome.issues[0].text,
+        format!(
+            "CodeSystem {ANIMALS_NL}|1 is a supplement, so can't be used as a value in Coding.system"
+        )
+    );
+    assert_eq!(
+        outcome.issues[0].message_id(),
+        "CODESYSTEM_CS_NO_SUPPLEMENT"
+    );
+    assert_eq!(outcome.unknown_systems, [ANIMALS_NL]);
+    assert_eq!(outcome.code.as_deref(), Some("cat"));
+}
+
+#[test]
+fn expand_filters_designations_by_a_bcp47_language() {
+    let world = World::load();
+    let request = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        include_designations: Some(true),
+        designation: vec![String::from("urn:ietf:bcp:47|de")],
+        ..ExpandInput::default()
+    };
+    let vs = expand::expand(&world.sources(), &request).expect("expands");
+    let cat = vs.contains.iter().find(|c| c.code == "cat").expect("cat");
+    let values: Vec<&str> = cat.designations.iter().map(|d| d.value.as_str()).collect();
+    assert_eq!(values, ["Katze"]);
 }

@@ -118,6 +118,9 @@ pub struct ValueSetValidateInput {
     /// `activeOnly`: an inactive concept is outside the value set (the
     /// ecosystem's extension of this operation).
     pub active_only: Option<bool>,
+    /// `valueset-membership-only`: only membership is checked, no display or
+    /// status (pre-adopted from R6).
+    pub membership_only: Option<bool>,
 }
 
 /// The value set at its negotiated version with its systems pinned, and the
@@ -147,7 +150,6 @@ fn prepare(
         version.as_deref(),
     )?;
     let model = Arc::new(ValueSetModel {
-        expansion_parameters: Vec::new(),
         compose: negotiation.pin_lenient(&model.compose),
         ..(*model).clone()
     });
@@ -161,14 +163,53 @@ struct Policy<'a> {
     language: Option<&'a str>,
     /// `abstract`: whether an abstract code may be selected.
     abstract_ok: bool,
-    /// `lenient-display-validation`: a wrong display is a warning, and the
-    /// result stays true (pre-adopted from R6).
-    lenient_display: bool,
+    /// How a display is judged.
+    display: DisplayCheck,
+    /// `valueset-membership-only`: no display, case, or status notes.
+    membership_only: bool,
     /// `inferSystem`: find the system of a bare code by its membership in the
     /// value set (pre-adopted from R6).
     infer_system: bool,
     /// What an inactive concept is to the value set.
     inactive: InactivePolicy,
+}
+
+/// The policy a request and its value set set for the validation.
+fn policy_of<'a>(input: &'a ValueSetValidateInput, model: &'a ValueSetModel) -> Policy<'a> {
+    // NOTE: a value set's own language, or its `displayLanguage` expansion
+    // default, is the language its displays are judged in when the request
+    // names none (the ecosystem's `bad-language-vs` cases).
+    let default_language = model
+        .expansion_parameters
+        .iter()
+        .find(|d| d.name == "displayLanguage")
+        .map(|d| d.value.as_str())
+        .or(model.language.as_deref());
+    let membership_only = input.membership_only.unwrap_or(false);
+    Policy {
+        language: input.display_language.as_deref().or(default_language),
+        abstract_ok: input.abstract_ok.unwrap_or(true),
+        display: if membership_only {
+            DisplayCheck::Skipped
+        } else if input.lenient_display_validation.unwrap_or(false) {
+            DisplayCheck::Lenient
+        } else {
+            DisplayCheck::Strict
+        },
+        membership_only,
+        infer_system: input.infer_system.unwrap_or(false),
+        inactive: InactivePolicy::of(input.active_only),
+    }
+}
+
+/// How an asserted display is judged: strictly (an error), leniently
+/// (`lenient-display-validation`, a warning), or not at all
+/// (`valueset-membership-only`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DisplayCheck {
+    Strict,
+    Lenient,
+    Skipped,
 }
 
 /// Whether an inactive concept is a member (the default) or refused
@@ -228,13 +269,7 @@ pub fn validate_code(
     };
     let resolver =
         Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
-    let policy = Policy {
-        language: input.display_language.as_deref(),
-        abstract_ok: input.abstract_ok.unwrap_or(true),
-        lenient_display: input.lenient_display_validation.unwrap_or(false),
-        infer_system: input.infer_system.unwrap_or(false),
-        inactive: InactivePolicy::of(input.active_only),
-    };
+    let policy = policy_of(input, &model);
     let check = |subject: &Subject<'_>| -> Result<Validation, OperationError> {
         check(sources, &model, &resolver, &negotiation, subject, &policy)
     };
@@ -370,6 +405,24 @@ fn combine(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Valida
         validation.display = None;
         return validation;
     }
+    // NOTE: a value set whose include names a version the server does not serve
+    // fails the whole concept on that coding alone, the code and system dropped
+    // (the ecosystem's `codeableconcept-*-vs1wb` cases).
+    if let Some((_, unresolvable)) = judged.iter().find(|(coding, v)| {
+        coding.system.as_deref().is_some_and(|system| {
+            include_literal_for(model, system, coding.version.as_deref()).is_some_and(|literal| {
+                v.unknown_systems
+                    .iter()
+                    .any(|c| *c == format!("{system}|{literal}"))
+            })
+        })
+    }) {
+        let mut validation = unresolvable.clone();
+        validation.code = None;
+        validation.system = None;
+        validation.message = message_of(&validation.issues);
+        return validation;
+    }
     let base = |index: usize| format!("CodeableConcept.coding[{index}]");
     if let Some((primary, (_, found))) = judged
         .iter()
@@ -393,13 +446,7 @@ fn combine(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Valida
             take_unknown(other, &mut answer);
         }
         answer.result = !answer.issues.iter().any(|i| i.severity == "error");
-        let errors: Vec<&str> = answer
-            .issues
-            .iter()
-            .filter(|i| i.severity == "error")
-            .map(|i| i.text.as_str())
-            .collect();
-        answer.message = (!errors.is_empty()).then(|| errors.join("; "));
+        answer.message = message_of(&answer.issues);
         return answer;
     }
     let mut answer = failed(
@@ -429,6 +476,7 @@ fn combine(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Valida
             .issues
             .push(this_code_not_in_vs(model, coding, &base(index)));
     }
+    answer.message = message_of(&answer.issues);
     answer
 }
 
@@ -546,18 +594,20 @@ fn check(
     // NOTE: the value set's own deprecation note stays out of `message`, the
     // ecosystem's shape (its `CONCEPT_DEPRECATED_IN_VALUESET` cases).
     let message = message_of(&issues);
-    issues.extend(deprecated_in_value_set(
-        model,
-        &item,
-        &located.code,
-        subject,
-    ));
-    issues.extend(super::standing_note(
-        "CodeSystem",
-        &format!("{system}|{version}"),
-        &provider.standing(),
-    ));
-    issues.extend(value_set_notes(sources, model, resolver));
+    if !policy.membership_only {
+        issues.extend(deprecated_in_value_set(
+            model,
+            &item,
+            &located.code,
+            subject,
+        ));
+        issues.extend(super::standing_note(
+            "CodeSystem",
+            &format!("{system}|{version}"),
+            &provider.standing(),
+        ));
+        issues.extend(value_set_notes(sources, model, resolver));
+    }
     let result = !issues.iter().any(|issue| issue.severity == "error");
     Ok(Validation {
         result,
@@ -805,6 +855,7 @@ fn resolve_target(
         return unresolvable_include(
             sources,
             model,
+            negotiation,
             system,
             subject,
             subject_served,
@@ -956,9 +1007,14 @@ fn disagreement(
 
 /// The target when the include's version is not served: the subject's version
 /// when served, else the default, and the validation fails regardless.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the fallback is described by exactly these facts"
+)]
 fn unresolvable_include(
     sources: &Sources<'_>,
     model: &ValueSetModel,
+    negotiation: &Negotiation,
     system: &str,
     subject: &Subject<'_>,
     subject_served: bool,
@@ -967,8 +1023,15 @@ fn unresolvable_include(
 ) -> Result<Target, Box<Validation>> {
     let registry = sources.registry;
     let expression = subject.expression;
+    // NOTE: a versionless subject falls back to the negotiated default
+    // (`system-version`), else the server's (the ecosystem's `vs1wb` cases).
+    let default = negotiation.system_version(system, None).ok().flatten();
     let fallback = subject.version.filter(|_| subject_served).map_or_else(
-        || registry.resolve(system, None),
+        || {
+            registry
+                .resolve(system, default.as_deref())
+                .or_else(|_| registry.resolve(system, None))
+        },
         |v| registry.resolve(system, Some(v)),
     );
     let Ok(fallback) = fallback else {
@@ -1180,12 +1243,14 @@ fn assess(
 ) -> Result<Vec<Issue>, OperationError> {
     let language = policy.language;
     let mut issues = Vec::new();
-    if let Some(note) = super::display::case_note(
-        provider,
-        subject.code,
-        &located.code,
-        super::at(subject.expression, "code"),
-    ) {
+    if !policy.membership_only
+        && let Some(note) = super::display::case_note(
+            provider,
+            subject.code,
+            &located.code,
+            super::at(subject.expression, "code"),
+        )
+    {
         issues.push(note);
     }
     if item.abstract_concept && !policy.abstract_ok {
@@ -1230,19 +1295,22 @@ fn assess(
                 subject.expression,
             ));
         }
-        if let Some((note, _)) =
-            super::inactive_note(&located.code, &status, super::whole(subject.expression))
+        if !policy.membership_only
+            && let Some((note, _)) =
+                super::inactive_note(&located.code, &status, super::whole(subject.expression))
         {
             issues.push(note);
         }
-    } else if let Some((note, _)) =
-        super::deprecated_note(&located.code, &status, super::whole(subject.expression))
+    } else if !policy.membership_only
+        && let Some((note, _)) =
+            super::deprecated_note(&located.code, &status, super::whole(subject.expression))
     {
         issues.push(note);
     }
     // NOTE: under `lenient-display-validation` a wrong display does not fail the
     // result (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
     if let Some(given) = subject.display
+        && policy.display != DisplayCheck::Skipped
         && let Some(issue) = super::display::judge(
             provider,
             located.concept,
@@ -1251,7 +1319,7 @@ fn assess(
                 code: &located.code,
                 given,
                 requested: language,
-                lenient: policy.lenient_display,
+                lenient: policy.display == DisplayCheck::Lenient,
             },
             super::at(subject.expression, "display"),
         )?

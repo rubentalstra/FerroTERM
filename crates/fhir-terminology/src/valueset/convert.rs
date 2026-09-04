@@ -184,6 +184,7 @@ macro_rules! convert_value_set {
                 Ok(ValueSetModel {
                     url,
                     version: string(&resource.version),
+                    language: text(resource.language.as_ref().and_then(|l| l.value.as_deref())),
                     supplements,
                     expansion_parameters,
                     standards_status,
