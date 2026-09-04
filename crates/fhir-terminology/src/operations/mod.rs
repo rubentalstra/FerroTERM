@@ -251,6 +251,11 @@ impl From<ProviderError> for OperationError {
             | ProviderError::MalformedImplicitValueSet { .. } => {
                 Self::ValueSetInvalid(error.to_string())
             }
+            // NOTE: an implicit concept map URI the system does not answer is the
+            // unknown-map outcome `$translate` already has for a `url` nothing serves
+            // (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>).
+            ProviderError::MalformedImplicitConceptMap { .. } => Self::Invalid(error.to_string()),
+            ProviderError::UnknownImplicitConceptMap { url } => Self::UnknownConceptMap(url),
             ProviderError::CannotDetermine(_) => Self::CannotDetermine(error.to_string()),
             ProviderError::InvalidCode { code, reason } => Self::InvalidCode { code, reason },
             other @ ProviderError::Storage(_) => Self::Provider(other),

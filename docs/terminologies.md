@@ -82,8 +82,8 @@ engine. Each row is a tracker issue under the program issue.
   `?fhir_vs=refset`, and `?fhir_vs=refset/[sctid]` on the system, edition, or
   version URI, and the `concept is-a`, `descendent-of`, and `in` (reference
   set membership) filters, `?fhir_vs=ecl/[ecl]` and the `constraint` filter
-  through the ECL evaluator (`crates/sct-ecl`); `?fhir_cm=` waits for
-  its issue.
+  through the ECL evaluator (`crates/sct-ecl`), and the implicit concept maps
+  `?fhir_cm=[sctid]` over the association and map reference sets.
 
 ## FHIR `CodeSystem` resources (HL7 Terminology and custom systems)
 

@@ -13,8 +13,8 @@ use fhir_terminology::snomed::{OpenError, SYSTEM, SnomedProvider};
 
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
-    ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, LEGS, PETS, SAME_AS, SCHEME, TOP,
-    VERSION, item, sctid,
+    ALTERNATIVE, ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, LEGS, PETS,
+    POSSIBLY_EQUIVALENT_TO, REPLACED_BY, SAME_AS, SCHEME, TOP, VERSION, item, sctid,
 };
 
 fn provider() -> (tempfile::TempDir, SnomedProvider) {
@@ -53,7 +53,7 @@ fn identity_and_declaration_follow_the_manifest() {
     assert!(codes.contains(&sctid(item(COVERING)).as_str()));
     assert!(codes.contains(&sctid(item(LEGS)).as_str()));
     assert_eq!(p.language_refsets(), [snomed::GB_REFSET, snomed::NL_REFSET]);
-    assert_eq!(p.all().expect("all").len(), 13);
+    assert_eq!(p.all().expect("all").len(), 16);
 }
 
 #[test]
@@ -223,7 +223,18 @@ fn the_hierarchy_answers_subsumption_and_the_filters_from_the_closure() {
     assert_eq!(
         leaves.iter().collect::<Vec<_>>(),
         [
-            CAT, DOG, FUR, COVERING, LEGS, PETS, CODES_MAP, SAME_AS, SCHEME
+            CAT,
+            DOG,
+            FUR,
+            COVERING,
+            LEGS,
+            PETS,
+            CODES_MAP,
+            SAME_AS,
+            SCHEME,
+            REPLACED_BY,
+            POSSIBLY_EQUIVALENT_TO,
+            ALTERNATIVE
         ]
     );
 }
@@ -339,7 +350,7 @@ fn the_implicit_value_sets_follow_the_snomed_ct_page() {
         .expect("compose");
     assert_eq!(
         refsets.include[0].concepts.len(),
-        3,
+        6,
         "every reference set with concept members"
     );
     assert!(
@@ -454,7 +465,7 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
         op: FilterOperator::Equal,
         value: value.to_owned(),
     };
-    assert_eq!(p.filter(&expressions("false")).expect("all").len(), 13);
+    assert_eq!(p.filter(&expressions("false")).expect("all").len(), 16);
     assert!(matches!(
         p.filter(&expressions("true")),
         Err(ProviderError::UnsupportedFilter { .. })

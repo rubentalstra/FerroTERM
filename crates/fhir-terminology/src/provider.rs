@@ -379,6 +379,23 @@ pub struct Subproperty {
     pub description: Option<String>,
 }
 
+/// One concept a system names in place of an inactive one.
+///
+/// SNOMED CT states these in its historical association reference sets, so a
+/// translation of a retired concept answers with its successor
+/// (<https://hl7.org/fhir/R4B/snomedct.html>).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Successor {
+    /// The code that stands in for the inactive one.
+    pub code: String,
+    /// Its display.
+    pub display: Option<String>,
+    /// The relationship the association asserts.
+    pub relationship: crate::conceptmap::model::Relationship,
+    /// The canonical of the implicit concept map the association forms.
+    pub map: String,
+}
+
 /// A failure inside a provider.
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {
@@ -440,6 +457,20 @@ pub enum ProviderError {
         url: String,
         /// Why.
         reason: String,
+    },
+    /// An implicit concept map URI of this system is malformed.
+    #[error("implicit concept map `{url}` is malformed: {reason}")]
+    MalformedImplicitConceptMap {
+        /// The URI.
+        url: String,
+        /// Why.
+        reason: String,
+    },
+    /// An implicit concept map URI names a map this system does not hold.
+    #[error("implicit concept map `{url}` names no map this code system holds")]
+    UnknownImplicitConceptMap {
+        /// The URI.
+        url: String,
     },
 }
 
@@ -629,6 +660,29 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// own says so.
     fn implicit_metadata(&self, _url: &str) -> ImplicitMetadata {
         ImplicitMetadata::default()
+    }
+
+    /// The concepts this system names in place of an inactive one, from its
+    /// own historical associations. The default declares none.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails.
+    fn successors(&self, _concept: Concept) -> Result<Vec<Successor>, ProviderError> {
+        Ok(Vec::new())
+    }
+
+    /// The `ConceptMap` an implicit concept map URI of this system denotes,
+    /// when the system defines implicit concept maps and `url` is one of them.
+    ///
+    /// `None` when the URI is not an implicit concept map of this system; the
+    /// error when it is malformed or names a map the system does not hold.
+    /// The default declares none.
+    fn implicit_concept_map(
+        &self,
+        _url: &str,
+    ) -> Option<Result<crate::conceptmap::model::ConceptMapModel, ProviderError>> {
+        None
     }
 
     /// The concepts a filter selects.
