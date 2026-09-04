@@ -13,6 +13,8 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.10] - 2026-09-04
+
 ### Added
 
 - `CapabilityStatement.rest[mode = server].security.service` on every served version, which the terminology ecosystem requires. A deployment names the authentication in front of the server with `FERROTERM_SECURITY_SERVICE` (codes of the FHIR `restful-security-service` value set, comma-separated); the server itself authenticates nobody and says so in text when a deployment declares none.
@@ -582,7 +584,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.9...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.10...HEAD
+[0.0.10]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.10
 [0.0.9]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.9
 [0.0.8]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.8
 [0.0.7]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.7
