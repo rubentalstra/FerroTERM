@@ -182,7 +182,17 @@ fn the_publication_builds_from_a_document_a_directory_or_a_zip() {
         [CodeSystemConceptPropertyValue::Coding(coding)]
             if coding.system.as_ref().and_then(|s| s.value.as_deref()) == Some("http://snomed.info/sct")
     ));
+}
 
+#[test]
+fn the_ordinal_lists_and_the_zip_build_the_same_resources() {
+    let source = tempfile::tempdir().expect("tempdir");
+    let document = write_publication(source.path()).expect("writes");
+    let out = tempfile::tempdir().expect("tempdir");
+    let report = ferroterm_build::run(&cli(document.clone(), out.path())).expect("builds");
+    let ferroterm_build::Report::Labcodeset(report) = report else {
+        panic!("a Labcodeset report");
+    };
     // The ordinal list: a value set under its OID, over SNOMED CT.
     let value = read_json(
         &report
