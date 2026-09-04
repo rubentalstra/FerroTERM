@@ -1,34 +1,25 @@
 # Hardware sizing
 
-FerroTERM is built to run an edition on ordinary hardware. This page gives
-measurements of v0.0.9 and where the memory goes.
-
-> [!NOTE]
-> The figures were taken on a laptop over the licensed Dutch SNOMED CT edition
-> of June 2026 (548,949 concepts, active and inactive), with the public
-> ICD-10-CM FY2026 release and the RxNorm prescribable subset loaded beside it.
-> Your numbers vary with the edition and the machine; the shape holds.
+FerroTERM is built to run an edition on ordinary hardware. This page says
+where the memory goes and how to size a machine; the measurements themselves
+(build time and peak build memory per release, the index on disk, the server's
+resident memory, the latency of every operation) are on the
+[benchmarks page](../evaluate/benchmarks.md), rendered from the committed
+records so no figure on this site is typed by hand. Your numbers vary with the
+edition and the machine; the shape below holds.
 
 <!-- toc -->
 
-## Measured
-
-| What | Figure |
-|---|---|
-| Build the Dutch edition from the release zip | 49 s |
-| The Dutch edition on disk | 637 MB (`store.redb`, `hierarchy.bin`, `text.bin`, `refsets.bin`, `attributes.bin`, `members.bin`) |
-| ICD-10-CM FY2026 (98,827 codes) | 8 s to build, 38 MB |
-| RxNorm prescribable subset (81,468 concepts, 1.13 million edges) | 11 s to build, 68 MB |
-| Server start with the three indexes | 0.5 s |
-| Resident memory after start, all three | 578 MB |
-| Resident memory after 200 lookups and two expansions | 423 MB |
-| `$lookup` of a SNOMED CT concept, end to end with `curl` | about 2.5 ms |
-| `$lookup` of an ICD-10-CM code | about 0.6 ms |
+## What the records show
 
 The resident figure is mostly the memory-mapped files the kernel has paged in;
-it moves with the page cache and shrinks under pressure. The design target for
-point reads is under 1 ms; the millisecond-scale figures above are measured
-over HTTP with `curl` on the same machine and are tracked as a performance
+it moves with the page cache and shrinks under pressure, so a server that shows
+several hundred MB resident after warm-up is not holding that much heap. The
+build is the expensive step: it holds a whole release in memory while it
+computes the transitive closure, so peak build memory is several times the
+size of the finished index and is the figure to size a build machine by. The
+design target for point reads is under 1 ms measured over HTTP on the same
+machine; a millisecond-scale figure in a record is tracked as a performance
 issue, not called done.
 
 ## Where the memory goes
@@ -48,7 +39,7 @@ bitset would need.
 
 ## Disk and CPU
 
-Size the disk for the indexes you load; the table above gives the shape. The
+Size the disk for the indexes you load; the benchmarks page gives each index's size. The
 offline build is the CPU-heavy step, once per release, in `ferroterm-build`.
 Serving is a point read or a bitmap operation, so a modest CPU handles it: a
 2 to 4 GB box with two cores serves an edition beside other services. A paged

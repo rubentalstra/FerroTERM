@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>FerroTERM benchmarks: build time, index size, memory, and latency per code system</title>
+  <meta name="description" content="What each code system costs FerroTERM to build and serve, and how fast every FHIR terminology operation answers, rendered from committed benchmark records with the machine, the method, and the conditions beside every number.">
+  <link rel="icon" type="image/svg+xml" href="./assets/logo-mark.svg">
+  <link rel="canonical" href="https://ferroterm.eu/benchmarks.html">
+  <meta property="og:url" content="https://ferroterm.eu/benchmarks.html">
+  <link rel="stylesheet" href="./style.css">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="FerroTERM benchmarks">
+  <meta property="og:description" content="Build time, index size, memory, and latency per operation for every code system FerroTERM serves, from committed benchmark records.">
+  <meta property="og:site_name" content="FerroTERM">
+</head>
+<body>
+
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="./">
+        <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
+        <span>FerroTERM</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="./docs/">Docs</a>
+        <a href="./docs/evaluate/code-systems.html" class="hide-sm">Code systems</a>
+        <a href="./benchmarks.html" aria-current="page">Benchmarks</a>
+        <a href="https://github.com/rubentalstra/FerroTERM" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+
+    <section class="hero hero-compact">
+      <div class="wrap">
+        <span class="eyebrow">Benchmarks</span>
+        <h1>What each code system costs to build and serve, and how fast it answers</h1>
+        <p class="sub">
+          Every number on this page is rendered from a benchmark record
+          committed to the repository, one file per code system and run; a
+          check fails when this page and the records disagree. The machine, the
+          method, and the conditions stand beside every figure, and a number
+          that was not measured says so.
+        </p>
+      </div>
+    </section>
+
+    <section id="method" class="surface">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Method</span>
+          <h2>How a record is taken</h2>
+        </div>
+        <div class="prose">
+          <p>
+            The harness (<code>ferroterm-bench</code>, in the repository under
+            <code>tools/</code>) builds the release into an index with
+            <code>ferroterm-build</code>, timing the build and reading its peak
+            resident memory from the operating system; starts the server over
+            the index and times the wait until <code>/health</code> answers;
+            reads the server's resident memory after start and again after the
+            warm requests; and, for each operation, sends one cold request
+            followed by the warm requests, timing every HTTP round trip from
+            the same machine. The latency columns are the cold request and the
+            nearest-rank p50, p95, and p99 of the warm requests.
+          </p>
+          <p>
+            A request that answers anything other than a 2xx status fails the
+            run for that system and no record is written, so a record never
+            holds the latency of an error response. Runs for this page are
+            taken inside the repository's benchmark container
+            (<code>bench/compose.yaml</code>), which builds the server, the
+            build tool, and the harness on digest-pinned images and mounts the
+            licensed releases read-only, so the environment is the same from
+            one machine to the next. Resident memory is mostly the
+            memory-mapped index the kernel has paged in; it moves with the
+            page cache and shrinks under pressure. Units fit the value:
+            seconds, milliseconds, or microseconds; GB, MB, or KB.
+          </p>
+          <p>
+            The repository ships no code system content. To take a record over
+            the releases you are licensed for, follow the
+            <a href="./docs/evaluate/benchmarks.html">benchmarks chapter</a>
+            of the book; a record you take on your hardware is the number that
+            matters for your deployment.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="records">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">The records</span>
+          <h2>Per code system</h2>
+          <p>
+            Each row links to the record it was rendered from. A cell reads
+            <code>n/a</code> when the system defines no such operation, for
+            instance a code system with no whole-system value set to expand.
+          </p>
+        </div>
+        <div class="prose prose-wide">
+          <!-- bench-table:begin -->
+<p class="conditions">Warm p50 over 200 HTTP round trips on one machine, inside a Docker container (Apple aarch64 (implementer 0x61, part 0x000), 8.22 GB, linux/aarch64), FerroTERM 0.0.9 serving FHIR R4B, taken 2026-09-04.</p>
+<h3>Footprint</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Code system</th><th>Release</th><th>Concepts</th><th>Build</th><th>Peak build memory</th><th>Index on disk</th><th>Time to ready</th><th>Resident, open</th><th>Resident, warm</th></tr></thead>
+<tbody>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/icd-10-cm-2026-09-04T09-16-57-858505552Z.json" rel="noopener">ICD-10-CM</a></th><td>2026</td><td>98,827</td><td>1.7 s</td><td>319 MB</td><td>40 MB</td><td>111.98 ms</td><td>43 MB</td><td>45 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/icd-11-mms-2026-09-04T09-17-03-558396221Z.json" rel="noopener">ICD-11 MMS</a></th><td>2026-01</td><td>37,211</td><td>n/a</td><td>n/a</td><td>34 MB</td><td>213.37 ms</td><td>57 MB</td><td>60 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/loinc-2026-09-04T09-16-55-946117093Z.json" rel="noopener">LOINC</a></th><td>2.83</td><td>257,266</td><td>12.89 s</td><td>2.27 GB</td><td>260 MB</td><td>333.03 ms</td><td>118 MB</td><td>124 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/rxnorm-prescribable-subset-2026-09-04T09-17-03-166797554Z.json" rel="noopener">RxNorm (prescribable subset)</a></th><td>09082026</td><td>81,468</td><td>4.49 s</td><td>568 MB</td><td>72 MB</td><td>459.46 ms</td><td>73 MB</td><td>86 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/snomed-ct-international-edition-2026-09-04T09-16-41-025864294Z.json" rel="noopener">SNOMED CT (International edition)</a></th><td>20260901</td><td>535,502</td><td>36.81 s</td><td>2.49 GB</td><td>486 MB</td><td>648.55 ms</td><td>393 MB</td><td>402 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/snomed-ct-netherlands-edition-2026-09-04T09-16-02-189844762Z.json" rel="noopener">SNOMED CT (Netherlands edition)</a></th><td>20260630</td><td>548,949</td><td>62.92 s</td><td>3.41 GB</td><td>668 MB</td><td>873.6 ms</td><td>465 MB</td><td>475 MB</td></tr>
+</tbody></table></div>
+<h3>Latency per operation</h3>
+<p>Each operation: the first request cold, then the nearest-rank p50, p95, and p99 over the warm requests.</p>
+<h4><code>$lookup</code></h4>
+<div class="table-wrap"><table>
+<thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
+<tbody>
+<tr><th scope="row">ICD-10-CM</th><td>2.11 ms</td><td>104 µs</td><td>134 µs</td><td>176 µs</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>2.87 ms</td><td>263 µs</td><td>290 µs</td><td>312 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>7.27 ms</td><td>265 µs</td><td>288 µs</td><td>306 µs</td></tr>
+<tr><th scope="row">RxNorm (prescribable subset)</th><td>13.05 ms</td><td>1.41 ms</td><td>1.58 ms</td><td>1.75 ms</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>29.73 ms</td><td>915 µs</td><td>968 µs</td><td>985 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>52.28 ms</td><td>934 µs</td><td>1.09 ms</td><td>1.38 ms</td></tr>
+</tbody></table></div>
+<h4><code>$validate-code</code></h4>
+<div class="table-wrap"><table>
+<thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
+<tbody>
+<tr><th scope="row">ICD-10-CM</th><td>79 µs</td><td>103 µs</td><td>352 µs</td><td>560 µs</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>125 µs</td><td>115 µs</td><td>125 µs</td><td>131 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>151 µs</td><td>116 µs</td><td>127 µs</td><td>136 µs</td></tr>
+<tr><th scope="row">RxNorm (prescribable subset)</th><td>195 µs</td><td>134 µs</td><td>148 µs</td><td>155 µs</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>157 µs</td><td>116 µs</td><td>127 µs</td><td>135 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>1.72 ms</td><td>118 µs</td><td>127 µs</td><td>139 µs</td></tr>
+</tbody></table></div>
+<h4><code>$subsumes</code></h4>
+<div class="table-wrap"><table>
+<thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
+<tbody>
+<tr><th scope="row">ICD-10-CM</th><td>212 µs</td><td>111 µs</td><td>120 µs</td><td>126 µs</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">LOINC</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">RxNorm (prescribable subset)</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>1.24 ms</td><td>111 µs</td><td>122 µs</td><td>127 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>728 µs</td><td>112 µs</td><td>121 µs</td><td>132 µs</td></tr>
+</tbody></table></div>
+<h4><code>$expand (a small value set)</code></h4>
+<div class="table-wrap"><table>
+<thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
+<tbody>
+<tr><th scope="row">ICD-10-CM</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>1.91 ms</td><td>126 µs</td><td>139 µs</td><td>148 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>4.62 ms</td><td>127 µs</td><td>148 µs</td><td>152 µs</td></tr>
+<tr><th scope="row">RxNorm (prescribable subset)</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>30.25 ms</td><td>526 µs</td><td>556 µs</td><td>584 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>40.04 ms</td><td>838 µs</td><td>895 µs</td><td>1.34 ms</td></tr>
+</tbody></table></div>
+<h4><code>$expand (the whole system, one page)</code></h4>
+<div class="table-wrap"><table>
+<thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
+<tbody>
+<tr><th scope="row">ICD-10-CM</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>123 µs</td><td>125 µs</td><td>138 µs</td><td>141 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>11.66 ms</td><td>6.46 ms</td><td>8.29 ms</td><td>11.45 ms</td></tr>
+<tr><th scope="row">RxNorm (prescribable subset)</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>10.76 ms</td><td>3.9 ms</td><td>4.55 ms</td><td>5.78 ms</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>16.86 ms</td><td>6.91 ms</td><td>9.08 ms</td><td>14.76 ms</td></tr>
+</tbody></table></div>
+<h4><code>$expand with filter (designation search)</code></h4>
+<div class="table-wrap"><table>
+<thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
+<tbody>
+<tr><th scope="row">ICD-10-CM</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>167 µs</td><td>139 µs</td><td>153 µs</td><td>162 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>5.02 ms</td><td>1.45 ms</td><td>1.64 ms</td><td>1.74 ms</td></tr>
+<tr><th scope="row">RxNorm (prescribable subset)</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>4.99 ms</td><td>357 µs</td><td>389 µs</td><td>405 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>4.44 ms</td><td>869 µs</td><td>908 µs</td><td>1.23 ms</td></tr>
+</tbody></table></div>
+<h3>Reference-server comparison</h3>
+<p>A comparison is stated only when the reference server ran on the same machine over the same release, with its configuration recorded in the record.</p>
+<ul>
+<li><strong>ICD-10-CM:</strong> not run</li>
+<li><strong>ICD-11 MMS:</strong> not run</li>
+<li><strong>LOINC:</strong> not run</li>
+<li><strong>RxNorm (prescribable subset):</strong> not run</li>
+<li><strong>SNOMED CT (International edition):</strong> not run</li>
+<li><strong>SNOMED CT (Netherlands edition):</strong> not run</li>
+</ul>
+          <!-- bench-table:end -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="./">
+            <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
+            <span>FerroTERM</span>
+          </a>
+          <p>
+            A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD, RxNorm, and every FHIR code system.
+            The software is licensed under
+            <a href="https://github.com/rubentalstra/FerroTERM/blob/main/LICENSE" rel="noopener">Apache License 2.0</a>.
+            SNOMED CT is a registered trademark of SNOMED International; each
+            code system's content is licensed separately by its owner.
+          </p>
+        </div>
+        <div class="footer-links">
+          <div>
+            <h4>Read</h4>
+            <ul>
+              <li><a href="./docs/">Documentation</a></li>
+              <li><a href="./docs/evaluate/code-systems.html">Code systems</a></li>
+              <li><a href="./benchmarks.html">Benchmarks</a></li>
+              <li><a href="./docs/integrate/fhir-api.html">FHIR terminology API</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Project</h4>
+            <ul>
+              <li><a href="https://github.com/rubentalstra/FerroTERM" rel="noopener">GitHub</a></li>
+              <li><a href="https://github.com/rubentalstra/FerroTERM/releases" rel="noopener">Releases</a></li>
+              <li><a href="https://github.com/rubentalstra/FerroTERM/issues" rel="noopener">Issues</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="footer-note">
+        <span>FerroTERM, a FerroEHR sibling project. ferroterm.eu</span>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
