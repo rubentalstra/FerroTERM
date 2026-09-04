@@ -27,8 +27,11 @@ async fn expand_by_get_and_post_returns_the_value_set_with_its_expansion() {
     assert_eq!(body["resourceType"], "ValueSet");
     assert_eq!(body["url"], VS_PETS);
     let contains = body["expansion"]["contains"].as_array().expect("contains");
+    // The compose is one `is-a` include, so the expansion nests: `pet` is the root
+    // and `kitten`, which the fixture subsumes under it, its child.
     let codes: Vec<&str> = contains.iter().filter_map(|c| c["code"].as_str()).collect();
-    assert_eq!(codes, ["kitten", "pet"]);
+    assert_eq!(codes, ["pet"]);
+    assert_eq!(contains[0]["contains"][0]["code"], "kitten");
     assert_eq!(body["expansion"]["total"], 2);
     let used: Vec<&str> = body["expansion"]["parameter"]
         .as_array()
@@ -52,10 +55,8 @@ async fn expand_by_get_and_post_returns_the_value_set_with_its_expansion() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["expansion"]["total"], 9);
     assert_eq!(body["expansion"]["offset"], 1);
-    assert_eq!(
-        body["expansion"]["contains"].as_array().map(Vec::len),
-        Some(2)
-    );
+    // The page carries two concepts; nested, they may be a parent and its child.
+    assert_eq!(crate::ecosystem::counted(&body["expansion"]["contains"]), 2);
 }
 
 #[tokio::test]

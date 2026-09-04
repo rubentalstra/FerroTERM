@@ -110,6 +110,10 @@ pub enum ParameterValue {
 }
 
 /// One concept of the expansion page.
+#[expect(
+    clippy::struct_field_names,
+    reason = "`contains.contains` is the FHIR element's own name"
+)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Contains {
     /// The code system URI.
@@ -129,6 +133,9 @@ pub struct Contains {
     /// The properties asked for with `property`
     /// (<https://hl7.org/fhir/R5/valueset-operation-expand.html>).
     pub properties: Vec<Property>,
+    /// The entry's children, when the expansion carries the system's hierarchy
+    /// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.expansion.contains>).
+    pub contains: Vec<Contains>,
 }
 
 /// One property the expansion returns on its concepts, for
@@ -213,7 +220,7 @@ pub fn expand(
         )));
     }
     let contains = contains(sources, &expansion, input)?;
-    let properties = expansion_properties(sources, &expansion, &contains)?;
+    let properties = expansion_properties(sources, &contains)?;
     // The message says what is wrong; the conversion error adds nothing to it.
     let Ok(offset) = u64::try_from(expansion.offset) else {
         return Err(OperationError::Invalid(String::from(
@@ -292,6 +299,7 @@ fn options(input: &ExpandInput) -> Result<Options, OperationError> {
     };
     Ok(Options {
         active_only: input.active_only.unwrap_or(false),
+        exclude_nested: input.exclude_nested.unwrap_or(false),
         exclude_not_for_ui: input.exclude_not_for_ui.unwrap_or(false),
         exclude_post_coordinated: input.exclude_post_coordinated.unwrap_or(false),
         text: input.filter.clone(),
@@ -427,7 +435,7 @@ fn contains(
 ) -> Result<Vec<Contains>, OperationError> {
     let include_designations = input.include_designations.unwrap_or(false);
     let wanted: Vec<&str> = input.designation.iter().map(String::as_str).collect();
-    let mut out = Vec::with_capacity(expansion.items.len());
+    let mut out: Vec<(usize, Contains)> = Vec::with_capacity(expansion.items.len());
     for item in &expansion.items {
         let designations = if include_designations {
             designations_of(sources, item, &wanted)?
@@ -446,18 +454,46 @@ fn contains(
         } else {
             properties_of(sources, item, &asked)?
         };
-        out.push(Contains {
-            system: item.system.clone(),
-            version: item.version.clone(),
-            code: item.code.clone(),
-            display: item.display.clone(),
-            abstract_concept: item.abstract_concept,
-            inactive: item.inactive,
-            designations,
-            properties,
-        });
+        out.push((
+            item.depth,
+            Contains {
+                system: item.system.clone(),
+                version: item.version.clone(),
+                code: item.code.clone(),
+                display: item.display.clone(),
+                abstract_concept: item.abstract_concept,
+                inactive: item.inactive,
+                designations,
+                properties,
+                contains: Vec::new(),
+            },
+        ));
     }
-    Ok(out)
+    Ok(nest(out))
+}
+
+/// The pre-order page as a tree: an entry deeper than the one before it
+/// becomes its child. A flat page (every depth `0`) comes back unchanged.
+fn nest(page: Vec<(usize, Contains)>) -> Vec<Contains> {
+    let mut entries = page.into_iter().peekable();
+    level(&mut entries, 0)
+}
+
+/// The entries of `entries` that belong at `depth` or deeper, as one level of
+/// the tree; each entry takes the deeper entries that follow it as its own.
+fn level(
+    entries: &mut std::iter::Peekable<std::vec::IntoIter<(usize, Contains)>>,
+    depth: usize,
+) -> Vec<Contains> {
+    let mut out = Vec::new();
+    while entries.peek().is_some_and(|(at, _)| *at >= depth) {
+        let Some((_, mut entry)) = entries.next() else {
+            break;
+        };
+        entry.contains = level(entries, depth.saturating_add(1));
+        out.push(entry);
+    }
+    out
 }
 
 /// The designations of an item the client asked for: by language, or by
@@ -542,18 +578,28 @@ fn properties_of(
 /// declares for each, for `expansion.property`.
 fn expansion_properties(
     sources: &Sources<'_>,
-    expansion: &Expansion,
     contains: &[Contains],
 ) -> Result<Vec<ExpansionProperty>, OperationError> {
     let mut out: Vec<ExpansionProperty> = Vec::new();
-    for (item, entry) in expansion.items.iter().zip(contains) {
+    declared(sources, contains, &mut out)?;
+    Ok(out)
+}
+
+/// Adds to `out` the properties `entries` and their children carry, each once,
+/// in order of appearance.
+fn declared(
+    sources: &Sources<'_>,
+    entries: &[Contains],
+    out: &mut Vec<ExpansionProperty>,
+) -> Result<(), OperationError> {
+    for entry in entries {
         for property in &entry.properties {
             if out.iter().any(|p| p.code == property.code) {
                 continue;
             }
             let resolved = sources
                 .registry
-                .resolve(&item.system, Some(&item.version))?;
+                .resolve(&entry.system, Some(&entry.version))?;
             let uri = resolved
                 .provider
                 .declaration()
@@ -566,6 +612,7 @@ fn expansion_properties(
                 uri,
             });
         }
+        declared(sources, &entry.contains, out)?;
     }
-    Ok(out)
+    Ok(())
 }

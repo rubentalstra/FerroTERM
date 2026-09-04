@@ -185,12 +185,9 @@ async fn expand_returns_properties_under_r5() {
         body["expansion"]["property"][0]["uri"],
         "http://example.org/legs"
     );
-    let kitten = body["expansion"]["contains"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|c| c["code"] == "kitten")
-        .expect("kitten");
+    // `VS_PETS` is one `is-a` include, so the expansion nests and `kitten` is a child.
+    let kitten =
+        crate::ecosystem::contained(&body["expansion"]["contains"], "kitten").expect("kitten");
     assert_eq!(kitten["property"][0]["code"], "legs");
     assert_eq!(kitten["property"][0]["valueInteger"], 4);
     let (status, body) = server

@@ -216,7 +216,7 @@ macro_rules! render_value_set {
             };
 
             use crate::compose::{Compose, Include};
-            use crate::operations::expand::{ExpansionOutcome, ParameterValue};
+            use crate::operations::expand::{Contains, ExpansionOutcome, ParameterValue};
             use crate::valueset::model::ValueSetModel;
 
             render_value_set!(@helpers $properties, $module);
@@ -292,6 +292,67 @@ macro_rules! render_value_set {
             ///
             /// The definition (the compose when `includeDefinition` asked for it) and
             /// the `expansion` with its identifier, timestamp, total, offset, echoed
+            /// Every system and version the tree names, for `contains.version`.
+            fn systems<'a>(
+                items: &'a [Contains],
+                versions: &mut std::collections::BTreeMap<
+                    &'a str,
+                    std::collections::BTreeSet<&'a str>,
+                >,
+            ) {
+                for item in items {
+                    versions
+                        .entry(item.system.as_str())
+                        .or_default()
+                        .insert(item.version.as_str());
+                    systems(&item.contains, versions);
+                }
+            }
+
+            /// One level of the expansion tree, with its children below it.
+            fn entries(
+                items: &[Contains],
+                versions: &std::collections::BTreeMap<
+                    &str,
+                    std::collections::BTreeSet<&str>,
+                >,
+            ) -> Vec<ValueSetExpansionContains> {
+                items
+                .iter()
+                .map(|item| {
+                    let entry = ValueSetExpansionContains {
+                        system: Some(item.system.as_str().into()),
+                        version: versions
+                            .get(item.system.as_str())
+                            .filter(|v| v.len() > 1)
+                            .map(|_| item.version.as_str().into()),
+                        r#abstract: item.abstract_concept.then_some(true.into()),
+                        inactive: item.inactive.then_some(true.into()),
+                        code: Some(item.code.as_str().into()),
+                        display: item.display.as_deref().map(Into::into),
+                        designation: item
+                            .designations
+                            .iter()
+                            .map(|d| ValueSetComposeIncludeConceptDesignation {
+                                language: d.language.as_deref().map(Into::into),
+                                r#use: d.use_.as_ref().map(|u| Coding {
+                                    system: Some(u.system.as_str().into()),
+                                    code: Some(u.code.as_str().into()),
+                                    display: u.display.as_deref().map(Into::into),
+                                    ..Default::default()
+                                }),
+                                value: d.value.as_str().into(),
+                                ..Default::default()
+                            })
+                            .collect(),
+                        contains: entries(&item.contains, versions),
+                        ..Default::default()
+                    };
+                    render_value_set!(@properties $properties, $module, entry, item)
+                })
+                .collect()
+            }
+
             /// parameters, and page.
             #[must_use]
             pub fn expansion(outcome: &ExpansionOutcome) -> ValueSet {
@@ -326,46 +387,8 @@ macro_rules! render_value_set {
                 // (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.expansion.contains.version>).
                 let mut versions: std::collections::BTreeMap<&str, std::collections::BTreeSet<&str>> =
                     std::collections::BTreeMap::new();
-                for item in &outcome.contains {
-                    versions
-                        .entry(item.system.as_str())
-                        .or_default()
-                        .insert(item.version.as_str());
-                }
-                let contains = outcome
-                    .contains
-                    .iter()
-                    .map(|item| {
-                        let entry = ValueSetExpansionContains {
-                            system: Some(item.system.as_str().into()),
-                            version: versions
-                                .get(item.system.as_str())
-                                .filter(|v| v.len() > 1)
-                                .map(|_| item.version.as_str().into()),
-                            r#abstract: item.abstract_concept.then_some(true.into()),
-                            inactive: item.inactive.then_some(true.into()),
-                            code: Some(item.code.as_str().into()),
-                            display: item.display.as_deref().map(Into::into),
-                            designation: item
-                                .designations
-                                .iter()
-                                .map(|d| ValueSetComposeIncludeConceptDesignation {
-                                    language: d.language.as_deref().map(Into::into),
-                                    r#use: d.use_.as_ref().map(|u| Coding {
-                                        system: Some(u.system.as_str().into()),
-                                        code: Some(u.code.as_str().into()),
-                                        display: u.display.as_deref().map(Into::into),
-                                        ..Default::default()
-                                    }),
-                                    value: d.value.as_str().into(),
-                                    ..Default::default()
-                                })
-                                .collect(),
-                            ..Default::default()
-                        };
-                        render_value_set!(@properties $properties, $module, entry, item)
-                    })
-                    .collect();
+                systems(&outcome.contains, &mut versions);
+                let contains = entries(&outcome.contains, &versions);
                 let expansion = ValueSetExpansion {
                     identifier: Some(outcome.identifier.as_str().into()),
                     timestamp: outcome.timestamp.as_str().into(),

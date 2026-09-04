@@ -7,6 +7,8 @@ icd-11/cs-validate-pc
 icd-11/cs-validate-uri
 icd-11/expand-adhoc-bad-code
 icd-11/expand-adhoc-enum-uri
+icd-11/expand-adhoc-isa
+icd-11/expand-adhoc-isa-uri
 icd-11/expand-bad-url
 icd-11/expand-inline-vs
 icd-11/expand-pcs

@@ -13,7 +13,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use crate::filter::Filter;
+use crate::filter::{Filter, FilterOperator};
 use crate::language;
 use crate::provider::{CodeSystemProvider, Concept, ConceptSet, ProviderError};
 use crate::registry::{Registry, ResolveError};
@@ -64,10 +64,17 @@ pub struct Compose {
 }
 
 /// The request-time controls of an expansion (`$expand` parameters).
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag is a boolean parameter the operation declares, named as it names it"
+)]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Options {
     /// `activeOnly`: drop inactive concepts.
     pub active_only: bool,
+    /// `excludeNested`: keep the expansion flat even where the compose admits
+    /// the system's hierarchy.
+    pub exclude_nested: bool,
     /// `excludeNotForUI`: drop the abstract (`notSelectable`) groupers.
     pub exclude_not_for_ui: bool,
     /// `excludePostCoordinated`: drop post-coordinated expressions.
@@ -97,6 +104,9 @@ pub struct Item {
     pub inactive: bool,
     /// Whether the concept is abstract.
     pub abstract_concept: bool,
+    /// The item's depth in a nested expansion; `0` for a root and for every
+    /// item of a flat one.
+    pub depth: usize,
 }
 
 /// A code system version an expansion used, for `expansion.parameter`.
@@ -122,6 +132,8 @@ pub struct Expansion {
     pub items: Vec<Item>,
     /// The system versions used.
     pub versions: Vec<UsedVersion>,
+    /// Whether `items` carry the system's hierarchy in their depths.
+    pub nested: bool,
 }
 
 /// Resolves `include.valueSet` references to their complete expansions.
@@ -292,6 +304,9 @@ impl<'a> Expander<'a> {
             }
         }
         let total = selections.values().map(|s| s.set.len()).sum();
+        // NOTE: a nested expansion pages over its pre-order flattening, so `count`
+        // and `offset` mean the same thing they do in a flat one.
+        let mut nested = false;
         let mut items = Vec::new();
         let mut skip = options.offset;
         let mut remaining = options.count.unwrap_or(usize::MAX);
@@ -304,8 +319,18 @@ impl<'a> Expander<'a> {
                 skip = skip.saturating_sub(len);
                 continue;
             }
-            for index in selection.set.iter().skip(skip).take(remaining) {
-                items.push(materialize(url, version, selection, index, options)?);
+            let order: Vec<(u32, usize)> = match nests(compose, options)
+                .then(|| preorder(selection))
+                .flatten()
+            {
+                Some(order) => {
+                    nested = true;
+                    order
+                }
+                None => selection.set.iter().map(|index| (index, 0)).collect(),
+            };
+            for (index, depth) in order.into_iter().skip(skip).take(remaining) {
+                items.push(materialize(url, version, selection, index, depth, options)?);
             }
             remaining = remaining.saturating_sub(len.saturating_sub(skip));
             skip = 0;
@@ -317,6 +342,7 @@ impl<'a> Expander<'a> {
             offset: options.offset,
             items,
             versions,
+            nested,
         })
     }
 
@@ -570,12 +596,87 @@ fn drop_not_for_ui(url: &str, selection: &mut Selection) -> Result<(), ComposeEr
     Ok(())
 }
 
+/// Whether `compose` expands as the system's own hierarchy: one include of one
+/// system, selected by the whole system or by a hierarchical filter, so the
+/// selection is a set of subtrees rather than a list somebody enumerated.
+///
+/// A `ValueSet.expansion.contains` may nest its children
+/// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.expansion.contains>);
+/// the ecosystem's `parameters-expand-*-hierarchy` cases pin which composes do.
+fn nests(compose: &Compose, options: &Options) -> bool {
+    if options.exclude_nested || !compose.exclude.is_empty() {
+        return false;
+    }
+    let [include] = compose.include.as_slice() else {
+        return false;
+    };
+    if include.system.is_none() || !include.concepts.is_empty() || !include.value_sets.is_empty() {
+        return false;
+    }
+    let hierarchical = |filter: &Filter| {
+        matches!(
+            filter.op,
+            FilterOperator::IsA | FilterOperator::DescendentOf
+        )
+    };
+    if !include.filters.iter().all(hierarchical) {
+        return false;
+    }
+    // NOTE: a text search over a whole system returns scattered matches with no root
+    // to hang them from and the ecosystem's `search-all-yes` case wants them flat; the
+    // same search inside an `is-a` include keeps the subtree (its `search-filter-yes`).
+    include.filters.iter().any(hierarchical)
+        || options
+            .text
+            .as_deref()
+            .is_none_or(|text| text.trim().is_empty())
+}
+
+/// The members of `selection` in pre-order with their depths: each root (a
+/// member no other member subsumes) followed by its children, in the
+/// provider's concept order.
+///
+/// `None` when the provider has no hierarchy to walk.
+fn preorder(selection: &Selection) -> Option<Vec<(u32, usize)>> {
+    let hierarchy = selection.provider.hierarchy()?;
+    let mut roots = Vec::new();
+    for index in &selection.set {
+        let parents = hierarchy.parents(Concept::new(index));
+        if !parents.iter().any(|parent| selection.set.contains(parent)) {
+            roots.push(index);
+        }
+    }
+    let mut out = Vec::with_capacity(selection.set.len().try_into().unwrap_or(usize::MAX));
+    let mut seen = ConceptSet::new();
+    let mut stack: Vec<(u32, usize)> = roots.into_iter().rev().map(|root| (root, 0)).collect();
+    while let Some((index, depth)) = stack.pop() {
+        if !seen.insert(index) {
+            continue;
+        }
+        out.push((index, depth));
+        let children: Vec<u32> = hierarchy
+            .children(Concept::new(index))
+            .iter()
+            .filter(|child| selection.set.contains(*child) && !seen.contains(*child))
+            .collect();
+        stack.extend(children.into_iter().rev().map(|child| (child, depth + 1)));
+    }
+    // A cycle or a member no root reaches keeps its place at the end, flat.
+    for index in &selection.set {
+        if !seen.contains(index) {
+            out.push((index, 0));
+        }
+    }
+    Some(out)
+}
+
 /// The item for the concept at `index` of `selection`.
 fn materialize(
     url: &str,
     version: &str,
     selection: &Selection,
     index: u32,
+    depth: usize,
     options: &Options,
 ) -> Result<Item, ComposeError> {
     let failed = |source: ProviderError| ComposeError::Provider {
@@ -608,6 +709,7 @@ fn materialize(
         display,
         inactive: !status.active,
         abstract_concept: status.abstract_concept,
+        depth,
     })
 }
 
@@ -742,6 +844,7 @@ impl Expander<'_> {
                 display,
                 inactive: !status.active,
                 abstract_concept: status.abstract_concept,
+                depth: 0,
             });
         }
         for url in &include.value_sets {
