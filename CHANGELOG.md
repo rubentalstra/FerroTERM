@@ -21,6 +21,7 @@ fresh link reference.
 
 ### Fixed
 
+- The build warns and omits the release date when `CHANGELOG.md` cannot be read or its heading for the version being built carries no FHIR `date`; a malformed date no longer reaches `CapabilityStatement.software.releaseDate`.
 - The compose's spelling of an enumerated code survives an include merge and an `include.valueSet` import in an expansion, and an enumerated concept is located once.
 - `excludeNotForUI = true` on `$expand` drops the abstract (`notSelectable`) groupers and `excludePostCoordinated = true` drops post-coordinated expressions; both were accepted and ignored.
 - A code a case-insensitive system locates under another spelling is noted as `information` on `$validate-code`, the terminology ecosystem's severity. The message id every issue carries on the wire is decided where the issue is raised, never read off its wording.

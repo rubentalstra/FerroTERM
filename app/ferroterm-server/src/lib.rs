@@ -18,6 +18,10 @@ pub mod r4;
 pub mod r4b;
 pub mod r5;
 pub mod r6;
+// The build script is the only caller: it `include!`s this source rather than
+// linking the library it builds, so the module is compiled here for its tests.
+#[cfg(test)]
+mod release_date;
 pub mod request_log;
 pub mod scope;
 pub mod state;
