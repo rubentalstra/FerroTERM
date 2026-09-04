@@ -13,6 +13,10 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- `$expand` carries the code system's hierarchy: a compose of one include that selects a whole system or an `is-a` subtree nests its `expansion.contains`, with `total` counting every concept and `count` and `offset` paging over the pre-order flattening. `excludeNested` keeps it flat, and so does a text `filter` over a whole system, whose matches have no root to hang from.
+
 ## [0.0.10] - 2026-09-04
 
 ### Added

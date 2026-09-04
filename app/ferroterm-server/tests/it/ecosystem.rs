@@ -14,6 +14,31 @@ use crate::fixture::{Server, parameter};
 
 const VERSIONS: [&str; 4] = ["r4", "r4b", "r5", "r6"];
 
+/// The number of concepts an expansion carries, at every depth.
+pub(crate) fn counted(contains: &Value) -> usize {
+    contains.as_array().map_or(0, |entries| {
+        entries
+            .iter()
+            .map(|entry| 1 + counted(&entry["contains"]))
+            .sum()
+    })
+}
+
+/// The entry for `code` anywhere in an expansion, which nests when the compose
+/// is one hierarchical include
+/// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.expansion.contains>).
+pub(crate) fn contained(contains: &Value, code: &str) -> Option<Value> {
+    for entry in contains.as_array()? {
+        if entry["code"] == code {
+            return Some(entry.clone());
+        }
+        if let Some(found) = contained(&entry["contains"], code) {
+            return Some(found);
+        }
+    }
+    None
+}
+
 #[tokio::test]
 async fn the_version_negotiation_parameters_are_accepted_on_every_version() {
     let server = Server::start_with_resources();
@@ -655,12 +680,7 @@ async fn expand_flags_inactive_concepts_with_their_status_on_every_version() {
             !echoed.contains(&"displayLanguage"),
             "{version}: {echoed:?}"
         );
-        let fish = body["expansion"]["contains"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|c| c["code"] == "fish")
-            .expect("fish");
+        let fish = contained(&body["expansion"]["contains"], "fish").expect("fish");
         assert_eq!(fish["inactive"], true, "{version}: {fish}");
         if matches!(version, "r5" | "r6") {
             assert_eq!(fish["property"][0]["code"], "status", "{version}: {fish}");

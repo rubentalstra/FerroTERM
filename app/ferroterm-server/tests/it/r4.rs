@@ -137,13 +137,16 @@ async fn the_value_set_and_concept_map_operations_answer_under_r4() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["resourceType"], "ValueSet");
+    // The compose is one `is-a` include, so the expansion carries the hierarchy:
+    // `pet` is the root and `kitten` its child.
     let codes: Vec<&str> = body["expansion"]["contains"]
         .as_array()
         .unwrap()
         .iter()
         .filter_map(|c| c["code"].as_str())
         .collect();
-    assert_eq!(codes, ["kitten", "pet"]);
+    assert_eq!(codes, ["pet"]);
+    assert!(crate::ecosystem::contained(&body["expansion"]["contains"], "kitten").is_some());
     let mut path = Path::root("ValueSet");
     let object = expect_object(&body, &path).expect("object");
     fhir_types::r4::value_set::ValueSet::from_json(object, &mut path).expect("an R4 ValueSet");
@@ -279,12 +282,9 @@ async fn expand_returns_properties_as_cross_version_extensions_under_r4() {
         property["extension"][1]["valueUri"],
         "http://example.org/legs"
     );
-    let kitten = body["expansion"]["contains"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|c| c["code"] == "kitten")
-        .expect("kitten");
+    // `VS_PETS` is one `is-a` include, so the expansion nests and `kitten` is a child.
+    let kitten =
+        crate::ecosystem::contained(&body["expansion"]["contains"], "kitten").expect("kitten");
     let legs = &kitten["extension"][0];
     assert_eq!(
         legs["url"],
