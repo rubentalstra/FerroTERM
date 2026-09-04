@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 # cargo-deny configuration. Run: cargo deny check
 # Docs: https://embarkstudios.github.io/cargo-deny/
@@ -17,7 +17,8 @@ ignore = []
 
 [licenses]
 version = 2
-# Permissive licenses compatible with an Apache 2.0 licensed project. Copyleft
+# Permissive licenses a BUSL-1.1 project can depend on (and that its Apache 2.0
+# Change License admits). Copyleft
 # is NOT allowed by default; a genuinely necessary weak-copyleft dependency gets a
 # crate-scoped `exceptions` entry with its reason, never a blanket allow.
 allow = [
@@ -33,11 +34,32 @@ allow = [
   "Unicode-3.0",
   "CC0-1.0",
   # Community Data License Agreement, Permissive 2.0 (e.g. the Mozilla CA
-  # bundle data via webpki-roots). Permissive, Apache-2.0-compatible.
+  # bundle data via webpki-roots). Permissive.
   "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.9
-exceptions = []
+# The project's own crates are BUSL-1.1 (LICENSE); no dependency may be.
+exceptions = [
+  { allow = ["BUSL-1.1"], crate = "fhir-types" },
+  { allow = ["BUSL-1.1"], crate = "rf2" },
+  { allow = ["BUSL-1.1"], crate = "concept-graph" },
+  { allow = ["BUSL-1.1"], crate = "concept-store" },
+  { allow = ["BUSL-1.1"], crate = "designation-index" },
+  { allow = ["BUSL-1.1"], crate = "sct-ecl" },
+  { allow = ["BUSL-1.1"], crate = "loinc" },
+  { allow = ["BUSL-1.1"], crate = "classification" },
+  { allow = ["BUSL-1.1"], crate = "dhd-thesaurus" },
+  { allow = ["BUSL-1.1"], crate = "gstandaard" },
+  { allow = ["BUSL-1.1"], crate = "labcodeset" },
+  { allow = ["BUSL-1.1"], crate = "icd11" },
+  { allow = ["BUSL-1.1"], crate = "rxnorm-rrf" },
+  { allow = ["BUSL-1.1"], crate = "fhir-terminology" },
+  { allow = ["BUSL-1.1"], crate = "ferroterm-server" },
+  { allow = ["BUSL-1.1"], crate = "ferroterm-build" },
+  { allow = ["BUSL-1.1"], crate = "ferroterm-bench" },
+  { allow = ["BUSL-1.1"], crate = "ferroterm-testkit" },
+  { allow = ["BUSL-1.1"], crate = "fhir-codegen" },
+]
 
 [bans]
 multiple-versions = "warn"

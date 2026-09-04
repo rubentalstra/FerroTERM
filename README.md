@@ -5,7 +5,7 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/rubentalstra/FerroTERM/badge)](https://scorecard.dev/viewer/?uri=github.com/rubentalstra/FerroTERM)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_FerroTERM&metric=alert_status)](https://sonarcloud.io/summary/overall?id=rubentalstra_FerroTERM)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_FerroTERM&metric=coverage)](https://sonarcloud.io/summary/new_code?id=rubentalstra_FerroTERM)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License: BUSL-1.1](https://img.shields.io/badge/License-BUSL--1.1-blue.svg)](LICENSE)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/rubentalstra/FerroTERM?sort=semver)](https://github.com/rubentalstra/FerroTERM/releases/latest)
 
 [![tx-ecosystem R4](https://img.shields.io/endpoint?url=https%3A%2F%2Fferroterm.eu%2Fconformance%2Fr4.json)](https://ferroterm.eu/docs/evaluate/conformance.html)
@@ -147,12 +147,33 @@ The short form:
 
 ## Licensing
 
-The software is Apache 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)). The code
-systems are not: SNOMED CT is licensed by SNOMED
-International, LOINC by Regenstrief, ICD by WHO, RxNorm by NLM, and the
-repository ships none of their content. You bring the release you are licensed
-for; UCUM and the IANA and Unicode registries are vendored under their own
-licences, recorded beside the data.
+The software is source-available under the Business Source License 1.1
+([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)), the same terms as FerroEHR, with
+no open-core tier: every crate, the server, and the tools are in this
+repository under the one licence.
+
+The licence lets you read, build, modify, and redistribute the source without
+a fee and without asking anyone, and it covers every non-production use:
+development, testing, evaluation, and prototyping. Production use is free for
+Non-Commercial Purposes, which the licence defines as personal use, academic or
+scientific research, teaching, and use by a non-profit organisation or public
+body that is not in the course of a business, does not deliver a service for
+payment, and is not for commercial advantage. Any other production use needs a
+commercial licence from the Licensor: a hospital, clinic, or care provider
+running FerroTERM for its patients needs one, and so does a vendor, integrator,
+or any company running it in production. Offering FerroTERM, or a work derived
+from it, to third parties as a hosted, managed, or embedded terminology
+service, and selling, sublicensing, or otherwise distributing it for a fee on
+its own or inside another product, need a commercial licence in every case.
+Each version becomes Apache License 2.0 four years after that version is
+published. The commercial licence starts with a short conversation with the
+maintainer named in [MAINTAINERS.md](MAINTAINERS.md).
+
+The code systems are licensed separately: SNOMED CT by SNOMED International,
+LOINC by Regenstrief, ICD by WHO, RxNorm by NLM, and the repository ships none
+of their content. You bring the release you are licensed for; UCUM and the IANA
+and Unicode registries are vendored under their own licences, recorded beside
+the data.
 
 ## Contributing
 

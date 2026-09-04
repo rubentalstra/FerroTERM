@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 name: Install the docs toolchain
 description: >-
   Install the pinned mdBook toolchain (mdBook, mdbook-toc, mdbook-mermaid) used

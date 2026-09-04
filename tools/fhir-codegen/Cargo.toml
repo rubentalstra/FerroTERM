@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 [package]
 name = "fhir-codegen"
 description = "Generates the fhir-types crate from the vendored FHIR packages"

@@ -1,8 +1,8 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 [package]
 name = "concept-store"
 description = "The memory-mapped columnar concept and description store"
-version = "0.1.20"
+version = "0.1.21"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

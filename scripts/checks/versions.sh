@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: BUSL-1.1
 # scripts/checks/versions.sh
 #
 # Version-drift guard: docs/VERSIONS.md is the single source of truth, and this
@@ -116,20 +116,20 @@ else
 fi
 
 # --- One licence everywhere the project names its own ------------------------
-# The project's own code is Apache-2.0 (LICENSE); a header, manifest, badge, or
-# image label still saying MIT is a stale claim. Third-party files keep theirs.
+# The project's own code is BUSL-1.1 (LICENSE); a header, manifest, badge, or
+# image label still saying MIT or Apache-2.0 is a stale claim. Third-party files keep theirs.
 echo "== licence (LICENSE <-> SPDX headers, manifests, badges, labels)"
 if [ -f LICENSE ]; then
   stale=0
-  if ! grep -q 'Apache License' LICENSE; then
-    bad "LICENSE is not the Apache License 2.0"; stale=1
+  if ! grep -q 'Business Source License 1.1' LICENSE; then
+    bad "LICENSE is not the Business Source License 1.1"; stale=1
   fi
   while IFS= read -r hit; do
     [ -n "$hit" ] || continue
-    bad "stale MIT licence claim at $hit"; stale=1
-  done < <(git grep -n -E 'SPDX-License-Identifier: MIT|License-MIT|^license = "MIT"|^license: MIT|image\.licenses="?MIT' \
+    bad "stale licence claim at $hit"; stale=1
+  done < <(git grep -n -E 'SPDX-License-Identifier: (MIT|Apache-2\.0)|License-MIT|License-Apache|^license = "(MIT|Apache-2\.0)"|^license: (MIT|Apache-2\.0)|image\.licenses="?(MIT|Apache)' \
     -- ':!scripts/checks/versions.sh' ':!tools/fhir-codegen/vendor' ':!crates/sct-ecl/vendor' ':!crates/fhir-types/src' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
-  [ "$stale" -eq 0 ] && note "OK: the project's own files name Apache-2.0"
+  [ "$stale" -eq 0 ] && note "OK: the project's own files name BUSL-1.1"
 else
   note "no LICENSE yet — skipped"
 fi

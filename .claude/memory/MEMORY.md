@@ -12,11 +12,10 @@
 - [Performance bar](performance-bar.md), point reads and operations under 1 ms, NL ingest under 60 s, measured with criterion; never call a millisecond figure fine (#77)
 - [ICD-11 local deployment](icd11-local-deployment.md), the WHO ICD-API container flags, which language bundles exist per release, cache under data/icd11, artifacts under artifacts/icd11, clean up the containers afterwards
 - [Perl edit pitfalls](perl-edit-pitfalls.md), heredoc-quoted literals only, re-read after rustfmt, cargo clean -p on a stale rmeta
-- [Licence: BUSL 1.1](license-busl.md), the owner changed the project licence from MIT to the Business Source License 1.1 on 2026-09-03 (no hosted-service offering, no for-fee resale, Apache 2.0 after four years); the versions guard fails on stale MIT claims
 - [Multi-version program](multi-version-program.md), v0.0.9 plan decided 2026-09-03: neutral-core refactor of the operations (#146) first, then R4, then R5 (the LOINC suite cases need R5 shapes), then R6 and XML
-- [Licence: Apache 2.0](license-apache.md), MIT until 2026-09-03, a BUSL 1.1 change (#147) merged and was reverted the same day for Apache 2.0 (#150); the versions guard fails on stale MIT claims
 - [Auto-merge follow-ups](auto-merge-follow-ups.md), never push a follow-up to an auto-merge PR unless it is still BLOCKED; one PR per slice, branch from origin/main; check for UU after stash pop
 - [Repo path FerroTERM](repo-path-ferroterm.md), the clone moved to RustroverProjects/FerroTERM on 2026-09-03; touch the CARGO_MANIFEST_DIR users after a rename or stale test binaries fail
 - [Crate names and publishing](crate-names-and-publishing.md), plain crates.io names since 2026-09-03 (fhir-types, rf2, concept-graph, sct-ecl, fhir-terminology, ...), separate lockstep crate line with a bump guard, Trusted Publishing lanes; new crate names are rate-limited, publish in batches
 - [Sonar MCP triage](sonar-mcp-triage.md), the owner wants every SonarQube finding triaged and fixed through the SonarQube MCP server (#209); advisory, never authority
 - [Benchmark program](benchmark-program.md), trusted per-system benchmarks from container-run records (#212/#213/#214), never hand-typed; #217 audits every claim before v0.1.0
+- [Licence: BUSL 1.1](license-busl.md), BUSL 1.1 on FerroEHR terms since 2026-09-04 (#221) after MIT, BUSL (#147), and an Apache interlude (#150); non-commercial production free, commercial production needs a licence; the versions guard fails on stale MIT or Apache claims

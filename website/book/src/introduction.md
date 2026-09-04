@@ -43,8 +43,10 @@ milestones are the roadmap.
 
 ## Two things that are always true
 
-You bring your own code system content, and the software is open source under
-the Apache License 2.0. SNOMED CT is licensed by SNOMED International, LOINC by the
+You bring your own code system content, and the software is source-available
+under the Business Source License 1.1: free to use outside production and in
+non-commercial production, a commercial licence for other production use, and
+Apache License 2.0 four years after each version. SNOMED CT is licensed by SNOMED International, LOINC by the
 Regenstrief Institute, ICD by the WHO, and RxNorm by the NLM; this repository
 and every build of FerroTERM ship none of their content. You load a release you
 are licensed for, and the server serves it. See

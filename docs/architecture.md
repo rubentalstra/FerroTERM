@@ -351,7 +351,10 @@ server.
 
 ## Licensing
 
-The software is Apache 2.0. Code system content is licensed by its owner and is never
+The software is under the Business Source License 1.1 (free for non-production
+and non-commercial production use; commercial production use needs a licence;
+Apache 2.0 four years after each version). Code system content is licensed by
+its owner and is never
 distributed here: SNOMED CT by SNOMED International (free within member
 countries, affiliate licence elsewhere), LOINC by the Regenstrief Institute,
 and so on per `docs/terminologies.md`. A deployment brings its own releases
