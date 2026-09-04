@@ -64,10 +64,22 @@ pub const HISTORICAL: u32 = 10;
 pub const SAME_AS: u32 = 11;
 /// An identifier scheme whose alias is `ZOO`; the cat is `ZOO#cat-1`, the dog `ZOO#dog-1`.
 pub const SCHEME: u32 = 12;
+/// The REPLACED BY association reference set (a published SCTID); the fish is REPLACED BY the dog.
+pub const REPLACED_BY: u32 = 13;
+/// The POSSIBLY EQUIVALENT TO association reference set (a published SCTID); the fish points at the dog.
+pub const POSSIBLY_EQUIVALENT_TO: u32 = 14;
+/// The ALTERNATIVE association reference set (a published SCTID); the fish points at the cat.
+pub const ALTERNATIVE: u32 = 15;
 /// The published SCTID of the historical association reference set root.
 pub const HISTORICAL_SCTID: &str = "900000000000522004";
 /// The published SCTID of the SAME AS association reference set.
 pub const SAME_AS_SCTID: &str = "900000000000527005";
+/// The published SCTID of the REPLACED BY association reference set.
+pub const REPLACED_BY_SCTID: &str = "900000000000526001";
+/// The published SCTID of the POSSIBLY EQUIVALENT TO association reference set.
+pub const POSSIBLY_EQUIVALENT_TO_SCTID: &str = "900000000000523009";
+/// The published SCTID of the ALTERNATIVE association reference set.
+pub const ALTERNATIVE_SCTID: &str = "900000000000530003";
 
 /// The item number behind each ordinal, so `sctid(item(CAT))` is the cat's code.
 #[must_use]
@@ -148,6 +160,24 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     let syn = 1;
     let (gb, nl) = (0, 1);
     let (preferred, acceptable) = (0, 1);
+    // The association reference set concepts share one shape: a published SCTID,
+    // the metadata fully specified name, and the bare name as the synonym.
+    let association = |ordinal: u32, code: &'static str, name: &'static str| Row {
+        ordinal,
+        code: Some(code),
+        active: true,
+        defined: false,
+        designations: vec![
+            (name, "en", fsn, true, vec![(gb, preferred)]),
+            (
+                name.trim_end_matches(" (foundation metadata concept)"),
+                "en",
+                syn,
+                true,
+                vec![(gb, preferred)],
+            ),
+        ],
+    };
     let rows = [
         Row {
             ordinal: TOP,
@@ -351,6 +381,21 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
                 ("ZOO", "en", syn, true, vec![(gb, acceptable)]),
             ],
         },
+        association(
+            REPLACED_BY,
+            REPLACED_BY_SCTID,
+            "REPLACED BY association reference set (foundation metadata concept)",
+        ),
+        association(
+            POSSIBLY_EQUIVALENT_TO,
+            POSSIBLY_EQUIVALENT_TO_SCTID,
+            "POSSIBLY EQUIVALENT TO association reference set (foundation metadata concept)",
+        ),
+        association(
+            ALTERNATIVE,
+            ALTERNATIVE_SCTID,
+            "ALTERNATIVE association reference set (foundation metadata concept)",
+        ),
     ];
     let is_a = [
         (ANIMAL, TOP),
@@ -363,6 +408,9 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         (CODES_MAP, TOP),
         (HISTORICAL, TOP),
         (SAME_AS, HISTORICAL),
+        (REPLACED_BY, HISTORICAL),
+        (POSSIBLY_EQUIVALENT_TO, HISTORICAL),
+        (ALTERNATIVE, HISTORICAL),
         (SCHEME, TOP),
     ];
     let code_of = |row: &Row| {
@@ -561,11 +609,17 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
             .ok_or_else(|| FixtureError::Graph(String::from("refset id")))
     };
     let (pets, codes_map, same_as) = (refset_id(PETS)?, refset_id(CODES_MAP)?, refset_id(SAME_AS)?);
+    let replaced_by = refset_id(REPLACED_BY)?;
+    let possibly_equivalent_to = refset_id(POSSIBLY_EQUIVALENT_TO)?;
+    let alternative = refset_id(ALTERNATIVE)?;
     memberships.insert(pets, Ordinal::new(CAT));
     memberships.insert(pets, Ordinal::new(DOG));
     memberships.insert(codes_map, Ordinal::new(CAT));
     memberships.insert(codes_map, Ordinal::new(DOG));
     memberships.insert(same_as, Ordinal::new(FISH));
+    memberships.insert(replaced_by, Ordinal::new(FISH));
+    memberships.insert(possibly_equivalent_to, Ordinal::new(FISH));
+    memberships.insert(alternative, Ordinal::new(FISH));
     let module_id: u64 = module.parse().unwrap_or_default();
     let member = |concept: u32, values: Vec<refsets::FieldValue>| refsets::MemberRow {
         concept: Ordinal::new(concept),
@@ -582,39 +636,59 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
             codes_map,
             &[
                 (String::from("mapGroup"), refsets::FieldKind::Integer),
+                (String::from("mapPriority"), refsets::FieldKind::Integer),
+                (String::from("mapRule"), refsets::FieldKind::String),
+                (String::from("mapAdvice"), refsets::FieldKind::String),
                 (String::from("mapTarget"), refsets::FieldKind::String),
+                (String::from("correlationId"), refsets::FieldKind::Component),
             ],
             vec![
                 member(
                     CAT,
                     vec![
                         refsets::FieldValue::Integer(1),
+                        refsets::FieldValue::Integer(1),
+                        refsets::FieldValue::String(String::from("TRUE")),
+                        refsets::FieldValue::String(String::from("ALWAYS C01")),
                         refsets::FieldValue::String(String::from("C01")),
+                        refsets::FieldValue::Component(447_561_005),
                     ],
                 ),
                 member(
                     DOG,
                     vec![
                         refsets::FieldValue::Integer(1),
+                        refsets::FieldValue::Integer(1),
+                        refsets::FieldValue::String(String::from("TRUE")),
+                        refsets::FieldValue::String(String::from("ALWAYS D01")),
                         refsets::FieldValue::String(String::from("D01")),
+                        refsets::FieldValue::Component(447_561_005),
                     ],
                 ),
             ],
         )
         .map_err(|e| graph_error(&e))?;
-    tables
-        .insert(
-            same_as,
-            &[(
-                String::from("targetComponentId"),
-                refsets::FieldKind::Component,
-            )],
-            vec![member(
-                FISH,
-                vec![refsets::FieldValue::Concept(Ordinal::new(CAT))],
-            )],
-        )
-        .map_err(|e| graph_error(&e))?;
+    let target_component = [(
+        String::from("targetComponentId"),
+        refsets::FieldKind::Component,
+    )];
+    for (refset, target) in [
+        (same_as, CAT),
+        (replaced_by, DOG),
+        (possibly_equivalent_to, DOG),
+        (alternative, CAT),
+    ] {
+        tables
+            .insert(
+                refset,
+                &target_component,
+                vec![member(
+                    FISH,
+                    vec![refsets::FieldValue::Concept(Ordinal::new(target))],
+                )],
+            )
+            .map_err(|e| graph_error(&e))?;
+    }
     let mut table_bytes = Vec::new();
     tables
         .write_to(&mut table_bytes)

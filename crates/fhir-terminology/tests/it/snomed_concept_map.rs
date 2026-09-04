@@ -1,0 +1,323 @@
+//! The SNOMED CT implicit concept maps `?fhir_cm=[sctid]` and the historical
+//! associations `$translate` falls back to
+//! (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
+
+use std::sync::Arc;
+
+use fhir_terminology::conceptmap::model::Relationship;
+use fhir_terminology::conceptmap::store::ConceptMapStore;
+use fhir_terminology::operations::translate::{Match, TranslateInput, translate};
+use fhir_terminology::operations::{OperationError, Sources};
+use fhir_terminology::provider::{Capability, ProviderError};
+use fhir_terminology::registry::Registry;
+use fhir_terminology::snomed::{SYSTEM, SnomedProvider};
+use fhir_terminology::valueset::store::ValueSetStore;
+
+use ferroterm_testkit::snomed;
+use ferroterm_testkit::snomed::{
+    ALTERNATIVE_SCTID, CAT, CODES_MAP, DOG, FISH, POSSIBLY_EQUIVALENT_TO_SCTID, REPLACED_BY_SCTID,
+    SAME_AS_SCTID, VERSION, item, sctid,
+};
+
+/// The edition, and a registry holding it.
+struct World {
+    _dir: tempfile::TempDir,
+    registry: Registry,
+    value_sets: ValueSetStore,
+    concept_maps: ConceptMapStore,
+}
+
+impl World {
+    fn new() -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        snomed::write(dir.path()).expect("writes the fixture");
+        let provider = SnomedProvider::open(dir.path(), "en").expect("opens");
+        let mut registry = Registry::new();
+        registry.register(Arc::new(provider)).expect("registers");
+        Self {
+            _dir: dir,
+            registry,
+            value_sets: ValueSetStore::new(),
+            concept_maps: ConceptMapStore::new(),
+        }
+    }
+
+    fn sources(&self) -> Sources<'_> {
+        Sources {
+            registry: &self.registry,
+            value_sets: &self.value_sets,
+            concept_maps: &self.concept_maps,
+        }
+    }
+
+    /// `$translate` of `code` through the map `url` names, or through none.
+    fn translate(&self, url: Option<&str>, code: &str) -> Vec<Match> {
+        let input = TranslateInput {
+            url: url.map(str::to_owned),
+            code: Some(code.to_owned()),
+            system: Some(String::from(SYSTEM)),
+            ..TranslateInput::default()
+        };
+        translate(&self.sources(), &input)
+            .expect("translates")
+            .matches
+    }
+}
+
+/// The code of the fixture concept at `ordinal`.
+fn code(ordinal: u32) -> String {
+    sctid(item(ordinal))
+}
+
+/// The implicit concept map URI of the reference set `refset`.
+fn map_url(refset: &str) -> String {
+    format!("{SYSTEM}?fhir_cm={refset}")
+}
+
+/// The target code and relationship of the one match.
+fn only(matches: &[Match]) -> (&str, Relationship) {
+    let found = match matches {
+        [found] => found,
+        other => panic!("one match, not {}", other.len()),
+    };
+    (
+        found
+            .concept
+            .as_ref()
+            .and_then(|concept| concept.code.as_deref())
+            .expect("a target code"),
+        found.relationship,
+    )
+}
+
+#[test]
+fn the_edition_declares_that_it_defines_implicit_concept_maps() {
+    let world = World::new();
+    let resolved = world.registry.resolve(SYSTEM, None).expect("snomed");
+    assert!(
+        resolved
+            .provider
+            .declaration()
+            .capabilities
+            .contains(&Capability::ImplicitConceptMaps)
+    );
+}
+
+#[test]
+fn each_association_reference_set_translates_with_the_relationship_the_page_gives_it() {
+    let world = World::new();
+    // The four rows of the FHIR SNOMED CT page's table, each on its own; the fish
+    // is inactive and every association points from it
+    // (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
+    for (refset, target, relationship) in [
+        (SAME_AS_SCTID, CAT, Relationship::Equal),
+        (REPLACED_BY_SCTID, DOG, Relationship::Equivalent),
+        (POSSIBLY_EQUIVALENT_TO_SCTID, DOG, Relationship::Inexact),
+        (ALTERNATIVE_SCTID, CAT, Relationship::Inexact),
+    ] {
+        let matches = world.translate(Some(&map_url(refset)), &code(FISH));
+        assert_eq!(
+            only(&matches),
+            (code(target).as_str(), relationship),
+            "{refset} translates the fish"
+        );
+    }
+}
+
+#[test]
+fn an_association_map_carries_the_page_s_template() {
+    let world = World::new();
+    let resolved = world.registry.resolve(SYSTEM, None).expect("snomed");
+    let url = map_url(SAME_AS_SCTID);
+    let map = resolved
+        .provider
+        .implicit_concept_map(&url)
+        .expect("an implicit map")
+        .expect("it builds");
+    assert_eq!(map.url, url);
+    assert_eq!(map.version.as_deref(), Some(VERSION));
+    assert_eq!(map.status, "active");
+    assert_eq!(
+        map.source_scope.as_deref(),
+        Some(format!("{VERSION}?fhir_vs").as_str()),
+        "the template scopes the map to the edition's own implicit value set"
+    );
+    assert_eq!(map.source_scope, map.target_scope);
+    assert!(
+        map.name
+            .as_deref()
+            .is_some_and(|name| name.starts_with("SNOMED CT ")),
+        "the template names the map after the reference set: {:?}",
+        map.name
+    );
+    let group = map.groups.first().expect("one group");
+    assert_eq!(group.source.as_deref(), Some(SYSTEM));
+    assert_eq!(
+        group.target.as_deref(),
+        Some(SYSTEM),
+        "an association maps SNOMED to SNOMED"
+    );
+    assert_eq!(group.source_version.as_deref(), Some(VERSION));
+    assert_eq!(group.target_version.as_deref(), Some(VERSION));
+}
+
+#[test]
+fn a_map_reference_set_translates_to_its_target_code_with_the_rf2_columns() {
+    let world = World::new();
+    let matches = world.translate(Some(&map_url(&code(CODES_MAP))), &code(CAT));
+    let found = match matches.as_slice() {
+        [found] => found,
+        other => panic!("one match, not {}", other.len()),
+    };
+    assert_eq!(
+        found
+            .concept
+            .as_ref()
+            .and_then(|concept| concept.code.as_deref()),
+        Some("C01")
+    );
+    let parts: Vec<&str> = found
+        .products
+        .iter()
+        .map(|product| product.element.as_str())
+        .collect();
+    assert_eq!(
+        parts,
+        [
+            "mapGroup",
+            "mapPriority",
+            "mapRule",
+            "mapAdvice",
+            "correlationId"
+        ],
+        "every RF2 map column the row carries travels as a product part"
+    );
+    let advice = found
+        .products
+        .iter()
+        .find(|product| product.element == "mapAdvice")
+        .and_then(|product| product.concept.code.as_deref());
+    assert_eq!(advice, Some("ALWAYS C01"));
+}
+
+#[test]
+fn a_map_reference_set_declares_no_target_system() {
+    let world = World::new();
+    let resolved = world.registry.resolve(SYSTEM, None).expect("snomed");
+    let map = resolved
+        .provider
+        .implicit_concept_map(&map_url(&code(CODES_MAP)))
+        .expect("an implicit map")
+        .expect("it builds");
+    let group = map.groups.first().expect("one group");
+    assert_eq!(group.source.as_deref(), Some(SYSTEM));
+    assert_eq!(
+        group.target, None,
+        "no RF2 file records which system a mapTarget belongs to"
+    );
+}
+
+#[test]
+fn translating_an_inactive_concept_without_a_map_names_its_successors() {
+    let world = World::new();
+    let matches = world.translate(None, &code(FISH));
+    let mut found: Vec<(&str, Relationship)> = matches
+        .iter()
+        .map(|held| {
+            (
+                held.concept
+                    .as_ref()
+                    .and_then(|concept| concept.code.as_deref())
+                    .expect("a target code"),
+                held.relationship,
+            )
+        })
+        .collect();
+    found.sort_unstable_by(|left, right| left.0.cmp(right.0));
+    let (cat, dog) = (code(CAT), code(DOG));
+    let mut wanted = vec![
+        (cat.as_str(), Relationship::Equal),
+        (dog.as_str(), Relationship::Equivalent),
+    ];
+    wanted.sort_unstable_by(|left, right| left.0.cmp(right.0));
+    assert_eq!(found, wanted, "SAME AS and REPLACED BY answer for the fish");
+    assert!(
+        matches.iter().all(|held| held
+            .source
+            .as_deref()
+            .is_some_and(|url| url.contains("fhir_cm"))),
+        "each match names the implicit map it came from"
+    );
+}
+
+#[test]
+fn translating_an_active_concept_without_a_map_names_no_successor() {
+    let world = World::new();
+    assert!(
+        world.translate(None, &code(CAT)).is_empty(),
+        "only an inactive concept has successors"
+    );
+}
+
+#[test]
+fn an_unknown_reference_set_is_not_found_and_a_malformed_one_is_invalid() {
+    let world = World::new();
+    let input = |url: &str| TranslateInput {
+        url: Some(url.to_owned()),
+        code: Some(code(FISH)),
+        system: Some(String::from(SYSTEM)),
+        ..TranslateInput::default()
+    };
+    // NOTE: no specification fixes the outcome for a `?fhir_cm=` the server cannot
+    // answer; `not-found` is what tx.fhir.org and Snowstorm both return.
+    assert!(matches!(
+        translate(&world.sources(), &input(&map_url(&code(CAT)))),
+        Err(OperationError::UnknownConceptMap(_))
+    ));
+    assert!(matches!(
+        translate(&world.sources(), &input(&map_url("not-an-sctid"))),
+        Err(OperationError::Invalid(_))
+    ));
+    assert!(
+        matches!(
+            translate(
+                &world.sources(),
+                &input("http://snomed.info/sct/999?fhir_cm=900000000000527005")
+            ),
+            Err(OperationError::Invalid(_))
+        ),
+        "another edition's base is refused"
+    );
+}
+
+#[test]
+fn a_reference_set_that_maps_nothing_is_not_a_concept_map() {
+    let world = World::new();
+    let resolved = world.registry.resolve(SYSTEM, None).expect("snomed");
+    let pets = code(snomed::PETS);
+    assert!(
+        matches!(
+            resolved.provider.implicit_concept_map(&map_url(&pets)),
+            Some(Err(ProviderError::UnknownImplicitConceptMap { .. }))
+        ),
+        "a plain reference set has neither a target component nor a map target"
+    );
+}
+
+#[test]
+fn a_value_set_uri_is_not_a_concept_map_uri() {
+    let world = World::new();
+    let resolved = world.registry.resolve(SYSTEM, None).expect("snomed");
+    assert!(
+        resolved
+            .provider
+            .implicit_concept_map(&format!("{SYSTEM}?fhir_vs"))
+            .is_none()
+    );
+    assert!(
+        resolved
+            .provider
+            .implicit_value_set(&map_url(SAME_AS_SCTID))
+            .is_none()
+    );
+}

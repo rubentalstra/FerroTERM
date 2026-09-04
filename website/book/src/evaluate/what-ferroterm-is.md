@@ -71,9 +71,9 @@ clinical data repository by the same author. FerroTERM is independent of it.
 
 The build order is the tracker's milestones. As of v0.0.10:
 
-- Post-coordinated SNOMED expressions (`expressions = true`) and the implicit
-  concept maps (`?fhir_cm=`) are v0.0.11; ECL and every implicit value set
-  are served.
+- Post-coordinated SNOMED expressions (`expressions = true`) are v0.0.11; ECL,
+  every implicit value set, and the implicit concept maps (`?fhir_cm=`) are
+  served.
 - The licence-gated providers program (LOINC, ICD-10, the classifications,
   the Dutch national code systems) closes out in v0.0.10 over owner-licensed
   data; R4, R4B, R5, and the R6 ballot answer in JSON and XML today.

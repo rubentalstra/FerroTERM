@@ -93,7 +93,7 @@ sequence, not a scope limit; the server serves every version.
 - [ ] Implicit value sets: `?fhir_vs`, `?fhir_vs=isa/[sctid]`,
   `?fhir_vs=ecl/[ecl]`, `?fhir_vs=refset`, `?fhir_vs=refset/[sctid]`, with an
   edition/version base
-- [ ] Implicit concept maps: `?fhir_cm=[sctid]`; historical-association and
+- [x] Implicit concept maps: `?fhir_cm=[sctid]`; historical-association and
   map reference sets wired into `$translate`
 - [ ] Multi-edition support via the Module Dependency Reference Set; default
   edition+version resolution and per-request override

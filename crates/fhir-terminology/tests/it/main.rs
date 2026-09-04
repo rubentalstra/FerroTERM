@@ -26,6 +26,7 @@ mod registries;
 mod registry;
 mod rxnorm;
 mod snomed;
+mod snomed_concept_map;
 mod supplement;
 mod ucum;
 mod value_set;

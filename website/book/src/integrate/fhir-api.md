@@ -142,3 +142,44 @@ sees one loaded from `FERROTERM_CODESYSTEMS`, on every served version.
 
 A deployment that names no database refuses every write with a `422` and
 declares no write interaction in its capability statement.
+
+## SNOMED CT implicit concept maps
+
+`ConceptMap/$translate` answers `url=http://snomed.info/sct?fhir_cm=[sctid]`,
+where the SCTID names a reference set of the loaded edition. The edition or
+edition-version URI may take the place of the bare system URI; the map states
+the served edition version either way
+(<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
+
+Two kinds of reference set answer. An association reference set maps a SNOMED
+concept to another SNOMED concept, and the FHIR SNOMED CT page fixes the
+relationship each one asserts:
+
+| Reference set | SCTID | Relationship |
+|---|---|---|
+| POSSIBLY EQUIVALENT TO | `900000000000523009` | `inexact` |
+| REPLACED BY | `900000000000526001` | `equivalent` |
+| SAME AS | `900000000000527005` | `equal` |
+| ALTERNATIVE | `900000000000530003` | `inexact` |
+
+R5 and R6 have no `equal` or `inexact` code, so those become `equivalent` and
+`related-to` on those versions, as the generated relationship vocabulary maps
+them.
+
+A map reference set maps a SNOMED concept to a code of another system through
+`mapTarget`. No RF2 file records which system that code belongs to, so the
+group names no target system. The complex and extended map columns
+(`mapGroup`, `mapPriority`, `mapRule`, `mapAdvice`, `correlationId`,
+`mapCategoryId`) travel as `product` parts of the match. No specification says
+where those columns belong in a `$translate` result; this placement is
+FerroTERM's own design.
+
+A `$translate` that names no `url` and finds no stored map falls back to the
+historical associations of an inactive concept: the `SAME AS` and `REPLACED BY`
+reference sets name what stands in its place, and each match names the implicit
+map it came from. No specification asks for this fallback; it is FerroTERM's
+own design. An active concept has no successors.
+
+A `?fhir_cm=` naming a reference set the edition does not hold, or one that
+maps nothing, is a `not-found`; a base that is not the served edition, or an
+SCTID that does not parse, is a `400`.

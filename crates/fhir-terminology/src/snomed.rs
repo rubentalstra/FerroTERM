@@ -16,6 +16,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 
+mod conceptmap;
 mod ecl;
 
 use concept_graph::attributes::{Attributes, AttributesError};
@@ -46,6 +47,14 @@ use crate::provider::{
 
 /// The SNOMED CT system URI.
 pub const SYSTEM: &str = "http://snomed.info/sct";
+
+/// The query key of an implicit value set URI
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets").
+const FHIR_VS: &str = "fhir_vs";
+
+/// The query key of an implicit concept map URI
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
+const FHIR_CM: &str = "fhir_cm";
 /// The manifest file inside an artifact directory.
 pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest version this provider reads: the store beside the hierarchy
@@ -344,6 +353,7 @@ impl SnomedProvider {
                     Capability::Subsumption,
                     Capability::Enumeration,
                     Capability::ImplicitValueSets,
+                    Capability::ImplicitConceptMaps,
                 ]),
             },
             keys,
@@ -611,6 +621,22 @@ impl SnomedProvider {
                     reason: format!("`{text}` is not an SCTID"),
                 },
             }),
+        }
+    }
+
+    /// The `version` an implicit URI on `base` resolves to: `None` for the
+    /// bare system URI, this edition's version URI for its own edition or
+    /// version base, and the reason it does not fit otherwise.
+    pub(crate) fn implicit_version(&self, base: &str) -> Result<Option<String>, String> {
+        if base == SYSTEM {
+            Ok(None)
+        } else if base == self.edition || base == self.identity.version {
+            Ok(Some(self.identity.version.clone()))
+        } else {
+            Err(format!(
+                "`{base}` is not the served edition `{}`",
+                self.identity.version
+            ))
         }
     }
 
@@ -970,21 +996,52 @@ impl CodeSystemProvider for SnomedProvider {
     /// `?fhir_vs`, `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, and
     /// `?fhir_vs=refset/[sctid]`, on the bare system URI or on this edition's
     /// edition or version URI. `ecl/` waits for the evaluator.
+    fn successors(
+        &self,
+        concept: Concept,
+    ) -> Result<Vec<crate::provider::Successor>, ProviderError> {
+        conceptmap::successors(self, concept)
+    }
+
+    /// The implicit concept maps of the FHIR SNOMED CT page
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps"):
+    /// `?fhir_cm=[sctid]` names a map reference set of this edition, on the
+    /// bare system URI or on this edition's edition or version URI.
+    fn implicit_concept_map(
+        &self,
+        url: &str,
+    ) -> Option<Result<crate::conceptmap::model::ConceptMapModel, ProviderError>> {
+        let (base, form) = implicit_parts(url, FHIR_CM)?;
+        let malformed = |reason: String| ProviderError::MalformedImplicitConceptMap {
+            url: url.to_owned(),
+            reason,
+        };
+        // NOTE: the base must be this edition or the bare system URI; the map itself
+        // always states the served version
+        // (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
+        if let Err(reason) = self.implicit_version(base) {
+            return Some(Err(malformed(reason)));
+        }
+        let Some(decoded) = percent_decode(form) else {
+            return Some(Err(malformed(format!(
+                "`{form}` is not a percent-encoded SCTID"
+            ))));
+        };
+        let Ok(refset) = ConceptId::parse(decoded.trim()) else {
+            return Some(Err(malformed(format!("`{decoded}` is not an SCTID"))));
+        };
+        Some(conceptmap::concept_map(self, url, refset.value()))
+    }
+
     fn implicit_value_set(&self, url: &str) -> Option<Result<Compose, ProviderError>> {
-        let (base, form) = implicit_parts(url)?;
+        let (base, form) = implicit_parts(url, FHIR_VS)?;
         let malformed = |reason: String| ProviderError::MalformedImplicitValueSet {
             url: url.to_owned(),
             reason,
         };
-        let version = if base == SYSTEM {
-            None
-        } else if base == self.edition || base == self.identity.version {
-            Some(self.identity.version.clone())
-        } else {
-            return Some(Err(malformed(format!(
-                "`{base}` is not the served edition `{}`",
-                self.identity.version
-            ))));
+        let version = match self.implicit_version(base) {
+            Ok(version) => version,
+            Err(reason) => return Some(Err(malformed(reason))),
         };
         let system = SystemRef {
             url: SYSTEM.to_owned(),
@@ -1055,8 +1112,6 @@ impl CodeSystemProvider for SnomedProvider {
     }
 }
 
-/// The base (the system, edition, or version URI) and the `fhir_vs` form of
-/// an implicit value set URL, when `url` has the shape.
 /// Decodes the percent-encoding of a URI component
 /// (<https://www.rfc-editor.org/rfc/rfc3986#section-2.1>); `None` for a
 /// stray `%` or bytes that are not UTF-8.
@@ -1078,9 +1133,12 @@ fn percent_decode(text: &str) -> Option<String> {
     String::from_utf8(out).ok()
 }
 
-fn implicit_parts(url: &str) -> Option<(&str, &str)> {
+/// The base (the system, edition, or version URI) and the form of an implicit
+/// URI whose query key is `key` (`fhir_vs` or `fhir_cm`), when `url` has the
+/// shape (<https://hl7.org/fhir/R4B/snomedct.html>).
+fn implicit_parts<'a>(url: &'a str, key: &str) -> Option<(&'a str, &'a str)> {
     let (base, query) = url.split_once('?')?;
-    let form = match query.strip_prefix("fhir_vs")? {
+    let form = match query.strip_prefix(key)? {
         "" => "",
         rest => rest.strip_prefix('=')?,
     };
@@ -1089,7 +1147,7 @@ fn implicit_parts(url: &str) -> Option<(&str, &str)> {
 
 #[cfg(test)]
 mod tests {
-    use super::{implicit_parts, percent_decode, primary_subtag};
+    use super::{FHIR_CM, FHIR_VS, implicit_parts, percent_decode, primary_subtag};
 
     #[test]
     fn percent_encoding_decodes_and_a_stray_percent_is_refused() {
@@ -1112,18 +1170,36 @@ mod tests {
     #[test]
     fn implicit_urls_split_into_base_and_form() {
         assert_eq!(
-            implicit_parts("http://snomed.info/sct?fhir_vs"),
+            implicit_parts("http://snomed.info/sct?fhir_vs", FHIR_VS),
             Some(("http://snomed.info/sct", ""))
         );
         assert_eq!(
-            implicit_parts("http://snomed.info/sct/11000146104/version/20260630?fhir_vs=isa/1"),
+            implicit_parts(
+                "http://snomed.info/sct/11000146104/version/20260630?fhir_vs=isa/1",
+                FHIR_VS
+            ),
             Some((
                 "http://snomed.info/sct/11000146104/version/20260630",
                 "isa/1"
             ))
         );
-        assert_eq!(implicit_parts("http://snomed.info/sct?fhir_cm=1"), None);
-        assert_eq!(implicit_parts("http://loinc.org/vs"), None);
-        assert_eq!(implicit_parts("http://snomed.info/sct?fhir_vsx"), None);
+        assert_eq!(
+            implicit_parts("http://snomed.info/sct?fhir_cm=1", FHIR_CM),
+            Some(("http://snomed.info/sct", "1"))
+        );
+        assert_eq!(
+            implicit_parts("http://snomed.info/sct?fhir_cm=1", FHIR_VS),
+            None,
+            "one key never reads the other's URI"
+        );
+        assert_eq!(
+            implicit_parts("http://snomed.info/sct?fhir_vs", FHIR_CM),
+            None
+        );
+        assert_eq!(implicit_parts("http://loinc.org/vs", FHIR_VS), None);
+        assert_eq!(
+            implicit_parts("http://snomed.info/sct?fhir_vsx", FHIR_VS),
+            None
+        );
     }
 }

@@ -157,6 +157,9 @@ pub fn translate(
             }
         }
     }
+    if matches.is_empty() && input.url.is_none() {
+        matches = successors(sources, &subjects, target_system)?;
+    }
     // NOTE: every match is an answer, a `noMap` or `not-related-to` one too, so
     // `result` is true whenever a match exists (the ecosystem's `translate-2b`
     // and `translate-4` cases, <https://hl7.org/fhir/uv/tx-ecosystem/>).
@@ -183,6 +186,62 @@ pub fn translate(
         matches,
         used_concept_maps: used,
     })
+}
+
+/// The matches an inactive concept's own historical associations give, when no
+/// concept map translated it and the request named none.
+///
+/// No FHIR specification asks a server to do this: `$translate` is defined
+/// over the map a request names, and a system's own associations are reached
+/// only by naming their reference set. Answering a retired concept with the
+/// concept that stands in for it is our own design.
+fn successors(
+    sources: &Sources<'_>,
+    subjects: &[Subject],
+    target_system: Option<&str>,
+) -> Result<Vec<Match>, OperationError> {
+    let mut matches = Vec::new();
+    for subject in subjects {
+        let Ok(resolved) = sources
+            .registry
+            .resolve(&subject.system, subject.version.as_deref())
+        else {
+            continue;
+        };
+        let Some(located) = resolved.provider.locate(&subject.code)? else {
+            continue;
+        };
+        if resolved.provider.status(located.concept)?.active {
+            continue;
+        }
+        for successor in resolved.provider.successors(located.concept)? {
+            if target_system.is_some_and(|wanted| wanted != subject.system) {
+                continue;
+            }
+            matches.push(Match {
+                relationship: successor.relationship,
+                concept: Some(CodingRef {
+                    system: Some(subject.system.clone()),
+                    version: None,
+                    code: Some(successor.code),
+                    display: successor.display,
+                }),
+                products: Vec::new(),
+                source: Some(successor.map.clone()),
+                origin: MatchOrigin {
+                    origin_map: successor.map,
+                    source_concept: Some(CodingRef {
+                        system: Some(subject.system.clone()),
+                        version: None,
+                        code: Some(subject.code.clone()),
+                        display: None,
+                    }),
+                    ..MatchOrigin::default()
+                },
+            });
+        }
+    }
+    Ok(matches)
 }
 
 /// The ecosystem's message when no concept map fits the request.
@@ -268,16 +327,20 @@ fn candidate_maps(
         )]),
         (None, Some(url)) => {
             let version = input.concept_map_version.as_deref();
-            sources
-                .concept_maps
-                .resolve(url, version)
-                .map(|map| vec![map])
-                .ok_or_else(|| {
-                    OperationError::UnknownConceptMap(match version {
-                        Some(version) => format!("{url}|{version}"),
-                        None => url.to_owned(),
-                    })
-                })
+            if let Some(map) = sources.concept_maps.resolve(url, version) {
+                return Ok(vec![map]);
+            }
+            // NOTE: a system may define concept maps by URI, the way SNOMED CT's
+            // `?fhir_cm=[sctid]` names a map reference set
+            // (<https://hl7.org/fhir/R4B/snomedct.html>).
+            match sources.registry.implicit_concept_map(url) {
+                Some(Ok(map)) => Ok(vec![Arc::new(map)]),
+                Some(Err(source)) => Err(source.into()),
+                None => Err(OperationError::UnknownConceptMap(match version {
+                    Some(version) => format!("{url}|{version}"),
+                    None => url.to_owned(),
+                })),
+            }
         }
         (None, None) => {
             let source = input.source.as_deref();

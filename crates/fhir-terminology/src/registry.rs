@@ -280,6 +280,22 @@ impl Registry {
             .unwrap_or_default()
     }
 
+    /// The `ConceptMap` an implicit concept map URI denotes, asking the
+    /// default version of every system whose URI prefixes `url`.
+    ///
+    /// `None` when no system claims the URI.
+    #[must_use]
+    pub fn implicit_concept_map(
+        &self,
+        url: &str,
+    ) -> Option<Result<crate::conceptmap::model::ConceptMapModel, ProviderError>> {
+        self.systems
+            .keys()
+            .filter(|system| url.starts_with(system.as_str()))
+            .filter_map(|system| self.resolve(system, None).ok())
+            .find_map(|resolved| resolved.provider.implicit_concept_map(url))
+    }
+
     /// The registered system URIs, sorted.
     pub fn systems(&self) -> impl Iterator<Item = &str> {
         self.systems.keys().map(String::as_str)
