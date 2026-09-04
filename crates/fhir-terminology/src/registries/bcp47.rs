@@ -514,6 +514,7 @@ impl CodeSystemProvider for Bcp47Provider {
             active: !deprecated,
             inactive_reason: deprecated.then(|| String::from("deprecated")),
             abstract_concept: false,
+            codeless: false,
         })
     }
 

@@ -188,7 +188,10 @@ pub fn lookup(
         Vec::new()
     };
     let properties = properties(provider.as_ref(), concept, &asked)?;
-    let abstract_concept = provider.status(concept)?.abstract_concept;
+    // NOTE: the ecosystem's icd-11 `lookup-mms-no-code` answers a codeless grouper
+    // `notSelectable` as a property and no `abstract`; `simple-lookup-2` wants `abstract`.
+    let status = provider.status(concept)?;
+    let abstract_concept = status.abstract_concept && !status.codeless;
     Ok(LookupOutcome {
         code: String::from(code),
         system: identity.url.clone(),

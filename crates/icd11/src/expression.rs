@@ -84,10 +84,11 @@ impl Expression {
             uri_form &= stem.uri && values.iter().all(|v| v.uri);
             members.push(Member { stem, values });
         }
+        let dotted = value_separator == '.' && members.iter().any(|m| !m.values.is_empty());
         Some(Self {
             members,
             uri_form,
-            dotted: value_separator == '.',
+            dotted,
         })
     }
 

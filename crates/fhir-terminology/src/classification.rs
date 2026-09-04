@@ -369,6 +369,7 @@ impl CodeSystemProvider for ClassificationProvider {
             active: record.is_some_and(|c| c.active),
             inactive_reason: None,
             abstract_concept: false,
+            codeless: false,
         })
     }
 

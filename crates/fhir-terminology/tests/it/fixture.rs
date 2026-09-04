@@ -256,6 +256,7 @@ impl CodeSystemProvider for Fixture {
             active: self.row(concept).is_some_and(|row| row.active),
             inactive_reason: None,
             abstract_concept: false,
+            codeless: false,
         })
     }
 

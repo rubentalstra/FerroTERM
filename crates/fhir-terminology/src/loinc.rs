@@ -499,6 +499,7 @@ impl CodeSystemProvider for LoincProvider {
             active,
             inactive_reason: (!active).then(|| String::from("DEPRECATED")),
             abstract_concept: false,
+            codeless: false,
         })
     }
 
