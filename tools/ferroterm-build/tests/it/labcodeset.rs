@@ -120,7 +120,17 @@ fn the_publication_builds_from_a_document_a_directory_or_a_zip() {
         include.concept[0].designation[0].value.value.as_deref(),
         Some("Glucose [Mass/volume] in Serum or Plasma")
     );
+}
 
+#[test]
+fn the_supplement_carries_the_dutch_names_and_the_facts() {
+    let source = tempfile::tempdir().expect("tempdir");
+    let document = write_publication(source.path()).expect("writes");
+    let out = tempfile::tempdir().expect("tempdir");
+    let report = ferroterm_build::run(&cli(document, out.path())).expect("builds");
+    let ferroterm_build::Report::Labcodeset(report) = report else {
+        panic!("a Labcodeset report");
+    };
     // The LOINC supplement: every concept, with the Dutch name and the facts.
     let value = read_json(&report.dir.join("CodeSystem-nl-labcodeset-loinc.json"));
     let supplement = CodeSystem::from_json(
