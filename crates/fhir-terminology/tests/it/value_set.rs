@@ -11,7 +11,9 @@ use ferroterm_testkit::fhir::{
 use fhir_terminology::conceptmap::store::ConceptMapStore;
 use fhir_terminology::fhir_codesystem::load::{FhirVersion, load_dir};
 use fhir_terminology::fhir_codesystem::provider::FhirCodeSystem;
-use fhir_terminology::operations::expand::{ExpandInput, ExpansionOutcome, ParameterValue};
+use fhir_terminology::operations::expand::{
+    Contains, ExpandInput, ExpansionOutcome, ParameterValue,
+};
 use fhir_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use fhir_terminology::operations::{CodingRef, Issue};
 use fhir_terminology::operations::{OperationError, Sources, expand, value_set_validate_code};
@@ -135,9 +137,9 @@ fn expand_lists_the_system_flat_with_the_parameter_echo_and_used_codesystem() {
             "animal", "cat", "dodo", "dog", "fish", "kitten", "living", "pet", "plant"
         ]
     );
-    let dodo = vs.contains.iter().find(|c| c.code == "dodo").expect("dodo");
+    let dodo = entry(&vs.contains, "dodo").expect("dodo");
     assert!(dodo.inactive);
-    let pet = vs.contains.iter().find(|c| c.code == "pet").expect("pet");
+    let pet = entry(&vs.contains, "pet").expect("pet");
     assert!(pet.abstract_concept);
     assert_eq!(parameter(&vs, "excludeNested").len(), 1);
     assert_eq!(
@@ -738,19 +740,11 @@ fn expand_returns_the_properties_asked_for() {
         },
     )
     .expect("expands");
-    let kitten = by_code
-        .contains
-        .iter()
-        .find(|c| c.code == "kitten")
-        .expect("kitten");
+    let kitten = entry(&by_code.contains, "kitten").expect("kitten");
     assert_eq!(kitten.properties.len(), 1);
     assert_eq!(kitten.properties[0].code, "legs");
     assert_eq!(kitten.properties[0].value, PropertyValue::Integer(4));
-    let pet = by_code
-        .contains
-        .iter()
-        .find(|c| c.code == "pet")
-        .expect("pet");
+    let pet = entry(&by_code.contains, "pet").expect("pet");
     assert!(pet.properties.is_empty(), "pet declares no leg count");
     assert_eq!(by_code.properties.len(), 1);
     assert_eq!(by_code.properties[0].code, "legs");
@@ -782,11 +776,7 @@ fn expand_returns_the_properties_asked_for() {
         },
     )
     .expect("expands");
-    let kitten = all
-        .contains
-        .iter()
-        .find(|c| c.code == "kitten")
-        .expect("kitten");
+    let kitten = entry(&all.contains, "kitten").expect("kitten");
     let codes: Vec<&str> = kitten.properties.iter().map(|p| p.code.as_str()).collect();
     assert!(
         codes.contains(&"legs") && codes.contains(&"parent"),
@@ -1756,7 +1746,9 @@ fn expand_lists_every_designation_and_flags_inactive_concepts() {
         !names.contains(&"displayLanguage"),
         "no language is echoed when none was asked for: {names:?}"
     );
-    let fish = vs.contains.iter().find(|c| c.code == "fish").expect("fish");
+    // The compose is one whole-system include, so the expansion nests and `fish`
+    // sits under `living` > `animal`.
+    let fish = entry(&vs.contains, "fish").expect("fish");
     assert!(fish.inactive);
     let codes: Vec<&str> = fish.properties.iter().map(|p| p.code.as_str()).collect();
     assert_eq!(
@@ -1768,7 +1760,7 @@ fn expand_lists_every_designation_and_flags_inactive_concepts() {
         fish.properties[1].value,
         PropertyValue::Code(String::from("retired"))
     );
-    let cat = vs.contains.iter().find(|c| c.code == "cat").expect("cat");
+    let cat = entry(&vs.contains, "cat").expect("cat");
     let mut languages: Vec<Option<&str>> = cat
         .designations
         .iter()
@@ -1791,11 +1783,7 @@ fn expand_lists_every_designation_and_flags_inactive_concepts() {
         },
     )
     .expect("expands");
-    let cat = german
-        .contains
-        .iter()
-        .find(|c| c.code == "cat")
-        .expect("cat");
+    let cat = entry(&german.contains, "cat").expect("cat");
     assert_eq!(
         cat.designations.len(),
         2,
@@ -2324,7 +2312,7 @@ fn expand_filters_designations_by_a_bcp47_language() {
         ..ExpandInput::default()
     };
     let vs = expand::expand(&world.sources(), &request).expect("expands");
-    let cat = vs.contains.iter().find(|c| c.code == "cat").expect("cat");
+    let cat = entry(&vs.contains, "cat").expect("cat");
     let values: Vec<&str> = cat.designations.iter().map(|d| d.value.as_str()).collect();
     assert_eq!(values, ["Katze"]);
 }
@@ -2422,14 +2410,102 @@ fn exclude_not_for_ui_drops_the_abstract_groupers_and_the_total_follows() {
         ..ExpandInput::default()
     };
     let vs = expand::expand(&world.sources(), &request).expect("expands");
+    let every = flatten(&vs.contains);
     assert!(
-        !vs.contains
-            .iter()
-            .any(|c| c.code == "pet" || c.code == "living"),
-        "the abstract `pet` and `living` are left out: {:?}",
-        codes(&vs)
+        !every.contains(&"pet") && !every.contains(&"living"),
+        "the abstract `pet` and `living` are left out: {every:?}"
     );
-    assert!(vs.contains.iter().all(|c| !c.abstract_concept));
+    assert!(entry(&vs.contains, "cat").is_some_and(|c| !c.abstract_concept));
     assert_eq!(vs.total, 7);
     assert_eq!(parameter(&vs, "excludeNotForUI").len(), 1);
+}
+
+// NOTE: one hierarchical include expands as the system's own tree
+// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.expansion.contains>);
+// the ecosystem's `parameters-expand-*-hierarchy` cases pin which composes nest.
+#[test]
+fn a_single_hierarchical_include_nests_and_pages_over_the_flattening() {
+    let world = World::load();
+    let nested = |input: ExpandInput| expand::expand(&world.sources(), &input).expect("expands");
+
+    let whole = nested(ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        value_set_version: Some(String::from("1.0")),
+        ..ExpandInput::default()
+    });
+    assert_eq!(
+        whole.total, 9,
+        "the total counts every concept, not the roots"
+    );
+    // The roots are the concepts no other selected concept subsumes; the fixture
+    // nests `animal` and `plant` under `living`, and `kitten` under `cat` and `pet`.
+    let roots: Vec<&str> = whole.contains.iter().map(|c| c.code.as_str()).collect();
+    assert_eq!(roots, ["dodo", "living", "pet"], "{roots:?}");
+    assert_eq!(
+        flatten(&whole.contains).len(),
+        9,
+        "every concept appears once in the tree"
+    );
+    let living = entry(&whole.contains, "living").expect("living");
+    let below: Vec<&str> = living.contains.iter().map(|c| c.code.as_str()).collect();
+    assert_eq!(below, ["animal", "plant"], "{below:?}");
+    let animal = living.contains.first().expect("animal");
+    let under_animal: Vec<&str> = animal.contains.iter().map(|c| c.code.as_str()).collect();
+    assert_eq!(under_animal, ["cat", "dog", "fish"], "{under_animal:?}");
+
+    // `excludeNested` keeps the same concepts flat, and the echo says so.
+    let flat = nested(ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        value_set_version: Some(String::from("1.0")),
+        exclude_nested: Some(true),
+        ..ExpandInput::default()
+    });
+    assert_eq!(flat.total, whole.total);
+    assert_eq!(flat.contains.len(), 9, "every concept is a root");
+    assert!(flat.contains.iter().all(|c| c.contains.is_empty()));
+    assert_eq!(
+        parameter(&flat, "excludeNested"),
+        [ParameterValue::Boolean(true)]
+    );
+
+    // The page is the pre-order flattening, so paging cuts the tree in order.
+    let page = nested(ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        value_set_version: Some(String::from("1.0")),
+        offset: Some(1),
+        count: Some(3),
+        ..ExpandInput::default()
+    });
+    assert_eq!(page.total, 9, "the total is the whole expansion");
+    let paged = flatten(&page.contains);
+    assert_eq!(paged.len(), 3, "the page carries three concepts: {paged:?}");
+    let whole_order = flatten(&whole.contains);
+    assert_eq!(
+        paged,
+        whole_order.get(1..4).expect("the same flattening"),
+        "the page is the slice the offset and count name"
+    );
+}
+
+/// Every code of an expansion tree, in pre-order.
+fn flatten(contains: &[Contains]) -> Vec<&str> {
+    let mut out = Vec::new();
+    for entry in contains {
+        out.push(entry.code.as_str());
+        out.extend(flatten(&entry.contains));
+    }
+    out
+}
+
+/// The entry for `code` anywhere in an expansion tree.
+fn entry<'a>(contains: &'a [Contains], code: &str) -> Option<&'a Contains> {
+    for item in contains {
+        if item.code == code {
+            return Some(item);
+        }
+        if let Some(found) = entry(&item.contains, code) {
+            return Some(found);
+        }
+    }
+    None
 }
