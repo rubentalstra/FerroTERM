@@ -38,6 +38,18 @@ pub const VAULT_OPEN: &str = "S02.01";
 pub const BASE: &str = "S02.1";
 /// The modifier.
 pub const MODIFIER: &str = "S5";
+/// The ICD-10 category whose subcategory shares four characters with a
+/// morphology class.
+pub const DEFORMITY: &str = "M95";
+/// The explicit ICD-10 subcategory, spelled with its period in the document.
+pub const NECK_DEFORMITY: &str = "M95.3";
+/// The root of the ICD-O morphology axis.
+pub const MORPHOLOGY: &str = "M";
+/// The morphology class spelled `M953` in the document, which keeps its
+/// spelling: its ancestor is `M`, not `M95`.
+pub const MESOTHELIOMAS: &str = "M953";
+/// A morphology code with a behaviour suffix.
+pub const MALIGNANT_MESOTHELIOMA: &str = "M9530/3";
 
 /// The version the ICD-10-CM fixture states.
 pub const CM_VERSION: &str = "2099";
@@ -61,9 +73,7 @@ pub const CM_VAULT: &str = "S02.0";
 pub const CM_VAULT_INITIAL: &str = "S02.0XXA";
 
 /// The `ClaML` document.
-#[must_use]
-pub fn claml() -> String {
-    let doc = r#"<?xml version="1.0" encoding="UTF-8"?>
+const CLAML: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <ClaML version="2.0.0">
   <Meta name="lang" value="nl"/>
   <Identifier authority="WHO" uid="synthetic"/>
@@ -72,6 +82,9 @@ pub fn claml() -> String {
     <ClassKind name="chapter"/>
     <ClassKind name="block"/>
     <ClassKind name="category"/>
+    <ClassKind name="mblock"/>
+    <ClassKind name="mdigit4"/>
+    <ClassKind name="mdigit6"/>
   </ClassKinds>
   <UsageKinds>
     <UsageKind mark="*" name="aster"/>
@@ -148,9 +161,44 @@ pub fn claml() -> String {
     <ExcludeModifier code="S5"/>
     <Rubric kind="preferred"><Label xml:lang="nl">Fractuur van schedelbasis</Label></Rubric>
   </Class>
+  <Class code="XIII" kind="chapter">
+    <SubClass code="M95-M99"/>
+    <Rubric kind="preferred"><Label xml:lang="nl">Ziekten van botspierstelsel en bindweefsel</Label></Rubric>
+  </Class>
+  <Class code="M95-M99" kind="block">
+    <SuperClass code="XIII"/>
+    <SubClass code="M95"/>
+    <Rubric kind="preferred"><Label xml:lang="nl">Overige aandoeningen van botspierstelsel en bindweefsel</Label></Rubric>
+  </Class>
+  <Class code="M95" kind="category">
+    <SuperClass code="M95-M99"/>
+    <SubClass code="M95.3"/>
+    <Rubric kind="preferred"><Label xml:lang="nl">Overige verworven misvormingen van botspierstelsel en bindweefsel</Label></Rubric>
+  </Class>
+  <Class code="M95.3" kind="category">
+    <SuperClass code="M95"/>
+    <Rubric kind="preferred"><Label xml:lang="nl">Verworven misvorming van hals</Label></Rubric>
+  </Class>
+  <Class code="M" kind="mblock">
+    <SubClass code="M953"/>
+    <Rubric kind="preferred"><Label xml:lang="nl">Morfologie van neoplasmata</Label></Rubric>
+  </Class>
+  <Class code="M953" kind="mdigit4">
+    <SuperClass code="M"/>
+    <SubClass code="M9530/3"/>
+    <Rubric kind="preferred"><Label xml:lang="nl">Mesotheliomen</Label></Rubric>
+  </Class>
+  <Class code="M9530/3" kind="mdigit6">
+    <SuperClass code="M953"/>
+    <Rubric kind="preferred"><Label xml:lang="nl">Mesothelioom, maligne</Label></Rubric>
+  </Class>
 </ClaML>
 "#;
-    doc.to_owned()
+
+/// The `ClaML` document.
+#[must_use]
+pub fn claml() -> String {
+    CLAML.to_owned()
 }
 
 /// Writes the `ClaML` document to `path`.

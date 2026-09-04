@@ -160,7 +160,7 @@ impl Cursor {
                 ));
             }
             "Class" => {
-                let code = with_period(&required(start, "Class", "code")?);
+                let code = required(start, "Class", "code")?;
                 let kind = required(start, "Class", "kind")?;
                 self.class = Some(Parsed {
                     class: Class {
@@ -176,7 +176,7 @@ impl Cursor {
                 if let Some(parsed) = &mut self.class
                     && parsed.class.parent.is_none()
                 {
-                    parsed.class.parent = attribute(start, "code").map(|c| with_period(&c));
+                    parsed.class.parent = attribute(start, "code");
                 }
             }
             "ModifiedBy" => {
@@ -329,6 +329,7 @@ pub fn read(text: &str) -> Result<Classification, ClamlError> {
             .title
             .clone_from(&document.classification.name);
     }
+    periods(&mut document);
     expand(&mut document)?;
     Ok(document.classification)
 }
@@ -368,6 +369,56 @@ fn applicable(by_code: &BTreeMap<&str, &Parsed>, code: &str) -> Vec<ModifiedBy> 
         out.extend(parsed.modified_by.iter().cloned());
     }
     out
+}
+
+/// Gives each ICD-10 subcategory code the period after its third character.
+///
+/// The period belongs to a code whose three-character category is one of its
+/// ancestors (<https://hl7.org/fhir/R4B/icd.html>). A code on another axis
+/// keeps its spelling: the ICD-O morphology class `M953` under `M` is not
+/// the ICD-10 subcategory `M95.3` under `M95`.
+fn periods(document: &mut Document) {
+    let parents: BTreeMap<&str, Option<&str>> = document
+        .parsed
+        .iter()
+        .map(|p| (p.class.code.as_str(), p.class.parent.as_deref()))
+        .collect();
+    let mut renamed: BTreeMap<String, String> = BTreeMap::new();
+    for parsed in &document.parsed {
+        let code = parsed.class.code.as_str();
+        let spelled = with_period(code);
+        if spelled == code {
+            continue;
+        }
+        let Some((category, _)) = code.split_at_checked(3) else {
+            continue;
+        };
+        let mut seen = BTreeSet::new();
+        let mut current = parents.get(code).copied().flatten();
+        while let Some(ancestor) = current {
+            if ancestor == category {
+                renamed.insert(code.to_owned(), spelled);
+                break;
+            }
+            if !seen.insert(ancestor) {
+                break;
+            }
+            current = parents.get(ancestor).copied().flatten();
+        }
+    }
+    for parsed in &mut document.parsed {
+        if let Some(spelled) = renamed.get(&parsed.class.code) {
+            parsed.class.code.clone_from(spelled);
+        }
+        if let Some(spelled) = parsed
+            .class
+            .parent
+            .as_deref()
+            .and_then(|parent| renamed.get(parent))
+        {
+            parsed.class.parent = Some(spelled.clone());
+        }
+    }
 }
 
 /// Expands the modifiers onto the leaf classes they apply to.

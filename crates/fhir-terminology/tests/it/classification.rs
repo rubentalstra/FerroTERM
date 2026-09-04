@@ -206,7 +206,7 @@ fn subsumption_and_the_generic_filters_answer_from_the_tree() {
     let chapters = provider
         .filter(&filter("kind", FilterOperator::Equal, "chapter"))
         .expect("filters");
-    assert_eq!(codes(&provider, chapters), ["II", "XIX"]);
+    assert_eq!(codes(&provider, chapters), ["II", "XIII", "XIX"]);
     let daggers = provider
         .filter(&filter("usage", FilterOperator::Exists, "true"))
         .expect("filters");
@@ -223,7 +223,7 @@ fn subsumption_and_the_generic_filters_answer_from_the_tree() {
         provider.filter(&filter("concept", FilterOperator::IsA, "Z99")),
         Err(ProviderError::UnknownCode(_))
     ));
-    assert_eq!(provider.all().expect("all").len(), 12);
+    assert_eq!(provider.all().expect("all").len(), 19);
     let hits = provider.search("schedeldak", Some("nl")).expect("searches");
     assert_eq!(
         codes(&provider, hits),

@@ -75,6 +75,28 @@
       "search": "diabetes"
     },
     {
+      "name": "ICD-10-NL",
+      "artifact": "artifacts/icd10nl",
+      "release": "data/icd10/20241128 ICD-10-2021v3.1C.zip",
+      "build": [
+        "--claml",
+        "--system",
+        "http://hl7.org/fhir/sid/icd-10-nl",
+        "--claml-version",
+        "2021"
+      ],
+      "uri": "http://hl7.org/fhir/sid/icd-10-nl",
+      "lookup": "M95.3",
+      "validate": "M95.3",
+      "subsumes": [
+        "M95",
+        "M95.3"
+      ],
+      "expand": null,
+      "expand_small": null,
+      "search": "hals"
+    },
+    {
       "name": "RxNorm (prescribable subset)",
       "artifact": "artifacts/rxnorm",
       "release": "data/rxnorm/RxNorm_full_prescribe_current.zip",

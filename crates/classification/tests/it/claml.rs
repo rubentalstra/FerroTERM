@@ -4,7 +4,8 @@
 use ::classification::claml::{ClamlError, MODIFIER, read};
 use ::classification::{Class, Classification, PREFERRED};
 use ferroterm_testkit::classification::{
-    BASE, BILE_DUCT, BLOCK, CHAPTER, CLAML_VERSION, LIVER, LIVER_CELL, SKULL, VAULT, VAULT_CLOSED,
+    BASE, BILE_DUCT, BLOCK, CHAPTER, CLAML_VERSION, DEFORMITY, LIVER, LIVER_CELL,
+    MALIGNANT_MESOTHELIOMA, MESOTHELIOMAS, MORPHOLOGY, NECK_DEFORMITY, SKULL, VAULT, VAULT_CLOSED,
     VAULT_OPEN, claml,
 };
 
@@ -22,7 +23,12 @@ fn the_title_kinds_classes_and_parents_are_read() {
     assert_eq!(classification.name, "ICD-10-NL");
     assert_eq!(classification.version.as_deref(), Some(CLAML_VERSION));
     assert_eq!(classification.language, "nl");
-    assert_eq!(classification.kinds, ["chapter", "block", "category"]);
+    assert_eq!(
+        classification.kinds,
+        [
+            "chapter", "block", "category", "mblock", "mdigit4", "mdigit6"
+        ]
+    );
     assert_eq!(
         classification.title,
         "ICD-10 Nederlandse vertaling (synthetisch)"
@@ -115,7 +121,7 @@ fn modifiers_expand_onto_the_leaves_they_apply_to() {
         "the block itself is not a leaf and is not modified"
     );
     assert_eq!(class(&classification, BASE).parent.as_deref(), Some(SKULL));
-    assert_eq!(classification.classes.len(), 12);
+    assert_eq!(classification.classes.len(), 19);
     assert!(
         classification
             .classes
@@ -147,4 +153,32 @@ fn a_document_that_is_not_claml_or_names_an_undefined_modifier_is_refused() {
         })
     ));
     assert!(read("<ClaML><Title>").is_err(), "not well-formed");
+}
+
+#[test]
+fn a_morphology_code_keeps_its_spelling_beside_the_subcategory_it_resembles() {
+    let classification = read(&claml()).expect("reads");
+    let neck = class(&classification, NECK_DEFORMITY);
+    assert_eq!(neck.parent.as_deref(), Some(DEFORMITY));
+    assert_eq!(neck.kind, "category");
+    assert_eq!(neck.title("nl"), Some("Verworven misvorming van hals"));
+    let mesotheliomas = class(&classification, MESOTHELIOMAS);
+    assert_eq!(
+        mesotheliomas.parent.as_deref(),
+        Some(MORPHOLOGY),
+        "`M953` hangs under `M`, not under `M95`, so it earns no period"
+    );
+    assert_eq!(mesotheliomas.kind, "mdigit4");
+    assert_eq!(mesotheliomas.title("nl"), Some("Mesotheliomen"));
+    let malignant = class(&classification, MALIGNANT_MESOTHELIOMA);
+    assert_eq!(malignant.parent.as_deref(), Some(MESOTHELIOMAS));
+    assert_eq!(
+        classification
+            .classes
+            .iter()
+            .filter(|c| c.code == NECK_DEFORMITY)
+            .count(),
+        1,
+        "one class spells M95.3"
+    );
 }
