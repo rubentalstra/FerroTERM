@@ -17,3 +17,5 @@ The engine's operations are written in `fhir_types::r4b` types (49 imports acros
 **Why:** the owner wants every version served from one server (`docs/architecture.md`); the tx-ecosystem suite and the LOINC cases are written in R5 shapes, so R5 is the value driver.
 
 **How to apply:** do the refactor first with `/r4b` behaviour pinned by the existing suites and the 120-case general pass list; then R4 (#113) as the first new wire module, then R5 (#114) and rerun the tx.fhir.org and general modes against `/r5`. See [[milestone-autonomy]], [[release-cut-cadence]].
+
+Benchmark program state (2026-09-04): #212 merged (PR #218, harness + container), #213 merged (PR #219, README table from bench/records/2026-09-04-docker-apple-m2), #214 in PR #220 (landing redesign, benchmarks.html, assemble.sh with roadmap from milestones). Remaining in v0.0.10: #209 (Sonar, owner session), #12 children #13 #15 #18 #19.

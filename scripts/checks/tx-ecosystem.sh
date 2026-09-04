@@ -109,9 +109,11 @@ if [ "$total" = 0 ]; then
   exit 1
 fi
 # The committed total feeds the conformance badges (conformance-badges.sh); a
-# suite bump that changes it is recorded in the same change.
+# suite bump that changes it is recorded in the same change. A mode run
+# (icd-11, tx.fhir.org, ...) selects a subset, so only the general run is held
+# to it.
 committed_total=$(tr -d '[:space:]' < conformance/tx-ecosystem/total.txt)
-if [ "$committed_total" != "$total" ]; then
+if [ "$mode" = general ] && [ "$committed_total" != "$total" ]; then
   echo "tx-ecosystem: the suite ran $total tests but conformance/tx-ecosystem/total.txt says $committed_total; update it in this change" >&2
   exit 1
 fi
