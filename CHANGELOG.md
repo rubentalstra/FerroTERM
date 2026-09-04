@@ -20,6 +20,7 @@ fresh link reference.
 
 ### Fixed
 
+- `excludeNotForUI = true` on `$expand` drops the abstract (`notSelectable`) groupers and `excludePostCoordinated = true` drops post-coordinated expressions; both were accepted and ignored.
 - A code a case-insensitive system locates under another spelling is noted as `information` on `$validate-code`, the terminology ecosystem's severity. The message id every issue carries on the wire is decided where the issue is raised, never read off its wording.
 - ICD-11: a codeless grouper keeps its abstract status for expansions (`contains.abstract`) and for `$validate-code` with `abstract = false`; only the `$lookup` output `abstract` is withheld, as the ecosystem's icd-11 case expects. A bare ICF code no longer counts as the dotted qualifier form.
 - ClaML: a code earns the period after its third character only when its three-character category is one of its ancestors, so the ICD-O morphology class `M953` under `M` keeps its spelling beside the ICD-10 subcategory `M95.3`; the ICD-10-NL 2021 release builds.

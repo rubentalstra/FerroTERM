@@ -453,3 +453,81 @@ fn a_codeless_grouper_is_abstract_and_codeless_and_a_coded_concept_is_neither() 
     assert!(!status.abstract_concept);
     assert!(!status.codeless);
 }
+
+// NOTE: `excludePostCoordinated` leaves post-coordinated expressions out of an
+// expansion (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>).
+#[test]
+fn the_exclude_flags_drop_a_postcoordinated_expression_and_a_codeless_grouper() {
+    use std::sync::Arc;
+
+    use fhir_terminology::conceptmap::store::ConceptMapStore;
+    use fhir_terminology::operations::expand::ExpandInput;
+    use fhir_terminology::operations::{Sources, expand};
+    use fhir_terminology::registry::Registry;
+    use fhir_terminology::valueset::store::ValueSetStore;
+    use fhir_types::r4b::value_set::{
+        ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeConcept,
+    };
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_artifacts(dir.path()).expect("builds");
+    let mut registry = Registry::new();
+    registry
+        .register(Arc::new(
+            Icd11Provider::open(&dir.path().join("mms")).expect("opens mms"),
+        ))
+        .expect("registers");
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let block_uri = format!("{MMS}/{BLOCK}");
+    let inline = ValueSet {
+        url: Some("http://example.org/inline".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(MMS.into()),
+                concept: [block_uri.as_str(), "1A00", "1A00&XN8P1"]
+                    .iter()
+                    .map(|code| ValueSetComposeIncludeConcept {
+                        code: (*code).into(),
+                        ..Default::default()
+                    })
+                    .collect(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let inline = fhir_terminology::valueset::convert::r4b::convert(&inline);
+    let codes = |input: ExpandInput| -> Vec<String> {
+        let vs = expand::expand(&sources, &input).expect("expands");
+        vs.contains.iter().map(|c| c.code.clone()).collect()
+    };
+    let all = codes(ExpandInput {
+        inline_value_set: Some(inline.clone()),
+        ..ExpandInput::default()
+    });
+    assert_eq!(all.len(), 3, "{all:?}");
+    assert!(all.contains(&String::from("1A00&XN8P1")));
+    let no_expressions = codes(ExpandInput {
+        inline_value_set: Some(inline.clone()),
+        exclude_post_coordinated: Some(true),
+        ..ExpandInput::default()
+    });
+    assert_eq!(no_expressions.len(), 2, "{no_expressions:?}");
+    assert!(!no_expressions.iter().any(|c| c.contains('&')));
+    assert!(no_expressions.contains(&block_uri));
+    let selectable = codes(ExpandInput {
+        inline_value_set: Some(inline),
+        exclude_not_for_ui: Some(true),
+        exclude_post_coordinated: Some(true),
+        ..ExpandInput::default()
+    });
+    assert_eq!(selectable, ["1A00"]);
+}

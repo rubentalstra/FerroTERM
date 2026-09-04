@@ -830,6 +830,10 @@ impl CodeSystemProvider for Icd11Provider {
             }))
     }
 
+    fn is_postcoordinated(&self, concept: Concept) -> bool {
+        concept.index() >= self.concepts
+    }
+
     fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
         // A grouper without a code of its own is `notSelectable`: abstract in an
         // expansion and refused by `$validate-code` with `abstract = false`.

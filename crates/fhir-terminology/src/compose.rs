@@ -68,6 +68,10 @@ pub struct Compose {
 pub struct Options {
     /// `activeOnly`: drop inactive concepts.
     pub active_only: bool,
+    /// `excludeNotForUI`: drop the abstract (`notSelectable`) groupers.
+    pub exclude_not_for_ui: bool,
+    /// `excludePostCoordinated`: drop post-coordinated expressions.
+    pub exclude_post_coordinated: bool,
     /// `filter`: a text search every concept must match by a designation.
     pub text: Option<String>,
     /// `displayLanguage`: the language for `display`.
@@ -276,6 +280,11 @@ impl<'a> Expander<'a> {
                 drop_inactive(url, selection)?;
             }
         }
+        if options.exclude_not_for_ui {
+            for ((url, _), selection) in &mut selections {
+                drop_not_for_ui(url, selection)?;
+            }
+        }
         let total = selections.values().map(|s| s.set.len()).sum();
         let mut items = Vec::new();
         let mut skip = options.offset;
@@ -455,6 +464,10 @@ impl<'a> Expander<'a> {
                 let Some(located) = provider.locate(&concept.code).map_err(&failed)? else {
                     continue;
                 };
+                if options.exclude_post_coordinated && provider.is_postcoordinated(located.concept)
+                {
+                    continue;
+                }
                 set.insert(located.concept.index());
             }
             set
@@ -505,6 +518,38 @@ fn drop_inactive(url: &str, selection: &mut Selection) -> Result<(), ComposeErro
         }
     }
     selection.set -= inactive;
+    Ok(())
+}
+
+/// Drops the abstract (`notSelectable`) groupers from `selection`: by a status
+/// scan for a small set, by the provider's set for a large one.
+fn drop_not_for_ui(url: &str, selection: &mut Selection) -> Result<(), ComposeError> {
+    let failed = |source: ProviderError| ComposeError::Provider {
+        system: url.to_owned(),
+        source,
+    };
+    if selection.set.len() > STATUS_SCAN_LIMIT {
+        match selection.provider.not_for_ui() {
+            Ok(abstract_concepts) => {
+                selection.set -= &abstract_concepts;
+                return Ok(());
+            }
+            Err(ProviderError::NotEnumerable) => {}
+            Err(source) => return Err(failed(source)),
+        }
+    }
+    let mut abstract_concepts = ConceptSet::new();
+    for index in &selection.set {
+        if selection
+            .provider
+            .status(Concept::new(index))
+            .map_err(&failed)?
+            .abstract_concept
+        {
+            abstract_concepts.insert(index);
+        }
+    }
+    selection.set -= abstract_concepts;
     Ok(())
 }
 

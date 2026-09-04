@@ -545,6 +545,34 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
         Ok(inactive)
     }
 
+    /// The concepts an expansion for use outside a user interface leaves out:
+    /// the abstract (`notSelectable`) groupers, for `excludeNotForUI`
+    /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>).
+    ///
+    /// The default scans every concept's status; a provider with a cheaper
+    /// answer overrides.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::NotEnumerable`] when the system cannot
+    /// enumerate, and [`ProviderError::Storage`] when the substrate fails.
+    fn not_for_ui(&self) -> Result<ConceptSet, ProviderError> {
+        let mut abstract_concepts = ConceptSet::new();
+        for index in self.all()? {
+            if self.status(Concept::new(index))?.abstract_concept {
+                abstract_concepts.insert(index);
+            }
+        }
+        Ok(abstract_concepts)
+    }
+
+    /// Whether `concept` is a post-coordinated expression the system composed
+    /// on request, for `excludePostCoordinated`; a system without a grammar
+    /// has none.
+    fn is_postcoordinated(&self, _concept: Concept) -> bool {
+        false
+    }
+
     /// Every designation, optionally only those in `language`.
     ///
     /// # Errors
