@@ -18,8 +18,11 @@ macro_rules! metadata {
             use fhir_types::$fhir::capability_statement::{
                 CapabilityStatement, CapabilityStatementImplementation, CapabilityStatementRest,
                 CapabilityStatementRestResource, CapabilityStatementRestResourceInteraction,
-                CapabilityStatementRestResourceOperation, CapabilityStatementSoftware,
+                CapabilityStatementRestResourceOperation, CapabilityStatementRestSecurity,
+                CapabilityStatementSoftware,
             };
+            use fhir_types::$fhir::codeable_concept::CodeableConcept;
+            use fhir_types::$fhir::coding::Coding;
             use fhir_types::$fhir::extension::{Extension, ExtensionValue};
             use fhir_types::operation::{Operation, ParameterSource, ParameterUse};
             use fhir_types::$fhir::operations::code_system_lookup::CODE_SYSTEM_LOOKUP;
@@ -35,10 +38,51 @@ macro_rules! metadata {
             use http::StatusCode;
 
             use crate::outcome::Failure;
+            use crate::config::{SECURITY_SERVICES, SECURITY_SERVICE_SYSTEM};
             use crate::state::AppState;
 
             /// The FHIR version this surface serves.
             pub const FHIR_VERSION: &str = $fhir_version;
+            /// `rest.security.service`: the authentication in front of the server, which
+            /// the terminology ecosystem requires a server to populate
+            /// (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, Metadata).
+            ///
+            /// The deployment declares it (`FERROTERM_SECURITY_SERVICE`); the server itself
+            /// authenticates nobody, and the binding is extensible, so a deployment that
+            /// declares none says so in text.
+            fn security(state: &AppState) -> CapabilityStatementRestSecurity {
+                let declared = state.security_services();
+                let service = if declared.is_empty() {
+                    CodeableConcept {
+                        text: Some(
+                            "The server requires no authentication of its own; a deployment puts its own in front of it."
+                                .into(),
+                        ),
+                        ..Default::default()
+                    }
+                } else {
+                    CodeableConcept {
+                        coding: declared
+                            .iter()
+                            .map(|code| Coding {
+                                system: Some(SECURITY_SERVICE_SYSTEM.into()),
+                                code: Some(code.as_str().into()),
+                                display: SECURITY_SERVICES
+                                    .iter()
+                                    .find(|(known, _)| known == code)
+                                    .map(|(_, display)| (*display).into()),
+                                ..Default::default()
+                            })
+                            .collect(),
+                        ..Default::default()
+                    }
+                };
+                CapabilityStatementRestSecurity {
+                    service: vec![service],
+                    ..Default::default()
+                }
+            }
+
             /// The canonical of this server's capability statement for the version (our own).
             pub const CAPABILITY_URL: &str =
                 concat!("https://ferroterm.eu/fhir/CapabilityStatement/ferroterm-", stringify!($fhir));
@@ -227,6 +271,7 @@ macro_rules! metadata {
                     }),
                     rest: vec![CapabilityStatementRest {
                         mode: "server".into(),
+                        security: Some(security(state)),
                         resource: vec![
                             CapabilityStatementRestResource {
                                 r#type: "CodeSystem".into(),

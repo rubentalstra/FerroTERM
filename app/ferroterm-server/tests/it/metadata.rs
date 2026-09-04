@@ -51,3 +51,26 @@ async fn terminology_capabilities_list_the_loaded_edition() {
     assert_eq!(bad, StatusCode::BAD_REQUEST);
     assert_eq!(outcome["issue"][0]["code"], "value");
 }
+
+// NOTE: <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html> (Metadata) requires
+// a server to populate `rest[mode = server].security.service`; the binding is extensible,
+// so a deployment that authenticates nobody says so in text.
+#[tokio::test]
+async fn the_capability_statement_names_its_security_service_on_every_version() {
+    let server = Server::start();
+    for version in ["r4", "r4b", "r5", "r6"] {
+        let (status, body) = server.get(&format!("/{version}/metadata")).await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        let service = &body["rest"][0]["security"]["service"][0];
+        assert!(
+            service["coding"].as_array().is_none_or(Vec::is_empty),
+            "{version}: no deployment declared one: {service}"
+        );
+        assert!(
+            service["text"]
+                .as_str()
+                .is_some_and(|text| text.contains("no authentication of its own")),
+            "{version}: {service}"
+        );
+    }
+}
