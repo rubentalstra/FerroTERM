@@ -30,6 +30,9 @@ pub struct ValidateCodeInput {
     pub codeable_concept: Option<Vec<CodingRef>>,
     /// The language of the display (a BCP 47 range list).
     pub display_language: Option<String>,
+    /// `lenient-display-validation`: a wrong display is a warning and the
+    /// result stays true (the ecosystem's extension of this operation).
+    pub lenient_display: bool,
 }
 
 /// The outcome of `CodeSystem/$validate-code`.
@@ -161,6 +164,7 @@ pub fn validate_code(
             code,
             input.display.as_deref(),
             language,
+            input.lenient_display,
             "code",
         );
     }
@@ -192,6 +196,7 @@ pub fn validate_code(
             code,
             coding.display.as_deref().or(input.display.as_deref()),
             language,
+            input.lenient_display,
             "coding",
         );
     }
@@ -229,7 +234,14 @@ fn check_codeable_concept(
         };
         any = true;
         let base = format!("CodeableConcept.coding[{index}]");
-        let outcome = check(provider, code, coding.display.as_deref(), language, &base)?;
+        let outcome = check(
+            provider,
+            code,
+            coding.display.as_deref(),
+            language,
+            false,
+            &base,
+        )?;
         if outcome.result {
             return Ok(outcome);
         }
@@ -271,9 +283,11 @@ fn check(
     code: &str,
     display: Option<&str>,
     language: Option<&str>,
+    lenient: bool,
     expression: &str,
 ) -> Result<ValidationOutcome, OperationError> {
     let identity = provider.identity();
+    let version = Some(identity.version.clone()).filter(|v| !v.is_empty());
     let Some(located) = provider.locate(code)? else {
         let text = super::display::unknown_code_text(provider.as_ref(), code);
         return Ok(ValidationOutcome {
@@ -282,7 +296,7 @@ fn check(
             display: None,
             code: Some(code.to_owned()),
             system: Some(identity.url.clone()),
-            version: Some(identity.version.clone()),
+            version,
             issues: vec![Issue {
                 severity: "error",
                 code: "code-invalid",
@@ -319,7 +333,7 @@ fn check(
                 code: &located.code,
                 given: display,
                 requested: requested_language,
-                lenient: false,
+                lenient,
             },
             super::at(expression, "display"),
         )?
@@ -340,6 +354,12 @@ fn check(
         issues.push(note);
         inactive = Some(true);
         status_code = code_status;
+    } else if let Some((note, code_status)) =
+        super::deprecated_note(&located.code, &status, super::whole(expression))
+    {
+        messages.push(note.text.clone());
+        issues.push(note);
+        status_code = Some(code_status);
     }
     let canonical = format!("{}|{}", identity.url, identity.version);
     issues.extend(super::standing_note(
@@ -353,7 +373,7 @@ fn check(
         display: preferred,
         code: Some(located.code),
         system: Some(identity.url.clone()),
-        version: Some(identity.version.clone()),
+        version,
         issues,
         unknown_systems: Vec::new(),
         x_unknown_systems: Vec::new(),

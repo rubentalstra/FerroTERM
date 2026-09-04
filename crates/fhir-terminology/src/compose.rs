@@ -34,6 +34,9 @@ pub struct ConceptRef {
     pub code: String,
     /// A display to use instead of the system's.
     pub display: Option<String>,
+    /// Whether the value set marks the concept deprecated
+    /// (`valueset-deprecated`).
+    pub deprecated: bool,
 }
 
 /// `ValueSet.compose.include` (and `exclude`, which has the same shape).

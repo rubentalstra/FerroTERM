@@ -769,6 +769,7 @@ impl CodeSystemProvider for SnomedProvider {
             .concept(Self::ordinal(concept))
             .map_err(storage)?;
         Ok(Status {
+            standards_status: None,
             active: record.is_some_and(|c| c.active),
             inactive_reason: None,
             abstract_concept: false,
@@ -792,6 +793,7 @@ impl CodeSystemProvider for SnomedProvider {
                     .is_none_or(|wanted| primary_subtag(&d.language) == wanted)
             })
             .map(|d| Designation {
+                standards_status: None,
                 language: Some(d.language.clone()),
                 use_: Some(self.use_coding(d.use_ordinal)),
                 value: d.term,
@@ -986,6 +988,7 @@ impl CodeSystemProvider for SnomedProvider {
                 for refset in self.memberships.refsets() {
                     if let Ok(Some(located)) = self.locate(&refset.to_string()) {
                         concepts.push(ConceptRef {
+                            deprecated: false,
                             code: located.code,
                             display: None,
                         });

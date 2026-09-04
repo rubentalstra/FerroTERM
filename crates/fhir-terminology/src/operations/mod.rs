@@ -508,14 +508,24 @@ impl Issue {
             "code-rule" if text.contains("is abstract") => "ABSTRACT_CODE_NOT_ALLOWED",
             "code-rule" if text.contains("by case") => "CODE_CASE_DIFFERENCE",
             "code-rule" => "STATUS_CODE_WARNING_CODE",
+            "code-comment" if text.contains("is marked with a status of deprecated") => {
+                "CONCEPT_DEPRECATED_IN_VALUESET"
+            }
             "code-comment" if text.contains("is deprecated") => "DEPRECATED_CONCEPT_FOUND",
             "code-comment" => "INACTIVE_CONCEPT_FOUND",
+            "display-comment" => "INACTIVE_DISPLAY_FOUND",
             "status-check" if text.starts_with("Reference to draft") => "MSG_DRAFT",
             "status-check" if text.starts_with("Reference to deprecated") => "MSG_DEPRECATED",
             "status-check" if text.starts_with("Reference to withdrawn") => "MSG_WITHDRAWN",
             "status-check" => "MSG_EXPERIMENTAL",
             "cannot-infer" => "UNABLE_TO_INFER_CODESYSTEM",
             "invalid-data" if text.contains("is a supplement") => "CODESYSTEM_CS_NO_SUPPLEMENT",
+            "invalid-data" if text.contains("references a value set") => {
+                "Terminology_TX_System_ValueSet2"
+            }
+            "invalid-data" if text.contains("absolute reference") => {
+                "Terminology_TX_System_Relative"
+            }
             "invalid-data" => "Coding_has_no_system__cannot_validate",
             "not-supported" => "CODESYSTEM_NOT_ENUMERABLE",
             "too-costly" => "VALUESET_TOO_COSTLY",
@@ -583,6 +593,30 @@ pub fn at(base: &str, leaf: &str) -> Option<String> {
 ///
 /// The ecosystem asks for a `code-comment` warning beside `inactive = true`,
 /// and for `status` when the system states one
+/// The `code-comment` warning for an active concept whose standards status is
+/// `deprecated`, with the `status` output it earns (the ecosystem's
+/// `DEPRECATED_CONCEPT_FOUND`); `None` otherwise.
+#[must_use]
+pub fn deprecated_note(
+    code: &str,
+    status: &crate::provider::Status,
+    expression: Option<String>,
+) -> Option<(Issue, String)> {
+    if !status.active || status.standards_status.as_deref() != Some("deprecated") {
+        return None;
+    }
+    Some((
+        Issue {
+            severity: "warning",
+            code: "business-rule",
+            kind: "code-comment",
+            text: format!("The concept '{code}' is deprecated and its use should be reviewed"),
+            expression,
+        },
+        String::from("deprecated"),
+    ))
+}
+
 /// (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, "Inactive Codes").
 #[must_use]
 pub fn inactive_note(

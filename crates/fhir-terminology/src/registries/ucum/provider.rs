@@ -261,6 +261,7 @@ impl CodeSystemProvider for UcumProvider {
 
     fn status(&self, _concept: Concept) -> Result<Status, ProviderError> {
         Ok(Status {
+            standards_status: None,
             active: true,
             inactive_reason: None,
             abstract_concept: false,
@@ -279,6 +280,7 @@ impl CodeSystemProvider for UcumProvider {
             return Ok(Vec::new());
         };
         Ok(vec![Designation {
+            standards_status: None,
             language: Some(String::from("en")),
             use_: Some(DesignationUse {
                 system: String::from("http://snomed.info/sct"),

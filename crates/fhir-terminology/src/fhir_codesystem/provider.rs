@@ -202,6 +202,7 @@ impl FhirCodeSystem {
             }
         }
         Status {
+            standards_status: entry.standards_status.clone(),
             active,
             inactive_reason: reason,
             abstract_concept,

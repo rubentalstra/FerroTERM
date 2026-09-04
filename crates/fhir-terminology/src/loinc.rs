@@ -495,6 +495,7 @@ impl CodeSystemProvider for LoincProvider {
             .map_err(storage)?;
         let active = record.is_some_and(|c| c.active);
         Ok(Status {
+            standards_status: None,
             active,
             inactive_reason: (!active).then(|| String::from("DEPRECATED")),
             abstract_concept: false,
@@ -518,6 +519,7 @@ impl CodeSystemProvider for LoincProvider {
                     .is_none_or(|w| primary_subtag(&d.language) == w)
             })
             .map(|d| Designation {
+                standards_status: None,
                 language: Some(d.language.clone()),
                 use_: Some(self.use_coding(d.use_ordinal)),
                 value: d.term,
@@ -615,6 +617,7 @@ impl CodeSystemProvider for LoincProvider {
                         concepts: concepts
                             .into_iter()
                             .map(|code| ConceptRef {
+                                deprecated: false,
                                 code,
                                 display: None,
                             })

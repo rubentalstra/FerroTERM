@@ -124,12 +124,32 @@ macro_rules! convert_code_system {
                 }
             }
 
+            // NOTE: `structuredefinition-standards-status` on a concept or a designation
+            // marks it deprecated or withdrawn while it stays defined
+            // (<https://hl7.org/fhir/R4B/extension-structuredefinition-standards-status.html>).
+            fn standards_status(
+                extensions: &[fhir_types::$module::extension::Extension],
+            ) -> Option<String> {
+                extensions
+                    .iter()
+                    .find(|x| {
+                        x.url == "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status"
+                    })
+                    .and_then(|x| match &x.value {
+                        Some(fhir_types::$module::extension::ExtensionValue::Code(c)) => {
+                            text(c.value.as_deref())
+                        }
+                        _ => None,
+                    })
+            }
+
             fn designations(concept: &CodeSystemConcept) -> Vec<Designation> {
                 let mut out = Vec::new();
                 for designation in &concept.designation {
                     let language =
                         text(designation.language.as_ref().and_then(|l| l.value.as_deref()));
                     let value = text(designation.value.value.as_deref()).unwrap_or_default();
+                    let standing = standards_status(&designation.extension);
                     out.push(Designation {
                         language: language.clone(),
                         use_: designation.r#use.as_ref().and_then(|u| {
@@ -140,8 +160,9 @@ macro_rules! convert_code_system {
                             )
                         }),
                         value: value.clone(),
+                        standards_status: standing.clone(),
                     });
-                    convert_code_system!(@additional $additional_use, designation, language, value, out);
+                    convert_code_system!(@additional $additional_use, designation, language, value, standing, out);
                 }
                 out
             }
@@ -176,6 +197,7 @@ macro_rules! convert_code_system {
                             concept.definition.as_ref().and_then(|d| d.value.as_deref()),
                         ),
                         designations: designations(concept),
+                        standards_status: standards_status(&concept.extension),
                         properties,
                         parents,
                     });
@@ -257,7 +279,7 @@ macro_rules! convert_code_system {
             }
         }
     };
-    (@additional true, $designation:ident, $language:ident, $value:ident, $out:ident) => {
+    (@additional true, $designation:ident, $language:ident, $value:ident, $standing:ident, $out:ident) => {
         for extra in &$designation.additional_use {
             $out.push(Designation {
                 language: $language.clone(),
@@ -267,10 +289,11 @@ macro_rules! convert_code_system {
                     extra.display.as_ref().and_then(|s| s.value.as_deref()),
                 ),
                 value: $value.clone(),
+                standards_status: $standing.clone(),
             });
         }
     };
-    (@additional false, $designation:ident, $language:ident, $value:ident, $out:ident) => {};
+    (@additional false, $designation:ident, $language:ident, $value:ident, $standing:ident, $out:ident) => {};
 }
 
 convert_code_system!(r4, false);

@@ -365,6 +365,7 @@ impl CodeSystemProvider for ClassificationProvider {
             .concept(Self::ordinal(concept))
             .map_err(storage)?;
         Ok(Status {
+            standards_status: None,
             active: record.is_some_and(|c| c.active),
             inactive_reason: None,
             abstract_concept: false,
@@ -388,6 +389,7 @@ impl CodeSystemProvider for ClassificationProvider {
                     .is_none_or(|w| primary_subtag(&d.language) == w)
             })
             .map(|d| Designation {
+                standards_status: None,
                 language: Some(d.language.clone()),
                 use_: Some(self.use_coding(d.use_ordinal)),
                 value: d.term,

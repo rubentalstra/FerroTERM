@@ -176,6 +176,10 @@ pub struct TypeDef {
     pub is_primitive: bool,
     /// Whether the type is a root-set resource.
     pub is_resource: bool,
+    /// The Rust name of the type this one specializes (`baseDefinition`), for
+    /// a primitive: `Code` and `Id` specialize `String`, `Canonical` and `Url`
+    /// specialize `Uri` (<https://hl7.org/fhir/R5/datatypes.html#primitive>).
+    pub base: Option<String>,
 }
 
 /// The generated module for one FHIR version: every type it emits.
@@ -249,6 +253,7 @@ impl VersionModule {
             kind: TypeKind::ResourceEnum { resources },
             is_primitive: false,
             is_resource: false,
+            base: None,
         }, "the Resource enum")?;
         model.insert(TypeDef {
             name: UNKNOWN_RESOURCE.to_owned(),
@@ -262,6 +267,7 @@ impl VersionModule {
             kind: TypeKind::UnknownResource,
             is_primitive: false,
             is_resource: false,
+            base: None,
         }, "the UnknownResource struct")?;
         model.box_cycles();
         Ok(model)
@@ -404,6 +410,7 @@ fn lower_struct(
                             variants,
                         },
                         is_primitive: false,
+                        base: None,
                         is_resource: false,
                     },
                     &element.path,
@@ -434,6 +441,11 @@ fn lower_struct(
             kind: TypeKind::Struct { fields },
             is_primitive,
             is_resource,
+            base: is_primitive
+                .then_some(structure.base_definition.as_deref())
+                .flatten()
+                .and_then(|url| url.rsplit('/').next())
+                .map(type_name),
         },
         path,
     )
@@ -540,7 +552,7 @@ fn lower_typed(
 /// the primitive's definition (<https://hl7.org/fhir/R4B/datatypes.html#primitive>).
 /// Decimals and the date and time primitives keep their lexical form so
 /// precision and partial dates survive.
-fn scalar_for(code: &str) -> Scalar {
+pub(crate) fn scalar_for(code: &str) -> Scalar {
     match code {
         "boolean" => Scalar::Bool,
         "integer" => Scalar::I32,

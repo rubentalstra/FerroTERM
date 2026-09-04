@@ -843,6 +843,7 @@ impl CodeSystemProvider for Icd11Provider {
                 .and_then(|i| self.codes.get(i))
                 .is_some_and(Option::is_none);
         Ok(Status {
+            standards_status: None,
             active: true,
             inactive_reason: None,
             abstract_concept,
@@ -869,6 +870,7 @@ impl CodeSystemProvider for Icd11Provider {
                     .is_none_or(|w| primary_subtag(&d.language) == w)
             })
             .map(|d| Designation {
+                standards_status: None,
                 language: Some(d.language.clone()),
                 use_: Some(self.use_coding(d.use_ordinal)),
                 value: d.term,

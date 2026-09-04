@@ -252,6 +252,7 @@ impl CodeSystemProvider for Fixture {
 
     fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
         Ok(Status {
+            standards_status: None,
             active: self.row(concept).is_some_and(|row| row.active),
             inactive_reason: None,
             abstract_concept: false,
@@ -270,6 +271,7 @@ impl CodeSystemProvider for Fixture {
             .into_iter()
             .filter(|(lang, _)| language.is_none_or(|wanted| wanted == *lang))
             .map(|(lang, value)| Designation {
+                standards_status: None,
                 language: Some(lang.to_owned()),
                 use_: Some(synonym()),
                 value: value.to_owned(),

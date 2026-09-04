@@ -18,6 +18,8 @@ pub struct ConceptEntry {
     pub definition: Option<String>,
     /// `concept.designation`.
     pub designations: Vec<Designation>,
+    /// The concept's `structuredefinition-standards-status` code, when set.
+    pub standards_status: Option<String>,
     /// `concept.property`, as declared.
     pub properties: Vec<Property>,
     /// The codes of the parents: the enclosing concept, plus every `parent`

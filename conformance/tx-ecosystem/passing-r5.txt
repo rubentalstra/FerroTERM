@@ -4,6 +4,7 @@ big/big-echo-zero-fifty-limit
 case/case-insensitive-code1-1
 case/case-sensitive-code1-1
 case/case-sensitive-code1-2
+case/case-sensitive-code1-3
 default-valueset-version/direct-expand-one
 default-valueset-version/direct-expand-two
 default-valueset-version/indirect-expand-zero-pinned-wrong
@@ -12,6 +13,7 @@ default-valueset-version/indirect-validation-two
 default-valueset-version/indirect-validation-zero
 default-valueset-version/indirect-validation-zero-pinned
 default-valueset-version/indirect-validation-zero-pinned-wrong
+deprecated/deprecating-validate
 deprecated/draft-validate
 deprecated/experimental-validate
 deprecated/not-withdrawn-validate
@@ -22,8 +24,13 @@ exclude/exclude-all
 exclude/exclude-zero
 extensions/extensions-echo-bad-supplement
 extensions/validate-code-bad-supplement
+extensions/validate-code-inactive
+extensions/validate-code-inactive-display-lenient
+extensions/validate-code-inactive-display-notlenient
 extensions/validate-codeableconcept-bad-supplement
 extensions/validate-coding-bad-supplement
+extensions/validate-coding-good-supplement
+extensions/validate-coding-good2-supplement
 fragment/validation-fragment-code-good
 fragment/validation-fragment-codeableconcept-good
 fragment/validation-fragment-coding-good
@@ -93,6 +100,7 @@ notSelectable/notSelectable-prop-out-unknown
 notSelectable/notSelectable-prop-true
 notSelectable/notSelectable-prop-true-false
 notSelectable/notSelectable-prop-true-true
+notSelectable/notSelectable-prop-true-true-param-false
 notSelectable/notSelectable-prop-true-true-param-true
 notSelectable/notSelectable-prop-true-unknown
 notSelectable/notSelectable-prop-trueUC
@@ -119,6 +127,7 @@ overload/validate-all-good2
 overload/validate-all-good3
 overload/validate-all-good4
 overload/validate-bad-enum-code1
+overload/validate-bad-unknown
 overload/validate-good-enum-code3
 overload/validate-good-exclude-code4
 overload/validate-good-v1code1
@@ -143,6 +152,20 @@ permutations/bad-cc2-exclude-filter-request
 permutations/bad-cc2-exclude-import-request
 permutations/bad-cc2-exclude-list-request
 permutations/bad-cc2-import-request
+permutations/bad-coding-all-request
+permutations/bad-coding-enumerated-request
+permutations/bad-coding-exclude-filter-request
+permutations/bad-coding-exclude-import-request
+permutations/bad-coding-exclude-list-request
+permutations/bad-coding-import-request
+permutations/bad-coding-isa-request
+permutations/bad-scd-all-request
+permutations/bad-scd-enumerated-request
+permutations/bad-scd-exclude-filter-request
+permutations/bad-scd-exclude-import-request
+permutations/bad-scd-exclude-list-request
+permutations/bad-scd-import-request
+permutations/bad-scd-isa-request
 permutations/good-cc1-all-request
 permutations/good-cc1-enumerated-request
 permutations/good-cc1-exclude-filter-request
@@ -173,6 +196,7 @@ permutations/good-scd-import-request
 permutations/good-scd-isa-request
 regex-bad/expand-regex-bad
 regex-bad/expand-regex-bad-2
+regex-bad/validate-regex-bad
 regex-bad/validate-regex-bad-2
 search/search-all-no
 search/search-all-yes
@@ -192,6 +216,7 @@ simple-cases/simple-expand-regex-none
 simple-cases/simple-expand-regex2
 simple-cases/simple-expand-regexp-prop
 simple-cases/simple-expand-repeating-prop
+simple-cases/simple-expand-repeating-prop-values
 simple-cases/simple-lookup-1
 simple-cases/simple-lookup-2
 tho/act-exclusion
@@ -207,6 +232,7 @@ tho/validate-isa-parent
 tho/validate-isa-second-parent
 tho/validate-isa-second-parent-out
 tho/validate-isa-self
+tho/validate-isa-unknown-code
 tho/validate-isnota-descendant
 tho/validate-isnota-other-branch
 tho/validate-isnota-parent
@@ -257,12 +283,16 @@ validation/validation-simple-codeableconcept-good
 validation/validation-simple-codeableconcept-good-display
 validation/validation-simple-codeableconcept-good-language
 validation/validation-simple-coding-bad-code
+validation/validation-simple-coding-bad-code-inactive
 validation/validation-simple-coding-bad-display
 validation/validation-simple-coding-bad-display-warning
 validation/validation-simple-coding-bad-import
 validation/validation-simple-coding-bad-language
 validation/validation-simple-coding-bad-language-header
 validation/validation-simple-coding-bad-language-none
+validation/validation-simple-coding-bad-system
+validation/validation-simple-coding-bad-system-local
+validation/validation-simple-coding-bad-system2
 validation/validation-simple-coding-bad-valueSet
 validation/validation-simple-coding-good
 validation/validation-simple-coding-good-display
