@@ -265,6 +265,7 @@ impl CodeSystemProvider for UcumProvider {
             active: true,
             inactive_reason: None,
             abstract_concept: false,
+            codeless: false,
         })
     }
 

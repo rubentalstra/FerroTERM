@@ -714,6 +714,8 @@ impl Icd11Provider {
                     .cmp(&self.code_or_uri(b.value))
                     .then_with(|| a.axis.cmp(&b.axis))
             });
+            // NOTE: the ecosystem's icd-11 `lookup-pc-simple` keys each bound value's
+            // subproperty by the value's code, not by an axis property name.
             for bound in bounds {
                 out.push(Property {
                     code: String::from("postcoordinationValues"),
@@ -828,14 +830,19 @@ impl CodeSystemProvider for Icd11Provider {
             }))
     }
 
-    fn status(&self, _concept: Concept) -> Result<Status, ProviderError> {
-        // NOTE: a codeless entity answers `notSelectable` as a property and no
-        // `abstract` (the ecosystem's icd-11 `lookup-mms-no-code` and `lookup-foundation`).
+    fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
+        // A grouper without a code of its own is `notSelectable`: abstract in an
+        // expansion and refused by `$validate-code` with `abstract = false`.
+        let codeless = concept.index() < self.concepts
+            && Self::at(concept.index())
+                .and_then(|i| self.codes.get(i))
+                .is_some_and(Option::is_none);
         Ok(Status {
             standards_status: None,
             active: true,
             inactive_reason: None,
-            abstract_concept: false,
+            abstract_concept: codeless,
+            codeless,
         })
     }
 

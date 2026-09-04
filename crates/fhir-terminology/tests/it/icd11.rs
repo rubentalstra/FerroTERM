@@ -123,9 +123,6 @@ fn codes_and_entity_uris_in_both_forms_name_the_same_concept() {
     let block_props = props(&mms, block);
     assert!(block_props.contains(&String::from("notSelectable=true")));
     assert!(!block_props.iter().any(|x| x.starts_with("code=")));
-    // The block is `notSelectable` as a property only; no `abstract` flag (the
-    // ecosystem's `lookup-mms-no-code`).
-    assert!(!mms.status(block).expect("reads").abstract_concept);
     assert_eq!(
         mms.display(block, None).expect("reads").as_deref(),
         Some("Bacterial intestinal infections")
@@ -333,4 +330,126 @@ fn scales_are_implicit_value_sets_and_the_tree_answers_filters() {
         Err(OpenError::NotIcd11(_))
     ));
     assert_eq!(PropertyValue::Uri(String::from("u")).as_text(), "u");
+}
+
+// NOTE: `ValueSet.expansion.contains.abstract` marks an entry the user cannot select as a
+// value (<https://hl7.org/fhir/R5/valueset-definitions.html#ValueSet.expansion.contains.abstract>);
+// the ecosystem's `notSelectable` cases refuse such a code when `abstract = false`.
+#[test]
+fn a_codeless_grouper_expands_abstract_and_is_refused_when_abstract_is_not_allowed() {
+    use std::sync::Arc;
+
+    use fhir_terminology::conceptmap::store::ConceptMapStore;
+    use fhir_terminology::operations::expand::ExpandInput;
+    use fhir_terminology::operations::value_set_validate_code::ValueSetValidateInput;
+    use fhir_terminology::operations::{Sources, expand, value_set_validate_code};
+    use fhir_terminology::registry::Registry;
+    use fhir_terminology::valueset::store::ValueSetStore;
+    use fhir_types::r4b::value_set::{
+        ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeConcept,
+    };
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_artifacts(dir.path()).expect("builds");
+    let mut registry = Registry::new();
+    registry
+        .register(Arc::new(
+            Icd11Provider::open(&dir.path().join("mms")).expect("opens mms"),
+        ))
+        .expect("registers");
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let block_uri = format!("{MMS}/{BLOCK}");
+    let inline = ValueSet {
+        url: Some("http://example.org/inline".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(MMS.into()),
+                concept: [block_uri.as_str(), "1A00"]
+                    .iter()
+                    .map(|code| ValueSetComposeIncludeConcept {
+                        code: (*code).into(),
+                        ..Default::default()
+                    })
+                    .collect(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let inline = fhir_terminology::valueset::convert::r4b::convert(&inline);
+    let vs = expand::expand(
+        &sources,
+        &ExpandInput {
+            inline_value_set: Some(inline.clone()),
+            ..ExpandInput::default()
+        },
+    )
+    .expect("expands");
+    let block = vs
+        .contains
+        .iter()
+        .find(|c| c.code == block_uri)
+        .expect("the block");
+    assert!(block.abstract_concept, "a codeless grouper is abstract");
+    let cholera = vs
+        .contains
+        .iter()
+        .find(|c| c.code == "1A00")
+        .expect("cholera");
+    assert!(!cholera.abstract_concept);
+
+    let refused = value_set_validate_code::validate_code(
+        &sources,
+        &ValueSetValidateInput {
+            inline_value_set: Some(inline.clone()),
+            code: Some(block_uri.clone()),
+            system: Some(MMS.to_owned()),
+            abstract_ok: Some(false),
+            ..ValueSetValidateInput::default()
+        },
+    )
+    .expect("validates");
+    assert!(!refused.result, "abstract = false refuses the grouper");
+    assert!(
+        refused
+            .issues
+            .iter()
+            .any(|i| i.kind == "code-rule" && i.text.contains("abstract")),
+        "{:?}",
+        refused.issues
+    );
+    let allowed = value_set_validate_code::validate_code(
+        &sources,
+        &ValueSetValidateInput {
+            inline_value_set: Some(inline),
+            code: Some(block_uri),
+            system: Some(MMS.to_owned()),
+            ..ValueSetValidateInput::default()
+        },
+    )
+    .expect("validates");
+    assert!(allowed.result, "abstract defaults to allowed");
+}
+
+#[test]
+fn a_codeless_grouper_is_abstract_and_codeless_and_a_coded_concept_is_neither() {
+    let (_dir, mms, _icf, _foundation) = providers();
+    // The codeless block is abstract for expansions and validation; `$lookup`
+    // answers it `notSelectable` only (the ecosystem's `lookup-mms-no-code`).
+    let status = mms
+        .status(located(&mms, &format!("{MMS}/{BLOCK}")))
+        .expect("reads");
+    assert!(status.abstract_concept);
+    assert!(status.codeless);
+    let status = mms.status(located(&mms, "1A00")).expect("reads");
+    assert!(!status.abstract_concept);
+    assert!(!status.codeless);
 }

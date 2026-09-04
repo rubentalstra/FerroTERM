@@ -263,6 +263,10 @@ pub struct Status {
     pub inactive_reason: Option<String>,
     /// Whether the concept is abstract (`notSelectable`).
     pub abstract_concept: bool,
+    /// Whether the concept has no code of its own and is addressed by its URI
+    /// (an ICD-11 grouper); `$lookup` answers it `notSelectable` as a property
+    /// and no `abstract`, expansions and validation keep `abstract_concept`.
+    pub codeless: bool,
 }
 
 /// The `use` of a designation (`ValueSet.expansion.contains.designation.use`).

@@ -371,6 +371,7 @@ impl CodeSystemProvider for RxNormProvider {
             active,
             inactive_reason: (!active).then(|| String::from("obsolete")),
             abstract_concept: false,
+            codeless: false,
         })
     }
 

@@ -20,6 +20,7 @@ fresh link reference.
 
 ### Fixed
 
+- ICD-11: a codeless grouper keeps its abstract status for expansions (`contains.abstract`) and for `$validate-code` with `abstract = false`; only the `$lookup` output `abstract` is withheld, as the ecosystem's icd-11 case expects. A bare ICF code no longer counts as the dotted qualifier form.
 - ClaML: a code earns the period after its third character only when its three-character category is one of its ancestors, so the ICD-O morphology class `M953` under `M` keeps its spelling beside the ICD-10 subcategory `M95.3`; the ICD-10-NL 2021 release builds.
 - ICD-11: `postcoordinationValues` subproperties carry each value under its own code; an unknown ICF dotted qualifier is an unknown code; a codeless entity answers `notSelectable` as a property, not `abstract`. The `icd-11` suite mode passes 41 of 52 cases (from 28).
 

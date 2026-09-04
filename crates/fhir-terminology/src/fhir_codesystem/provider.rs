@@ -220,6 +220,7 @@ impl FhirCodeSystem {
             active,
             inactive_reason: reason,
             abstract_concept,
+            codeless: false,
         }
     }
 }
