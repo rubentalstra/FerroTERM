@@ -147,7 +147,7 @@ fn no_map_and_unmapped_rules_still_answer() {
     };
     let translation = run(&world, &fish);
     // NOTE: an explicit `noMap` is an answer, so `result` is true and there is no
-    // message (the ecosystem's `translate-4`, <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/>).
+    // message (the ecosystem's `translate-4`, <https://hl7.org/fhir/uv/tx-ecosystem/>).
     assert!(translation.result);
     assert_eq!(equivalence(&translation.matches[0]), "unmatched");
     assert!(translation.matches[0].origin.no_map);

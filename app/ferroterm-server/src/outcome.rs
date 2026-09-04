@@ -63,7 +63,7 @@ impl Failure {
         OperationOutcome {
             // NOTE: the ecosystem's message ids live on the itemised `issues` of a
             // validation; the outcome of a refused request carries none (its test
-            // cases expect a bare issue, <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/>).
+            // cases expect a bare issue, <https://hl7.org/fhir/uv/tx-ecosystem/>).
             issue: vec![OperationOutcomeIssue {
                 severity: "error".into(),
                 code: self.code.into(),

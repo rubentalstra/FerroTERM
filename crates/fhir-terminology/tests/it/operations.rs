@@ -545,7 +545,7 @@ fn subsumes_refusals_are_errors_never_not_subsumed() {
 
 // NOTE: the terminology ecosystem answers an unknown system as `result = false`
 // with `x-caused-by-unknown-system`, never as an HTTP error
-// (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, `$validate-code` return parameters).
+// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>, `$validate-code` return parameters).
 #[test]
 fn validate_code_names_an_unknown_system_or_version_instead_of_failing() {
     let registry = registry();

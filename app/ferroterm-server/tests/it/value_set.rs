@@ -97,7 +97,7 @@ async fn validate_code_carries_the_declared_outputs_and_the_r5_issues() {
         "Kitten"
     );
     // NOTE: R4B declares none of these; the terminology ecosystem overlay pre-adopts
-    // them from R6 (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+    // them from R6 (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
     assert_eq!(param(&body, "system").expect("system")["valueUri"], ANIMALS);
     assert_eq!(
         param(&body, "version").expect("version")["valueString"],

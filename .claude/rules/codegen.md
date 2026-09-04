@@ -76,7 +76,7 @@ emitter) → `crates/fhir-types`, one module per version (R4 / R4B / R5 / R6).
   lowering.** `src/ecosystem.rs` names the R6 parameters pre-adopted into
   every earlier version (their shape and documentation come from the vendored
   R6 package) and declares the parameters the ecosystem alone defines
-  (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>). Every
+  (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>). Every
   overlaid field and descriptor parameter carries its `source`. Adding a
   parameter to the overlay is a change to that module plus regeneration, never
   a hand-written field in a consumer.

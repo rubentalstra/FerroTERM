@@ -416,7 +416,7 @@ pub fn render_descriptor_module(banner: &str) -> String {
 //!
 //! The exact parameter set each FHIR version declares
 //! (<https://hl7.org/fhir/R4B/operationdefinition.html>) plus the terminology
-//! ecosystem overlay (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>),
+//! ecosystem overlay (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>),
 //! each parameter marked with its source, so a server accepts nothing more
 //! and nothing less.
 

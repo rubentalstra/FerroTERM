@@ -251,7 +251,7 @@ impl AppState {
             registry.register(provider)?;
         }
         // NOTE: a loaded supplement stays dormant until a request names it
-        // (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>).
+        // (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
         for (target, supplement) in supplements {
             registry.register_supplement(target, supplement);
         }

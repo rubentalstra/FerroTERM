@@ -629,7 +629,7 @@ impl Issue {
 ///
 /// Returns the canonical (`url` or `url|version`) and the issue that says so;
 /// the wording is the ecosystem's
-/// (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, the
+/// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>, the
 /// `$validate-code` return parameters).
 #[must_use]
 pub fn unknown_system(
@@ -716,7 +716,7 @@ pub fn deprecated_note(
     ))
 }
 
-/// (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>, "Inactive Codes").
+/// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>, "Inactive Codes").
 #[must_use]
 pub fn inactive_note(
     code: &str,

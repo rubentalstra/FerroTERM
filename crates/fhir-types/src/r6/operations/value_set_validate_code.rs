@@ -184,9 +184,9 @@ pub struct ValueSetValidateCodeRequest {
     /// server.
     pub tx_resource: Vec<super::super::resource::Resource>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. Whether an inactive concept is refused as
-    /// outside the value set.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. Whether an inactive concept is refused as outside
+    /// the value set.
     pub active_only: Option<super::super::primitives::Boolean>,
 }
 
@@ -214,34 +214,33 @@ pub struct ValueSetValidateCodeResponse {
     /// CodeableConcept.coding\[1\].display, or Coding.display
     pub issues: Option<super::super::operation_outcome::OperationOutcome>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The code as the code system spells it, when
-    /// the request spelled it otherwise (a case difference, an alternate form
-    /// such as a URI); the ecosystem asks for it on case-insensitive systems
-    /// and systems with a grammar.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The code as the code system spells it, when the
+    /// request spelled it otherwise (a case difference, an alternate form such
+    /// as a URI); the ecosystem asks for it on case-insensitive systems and
+    /// systems with a grammar.
     pub normalized_code: Option<super::super::primitives::Code>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. A code system the server does not serve,
-    /// one parameter per system, so a validator can tell the user which
-    /// resources are missing.
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. A code system the server does not serve, one
+    /// parameter per system, so a validator can tell the user which resources
+    /// are missing.
     pub x_caused_by_unknown_system: Vec<super::super::primitives::Canonical>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. A code system a coding of the
-    /// \`codeableConcept\` names that the server does not serve, one parameter
-    /// per system (the ecosystem's twin of \`x-caused-by-unknown-system\` for
-    /// that input).
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. A code system a coding of the \`codeableConcept\`
+    /// names that the server does not serve, one parameter per system (the
+    /// ecosystem's twin of \`x-caused-by-unknown-system\` for that input).
     pub x_unknown_system: Vec<super::super::primitives::Canonical>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. Whether the validated concept is inactive
-    /// in its code system (the ecosystem requires it beside a warning).
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. Whether the validated concept is inactive in its
+    /// code system (the ecosystem requires it beside a warning).
     pub inactive: Option<super::super::primitives::Boolean>,
     /// Defined by the terminology ecosystem
-    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The status of the validated concept when
-    /// its code system states one (\`retired\`, \`deprecated\`, …).
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>\>), declared
+    /// by no FHIR version. The status of the validated concept when its code
+    /// system states one (\`retired\`, \`deprecated\`, …).
     pub status: Option<super::super::primitives::Code>,
 }
 

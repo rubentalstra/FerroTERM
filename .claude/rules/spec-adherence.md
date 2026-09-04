@@ -28,7 +28,7 @@ under `tools/fhir-codegen/vendor/` (the codegen input;
     `useSupplement`/`property`/`displayLanguage` appear where the spec has
     them and are absent where it does not. The overlay (the owner's decision
     on #154, 2026-09-03) adds, on every version, the parameters the ecosystem
-    requires (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>):
+    requires (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>):
     the R6 ones pre-adopted from the vendored R6 package, the ecosystem-only
     ones declared in the generator (`tools/fhir-codegen/src/ecosystem.rs`),
     each marked with its source in the generated descriptor. The overlay

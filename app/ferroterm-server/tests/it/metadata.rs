@@ -52,7 +52,7 @@ async fn terminology_capabilities_list_the_loaded_edition() {
     assert_eq!(outcome["issue"][0]["code"], "value");
 }
 
-// NOTE: <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html> (Metadata) requires
+// NOTE: <https://hl7.org/fhir/uv/tx-ecosystem/requirements.html> (Metadata) requires
 // a server to populate `rest[mode = server].security.service`; the binding is extensible,
 // so a deployment that authenticates nobody says so in text.
 #[tokio::test]
