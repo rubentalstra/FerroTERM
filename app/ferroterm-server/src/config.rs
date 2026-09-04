@@ -16,6 +16,28 @@ pub const LANGUAGE_ENV: &str = "FERROTERM_DEFAULT_LANGUAGE";
 /// Each is a FHIR package's `package/` directory or a directory of JSON files;
 /// the platform's path separator separates them.
 pub const CODESYSTEMS_ENV: &str = "FERROTERM_CODESYSTEMS";
+/// The environment variable naming the authentication in front of the server.
+///
+/// Its value is codes of the FHIR `restful-security-service` value set
+/// (`SMART-on-FHIR`, `OAuth`, `Basic`, `Certificates`, `Kerberos`, `NTLM`),
+/// separated by commas.
+pub const SECURITY_SERVICE_ENV: &str = "FERROTERM_SECURITY_SERVICE";
+
+/// The codes of the FHIR `restful-security-service` value set
+/// (<http://hl7.org/fhir/ValueSet/restful-security-service>), each with its
+/// display, in the code system's own order.
+pub const SECURITY_SERVICES: [(&str, &str); 6] = [
+    ("OAuth", "OAuth"),
+    ("SMART-on-FHIR", "SMART-on-FHIR"),
+    ("NTLM", "NTLM"),
+    ("Basic", "Basic"),
+    ("Kerberos", "Kerberos"),
+    ("Certificates", "Certificates"),
+];
+
+/// The code system the security service codes come from.
+pub const SECURITY_SERVICE_SYSTEM: &str =
+    "http://terminology.hl7.org/CodeSystem/restful-security-service";
 
 /// What the server needs to start.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,6 +54,10 @@ pub struct Config {
     pub log_format: LogFormat,
     /// The `tracing` filter.
     pub log_filter: String,
+    /// The authentication in front of the server, as codes of the FHIR
+    /// `restful-security-service` value set; empty when the deployment
+    /// declares none.
+    pub security_services: Vec<String>,
 }
 
 /// A configuration value that does not parse.
@@ -40,6 +66,11 @@ pub enum ConfigError {
     /// `FERROTERM_LOG_FORMAT` names no format.
     #[error("{FORMAT_ENV}: {0}")]
     LogFormat(#[from] FormatError),
+    /// `FERROTERM_SECURITY_SERVICE` names a code the value set does not define.
+    #[error(
+        "{SECURITY_SERVICE_ENV}: `{0}` is not a code of http://hl7.org/fhir/ValueSet/restful-security-service"
+    )]
+    SecurityService(String),
 }
 
 impl Default for Config {
@@ -51,6 +82,7 @@ impl Default for Config {
             default_language: String::from("en"),
             log_format: LogFormat::Auto,
             log_filter: String::from(crate::telemetry::DEFAULT_FILTER),
+            security_services: Vec::new(),
         }
     }
 }
@@ -78,6 +110,28 @@ impl Config {
                 Err(_) => defaults.log_format,
             },
             log_filter: std::env::var(FILTER_ENV).unwrap_or(defaults.log_filter),
+            security_services: security_services()?,
         })
     }
+}
+
+/// The security services `FERROTERM_SECURITY_SERVICE` names, each a code of
+/// the FHIR `restful-security-service` value set.
+///
+/// # Errors
+///
+/// Returns [`ConfigError::SecurityService`] for a code the value set does not
+/// define.
+fn security_services() -> Result<Vec<String>, ConfigError> {
+    let Ok(value) = std::env::var(SECURITY_SERVICE_ENV) else {
+        return Ok(Vec::new());
+    };
+    let mut out = Vec::new();
+    for name in value.split(',').map(str::trim).filter(|n| !n.is_empty()) {
+        let Some((code, _)) = SECURITY_SERVICES.iter().find(|(code, _)| *code == name) else {
+            return Err(ConfigError::SecurityService(name.to_owned()));
+        };
+        out.push((*code).to_owned());
+    }
+    Ok(out)
 }

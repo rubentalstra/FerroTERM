@@ -178,6 +178,9 @@ pub struct AppState {
     paths: BTreeMap<(String, String), PathBuf>,
     /// The software version reported in the capability statements.
     software_version: &'static str,
+    /// The authentication the deployment declares, as codes of the FHIR
+    /// `restful-security-service` value set.
+    security_services: Vec<String>,
 }
 
 /// A provider before registration, with where it came from.
@@ -254,6 +257,9 @@ impl AppState {
         }
         let mut state = Self::from_registry(registry);
         state.paths = paths;
+        state
+            .security_services
+            .clone_from(&config.security_services);
         for model in value_sets.iter() {
             let id = unique_id_of(
                 &state.value_set_instances,
@@ -288,6 +294,7 @@ impl AppState {
             instances,
             paths: BTreeMap::new(),
             software_version: env!("CARGO_PKG_VERSION"),
+            security_services: Vec::new(),
         }
     }
 
@@ -385,6 +392,13 @@ impl AppState {
     #[must_use]
     pub fn software_version(&self) -> &'static str {
         self.software_version
+    }
+
+    /// The authentication the deployment declares, as codes of the FHIR
+    /// `restful-security-service` value set; empty when it declares none.
+    #[must_use]
+    pub fn security_services(&self) -> &[String] {
+        &self.security_services
     }
 
     /// The default provider of a system, for callers that need one.
