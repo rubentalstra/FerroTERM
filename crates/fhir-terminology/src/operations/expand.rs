@@ -284,6 +284,8 @@ fn options(input: &ExpandInput) -> Result<Options, OperationError> {
     };
     Ok(Options {
         active_only: input.active_only.unwrap_or(false),
+        exclude_not_for_ui: input.exclude_not_for_ui.unwrap_or(false),
+        exclude_post_coordinated: input.exclude_post_coordinated.unwrap_or(false),
         text: input.filter.clone(),
         language: input.display_language.clone(),
         offset: non_negative(input.offset, "offset")?.unwrap_or(0),

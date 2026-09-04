@@ -2413,3 +2413,27 @@ fn an_invalid_display_language_is_refused_on_every_operation() {
         expand::expand(&world.sources(), &request).expect(language);
     }
 }
+
+// NOTE: `excludeNotForUI` leaves out the abstract groupers a user interface would
+// show for navigation (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>).
+#[test]
+fn exclude_not_for_ui_drops_the_abstract_groupers_and_the_total_follows() {
+    let world = World::load();
+    let request = ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        value_set_version: Some(String::from("1.0")),
+        exclude_not_for_ui: Some(true),
+        ..ExpandInput::default()
+    };
+    let vs = expand::expand(&world.sources(), &request).expect("expands");
+    assert!(
+        !vs.contains
+            .iter()
+            .any(|c| c.code == "pet" || c.code == "living"),
+        "the abstract `pet` and `living` are left out: {:?}",
+        codes(&vs)
+    );
+    assert!(vs.contains.iter().all(|c| !c.abstract_concept));
+    assert_eq!(vs.total, 7);
+    assert_eq!(parameter(&vs, "excludeNotForUI").len(), 1);
+}
