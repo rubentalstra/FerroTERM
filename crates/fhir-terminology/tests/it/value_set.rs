@@ -1312,7 +1312,7 @@ fn validate_code_speaks_the_ecosystems_words_for_codes_membership_abstract_and_c
             .as_str()
         )
     );
-    // A case-insensitive system located the code under another spelling: a warning.
+    // A case-insensitive system located the code under another spelling: an information note.
     let cased = run(&ValueSetValidateInput {
         url: Some(VS_COLOURS.to_owned()),
         code: Some(String::from("red")),
@@ -1323,7 +1323,7 @@ fn validate_code_speaks_the_ecosystems_words_for_codes_membership_abstract_and_c
     assert_eq!(cased.code.as_deref(), Some("red"));
     assert_eq!(cased.normalized_code.as_deref(), Some("RED"));
     assert_eq!(cased.issues[0].kind, "code-rule");
-    assert_eq!(cased.issues[0].severity, "warning");
+    assert_eq!(cased.issues[0].severity, "information");
     assert_eq!(
         cased.issues[0].text,
         format!(

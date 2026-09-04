@@ -464,6 +464,142 @@ impl<'a> Sources<'a> {
 pub const MESSAGE_ID_URL: &str =
     "http://hl7.org/fhir/StructureDefinition/operationoutcome-message-id";
 
+/// The message the terminology ecosystem attaches to an issue: the reference
+/// server's message key, which its test cases fix (spec-silent, #189).
+///
+/// The wire key is [`MessageId::key`]; the wording of `issue.details.text`
+/// never decides the key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum MessageId {
+    /// An unknown code in a code system labeled as a fragment.
+    UnknownCodeInFragment,
+    /// An unknown code in a versioned code system.
+    UnknownCodeInVersion,
+    /// An unknown code in a code system without a version.
+    UnknownCodeIn,
+    /// No coding of a `CodeableConcept` is in the value set.
+    TxGeneralCcErrorMessage,
+    /// The code is not in the value set.
+    NoneOfTheProvidedCodesAreInTheValueSetOne,
+    /// No display for the requested language; the given display fits the default one.
+    NoValidDisplayFoundNoneForLangOk,
+    /// No display for the requested language and the given display fits none.
+    NoValidDisplayFoundNoneForLangErr,
+    /// The display differs in its whitespace only.
+    DisplayNameWsForShouldBeOneOfInsteadOf,
+    /// The display is wrong.
+    DisplayNameForShouldBeOneOfInsteadOf,
+    /// A supplement the value set requires is not loaded.
+    ValueSetSupplementMissing,
+    /// The value set cannot be resolved.
+    UnableToResolveValueSet,
+    /// A code system version an expansion needs is unknown.
+    UnknownCodeSystemVersionExp,
+    /// A code system version is unknown.
+    UnknownCodeSystemVersion,
+    /// A code system is unknown.
+    UnknownCodeSystem,
+    /// The versionless include's default version differs from the coding's.
+    ValueSetValueMismatchDefault,
+    /// The include's version, once resolved, differs from the coding's.
+    ValueSetValueMismatchChanged,
+    /// The include's version differs from the coding's.
+    ValueSetValueMismatch,
+    /// A `check-system-version` or `check-valueset-version` failed.
+    ValueSetVersionCheck,
+    /// An abstract code where `abstract = false`.
+    AbstractCodeNotAllowed,
+    /// The code differs from the system's spelling by case or form.
+    CodeCaseDifference,
+    /// The code is valid and inactive.
+    StatusCodeWarningCode,
+    /// The value set marks the concept deprecated.
+    ConceptDeprecatedInValueSet,
+    /// The code system marks the concept deprecated.
+    DeprecatedConceptFound,
+    /// The concept is inactive.
+    InactiveConceptFound,
+    /// The display matches a retired designation.
+    InactiveDisplayFound,
+    /// A reference to a draft resource.
+    MsgDraft,
+    /// A reference to a deprecated resource.
+    MsgDeprecated,
+    /// A reference to a withdrawn resource.
+    MsgWithdrawn,
+    /// A reference to an experimental resource.
+    MsgExperimental,
+    /// The code system cannot be inferred from the code.
+    UnableToInferCodeSystem,
+    /// A supplement was named as the code system.
+    CodeSystemCsNoSupplement,
+    /// The coding names a value set as its system.
+    TerminologyTxSystemValueSet2,
+    /// The coding's system is a relative reference.
+    TerminologyTxSystemRelative,
+    /// The coding has no system.
+    CodingHasNoSystemCannotValidate,
+    /// The code system cannot be enumerated.
+    CodeSystemNotEnumerable,
+    /// The expansion is too costly.
+    ValueSetTooCostly,
+    /// Any other failure.
+    TxGeneralError,
+}
+
+impl MessageId {
+    /// The `operationoutcome-message-id` value on the wire.
+    #[must_use]
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::UnknownCodeInFragment => "UNKNOWN_CODE_IN_FRAGMENT",
+            Self::UnknownCodeInVersion => "Unknown_Code_in_Version",
+            Self::UnknownCodeIn => "Unknown_Code_in",
+            Self::TxGeneralCcErrorMessage => "TX_GENERAL_CC_ERROR_MESSAGE",
+            Self::NoneOfTheProvidedCodesAreInTheValueSetOne => {
+                "None_of_the_provided_codes_are_in_the_value_set_one"
+            }
+            Self::NoValidDisplayFoundNoneForLangOk => "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK",
+            Self::NoValidDisplayFoundNoneForLangErr => "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_ERR",
+            Self::DisplayNameWsForShouldBeOneOfInsteadOf => {
+                "Display_Name_WS_for__should_be_one_of__instead_of"
+            }
+            Self::DisplayNameForShouldBeOneOfInsteadOf => {
+                "Display_Name_for__should_be_one_of__instead_of"
+            }
+            Self::ValueSetSupplementMissing => "VALUESET_SUPPLEMENT_MISSING",
+            Self::UnableToResolveValueSet => "Unable_to_resolve_value_Set_",
+            Self::UnknownCodeSystemVersionExp => "UNKNOWN_CODESYSTEM_VERSION_EXP",
+            Self::UnknownCodeSystemVersion => "UNKNOWN_CODESYSTEM_VERSION",
+            Self::UnknownCodeSystem => "UNKNOWN_CODESYSTEM",
+            Self::ValueSetValueMismatchDefault => "VALUESET_VALUE_MISMATCH_DEFAULT",
+            Self::ValueSetValueMismatchChanged => "VALUESET_VALUE_MISMATCH_CHANGED",
+            Self::ValueSetValueMismatch => "VALUESET_VALUE_MISMATCH",
+            Self::ValueSetVersionCheck => "VALUESET_VERSION_CHECK",
+            Self::AbstractCodeNotAllowed => "ABSTRACT_CODE_NOT_ALLOWED",
+            Self::CodeCaseDifference => "CODE_CASE_DIFFERENCE",
+            Self::StatusCodeWarningCode => "STATUS_CODE_WARNING_CODE",
+            Self::ConceptDeprecatedInValueSet => "CONCEPT_DEPRECATED_IN_VALUESET",
+            Self::DeprecatedConceptFound => "DEPRECATED_CONCEPT_FOUND",
+            Self::InactiveConceptFound => "INACTIVE_CONCEPT_FOUND",
+            Self::InactiveDisplayFound => "INACTIVE_DISPLAY_FOUND",
+            Self::MsgDraft => "MSG_DRAFT",
+            Self::MsgDeprecated => "MSG_DEPRECATED",
+            Self::MsgWithdrawn => "MSG_WITHDRAWN",
+            Self::MsgExperimental => "MSG_EXPERIMENTAL",
+            Self::UnableToInferCodeSystem => "UNABLE_TO_INFER_CODESYSTEM",
+            Self::CodeSystemCsNoSupplement => "CODESYSTEM_CS_NO_SUPPLEMENT",
+            Self::TerminologyTxSystemValueSet2 => "Terminology_TX_System_ValueSet2",
+            Self::TerminologyTxSystemRelative => "Terminology_TX_System_Relative",
+            Self::CodingHasNoSystemCannotValidate => "Coding_has_no_system__cannot_validate",
+            Self::CodeSystemNotEnumerable => "CODESYSTEM_NOT_ENUMERABLE",
+            Self::ValueSetTooCostly => "VALUESET_TOO_COSTLY",
+            Self::TxGeneralError => "TX_GENERAL_ERROR",
+        }
+    }
+}
+
 /// One `OperationOutcome.issue` of a validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Issue {
@@ -473,6 +609,8 @@ pub struct Issue {
     pub code: &'static str,
     /// The `tx-issue-type` code in `issue.details.coding`.
     pub kind: &'static str,
+    /// The ecosystem's message, decided where the issue is raised.
+    pub message: MessageId,
     /// `issue.details.text`.
     pub text: String,
     /// `issue.expression`: the parameter at fault.
@@ -480,73 +618,10 @@ pub struct Issue {
 }
 
 impl Issue {
-    /// The message id the terminology ecosystem attaches to this issue, the
-    /// reference server's message key for its kind and wording (the
-    /// ecosystem's test cases fix them; spec-silent, #189).
+    /// The message id the terminology ecosystem attaches to this issue.
     #[must_use]
-    pub fn message_id(&self) -> &'static str {
-        let text = self.text.as_str();
-        match self.kind {
-            "invalid-code" if text.contains("labeled as a fragment") => "UNKNOWN_CODE_IN_FRAGMENT",
-            "invalid-code" if text.contains(" version '") => "Unknown_Code_in_Version",
-            "invalid-code" => "Unknown_Code_in",
-            "not-in-vs" if text.starts_with("No valid coding") => "TX_GENERAL_CC_ERROR_MESSAGE",
-            "not-in-vs" | "this-code-not-in-vs" => {
-                "None_of_the_provided_codes_are_in_the_value_set_one"
-            }
-            "invalid-display" if text.starts_with("There are no valid display names") => {
-                "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK"
-            }
-            "invalid-display" if text.contains("There are no valid display names") => {
-                "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_ERR"
-            }
-            "invalid-display" if text.contains("the whitespace differs") => {
-                "Display_Name_WS_for__should_be_one_of__instead_of"
-            }
-            "invalid-display" => "Display_Name_for__should_be_one_of__instead_of",
-            "not-found" if text.starts_with("Required supplement") => "VALUESET_SUPPLEMENT_MISSING",
-            "not-found" if text.contains("the value Set") => "Unable_to_resolve_value_Set_",
-            "not-found" if text.contains("could not be found, so the value set") => {
-                "UNKNOWN_CODESYSTEM_VERSION_EXP"
-            }
-            "not-found" if text.contains(" version '") => "UNKNOWN_CODESYSTEM_VERSION",
-            "not-found" => "UNKNOWN_CODESYSTEM",
-            "vs-invalid" if text.contains("for the versionless include") => {
-                "VALUESET_VALUE_MISMATCH_DEFAULT"
-            }
-            "vs-invalid" if text.contains("resulting from the version") => {
-                "VALUESET_VALUE_MISMATCH_CHANGED"
-            }
-            "vs-invalid" => "VALUESET_VALUE_MISMATCH",
-            "version-error" => "VALUESET_VERSION_CHECK",
-            "code-rule" if text.contains("is abstract") => "ABSTRACT_CODE_NOT_ALLOWED",
-            "code-rule" if text.contains("by case") || text.contains("alternate form") => {
-                "CODE_CASE_DIFFERENCE"
-            }
-            "code-rule" => "STATUS_CODE_WARNING_CODE",
-            "code-comment" if text.contains("is marked with a status of deprecated") => {
-                "CONCEPT_DEPRECATED_IN_VALUESET"
-            }
-            "code-comment" if text.contains("is deprecated") => "DEPRECATED_CONCEPT_FOUND",
-            "code-comment" => "INACTIVE_CONCEPT_FOUND",
-            "display-comment" => "INACTIVE_DISPLAY_FOUND",
-            "status-check" if text.starts_with("Reference to draft") => "MSG_DRAFT",
-            "status-check" if text.starts_with("Reference to deprecated") => "MSG_DEPRECATED",
-            "status-check" if text.starts_with("Reference to withdrawn") => "MSG_WITHDRAWN",
-            "status-check" => "MSG_EXPERIMENTAL",
-            "cannot-infer" => "UNABLE_TO_INFER_CODESYSTEM",
-            "invalid-data" if text.contains("is a supplement") => "CODESYSTEM_CS_NO_SUPPLEMENT",
-            "invalid-data" if text.contains("references a value set") => {
-                "Terminology_TX_System_ValueSet2"
-            }
-            "invalid-data" if text.contains("absolute reference") => {
-                "Terminology_TX_System_Relative"
-            }
-            "invalid-data" => "Coding_has_no_system__cannot_validate",
-            "not-supported" => "CODESYSTEM_NOT_ENUMERABLE",
-            "too-costly" => "VALUESET_TOO_COSTLY",
-            _ => "TX_GENERAL_ERROR",
-        }
+    pub const fn message_id(&self) -> &'static str {
+        self.message.key()
     }
 }
 
@@ -563,9 +638,10 @@ pub fn unknown_system(
     expression: Option<String>,
     valid: &[String],
 ) -> (String, Issue) {
-    let (canonical, text) = match version {
+    let (canonical, message, text) = match version {
         Some(version) => (
             format!("{url}|{version}"),
+            MessageId::UnknownCodeSystemVersion,
             format!(
                 "A definition for CodeSystem '{url}' version '{version}' could not be found, so the code cannot be validated{}",
                 valid_versions(valid)
@@ -573,6 +649,7 @@ pub fn unknown_system(
         ),
         None => (
             url.to_owned(),
+            MessageId::UnknownCodeSystem,
             format!(
                 "A definition for CodeSystem '{url}' could not be found, so the code cannot be validated"
             ),
@@ -584,6 +661,7 @@ pub fn unknown_system(
             severity: "error",
             code: "not-found",
             kind: "not-found",
+            message,
             text,
             expression,
         },
@@ -626,6 +704,7 @@ pub fn deprecated_note(
             severity: "warning",
             code: "business-rule",
             kind: "code-comment",
+            message: MessageId::DeprecatedConceptFound,
             text: format!("The concept '{code}' is deprecated and its use should be reviewed"),
             expression,
         },
@@ -662,6 +741,7 @@ pub fn inactive_note(
             severity: "warning",
             code: "business-rule",
             kind: "code-comment",
+            message: MessageId::InactiveConceptFound,
             text,
             expression,
         },
@@ -687,21 +767,19 @@ pub fn standing_note(
     canonical: &str,
     standing: &crate::provider::Standing,
 ) -> Option<Issue> {
-    let word = if let Some(standards) = standing.standards_status.as_deref()
-        && matches!(standards, "deprecated" | "withdrawn" | "draft")
-    {
-        standards.to_owned()
-    } else if standing.status == "draft" {
-        String::from("draft")
-    } else if standing.experimental {
-        String::from("experimental")
-    } else {
-        return None;
+    let (word, message) = match standing.standards_status.as_deref() {
+        Some("deprecated") => ("deprecated", MessageId::MsgDeprecated),
+        Some("withdrawn") => ("withdrawn", MessageId::MsgWithdrawn),
+        Some("draft") => ("draft", MessageId::MsgDraft),
+        _ if standing.status == "draft" => ("draft", MessageId::MsgDraft),
+        _ if standing.experimental => ("experimental", MessageId::MsgExperimental),
+        _ => return None,
     };
     Some(Issue {
         severity: "information",
         code: "business-rule",
         kind: "status-check",
+        message,
         text: format!("Reference to {word} {kind} {canonical}"),
         expression: None,
     })
@@ -715,5 +793,24 @@ pub fn valid_versions(versions: &[String]) -> String {
         [] => String::new(),
         [one] => format!(". Valid versions: {one}"),
         [head @ .., last] => format!(". Valid versions: {} or {last}", head.join(", ")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Issue, MessageId};
+
+    #[test]
+    fn the_message_id_is_the_issues_own_and_survives_a_reworded_text() {
+        let issue = Issue {
+            severity: "information",
+            code: "business-rule",
+            kind: "code-rule",
+            message: MessageId::CodeCaseDifference,
+            text: String::from("Any wording at all"),
+            expression: None,
+        };
+        assert_eq!(issue.message_id(), "CODE_CASE_DIFFERENCE");
+        assert_eq!(MessageId::TxGeneralError.key(), "TX_GENERAL_ERROR");
     }
 }

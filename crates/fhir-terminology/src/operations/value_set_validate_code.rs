@@ -384,6 +384,7 @@ fn this_code_not_in_vs(model: &ValueSetModel, coding: &CodingRef, base: &str) ->
         severity: "information",
         code: "code-invalid",
         kind: "this-code-not-in-vs",
+        message: crate::operations::MessageId::NoneOfTheProvidedCodesAreInTheValueSetOne,
         text: format!(
             "The provided code '{}' was not found in the value set '{}'",
             named_code(
@@ -468,6 +469,7 @@ fn combine(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Valida
             severity: "error",
             code: "code-invalid",
             kind: "not-in-vs",
+            message: crate::operations::MessageId::TxGeneralCcErrorMessage,
             text: format!(
                 "No valid coding was found for the value set '{}'",
                 model.canonical()
@@ -665,6 +667,7 @@ fn deprecated_in_value_set(
         severity: "warning",
         code: "business-rule",
         kind: "code-comment",
+        message: crate::operations::MessageId::ConceptDeprecatedInValueSet,
         text: format!(
             "The presence of the concept '{code}' in the system '{}' in the value set {} is marked with a status of deprecated and its use should be reviewed",
             item.system,
@@ -888,6 +891,7 @@ fn resolve_target(
             severity: "error",
             code: "exception",
             kind: "version-error",
+            message: crate::operations::MessageId::ValueSetVersionCheck,
             text: error.to_string(),
             expression: super::at(expression, "version"),
         });
@@ -981,33 +985,37 @@ fn disagreement(
         return;
     }
     let expression = subject.expression;
-    let (severity, text) = match (literal, original) {
+    let (severity, message, text) = match (literal, original) {
         (Some(named), Some(orig)) if named != orig => (
             "error",
+            crate::operations::MessageId::ValueSetValueMismatchChanged,
             format!(
                 "The code system '{system}' version '{named}' resulting from the version '{orig}' in the ValueSet include is different to the one in the value ('{sv}')"
             ),
         ),
         (Some(named), _) => (
             "error",
+            crate::operations::MessageId::ValueSetValueMismatch,
             format!(
                 "The code system '{system}' version '{named}' in the ValueSet include is different to the one in the value ('{sv}')"
             ),
         ),
         (None, _) if subject_served => (
             "error",
+            crate::operations::MessageId::ValueSetValueMismatch,
             format!(
                 "The code system '{system}' version '{version}' in the ValueSet include is different to the one in the value ('{sv}')"
             ),
         ),
         (None, _) => (
             "warning",
+            crate::operations::MessageId::ValueSetValueMismatchDefault,
             format!(
                 "The code system '{system}' version '{version}' for the versionless include in the ValueSet include is different to the one in the value ('{sv}')"
             ),
         ),
     };
-    let disagreement = vs_invalid(severity, text, expression);
+    let disagreement = vs_invalid(severity, message, text, expression);
     if subject_served {
         issues.push(disagreement);
         return;
@@ -1063,6 +1071,7 @@ fn unresolvable_include(
     if let Some(sv) = subject.version {
         issues.push(vs_invalid(
             "error",
+            crate::operations::MessageId::ValueSetValueMismatch,
             format!(
                 "The code system '{system}' version '{bad}' in the ValueSet include is different to the one in the value ('{sv}')"
             ),
@@ -1098,11 +1107,17 @@ fn negotiation_original(
 }
 
 /// A `vs-invalid` issue about the include's version, at `Coding.version`.
-fn vs_invalid(severity: &'static str, text: String, expression: &str) -> Issue {
+fn vs_invalid(
+    severity: &'static str,
+    message: crate::operations::MessageId,
+    text: String,
+    expression: &str,
+) -> Issue {
     Issue {
         severity,
         code: "invalid",
         kind: "vs-invalid",
+        message,
         text,
         expression: super::at(expression, "version"),
     }
@@ -1122,6 +1137,7 @@ fn supplement_as_system(system: &str, version: Option<&str>, subject: &Subject<'
             severity: "error",
             code: "invalid",
             kind: "invalid-data",
+            message: crate::operations::MessageId::CodeSystemCsNoSupplement,
             text: format!(
                 "CodeSystem {canonical} is a supplement, so can't be used as a value in Coding.system"
             ),
@@ -1180,6 +1196,7 @@ fn unserved_subject(
             severity: "error",
             code: "invalid",
             kind: "invalid-data",
+            message: crate::operations::MessageId::TerminologyTxSystemValueSet2,
             text: format!("The Coding references a value set, not a code system ('{system}')"),
             expression: super::at(subject.expression, "system"),
         });
@@ -1213,6 +1230,7 @@ fn local_system(system: &str, expression: &str) -> Option<Issue> {
         severity: "error",
         code: "invalid",
         kind: "invalid-data",
+        message: crate::operations::MessageId::TerminologyTxSystemRelative,
         text: String::from("Coding.system must be an absolute reference, not a local reference"),
         expression: super::at(expression, "system"),
     })
@@ -1280,6 +1298,7 @@ fn assess(
             severity: "error",
             code: "business-rule",
             kind: "code-rule",
+            message: crate::operations::MessageId::AbstractCodeNotAllowed,
             text: format!(
                 "Code '{}' is abstract, and not allowed in this context",
                 system_code(&item.system, &located.code)
@@ -1304,6 +1323,7 @@ fn assess(
                 severity: "error",
                 code: "business-rule",
                 kind: "code-rule",
+                message: crate::operations::MessageId::StatusCodeWarningCode,
                 text: format!("The concept '{}' is valid but is not active", located.code),
                 expression: super::at(subject.expression, "code"),
             });
@@ -1424,6 +1444,7 @@ fn no_system(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
         severity: "warning",
         code: "invalid",
         kind: "invalid-data",
+        message: crate::operations::MessageId::CodingHasNoSystemCannotValidate,
         text: String::from(
             "Coding has no system. A code with no system has no defined meaning, and it cannot be validated. A system should be provided",
         ),
@@ -1449,6 +1470,7 @@ fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
         severity: "error",
         code: "not-found",
         kind: "cannot-infer",
+        message: crate::operations::MessageId::UnableToInferCodeSystem,
         text,
         expression: super::at(subject.expression, "code"),
     });
@@ -1482,6 +1504,7 @@ fn not_in_vs(
         severity: "error",
         code: "code-invalid",
         kind: "not-in-vs",
+        message: crate::operations::MessageId::NoneOfTheProvidedCodesAreInTheValueSetOne,
         text: format!(
             "The provided code '{}' was not found in the value set '{}'",
             named_code(system, code, display),
@@ -1522,6 +1545,7 @@ fn unknown_import(system: &str, version: String, url: &str, code: &str) -> Valid
             severity: "error",
             code: "not-found",
             kind: "not-found",
+            message: crate::operations::MessageId::UnableToResolveValueSet,
             text: format!("A definition for the value Set '{url}' could not be found"),
             expression: None,
         },
@@ -1539,11 +1563,13 @@ fn unknown_code(
     version: String,
     subject: &Subject<'_>,
 ) -> Validation {
+    let (message, text) = super::display::unknown_code(provider.as_ref(), subject.code);
     let unknown = Issue {
         severity: "error",
         code: "code-invalid",
         kind: "invalid-code",
-        text: super::display::unknown_code_text(provider.as_ref(), subject.code),
+        message,
+        text,
         expression: super::at(subject.expression, "code"),
     };
     let mut validation = failed(
@@ -1595,6 +1621,7 @@ mod tests {
             severity,
             code: "invalid",
             kind,
+            message: crate::operations::MessageId::TxGeneralError,
             text: text.to_owned(),
             expression: None,
         }
@@ -1631,6 +1658,7 @@ mod tests {
             severity: "information",
             code: "invalid",
             kind: "invalid-display",
+            message: crate::operations::MessageId::NoValidDisplayFoundNoneForLangOk,
             text: String::from("There are no valid display names found"),
             expression: None,
         }];

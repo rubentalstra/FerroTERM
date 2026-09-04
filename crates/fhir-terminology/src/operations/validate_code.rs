@@ -131,6 +131,7 @@ fn supplement_as_system(
             severity: "error",
             code: "invalid",
             kind: "invalid-data",
+            message: super::MessageId::CodeSystemCsNoSupplement,
             text,
             expression: super::at(expression, "system"),
         }],
@@ -318,6 +319,11 @@ fn check_codeable_concept(
             severity: "error",
             code: "code-invalid",
             kind: "invalid-code",
+            message: if identity.version.is_empty() {
+                super::MessageId::UnknownCodeIn
+            } else {
+                super::MessageId::UnknownCodeInVersion
+            },
             text: message,
             expression: None,
         }],
@@ -342,7 +348,7 @@ fn check(
     let identity = provider.identity();
     let version = Some(identity.version.clone()).filter(|v| !v.is_empty());
     let Some(located) = provider.locate(code)? else {
-        let text = super::display::unknown_code_text(provider.as_ref(), code);
+        let (id, text) = super::display::unknown_code(provider.as_ref(), code);
         return Ok(ValidationOutcome {
             result: false,
             message: Some(text.clone()),
@@ -355,6 +361,7 @@ fn check(
                 severity: "error",
                 code: "code-invalid",
                 kind: "invalid-code",
+                message: id,
                 text,
                 expression: super::at(expression, "code"),
             }],
