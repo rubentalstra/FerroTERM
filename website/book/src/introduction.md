@@ -12,7 +12,7 @@ run.
 
 ## Where the project is
 
-v0.0.8 is the current release. It ships as Linux binaries for `x86_64` and
+v0.0.9 is the current release. It ships as Linux binaries for `x86_64` and
 `aarch64` (glibc and musl), as a container image for `linux/amd64` and
 `linux/arm64`, and as a Compose file, all built with signed provenance. The
 server answers FHIR R4 under `/r4`, R4B under `/r4b`, R5 under `/r5`, and the
@@ -21,10 +21,9 @@ against the published versions on every change and holds a committed pass list
 per version.
 
 Some of what a mature terminology server does is still on the roadmap, and
-this book says so where it matters: ECL and the SNOMED implicit value sets
-(v0.0.8), the R4, R5, and R6 endpoints and XML (v0.0.9), hierarchical
-expansion, persisted client resources, `Bundle` batch, and `$closure`
-(v0.0.10). Each is an issue with acceptance criteria on the tracker; the
+this book says so where it matters: hierarchical expansion, persisted client
+resources, `Bundle` batch, `$closure`, and the SNOMED implicit concept maps
+(v0.0.11). Each is an issue with acceptance criteria on the tracker; the
 milestones are the roadmap.
 
 ## Who each part of this book is for

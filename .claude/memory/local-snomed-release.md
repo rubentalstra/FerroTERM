@@ -17,3 +17,5 @@ Built artifacts (gitignored `/artifacts/`): `artifacts/nl`, `artifacts/int` (eac
 **Why:** the benches and the differential checks run over these; fixtures stay synthetic ([[performance-bar]], [[milestone-autonomy]]).
 
 **How to apply:** rebuild an artifact after a pipeline change with `cargo run --release -p ferroterm-build -- --rf2 <zip> --out artifacts/<name>`; the ECL benches read `artifacts/nl`.
+
+Data drops added 2026-09-04, all under `data/` and never committed: `data/labcodeset/Labcodeset_v2026-08.zip` (Nictiz Labcodeset, built with `ferroterm-build --labcodeset`), `data/icpc2/SnomedCT_ICNPNursingPractice_PRODUCTION_20260331T120000Z.zip` (the ICNP refset-only RF2 package over the January 2026 International Edition; loading it is #205), and `data/nhg/ICPC-SNOMED-20260331.json` (the NHG ICPC-1 to SNOMED CT `ConceptMap`, R4; loads as a FHIR resource dir once its string `experimental` is a boolean).

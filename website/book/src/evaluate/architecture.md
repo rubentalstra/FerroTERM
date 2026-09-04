@@ -78,7 +78,7 @@ packages. FerroTERM vendors and pins those packages (R4 4.0.1, R4B 4.3.0, R5
 from them, so a parameter R5 adds appears in the R5 module and is absent from
 R4B. Every generated file is marked `// @generated`, and a drift check
 regenerates it in CI. The server mounts the R4B module today; the R4, R5, and
-R6 modules exist and are the v0.0.9 milestone.
+R6 modules are served under `/r4`, `/r5`, and `/r6`.
 
 ## Text search is a separate index
 

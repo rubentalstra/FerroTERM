@@ -65,7 +65,7 @@ honours `count` and `offset` (at most 1,000 members without `count`), `filter`
 `check-system-version`, `force-system-version`, and `exclude-system`, and
 echoes every effective parameter plus one `used-codesystem` per system version
 the expansion drew on. Expansions are flat today; nested `contains` is the
-v0.0.10 milestone.
+v0.0.11 milestone.
 
 ## Request-scoped resources
 
