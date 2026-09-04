@@ -1,10 +1,14 @@
 # Code systems
 
 FerroTERM serves more than one code system through one engine (`architecture.md`
-§5). This file is the catalogue: for each code system, the identity FHIR gives
-it, how its content is distributed and licensed, what hierarchy it has, what the
-FHIR specification defines for it (filters, properties, implicit value sets),
-and where it sits in the build order. Every fact carries its source; a fact
+§5). What is served, with each system's URI, versions, build command, and
+licence position, is the table in `website/book/src/evaluate/code-systems.md`
+(published at <https://ferroterm.eu/docs/evaluate/code-systems.html>), the
+single source the README and the landing page follow. This file holds the
+design notes: for each code system, the identity FHIR gives it, how its
+content is distributed and licensed, what hierarchy it has, what the FHIR
+specification defines for it (filters, properties, implicit value sets), and
+where it sits in the build order. Every fact carries its source; a fact
 marked "unverified" was read from a search result or an archived page, not the
 live source, and is re-checked when the provider is built.
 

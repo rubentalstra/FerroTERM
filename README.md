@@ -64,24 +64,21 @@ pages cover every system and the binary distribution.
 
 ## What it serves
 
-| Code system | Source you provide | Notes |
-|---|---|---|
-| SNOMED CT (any edition) | the RF2 release zip | preferred terms per language reference set, inactive concepts marked, the edition and version URI in `version` |
-| LOINC | `Loinc_x.yy.zip` | terms, parts, answer lists, linguistic variants; the FHIR LOINC filters and `/vs/` value sets |
-| ICD-10 (WHO, national translations), ICPC-2 | a ClaML document | `classified-with` tree, modifiers expanded, notes as properties |
-| ICD-10-CM | the CMS tabular and order files | codes with the period, seventh-character codes, the `valid` flag |
-| ICD-11 (MMS, ICF, the Foundation) | the WHO ICD-API local deployment | codes, entity URIs, and postcoordination expressions validated against the axes |
-| RxNorm | the RRF release, or the licence-free prescribable subset | the FHIR `STY`, `SAB`, `TTY`, `REL`, and `RELA` filters over typed edges |
-| ATC/DDD | the WHO index as CSV, or the G-Standaard `BST801T` file | the five levels as a tree, DDDs as properties |
-| DHD thesauri | the Uitleverformaat 5.0 delivery zip | a flat table with SNOMED CT, ICD-10, DBC, and ZA links as properties and concept maps |
-| G-Standaard | the monthly release directory (`BSTnnnT` files) | GPK, PRK, HPK, and article systems, the ladder as properties |
-| Any FHIR `CodeSystem`, `ValueSet`, `ConceptMap` | a FHIR package or a directory of JSON | HL7 Terminology's 900+ systems load this way; supplements apply to loaded systems |
-| UCUM, BCP 47, BCP 13, ISO 3166-1 | nothing | grammar and registry systems vendored into the binary |
+<!-- code-systems:begin -->
+SNOMED CT, LOINC, UCUM, BCP 47, BCP 13, ISO 3166-1, ICD-10 (WHO), ICD-10-NL,
+ICD-10-CM, ICD-11 MMS, ICD-11 ICF, ICD-11 Foundation, ATC/DDD, ICPC-2, RxNorm,
+the DHD Diagnosethesaurus and Verrichtingenthesaurus, the G-Standaard, the
+Nederlandse Labcodeset, the NHG ICPC-1 to SNOMED CT map, and any FHIR
+`CodeSystem`, `ValueSet`, and `ConceptMap` resources (HL7 Terminology's 900+
+systems load this way).
+<!-- code-systems:end -->
 
-Every system reaches the operations through one provider seam
-([`docs/terminologies.md`](docs/terminologies.md) records each system's FHIR
-page, licence, and what the provider answers), so nothing in an operation is a
-special case for one system.
+The [code systems page](https://ferroterm.eu/docs/evaluate/code-systems.html)
+of the book is the one list: per system the canonical URI, the versions and
+editions handled, the build command, and the licence position. You bring the
+release you are licensed for; UCUM and the registries are vendored into the
+binary and need nothing. Every system reaches the operations through one
+provider seam, so nothing in an operation is a special case for one system.
 
 ## The API
 
