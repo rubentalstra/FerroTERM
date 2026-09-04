@@ -230,8 +230,9 @@ async fn translate_speaks_the_r5_parameter_names() {
         part(m, "concept").expect("concept")["valueCoding"]["code"],
         "RED"
     );
+    // R5 declares `originMap` as a uri; the overlay takes R6's canonical.
     assert_eq!(
-        part(m, "originMap").expect("originMap")["valueUri"],
+        part(m, "originMap").expect("originMap")["valueCanonical"],
         format!("{CM_ANIMALS_COLOURS}|1.0")
     );
     // `code` is the R4 name; R5 declares `sourceCode`.
@@ -249,12 +250,18 @@ async fn translate_speaks_the_r5_parameter_names() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(parameter(&body, "result").unwrap()["valueBoolean"], true);
+    // The match is reported source to target: `concept` is the target code.
     let m = parameter(&body, "match").expect("match");
     assert_eq!(
         part(m, "concept").expect("concept")["valueCoding"]["code"],
+        "RED"
+    );
+    assert_eq!(
+        part(m, "sourceConcept").expect("sourceConcept")["valueCoding"]["code"],
         "cat"
     );
-    // R4B emits only its declared match parts.
+    // R4B emits its declared match parts plus the overlay's `originMap`, as a
+    // canonical (pre-adopted from R6), and no `relationship`.
     let (status, body) = server
         .get(&format!(
             "/r4b/ConceptMap/$translate?url={CM_ANIMALS_COLOURS}&system={ANIMALS}&code=cat"
@@ -262,7 +269,12 @@ async fn translate_speaks_the_r5_parameter_names() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let m = parameter(&body, "match").expect("match");
-    assert!(part(m, "originMap").is_none(), "{body}");
+    assert_eq!(
+        part(m, "originMap").expect("originMap")["valueCanonical"],
+        format!("{CM_ANIMALS_COLOURS}|1.0"),
+        "{body}"
+    );
+    assert!(part(m, "relationship").is_none(), "{body}");
     assert_eq!(
         part(m, "equivalence").expect("equivalence")["valueCode"],
         "equivalent"

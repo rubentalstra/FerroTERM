@@ -491,19 +491,6 @@ fn the_overlay_pre_adopts_the_r6_parameters_every_earlier_version_lacks() {
             "{module}: {:?}",
             documented.documentation
         );
-        let translate = find(&contracts, "ConceptMap", "translate");
-        for name in ["sourceSystem", "sourceVersion"] {
-            let field = translate
-                .inputs
-                .iter()
-                .find(|f| f.fhir_name == name)
-                .expect(name);
-            assert_eq!(
-                field.source,
-                ParameterSource::PreAdopted,
-                "{module}: {name}"
-            );
-        }
         // $expand pre-adopts the value set version trio and nothing else;
         // $subsumes gets nothing.
         let expand = find(&contracts, "ValueSet", "expand");
@@ -532,6 +519,114 @@ fn the_overlay_pre_adopts_the_r6_parameters_every_earlier_version_lacks() {
                 .all(|f| f.source == ParameterSource::Version),
             "{module}: CodeSystem/$subsumes"
         );
+    }
+}
+
+#[test]
+fn the_overlay_pre_adopts_the_r6_translate_inputs() {
+    use fhir_codegen::ecosystem::ParameterSource;
+    for (package, module) in [(&*R4, "r4"), (&*R4B, "r4b"), (&*R5, "r5")] {
+        let contracts = overlaid(package, module);
+        let translate = find(&contracts, "ConceptMap", "translate");
+        let adopted: Vec<&str> = translate
+            .inputs
+            .iter()
+            .filter(|f| f.source == ParameterSource::PreAdopted)
+            .map(|f| f.fhir_name.as_str())
+            .collect();
+        // R5 declares the source*/target* names itself; the R4 family pre-adopts
+        // them all from R6, in the R6 order.
+        // R5 also takes the R6 types for `targetCode`, `targetCoding`, and
+        // `targetCodeableConcept`, which it declares as `uri`.
+        let expected_translate = if module == "r5" {
+            vec![
+                "targetCode",
+                "targetCoding",
+                "targetCodeableConcept",
+                "sourceSystem",
+                "sourceVersion",
+            ]
+        } else {
+            vec![
+                "sourceCode",
+                "sourceSystem",
+                "sourceVersion",
+                "sourceScope",
+                "sourceCoding",
+                "sourceCodeableConcept",
+                "targetCode",
+                "targetCoding",
+                "targetCodeableConcept",
+                "targetScope",
+                "targetSystem",
+            ]
+        };
+        assert_eq!(adopted, expected_translate, "{module}");
+    }
+}
+
+#[test]
+fn the_translate_match_carries_the_ecosystem_parts_and_pre_adopts_origin_map() {
+    use fhir_codegen::ecosystem::ParameterSource;
+    for (package, module) in [(&*R4, "r4"), (&*R4B, "r4b"), (&*R5, "r5"), (&*R6, "r6")] {
+        let contracts = overlaid(package, module);
+        let translate = find(&contracts, "ConceptMap", "translate");
+        let matched = translate
+            .outputs
+            .iter()
+            .find(|f| f.fhir_name == "match")
+            .expect("match");
+        let part = |name: &str| {
+            matched
+                .parts
+                .iter()
+                .find(|p| p.fhir_name == name)
+                .map(|p| (p.type_code.as_deref(), p.source))
+        };
+        // R5 declares `originMap` as a uri and takes R6's canonical; the R4
+        // family pre-adopts the R6 part, and answers its own `source` as a
+        // canonical, the ecosystem's type.
+        let origin_source = if module == "r6" {
+            ParameterSource::Version
+        } else {
+            ParameterSource::PreAdopted
+        };
+        assert_eq!(
+            part("originMap"),
+            Some((Some("canonical"), origin_source)),
+            "{module}"
+        );
+        if module == "r4" || module == "r4b" {
+            assert_eq!(
+                part("source"),
+                Some((Some("canonical"), ParameterSource::Ecosystem)),
+                "{module}"
+            );
+        }
+        for (name, type_code) in [
+            ("sourceConcept", "Coding"),
+            ("sourceComment", "string"),
+            ("targetComment", "string"),
+            ("noMap", "boolean"),
+        ] {
+            assert_eq!(
+                part(name),
+                Some((Some(type_code), ParameterSource::Ecosystem)),
+                "{module}: {name}"
+            );
+        }
+        for name in ["used-conceptmap", "used-system"] {
+            let field = translate
+                .outputs
+                .iter()
+                .find(|f| f.fhir_name == name)
+                .expect(name);
+            assert_eq!(
+                (field.type_code.as_deref(), field.source),
+                (Some("uri"), ParameterSource::Ecosystem),
+                "{module}: {name}"
+            );
+        }
     }
 }
 

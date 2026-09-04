@@ -386,6 +386,18 @@ macro_rules! map {
             /// `system` and `version`.
             #[must_use]
             pub fn translate_input(request: &ConceptMapTranslateRequest) -> TranslateInput {
+                // NOTE: the R6 names are pre-adopted beside the version's own; a
+                // `target*` input reads the map in reverse, as R5 and R6 define it
+                // (<https://hl7.org/fhir/R5/conceptmap-operation-translate.html>).
+                let targeted = request.target_code.is_some()
+                    || request.target_coding.is_some()
+                    || request.target_codeable_concept.is_some();
+                let text = |value: &Option<fhir_types::$fhir::primitives::Code>| {
+                    value.as_ref().and_then(|v| v.value.clone())
+                };
+                let uri = |value: &Option<fhir_types::$fhir::primitives::Uri>| {
+                    value.as_ref().and_then(|v| v.value.clone())
+                };
                 TranslateInput {
                     url: request.url.as_ref().and_then(|v| v.value.clone()),
                     concept_map_version: request
@@ -396,26 +408,44 @@ macro_rules! map {
                         .concept_map
                         .as_ref()
                         .map(fhir_terminology::conceptmap::convert::$fhir::convert),
-                    code: request.code.as_ref().and_then(|v| v.value.clone()),
-                    system: request
-                        .system
-                        .as_ref()
-                        .or(request.source_system.as_ref())
-                        .and_then(|v| v.value.clone()),
+                    code: text(&request.code)
+                        .or_else(|| text(&request.source_code))
+                        .or_else(|| text(&request.target_code)),
+                    system: if targeted {
+                        uri(&request.target_system).or_else(|| uri(&request.system))
+                    } else {
+                        uri(&request.system).or_else(|| uri(&request.source_system))
+                    },
                     version: request
                         .version
                         .as_ref()
                         .or(request.source_version.as_ref())
                         .and_then(|v| v.value.clone()),
-                    coding: request.coding.as_ref().map(coding_ref),
+                    coding: request
+                        .coding
+                        .as_ref()
+                        .or(request.source_coding.as_ref())
+                        .or(request.target_coding.as_ref())
+                        .map(coding_ref),
                     codeable_concept: request
                         .codeable_concept
                         .as_ref()
+                        .or(request.source_codeable_concept.as_ref())
+                        .or(request.target_codeable_concept.as_ref())
                         .map(|concept| concept.coding.iter().map(coding_ref).collect()),
-                    source: request.source.as_ref().and_then(|v| v.value.clone()),
-                    target: request.target.as_ref().and_then(|v| v.value.clone()),
-                    target_system: request.targetsystem.as_ref().and_then(|v| v.value.clone()),
-                    reverse: request.reverse.as_ref().and_then(|b| b.value),
+                    source: uri(&request.source).or_else(|| uri(&request.source_scope)),
+                    target: uri(&request.target).or_else(|| uri(&request.target_scope)),
+                    target_system: if targeted {
+                        uri(&request.source_system)
+                    } else {
+                        uri(&request.targetsystem).or_else(|| uri(&request.target_system))
+                    },
+                    reverse: request
+                        .reverse
+                        .as_ref()
+                        .and_then(|b| b.value)
+                        .or(targeted.then_some(true)),
+                    target_input: targeted,
                     dependency: !request.dependency.is_empty(),
                 }
             }
@@ -423,18 +453,31 @@ macro_rules! map {
             /// The `$translate` outcome as the version's `Parameters`.
             ///
             /// `result`, `message`, and each `match` with `equivalence`, `concept`, `product`,
-            /// and `source`, the declared shape (R5 declares `originMap`; 4.0.1 and
-            /// 4.3.0 do not).
+            /// and `source`, the declared shape, plus the overlay's `originMap`,
+            /// `sourceConcept`, the comments, `noMap`, and `used-conceptmap`; a `noMap`
+            /// match has no `equivalence`.
             #[must_use]
             pub fn translation_parameters(translation: &Translation) -> Parameters {
                 let response = ConceptMapTranslateResponse {
                     result: translation.result.into(),
                     message: translation.message.as_deref().map(Into::into),
+                    used_conceptmap: translation
+                        .used_concept_maps
+                        .iter()
+                        .map(|c| c.as_str().into())
+                        .collect(),
+                    used_system: Vec::new(),
                     r#match: translation
                         .matches
                         .iter()
                         .map(|m| ConceptMapTranslateResponseMatch {
-                            equivalence: Some(m.relationship.equivalence().into()),
+                            equivalence: (!m.origin.no_map)
+                                .then(|| m.relationship.equivalence().into()),
+                            origin_map: Some(m.origin.origin_map.as_str().into()),
+                            source_concept: m.origin.source_concept.as_ref().map(coding_of),
+                            source_comment: m.origin.source_comment.as_deref().map(Into::into),
+                            target_comment: m.origin.target_comment.as_deref().map(Into::into),
+                            no_map: m.origin.no_map.then_some(true.into()),
                             concept: m.concept.as_ref().map(coding_of),
                             product: m
                                 .products

@@ -56,8 +56,10 @@ const CONCEPT_MAP_TRANSLATE: &str = "http://hl7.org/fhir/OperationDefinition/Con
 const VALUE_SET_EXPAND: &str = "http://hl7.org/fhir/OperationDefinition/ValueSet-expand";
 
 /// The R6 parameters pre-adopted into every version that lacks them, by
-/// operation URL, direction, and name.
+/// operation URL, direction, and name; a dotted name (`match.originMap`) is a
+/// part of a declared multi-part parameter.
 const PRE_ADOPTED: &[(&str, ParameterUse, &str)] = &[
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::Out, "match.originMap"),
     (VALUE_SET_VALIDATE_CODE, ParameterUse::In, "system-version"),
     (
         VALUE_SET_VALIDATE_CODE,
@@ -108,8 +110,25 @@ const PRE_ADOPTED: &[(&str, ParameterUse, &str)] = &[
         ParameterUse::Out,
         "codeableConcept",
     ),
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceCode"),
     (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceSystem"),
     (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceVersion"),
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceScope"),
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "sourceCoding"),
+    (
+        CONCEPT_MAP_TRANSLATE,
+        ParameterUse::In,
+        "sourceCodeableConcept",
+    ),
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "targetCode"),
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "targetCoding"),
+    (
+        CONCEPT_MAP_TRANSLATE,
+        ParameterUse::In,
+        "targetCodeableConcept",
+    ),
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "targetScope"),
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "targetSystem"),
     (CODE_SYSTEM_LOOKUP, ParameterUse::In, "useSupplement"),
     (VALUE_SET_VALIDATE_CODE, ParameterUse::In, "useSupplement"),
     (VALUE_SET_EXPAND, ParameterUse::In, "useSupplement"),
@@ -122,12 +141,83 @@ const PRE_ADOPTED: &[(&str, ParameterUse, &str)] = &[
     (VALUE_SET_EXPAND, ParameterUse::In, "force-valueset-version"),
 ];
 
+/// The declared parameters whose type the overlay takes from R6, by operation
+/// URL, direction, and (dotted) name: R5 types `targetCode`, `targetCoding`,
+/// and `targetCodeableConcept` as `uri` and `match.originMap` as `uri`, which
+/// R6 corrects (<https://hl7.org/fhir/6.0.0-ballot5/conceptmap-operation-translate.html>).
+const PRE_ADOPTED_TYPES: &[(&str, ParameterUse, &str)] = &[
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "targetCode"),
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::In, "targetCoding"),
+    (
+        CONCEPT_MAP_TRANSLATE,
+        ParameterUse::In,
+        "targetCodeableConcept",
+    ),
+    (CONCEPT_MAP_TRANSLATE, ParameterUse::Out, "match.originMap"),
+];
+
+/// The declared parameters whose type the ecosystem alone changes, by
+/// operation URL, direction, dotted name, and type: the R4 family's
+/// `match.source` is answered as a canonical (`url|version`).
+const ECOSYSTEM_TYPES: &[(&str, ParameterUse, &str, &str)] = &[(
+    CONCEPT_MAP_TRANSLATE,
+    ParameterUse::Out,
+    "match.source",
+    "canonical",
+)];
+
+/// Takes the R6 type for a declared parameter named in [`PRE_ADOPTED_TYPES`],
+/// and the ecosystem's for one named in [`ECOSYSTEM_TYPES`]; records the change.
+fn overlay_type(
+    url: &str,
+    dotted: &str,
+    parameter: &mut OperationParameter,
+    r6: Option<&OperationParameter>,
+    added: &mut Vec<Added>,
+) {
+    let pre_adopted = PRE_ADOPTED_TYPES
+        .iter()
+        .any(|(u, usage, name)| *u == url && *usage == parameter.usage && *name == dotted);
+    if pre_adopted
+        && let Some(r6) = r6
+        && r6.type_name.is_some()
+        && r6.type_name != parameter.type_name
+    {
+        parameter.type_name.clone_from(&r6.type_name);
+        parameter.documentation = Some(format!(
+            "Typed as the FHIR R6 ballot declares it, for the terminology ecosystem (<{IG_REQUIREMENTS}>). {}",
+            parameter.documentation.as_deref().unwrap_or_default()
+        ));
+        added.push(Added {
+            usage: parameter.usage,
+            name: dotted.to_owned(),
+            source: ParameterSource::PreAdopted,
+        });
+    }
+    if let Some((_, _, _, type_name)) = ECOSYSTEM_TYPES
+        .iter()
+        .find(|(u, usage, name, _)| *u == url && *usage == parameter.usage && *name == dotted)
+        && parameter.type_name.as_deref() != Some(type_name)
+    {
+        parameter.type_name = Some((*type_name).to_owned());
+        parameter.documentation = Some(format!(
+            "Typed as the terminology ecosystem answers it (<{IG_REQUIREMENTS}>). {}",
+            parameter.documentation.as_deref().unwrap_or_default()
+        ));
+        added.push(Added {
+            usage: parameter.usage,
+            name: dotted.to_owned(),
+            source: ParameterSource::Ecosystem,
+        });
+    }
+}
+
 /// One parameter the overlay added: its direction, name, and source.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Added {
     /// `in` or `out`.
     pub usage: ParameterUse,
-    /// The parameter name.
+    /// The parameter name, dotted for a part (`match.originMap`).
     pub name: String,
     /// Where it comes from.
     pub source: ParameterSource,
@@ -205,6 +295,22 @@ fn ecosystem_parameters(url: &str) -> Vec<OperationParameter> {
                 status(),
             ]
         }
+        CONCEPT_MAP_TRANSLATE => vec![
+            ecosystem_parameter(
+                "used-conceptmap",
+                ParameterUse::Out,
+                "*",
+                "uri",
+                "A concept map the translation consulted beyond the ones its matches name, one parameter per map.",
+            ),
+            ecosystem_parameter(
+                "used-system",
+                ParameterUse::Out,
+                "*",
+                "uri",
+                "A code system version the translation drew on, one parameter per system.",
+            ),
+        ],
         CODE_SYSTEM_LOOKUP => vec![
             ecosystem_parameter(
                 "code",
@@ -229,6 +335,94 @@ fn ecosystem_parameters(url: &str) -> Vec<OperationParameter> {
             ),
         ],
         _ => Vec::new(),
+    }
+}
+
+/// The parts the ecosystem alone defines on a declared multi-part parameter.
+fn ecosystem_parts(url: &str, usage: ParameterUse, name: &str) -> Vec<OperationParameter> {
+    match (url, usage, name) {
+        (CONCEPT_MAP_TRANSLATE, ParameterUse::Out, "match") => vec![
+            ecosystem_parameter(
+                "sourceConcept",
+                ParameterUse::Out,
+                "1",
+                "Coding",
+                "The source concept the match translates.",
+            ),
+            ecosystem_parameter(
+                "sourceComment",
+                ParameterUse::Out,
+                "1",
+                "string",
+                "The comment on the source element.",
+            ),
+            ecosystem_parameter(
+                "targetComment",
+                ParameterUse::Out,
+                "1",
+                "string",
+                "The comment on the target.",
+            ),
+            ecosystem_parameter(
+                "noMap",
+                ParameterUse::Out,
+                "1",
+                "boolean",
+                "Whether the source element is explicitly not mapped.",
+            ),
+        ],
+        _ => Vec::new(),
+    }
+}
+
+/// Pre-adopts the R6 parts of `parameter` named in [`PRE_ADOPTED`] that the
+/// version's own parameter lacks, and adds the ecosystem's parts.
+fn overlay_parts(
+    url: &str,
+    parameter: &mut OperationParameter,
+    r6: Option<&OperationParameter>,
+    added: &mut Vec<Added>,
+) {
+    let has =
+        |parameter: &OperationParameter, name: &str| parameter.part.iter().any(|p| p.name == name);
+    let owner = parameter.name.clone();
+    for part in &mut parameter.part {
+        let dotted = format!("{owner}.{}", part.name);
+        let source = r6.and_then(|r6| r6.part.iter().find(|p| p.name == part.name));
+        overlay_type(url, &dotted, part, source, added);
+    }
+    if let Some(r6) = r6 {
+        for part in &r6.part {
+            let dotted = format!("{}.{}", parameter.name, part.name);
+            let wanted = PRE_ADOPTED
+                .iter()
+                .any(|(u, usage, name)| *u == url && *usage == parameter.usage && *name == dotted);
+            if !wanted || has(parameter, &part.name) {
+                continue;
+            }
+            let mut part = part.clone();
+            part.documentation = Some(format!(
+                "Pre-adopted from the FHIR R6 ballot for the terminology ecosystem (<{IG_REQUIREMENTS}>). {}",
+                part.documentation.as_deref().unwrap_or_default()
+            ));
+            added.push(Added {
+                usage: parameter.usage,
+                name: dotted,
+                source: ParameterSource::PreAdopted,
+            });
+            parameter.part.push(part);
+        }
+    }
+    for part in ecosystem_parts(url, parameter.usage, &parameter.name) {
+        if has(parameter, &part.name) {
+            continue;
+        }
+        added.push(Added {
+            usage: parameter.usage,
+            name: format!("{}.{}", parameter.name, part.name),
+            source: ParameterSource::Ecosystem,
+        });
+        parameter.part.push(part);
     }
 }
 
@@ -271,6 +465,16 @@ pub fn overlay(
             });
             overlaid.parameter.push(parameter);
         }
+    }
+    for parameter in &mut overlaid.parameter {
+        let source = r6.and_then(|r6| {
+            r6.parameter
+                .iter()
+                .find(|p| p.usage == parameter.usage && p.name == parameter.name)
+        });
+        let name = parameter.name.clone();
+        overlay_type(&definition.url, &name, parameter, source, &mut added);
+        overlay_parts(&definition.url, parameter, source, &mut added);
     }
     for parameter in ecosystem_parameters(&definition.url) {
         if declares(definition, parameter.usage, &parameter.name) {

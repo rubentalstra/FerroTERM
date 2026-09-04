@@ -44,8 +44,9 @@ async fn translate_by_get_and_post_answers_matches() {
         part(m, "concept").expect("concept")["valueCoding"]["system"],
         COLOURS
     );
+    // The ecosystem answers `source` as a canonical (`url|version`).
     assert_eq!(
-        part(m, "source").expect("source")["valueUri"],
+        part(m, "source").expect("source")["valueCanonical"],
         format!("{CM_ANIMALS_COLOURS}|1.0")
     );
     let (status, body) = server
@@ -58,20 +59,74 @@ async fn translate_by_get_and_post_answers_matches() {
         )
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
+    // An explicit `noMap` is an answer: `result` true, the overlay's `noMap` part,
+    // no `equivalence`, and no message.
     assert_eq!(
         param(&body, "result").expect("result")["valueBoolean"],
-        false
+        true
+    );
+    let m = param(&body, "match").expect("match");
+    assert!(part(m, "equivalence").is_none(), "{body}");
+    assert_eq!(part(m, "noMap").expect("noMap")["valueBoolean"], true);
+    assert_eq!(
+        part(m, "sourceComment").expect("sourceComment")["valueString"],
+        "fish have no colour"
+    );
+    assert_eq!(
+        part(m, "sourceConcept").expect("sourceConcept")["valueCoding"]["code"],
+        "fish"
+    );
+    assert_eq!(
+        part(m, "originMap").expect("originMap")["valueCanonical"],
+        format!("{CM_ANIMALS_COLOURS}|1.0"),
+        "originMap is pre-adopted from R6 as a canonical"
+    );
+    assert!(param(&body, "message").is_none(), "{body}");
+}
+
+#[tokio::test]
+async fn translate_on_r4b_accepts_the_pre_adopted_r6_names() {
+    let server = Server::start_with_resources();
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/ConceptMap/$translate?url={CM_ANIMALS_COLOURS}&sourceSystem={ANIMALS}&sourceCode=cat&targetSystem={COLOURS}"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        param(&body, "result").expect("result")["valueBoolean"],
+        true
     );
     let m = param(&body, "match").expect("match");
     assert_eq!(
-        part(m, "equivalence").expect("equivalence")["valueCode"],
-        "unmatched"
+        part(m, "concept").expect("concept")["valueCoding"]["code"],
+        "RED"
     );
-    assert!(
-        part(m, "noMap").is_none(),
-        "R4B declares no noMap part: {body}"
+    // A `targetCode` reads the map in reverse, as R5 defines it; the match is
+    // reported source to target.
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/ConceptMap/$translate?url={CM_ANIMALS_COLOURS}&system={COLOURS}&targetCode=RED"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let m = param(&body, "match").expect("match");
+    assert_eq!(
+        part(m, "concept").expect("concept")["valueCoding"]["code"],
+        "RED"
     );
-    assert!(param(&body, "message").is_some());
+    assert_eq!(
+        part(m, "sourceConcept").expect("sourceConcept")["valueCoding"]["code"],
+        "cat"
+    );
+    // R5 declares no `reverse`; the refusal names the target inputs.
+    let (status, body) = server
+        .get(&format!(
+            "/r5/ConceptMap/$translate?url={CM_ANIMALS_COLOURS}&system={ANIMALS}&sourceCode=cat&reverse=true"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["issue"][0]["code"], "not-supported");
 }
 
 #[tokio::test]

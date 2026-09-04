@@ -33,6 +33,8 @@ pub struct MatchOrigin {
     pub source_concept: Option<CodingRef>,
     /// The element's comment.
     pub source_comment: Option<String>,
+    /// The target's comment.
+    pub target_comment: Option<String>,
     /// `noMap`: the element is explicitly not mapped.
     pub no_map: bool,
 }
@@ -40,12 +42,15 @@ pub struct MatchOrigin {
 /// The outcome of a translation: the R4B response and, per match, its origin.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Translation {
-    /// Whether some match translates the code (a relationship other than `unmatched` or `disjoint`).
+    /// Whether some match answers the request.
     pub result: bool,
     /// Why nothing translated, when nothing did.
     pub message: Option<String>,
     /// The matches, in the order the maps and groups were read.
     pub matches: Vec<Match>,
+    /// The canonicals of the maps an `other-map` rule chained to
+    /// (`used-conceptmap`), beyond the ones the matches name.
+    pub used_concept_maps: Vec<String>,
 }
 
 /// One match of the translation.
@@ -102,6 +107,9 @@ pub struct TranslateInput {
     pub reverse: Option<bool>,
     /// Whether `dependency` was given; not supported.
     pub dependency: bool,
+    /// Whether the subject is a target code (the R5 `target*` inputs): the map
+    /// is read in reverse and each match is reported source to target.
+    pub target_input: bool,
 }
 
 /// The code under translation.
@@ -132,36 +140,67 @@ pub fn translate(
     let reverse = input.reverse.unwrap_or(false);
     let target_system = input.target_system.as_deref();
     let subjects = subjects(input)?;
-    let mut matches = Vec::new();
+    let mut matches: Vec<Match> = Vec::new();
+    let mut used = Vec::new();
     for subject in &subjects {
         for map in &maps {
-            matches.extend(matches_in(
-                sources,
-                map,
-                subject,
-                target_system,
-                reverse,
-                0,
-            )?);
+            for found in matches_in(sources, map, subject, target_system, reverse, 0, &mut used)? {
+                // NOTE: the same target reached through two maps is one match, the
+                // ecosystem's shape (<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/>).
+                let seen = found.concept.is_some()
+                    && matches.iter().any(|m| {
+                        m.concept == found.concept && m.relationship == found.relationship
+                    });
+                if !seen {
+                    matches.push(found);
+                }
+            }
         }
     }
-    let result = matches.iter().any(|m| m.relationship.translates());
+    // NOTE: every match is an answer, a `noMap` or `not-related-to` one too, so
+    // `result` is true whenever a match exists (the ecosystem's `translate-2b`
+    // and `translate-4` cases, <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/>).
+    if input.target_input {
+        // NOTE: a `target*` request reports the source concept as `sourceConcept`
+        // and the target as `concept`, the map's own direction
+        // (<https://hl7.org/fhir/R5/conceptmap-operation-translate.html>).
+        for found in &mut matches {
+            std::mem::swap(&mut found.concept, &mut found.origin.source_concept);
+            found.relationship = found.relationship.inverse();
+        }
+    }
+    let result = !matches.is_empty();
     let message = if result {
         None
+    } else if maps.is_empty() {
+        Some(no_map_message(subjects.first(), target_system, reverse))
     } else {
-        let subject = subjects
-            .first()
-            .map_or(String::new(), |s| format!("{}#{}", s.system, s.code));
-        Some(match target_system {
-            Some(target) => format!("no translation of `{subject}` to `{target}`"),
-            None => format!("no translation of `{subject}`"),
-        })
+        Some(String::from("No translations found"))
     };
     Ok(Translation {
         result,
         message,
         matches,
+        used_concept_maps: used,
     })
+}
+
+/// The ecosystem's message when no concept map fits the request.
+fn no_map_message(subject: Option<&Subject>, target_system: Option<&str>, reverse: bool) -> String {
+    let subject_system = subject.map(|s| s.system.as_str());
+    let (from, to) = if reverse {
+        (target_system, subject_system)
+    } else {
+        (subject_system, target_system)
+    };
+    match (from, to) {
+        (Some(from), Some(to)) => {
+            format!("No ConceptMap is available to translate from '{from}' to '{to}'")
+        }
+        (Some(from), None) => format!("No ConceptMap is available to translate from '{from}'"),
+        (None, Some(to)) => format!("No ConceptMap is available to translate to '{to}'"),
+        (None, None) => String::from("No ConceptMap is available"),
+    }
 }
 
 /// The codes to translate: the one `code`/`system`, the `coding`, or every
@@ -256,7 +295,8 @@ fn candidate_maps(
     }
 }
 
-/// The matches for `subject` in `map`.
+/// The matches for `subject` in `map`; the maps an `other-map` rule chains
+/// to are recorded in `used`.
 fn matches_in(
     sources: &Sources<'_>,
     map: &ConceptMapModel,
@@ -264,6 +304,7 @@ fn matches_in(
     target_system: Option<&str>,
     reverse: bool,
     depth: usize,
+    used: &mut Vec<String>,
 ) -> Result<Vec<Match>, OperationError> {
     let mut out = Vec::new();
     for group in &map.groups {
@@ -301,6 +342,7 @@ fn matches_in(
                 ..CodingRef::default()
             }),
             source_comment: element.and_then(|e| e.comment.clone()),
+            target_comment: None,
             no_map: element.is_some_and(|e| e.no_map),
         };
         let mut found = false;
@@ -315,7 +357,7 @@ fn matches_in(
                     origin: origin(Some(element)),
                 });
             }
-            for (code, display, relationship, product) in targets {
+            for (code, display, relationship, product, comment) in targets {
                 out.push(Match {
                     relationship,
                     concept: Some(CodingRef {
@@ -326,7 +368,10 @@ fn matches_in(
                     }),
                     products: product.iter().map(product_of).collect(),
                     source: Some(map.canonical()),
-                    origin: origin(Some(element)),
+                    origin: MatchOrigin {
+                        target_comment: comment.clone(),
+                        ..origin(Some(element))
+                    },
                 });
             }
         }
@@ -342,6 +387,7 @@ fn matches_in(
                 subject,
                 target_system,
                 depth,
+                used,
             )?);
         }
     }
@@ -349,7 +395,7 @@ fn matches_in(
 }
 
 /// The elements of `group` for `subject`, each with its targets read in the
-/// requested direction: `(code, display, relationship, product)`.
+/// requested direction: `(code, display, relationship, product, comment)`.
 #[expect(
     clippy::type_complexity,
     reason = "one tuple per matched target, consumed in place"
@@ -365,6 +411,7 @@ fn element_targets<'a>(
         &'a Option<String>,
         Relationship,
         &'a [DependsOn],
+        &'a Option<String>,
     )>,
 )> {
     if reverse {
@@ -380,6 +427,7 @@ fn element_targets<'a>(
                         &element.display,
                         t.relationship.inverse(),
                         t.product.as_slice(),
+                        &t.comment,
                     )
                 })
                 .collect();
@@ -399,7 +447,15 @@ fn element_targets<'a>(
                 element
                     .targets
                     .iter()
-                    .map(|t| (&t.code, &t.display, t.relationship, t.product.as_slice()))
+                    .map(|t| {
+                        (
+                            &t.code,
+                            &t.display,
+                            t.relationship,
+                            t.product.as_slice(),
+                            &t.comment,
+                        )
+                    })
                     .collect(),
             )
         })
@@ -407,6 +463,10 @@ fn element_targets<'a>(
 }
 
 /// The matches an `unmapped` rule yields for a code no element names.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the rule is described by exactly these facts"
+)]
 fn unmapped_matches(
     sources: &Sources<'_>,
     map: &ConceptMapModel,
@@ -415,6 +475,7 @@ fn unmapped_matches(
     subject: &Subject,
     target_system: Option<&str>,
     depth: usize,
+    used: &mut Vec<String>,
 ) -> Result<Vec<Match>, OperationError> {
     let origin = MatchOrigin {
         origin_map: map.canonical(),
@@ -424,6 +485,7 @@ fn unmapped_matches(
             ..CodingRef::default()
         }),
         source_comment: None,
+        target_comment: None,
         no_map: false,
     };
     let fixed = |code: Option<&str>, display: Option<&str>, relationship: Relationship| Match {
@@ -465,14 +527,29 @@ fn unmapped_matches(
                 .concept_maps
                 .resolve(other, None)
                 .ok_or_else(|| OperationError::UnknownConceptMap(other.clone()))?;
-            matches_in(
+            let chained = matches_in(
                 sources,
                 &other_map,
                 subject,
                 target_system,
                 false,
                 depth + 1,
-            )?
+                used,
+            )?;
+            // NOTE: a chained match is answered as this map's, and the map it came
+            // from is reported in `used-conceptmap` (the ecosystem's `translate-5`).
+            let canonical = other_map.canonical();
+            if !used.contains(&canonical) {
+                used.push(canonical);
+            }
+            chained
+                .into_iter()
+                .map(|mut m| {
+                    m.origin.origin_map = map.canonical();
+                    m.source = Some(map.canonical());
+                    m
+                })
+                .collect()
         }
     })
 }
