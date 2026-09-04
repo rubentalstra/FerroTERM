@@ -531,3 +531,105 @@ fn the_exclude_flags_drop_a_postcoordinated_expression_and_a_codeless_grouper() 
     });
     assert_eq!(selectable, ["1A00"]);
 }
+
+// NOTE: no FHIR specification governs which spelling `expansion.contains.code` carries when
+// a system admits several; the compose's spelling is kept, in every include and through an
+// `include.valueSet` import (the ecosystem's icd-11 `expand-adhoc-enum-uri` pins the direct case).
+#[test]
+fn the_composes_spelling_survives_an_include_merge_and_a_value_set_import() {
+    use std::sync::Arc;
+
+    use fhir_terminology::conceptmap::store::ConceptMapStore;
+    use fhir_terminology::operations::expand::ExpandInput;
+    use fhir_terminology::operations::{Sources, expand};
+    use fhir_terminology::registry::Registry;
+    use fhir_terminology::valueset::store::ValueSetStore;
+    use fhir_types::r4b::value_set::{
+        ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeConcept,
+    };
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_artifacts(dir.path()).expect("builds");
+    let mut registry = Registry::new();
+    registry
+        .register(Arc::new(
+            Icd11Provider::open(&dir.path().join("mms")).expect("opens mms"),
+        ))
+        .expect("registers");
+    let enumerated = |codes: &[&str]| ValueSetComposeInclude {
+        system: Some(MMS.into()),
+        concept: codes
+            .iter()
+            .map(|code| ValueSetComposeIncludeConcept {
+                code: (*code).into(),
+                ..Default::default()
+            })
+            .collect(),
+        ..Default::default()
+    };
+    let cholera_uri = format!("{MMS}/{CHOLERA}");
+    let vibrio_uri = format!("{MMS}/{VIBRIO}");
+    let uri_set = ValueSet {
+        url: Some("http://example.org/icd11-uri".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![enumerated(&[cholera_uri.as_str()])],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let mut value_sets = ValueSetStore::new();
+    value_sets
+        .insert(fhir_terminology::valueset::convert::r4b::convert(&uri_set).expect("converts"))
+        .expect("stores");
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let codes = |value_set: ValueSet| -> Vec<String> {
+        let vs = expand::expand(
+            &sources,
+            &ExpandInput {
+                inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(
+                    &value_set,
+                )),
+                ..ExpandInput::default()
+            },
+        )
+        .expect("expands");
+        vs.contains.iter().map(|c| c.code.clone()).collect()
+    };
+
+    // Two includes over one system: the first by code, the second by URI.
+    let merged = codes(ValueSet {
+        url: Some("http://example.org/inline".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![enumerated(&["1A00"]), enumerated(&[vibrio_uri.as_str()])],
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    assert!(merged.contains(&String::from("1A00")), "{merged:?}");
+    assert!(
+        merged.contains(&vibrio_uri),
+        "the second include's URI spelling: {merged:?}"
+    );
+
+    // An import through `include.valueSet` keeps the imported compose's spelling.
+    let imported = codes(ValueSet {
+        url: Some("http://example.org/inline-import".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                value_set: vec!["http://example.org/icd11-uri".into()],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    assert_eq!(imported, [cholera_uri], "the imported URI spelling");
+}

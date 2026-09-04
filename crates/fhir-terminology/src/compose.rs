@@ -207,6 +207,9 @@ struct Selection {
     set: ConceptSet,
     overrides: BTreeMap<u32, String>,
     /// The compose's spelling of an enumerated code the system spells otherwise.
+    // NOTE: no FHIR specification governs which spelling `contains.code` carries when a
+    // system admits several (the ecosystem's icd-11 `expand-adhoc-enum-uri` keeps the
+    // compose's); the compose's spelling is kept wherever the compose is: our own design.
     spellings: BTreeMap<u32, String>,
 }
 
@@ -257,6 +260,9 @@ impl<'a> Expander<'a> {
                         existing.set |= &part.set;
                         for (ordinal, display) in part.overrides {
                             existing.overrides.entry(ordinal).or_insert(display);
+                        }
+                        for (ordinal, spelling) in part.spellings {
+                            existing.spellings.entry(ordinal).or_insert(spelling);
                         }
                     }
                     None => {
@@ -344,27 +350,11 @@ impl<'a> Expander<'a> {
                 version: identity.version.clone(),
                 defaulted: resolved.defaulted,
             });
-            let set = Self::select(provider, include, options)?;
-            let mut overrides = BTreeMap::new();
-            let mut spellings = BTreeMap::new();
-            for concept in &include.concepts {
-                let located =
-                    provider
-                        .locate(&concept.code)
-                        .map_err(|source| ComposeError::Provider {
-                            system: identity.url.clone(),
-                            source,
-                        })?;
-                let Some(located) = located else {
-                    continue;
-                };
-                if let Some(display) = &concept.display {
-                    overrides.insert(located.concept.index(), display.clone());
-                }
-                if located.code != concept.code {
-                    spellings.insert(located.concept.index(), concept.code.clone());
-                }
-            }
+            let Selected {
+                set,
+                overrides,
+                spellings,
+            } = Self::select(provider, include, options)?;
             let mut selected = BTreeMap::new();
             selected.insert(
                 (identity.url.clone(), identity.version.clone()),
@@ -439,6 +429,11 @@ impl<'a> Expander<'a> {
                 continue;
             };
             selection.set.insert(located.concept.index());
+            if located.code != item.code {
+                selection
+                    .spellings
+                    .insert(located.concept.index(), item.code.clone());
+            }
             if let Some(display) = item.display {
                 selection.overrides.insert(located.concept.index(), display);
             }
@@ -446,16 +441,20 @@ impl<'a> Expander<'a> {
         Ok(selections)
     }
 
+    /// The concepts `include` selects from `provider`, with the compose's display
+    /// overrides and spellings of its enumerated codes, each located once.
     fn select(
         provider: &Arc<dyn CodeSystemProvider>,
         include: &Include,
         options: &Options,
-    ) -> Result<ConceptSet, ComposeError> {
+    ) -> Result<Selected, ComposeError> {
         let system = provider.identity().url.clone();
         let failed = |source: ProviderError| ComposeError::Provider {
             system: system.clone(),
             source,
         };
+        let mut overrides = BTreeMap::new();
+        let mut spellings = BTreeMap::new();
         let mut set = if include.concepts.is_empty() {
             provider.filter_all(&include.filters).map_err(&failed)?
         } else {
@@ -469,6 +468,12 @@ impl<'a> Expander<'a> {
                     continue;
                 }
                 set.insert(located.concept.index());
+                if let Some(display) = &concept.display {
+                    overrides.insert(located.concept.index(), display.clone());
+                }
+                if located.code != concept.code {
+                    spellings.insert(located.concept.index(), concept.code.clone());
+                }
             }
             set
         };
@@ -485,8 +490,20 @@ impl<'a> Expander<'a> {
                 )
                 .map_err(failed)?;
         }
-        Ok(set)
+        Ok(Selected {
+            set,
+            overrides,
+            spellings,
+        })
     }
+}
+
+/// What one include selects: the concept set with the compose's display
+/// overrides and spellings, by ordinal.
+struct Selected {
+    set: ConceptSet,
+    overrides: BTreeMap<u32, String>,
+    spellings: BTreeMap<u32, String>,
 }
 
 /// Removes the inactive concepts from `selection`: concept by concept for a
