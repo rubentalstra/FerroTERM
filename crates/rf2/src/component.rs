@@ -165,6 +165,10 @@ impl Component for Description {
 
 /// A row of `sct2_Relationship` or `sct2_StatedRelationship` (the layouts coincide).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "the fields are the RF2 columns, named as the release file specification names them"
+)]
 pub struct Relationship {
     /// The relationship.
     pub id: RelationshipId,
@@ -214,14 +218,16 @@ impl Component for Relationship {
 
 fn group(record: &Record<'_>, index: usize) -> Result<u32, Rf2Error> {
     let value = record.integer(index)?;
-    u32::try_from(value).map_err(|_| {
-        record.field_error(
+    // The field error names the text; a `TryFromIntError` adds nothing to it.
+    let Ok(group) = u32::try_from(value) else {
+        return Err(record.field_error(
             index,
             FieldError::Integer {
                 text: value.to_string(),
             },
-        )
-    })
+        ));
+    };
+    Ok(group)
 }
 
 /// A concrete value: a number (`#3`) or a string (`"text"`) with its RF2 marker.
@@ -311,6 +317,10 @@ impl Component for ConcreteRelationship {
 
 /// A row of `sct2_Identifier`: an alternate identifier for a component.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "the fields are the RF2 columns, named as the release file specification names them"
+)]
 pub struct AlternateIdentifier {
     /// The identifier in the other scheme.
     pub alternate_identifier: String,

@@ -183,7 +183,11 @@ pub struct Report {
 }
 
 fn ordinal_of(count: usize, what: &'static str) -> Result<u32, Error> {
-    u32::try_from(count).map_err(|_| Error::TooMany(what))
+    // A count past u32::MAX is the whole message; the conversion error adds nothing.
+    let Ok(count) = u32::try_from(count) else {
+        return Err(Error::TooMany(what));
+    };
+    Ok(count)
 }
 
 fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Error + '_ {
@@ -348,10 +352,9 @@ impl Relationships {
         let types: Vec<u64> = self.attribute_types.iter().map(|t| t.value()).collect();
         let mut edges = Vec::with_capacity(self.edges.len());
         for (source, group, type_id, value) in &self.edges {
-            let kind = self
-                .attribute_types
-                .binary_search(type_id)
-                .map_err(|_| Error::TooMany("attribute types"))?;
+            let Ok(kind) = self.attribute_types.binary_search(type_id) else {
+                return Err(Error::TooMany("attribute types"));
+            };
             edges.push(attributes::Edge {
                 source: *source,
                 group: *group,
@@ -528,11 +531,14 @@ fn read_acceptabilities(
             if !member.member.active {
                 continue;
             }
-            let description = DescriptionId::try_from(member.member.referenced_component_id)
-                .map_err(|_| Error::NotADescription {
+            // The error names the member and component; the id error adds nothing.
+            let Ok(description) = DescriptionId::try_from(member.member.referenced_component_id)
+            else {
+                return Err(Error::NotADescription {
                     member: member.member.id.to_string(),
                     component: member.member.referenced_component_id.to_string(),
-                })?;
+                });
+            };
             let acceptability = ACCEPTABILITIES
                 .iter()
                 .position(|a| *a == member.acceptability_id)
@@ -551,10 +557,10 @@ fn read_acceptabilities(
         let Some(place) = by_id.get(&description).copied() else {
             continue;
         };
-        let refset_ordinal = refsets
-            .binary_search(&refset)
-            .map_err(|_| Error::TooMany("language reference sets"))
-            .and_then(|p| ordinal_of(p, "language reference sets"))?;
+        let Ok(position) = refsets.binary_search(&refset) else {
+            return Err(Error::TooMany("language reference sets"));
+        };
+        let refset_ordinal = ordinal_of(position, "language reference sets")?;
         acceptabilities
             .entry(place)
             .or_default()
@@ -795,10 +801,9 @@ fn write_concepts(
             .range((ordinal, ConceptId::published(0))..)
             .take_while(|((source, _), _)| *source == ordinal)
         {
-            let position = relationships
-                .attribute_types
-                .binary_search(attribute)
-                .map_err(|_| Error::TooMany("attribute types"))?;
+            let Ok(position) = relationships.attribute_types.binary_search(attribute) else {
+                return Err(Error::TooMany("attribute types"));
+            };
             let key = ordinal_of(
                 PROPERTY_KEYS.len().saturating_add(position),
                 "property keys",

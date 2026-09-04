@@ -36,9 +36,17 @@ impl EffectiveTime {
                 .ok_or_else(error)
         };
         let year = group(0..4)?;
-        let month = i8::try_from(group(4..6)?).map_err(|_| error())?;
-        let day = i8::try_from(group(6..8)?).map_err(|_| error())?;
-        Date::new(year, month, day).map(Self).map_err(|_| error())
+        // The error names the text; the range and calendar errors add nothing to it.
+        let Ok(month) = i8::try_from(group(4..6)?) else {
+            return Err(error());
+        };
+        let Ok(day) = i8::try_from(group(6..8)?) else {
+            return Err(error());
+        };
+        let Ok(date) = Date::new(year, month, day) else {
+            return Err(error());
+        };
+        Ok(Self(date))
     }
 
     /// The calendar date.

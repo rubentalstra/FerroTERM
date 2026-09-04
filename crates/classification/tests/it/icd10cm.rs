@@ -19,7 +19,10 @@ fn fixture() -> (tempfile::TempDir, Classification) {
     let dir = tempfile::tempdir().expect("tempdir");
     write_icd10cm(dir.path()).expect("writes");
     let files = locate(&[dir.path().to_path_buf()]).expect("locates");
-    assert!(files.tabular.ends_with("icd10cm_tabular_2099.xml"));
+    assert!(
+        files.tabular.ends_with("icd10cm_tabular_2099.xml"),
+        "the tabular file is located by its name"
+    );
     let classification = read(&files).expect("reads");
     (dir, classification)
 }

@@ -17,9 +17,13 @@ chapters, and the Clippy book.
 2. **Workspace lint at `deny`/`forbid`:** fails every `cargo clippy`, local
    and CI (`Cargo.toml [workspace.lints]`). `forbid` cannot be relaxed by any
    attribute; escaping it is an owner decision, not an `#[allow]`.
-3. **Warn + CI `-D warnings`:** `clippy::all` + `clippy::pedantic` both live
-   here, so every pedantic lint is effectively a hard rule (including
-   `missing_errors_doc` / `missing_panics_doc`).
+3. **Deny, with `clippy::all` and `clippy::pedantic` at `deny`:** every
+   pedantic lint is a hard rule locally and in CI (including
+   `missing_errors_doc` / `missing_panics_doc`). The table is FerroEHR's
+   (the owner's rule, 2026-09-04): the two repositories hold the same bar,
+   with `as_conversions`, `pub_use`, `dead_code`, `map_err_ignore`,
+   `missing_assert_message`, `unused_qualifications`, `rc_buffer`,
+   `create_dir`, `exit`, and the feature-name lints among the additions.
 4. **A committed check script / CI job:** currently
    `scripts/checks/comment-style.sh` (per-edit via the hook); more are added
    as CI is stood up.

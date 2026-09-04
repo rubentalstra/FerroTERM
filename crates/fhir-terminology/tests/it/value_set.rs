@@ -1388,11 +1388,9 @@ fn a_value_set_asks_for_its_supplement_and_a_supplement_is_no_code_system() {
     let asking = ValueSet {
         url: Some("http://example.org/inline-asking".into()),
         status: "draft".into(),
-        extension: vec![fhir_types::r4b::extension::Extension {
+        extension: vec![Extension {
             url: "http://hl7.org/fhir/StructureDefinition/valueset-supplement".into(),
-            value: Some(fhir_types::r4b::extension::ExtensionValue::Canonical(
-                ANIMALS_NL.into(),
-            )),
+            value: Some(ExtensionValue::Canonical(ANIMALS_NL.into())),
             ..Default::default()
         }],
         compose: Some(ValueSetCompose {
@@ -1437,7 +1435,7 @@ fn a_value_set_asks_for_its_supplement_and_a_supplement_is_no_code_system() {
     );
     assert_eq!(as_system.unknown_systems, [ANIMALS_NL.to_owned()]);
     // $expand applies a named supplement to the designations it returns.
-    let kat_in = |vs: &fhir_terminology::operations::expand::ExpansionOutcome| {
+    let kat_in = |vs: &ExpansionOutcome| {
         vs.contains
             .iter()
             .any(|c| c.designations.iter().any(|d| d.value == "Kat"))
@@ -1565,12 +1563,10 @@ fn a_draft_experimental_deprecated_or_withdrawn_resource_earns_a_status_note() {
         url: Some("http://example.org/inline-withdrawn".into()),
         version: Some("1".into()),
         status: "active".into(),
-        extension: vec![fhir_types::r4b::extension::Extension {
+        extension: vec![Extension {
             url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status"
                 .into(),
-            value: Some(fhir_types::r4b::extension::ExtensionValue::Code(
-                "withdrawn".into(),
-            )),
+            value: Some(ExtensionValue::Code("withdrawn".into())),
             ..Default::default()
         }],
         compose: Some(ValueSetCompose {

@@ -214,8 +214,12 @@ pub fn expand(
     }
     let contains = contains(sources, &expansion, input)?;
     let properties = expansion_properties(sources, &expansion, &contains)?;
-    let offset = u64::try_from(expansion.offset)
-        .map_err(|_| OperationError::Invalid(String::from("`offset` is too large")))?;
+    // The message says what is wrong; the conversion error adds nothing to it.
+    let Ok(offset) = u64::try_from(expansion.offset) else {
+        return Err(OperationError::Invalid(String::from(
+            "`offset` is too large",
+        )));
+    };
     Ok(ExpansionOutcome {
         include_definition: input.include_definition.unwrap_or(false),
         identifier: format!("urn:uuid:{}", uuid::Uuid::new_v4()),
@@ -277,8 +281,12 @@ fn options(input: &ExpandInput) -> Result<Options, OperationError> {
     let non_negative = |value: Option<i64>, name: &str| -> Result<Option<usize>, OperationError> {
         value
             .map(|v| {
-                usize::try_from(v)
-                    .map_err(|_| OperationError::Invalid(format!("`{name}` must not be negative")))
+                let Ok(value) = usize::try_from(v) else {
+                    return Err(OperationError::Invalid(format!(
+                        "`{name}` must not be negative"
+                    )));
+                };
+                Ok(value)
             })
             .transpose()
     };

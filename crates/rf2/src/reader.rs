@@ -184,9 +184,13 @@ impl Record<'_> {
     /// Returns [`Rf2Error::Field`] for any other text.
     pub fn integer(&self, index: usize) -> Result<i64, Rf2Error> {
         self.parse(index, |text| {
-            text.parse::<i64>().map_err(|_| FieldError::Integer {
-                text: text.to_owned(),
-            })
+            // The field error names the text; a `ParseIntError` adds nothing to it.
+            let Ok(value) = text.parse::<i64>() else {
+                return Err(FieldError::Integer {
+                    text: text.to_owned(),
+                });
+            };
+            Ok(value)
         })
     }
 

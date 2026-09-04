@@ -86,9 +86,12 @@ impl Sctid {
                 text: text.to_owned(),
             });
         }
-        let value: u64 = text.parse().map_err(|_| IdError::Shape {
-            text: text.to_owned(),
-        })?;
+        // The shape error names the text; a `ParseIntError` adds nothing to it.
+        let Ok(value) = text.parse::<u64>() else {
+            return Err(IdError::Shape {
+                text: text.to_owned(),
+            });
+        };
         if !verhoeff_valid(text) {
             return Err(IdError::CheckDigit { value });
         }
@@ -393,7 +396,10 @@ impl MemberId {
         let mut bytes = [0_u8; 16];
         for (index, byte) in bytes.iter_mut().enumerate() {
             let pair = hex.get(index * 2..index * 2 + 2).ok_or_else(error)?;
-            *byte = u8::from_str_radix(pair, 16).map_err(|_| error())?;
+            let Ok(value) = u8::from_str_radix(pair, 16) else {
+                return Err(error());
+            };
+            *byte = value;
         }
         Ok(Self(bytes))
     }

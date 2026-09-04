@@ -560,7 +560,7 @@ fn render_field_to_json(model: &VersionModule, out: &mut String, field: &Field) 
                 (
                     format!("        if let Some(item) = &{access} {{\n"),
                     "        }\n",
-                    std::string::String::from("item"),
+                    String::from("item"),
                 )
             } else {
                 (String::new(), "", format!("&{access}"))
@@ -657,7 +657,7 @@ fn render_field_to_json(model: &VersionModule, out: &mut String, field: &Field) 
                 Cardinality::Optional => (
                     format!("        if let Some(item) = &{access} {{\n"),
                     "        }\n",
-                    std::string::String::from("item"),
+                    String::from("item"),
                     "            ",
                 ),
                 _ => (String::new(), "", access.clone(), "        "),

@@ -301,7 +301,7 @@ impl RxNormProvider {
                 let id: u64 = rxaui
                     .trim()
                     .parse()
-                    .map_err(|_| invalid("the AUI is not a number"))?;
+                    .map_err(|source| invalid(&format!("the AUI is not a number: {source}")))?;
                 self.atoms
                     .get(id)
                     .map(Ordinal::new)

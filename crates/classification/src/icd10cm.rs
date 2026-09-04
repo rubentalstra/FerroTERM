@@ -102,7 +102,7 @@ pub fn locate(roots: &[PathBuf]) -> Result<Files, Icd10cmError> {
             };
             let lower = name.to_ascii_lowercase();
             if lower.starts_with(TABULAR_PREFIX)
-                && std::path::Path::new(&lower)
+                && Path::new(&lower)
                     .extension()
                     .is_some_and(|e| e.eq_ignore_ascii_case("xml"))
                 && tabular.is_none()
@@ -110,7 +110,7 @@ pub fn locate(roots: &[PathBuf]) -> Result<Files, Icd10cmError> {
                 tabular = Some(path.to_path_buf());
             }
             if lower.starts_with(ORDER_PREFIX)
-                && std::path::Path::new(&lower)
+                && Path::new(&lower)
                     .extension()
                     .is_some_and(|e| e.eq_ignore_ascii_case("txt"))
                 && order.is_none()

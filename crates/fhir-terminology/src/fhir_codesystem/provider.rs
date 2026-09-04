@@ -25,6 +25,18 @@ pub enum BuildError {
     Cycle {
         /// The system.
         url: String,
+        /// The cause.
+        #[source]
+        source: concept_graph::closure::ClosureError,
+    },
+    /// The concept hierarchy does not fit the graph arrays.
+    #[error("the hierarchy of `{url}` cannot be built")]
+    Hierarchy {
+        /// The system.
+        url: String,
+        /// The cause.
+        #[source]
+        source: concept_graph::csr::CsrError,
     },
     /// Too many concepts for a `u32` ordinal.
     #[error("`{url}` has more concepts than the provider can number")]
@@ -95,9 +107,12 @@ impl FhirCodeSystem {
         // NOTE: no FHIR spec fixes an expansion order; concepts are numbered in code
         // order so paging over ordinals is paging over codes, as for every built system.
         model.concepts.sort_by(|a, b| a.code.cmp(&b.code));
-        let count = u32::try_from(model.concepts.len()).map_err(|_| BuildError::TooMany {
-            url: model.url.clone(),
-        })?;
+        // The error names the system; the conversion error adds nothing to it.
+        let Ok(count) = u32::try_from(model.concepts.len()) else {
+            return Err(BuildError::TooMany {
+                url: model.url.clone(),
+            });
+        };
         let key = |code: &str| {
             if model.case_sensitive {
                 code.to_owned()
@@ -375,7 +390,10 @@ impl CodeSystemProvider for FhirCodeSystem {
     }
 
     fn hierarchy(&self) -> Option<&dyn Hierarchy> {
-        self.hierarchy.as_ref().map(|h| h as &dyn Hierarchy)
+        match &self.hierarchy {
+            Some(hierarchy) => Some(hierarchy),
+            None => None,
+        }
     }
 
     fn all(&self) -> Result<ConceptSet, ProviderError> {
@@ -453,14 +471,16 @@ fn build_hierarchy(
                 .collect::<Vec<_>>()
         })
         .collect();
-    let too_many = || BuildError::TooMany {
+    let hierarchy = |source| BuildError::Hierarchy {
         url: model.url.clone(),
+        source,
     };
-    let parents = Csr::build(count, edges).map_err(|_| too_many())?;
-    let closure = Closure::compute(&parents).map_err(|_| BuildError::Cycle {
+    let parents = Csr::build(count, edges).map_err(hierarchy)?;
+    let closure = Closure::compute(&parents).map_err(|source| BuildError::Cycle {
         url: model.url.clone(),
+        source,
     })?;
-    let children = parents.transpose().map_err(|_| too_many())?;
+    let children = parents.transpose().map_err(hierarchy)?;
     Ok(Some(ModelHierarchy {
         parents,
         children,

@@ -57,10 +57,15 @@ impl Csr {
         }
         pairs.sort_unstable();
         pairs.dedup();
+        // A target count past u32::MAX is inconsistent with the offsets; the
+        // conversion error adds nothing to that.
         let count = |targets: &Vec<u32>| {
-            u32::try_from(targets.len()).map_err(|_| CsrError::Offsets {
-                targets: targets.len(),
-            })
+            let Ok(count) = u32::try_from(targets.len()) else {
+                return Err(CsrError::Offsets {
+                    targets: targets.len(),
+                });
+            };
+            Ok(count)
         };
         let mut offsets = Vec::with_capacity(to_usize(nodes).saturating_add(1));
         let mut targets = Vec::with_capacity(pairs.len());
@@ -167,9 +172,9 @@ mod tests {
         assert_eq!(csr.nodes(), 4);
         assert_eq!(csr.edges(), 3);
         assert_eq!(csr.neighbours(o(0)), &[1, 3]);
-        assert_eq!(csr.neighbours(o(1)), &[] as &[u32]);
+        assert!(csr.neighbours(o(1)).is_empty());
         assert_eq!(csr.neighbours(o(2)), &[1]);
-        assert_eq!(csr.neighbours(o(9)), &[] as &[u32]);
+        assert!(csr.neighbours(o(9)).is_empty());
         assert_eq!(csr.offsets(), &[0, 2, 2, 3, 3]);
     }
 
@@ -179,7 +184,7 @@ mod tests {
         let back = csr.transpose().expect("transposes");
         assert_eq!(back.neighbours(o(2)), &[0, 1]);
         assert_eq!(back.neighbours(o(1)), &[0]);
-        assert_eq!(back.neighbours(o(0)), &[] as &[u32]);
+        assert!(back.neighbours(o(0)).is_empty());
         assert_eq!(back.transpose().expect("transposes"), csr);
     }
 

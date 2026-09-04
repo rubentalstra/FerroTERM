@@ -50,6 +50,13 @@ struct System {
     default: Option<String>,
 }
 
+/// A loaded supplement a request named as if it were a code system.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DormantSupplement {
+    /// The supplement's version, when it states one.
+    pub version: Option<String>,
+}
+
 /// The providers a server has loaded.
 #[derive(Debug, Default, Clone)]
 pub struct Registry {
@@ -122,14 +129,16 @@ impl Registry {
         self.supplements.insert(canonical, (target, supplement));
     }
 
-    /// The version of the dormant supplement at `url`, when a system URI names
-    /// a supplement rather than a code system.
+    /// The dormant supplement at `url`, when a system URI names a supplement
+    /// rather than a code system.
     #[must_use]
-    pub fn supplement_named(&self, url: &str) -> Option<Option<String>> {
+    pub fn supplement_named(&self, url: &str) -> Option<DormantSupplement> {
         self.supplements
             .values()
             .find(|(_, s)| s.url == url)
-            .map(|(_, s)| s.version.clone())
+            .map(|(_, s)| DormantSupplement {
+                version: s.version.clone(),
+            })
     }
 
     /// This registry with the dormant supplements `wanted` names (each a `url`

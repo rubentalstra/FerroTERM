@@ -18,7 +18,7 @@ pub enum BuildError {
     Fst(#[from] fst::Error),
     /// More designations than the index can address.
     #[error("too many designations for a u32 ordinal")]
-    TooMany,
+    TooMany(#[source] std::num::TryFromIntError),
 }
 
 /// One indexed designation, by the concept and designation index it names in the store.
@@ -76,7 +76,7 @@ impl IndexBuilder {
     ///
     /// Returns [`BuildError::TooMany`] past `u32::MAX` designations.
     pub fn add(&mut self, input: &Input<'_>) -> Result<u32, BuildError> {
-        let ordinal = u32::try_from(self.entries.len()).map_err(|_| BuildError::TooMany)?;
+        let ordinal = u32::try_from(self.entries.len()).map_err(BuildError::TooMany)?;
         let term_length = u16::try_from(input.term.chars().count()).unwrap_or(u16::MAX);
         self.entries.push(Entry {
             concept: input.concept,

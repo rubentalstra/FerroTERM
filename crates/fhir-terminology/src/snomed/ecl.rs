@@ -390,7 +390,8 @@ impl Model for SnomedProvider {
                     .store
                     .designations(entry.concept)
                     .map_err(|e| storage(&e))?;
-                let Some(record) = designations.get(entry.index as usize) else {
+                let Some(record) = designations.get(concept_graph::ordinal::to_usize(entry.index))
+                else {
                     continue;
                 };
                 if self.designation_passes(entry.concept, entry.index, record, predicates)? {

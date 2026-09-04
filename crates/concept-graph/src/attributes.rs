@@ -40,7 +40,7 @@ pub enum AttributesError {
     },
     /// More rows or strings than the `u32` offsets address.
     #[error("too many attribute rows")]
-    TooMany,
+    TooMany(#[source] std::num::TryFromIntError),
     /// An I/O failure.
     #[error("attributes I/O failed")]
     Io(#[from] io::Error),
@@ -191,7 +191,7 @@ impl Attributes {
         types: Vec<u64>,
         mut edges: Vec<Edge>,
     ) -> Result<Self, AttributesError> {
-        let type_count = u32::try_from(types.len()).map_err(|_| AttributesError::TooMany)?;
+        let type_count = u32::try_from(types.len()).map_err(AttributesError::TooMany)?;
         for edge in &edges {
             let target_ok = match edge.value {
                 Value::Concept(target) => target.index() < nodes,
@@ -208,14 +208,14 @@ impl Attributes {
         }
         edges.sort_unstable();
         edges.dedup();
-        u32::try_from(edges.len()).map_err(|_| AttributesError::TooMany)?;
+        u32::try_from(edges.len()).map_err(AttributesError::TooMany)?;
         let mut interned: BTreeMap<String, u32> = BTreeMap::new();
         let mut strings = Vec::new();
         let mut intern = |text: &str| -> Result<u32, AttributesError> {
             if let Some(&index) = interned.get(text) {
                 return Ok(index);
             }
-            let index = u32::try_from(strings.len()).map_err(|_| AttributesError::TooMany)?;
+            let index = u32::try_from(strings.len()).map_err(AttributesError::TooMany)?;
             strings.push(text.to_owned());
             interned.insert(text.to_owned(), index);
             Ok(index)
@@ -357,7 +357,7 @@ impl Attributes {
     ///
     /// Returns [`AttributesError::Io`] when writing fails.
     pub fn write_to(&self, out: &mut impl Write) -> Result<(), AttributesError> {
-        let count = |len: usize| u32::try_from(len).map_err(|_| AttributesError::TooMany);
+        let count = |len: usize| u32::try_from(len).map_err(AttributesError::TooMany);
         out.write_all(MAGIC)?;
         out.write_all(&VERSION.to_le_bytes())?;
         out.write_all(&count(self.types.len())?.to_le_bytes())?;

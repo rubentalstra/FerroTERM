@@ -170,7 +170,10 @@ impl<'a> Parser<'a> {
                     self.bump();
                 }
                 let digits = self.text.get(start..self.at).unwrap_or_default();
-                let value = digits.parse::<u64>().map_err(|_| self.unexpected())?;
+                // The diagnostic names the position; a `ParseIntError` adds nothing to it.
+                let Ok(value) = digits.parse::<u64>() else {
+                    return Err(self.unexpected());
+                };
                 Ok(Component {
                     atom: Atom::Factor(value),
                     exponent: 1,
@@ -270,11 +273,16 @@ impl<'a> Parser<'a> {
             }
             return Ok(1);
         }
-        self.text
+        // The diagnostic names the position; a `ParseIntError` adds nothing to it.
+        let Ok(value) = self
+            .text
             .get(start..self.at)
             .unwrap_or_default()
             .parse::<i32>()
-            .map_err(|_| self.unexpected())
+        else {
+            return Err(self.unexpected());
+        };
+        Ok(value)
     }
 
     /// An optional `{annotation}`.

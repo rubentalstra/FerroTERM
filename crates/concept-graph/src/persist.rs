@@ -110,8 +110,22 @@ impl Hierarchy {
     }
 }
 
+/// A length or size past `u32::MAX`, which the artifact layout cannot store.
+#[derive(Debug, thiserror::Error)]
+#[error("{what} exceeds the u32 the artifact layout stores")]
+pub(crate) struct TooLong {
+    what: &'static str,
+    #[source]
+    source: std::num::TryFromIntError,
+}
+
+/// `len` as the `u32` the layout stores, or the I/O error naming `what` overflowed.
+pub(crate) fn u32_len(len: usize, what: &'static str) -> io::Result<u32> {
+    u32::try_from(len).map_err(|source| io::Error::other(TooLong { what, source }))
+}
+
 fn write_u32s(out: &mut impl Write, values: &[u32]) -> io::Result<()> {
-    let len = u32::try_from(values.len()).map_err(|_| io::Error::other("array too long"))?;
+    let len = u32_len(values.len(), "an array length")?;
     out.write_all(&len.to_le_bytes())?;
     for value in values {
         out.write_all(&value.to_le_bytes())?;
@@ -135,11 +149,10 @@ fn read_u32s(input: &mut impl Read) -> io::Result<Vec<u32>> {
 }
 
 fn write_bitmaps(out: &mut impl Write, sets: &[RoaringBitmap]) -> io::Result<()> {
-    let len = u32::try_from(sets.len()).map_err(|_| io::Error::other("too many sets"))?;
+    let len = u32_len(sets.len(), "the set count")?;
     out.write_all(&len.to_le_bytes())?;
     for set in sets {
-        let size =
-            u32::try_from(set.serialized_size()).map_err(|_| io::Error::other("set too large"))?;
+        let size = u32_len(set.serialized_size(), "a set size")?;
         out.write_all(&size.to_le_bytes())?;
         set.serialize_into(&mut *out)?;
     }

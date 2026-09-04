@@ -87,12 +87,15 @@ impl Edition {
                 .entry(source)
                 .and_modify(|t| *t = (*t).max(member.source_effective_time))
                 .or_insert(member.source_effective_time);
-            let target = ConceptId::try_from(member.member.referenced_component_id)
-                .map(ModuleId::from)
-                .map_err(|_| EditionError::MalformedTarget {
+            // The error names the member and its target; the id error adds nothing.
+            let Ok(target) =
+                ConceptId::try_from(member.member.referenced_component_id).map(ModuleId::from)
+            else {
+                return Err(EditionError::MalformedTarget {
                     member: member.member.id.to_string(),
                     target: member.member.referenced_component_id.to_string(),
-                })?;
+                });
+            };
             depended_on.insert(target);
             modules
                 .entry(target)

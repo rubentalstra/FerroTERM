@@ -233,7 +233,7 @@ fn a_directory_without_a_manifest_is_not_a_package() -> Result<(), Box<dyn std::
 fn a_duplicate_canonical_is_refused() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let content = dir.path().join("package");
-    std::fs::create_dir(&content)?;
+    std::fs::create_dir_all(&content)?;
     std::fs::write(
         content.join("package.json"),
         r#"{"name":"test.pkg","version":"0.1.0"}"#,
@@ -263,7 +263,7 @@ fn a_duplicate_canonical_is_refused() -> Result<(), Box<dyn std::error::Error>> 
 fn a_malformed_resource_names_its_file() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let content = dir.path().join("package");
-    std::fs::create_dir(&content)?;
+    std::fs::create_dir_all(&content)?;
     std::fs::write(
         content.join("package.json"),
         r#"{"name":"test.pkg","version":"0.1.0"}"#,

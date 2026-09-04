@@ -286,9 +286,10 @@ impl SnomedProvider {
         let concepts = store
             .meta(tables::META_CONCEPTS)?
             .ok_or(OpenError::MissingMeta(tables::META_CONCEPTS))?;
-        let concepts: u32 = concepts
-            .parse()
-            .map_err(|_| OpenError::ConceptCount(concepts.clone()))?;
+        // The error carries the text; a `ParseIntError` adds nothing to it.
+        let Ok(concepts) = concepts.parse::<u32>() else {
+            return Err(OpenError::ConceptCount(concepts.clone()));
+        };
         let keys = Self::resolve_keys(&store)?;
         let mut properties: Vec<PropertyDefinition> = FHIR_PROPERTIES
             .iter()
@@ -495,6 +496,10 @@ impl SnomedProvider {
     }
 
     /// The attribute relationships of the edition, with their role groups.
+    #[expect(
+        clippy::same_name_method,
+        reason = "the ECL evaluator's trait exposes the same graph part; this is the crate's own accessor"
+    )]
     #[must_use]
     pub fn attributes(&self) -> &Attributes {
         &self.attributes
@@ -507,6 +512,10 @@ impl SnomedProvider {
     }
 
     /// The alternate identifiers of the edition.
+    #[expect(
+        clippy::same_name_method,
+        reason = "the ECL evaluator's trait exposes the same graph part; this is the crate's own accessor"
+    )]
     #[must_use]
     pub fn identifiers(&self) -> &Identifiers {
         &self.identifiers
@@ -939,12 +948,14 @@ impl CodeSystemProvider for SnomedProvider {
             .map(str::trim)
             .filter(|v| !v.is_empty())
         {
-            let refset =
-                ConceptId::parse(value).map_err(|_| ProviderError::InvalidFilterValue {
+            // The error names the value and the reason; the id error adds nothing.
+            let Ok(refset) = ConceptId::parse(value) else {
+                return Err(ProviderError::InvalidFilterValue {
                     property: filter.property.clone(),
                     value: value.to_owned(),
                     reason: String::from("not an SCTID"),
-                })?;
+                });
+            };
             let members = self
                 .memberships
                 .members(refset.value())

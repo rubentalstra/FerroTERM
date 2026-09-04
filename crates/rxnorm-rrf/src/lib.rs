@@ -63,6 +63,9 @@ pub enum RrfError {
         path: PathBuf,
         /// The 1-based line.
         line: u64,
+        /// The cause.
+        #[source]
+        source: std::str::Utf8Error,
     },
     /// An identifier is not a number.
     #[error("{path}:{line}: `{value}` is not an identifier")]
@@ -73,6 +76,9 @@ pub enum RrfError {
         line: u64,
         /// The value.
         value: String,
+        /// The cause.
+        #[source]
+        source: std::num::ParseIntError,
     },
 }
 

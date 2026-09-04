@@ -8,6 +8,10 @@ use crate::release::{Release, ReleaseError, Table, csv_at, field};
 
 /// One translated term.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "the fields are the LOINC linguistic variant columns, named as the release names them"
+)]
 pub struct Translation {
     /// `LONG_COMMON_NAME` in the variant, when given.
     pub long_common_name: Option<String>,
