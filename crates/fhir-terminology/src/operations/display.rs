@@ -276,7 +276,24 @@ pub fn case_note(
     located: &str,
     expression: Option<String>,
 ) -> Option<Issue> {
-    if provider.declaration().case_sensitive || given == located {
+    if given == located {
+        return None;
+    }
+    if given.to_lowercase() != located.to_lowercase() {
+        // NOTE: an alternate form the system admits (the ecosystem's icd-11
+        // `cs-validate-uri`: a URI for a code) is normalized with an information note.
+        return Some(Issue {
+            severity: "information",
+            code: "business-rule",
+            kind: "code-rule",
+            text: format!(
+                "The code '{given}' is an alternate form of '{located}', the code as the code system '{}' spells it",
+                provider.identity().url
+            ),
+            expression,
+        });
+    }
+    if provider.declaration().case_sensitive {
         return None;
     }
     Some(Issue {

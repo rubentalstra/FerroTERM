@@ -71,8 +71,8 @@ pub struct CodeSystemLookupResponse {
     pub property: Vec<CodeSystemLookupResponseProperty>,
     /// Defined by the terminology ecosystem
     /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
-    /// declared by no FHIR version. The code that was looked up, as the code
-    /// system spells it.
+    /// declared by no FHIR version. The code that was looked up, as the request
+    /// spelled it.
     pub code: Option<super::super::primitives::Code>,
     /// Defined by the terminology ecosystem
     /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),

@@ -34,6 +34,9 @@ pub struct Expression {
     pub members: Vec<Member>,
     /// Whether every token was a URI (the URI form).
     pub uri_form: bool,
+    /// Whether the values were written in the ICF dotted qualifier form
+    /// (`d5409.qp3`), which admits qualifier codes only.
+    pub dotted: bool,
 }
 
 fn token(text: &str) -> Option<Token> {
@@ -81,7 +84,11 @@ impl Expression {
             uri_form &= stem.uri && values.iter().all(|v| v.uri);
             members.push(Member { stem, values });
         }
-        Some(Self { members, uri_form })
+        Some(Self {
+            members,
+            uri_form,
+            dotted: value_separator == '.',
+        })
     }
 
     /// Whether the expression is a single stem with no values.

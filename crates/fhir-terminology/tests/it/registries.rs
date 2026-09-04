@@ -498,7 +498,12 @@ fn the_grammar_systems_validate_by_membership_and_decline_undetermined_subsumpti
     };
     let validation = value_set_validate_code::validate_code(&sources, &english).expect("validates");
     assert!(validation.result);
-    assert_eq!(validation.code.as_deref(), Some("en-US"));
+    assert_eq!(
+        validation.code.as_deref(),
+        Some("en-us"),
+        "the request's spelling"
+    );
+    assert_eq!(validation.normalized_code.as_deref(), Some("en-US"));
     assert_eq!(
         validation.display.as_deref(),
         Some("English (United States)")

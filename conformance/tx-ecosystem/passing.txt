@@ -85,6 +85,7 @@ language2/validation-wrong-none-en
 language2/validation-wrong-none-ende
 language2/validation-wrong-none-ende-N
 language2/validation-wrong-none-none
+metadata/term-caps
 notSelectable/notSelectable-noprop-all
 notSelectable/notSelectable-noprop-false
 notSelectable/notSelectable-noprop-false-false
@@ -373,7 +374,6 @@ version/codeableconcept-v10-vs1wb-default
 version/codeableconcept-v10-vs1wb-force
 version/codeableconcept-v10-vs20-force
 version/codeableconcept-v10-vsbb
-version/codeableconcept-v10-vsbb
 version/codeableconcept-v10-vsbb-check
 version/codeableconcept-v10-vsbb-default
 version/codeableconcept-v10-vsbb-force
@@ -414,7 +414,6 @@ version/coding-v10-vs20
 version/coding-v10-vs20-check
 version/coding-v10-vs20-default
 version/coding-v10-vs20-force
-version/coding-v10-vsbb
 version/coding-v10-vsbb
 version/coding-v10-vsbb-check
 version/coding-v10-vsbb-default

@@ -103,6 +103,13 @@ pub struct CodeSystemValidateCodeResponse {
     pub issues: Option<super::super::operation_outcome::OperationOutcome>,
     /// Defined by the terminology ecosystem
     /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. The code as the code system spells it, when
+    /// the request spelled it otherwise (a case difference, an alternate form
+    /// such as a URI); the ecosystem asks for it on case-insensitive systems
+    /// and systems with a grammar.
+    pub normalized_code: Option<super::super::primitives::Code>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
     /// declared by no FHIR version. A code system the server does not serve,
     /// one parameter per system, so a validator can tell the user which
     /// resources are missing.
@@ -747,6 +754,7 @@ impl CodeSystemValidateCodeResponse {
         let mut field_codeable_concept: Option<super::super::codeable_concept::CodeableConcept> =
             None;
         let mut field_issues: Option<super::super::operation_outcome::OperationOutcome> = None;
+        let mut field_normalized_code: Option<super::super::primitives::Code> = None;
         let mut field_x_caused_by_unknown_system: Vec<super::super::primitives::Canonical> =
             Vec::new();
         let mut field_x_unknown_system: Vec<super::super::primitives::Canonical> = Vec::new();
@@ -1092,6 +1100,36 @@ impl CodeSystemValidateCodeResponse {
                         }
                     });
                 }
+                "normalized-code" => {
+                    if field_normalized_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "normalized-code",
+                        });
+                    }
+                    field_normalized_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "normalized-code",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "normalized-code",
+                                },
+                            );
+                        }
+                    });
+                }
                 "x-caused-by-unknown-system" => {
                     field_x_caused_by_unknown_system.push(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Canonical(
@@ -1224,6 +1262,7 @@ impl CodeSystemValidateCodeResponse {
             version: field_version,
             codeable_concept: field_codeable_concept,
             issues: field_issues,
+            normalized_code: field_normalized_code,
             x_caused_by_unknown_system: field_x_caused_by_unknown_system,
             x_unknown_system: field_x_unknown_system,
             inactive: field_inactive,
@@ -1305,6 +1344,15 @@ impl CodeSystemValidateCodeResponse {
                 name: "issues".into(),
                 resource: Some(super::super::resource::Resource::OperationOutcome(
                     Box::new(value.clone()),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.normalized_code {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "normalized-code".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
                 )),
                 ..Default::default()
             });
@@ -1585,6 +1633,18 @@ pub const CODE_SYSTEM_VALIDATE_CODE: super::super::super::operation::Operation =
                 type_code: Some("OperationOutcome"),
                 scope: &[],
                 source: super::super::super::operation::ParameterSource::Version,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "normalized-code",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("code"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
                 parts: &[],
             },
             super::super::super::operation::Parameter {

@@ -41,7 +41,14 @@ fn props(provider: &Icd11Provider, concept: Concept) -> Vec<String> {
             let parts: Vec<String> = p
                 .subproperties
                 .iter()
-                .map(|s| format!("{}={}", s.code, s.value.as_text()))
+                .map(|s| {
+                    let description = s
+                        .description
+                        .as_deref()
+                        .map(|d| format!(" ({d})"))
+                        .unwrap_or_default();
+                    format!("{}={}{description}", s.code, s.value.as_text())
+                })
                 .collect();
             if parts.is_empty() {
                 format!("{}={}", p.code, p.value.as_text())
@@ -116,7 +123,9 @@ fn codes_and_entity_uris_in_both_forms_name_the_same_concept() {
     let block_props = props(&mms, block);
     assert!(block_props.contains(&String::from("notSelectable=true")));
     assert!(!block_props.iter().any(|x| x.starts_with("code=")));
-    assert!(mms.status(block).expect("reads").abstract_concept);
+    // The block is `notSelectable` as a property only; no `abstract` flag (the
+    // ecosystem's `lookup-mms-no-code`).
+    assert!(!mms.status(block).expect("reads").abstract_concept);
     assert_eq!(
         mms.display(block, None).expect("reads").as_deref(),
         Some("Bacterial intestinal infections")
@@ -175,7 +184,7 @@ fn postcoordination_expressions_validate_against_the_axes() {
         "stem=1A00 [stemLabel=Cholera; stemUri={MMS}/{CHOLERA}]"
     )));
     assert!(p.contains(&format!(
-        "postcoordinationValues=http://id.who.int/icd/schema/infectiousAgent [code=XN8P1; description=Vibrio cholerae O1, biovar cholerae; value={MMS}/2001]"
+        "postcoordinationValues=http://id.who.int/icd/schema/infectiousAgent [XN8P1={MMS}/2001 (Vibrio cholerae O1, biovar cholerae)]"
     )));
     let uri_form = located(&mms, &format!("{MMS}/{CHOLERA} & {MMS}/2001"));
     assert_eq!(
@@ -209,10 +218,10 @@ fn postcoordination_expressions_validate_against_the_axes() {
     let p = props(&mms, cluster);
     assert!(p.contains(&String::from("code=1A01/1G41/1G40")));
     assert!(p.contains(&format!(
-        "postcoordinationValues=http://id.who.int/icd/schema/hasCausingCondition [code=1G41; description=Sepsis with septic shock; value={MMS}/3001]"
+        "postcoordinationValues=http://id.who.int/icd/schema/hasCausingCondition [1G41={MMS}/3001 (Sepsis with septic shock)]"
     )), "the required axis gets the first value: {p:?}");
     assert!(p.contains(&format!(
-        "postcoordinationValues=http://id.who.int/icd/schema/hasManifestation [code=1G40; description=Sepsis without septic shock; value={MMS}/{SEPSIS}]"
+        "postcoordinationValues=http://id.who.int/icd/schema/hasManifestation [1G40={MMS}/{SEPSIS} (Sepsis without septic shock)]"
     )));
     let two_stems = located(&mms, "1A00&XN8P1/XN62R");
     assert_eq!(
@@ -225,11 +234,11 @@ fn postcoordination_expressions_validate_against_the_axes() {
         icf.display(dot, None).expect("reads").as_deref(),
         Some("Dressing, unspecified [SEVERE performance difficulty (high, extreme,...) 50-95 %]")
     );
-    assert!(props(&icf, dot).iter().any(|x| x.starts_with(
-        "postcoordinationValues=http://id.who.int/icd/schema/performance [code=qp3;"
-    )));
+    assert!(props(&icf, dot).iter().any(|x| {
+        x.starts_with("postcoordinationValues=http://id.who.int/icd/schema/performance [qp3=")
+    }));
     assert!(
-        icf.locate("d5409.3").is_err(),
+        icf.locate("d5409.3").expect("reads").is_none(),
         "the pre-2026 qualifier syntax names no code"
     );
     assert_eq!(located(&icf, "d540"), located(&icf, "d540"));

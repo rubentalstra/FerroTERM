@@ -202,6 +202,8 @@ struct Selection {
     provider: Arc<dyn CodeSystemProvider>,
     set: ConceptSet,
     overrides: BTreeMap<u32, String>,
+    /// The compose's spelling of an enumerated code the system spells otherwise.
+    spellings: BTreeMap<u32, String>,
 }
 
 /// Sets at most this large check activity concept by concept; larger ones
@@ -335,7 +337,8 @@ impl<'a> Expander<'a> {
             });
             let set = Self::select(provider, include, options)?;
             let mut overrides = BTreeMap::new();
-            for concept in include.concepts.iter().filter(|c| c.display.is_some()) {
+            let mut spellings = BTreeMap::new();
+            for concept in &include.concepts {
                 let located =
                     provider
                         .locate(&concept.code)
@@ -343,8 +346,14 @@ impl<'a> Expander<'a> {
                             system: identity.url.clone(),
                             source,
                         })?;
-                if let (Some(located), Some(display)) = (located, &concept.display) {
+                let Some(located) = located else {
+                    continue;
+                };
+                if let Some(display) = &concept.display {
                     overrides.insert(located.concept.index(), display.clone());
+                }
+                if located.code != concept.code {
+                    spellings.insert(located.concept.index(), concept.code.clone());
                 }
             }
             let mut selected = BTreeMap::new();
@@ -354,6 +363,7 @@ impl<'a> Expander<'a> {
                     provider: Arc::clone(provider),
                     set,
                     overrides,
+                    spellings,
                 },
             );
             parts = Some(selected);
@@ -398,6 +408,7 @@ impl<'a> Expander<'a> {
                         provider: Arc::clone(&resolved.provider),
                         set: ConceptSet::new(),
                         overrides: BTreeMap::new(),
+                        spellings: BTreeMap::new(),
                     },
                 );
             }
@@ -511,10 +522,13 @@ fn materialize(
     };
     let concept = Concept::new(index);
     let provider = &selection.provider;
-    let code = provider
-        .code(concept)
-        .map_err(&failed)?
-        .unwrap_or_else(|| index.to_string());
+    let code = match selection.spellings.get(&index) {
+        Some(spelling) => spelling.clone(),
+        None => provider
+            .code(concept)
+            .map_err(&failed)?
+            .unwrap_or_else(|| index.to_string()),
+    };
     let display = match selection.overrides.get(&index) {
         Some(display) => Some(display.clone()),
         None => provider

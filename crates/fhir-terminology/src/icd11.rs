@@ -535,6 +535,11 @@ impl Icd11Provider {
             let mut values = Vec::new();
             for token in &member.values {
                 let Some(value) = self.resolve(token)? else {
+                    // NOTE: an ICF dotted qualifier that is no code (`d5409.3`) is an unknown
+                    // code (the ecosystem's `lookup-icf-pc-old`), not a malformed expression.
+                    if expression.dotted {
+                        return Ok(None);
+                    }
                     return Err(invalid(format!("`{}` is not a code", token.text)));
                 };
                 let filled: Vec<String> = values.iter().map(|b: &Bound| b.axis.clone()).collect();
@@ -713,25 +718,11 @@ impl Icd11Provider {
                 out.push(Property {
                     code: String::from("postcoordinationValues"),
                     value: PropertyValue::Code(bound.axis.clone()),
-                    subproperties: vec![
-                        Subproperty {
-                            code: String::from("code"),
-                            value: PropertyValue::Code(self.code_or_uri(bound.value)),
-                            description: None,
-                        },
-                        Subproperty {
-                            code: String::from("description"),
-                            value: PropertyValue::String(
-                                self.title(bound.value, language)?.unwrap_or_default(),
-                            ),
-                            description: None,
-                        },
-                        Subproperty {
-                            code: String::from("value"),
-                            value: PropertyValue::Uri(self.uri(bound.value)),
-                            description: None,
-                        },
-                    ],
+                    subproperties: vec![Subproperty {
+                        code: self.code_or_uri(bound.value),
+                        value: PropertyValue::Uri(self.uri(bound.value)),
+                        description: self.title(bound.value, language)?,
+                    }],
                     ..Property::default()
                 });
             }
@@ -837,16 +828,14 @@ impl CodeSystemProvider for Icd11Provider {
             }))
     }
 
-    fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
-        let abstract_concept = concept.index() < self.concepts
-            && Self::at(concept.index())
-                .and_then(|i| self.codes.get(i))
-                .is_some_and(Option::is_none);
+    fn status(&self, _concept: Concept) -> Result<Status, ProviderError> {
+        // NOTE: a codeless entity answers `notSelectable` as a property and no
+        // `abstract` (the ecosystem's icd-11 `lookup-mms-no-code` and `lookup-foundation`).
         Ok(Status {
             standards_status: None,
             active: true,
             inactive_reason: None,
-            abstract_concept,
+            abstract_concept: false,
         })
     }
 

@@ -144,6 +144,7 @@ macro_rules! r5_family_capabilities {
                     TerminologyCapabilities, TerminologyCapabilitiesCodeSystem,
                     TerminologyCapabilitiesCodeSystemVersion,
                     TerminologyCapabilitiesCodeSystemVersionFilter, TerminologyCapabilitiesExpansion,
+                    TerminologyCapabilitiesExpansionParameter,
                 };
                 let version_entry = |version: &VersionSummary| {
                     let mut entry = TerminologyCapabilitiesCodeSystemVersion {
@@ -196,6 +197,13 @@ macro_rules! r5_family_capabilities {
                         paging: Some(true.into()),
                         incomplete: Some(false.into()),
                         text_filter: Some(TEXT_FILTER.into()),
+                        parameter: EXPANSION_PARAMETERS
+                            .iter()
+                            .map(|name| TerminologyCapabilitiesExpansionParameter {
+                                name: (*name).into(),
+                                ..Default::default()
+                            })
+                            .collect(),
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -311,7 +319,7 @@ terminology_capabilities!(r4b, to_r4b);
 /// The `$expand` parameters the server evaluates, for
 /// `expansion.parameter`; `tx-resource` is the terminology ecosystem's
 /// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
-pub const EXPANSION_PARAMETERS: [&str; 16] = [
+pub const EXPANSION_PARAMETERS: [&str; 17] = [
     "activeOnly",
     "check-system-version",
     "count",
@@ -326,6 +334,7 @@ pub const EXPANSION_PARAMETERS: [&str; 16] = [
     "includeDefinition",
     "includeDesignations",
     "offset",
+    "property",
     "system-version",
     "tx-resource",
 ];
