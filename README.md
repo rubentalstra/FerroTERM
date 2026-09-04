@@ -148,9 +148,9 @@ The short form:
 ## Licensing
 
 The software is source-available under the Business Source License 1.1
-([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)), the same terms as FerroEHR, with
-no open-core tier: every crate, the server, and the tools are in this
-repository under the one licence.
+([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)), with no open-core tier: the
+engine, the server, and the tools are in this repository under the one
+licence, and nothing is held back to be sold back to you.
 
 The licence lets you read, build, modify, and redistribute the source without
 a fee and without asking anyone, and it covers every non-production use:
@@ -166,7 +166,10 @@ from it, to third parties as a hosted, managed, or embedded terminology
 service, and selling, sublicensing, or otherwise distributing it for a fee on
 its own or inside another product, need a commercial licence in every case.
 Each version becomes Apache License 2.0 four years after that version is
-published. The commercial licence starts with a short conversation with the
+published. Two crates are outside all of this: `fhir-types` (the FHIR types and
+operation contracts generated from HL7's own packages) and `rf2` (the SNOMED CT
+release file reader) are Apache 2.0 on crates.io, so any Rust project can use
+them without a licence conversation. The commercial licence starts with a short conversation with the
 maintainer named in [MAINTAINERS.md](MAINTAINERS.md).
 
 The code systems are licensed separately: SNOMED CT by SNOMED International,

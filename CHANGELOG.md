@@ -16,11 +16,13 @@ fresh link reference.
 ### Changed
 
 - The licence of the project's own code is the Business Source License 1.1
-  (`LICENSE`, `NOTICE`), on FerroEHR's terms: free for non-production use and
+  (`LICENSE`, `NOTICE`): free for non-production use and
   for non-commercial production use, a commercial licence for any other
   production use, and Apache License 2.0 four years after each version. Every
   header, manifest, badge, page, and image label names it, and the versions
-  guard fails on a stale Apache 2.0 claim (#221).
+  guard fails on a stale Apache 2.0 claim (#221). The `fhir-types` and `rf2`
+  crates stay Apache License 2.0 on crates.io, so the FHIR types and the RF2
+  reader remain usable by any Rust project (#223).
 
 ## [0.0.9] - 2026-09-04
 

@@ -128,7 +128,14 @@ if [ -f LICENSE ]; then
     [ -n "$hit" ] || continue
     bad "stale licence claim at $hit"; stale=1
   done < <(git grep -n -E 'SPDX-License-Identifier: (MIT|Apache-2\.0)|License-MIT|License-Apache|^license = "(MIT|Apache-2\.0)"|^license: (MIT|Apache-2\.0)|image\.licenses="?(MIT|Apache)' \
-    -- ':!scripts/checks/versions.sh' ':!tools/fhir-codegen/vendor' ':!crates/sct-ecl/vendor' ':!crates/fhir-types/src' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
+    -- ':!scripts/checks/versions.sh' ':!tools/fhir-codegen/vendor' ':!crates/sct-ecl/vendor' ':!crates/fhir-types' ':!crates/rf2' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
+  # fhir-types and rf2 are the two crates published under Apache 2.0 (the
+  # owner's decision, #223); each carries the Apache text and says so.
+  for apache in crates/fhir-types crates/rf2; do
+    if ! grep -q '^license = "Apache-2.0"' "$apache/Cargo.toml" || ! grep -q 'Apache License' "$apache/LICENSE"; then
+      bad "$apache is not Apache-2.0 in its manifest and LICENSE"; stale=1
+    fi
+  done
   [ "$stale" -eq 0 ] && note "OK: the project's own files name BUSL-1.1"
 else
   note "no LICENSE yet — skipped"
@@ -161,7 +168,11 @@ if ls crates/*/Cargo.toml >/dev/null 2>&1; then
     name="$(awk -F'"' '/^\[package\]/{p=1} p && /^name = /{print $2; exit}' "$manifest")"
     [ -f "$dir/README.md" ] || bad "$dir has no README.md (published crate)"
     [ -f "$dir/LICENSE" ] || bad "$dir has no LICENSE (published crate)"
-    cmp -s LICENSE "$dir/LICENSE" || bad "$dir/LICENSE differs from the root LICENSE"
+    case "$dir" in
+      # the two Apache-2.0 crates carry the Apache text, checked above
+      crates/fhir-types|crates/rf2) ;;
+      *) cmp -s LICENSE "$dir/LICENSE" || bad "$dir/LICENSE differs from the root LICENSE" ;;
+    esac
     grep -q '^publish = true' "$manifest" || bad "$manifest is not publish = true"
     grep -q '^readme = "README.md"' "$manifest" || bad "$manifest names no readme"
     grep -q '^description = ' "$manifest" || bad "$manifest has no description"
