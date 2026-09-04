@@ -85,8 +85,8 @@ special case for one system.
 
 ## The API
 
-FHIR R4 under `/r4`, R4B under `/r4b`, and R5 under `/r5`, each in its own
-version's shapes:
+FHIR R4 under `/r4`, R4B under `/r4b`, R5 under `/r5`, and the R6 ballot under
+`/r6`, each in its own version's shapes:
 `CodeSystem/$lookup`, `CodeSystem/$validate-code`,
 `CodeSystem/$subsumes`, `ValueSet/$expand` (paging, `filter`, version
 pins, inline and request-scoped value sets), `ValueSet/$validate-code`,

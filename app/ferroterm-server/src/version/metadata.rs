@@ -109,6 +109,17 @@ macro_rules! metadata {
                 }
             }
 
+            /// The note a ballot-tracking version carries: which ballot it serves, and
+            /// that ballot-grounded behaviour is re-verified when the version publishes.
+            fn ballot_note() -> Option<String> {
+                FHIR_VERSION.contains("ballot").then(|| {
+                    format!(
+                        "Serves the FHIR {} (version {FHIR_VERSION}). Every behaviour grounded only in the ballot is re-verified against the published specification when it appears, and may change with it.",
+                        $label
+                    )
+                })
+            }
+
             /// The current time as a FHIR `dateTime` (RFC 3339, UTC).
             fn now() -> String {
                 jiff::Timestamp::now().to_string()
@@ -195,6 +206,7 @@ macro_rules! metadata {
                         version: Some(state.software_version().into()),
                         ..Default::default()
                     }),
+                    description: ballot_note().map(Into::into),
                     implementation: Some(CapabilityStatementImplementation {
                         description: "FerroTERM terminology server".into(),
                         ..Default::default()
@@ -248,6 +260,7 @@ macro_rules! metadata {
                     version: Some(state.software_version().into()),
                     ..Default::default()
                 });
+                capabilities.description = ballot_note().map(Into::into);
                 capabilities.implementation = Some(TerminologyCapabilitiesImplementation {
                     description: "FerroTERM terminology server".into(),
                     ..Default::default()

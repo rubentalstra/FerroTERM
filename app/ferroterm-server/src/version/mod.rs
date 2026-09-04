@@ -6,10 +6,12 @@
 //! macros produces each version's modules from the generated
 //! `fhir_types::<version>` types: `surface!(r4b, "4.3.0", "R4B", to_r4b)`
 //! expands to `parameters`, `resources`, `map`, `metadata`, `system`,
-//! `operations`, and `router()`. A version that declares a different shape
-//! (R5 and later) gets its own modules.
+//! `operations`, and `router()`. The `map` module comes from one of two
+//! family macros: `map_r4` for R4 and R4B, `map_r5` for R5 and the R6 ballot,
+//! which share their result shapes and differ in a few inputs.
 
-pub(crate) mod map;
+pub(crate) mod map_r4;
+pub(crate) mod map_r5;
 pub(crate) mod metadata;
 pub(crate) mod operations;
 pub(crate) mod parameters;

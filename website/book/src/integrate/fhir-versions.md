@@ -1,7 +1,7 @@
 # FHIR versions
 
-FerroTERM answers FHIR R4 under `/r4`, R4B under `/r4b`, and R5 under `/r5`.
-The R6 ballot module is generated and its endpoint is the v0.0.9 milestone.
+FerroTERM answers FHIR R4 under `/r4`, R4B under `/r4b`, R5 under `/r5`, and
+the R6 ballot (6.0.0-ballot5) under `/r6`, marked ballot-tracking.
 
 <!-- toc -->
 
@@ -25,7 +25,7 @@ drift apart.
 | R4 | `hl7.fhir.r4.core` 4.0.1 | served under `/r4` |
 | R4B | `hl7.fhir.r4b.core` 4.3.0 | served under `/r4b` |
 | R5 | `hl7.fhir.r5.core` 5.0.0 | served under `/r5` |
-| R6 | `hl7.fhir.r6.core` 6.0.0-ballot5 | generated; the `/r6` endpoint is v0.0.9, marked ballot-tracking |
+| R6 | `hl7.fhir.r6.core` 6.0.0-ballot5 | served under `/r6`, marked ballot-tracking |
 
 R4B is the current stable release of the R4 line and a near-superset of R4;
 both endpoints serve the same engine, and a `$cache-control` cache started on
@@ -36,8 +36,15 @@ and R4B endpoints emit only what their own definitions declare.
 
 ## What this means for you
 
-Send R4 requests to `/r4`, R4B requests to `/r4b`, and R5 requests to `/r5`.
-`GET {base}/$versions` names the version of the base (`4.0`, `4.3`, or `5.0`), `GET {base}/metadata` is that
-version's `CapabilityStatement`, and a parameter the version does not declare
-is refused with an `OperationOutcome` rather than absorbed. When the R6 endpoint
-lands, it answers in the ballot's shapes at `/r6`.
+Send R4 requests to `/r4`, R4B requests to `/r4b`, R5 requests to `/r5`, and
+R6 ballot requests to `/r6`. `GET {base}/$versions` names the version of the
+base (`4.0`, `4.3`, `5.0`, or `6.0`), `GET {base}/metadata` is that version's
+`CapabilityStatement`, and a parameter the version does not declare is refused
+with an `OperationOutcome` rather than absorbed.
+
+The `/r6` endpoint answers in the ballot's shapes. Its capability statement
+says which ballot it serves and that every behaviour grounded only in the
+ballot is re-verified against the published specification when it appears. A
+ballot parameter the server does not implement yet (`manifest`,
+`filterProperty`, `handle-unclosed-expansion`) is refused as
+`not-supported`, never absorbed.
