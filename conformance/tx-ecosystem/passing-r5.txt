@@ -73,6 +73,7 @@ language2/validation-right-none-ende
 language2/validation-right-none-ende-N
 language2/validation-right-none-none
 language2/validation-wrong-de-en
+language2/validation-wrong-de-en-bad
 language2/validation-wrong-de-ende
 language2/validation-wrong-de-ende-N
 language2/validation-wrong-de-none
@@ -134,6 +135,7 @@ notSelectable/notSelectable-unprop-true
 notSelectable/notSelectable-unprop-true-false
 notSelectable/notSelectable-unprop-true-true
 notSelectable/notSelectable-unprop-true-unknown
+overload/expand-enum-bad
 overload/expand-enum-good
 overload/expand-mixed
 overload/validate-all-bad2
@@ -232,6 +234,7 @@ simple-cases/simple-expand-all
 simple-cases/simple-expand-all-count
 simple-cases/simple-expand-child-of
 simple-cases/simple-expand-enum
+simple-cases/simple-expand-enum-bad
 simple-cases/simple-expand-inactive
 simple-cases/simple-expand-isa
 simple-cases/simple-expand-prop

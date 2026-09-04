@@ -404,17 +404,20 @@ impl<'a> Expander<'a> {
             let Some(selection) = selections.get_mut(&key) else {
                 continue;
             };
-            let located = selection
-                .provider
-                .locate(&item.code)
-                .map_err(|source| ComposeError::Provider {
-                    system: item.system.clone(),
-                    source,
-                })?
-                .ok_or_else(|| ComposeError::UnknownCode {
-                    system: item.system.clone(),
-                    code: item.code.clone(),
-                })?;
+            // NOTE: an enumerated code the system does not define leaves the
+            // expansion instead of failing it (the ecosystem's `expand-enum-bad`
+            // cases; the FHIR specification is silent on the case).
+            let Some(located) =
+                selection
+                    .provider
+                    .locate(&item.code)
+                    .map_err(|source| ComposeError::Provider {
+                        system: item.system.clone(),
+                        source,
+                    })?
+            else {
+                continue;
+            };
             selection.set.insert(located.concept.index());
             if let Some(display) = item.display {
                 selection.overrides.insert(located.concept.index(), display);
@@ -438,13 +441,9 @@ impl<'a> Expander<'a> {
         } else {
             let mut set = ConceptSet::new();
             for concept in &include.concepts {
-                let located = provider
-                    .locate(&concept.code)
-                    .map_err(&failed)?
-                    .ok_or_else(|| ComposeError::UnknownCode {
-                        system: system.clone(),
-                        code: concept.code.clone(),
-                    })?;
+                let Some(located) = provider.locate(&concept.code).map_err(&failed)? else {
+                    continue;
+                };
                 set.insert(located.concept.index());
             }
             set

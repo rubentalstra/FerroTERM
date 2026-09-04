@@ -132,7 +132,11 @@ macro_rules! render_value_set {
                     status: model.status.as_str().into(),
                     experimental: model.experimental.map(Into::into),
                     date: model.date.as_deref().map(Into::into),
-                    publisher: model.publisher.as_deref().map(Into::into),
+                    // NOTE: `publisher` travels with the definition, as `compose` does
+                    // (the ecosystem's expansions omit it unless `includeDefinition`).
+                    publisher: with_compose
+                        .then(|| model.publisher.as_deref().map(Into::into))
+                        .flatten(),
                     description: None,
                     immutable: model.immutable.map(Into::into),
                     compose: with_compose.then(|| compose(&model.compose)),

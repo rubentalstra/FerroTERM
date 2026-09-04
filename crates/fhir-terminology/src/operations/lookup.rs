@@ -126,6 +126,7 @@ pub fn lookup(
     invocation: &Invocation,
     input: &LookupInput,
 ) -> Result<LookupOutcome, OperationError> {
+    language::check(input.display_language.as_deref())?;
     if matches!(invocation, Invocation::Instance(_)) {
         return Err(OperationError::NotSupported(String::from(
             "`CodeSystem/$lookup` is declared at the type level only",

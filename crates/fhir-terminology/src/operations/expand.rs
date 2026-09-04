@@ -176,6 +176,7 @@ pub fn expand(
     sources: &Sources<'_>,
     input: &ExpandInput,
 ) -> Result<ExpansionOutcome, OperationError> {
+    crate::language::check(input.display_language.as_deref())?;
     refuse_unsupported(input)?;
     let negotiation = negotiation(input);
     let (url, version) = match input.url.as_deref() {

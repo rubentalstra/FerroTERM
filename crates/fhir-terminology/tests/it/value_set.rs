@@ -2328,3 +2328,84 @@ fn expand_filters_designations_by_a_bcp47_language() {
     let values: Vec<&str> = cat.designations.iter().map(|d| d.value.as_str()).collect();
     assert_eq!(values, ["Katze"]);
 }
+
+#[test]
+fn an_enumerated_code_the_system_lacks_leaves_the_expansion() {
+    let world = World::load();
+    let inline = ValueSet {
+        url: Some("http://example.org/with-a-stranger".into()),
+        status: "draft".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                concept: vec![
+                    ValueSetComposeIncludeConcept {
+                        code: "cat".into(),
+                        ..Default::default()
+                    },
+                    ValueSetComposeIncludeConcept {
+                        code: "unicorn".into(),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let request = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        ..ExpandInput::default()
+    };
+    // NOTE: the ecosystem expands such a value set to the codes the system has
+    // (its `expand-enum-bad` cases); the specification is silent.
+    let vs = expand::expand(&world.sources(), &request).expect("expands");
+    assert_eq!(codes(&vs), ["cat"]);
+    assert_eq!(vs.total, 1);
+}
+
+#[test]
+fn an_invalid_display_language_is_refused_on_every_operation() {
+    let world = World::load();
+    for language in ["-", "zz", "en-XX", "de,zz"] {
+        let expand_request = ExpandInput {
+            url: Some(VS_PETS.to_owned()),
+            display_language: Some(String::from(language)),
+            ..ExpandInput::default()
+        };
+        let error = expand::expand(&world.sources(), &expand_request).expect_err(language);
+        assert!(
+            matches!(&error, OperationError::InvalidLanguage(_)),
+            "{language}: {error}"
+        );
+        assert_eq!(error.status(), http::StatusCode::BAD_REQUEST);
+        assert_eq!(error.issue_code(), "processing");
+        assert_eq!(error.tx_issue_type(), "invalid-display");
+        let validate_request = ValueSetValidateInput {
+            url: Some(VS_PETS.to_owned()),
+            code: Some(String::from("cat")),
+            system: Some(ANIMALS.to_owned()),
+            display_language: Some(String::from(language)),
+            ..ValueSetValidateInput::default()
+        };
+        let error = value_set_validate_code::validate_code(&world.sources(), &validate_request)
+            .expect_err(language);
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "Invalid displayLanguage: '{}'",
+                language.split(',').find(|l| *l != "de").unwrap_or(language)
+            )
+        );
+    }
+    // Valid ranges, quality values, and the wildcard pass.
+    for language in ["en", "de-AT", "nl, en;q=0.5", "*", "zh-Hant-TW"] {
+        let request = ExpandInput {
+            url: Some(VS_PETS.to_owned()),
+            display_language: Some(String::from(language)),
+            ..ExpandInput::default()
+        };
+        expand::expand(&world.sources(), &request).expect(language);
+    }
+}

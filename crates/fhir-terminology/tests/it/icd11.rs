@@ -263,6 +263,22 @@ fn scales_are_implicit_value_sets_and_the_tree_answers_filters() {
         .is_some(),
         "the versioned form"
     );
+    // The scale's value set carries the release as version and date, and a
+    // name and title of its own (the ecosystem's `icd-11` expansions).
+    let metadata = mms.implicit_metadata(&url);
+    assert_eq!(metadata.version.as_deref(), Some(RELEASE));
+    assert_eq!(metadata.date.as_deref(), Some(RELEASE));
+    assert_eq!(metadata.experimental, Some(false));
+    assert_eq!(
+        metadata.name.as_deref(),
+        Some(format!("PostcoordinationScale_{CHOLERA}_infectiousAgent").as_str())
+    );
+    assert!(metadata.title.is_some());
+    assert_eq!(
+        mms.implicit_metadata(&format!("{MMS}/{CHOLERA}")),
+        fhir_terminology::provider::ImplicitMetadata::default(),
+        "a plain entity URI is no implicit value set"
+    );
     assert!(
         mms.implicit_value_set(&format!(
             "{MMS}/999999999/postcoordinationScale/infectiousAgent"

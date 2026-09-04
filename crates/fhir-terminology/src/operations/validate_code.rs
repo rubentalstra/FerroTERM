@@ -184,6 +184,7 @@ pub fn validate_code(
     invocation: &Invocation,
     input: &ValidateCodeInput,
 ) -> Result<ValidationOutcome, OperationError> {
+    language::check(input.display_language.as_deref())?;
     if input.inline_code_system {
         return Err(OperationError::NotSupported(String::from(
             "validating against an inline `codeSystem` resource is not supported; name a served system with `url`",
