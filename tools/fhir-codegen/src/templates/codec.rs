@@ -39,6 +39,17 @@ pub enum DecodeErrorKind {
     DuplicateChoice,
     /// `resourceType` is absent, not a string, or names another type.
     ResourceType,
+    /// An XML element the type does not define.
+    UnknownElement,
+    /// Text where XML elements belong.
+    UnexpectedText,
+    /// An XML root element that is no resource of the version.
+    WrongRoot,
+    /// XML the parser refuses.
+    MalformedXml {
+        /// The parser's reason.
+        reason: String,
+    },
 }
 
 impl fmt::Display for DecodeErrorKind {
@@ -53,6 +64,10 @@ impl fmt::Display for DecodeErrorKind {
             Self::BadValue => f.write_str("invalid value"),
             Self::DuplicateChoice => f.write_str("more than one form of a choice element"),
             Self::ResourceType => f.write_str("resourceType is missing or does not match"),
+            Self::UnknownElement => f.write_str("unknown element"),
+            Self::UnexpectedText => f.write_str("text where an element belongs"),
+            Self::WrongRoot => f.write_str("the root element is no resource of this version"),
+            Self::MalformedXml { reason } => write!(f, "malformed XML: {reason}"),
         }
     }
 }
@@ -384,6 +399,11 @@ pub enum EncodeError {
     },
     /// An unknown resource's body is not a JSON object.
     UnknownResourceBody,
+    /// A value has no XML form, or the XML writer failed.
+    Xml {
+        /// What went wrong.
+        reason: String,
+    },
 }
 
 impl fmt::Display for EncodeError {
@@ -391,6 +411,7 @@ impl fmt::Display for EncodeError {
         match self {
             Self::BadDecimal { text } => write!(f, "decimal {text:?} is not a JSON number"),
             Self::UnknownResourceBody => f.write_str("an unknown resource's body is not an object"),
+            Self::Xml { reason } => write!(f, "no XML form: {reason}"),
         }
     }
 }

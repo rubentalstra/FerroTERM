@@ -131,8 +131,20 @@ pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
             include_str!("templates/codec.rs")
         ),
     );
+    files.insert(
+        String::from("xml.rs"),
+        format!(
+            "{}{}",
+            crate::render::crate_banner(&models),
+            include_str!("templates/xml.rs")
+        ),
+    );
     for model in &models {
         files.insert(format!("{}/mod.rs", model.name), render_version_mod(model)?);
+        files.insert(
+            format!("{}/schema.rs", model.name),
+            crate::render_schema::render_schema(model)?,
+        );
         for (module, types) in model.modules() {
             files.insert(
                 format!("{}/{module}.rs", model.name),

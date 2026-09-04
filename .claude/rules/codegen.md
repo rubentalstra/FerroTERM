@@ -65,6 +65,13 @@ emitter) → `crates/fhir-types`, one module per version (R4 / R4B / R5 / R6).
   conditional that can drift. A version difference the packages express is a
   generated difference; if two versions genuinely coincide the emitter may
   share, but the decision is the emitter's, driven by the inputs.
+- **XML is schema-driven, never a second hand-written codec.** The generator
+  emits, per version, `schema.rs`: every type's elements in definition order
+  with the kind the XML form needs (attribute, primitive and its value scalar,
+  complex, resource, XHTML, choice). The templated `xml.rs` converts between
+  FHIR XML and the JSON object model over that schema
+  (<https://hl7.org/fhir/R4B/xml.html>), so the JSON codec's strictness
+  governs both wires and a new element reaches XML by regeneration alone.
 - **The terminology ecosystem overlay is generator input, applied before
   lowering.** `src/ecosystem.rs` names the R6 parameters pre-adopted into
   every earlier version (their shape and documentation come from the vendored

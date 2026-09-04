@@ -1,0 +1,842 @@
+//! The FHIR XML representation shared by every version module, over the
+//! version's element schema.
+//!
+//! XML carries the same element tree as JSON, in the definition's element
+//! order: a primitive's value is the `value` attribute, an element id the `id`
+//! attribute, `Extension.url` an attribute, a choice element is named with its
+//! type, a resource is an element named by its type in the
+//! `http://hl7.org/fhir` namespace, a nested resource sits inside its wrapper
+//! element, and `Narrative.div` is XHTML passed through
+//! (<https://hl7.org/fhir/R4B/xml.html>). The conversion runs between XML and
+//! the FHIR JSON object model, so the JSON codec's strictness applies to both.
+
+use std::borrow::Cow;
+
+use quick_xml::events::attributes::Attribute;
+use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
+use quick_xml::{Reader, Writer, XmlVersion};
+use serde_json::{Number, Value};
+
+use super::codec::{DecodeError, DecodeErrorKind, EncodeError, Object, Path};
+
+/// The FHIR XML namespace.
+pub const FHIR_NAMESPACE: &str = "http://hl7.org/fhir";
+
+/// The scalar a primitive's `value` attribute carries in JSON.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ValueKind {
+    /// A JSON boolean.
+    Boolean,
+    /// A JSON number without a fraction.
+    Integer,
+    /// A JSON number keeping its lexical form.
+    Decimal,
+    /// A JSON string (every other primitive, `integer64` included).
+    Text,
+}
+
+/// How an element travels in XML.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Kind {
+    /// A plain string carried as an attribute (`Element.id`, `Extension.url`).
+    Attribute,
+    /// A primitive element: the `value` attribute, an `id` attribute, and
+    /// `extension` children.
+    Primitive(ValueKind),
+    /// A complex element of the named type.
+    Complex(&'static str),
+    /// A resource inside its wrapper element.
+    Resource,
+    /// The XHTML narrative, passed through as text.
+    Xhtml,
+    /// A choice element: the name is the stem, the suffix names the type.
+    Choice(&'static [(&'static str, Kind)]),
+}
+
+/// One element of a type, in definition order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FieldSchema {
+    /// The element name (the JSON key; a choice's stem).
+    pub name: &'static str,
+    /// How it travels.
+    pub kind: Kind,
+    /// Whether it repeats.
+    pub many: bool,
+}
+
+/// One type's elements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TypeSchema {
+    /// The type name (a resource's element name).
+    pub name: &'static str,
+    /// The elements, in definition order.
+    pub fields: &'static [FieldSchema],
+}
+
+/// A version's schema: every type, sorted by name, and the resource names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Schemas {
+    /// The types, sorted by name.
+    pub types: &'static [TypeSchema],
+    /// The resource type names, sorted.
+    pub resources: &'static [&'static str],
+}
+
+impl Schemas {
+    /// The schema of the type named `name`.
+    #[must_use]
+    pub fn type_named(&self, name: &str) -> Option<&'static TypeSchema> {
+        self.types
+            .binary_search_by(|t| t.name.cmp(name))
+            .ok()
+            .and_then(|i| self.types.get(i))
+    }
+
+    fn is_resource(&self, name: &str) -> bool {
+        self.resources.binary_search(&name).is_ok()
+    }
+}
+
+/// Writes `object`, a resource in the JSON object model, as FHIR XML.
+///
+/// # Errors
+///
+/// Returns [`EncodeError`] when the object names no resource type the schema
+/// knows, or a value has no XML form.
+pub fn to_xml(schemas: &Schemas, object: &Object) -> Result<String, EncodeError> {
+    let mut writer = Writer::new(Vec::new());
+    write_resource(schemas, &mut writer, object, true)?;
+    String::from_utf8(writer.into_inner()).map_err(|_| EncodeError::Xml {
+        reason: String::from("the writer produced invalid UTF-8"),
+    })
+}
+
+fn xml_error(reason: impl std::fmt::Display) -> EncodeError {
+    EncodeError::Xml {
+        reason: reason.to_string(),
+    }
+}
+
+fn write_resource(
+    schemas: &Schemas,
+    writer: &mut Writer<Vec<u8>>,
+    object: &Object,
+    root: bool,
+) -> Result<(), EncodeError> {
+    let name = match object.get("resourceType") {
+        Some(Value::String(name)) => name.as_str(),
+        _ => {
+            return Err(EncodeError::Xml {
+                reason: String::from("the resource names no resourceType"),
+            });
+        }
+    };
+    let schema = schemas
+        .type_named(name)
+        .filter(|_| schemas.is_resource(name))
+        .ok_or_else(|| EncodeError::Xml {
+            reason: format!("no schema for the resource type `{name}`"),
+        })?;
+    let mut start = BytesStart::new(name);
+    if root {
+        start.push_attribute(("xmlns", FHIR_NAMESPACE));
+    }
+    write_complex(schemas, writer, schema, object, start, &["resourceType"])
+}
+
+/// Writes one complex element: its attributes on the start tag, then its
+/// children in schema order.
+fn write_complex(
+    schemas: &Schemas,
+    writer: &mut Writer<Vec<u8>>,
+    schema: &TypeSchema,
+    object: &Object,
+    mut start: BytesStart<'_>,
+    skip: &[&str],
+) -> Result<(), EncodeError> {
+    for field in schema.fields {
+        if field.kind == Kind::Attribute
+            && let Some(Value::String(text)) = object.get(field.name)
+        {
+            start.push_attribute((field.name, text.as_str()));
+        }
+    }
+    let mut children = false;
+    for field in schema.fields {
+        let present = match field.kind {
+            Kind::Attribute => false,
+            Kind::Choice(variants) => variants.iter().any(|(suffix, _)| {
+                object.contains_key(&format!("{}{suffix}", field.name))
+                    || object.contains_key(&format!("_{}{suffix}", field.name))
+            }),
+            Kind::Primitive(_) => {
+                object.contains_key(field.name) || object.contains_key(&format!("_{}", field.name))
+            }
+            _ => object.contains_key(field.name),
+        };
+        if present && !skip.contains(&field.name) {
+            children = true;
+            break;
+        }
+    }
+    if !children {
+        writer.write_event(Event::Empty(start)).map_err(xml_error)?;
+        return Ok(());
+    }
+    let name = start.name().as_ref().to_owned();
+    writer.write_event(Event::Start(start)).map_err(xml_error)?;
+    for field in schema.fields {
+        if skip.contains(&field.name) {
+            continue;
+        }
+        write_field(schemas, writer, field, field.name, field.kind, object)?;
+    }
+    writer
+        .write_event(Event::End(BytesEnd::new(name)))
+        .map_err(xml_error)
+}
+
+fn write_field(
+    schemas: &Schemas,
+    writer: &mut Writer<Vec<u8>>,
+    field: &FieldSchema,
+    name: &str,
+    kind: Kind,
+    object: &Object,
+) -> Result<(), EncodeError> {
+    match kind {
+        Kind::Attribute => Ok(()),
+        Kind::Choice(variants) => {
+            for (suffix, kind) in variants {
+                let key = format!("{name}{suffix}");
+                write_field(schemas, writer, field, &key, *kind, object)?;
+            }
+            Ok(())
+        }
+        Kind::Primitive(_) => {
+            let values = object.get(name);
+            let elements = object.get(&format!("_{name}"));
+            if values.is_none() && elements.is_none() {
+                return Ok(());
+            }
+            if field.many {
+                let values = values.and_then(Value::as_array);
+                let elements = elements.and_then(Value::as_array);
+                let len = values.map_or(0, Vec::len).max(elements.map_or(0, Vec::len));
+                for index in 0..len {
+                    let value = values.and_then(|v| v.get(index)).filter(|v| !v.is_null());
+                    let element = elements
+                        .and_then(|e| e.get(index))
+                        .and_then(Value::as_object);
+                    write_primitive(schemas, writer, name, value, element)?;
+                }
+                Ok(())
+            } else {
+                write_primitive(
+                    schemas,
+                    writer,
+                    name,
+                    values.filter(|v| !v.is_null()),
+                    elements.and_then(Value::as_object),
+                )
+            }
+        }
+        Kind::Complex(type_name) => {
+            let schema = schemas.type_named(type_name).ok_or_else(|| EncodeError::Xml {
+                reason: format!("no schema for the type `{type_name}`"),
+            })?;
+            for item in items(object.get(name), field.many) {
+                let item = item.as_object().ok_or_else(|| EncodeError::Xml {
+                    reason: format!("`{name}` is not an object"),
+                })?;
+                write_complex(schemas, writer, schema, item, BytesStart::new(name), &[])?;
+            }
+            Ok(())
+        }
+        Kind::Resource => {
+            for item in items(object.get(name), field.many) {
+                let item = item.as_object().ok_or_else(|| EncodeError::Xml {
+                    reason: format!("`{name}` is not an object"),
+                })?;
+                writer
+                    .write_event(Event::Start(BytesStart::new(name)))
+                    .map_err(xml_error)?;
+                write_resource(schemas, writer, item, false)?;
+                writer
+                    .write_event(Event::End(BytesEnd::new(name)))
+                    .map_err(xml_error)?;
+            }
+            Ok(())
+        }
+        Kind::Xhtml => {
+            if object.contains_key(&format!("_{name}")) {
+                return Err(EncodeError::Xml {
+                    reason: format!("`_{name}`: an XHTML element carries no id or extension in XML"),
+                });
+            }
+            match object.get(name) {
+                None => Ok(()),
+                Some(Value::String(raw)) => writer
+                    .write_event(Event::Text(BytesText::from_escaped(raw.as_str())))
+                    .map_err(xml_error),
+                Some(_) => Err(EncodeError::Xml {
+                    reason: format!("`{name}` is not a string"),
+                }),
+            }
+        }
+    }
+}
+
+/// The items of a field's value: the array's entries when it repeats, else
+/// the value itself.
+fn items(value: Option<&Value>, many: bool) -> Vec<&Value> {
+    match value {
+        None => Vec::new(),
+        Some(Value::Array(items)) if many => items.iter().collect(),
+        Some(value) => vec![value],
+    }
+}
+
+fn write_primitive(
+    schemas: &Schemas,
+    writer: &mut Writer<Vec<u8>>,
+    name: &str,
+    value: Option<&Value>,
+    element: Option<&Object>,
+) -> Result<(), EncodeError> {
+    let mut start = BytesStart::new(name);
+    if let Some(Value::String(id)) = element.and_then(|e| e.get("id")) {
+        start.push_attribute(("id", id.as_str()));
+    }
+    if let Some(value) = value {
+        let text = match value {
+            Value::Bool(b) => b.to_string(),
+            Value::Number(n) => n.to_string(),
+            Value::String(s) => s.clone(),
+            _ => {
+                return Err(EncodeError::Xml {
+                    reason: format!("`{name}` is not a primitive value"),
+                });
+            }
+        };
+        start.push_attribute(("value", text.as_str()));
+    }
+    let extensions = element
+        .and_then(|e| e.get("extension"))
+        .and_then(Value::as_array);
+    match extensions {
+        Some(extensions) if !extensions.is_empty() => {
+            let schema = schemas.type_named("Extension").ok_or_else(|| EncodeError::Xml {
+                reason: String::from("no schema for the type `Extension`"),
+            })?;
+            writer.write_event(Event::Start(start)).map_err(xml_error)?;
+            for extension in extensions {
+                let extension = extension.as_object().ok_or_else(|| EncodeError::Xml {
+                    reason: format!("`_{name}.extension` is not an object"),
+                })?;
+                write_complex(
+                    schemas,
+                    writer,
+                    schema,
+                    extension,
+                    BytesStart::new("extension"),
+                    &[],
+                )?;
+            }
+            writer
+                .write_event(Event::End(BytesEnd::new(name)))
+                .map_err(xml_error)
+        }
+        _ => writer.write_event(Event::Empty(start)).map_err(xml_error),
+    }
+}
+
+/// Reads FHIR XML into the JSON object model of the resource it carries.
+///
+/// # Errors
+///
+/// Returns [`DecodeError`] for malformed XML, a root element that is no
+/// resource the schema knows, an unknown element or attribute, text where an
+/// element belongs, or a `value` that is not of the primitive's kind.
+pub fn from_xml(schemas: &Schemas, text: &str) -> Result<Object, DecodeError> {
+    let mut reader = Reader::from_str(text);
+    reader.config_mut().trim_text(true);
+    let mut path = Path::root("Resource");
+    let malformed = |path: &Path, e: quick_xml::Error| {
+        path.error(DecodeErrorKind::MalformedXml {
+            reason: e.to_string(),
+        })
+    };
+    let object = loop {
+        match reader.read_event().map_err(|e| malformed(&path, e))? {
+            Event::Decl(_) | Event::Comment(_) | Event::PI(_) | Event::DocType(_) => {}
+            Event::Start(start) => {
+                break read_resource(schemas, &mut reader, &start, false, &mut path)?;
+            }
+            Event::Empty(start) => {
+                break read_resource(schemas, &mut reader, &start, true, &mut path)?;
+            }
+            Event::Eof => return Err(path.error(DecodeErrorKind::WrongRoot)),
+            _ => return Err(path.error(DecodeErrorKind::UnexpectedText)),
+        }
+    };
+    loop {
+        match reader.read_event().map_err(|e| malformed(&path, e))? {
+            Event::Eof => return Ok(object),
+            Event::Comment(_) | Event::PI(_) => {}
+            _ => return Err(path.error(DecodeErrorKind::UnexpectedText)),
+        }
+    }
+}
+
+fn local_name(name: &str) -> String {
+    name.rsplit(':').next().unwrap_or(name).to_owned()
+}
+
+fn read_resource(
+    schemas: &Schemas,
+    reader: &mut Reader<&[u8]>,
+    start: &BytesStart<'_>,
+    empty: bool,
+    path: &mut Path,
+) -> Result<Object, DecodeError> {
+    let name = local_name(start.name().as_ref());
+    let schema = schemas
+        .type_named(&name)
+        .filter(|_| schemas.is_resource(&name))
+        .ok_or_else(|| path.error(DecodeErrorKind::WrongRoot))?;
+    let mut object = read_complex(schemas, reader, schema, start, empty, path)?;
+    object.insert(String::from("resourceType"), Value::String(name));
+    Ok(object)
+}
+
+/// The attribute's local name and unescaped value; `None` for a namespace
+/// declaration.
+fn attribute(
+    attribute: Result<Attribute<'_>, quick_xml::events::attributes::AttrError>,
+    path: &Path,
+) -> Result<Option<(String, String)>, DecodeError> {
+    let attribute = attribute.map_err(|e| {
+        path.error(DecodeErrorKind::MalformedXml {
+            reason: e.to_string(),
+        })
+    })?;
+    let key = attribute.key.as_ref();
+    if key == "xmlns" || key.starts_with("xmlns:") {
+        return Ok(None);
+    }
+    let value = attribute.normalized_value(XmlVersion::Explicit1_0).map_err(|e| {
+        path.error(DecodeErrorKind::MalformedXml {
+            reason: e.to_string(),
+        })
+    })?;
+    Ok(Some((local_name(key), value.into_owned())))
+}
+
+fn read_complex(
+    schemas: &Schemas,
+    reader: &mut Reader<&[u8]>,
+    schema: &TypeSchema,
+    start: &BytesStart<'_>,
+    empty: bool,
+    path: &mut Path,
+) -> Result<Object, DecodeError> {
+    let mut object = Object::new();
+    for attr in start.attributes() {
+        let Some((key, value)) = attribute(attr, path)? else {
+            continue;
+        };
+        let known = schema
+            .fields
+            .iter()
+            .any(|f| f.kind == Kind::Attribute && f.name == key);
+        if !known {
+            return path.with(&key, |path| Err(path.error(DecodeErrorKind::UnknownProperty)));
+        }
+        object.insert(key, Value::String(value));
+    }
+    if empty {
+        return Ok(object);
+    }
+    let mut collector = Collector::default();
+    loop {
+        let event = reader.read_event().map_err(|e| {
+            path.error(DecodeErrorKind::MalformedXml {
+                reason: e.to_string(),
+            })
+        })?;
+        match event {
+            Event::End(_) => break,
+            Event::Eof => {
+                return Err(path.error(DecodeErrorKind::MalformedXml {
+                    reason: String::from("the document ends inside an element"),
+                }));
+            }
+            Event::Comment(_) | Event::PI(_) => {}
+            Event::Start(child) => {
+                let child = child.into_owned();
+                read_child(schemas, reader, schema, &child, false, path, &mut collector)?;
+            }
+            Event::Empty(child) => {
+                let child = child.into_owned();
+                read_child(schemas, reader, schema, &child, true, path, &mut collector)?;
+            }
+            _ => return Err(path.error(DecodeErrorKind::UnexpectedText)),
+        }
+    }
+    collector.finish(schema, &mut object, path)?;
+    Ok(object)
+}
+
+/// The children read so far, by element name, in arrival order.
+#[derive(Default)]
+struct Collector {
+    /// Complex, resource, and XHTML values by name.
+    values: Vec<(String, Value)>,
+    /// Primitive positions by name: the value and the element object.
+    primitives: Vec<(String, Option<Value>, Option<Value>)>,
+}
+
+impl Collector {
+    fn finish(
+        self,
+        schema: &TypeSchema,
+        object: &mut Object,
+        path: &mut Path,
+    ) -> Result<(), DecodeError> {
+        let mut seen: Vec<String> = Vec::new();
+        for (name, value) in self.values {
+            let many = field_of(schema, &name).is_some_and(|(f, _, _)| f.many);
+            match object.get_mut(&name) {
+                None if many => {
+                    object.insert(name, Value::Array(vec![value]));
+                }
+                None => {
+                    object.insert(name, value);
+                }
+                Some(Value::Array(items)) if many => items.push(value),
+                Some(_) => {
+                    return path.with(&name, |path| {
+                        Err(path.error(DecodeErrorKind::WrongCardinality))
+                    });
+                }
+            }
+        }
+        for (name, value, element) in self.primitives {
+            let many = field_of(schema, &name).is_some_and(|(f, _, _)| f.many);
+            let element_key = format!("_{name}");
+            if !many {
+                if seen.contains(&name) {
+                    return path.with(&name, |path| {
+                        Err(path.error(DecodeErrorKind::WrongCardinality))
+                    });
+                }
+                seen.push(name.clone());
+                if let Some(value) = value {
+                    object.insert(name, value);
+                }
+                if let Some(element) = element {
+                    object.insert(element_key, element);
+                }
+                continue;
+            }
+            match object.entry(name.clone()).or_insert_with(|| Value::Array(Vec::new())) {
+                Value::Array(values) => values.push(value.unwrap_or(Value::Null)),
+                _ => {
+                    return path.with(&name, |path| {
+                        Err(path.error(DecodeErrorKind::WrongCardinality))
+                    });
+                }
+            }
+            match object
+                .entry(element_key)
+                .or_insert_with(|| Value::Array(Vec::new()))
+            {
+                Value::Array(elements) => elements.push(element.unwrap_or(Value::Null)),
+                _ => {
+                    return path.with(&name, |path| {
+                        Err(path.error(DecodeErrorKind::WrongCardinality))
+                    });
+                }
+            }
+        }
+        // A repeating primitive without any value keeps only its `_name` array,
+        // and without any element only its values (<https://hl7.org/fhir/R4B/json.html#primitive>).
+        let names: Vec<String> = object
+            .keys()
+            .filter(|k| k.starts_with('_'))
+            .cloned()
+            .collect();
+        for element_key in names {
+            let all_null = |v: &Value| v.as_array().is_some_and(|a| a.iter().all(Value::is_null));
+            if object.get(&element_key).is_some_and(all_null) {
+                object.remove(&element_key);
+            }
+            let name = element_key.trim_start_matches('_').to_owned();
+            if object.get(&name).is_some_and(all_null) {
+                object.remove(&name);
+            }
+        }
+        Ok(())
+    }
+}
+
+/// The field a child element belongs to, with the JSON key and the kind of
+/// the form it arrived in (a choice's variant).
+fn field_of(schema: &TypeSchema, name: &str) -> Option<(&'static FieldSchema, String, Kind)> {
+    for field in schema.fields {
+        match field.kind {
+            Kind::Attribute => {}
+            Kind::Choice(variants) => {
+                for (suffix, kind) in variants {
+                    let key = format!("{}{suffix}", field.name);
+                    if key == name {
+                        return Some((field, key, *kind));
+                    }
+                }
+            }
+            kind if field.name == name => return Some((field, name.to_owned(), kind)),
+            _ => {}
+        }
+    }
+    None
+}
+
+fn read_child(
+    schemas: &Schemas,
+    reader: &mut Reader<&[u8]>,
+    schema: &TypeSchema,
+    child: &BytesStart<'static>,
+    empty: bool,
+    path: &mut Path,
+    collector: &mut Collector,
+) -> Result<(), DecodeError> {
+    let name = local_name(child.name().as_ref());
+    let Some((_, key, kind)) = field_of(schema, &name) else {
+        return path.with(&name, |path| Err(path.error(DecodeErrorKind::UnknownElement)));
+    };
+    path.with(&key, |path| match kind {
+        Kind::Attribute | Kind::Choice(_) => Err(path.error(DecodeErrorKind::UnknownElement)),
+        Kind::Primitive(value_kind) => {
+            let (value, element) = read_primitive(schemas, reader, child, empty, value_kind, path)?;
+            collector.primitives.push((key.clone(), value, element));
+            Ok(())
+        }
+        Kind::Complex(type_name) => {
+            let nested = schemas
+                .type_named(type_name)
+                .ok_or_else(|| path.error(DecodeErrorKind::UnknownElement))?;
+            let value = read_complex(schemas, reader, nested, child, empty, path)?;
+            collector.values.push((key.clone(), Value::Object(value)));
+            Ok(())
+        }
+        Kind::Resource => {
+            let value = read_wrapped_resource(schemas, reader, empty, path)?;
+            collector.values.push((key.clone(), Value::Object(value)));
+            Ok(())
+        }
+        Kind::Xhtml => {
+            let raw = read_xhtml(reader, child, empty, path)?;
+            collector.values.push((key.clone(), Value::String(raw)));
+            Ok(())
+        }
+    })
+}
+
+fn read_primitive(
+    schemas: &Schemas,
+    reader: &mut Reader<&[u8]>,
+    start: &BytesStart<'_>,
+    empty: bool,
+    kind: ValueKind,
+    path: &mut Path,
+) -> Result<(Option<Value>, Option<Value>), DecodeError> {
+    let mut value = None;
+    let mut element = Object::new();
+    for attr in start.attributes() {
+        let Some((key, text)) = attribute(attr, path)? else {
+            continue;
+        };
+        match key.as_str() {
+            "value" => value = Some(primitive_value(kind, &text, path)?),
+            "id" => {
+                element.insert(String::from("id"), Value::String(text));
+            }
+            other => {
+                return path.with(other, |path| {
+                    Err(path.error(DecodeErrorKind::UnknownProperty))
+                });
+            }
+        }
+    }
+    if !empty {
+        let schema = schemas
+            .type_named("Extension")
+            .ok_or_else(|| path.error(DecodeErrorKind::UnknownElement))?;
+        let mut extensions = Vec::new();
+        loop {
+            let event = reader.read_event().map_err(|e| {
+                path.error(DecodeErrorKind::MalformedXml {
+                    reason: e.to_string(),
+                })
+            })?;
+            match event {
+                Event::End(_) => break,
+                Event::Comment(_) | Event::PI(_) => {}
+                Event::Start(child) => {
+                    let child = child.into_owned();
+                    let extension =
+                        read_extension(schemas, reader, schema, &child, false, path, extensions.len())?;
+                    extensions.push(Value::Object(extension));
+                }
+                Event::Empty(child) => {
+                    let child = child.into_owned();
+                    let extension =
+                        read_extension(schemas, reader, schema, &child, true, path, extensions.len())?;
+                    extensions.push(Value::Object(extension));
+                }
+                Event::Eof => {
+                    return Err(path.error(DecodeErrorKind::MalformedXml {
+                        reason: String::from("the document ends inside an element"),
+                    }));
+                }
+                _ => return Err(path.error(DecodeErrorKind::UnexpectedText)),
+            }
+        }
+        if !extensions.is_empty() {
+            element.insert(String::from("extension"), Value::Array(extensions));
+        }
+    }
+    if value.is_none() && element.is_empty() {
+        return Err(path.error(DecodeErrorKind::Empty));
+    }
+    Ok((
+        value,
+        (!element.is_empty()).then_some(Value::Object(element)),
+    ))
+}
+
+/// Reads one `extension` child of a primitive element.
+fn read_extension(
+    schemas: &Schemas,
+    reader: &mut Reader<&[u8]>,
+    schema: &TypeSchema,
+    child: &BytesStart<'static>,
+    empty: bool,
+    path: &mut Path,
+    index: usize,
+) -> Result<Object, DecodeError> {
+    let name = local_name(child.name().as_ref());
+    if name != "extension" {
+        return path.with(&name, |path| Err(path.error(DecodeErrorKind::UnknownElement)));
+    }
+    path.with_index("extension", index, |path| {
+        read_complex(schemas, reader, schema, child, empty, path)
+    })
+}
+
+fn primitive_value(kind: ValueKind, text: &str, path: &Path) -> Result<Value, DecodeError> {
+    match kind {
+        ValueKind::Boolean => match text {
+            "true" => Ok(Value::Bool(true)),
+            "false" => Ok(Value::Bool(false)),
+            _ => Err(path.error(DecodeErrorKind::BadValue)),
+        },
+        ValueKind::Integer => text
+            .parse::<i64>()
+            .map(|i| Value::Number(Number::from(i)))
+            .map_err(|_| path.error(DecodeErrorKind::BadValue)),
+        ValueKind::Decimal => text
+            .parse::<Number>()
+            .map(Value::Number)
+            .map_err(|_| path.error(DecodeErrorKind::BadValue)),
+        ValueKind::Text => Ok(Value::String(text.to_owned())),
+    }
+}
+
+/// Reads the one resource inside a wrapper element such as `contained`.
+fn read_wrapped_resource(
+    schemas: &Schemas,
+    reader: &mut Reader<&[u8]>,
+    empty: bool,
+    path: &mut Path,
+) -> Result<Object, DecodeError> {
+    if empty {
+        return Err(path.error(DecodeErrorKind::Empty));
+    }
+    let mut resource = None;
+    loop {
+        let event = reader.read_event().map_err(|e| {
+            path.error(DecodeErrorKind::MalformedXml {
+                reason: e.to_string(),
+            })
+        })?;
+        match event {
+            Event::End(_) => break,
+            Event::Comment(_) | Event::PI(_) => {}
+            Event::Start(inner) => {
+                let inner = inner.into_owned();
+                if resource.is_some() {
+                    return Err(path.error(DecodeErrorKind::WrongCardinality));
+                }
+                resource = Some(read_resource(schemas, reader, &inner, false, path)?);
+            }
+            Event::Empty(inner) => {
+                let inner = inner.into_owned();
+                if resource.is_some() {
+                    return Err(path.error(DecodeErrorKind::WrongCardinality));
+                }
+                resource = Some(read_resource(schemas, reader, &inner, true, path)?);
+            }
+            Event::Eof => {
+                return Err(path.error(DecodeErrorKind::MalformedXml {
+                    reason: String::from("the document ends inside an element"),
+                }));
+            }
+            _ => return Err(path.error(DecodeErrorKind::UnexpectedText)),
+        }
+    }
+    resource.ok_or_else(|| path.error(DecodeErrorKind::Empty))
+}
+
+/// Reads an XHTML element as the text FHIR JSON carries: its start tag, its
+/// raw content, and its end tag.
+fn read_xhtml(
+    reader: &mut Reader<&[u8]>,
+    start: &BytesStart<'_>,
+    empty: bool,
+    path: &Path,
+) -> Result<String, DecodeError> {
+    let name = start.name().as_ref().to_owned();
+    let mut raw = format!("<{name}");
+    for attr in start.attributes() {
+        let attr = attr.map_err(|e| {
+            path.error(DecodeErrorKind::MalformedXml {
+                reason: e.to_string(),
+            })
+        })?;
+        raw.push(' ');
+        raw.push_str(attr.key.as_ref());
+        raw.push_str("=\"");
+        raw.push_str(attr.value.as_ref());
+        raw.push('"');
+    }
+    if empty {
+        raw.push_str("/>");
+        return Ok(raw);
+    }
+    raw.push('>');
+    let inner: Cow<'_, str> = reader
+        .read_text(start.name())
+        .map_err(|e| {
+            path.error(DecodeErrorKind::MalformedXml {
+                reason: e.to_string(),
+            })
+        })?
+        .into_inner();
+    raw.push_str(&inner);
+    raw.push_str("</");
+    raw.push_str(&name);
+    raw.push('>');
+    Ok(raw)
+}
