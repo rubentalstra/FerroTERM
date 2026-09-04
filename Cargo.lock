@@ -336,7 +336,7 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
 name = "classification"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "csv",
  "ferroterm-testkit",
@@ -372,7 +372,7 @@ dependencies = [
 
 [[package]]
 name = "concept-graph"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "proptest",
  "rf2",
@@ -382,7 +382,7 @@ dependencies = [
 
 [[package]]
 name = "concept-store"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "concept-graph",
  "redb",
@@ -556,7 +556,7 @@ dependencies = [
 
 [[package]]
 name = "designation-index"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "concept-graph",
  "fst",
@@ -569,7 +569,7 @@ dependencies = [
 
 [[package]]
 name = "dhd-thesaurus"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "classification",
  "csv",
@@ -644,6 +644,7 @@ dependencies = [
  "fhir-types",
  "gstandaard",
  "icd11",
+ "labcodeset",
  "loinc",
  "rf2",
  "rxnorm-rrf",
@@ -688,6 +689,7 @@ dependencies = [
  "ferroterm-build",
  "gstandaard",
  "icd11",
+ "labcodeset",
  "loinc",
  "rf2",
  "rxnorm-rrf",
@@ -712,7 +714,7 @@ dependencies = [
 
 [[package]]
 name = "fhir-terminology"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "concept-graph",
  "concept-store",
@@ -742,7 +744,7 @@ dependencies = [
 
 [[package]]
 name = "fhir-types"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "quick-xml",
  "serde",
@@ -881,7 +883,7 @@ dependencies = [
 
 [[package]]
 name = "gstandaard"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "classification",
  "ferroterm-testkit",
@@ -1018,7 +1020,7 @@ dependencies = [
 
 [[package]]
 name = "icd11"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "ferroterm-testkit",
  "reqwest",
@@ -1305,6 +1307,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "labcodeset"
+version = "0.1.19"
+dependencies = [
+ "ferroterm-testkit",
+ "quick-xml",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1368,7 +1380,7 @@ dependencies = [
 
 [[package]]
 name = "loinc"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "csv",
  "ferroterm-testkit",
@@ -1835,7 +1847,7 @@ dependencies = [
 
 [[package]]
 name = "rf2"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "csv",
  "jiff",
@@ -1990,7 +2002,7 @@ dependencies = [
 
 [[package]]
 name = "rxnorm-rrf"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "csv",
  "ferroterm-testkit",
@@ -2024,7 +2036,7 @@ dependencies = [
 
 [[package]]
 name = "sct-ecl"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "concept-graph",
  "logos",

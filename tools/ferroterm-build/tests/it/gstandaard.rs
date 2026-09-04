@@ -27,6 +27,7 @@ fn the_release_builds_the_four_rungs_under_the_output_directory() {
         dhd_version: None,
         gstandaard: Some(source.path().to_path_buf()),
         gstandaard_version: Some(String::from(VERSION)),
+        labcodeset: None,
         rxnorm_sources: Vec::new(),
         out: out.path().to_path_buf(),
     })

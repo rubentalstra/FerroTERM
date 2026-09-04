@@ -270,6 +270,7 @@ fn no_input() -> ferroterm_build::Cli {
         dhd_version: None,
         gstandaard: None,
         gstandaard_version: None,
+        labcodeset: None,
         rxnorm_sources: Vec::new(),
         out: std::path::PathBuf::new(),
     }

@@ -359,6 +359,32 @@ pub fn unpack_dhd(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveError>
     Ok(into.to_path_buf())
 }
 
+/// Unpacks a Labcodeset release zip: the `labconcepts-*.xml` document; returns
+/// the directory holding it.
+///
+/// # Errors
+///
+/// Returns [`ArchiveError`] when the zip does not open, an entry cannot be
+/// written, or no document is in it.
+pub fn unpack_labcodeset(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveError> {
+    let written = unpack_matching(zip_path, into, &|name| {
+        let path = Path::new(name);
+        path.file_stem()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.starts_with("labconcepts"))
+            && path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("xml"))
+    })?;
+    if written.is_empty() {
+        return Err(ArchiveError::NoEntry {
+            path: zip_path.to_path_buf(),
+            wanted: "a labconcepts XML document",
+        });
+    }
+    Ok(into.to_path_buf())
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::{Path, PathBuf};

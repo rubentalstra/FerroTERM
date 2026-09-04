@@ -7,7 +7,8 @@ paths: ["crates/**", "scripts/release/**", ".github/workflows/publish-crates.yml
 The `crates/*` members are published on crates.io under plain names
 (`fhir-types`, `rf2`, `concept-graph`, `concept-store`, `designation-index`,
 `sct-ecl`, `fhir-terminology`, `loinc`, `classification`, `dhd-thesaurus`,
-`gstandaard`, `icd11`, `rxnorm-rrf`; the owner's decision on #164, 2026-09-03)
+`gstandaard`, `labcodeset`, `icd11`, `rxnorm-rrf`; the owner's decision on #164,
+2026-09-03, `labcodeset` added 2026-09-04)
 so other projects can depend on them. The server (`app/*`) and the tools
 (`tools/*`) are never published. Published versions are immutable, so version
 hygiene is a hard rule, machine-enforced by the `crate-version-guard` CI job
