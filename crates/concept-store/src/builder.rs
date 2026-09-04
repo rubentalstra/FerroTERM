@@ -165,6 +165,10 @@ impl StoreBuilder {
     /// # Errors
     ///
     /// Cannot fail today; the signature keeps the door open for a full buffer.
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "the build seam is fallible by contract: a full buffer fails here"
+    )]
     pub fn concept(&mut self, ordinal: Ordinal, concept: &Concept) -> Result<(), BuildError> {
         self.codes.insert(concept.code.clone(), ordinal.index());
         self.concepts.insert(ordinal.index(), concept.encode());
@@ -176,6 +180,10 @@ impl StoreBuilder {
     /// # Errors
     ///
     /// Cannot fail today; the signature keeps the door open for a full buffer.
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "the build seam is fallible by contract: a full buffer fails here"
+    )]
     pub fn designation(
         &mut self,
         ordinal: Ordinal,
@@ -194,6 +202,10 @@ impl StoreBuilder {
     /// # Errors
     ///
     /// Cannot fail today; the signature keeps the door open for a full buffer.
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "the build seam is fallible by contract: a full buffer fails here"
+    )]
     pub fn acceptability(
         &mut self,
         ordinal: Ordinal,
@@ -211,6 +223,10 @@ impl StoreBuilder {
     /// # Errors
     ///
     /// Cannot fail today; the signature keeps the door open for a full buffer.
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "the build seam is fallible by contract: a full buffer fails here"
+    )]
     pub fn properties(
         &mut self,
         ordinal: Ordinal,

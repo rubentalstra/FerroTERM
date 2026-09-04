@@ -151,7 +151,11 @@ impl<'a> Reducer<'a> {
         for component in &expression.components {
             match &component.atom {
                 Atom::Factor(n) => {
-                    #[expect(clippy::cast_precision_loss, reason = "a unit factor is small")]
+                    #[expect(
+                        clippy::as_conversions,
+                        clippy::cast_precision_loss,
+                        reason = "a unit factor is small"
+                    )]
                     out.scale(*n as f64, component.exponent);
                 }
                 Atom::Annotation => {}

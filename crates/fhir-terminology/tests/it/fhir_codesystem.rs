@@ -19,7 +19,8 @@ fn load_all() -> (tempfile::TempDir, Vec<FhirCodeSystem>) {
     write_code_systems(dir.path()).expect("writes");
     assert_eq!(
         package_version(dir.path()).expect("reads"),
-        Some(FhirVersion::R5)
+        Some(FhirVersion::R5),
+        "the package names its FHIR version"
     );
     let models = load_dir(dir.path(), FhirVersion::R5).expect("loads");
     let providers = models

@@ -58,7 +58,7 @@ async fn lookup_answers_definition_under_r5_only() {
         parameter(&body, "definition").unwrap()["valueString"],
         "A living thing that is not a plant."
     );
-    let property_codes = |body: &serde_json::Value| -> Vec<String> {
+    let property_codes = |body: &Value| -> Vec<String> {
         body["parameter"]
             .as_array()
             .unwrap()

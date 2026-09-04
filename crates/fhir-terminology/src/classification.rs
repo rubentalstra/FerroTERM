@@ -454,7 +454,11 @@ impl CodeSystemProvider for ClassificationProvider {
     }
 
     fn hierarchy(&self) -> Option<&dyn Hierarchy> {
-        self.tree_served.then_some(&self.tree as &dyn Hierarchy)
+        if self.tree_served {
+            Some(&self.tree)
+        } else {
+            None
+        }
     }
 
     fn all(&self) -> Result<ConceptSet, ProviderError> {

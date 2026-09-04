@@ -673,6 +673,10 @@ pub fn unknown_system(
 /// A coding inside a `CodeableConcept` is addressed by its index and the part
 /// at fault (`CodeableConcept.coding[1].display`), the ecosystem's shape; a
 /// bare parameter is named as itself.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the callers store the expression in the issue's optional field as is"
+)]
 #[must_use]
 pub fn at(base: &str, leaf: &str) -> Option<String> {
     Some(match base {
@@ -751,6 +755,10 @@ pub fn inactive_note(
 
 /// The `issue.expression` of the whole input element (`Coding`, `code`, or the
 /// indexed concept coding), for a note about the concept itself.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the callers store the expression in the issue's optional field as is"
+)]
 #[must_use]
 pub fn whole(base: &str) -> Option<String> {
     Some(match base {

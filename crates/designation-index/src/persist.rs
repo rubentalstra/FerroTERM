@@ -16,6 +16,20 @@ use crate::index::{BuildError, Entry, OwnedParts, TextIndex};
 const MAGIC: &[u8; 8] = b"FTTEXT\0\0";
 const VERSION: u32 = 1;
 
+/// A length or size past `u32::MAX`, which the artifact layout cannot store.
+#[derive(Debug, thiserror::Error)]
+#[error("{what} exceeds the u32 the artifact layout stores")]
+struct TooLong {
+    what: &'static str,
+    #[source]
+    source: std::num::TryFromIntError,
+}
+
+/// `len` as the `u32` the layout stores, or the I/O error naming `what` overflowed.
+fn u32_len(len: usize, what: &'static str) -> io::Result<u32> {
+    u32::try_from(len).map_err(|source| io::Error::other(TooLong { what, source }))
+}
+
 /// A failure while reading or writing the layout.
 #[derive(Debug, thiserror::Error)]
 pub enum PersistError {
@@ -38,7 +52,7 @@ pub enum PersistError {
     Build(#[from] BuildError),
     /// A string is not UTF-8.
     #[error("a language tag is not UTF-8")]
-    Utf8,
+    Utf8(#[source] std::string::FromUtf8Error),
 }
 
 /// Writes `index`.
@@ -52,19 +66,13 @@ pub fn write_to(index: &TextIndex, out: &mut impl Write) -> Result<(), PersistEr
     out.write_all(&VERSION.to_le_bytes())?;
     write_bytes(out, parts.dictionary)?;
     write_bitmaps(out, parts.postings)?;
-    write_u32(
-        out,
-        u32::try_from(parts.entries.len()).map_err(|_| io::Error::other("too many entries"))?,
-    )?;
+    write_u32(out, u32_len(parts.entries.len(), "the entry count")?)?;
     for entry in parts.entries {
         write_u32(out, entry.concept.index())?;
         write_u32(out, entry.index)?;
         out.write_all(&entry.term_length.to_le_bytes())?;
     }
-    write_u32(
-        out,
-        u32::try_from(parts.languages.len()).map_err(|_| io::Error::other("too many languages"))?,
-    )?;
+    write_u32(out, u32_len(parts.languages.len(), "the language count")?)?;
     for (language, bitmap) in parts.languages {
         write_bytes(out, language.as_bytes())?;
         write_bitmap(out, bitmap)?;
@@ -72,10 +80,7 @@ pub fn write_to(index: &TextIndex, out: &mut impl Write) -> Result<(), PersistEr
     write_keyed(out, parts.uses)?;
     write_keyed(out, parts.refsets)?;
     write_bitmap(out, parts.active)?;
-    write_u32(
-        out,
-        u32::try_from(parts.lengths.len()).map_err(|_| io::Error::other("too many lengths"))?,
-    )?;
+    write_u32(out, u32_len(parts.lengths.len(), "the length count")?)?;
     for (length, bitmap) in parts.lengths {
         out.write_all(&length.to_le_bytes())?;
         write_bitmap(out, bitmap)?;
@@ -119,7 +124,7 @@ pub fn read_from(input: &mut impl Read) -> Result<TextIndex, PersistError> {
     let language_count = read_u32(input)?;
     let mut languages = BTreeMap::new();
     for _ in 0..language_count {
-        let tag = String::from_utf8(read_bytes(input)?).map_err(|_| PersistError::Utf8)?;
+        let tag = String::from_utf8(read_bytes(input)?).map_err(PersistError::Utf8)?;
         languages.insert(tag, read_bitmap(input)?);
     }
     let uses = read_keyed(input)?;
@@ -155,10 +160,7 @@ fn read_u32(input: &mut impl Read) -> io::Result<u32> {
 }
 
 fn write_bytes(out: &mut impl Write, bytes: &[u8]) -> io::Result<()> {
-    write_u32(
-        out,
-        u32::try_from(bytes.len()).map_err(|_| io::Error::other("blob too large"))?,
-    )?;
+    write_u32(out, u32_len(bytes.len(), "a blob size")?)?;
     out.write_all(bytes)
 }
 
@@ -170,11 +172,7 @@ fn read_bytes(input: &mut impl Read) -> io::Result<Vec<u8>> {
 }
 
 fn write_bitmap(out: &mut impl Write, bitmap: &RoaringBitmap) -> io::Result<()> {
-    write_u32(
-        out,
-        u32::try_from(bitmap.serialized_size())
-            .map_err(|_| io::Error::other("bitmap too large"))?,
-    )?;
+    write_u32(out, u32_len(bitmap.serialized_size(), "a bitmap size")?)?;
     bitmap.serialize_into(out)
 }
 
@@ -184,10 +182,7 @@ fn read_bitmap(input: &mut impl Read) -> io::Result<RoaringBitmap> {
 }
 
 fn write_bitmaps(out: &mut impl Write, bitmaps: &[RoaringBitmap]) -> io::Result<()> {
-    write_u32(
-        out,
-        u32::try_from(bitmaps.len()).map_err(|_| io::Error::other("too many bitmaps"))?,
-    )?;
+    write_u32(out, u32_len(bitmaps.len(), "the bitmap count")?)?;
     for bitmap in bitmaps {
         write_bitmap(out, bitmap)?;
     }
@@ -204,10 +199,7 @@ fn read_bitmaps(input: &mut impl Read) -> io::Result<Vec<RoaringBitmap>> {
 }
 
 fn write_keyed(out: &mut impl Write, map: &BTreeMap<u32, RoaringBitmap>) -> io::Result<()> {
-    write_u32(
-        out,
-        u32::try_from(map.len()).map_err(|_| io::Error::other("too many keys"))?,
-    )?;
+    write_u32(out, u32_len(map.len(), "the key count")?)?;
     for (key, bitmap) in map {
         write_u32(out, *key)?;
         write_bitmap(out, bitmap)?;

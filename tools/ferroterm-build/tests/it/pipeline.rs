@@ -185,7 +185,7 @@ fn the_graph_and_text_files_open_beside_the_store() {
         .expect("nl refset");
 
     // The hierarchy file: cat is under animal and the root; fish is under nothing.
-    let graph = std::fs::read(&report.hierarchy).expect("hierarchy file");
+    let graph = fs::read(&report.hierarchy).expect("hierarchy file");
     let hierarchy = Hierarchy::read_from(&mut graph.as_slice()).expect("hierarchy reads");
     let top = store.ordinal(&concept(1)).expect("read").expect("top");
     assert!(hierarchy.closure.is_ancestor(animal, cat));
@@ -194,7 +194,7 @@ fn the_graph_and_text_files_open_beside_the_store() {
     assert_eq!(hierarchy.is_a.nodes(), 9);
 
     // The text file: a Dutch prefix, filtered by the NL refset, ranks the shortest first.
-    let text = std::fs::read(&report.text).expect("text file");
+    let text = fs::read(&report.text).expect("text file");
     let index = read_from(&mut text.as_slice()).expect("index reads");
     assert_eq!(index.len(), 12);
     let hits = index.search(
@@ -249,7 +249,7 @@ fn the_reference_set_memberships_are_written_beside_the_store() {
         report.refsets, 1,
         "the simple reference set; the language ones are acceptabilities"
     );
-    let manifest: serde_json::Value = serde_json::from_str(
+    let manifest: Value = serde_json::from_str(
         &fs::read_to_string(out.path().join("manifest.json")).expect("manifest"),
     )
     .expect("json");
@@ -262,21 +262,12 @@ fn the_reference_set_memberships_are_written_beside_the_store() {
             .as_slice(),
     )
     .expect("reads");
-    let refset: u64 = fixture::concept(8).parse().expect("number");
+    let refset: u64 = concept(8).parse().expect("number");
     assert_eq!(memberships.refsets().collect::<Vec<_>>(), [refset]);
     let store = Store::open(&report.store).expect("opens");
-    let cat = store
-        .ordinal(&fixture::concept(3))
-        .expect("read")
-        .expect("cat");
-    let dog = store
-        .ordinal(&fixture::concept(4))
-        .expect("read")
-        .expect("dog");
-    let fish = store
-        .ordinal(&fixture::concept(5))
-        .expect("read")
-        .expect("fish");
+    let cat = store.ordinal(&concept(3)).expect("read").expect("cat");
+    let dog = store.ordinal(&concept(4)).expect("read").expect("dog");
+    let fish = store.ordinal(&concept(5)).expect("read").expect("fish");
     let members = memberships.members(refset).expect("members");
     assert!(members.contains(cat.index()) && members.contains(dog.index()));
     assert!(!members.contains(fish.index()));
@@ -297,7 +288,7 @@ fn the_attribute_graph_member_tables_and_identifiers_are_written_beside_the_stor
         "the active simple reference set members"
     );
     assert_eq!(report.identifiers, 0, "the fixture has no identifier file");
-    let manifest: serde_json::Value = serde_json::from_str(
+    let manifest: Value = serde_json::from_str(
         &fs::read_to_string(out.path().join("manifest.json")).expect("manifest"),
     )
     .expect("json");
@@ -308,7 +299,7 @@ fn the_attribute_graph_member_tables_and_identifiers_are_written_beside_the_stor
     let store = Store::open(&report.store).expect("opens");
     let ordinal = |item: u32| {
         store
-            .ordinal(&fixture::concept(item))
+            .ordinal(&concept(item))
             .expect("read")
             .expect("concept")
     };
@@ -319,8 +310,8 @@ fn the_attribute_graph_member_tables_and_identifiers_are_written_beside_the_stor
             .as_slice(),
     )
     .expect("reads");
-    let covering: u64 = fixture::concept(6).parse().expect("number");
-    let legs: u64 = fixture::concept(8).parse().expect("number");
+    let covering: u64 = concept(6).parse().expect("number");
+    let legs: u64 = concept(8).parse().expect("number");
     let covering_kind = attributes.kind(covering).expect("covering type");
     let legs_kind = attributes.kind(legs).expect("leg count type");
     let rows: Vec<_> = attributes.rows(cat).collect();

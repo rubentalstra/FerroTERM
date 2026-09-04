@@ -32,7 +32,7 @@ pub enum IdentifiersError {
     },
     /// More identifiers than the `u32` count addresses.
     #[error("too many identifiers")]
-    TooMany,
+    TooMany(#[source] std::num::TryFromIntError),
     /// A code is not UTF-8.
     #[error("an alternate identifier is not UTF-8")]
     Text(#[from] std::string::FromUtf8Error),
@@ -96,11 +96,11 @@ impl Identifiers {
     pub fn write_to(&self, out: &mut impl Write) -> Result<(), IdentifiersError> {
         out.write_all(MAGIC)?;
         out.write_all(&VERSION.to_le_bytes())?;
-        let count = u32::try_from(self.entries.len()).map_err(|_| IdentifiersError::TooMany)?;
+        let count = u32::try_from(self.entries.len()).map_err(IdentifiersError::TooMany)?;
         out.write_all(&count.to_le_bytes())?;
         for (scheme, code, concept) in &self.entries {
             out.write_all(&scheme.to_le_bytes())?;
-            let len = u32::try_from(code.len()).map_err(|_| IdentifiersError::TooMany)?;
+            let len = u32::try_from(code.len()).map_err(IdentifiersError::TooMany)?;
             out.write_all(&len.to_le_bytes())?;
             out.write_all(code.as_bytes())?;
             out.write_all(&concept.to_le_bytes())?;

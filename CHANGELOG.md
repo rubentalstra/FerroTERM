@@ -28,6 +28,7 @@ fresh link reference.
 
 ### Changed
 
+- The workspace lint table is FerroEHR's: `clippy::all` and `clippy::pedantic` at `deny`, `as_conversions`, `pub_use`, `dead_code`, `missing_assert_message`, `map_err_ignore`, `unused_qualifications`, `rc_buffer`, `create_dir`, `exit`, the feature-name lints, and `non_ascii_idents = forbid` among the additions. Every finding is fixed at its site: an error that wrapped a conversion or parse failure now carries it as its source or states why the cause adds nothing, and the generated `fhir-types` crate carries `unused_qualifications` and `map_err_ignore` in its allow list because every path is spelled from the crate root and a primitive that fails to parse is reported by its path and kind.
 - The licence of the project's own code is the Business Source License 1.1
   (`LICENSE`, `NOTICE`): free for non-production use and
   for non-commercial production use, a commercial licence for any other

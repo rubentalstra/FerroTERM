@@ -201,17 +201,19 @@ pub fn cache_id(headers: &HeaderMap) -> Result<Option<String>, Failure> {
             format!("the request carries more than one `{CACHE_ID_HEADER}`"),
         ));
     }
-    first.to_str().map(|id| Some(id.to_owned())).map_err(|_| {
-        Failure::new(
+    // The failure names the header; the header crate's error adds nothing to it.
+    let Ok(id) = first.to_str() else {
+        return Err(Failure::new(
             StatusCode::BAD_REQUEST,
             "invalid",
             format!("`{CACHE_ID_HEADER}` is not text"),
-        )
-    })
+        ));
+    };
+    Ok(Some(id.to_owned()))
 }
 
 struct Entry {
-    resources: Arc<Vec<Loaded>>,
+    resources: Arc<[Loaded]>,
     last_used: Instant,
 }
 
@@ -242,7 +244,7 @@ impl Caches {
         entries.insert(
             id.clone(),
             Entry {
-                resources: Arc::new(resources),
+                resources: Arc::from(resources),
                 last_used: Instant::now(),
             },
         );
@@ -254,7 +256,7 @@ impl Caches {
     /// # Errors
     ///
     /// The cache is unknown or expired.
-    pub fn get(&self, id: &str) -> Result<Arc<Vec<Loaded>>, Failure> {
+    pub fn get(&self, id: &str) -> Result<Arc<[Loaded]>, Failure> {
         let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         Self::prune(&mut entries);
         let entry = entries.get_mut(id).ok_or_else(|| unknown(id))?;

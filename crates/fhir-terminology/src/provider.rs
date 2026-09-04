@@ -253,6 +253,10 @@ pub struct ImplicitMetadata {
 
 /// The status of a concept, for `inactive` and `abstract` on the wire.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "`standards_status` is the name of the FHIR extension it carries"
+)]
 pub struct Status {
     /// The concept's `structuredefinition-standards-status` code, when set
     /// (`deprecated`, `withdrawn`, ...): a note beside an active concept.

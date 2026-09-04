@@ -73,20 +73,20 @@ tempfile = "3.27.0"
 # Workspace-internal crates. The `crates/*` members carry the published crate
 # line (lockstep, bumped with their packaged content, never the product
 # version); the tools stay on the workspace version.
-fhir-types = { path = "crates/fhir-types", version = "0.1.28" }
-rf2 = { path = "crates/rf2", version = "0.1.28" }
-loinc = { path = "crates/loinc", version = "0.1.28" }
-classification = { path = "crates/classification", version = "0.1.28" }
-dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.28" }
-gstandaard = { path = "crates/gstandaard", version = "0.1.28" }
-labcodeset = { path = "crates/labcodeset", version = "0.1.28" }
-icd11 = { path = "crates/icd11", version = "0.1.28" }
-rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.28" }
-concept-graph = { path = "crates/concept-graph", version = "0.1.28" }
-concept-store = { path = "crates/concept-store", version = "0.1.28" }
-designation-index = { path = "crates/designation-index", version = "0.1.28" }
-sct-ecl = { path = "crates/sct-ecl", version = "0.1.28" }
-fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.28" }
+fhir-types = { path = "crates/fhir-types", version = "0.1.29" }
+rf2 = { path = "crates/rf2", version = "0.1.29" }
+loinc = { path = "crates/loinc", version = "0.1.29" }
+classification = { path = "crates/classification", version = "0.1.29" }
+dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.29" }
+gstandaard = { path = "crates/gstandaard", version = "0.1.29" }
+labcodeset = { path = "crates/labcodeset", version = "0.1.29" }
+icd11 = { path = "crates/icd11", version = "0.1.29" }
+rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.29" }
+concept-graph = { path = "crates/concept-graph", version = "0.1.29" }
+concept-store = { path = "crates/concept-store", version = "0.1.29" }
+designation-index = { path = "crates/designation-index", version = "0.1.29" }
+sct-ecl = { path = "crates/sct-ecl", version = "0.1.29" }
+fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.29" }
 # Path-only, with no `version`: cargo then strips the dev-dependency from a
 # packaged crates/* manifest instead of looking it up on crates.io.
 ferroterm-testkit = { path = "tools/ferroterm-testkit" }
@@ -96,25 +96,47 @@ ferroterm-build = { path = "tools/ferroterm-build" }
 # so every named lint below overrides its group.
 [workspace.lints.rust]
 unsafe_code = "forbid"
+non_ascii_idents = "forbid"
 missing_docs = "warn"
 missing_debug_implementations = "warn"
 unreachable_pub = "warn"
+dead_code = "deny"
 let_underscore_drop = "deny"
+non_local_definitions = "deny"
+unexpected_cfgs = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+ffi_unwind_calls = "deny"
+deprecated_safe_2024 = "deny"
 ambiguous_negative_literals = "deny"
 unused_must_use = "deny"
+macro_use_extern_crate = "warn"
+absolute_paths_not_starting_with_crate = "warn"
+unit_bindings = "warn"
+meta_variable_misuse = "warn"
+explicit_outlives_requirements = "warn"
+unused_extern_crates = "warn"
+unused_import_braces = "warn"
+unused_macro_rules = "warn"
+unused_qualifications = "warn"
+unused_lifetimes = "warn"
+redundant_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
 
 [workspace.lints.rustdoc]
 broken_intra_doc_links = "deny"
 private_intra_doc_links = "deny"
 missing_crate_level_docs = "warn"
 invalid_codeblock_attributes = "deny"
+invalid_rust_codeblocks = "deny"
 invalid_html_tags = "deny"
 bare_urls = "deny"
+redundant_explicit_links = "deny"
 unescaped_backticks = "warn"
 
 [workspace.lints.clippy]
-all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
 # Panics are for states that cannot happen; everything else is a Result.
 unwrap_used = "deny"
 expect_used = "deny"
@@ -123,32 +145,65 @@ unreachable = "deny"
 unimplemented = "deny"
 todo = "deny"
 panic_in_result_fn = "deny"
+missing_assert_message = "deny"
 indexing_slicing = "deny"
 string_slice = "deny"
 # Numeric honesty: no silent narrowing, wrapping, or lossy literals.
+as_conversions = "deny"
 float_cmp_const = "deny"
 lossy_float_literal = "deny"
 as_underscore = "deny"
 fn_to_numeric_cast_any = "deny"
+precedence_bits = "deny"
+suspicious_xor_used_as_pow = "deny"
 integer_division = "warn"
-# Guards and results are never dropped on the floor.
+unchecked_time_subtraction = "deny"
+# Guards, results, and causes are never dropped on the floor.
 let_underscore_must_use = "deny"
 let_underscore_untyped = "deny"
 unused_result_ok = "deny"
+map_err_ignore = "warn"
 # Determinism: hash iteration order feeds nothing that must be stable.
 iter_over_hash_type = "deny"
-# Libraries speak tracing; only binaries write to stdio.
+# Libraries speak tracing; only binaries write to stdio, and nothing exits.
 dbg_macro = "deny"
 print_stdout = "deny"
 print_stderr = "deny"
-# Suppressions are scoped and justified.
+exit = "deny"
+# Suppressions are scoped, justified, and self-reporting.
 allow_attributes_without_reason = "deny"
+allow_attributes = "warn"
 # Documentation and comment shape (RFC 505 / RFC 1574).
 too_long_first_doc_paragraph = "warn"
 unnecessary_safety_comment = "deny"
 unnecessary_safety_doc = "deny"
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"
 # The RFC 3107 shape: derive Default when the default is a variant.
 derivable_impls = "deny"
+# API hygiene: no re-exports, no pointer leakage, the right std call.
+pub_use = "deny"
+incompatible_msrv = "deny"
+verbose_file_reads = "deny"
+filetype_is_file = "deny"
+create_dir = "deny"
+large_include_file = "deny"
+rc_buffer = "deny"
+rc_mutex = "deny"
+mem_forget = "deny"
+pointer_format = "deny"
+empty_drop = "warn"
+deref_by_slicing = "warn"
+try_err = "warn"
+clone_on_ref_ptr = "warn"
+cfg_not_test = "warn"
+infinite_loop = "warn"
+mixed_read_write_in_expression = "warn"
+same_name_method = "warn"
+debug_assert_with_mut_call = "warn"
+wildcard_dependencies = "deny"
+negative_feature_names = "deny"
+redundant_feature_names = "deny"
 # Explicitly named (default-on) lints that carry rules from the reliability bar.
 disallowed_methods = "deny"
 disallowed_types = "deny"

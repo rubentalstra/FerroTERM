@@ -60,7 +60,7 @@ impl Interned {
             .read()
             .unwrap_or_else(PoisonError::into_inner)
             .codes
-            .get(concept.index() as usize)
+            .get(concept_graph::ordinal::to_usize(concept.index()))
             .cloned()
     }
 

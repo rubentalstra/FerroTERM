@@ -91,13 +91,11 @@ impl Memberships {
     pub fn write_to(&self, out: &mut impl Write) -> Result<(), MembersError> {
         out.write_all(MAGIC)?;
         out.write_all(&VERSION.to_le_bytes())?;
-        let count =
-            u32::try_from(self.sets.len()).map_err(|_| io::Error::other("too many refsets"))?;
+        let count = crate::persist::u32_len(self.sets.len(), "the refset count")?;
         out.write_all(&count.to_le_bytes())?;
         for (refset, set) in &self.sets {
             out.write_all(&refset.to_le_bytes())?;
-            let size = u32::try_from(set.serialized_size())
-                .map_err(|_| io::Error::other("set too large"))?;
+            let size = crate::persist::u32_len(set.serialized_size(), "a set size")?;
             out.write_all(&size.to_le_bytes())?;
             set.serialize_into(&mut *out)?;
         }

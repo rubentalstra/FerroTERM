@@ -159,7 +159,7 @@ fn resolve_for(
             if let Some(supplement_version) = registry.supplement_named(&url) {
                 return Ok(Err(supplement_as_system(
                     &url,
-                    supplement_version.as_deref(),
+                    supplement_version.version.as_deref(),
                     code,
                     expression,
                 )));

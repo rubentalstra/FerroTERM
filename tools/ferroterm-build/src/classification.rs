@@ -112,9 +112,11 @@ pub enum Error {
 }
 
 fn ordinal(index: usize) -> Result<Ordinal, Error> {
-    u32::try_from(index)
-        .map(Ordinal::new)
-        .map_err(|_| Error::TooMany)
+    // A count past u32::MAX is the whole message; the conversion error adds nothing.
+    let Ok(index) = u32::try_from(index) else {
+        return Err(Error::TooMany);
+    };
+    Ok(Ordinal::new(index))
 }
 
 fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Error + '_ {

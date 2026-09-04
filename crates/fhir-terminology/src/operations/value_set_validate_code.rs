@@ -1160,7 +1160,7 @@ fn unserved_subject(
 ) -> Validation {
     let registry = sources.registry;
     if let Some(supplement_version) = registry.supplement_named(system) {
-        return supplement_as_system(system, supplement_version.as_deref(), subject);
+        return supplement_as_system(system, supplement_version.version.as_deref(), subject);
     }
     let version = subject
         .version

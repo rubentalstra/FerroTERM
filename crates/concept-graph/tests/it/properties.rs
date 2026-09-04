@@ -13,7 +13,7 @@ use proptest::prelude::*;
 fn dag() -> impl Strategy<Value = (u32, Vec<(Ordinal, Ordinal)>)> {
     (2_u32..24).prop_flat_map(|n| {
         let edges =
-            prop::collection::vec((1..n, 0..n), 0..(n as usize * 3)).prop_map(move |pairs| {
+            prop::collection::vec((1..n, 0..n), 0..(to_usize(n) * 3)).prop_map(move |pairs| {
                 pairs
                     .into_iter()
                     .filter(|(child, parent)| parent < child)
@@ -24,13 +24,18 @@ fn dag() -> impl Strategy<Value = (u32, Vec<(Ordinal, Ordinal)>)> {
     })
 }
 
+/// A `u32` ordinal as a slice index.
+fn to_usize(value: u32) -> usize {
+    usize::try_from(value).expect("a u32 fits usize")
+}
+
 /// Reachability by a plain depth-first walk over the parent lists.
 fn brute_force_ancestors(n: u32, edges: &[(Ordinal, Ordinal)], node: u32) -> Vec<u32> {
-    let mut seen = vec![false; n as usize];
+    let mut seen = vec![false; to_usize(n)];
     let mut stack = vec![node];
     while let Some(current) = stack.pop() {
         for (child, parent) in edges {
-            let slot = parent.index() as usize;
+            let slot = to_usize(parent.index());
             if child.index() == current && seen.get(slot) == Some(&false) {
                 if let Some(flag) = seen.get_mut(slot) {
                     *flag = true;
@@ -40,7 +45,7 @@ fn brute_force_ancestors(n: u32, edges: &[(Ordinal, Ordinal)], node: u32) -> Vec
         }
     }
     (0..n)
-        .filter(|i| seen.get(*i as usize) == Some(&true))
+        .filter(|i| seen.get(to_usize(*i)) == Some(&true))
         .collect()
 }
 

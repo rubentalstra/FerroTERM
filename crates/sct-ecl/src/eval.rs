@@ -727,6 +727,7 @@ impl<M: Model> Evaluator<'_, M> {
             (FieldValue::Numeric { operator, value }, Some(FieldRef::Integer(actual))) => {
                 let expected: f64 = value.0.parse().unwrap_or(f64::NAN);
                 #[expect(
+                    clippy::as_conversions,
                     clippy::cast_precision_loss,
                     reason = "reference set integers are small"
                 )]

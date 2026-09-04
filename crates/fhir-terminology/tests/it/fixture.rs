@@ -203,7 +203,8 @@ impl Fixture {
     }
 
     fn row(&self, concept: Concept) -> Option<&Row> {
-        self.rows.get(concept.index() as usize)
+        self.rows
+            .get(concept_graph::ordinal::to_usize(concept.index()))
     }
 }
 
@@ -305,7 +306,10 @@ impl CodeSystemProvider for Fixture {
     }
 
     fn hierarchy(&self) -> Option<&dyn Hierarchy> {
-        self.tree.as_ref().map(|tree| tree as &dyn Hierarchy)
+        match &self.tree {
+            Some(tree) => Some(tree),
+            None => None,
+        }
     }
 
     /// `{url}?vs=isa/{code}`: the descendants and self of a code.

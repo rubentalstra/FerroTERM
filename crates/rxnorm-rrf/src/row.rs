@@ -44,9 +44,10 @@ impl Fields<'_> {
         let bytes = self.record.get(index).unwrap_or_default();
         std::str::from_utf8(bytes)
             .map(str::to_owned)
-            .map_err(|_| RrfError::Utf8 {
+            .map_err(|source| RrfError::Utf8 {
                 path: self.path.to_path_buf(),
                 line: self.line,
+                source,
             })
     }
 
@@ -57,21 +58,26 @@ impl Fields<'_> {
 
     fn id(&self, index: usize) -> Result<u64, RrfError> {
         let text = self.text(index)?;
-        text.parse().map_err(|_| RrfError::Identifier {
+        text.parse().map_err(|source| RrfError::Identifier {
             path: self.path.to_path_buf(),
             line: self.line,
             value: text,
+            source,
         })
     }
 
     fn optional_id(&self, index: usize) -> Result<Option<u64>, RrfError> {
         match self.optional(index)? {
             None => Ok(None),
-            Some(text) => text.parse().map(Some).map_err(|_| RrfError::Identifier {
-                path: self.path.to_path_buf(),
-                line: self.line,
-                value: text,
-            }),
+            Some(text) => text
+                .parse()
+                .map(Some)
+                .map_err(|source| RrfError::Identifier {
+                    path: self.path.to_path_buf(),
+                    line: self.line,
+                    value: text,
+                    source,
+                }),
         }
     }
 }

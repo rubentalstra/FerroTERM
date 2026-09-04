@@ -39,7 +39,7 @@ pub enum RefsetsError {
     },
     /// More rows or interned values than the `u32` offsets address.
     #[error("too many reference set rows")]
-    TooMany,
+    TooMany(#[source] std::num::TryFromIntError),
     /// An I/O failure.
     #[error("reference set members I/O failed")]
     Io(#[from] io::Error),
@@ -296,7 +296,7 @@ impl RefsetMembers {
                             index
                         } else {
                             let index = u32::try_from(table.strings.len())
-                                .map_err(|_| RefsetsError::TooMany)?;
+                                .map_err(RefsetsError::TooMany)?;
                             table.strings.push(text.clone());
                             interned.insert(text, index);
                             index
@@ -308,7 +308,7 @@ impl RefsetMembers {
                 table.payloads.push(payload);
             }
         }
-        u32::try_from(table.concepts.len()).map_err(|_| RefsetsError::TooMany)?;
+        u32::try_from(table.concepts.len()).map_err(RefsetsError::TooMany)?;
         self.tables.insert(refset, table);
         Ok(())
     }
@@ -351,7 +351,7 @@ impl RefsetMembers {
     ///
     /// Returns [`RefsetsError::Io`] when writing fails.
     pub fn write_to(&self, out: &mut impl Write) -> Result<(), RefsetsError> {
-        let count = |len: usize| u32::try_from(len).map_err(|_| RefsetsError::TooMany);
+        let count = |len: usize| u32::try_from(len).map_err(RefsetsError::TooMany);
         out.write_all(MAGIC)?;
         out.write_all(&VERSION.to_le_bytes())?;
         out.write_all(&count(self.tables.len())?.to_le_bytes())?;
@@ -469,14 +469,14 @@ fn intern_long(
     if let Some(&index) = seen.get(&value) {
         return Ok(index);
     }
-    let index = u32::try_from(longs.len()).map_err(|_| RefsetsError::TooMany)?;
+    let index = u32::try_from(longs.len()).map_err(RefsetsError::TooMany)?;
     longs.push(value);
     seen.insert(value, index);
     Ok(index)
 }
 
 fn write_text(out: &mut impl Write, text: &str) -> Result<(), RefsetsError> {
-    let len = u32::try_from(text.len()).map_err(|_| RefsetsError::TooMany)?;
+    let len = u32::try_from(text.len()).map_err(RefsetsError::TooMany)?;
     out.write_all(&len.to_le_bytes())?;
     out.write_all(text.as_bytes())?;
     Ok(())

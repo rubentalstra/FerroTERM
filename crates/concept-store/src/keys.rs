@@ -11,6 +11,15 @@ use std::io::{self, Read, Write};
 const MAGIC: &[u8; 8] = b"FTKEYS\0\0";
 const VERSION: u32 = 1;
 
+/// A count past the integer the key table layout stores.
+#[derive(Debug, thiserror::Error)]
+#[error("{what} exceeds the integer the key table layout stores")]
+struct Overflow {
+    what: &'static str,
+    #[source]
+    source: std::num::TryFromIntError,
+}
+
 /// A failure while reading or writing the table.
 #[derive(Debug, thiserror::Error)]
 pub enum KeyTableError {
@@ -75,7 +84,12 @@ impl KeyTable {
     pub fn write_to(&self, out: &mut impl Write) -> Result<(), KeyTableError> {
         out.write_all(MAGIC)?;
         out.write_all(&VERSION.to_le_bytes())?;
-        let len = u64::try_from(self.pairs.len()).map_err(|_| io::Error::other("too many keys"))?;
+        let len = u64::try_from(self.pairs.len()).map_err(|source| {
+            io::Error::other(Overflow {
+                what: "the key count",
+                source,
+            })
+        })?;
         out.write_all(&len.to_le_bytes())?;
         for (key, ordinal) in &self.pairs {
             out.write_all(&key.to_le_bytes())?;
@@ -106,8 +120,12 @@ impl KeyTable {
         }
         let mut long = [0_u8; 8];
         input.read_exact(&mut long)?;
-        let len = usize::try_from(u64::from_le_bytes(long))
-            .map_err(|_| io::Error::other("key table too large"))?;
+        let len = usize::try_from(u64::from_le_bytes(long)).map_err(|source| {
+            io::Error::other(Overflow {
+                what: "the key count",
+                source,
+            })
+        })?;
         let mut pairs = Vec::with_capacity(len);
         for _ in 0..len {
             input.read_exact(&mut long)?;

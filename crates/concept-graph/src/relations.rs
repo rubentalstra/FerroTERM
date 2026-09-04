@@ -221,11 +221,10 @@ impl Relations {
     pub fn write_to(&self, out: &mut impl Write) -> Result<(), RelationsError> {
         out.write_all(MAGIC)?;
         out.write_all(&VERSION.to_le_bytes())?;
-        let count =
-            u32::try_from(self.types.len()).map_err(|_| io::Error::other("too many types"))?;
+        let count = crate::persist::u32_len(self.types.len(), "the type count")?;
         out.write_all(&count.to_le_bytes())?;
         for name in &self.types {
-            let len = u32::try_from(name.len()).map_err(|_| io::Error::other("name too long"))?;
+            let len = crate::persist::u32_len(name.len(), "a type name length")?;
             out.write_all(&len.to_le_bytes())?;
             out.write_all(name.as_bytes())?;
         }
@@ -273,8 +272,11 @@ impl Relations {
         }
         let incoming = sides.pop().ok_or(RelationsError::Inconsistent)?;
         let outgoing = sides.pop().ok_or(RelationsError::Inconsistent)?;
-        let nodes = u32::try_from(outgoing.offsets.len().saturating_sub(1))
-            .map_err(|_| RelationsError::Inconsistent)?;
+        // A node count past u32::MAX is an inconsistent artifact; the conversion
+        // error adds nothing to that.
+        let Ok(nodes) = u32::try_from(outgoing.offsets.len().saturating_sub(1)) else {
+            return Err(RelationsError::Inconsistent);
+        };
         outgoing.check(nodes)?;
         incoming.check(nodes)?;
         Ok(Self {
@@ -286,7 +288,7 @@ impl Relations {
 }
 
 fn write_u32s(out: &mut impl Write, values: &[u32]) -> io::Result<()> {
-    let len = u32::try_from(values.len()).map_err(|_| io::Error::other("array too long"))?;
+    let len = crate::persist::u32_len(values.len(), "an array length")?;
     out.write_all(&len.to_le_bytes())?;
     for value in values {
         out.write_all(&value.to_le_bytes())?;

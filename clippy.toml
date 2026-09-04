@@ -9,6 +9,8 @@ allow-indexing-slicing-in-tests = true
 allow-dbg-in-tests = true
 allow-print-in-tests = true
 allow-useless-vec-in-tests = true
+check-incompatible-msrv-in-tests = true
+avoid-breaking-exported-api = false
 
 # Compile-time API bans. A legitimate exception site carries a scoped
 # `#[expect(clippy::disallowed_methods, reason = "...")]`.

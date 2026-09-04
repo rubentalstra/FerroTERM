@@ -21,6 +21,9 @@ pub enum RecordError {
     Utf8 {
         /// The offset of the string.
         at: usize,
+        /// The cause.
+        #[source]
+        source: std::str::Utf8Error,
     },
     /// A property value tag is not one this build knows.
     #[error("unknown property value tag {tag}")]
@@ -148,27 +151,27 @@ impl<'a> Reader<'a> {
             .ok_or(RecordError::Truncated { at: self.at })
     }
     fn u32(&mut self) -> Result<u32, RecordError> {
-        let bytes: [u8; 4] = self
-            .take(4)?
-            .try_into()
-            .map_err(|_| RecordError::Truncated { at: self.at })?;
+        // The error names the offset; the slice-length error adds nothing to it.
+        let Ok(bytes) = <[u8; 4]>::try_from(self.take(4)?) else {
+            return Err(RecordError::Truncated { at: self.at });
+        };
         Ok(u32::from_le_bytes(bytes))
     }
     fn i64(&mut self) -> Result<i64, RecordError> {
-        let bytes: [u8; 8] = self
-            .take(8)?
-            .try_into()
-            .map_err(|_| RecordError::Truncated { at: self.at })?;
+        let Ok(bytes) = <[u8; 8]>::try_from(self.take(8)?) else {
+            return Err(RecordError::Truncated { at: self.at });
+        };
         Ok(i64::from_le_bytes(bytes))
     }
     fn str(&mut self) -> Result<String, RecordError> {
-        let len =
-            usize::try_from(self.u32()?).map_err(|_| RecordError::Truncated { at: self.at })?;
+        let Ok(len) = usize::try_from(self.u32()?) else {
+            return Err(RecordError::Truncated { at: self.at });
+        };
         let at = self.at;
         let bytes = self.take(len)?;
         std::str::from_utf8(bytes)
             .map(str::to_owned)
-            .map_err(|_| RecordError::Utf8 { at })
+            .map_err(|source| RecordError::Utf8 { at, source })
     }
     fn opt_str(&mut self) -> Result<Option<String>, RecordError> {
         match self.u8()? {

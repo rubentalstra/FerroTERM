@@ -73,7 +73,11 @@ impl Member {
 
     fn concept(&self, column: &str) -> Result<ConceptId, ViewError> {
         let id = self.component(column)?;
-        ConceptId::try_from(id).map_err(|_| ViewError::field(column, self.field(column)))
+        // The view error names the column and field; the id error adds nothing.
+        let Ok(id) = ConceptId::try_from(id) else {
+            return Err(ViewError::field(column, self.field(column)));
+        };
+        Ok(id)
     }
 
     fn string(&self, column: &str) -> Result<&str, ViewError> {
