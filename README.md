@@ -26,7 +26,7 @@ The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration,
 so the first call needs nothing beyond Docker:
 
 ```console
-$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.0.8
+$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.0.9
 $ curl 'http://localhost:8080/r4b/CodeSystem/$lookup?system=http://unitsofmeasure.org&code=mg/dL'
 ```
 
@@ -96,18 +96,20 @@ pins, inline and request-scoped value sets), `ValueSet/$validate-code`,
 `tx-issue-type` coding.
 
 Conformance is measured, not asserted: CI runs the HL7 terminology ecosystem
-suite against every pull request and holds a committed pass list (120 of the
-670 general cases on R4B; the rest are R5-shape cases and features on the
-roadmap, listed on the tracker).
+suite against every pull request and holds a committed pass list per served
+version (500 of the 670 general cases on R5, 479 on R4 and R4B; the rest are
+features on the roadmap and fixture artefacts, listed by cluster on the
+tracker). Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept`.
 
 ## What is next
 
 The tracker's milestones are the roadmap:
 
-- **v0.0.9**: R4, R5, and R6 endpoints from the generated per-version modules,
-  and the XML wire format.
-- **v0.0.10**: hierarchical `$expand`, persisted client resources, `Bundle`
-  batch, `$closure`, and the SNOMED implicit concept maps.
+- **v0.0.10**: the SonarQube findings resolved, one published list of the
+  served code systems, and the licence-gated providers program closed out.
+- **v0.0.11**: hierarchical `$expand`, persisted client resources, `Bundle`
+  batch, `$closure`, the SNOMED implicit concept maps, and refset-only RF2
+  packages.
 
 ## How it is built
 

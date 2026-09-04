@@ -25,9 +25,19 @@ packaged=0
 if printf '%s\n' "$changed" | grep -qE '^crates/[a-z0-9-]+/(src/|data/|README\.md$|LICENSE$|Cargo\.toml$)'; then
   packaged=1
 fi
+# Only the `[workspace.dependencies]` table renders into a packaged manifest;
+# the `[workspace.package]` keys (the product `version`, edition, licence) are
+# read through `key.workspace = true` and change no crate's packaged bytes.
+workspace_dependencies() {
+  awk '/^\[workspace\.dependencies\]/{p=1; next} /^\[/{p=0} p && /^[A-Za-z0-9_-]+[[:space:]]*=/{sub(/[[:space:]]*=.*/, ""); print}'
+}
 if [ "$packaged" -eq 0 ] && printf '%s\n' "$changed" | grep -qx 'Cargo.toml'; then
   diff_names="$(git diff "$base" "$head" -- Cargo.toml | grep -E '^[+-][A-Za-z0-9_-]+[[:space:]]*=' | sed -E 's/^[+-]//; s/[[:space:]]*=.*//' | sort -u || true)"
+  dependency_names="$( { git show "$head:Cargo.toml"; git show "$base:Cargo.toml"; } | workspace_dependencies)"
   for name in $diff_names; do
+    if ! printf '%s\n' "$dependency_names" | grep -qx "$name"; then
+      continue
+    fi
     if grep -lE "^${name}(\.workspace)?[[:space:]]*=" crates/*/Cargo.toml >/dev/null 2>&1; then
       echo "crate-version-guard: workspace dependency '$name' changed and crates/* members consume it: packaged requirements move."
       packaged=1

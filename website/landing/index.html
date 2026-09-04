@@ -33,7 +33,7 @@
     "license": "https://www.apache.org/licenses/LICENSE-2.0",
     "applicationCategory": "HealthApplication",
     "runtimePlatform": "Linux",
-    "version": "0.0.8"
+    "version": "0.0.9"
   }
   </script>
 </head>
@@ -61,7 +61,7 @@
     <section class="hero">
       <div class="wrap">
         <img class="hero-logo" src="./assets/logo-mark.svg" alt="FerroTERM" width="88" height="88">
-        <p class="status" role="note">v0.0.8 released. Linux binaries and a container image, signed.</p>
+        <p class="status" role="note">v0.0.9 released. Linux binaries and a container image, signed.</p>
         <h1>A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD, RxNorm, and every FHIR code system, on ordinary hardware.</h1>
         <p class="sub">
           FerroTERM serves the HL7 FHIR terminology API from one static binary
@@ -136,7 +136,7 @@
           <article class="card">
             <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2M12 12.5v3"/></svg></div>
             <h3>SNOMED CT</h3>
-            <p>Any RF2 edition: the inferred hierarchy as a transitive closure, preferred terms per language reference set, inactive concepts served and marked, the edition and version URI in every answer. ECL follows in v0.0.8.</p>
+            <p>Any RF2 edition: the inferred hierarchy as a transitive closure, preferred terms per language reference set, inactive concepts served and marked, the edition and version URI in every answer, and ECL 2.2 behind <code>?fhir_vs=ecl/</code>.</p>
           </article>
 
           <article class="card">
@@ -154,13 +154,13 @@
           <article class="card">
             <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></div>
             <h3>The FHIR terminology API</h3>
-            <p><code>$lookup</code>, <code>$validate-code</code>, <code>$subsumes</code>, <code>$expand</code>, and <code>$translate</code> on FHIR R4B, with request-scoped resources and <code>$cache-control</code>. The HL7 terminology ecosystem suite runs against every pull request; 120 of its 670 general cases pass today and the list only grows.</p>
+            <p><code>$lookup</code>, <code>$validate-code</code>, <code>$subsumes</code>, <code>$expand</code>, and <code>$translate</code> on FHIR R4, R4B, R5, and the R6 ballot, in JSON or XML, with request-scoped resources and <code>$cache-control</code>. The HL7 terminology ecosystem suite runs against every pull request; 500 of its 670 general cases pass on R5 today and the list only grows.</p>
           </article>
 
           <article class="card">
             <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
             <h3>Machine-generated FHIR</h3>
-            <p>The FHIR types and operation contracts are generated from HL7's own packages for R4, R4B, R5, and R6, so each version's surface is right by construction and a drift check keeps it that way. R4B is served now; the other three endpoints are the v0.0.9 milestone.</p>
+            <p>The FHIR types and operation contracts are generated from HL7's own packages for R4, R4B, R5, and R6, so each version's surface is right by construction and a drift check keeps it that way. All four are served, each under its own path, and the XML codec is generated from the same definitions.</p>
           </article>
 
           <article class="card">
@@ -179,16 +179,16 @@
         <div class="status-panel">
           <h2>Where the project is</h2>
           <p>
-            v0.0.8 is the current release. It serves the code systems above on
-            FHIR R4B and ships as signed Linux binaries, a container image, and
-            a Compose file that builds an index from a release zip and serves
-            it in two commands.
+            v0.0.9 is the current release. It serves the code systems above on
+            FHIR R4, R4B, R5, and the R6 ballot, in JSON and XML, and ships as
+            signed Linux binaries, a container image, and a Compose file that
+            builds an index from a release zip and serves it in two commands.
           </p>
           <p>
-            Next, in milestone order: the
-            R4, R5, and R6 endpoints and XML (v0.0.9), and hierarchical
+            Next, in milestone order: the SonarQube findings resolved and the
+            licence-gated providers closed out (v0.0.10), then hierarchical
             expansion, persisted client resources, batch, and
-            <code>$closure</code> (v0.0.10). The tracker's milestones are the
+            <code>$closure</code> (v0.0.11). The tracker's milestones are the
             roadmap; every issue carries its acceptance criteria.
           </p>
           <div class="hero-cta">

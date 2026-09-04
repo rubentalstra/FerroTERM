@@ -13,8 +13,63 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.9] - 2026-09-04
+
+The wire release: FHIR R4, R5, and the R6 ballot are served beside R4B from
+the generated per-version modules, the terminology ecosystem's requirements
+are an overlay on every version, the tx-ecosystem general mode passes 500 of
+670 cases on R5, every route speaks FHIR XML as well as JSON through a codec
+generated from the same definitions, and the crates are published on
+crates.io under plain names.
+
 ### Added
 
+- FHIR R6 (6.0.0-ballot5) is served under `/r6`, marked ballot-tracking in
+  both capability statements; the R5 and R6 wires share one family of
+  modules, and the ballot's `manifest`, `filterProperty`, and
+  `handle-unclosed-expansion` are refused as `not-supported`, never absorbed.
+- FHIR XML on every route: `_format` or `Accept` selects
+  `application/fhir+xml` for responses, `Content-Type` names an XML
+  `Parameters` request body, and both go through `fhir-types::xml`, a codec
+  driven by a per-version element schema the generator emits, so the JSON
+  codec's strictness applies to both wires. The capability statements list
+  both formats.
+- The terminology ecosystem overlay: every version's operation contract
+  carries the parameters the HL7 terminology ecosystem requires beyond its own
+  `OperationDefinition`, pre-adopted from R6 where the ballot declares them
+  (the value set and system version trios, `inferSystem`,
+  `lenient-display-validation`, `valueset-membership-only`, `useSupplement`,
+  the validated `code`, `system`, `version`, `issues`, and `codeableConcept`,
+  the `$translate` `source*` and `target*` names and `originMap`) and
+  declared by the generator otherwise (`x-caused-by-unknown-system`,
+  `x-unknown-system`, `inactive`, `status`, `activeOnly`,
+  `used-conceptmap`, `used-system`, the `$translate` match parts
+  `sourceConcept`, `sourceComment`, `targetComment`, `noMap`), each marked by
+  source in the generated descriptor and in the capability statement.
+- Validation answers the ecosystem's shapes: `issues` with the
+  `tx-issue-type` codings and `operationoutcome-message-id` extensions, the
+  message rule, the `CodeableConcept` shape, version disagreements resolved
+  against the value set's version, wildcard system versions, supplements
+  applied only when asked, `inactive` and `status` outputs, status-check
+  notes for draft, experimental, deprecated, and withdrawn resources,
+  deprecated and withdrawn concepts and designations, a value set's own
+  language as the display language, whitespace-only display differences,
+  and `activeOnly` and membership-only validation.
+- `$expand` lists every designation when none is named, filters them by
+  `urn:ietf:bcp:47|<lang>`, applies a value set's `valueset-expansion-parameter`
+  defaults, populates `contains.version` when a system appears at several
+  versions, anchors the `regex` filter, and flags inactive concepts with their
+  status.
+- `$translate` answers every match with `originMap` and the ecosystem's
+  parts, treats a `noMap` element and a `not-related-to` target as answers,
+  reports chained (`other-map`) maps as `used-conceptmap`, and reads a
+  `target*` input in reverse on every version.
+- The Nederlandse Labcodeset: `ferroterm-build --labcodeset` reads the
+  publication (the new `labcodeset` crate) and writes the value set over LOINC,
+  the LOINC supplement with the Dutch names and the publication's facts, and
+  the ordinal outcome value sets as FHIR resources for `FERROTERM_CODESYSTEMS`.
+- Conformance badges per served version from the committed pass lists, and a
+  Sonar project key that follows the rename to FerroTERM.
 - FHIR R5 (5.0.0) is served under `/r5` with the shapes R5 declares: the
   validated `code`, `system`, `version`, and itemised `issues` on both
   `$validate-code` operations, `definition` on `$lookup`, `property` and
@@ -35,6 +90,16 @@ fresh link reference.
 
 ### Changed
 
+- The `crates/*` members are published on crates.io under plain names
+  (`fhir-types`, `rf2`, `concept-graph`, `concept-store`, `designation-index`,
+  `sct-ecl`, `fhir-terminology`, `loinc`, `classification`, `dhd-thesaurus`,
+  `gstandaard`, `labcodeset`, `icd11`, `rxnorm-rrf`) on their own lockstep
+  crate line, bumped with their packaged content and guarded in CI, and
+  published through crates.io Trusted Publishing from the release and a
+  dispatch lane.
+- A parameter declared as a primitive reads the primitives that specialize it
+  (a `code` for a `string`, a `canonical` for a `uri`), derived by the
+  generator from the FHIR type hierarchy.
 - The licence of the project's own code is the Apache License 2.0 (`LICENSE`,
   `NOTICE`), replacing MIT; every SPDX header, manifest, badge, image label,
   and page that named MIT follows. Releases up to v0.0.8 stay under the MIT
@@ -488,7 +553,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.8...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.9...HEAD
+[0.0.9]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.9
 [0.0.8]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.8
 [0.0.7]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.7
 [0.0.6]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.6

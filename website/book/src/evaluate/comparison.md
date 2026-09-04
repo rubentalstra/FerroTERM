@@ -9,7 +9,7 @@ Ontoserver, and Hermes.
 > The numbers for the other servers come from their own documentation and
 > published work, cited in
 > [`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md).
-> FerroTERM's own figures are measurements of v0.0.8 over the licensed Dutch
+> FerroTERM's own figures are measurements of v0.0.9 over the licensed Dutch
 > SNOMED CT edition on a laptop; see [Hardware sizing](../operate/hardware-sizing.md).
 
 ## The servers
@@ -35,15 +35,15 @@ Ontoserver, and Hermes.
 | Snowstorm Lite | Java (JVM) | Lucene | about 500 MB | JVM service |
 | Ontoserver | Java (JVM) | Postgres plus Lucene | server plus database | JVM plus Postgres |
 | Hermes | Clojure (JVM) | memory-mapped store plus Lucene | modest | JVM service |
-| FerroTERM 0.0.8 | Rust | `redb`, memory-mapped | 637 MB on disk, 420 to 580 MB resident with two more systems loaded | one static binary or a distroless image |
+| FerroTERM 0.0.9 | Rust | `redb`, memory-mapped | 637 MB on disk, 420 to 580 MB resident with two more systems loaded | one static binary or a distroless image |
 
 ## What FerroTERM trades
 
 FerroTERM is younger. The mature servers carry features that are still on
-FerroTERM's roadmap: ECL and the SNOMED implicit value sets (v0.0.8), the R4,
-R5, and R6 endpoints and XML (v0.0.9), hierarchical expansion, persisted client
-resources, batch, and `$closure` (v0.0.10), and MRCM validation of
-postcoordinated expressions (unscheduled). What it serves, it serves from one
+FerroTERM's roadmap: hierarchical expansion, persisted client resources,
+batch, `$closure`, and the SNOMED implicit concept maps (v0.0.11), and MRCM
+validation of postcoordinated expressions (unscheduled). ECL, the SNOMED
+implicit value sets, the R4, R4B, R5, and R6 endpoints, and XML are served. What it serves, it serves from one
 binary with signed provenance, over more code systems than the SNOMED-only
 servers, and with its conformance measured by the HL7 terminology ecosystem
 suite on every change.
