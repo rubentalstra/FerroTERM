@@ -34,7 +34,7 @@ macro_rules! metadata {
             use fhir_terminology::capabilities::Summary;
             use http::StatusCode;
 
-            use crate::outcome::{Failure, fhir_json};
+            use crate::outcome::Failure;
             use crate::state::AppState;
 
             /// The FHIR version this surface serves.
@@ -128,8 +128,13 @@ macro_rules! metadata {
             /// Handles `GET /metadata` (`mode` `full`, `normative`, or `terminology`).
             pub async fn metadata(
                 State(state): State<Arc<AppState>>,
+                headers: http::HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
+                let wire = match crate::wire::Wire::negotiate(&query, &headers) {
+                    Ok(wire) => wire,
+                    Err(failure) => return failure.into_response(),
+                };
                 let mode = query
                     .iter()
                     .find(|(name, _)| name == "mode")
@@ -147,7 +152,7 @@ macro_rules! metadata {
                     }
                 };
                 match encoded {
-                    Ok(object) => fhir_json(StatusCode::OK, &serde_json::Value::Object(object)),
+                    Ok(object) => wire.response(StatusCode::OK, &object, &fhir_types::$fhir::schema::SCHEMAS),
                     Err(e) => Failure::new(
                         StatusCode::INTERNAL_SERVER_ERROR,
                         "exception",
@@ -200,7 +205,12 @@ macro_rules! metadata {
                     kind: "instance".into(),
                     instantiates: vec![TERMINOLOGY_SERVER.into()],
                     fhir_version: FHIR_VERSION.into(),
-                    format: vec!["application/fhir+json".into(), "json".into()],
+                    format: vec![
+                        "application/fhir+json".into(),
+                        "json".into(),
+                        "application/fhir+xml".into(),
+                        "xml".into(),
+                    ],
                     software: Some(CapabilityStatementSoftware {
                         name: "FerroTERM".into(),
                         version: Some(state.software_version().into()),

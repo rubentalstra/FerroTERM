@@ -95,6 +95,38 @@ impl Server {
         json(self.router().oneshot(request).await.expect("response")).await
     }
 
+    /// A `GET` with an optional `Accept`, answered as the status, the
+    /// `Content-Type`, and the body text (for a response that is not FHIR JSON).
+    pub(crate) async fn get_text(
+        &self,
+        uri: &str,
+        accept: Option<&str>,
+    ) -> (StatusCode, String, String) {
+        let mut request = Request::get(uri);
+        if let Some(accept) = accept {
+            request = request.header(http::header::ACCEPT, accept);
+        }
+        let request = request.body(Body::empty()).expect("request");
+        text(self.router().oneshot(request).await.expect("response")).await
+    }
+
+    /// A `POST` of `body` with `content_type` and an optional `Accept`, answered
+    /// as the status, the `Content-Type`, and the body text.
+    pub(crate) async fn post_text(
+        &self,
+        uri: &str,
+        content_type: &str,
+        body: &str,
+        accept: Option<&str>,
+    ) -> (StatusCode, String, String) {
+        let mut request = Request::post(uri).header(http::header::CONTENT_TYPE, content_type);
+        if let Some(accept) = accept {
+            request = request.header(http::header::ACCEPT, accept);
+        }
+        let request = request.body(Body::from(body.to_owned())).expect("request");
+        text(self.router().oneshot(request).await.expect("response")).await
+    }
+
     pub(crate) async fn post_raw(
         &self,
         uri: &str,
@@ -124,6 +156,25 @@ pub(crate) async fn json(response: Response<Body>) -> (StatusCode, Value) {
         .expect("body");
     let value: Value = serde_json::from_slice(&bytes).expect("json body");
     (status, value)
+}
+
+/// The status, `Content-Type`, and text of any response.
+pub(crate) async fn text(response: Response<Body>) -> (StatusCode, String, String) {
+    let status = response.status();
+    let content_type = response
+        .headers()
+        .get(http::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_owned();
+    let bytes = axum::body::to_bytes(response.into_body(), 1 << 20)
+        .await
+        .expect("body");
+    (
+        status,
+        content_type,
+        String::from_utf8(bytes.to_vec()).expect("utf-8"),
+    )
 }
 
 /// The value of a named parameter of a `Parameters` body.

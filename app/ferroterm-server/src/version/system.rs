@@ -31,6 +31,7 @@ macro_rules! system {
             use super::resources::split_resources;
             use crate::scope::{CACHE_ID_HEADER, cache_id};
             use crate::state::AppState;
+            use crate::wire::Wire;
 
             /// The canonical of the `$cache-control` operation, the ecosystem IG's.
             pub const CACHE_CONTROL_URL: &str =
@@ -39,15 +40,28 @@ macro_rules! system {
             pub const VERSIONS_URL: &str =
                 "http://hl7.org/fhir/OperationDefinition/CapabilityStatement-versions";
 
-            fn finish(handled: Result<Response, Failure>) -> Response {
+            fn finish(handled: Result<Response, Failure>, wire: Wire) -> Response {
                 match handled {
                     Ok(response) => response,
-                    Err(failure) => failure.into_response(),
+                    Err(failure) => failure.respond(wire),
                 }
             }
 
+            /// The negotiated format of a request; a format the server does not speak
+            /// is refused (in JSON, at the call site).
+            fn negotiated(headers: &HeaderMap, query: &[(String, String)]) -> Result<Wire, Failure> {
+                Wire::negotiate(query, headers)
+            }
+
             /// `GET /$versions`: the FHIR versions this base serves, `MAJOR.MINOR`.
-            pub async fn versions() -> Response {
+            pub async fn versions(
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+            ) -> Response {
+                let wire = match negotiated(&headers, &query) {
+                    Ok(wire) => wire,
+                    Err(failure) => return failure.into_response(),
+                };
                 let major_minor: String = FHIR_VERSION
                     .rsplitn(2, '.')
                     .last()
@@ -67,7 +81,7 @@ macro_rules! system {
                         },
                     ],
                     ..Default::default()
-                }))
+                }, wire), wire)
             }
 
             /// `POST /$cache-control?mode=start|end`.
@@ -77,7 +91,11 @@ macro_rules! system {
                 Query(query): Query<Vec<(String, String)>>,
                 body: Bytes,
             ) -> Response {
-                finish(run_cache_control(&state, &headers, &query, &body))
+                let wire = match negotiated(&headers, &query) {
+                    Ok(wire) => wire,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(run_cache_control(&state, &headers, &query, &body, wire), wire)
             }
 
             fn run_cache_control(
@@ -85,6 +103,7 @@ macro_rules! system {
                 headers: &HeaderMap,
                 query: &[(String, String)],
                 body: &Bytes,
+                wire: Wire,
             ) -> Result<Response, Failure> {
                 let mode = query
                     .iter()
@@ -112,7 +131,7 @@ macro_rules! system {
                                 ..Default::default()
                             }],
                             ..Default::default()
-                        })
+                        }, wire)
                     }
                     "end" => {
                         let named = parameters
@@ -134,7 +153,7 @@ macro_rules! system {
                             ));
                         };
                         state.caches().end(&id)?;
-                        parameters::respond(&Parameters::default())
+                        parameters::respond(&Parameters::default(), wire)
                     }
                     other => Err(Failure::new(
                         StatusCode::BAD_REQUEST,
@@ -148,26 +167,44 @@ macro_rules! system {
             pub async fn value_set_read(
                 State(state): State<Arc<AppState>>,
                 UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
-                finish(match state.value_set_instance(&id) {
-                    Some(model) => parameters::respond_resource(&render::$fhir::value_set(&model, true)),
-                    None => Err(Failure::new(
-                        StatusCode::NOT_FOUND,
-                        "not-found",
-                        format!("no ValueSet with id `{id}`"),
-                    )),
-                })
+                let wire = match negotiated(&headers, &query) {
+                    Ok(wire) => wire,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    match state.value_set_instance(&id) {
+                        Some(model) => parameters::respond_resource(&render::$fhir::value_set(&model, true), wire),
+                        None => Err(Failure::new(
+                            StatusCode::NOT_FOUND,
+                            "not-found",
+                            format!("no ValueSet with id `{id}`"),
+                        )),
+                    },
+                    wire,
+                )
             }
 
             /// `GET /ValueSet?url=&version=`: a `searchset` of the stored value sets.
             pub async fn value_set_search(
                 State(state): State<Arc<AppState>>,
+                headers: HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
-                finish(run_value_set_search(&state, &query))
+                let wire = match negotiated(&headers, &query) {
+                    Ok(wire) => wire,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(run_value_set_search(&state, &query, wire), wire)
             }
 
-            fn run_value_set_search(state: &AppState, query: &[(String, String)]) -> Result<Response, Failure> {
+            fn run_value_set_search(
+                state: &AppState,
+                query: &[(String, String)],
+                wire: Wire,
+            ) -> Result<Response, Failure> {
                 let mut url = None;
                 let mut version = None;
                 for (name, value) in query {
@@ -211,12 +248,13 @@ macro_rules! system {
                         "too many value sets to count",
                     )
                 })?;
-                parameters::respond_resource(&Bundle {
+                let bundle = Bundle {
                     r#type: "searchset".into(),
                     total: Some(total.into()),
                     entry,
                     ..Default::default()
-                })
+                };
+                parameters::respond_resource(&bundle, wire)
             }
         }
     };
