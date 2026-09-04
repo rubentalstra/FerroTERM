@@ -9,4 +9,4 @@ Licence history: MIT until 2026-09-03; BUSL 1.1 (#147) merged and was reverted f
 
 **Why:** the owner wants FerroTERM and FerroEHR under one licensing model; the earlier revert to Apache was undone.
 
-**How to apply:** every header (`SPDX-License-Identifier: BUSL-1.1`), manifest, badge, page, image label, and crate LICENSE copy names BUSL-1.1; `scripts/checks/versions.sh` fails on a stale MIT or Apache-2.0 claim in the project's own files. The 14 published crates carry BUSL-1.1 too (the owner may still choose to keep `fhir-types` Apache, as FerroEHR keeps its spec crates). Related: [[crate-names-and-publishing]], [[release-cut-cadence]].
+**How to apply:** every header (`SPDX-License-Identifier: BUSL-1.1`), manifest, badge, page, image label, and crate LICENSE copy names BUSL-1.1; `scripts/checks/versions.sh` fails on a stale MIT or Apache-2.0 claim in the project's own files. Twelve published crates carry BUSL-1.1; `fhir-types` and `rf2` stay Apache 2.0 (the owner chose this on 2026-09-04, #223), as FerroEHR keeps its spec crates open; the versions guard checks both directions. Related: [[crate-names-and-publishing]], [[release-cut-cadence]].

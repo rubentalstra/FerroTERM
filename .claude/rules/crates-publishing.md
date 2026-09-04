@@ -10,7 +10,9 @@ The `crates/*` members are published on crates.io under plain names
 `gstandaard`, `labcodeset`, `icd11`, `rxnorm-rrf`; the owner's decision on #164,
 2026-09-03, `labcodeset` added 2026-09-04)
 so other projects can depend on them. The server (`app/*`) and the tools
-(`tools/*`) are never published. Published versions are immutable, so version
+(`tools/*`) are never published. Every member is BUSL-1.1 except `fhir-types` and
+`rf2`, which are Apache 2.0 (the owner's decision on #223, 2026-09-04) so the
+FHIR types and the RF2 reader stay usable by any Rust project. Published versions are immutable, so version
 hygiene is a hard rule, machine-enforced by the `crate-version-guard` CI job
 and the push hook `.claude/hooks/crate_version_bump_guard.sh`.
 

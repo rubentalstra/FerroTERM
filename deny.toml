@@ -40,8 +40,6 @@ allow = [
 confidence-threshold = 0.9
 # The project's own crates are BUSL-1.1 (LICENSE); no dependency may be.
 exceptions = [
-  { allow = ["BUSL-1.1"], crate = "fhir-types" },
-  { allow = ["BUSL-1.1"], crate = "rf2" },
   { allow = ["BUSL-1.1"], crate = "concept-graph" },
   { allow = ["BUSL-1.1"], crate = "concept-store" },
   { allow = ["BUSL-1.1"], crate = "designation-index" },

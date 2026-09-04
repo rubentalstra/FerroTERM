@@ -166,7 +166,10 @@ from it, to third parties as a hosted, managed, or embedded terminology
 service, and selling, sublicensing, or otherwise distributing it for a fee on
 its own or inside another product, need a commercial licence in every case.
 Each version becomes Apache License 2.0 four years after that version is
-published. The commercial licence starts with a short conversation with the
+published. Two crates are outside all of this: `fhir-types` (the FHIR types and
+operation contracts generated from HL7's own packages) and `rf2` (the SNOMED CT
+release file reader) are Apache 2.0 on crates.io, so any Rust project can use
+them without a licence conversation. The commercial licence starts with a short conversation with the
 maintainer named in [MAINTAINERS.md](MAINTAINERS.md).
 
 The code systems are licensed separately: SNOMED CT by SNOMED International,
