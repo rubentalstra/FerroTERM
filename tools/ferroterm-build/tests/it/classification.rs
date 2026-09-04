@@ -22,7 +22,7 @@ fn the_claml_classification_builds_an_artifact_the_store_graph_and_text_open() {
         classification::build(&classification, CLAML_SYSTEM, None, out.path()).expect("builds");
     assert_eq!(report.system, CLAML_SYSTEM);
     assert_eq!(report.version, CLAML_VERSION);
-    assert_eq!(report.concepts, 12);
+    assert_eq!(report.concepts, 19);
     let manifest: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(out.path().join("manifest.json")).expect("manifest"),
     )
@@ -209,7 +209,7 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
         panic!("a classification report");
     };
     assert_eq!(report.version, "2022", "the flag wins over the title");
-    assert_eq!(report.concepts, 12);
+    assert_eq!(report.concepts, 19);
 
     let cm_dir = source.path().join("cm");
     ferroterm_testkit::classification::write_icd10cm(&cm_dir).expect("writes");

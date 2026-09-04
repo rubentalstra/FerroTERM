@@ -225,7 +225,7 @@ fn a_classification_artifact_is_served_by_its_manifest_kind() {
         .find(|s| s.url == ferroterm_testkit::classification::CLAML_SYSTEM)
         .expect("icd-10-nl");
     assert_eq!(nl.version, ferroterm_testkit::classification::CLAML_VERSION);
-    assert_eq!(nl.concepts, Some(12));
+    assert_eq!(nl.concepts, Some(19));
     let cm_summary = summaries
         .iter()
         .find(|s| s.url == "http://hl7.org/fhir/sid/icd-10-cm")
