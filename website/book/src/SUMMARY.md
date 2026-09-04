@@ -7,6 +7,7 @@
 - [What FerroTERM is](evaluate/what-ferroterm-is.md)
 - [Architecture at a glance](evaluate/architecture.md)
 - [How it compares](evaluate/comparison.md)
+- [Code systems served](evaluate/code-systems.md)
 - [Conformance](evaluate/conformance.md)
 
 # Operate

@@ -159,6 +159,20 @@ jobs:
           persist-credentials: false
       - run: bash scripts/checks/versions.sh
 
+  # code-systems — the served code systems are listed once: the book's table
+  # is the source, and the README and the landing page must name every row.
+  code-systems:
+    name: code-systems
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/checks/code-systems.sh
+
   # ── Tier 2: the Rust lanes (guarded on the workspace existing) ──────────────
 
   # The one thing that decides whether the cargo tier runs at all. It checks
@@ -441,6 +455,7 @@ jobs:
       - shellcheck
       - dockerfile-lint
       - versions
+      - code-systems
       - detect
       - fmt
       - clippy
