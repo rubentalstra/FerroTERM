@@ -38,11 +38,12 @@ a `details.coding` from `http://hl7.org/fhir/tools/CodeSystem/tx-issue-type`
 
 ## Value sets
 
-A value set reaches `$expand` and `ValueSet/$validate-code` in four ways:
+A value set reaches `$expand` and `ValueSet/$validate-code` in five ways:
 
 - **Loaded**: a `ValueSet` JSON under `FERROTERM_CODESYSTEMS`, named by `url`
   (and `version`; without one the greatest version answers). Loaded value sets
   are readable at `GET ValueSet/{id}` and `GET ValueSet?url=…&version=…`.
+- **Persisted**: a `ValueSet` written through the REST API (see below).
 - **Inline**: the `valueSet` parameter of a `POST`.
 - **Request-scoped**: `tx-resource` parameters, see below.
 - **Implicit**: a URL a code system defines, answered by its provider without
@@ -111,3 +112,33 @@ A language the code system does not carry falls back to the system's own
 (English for LOINC and ICD-11, the classification's language for a ClaML
 document, the default language for SNOMED CT), and the response states what
 it used. Designations carry their BCP 47 language and their use.
+
+## Persisted resources
+
+A deployment that names a database in `FERROTERM_RESOURCES` accepts
+`CodeSystem`, `ValueSet`, and `ConceptMap` resources over the REST API and
+keeps them across restarts. The interactions are the ones the FHIR RESTful API
+defines (<https://hl7.org/fhir/R4B/http.html>), under every version prefix:
+
+| Request | Answer |
+|---|---|
+| `POST {type}` | `201 Created` with `Location`, `ETag`, and `Last-Modified`; the server assigns the id |
+| `PUT {type}/{id}` | `200 OK` when the id existed, `201 Created` when it is new |
+| `GET {type}/{id}` | `200 OK` with `ETag` and `Last-Modified`, `404` for an unknown id, `410 Gone` for a deleted one |
+| `GET {type}/{id}/_history/{versionId}` | `200 OK` with that version of the resource |
+| `GET {type}?url=…&version=…` | a `searchset` `Bundle` |
+| `DELETE {type}/{id}` | `204 No Content`, and deleting again has no effect and is not an error |
+
+`meta.versionId` starts at `1` and rises with every write; the `ETag` is its
+weak form (`W/"2"`). Send `If-Match` with that value on a `PUT` or a `DELETE`
+to make the write conditional; a value that names another version is a
+`412 Precondition Failed`.
+
+A resource is stored as the JSON it arrived as, with the FHIR version of the
+endpoint that received it, and a read renders it through the reading version's
+own codec. Reading a resource on a version that does not define an element it
+carries is a `422`. Every operation sees a persisted resource exactly as it
+sees one loaded from `FERROTERM_CODESYSTEMS`, on every served version.
+
+A deployment that names no database refuses every write with a `422` and
+declares no write interaction in its capability statement.

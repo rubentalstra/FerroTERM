@@ -54,6 +54,39 @@ macro_rules! resources {
                 ))
             }
 
+            /// The model of a resource given as a JSON object of this version.
+            ///
+            /// # Errors
+            ///
+            /// Returns what the codec or the conversion refused, as text.
+            pub fn model_of(object: &fhir_types::codec::Object) -> Result<Loaded, String> {
+                loaded(resource_of(object)?).map_err(|failure| failure.diagnostics)
+            }
+
+            /// `object` read as a resource of this version and written back.
+            ///
+            /// # Errors
+            ///
+            /// Returns what the codec refused, as text: a resource stored in
+            /// another FHIR version can carry an element this one does not define.
+            pub fn round_trip(
+                object: &fhir_types::codec::Object,
+            ) -> Result<fhir_types::codec::Object, String> {
+                fhir_types::codec::Json::to_json(&resource_of(object)?)
+                    .map_err(|error| error.to_string())
+            }
+
+            /// `object` read as a resource of this version.
+            ///
+            /// # Errors
+            ///
+            /// Returns what the codec refused, as text.
+            pub fn resource_of(object: &fhir_types::codec::Object) -> Result<Resource, String> {
+                let mut path = fhir_types::codec::Path::root("Resource");
+                fhir_types::codec::Json::from_json(object, &mut path)
+                    .map_err(|error| error.to_string())
+            }
+
             fn loaded(resource: Resource) -> Result<Loaded, Failure> {
                 match resource {
                     Resource::CodeSystem(code_system) => {

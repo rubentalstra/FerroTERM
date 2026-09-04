@@ -61,12 +61,12 @@ macro_rules! operations {
             }
 
             /// A `GET` invocation: the query parameters, in the scope the headers name.
-            fn from_query<'a>(
-                state: &'a AppState,
+            fn from_query(
+                state: &AppState,
                 operation: &fhir_types::operation::Operation,
                 headers: &HeaderMap,
                 query: &[(String, String)],
-            ) -> Result<(Scope<'a>, Parameters), Failure> {
+            ) -> Result<(Scope, Parameters), Failure> {
                 let own: Vec<(String, String)> = query
                     .iter()
                     .filter(|(name, _)| name != crate::scope::UUID)
@@ -79,12 +79,12 @@ macro_rules! operations {
 
             /// A `POST` invocation: the body's `Parameters` less its `tx-resource`s, in
             /// the scope those resources and the headers form.
-            fn from_body<'a>(
-                state: &'a AppState,
+            fn from_body(
+                state: &AppState,
                 operation: &fhir_types::operation::Operation,
                 headers: &HeaderMap,
                 body: &Bytes,
-            ) -> Result<(Scope<'a>, Parameters), Failure> {
+            ) -> Result<(Scope, Parameters), Failure> {
                 let (mut parameters, resources) =
                     split_resources(parameters::parameters_from_body(headers, body)?)?;
                 parameters::apply_accept_language(operation, headers, &mut parameters);
@@ -92,7 +92,7 @@ macro_rules! operations {
             }
 
             fn run_lookup(
-                scope: &Scope<'_>,
+                scope: &Scope,
                 invocation: &Invocation,
                 parameters: &Parameters,
                 wire: Wire,
@@ -105,7 +105,7 @@ macro_rules! operations {
             }
 
             fn run_validate_code(
-                scope: &Scope<'_>,
+                scope: &Scope,
                 invocation: &Invocation,
                 parameters: &Parameters,
                 wire: Wire,
@@ -121,7 +121,7 @@ macro_rules! operations {
             }
 
             fn run_subsumes(
-                scope: &Scope<'_>,
+                scope: &Scope,
                 invocation: &Invocation,
                 parameters: &Parameters,
                 wire: Wire,
@@ -136,14 +136,14 @@ macro_rules! operations {
                 parameters::respond(&map::subsumes_response(outcome).to_parameters(), wire)
             }
 
-            fn run_expand(scope: &Scope<'_>, parameters: &Parameters, wire: Wire) -> Handled {
+            fn run_expand(scope: &Scope, parameters: &Parameters, wire: Wire) -> Handled {
                 let request = ValueSetExpandRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let outcome = expand::expand(&scope.sources(), &map::expand_input(&request))?;
                 parameters::respond_resource(&render::$fhir::expansion(&outcome), wire)
             }
 
-            fn run_value_set_validate_code(scope: &Scope<'_>, parameters: &Parameters, wire: Wire) -> Handled {
+            fn run_value_set_validate_code(scope: &Scope, parameters: &Parameters, wire: Wire) -> Handled {
                 let request = ValueSetValidateCodeRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let validation = value_set_validate_code::validate_code(
@@ -177,7 +177,7 @@ macro_rules! operations {
                 Ok(())
             }
 
-            fn run_translate(scope: &Scope<'_>, parameters: &Parameters, wire: Wire) -> Handled {
+            fn run_translate(scope: &Scope, parameters: &Parameters, wire: Wire) -> Handled {
                 reverse_refusal(
                     parameters
                         .parameter

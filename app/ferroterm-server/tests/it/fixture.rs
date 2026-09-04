@@ -12,21 +12,48 @@ use tower::ServiceExt;
 
 /// The edition in a temporary directory, loaded the way the binary loads it.
 pub(crate) struct Server {
-    _dir: tempfile::TempDir,
+    _dir: Arc<tempfile::TempDir>,
+    config: Config,
     pub(crate) state: Arc<AppState>,
 }
 
 impl Server {
     pub(crate) fn start() -> Self {
-        Self::start_with(false)
+        Self::start_with(false, false)
     }
 
     /// The edition plus the testkit's `CodeSystem` and `ValueSet` resources.
     pub(crate) fn start_with_resources() -> Self {
-        Self::start_with(true)
+        Self::start_with(true, false)
     }
 
-    fn start_with(resources: bool) -> Self {
+    /// The edition, the testkit's resources, and a resource database, so the
+    /// persisted-resource routes answer.
+    pub(crate) fn start_persisting() -> Self {
+        Self::start_with(true, true)
+    }
+
+    /// The same configuration loaded again, as a restart loads it.
+    ///
+    /// The running server is dropped first: `redb` holds the database file for
+    /// as long as its handle lives
+    /// (<https://docs.rs/redb/latest/redb/struct.Database.html>).
+    pub(crate) fn restarted(self) -> Self {
+        let Self {
+            _dir: dir,
+            config,
+            state,
+        } = self;
+        drop(state);
+        let state = Arc::new(AppState::load(&config).expect("reloads"));
+        Self {
+            _dir: dir,
+            config,
+            state,
+        }
+    }
+
+    fn start_with(resources: bool, persists: bool) -> Self {
         let dir = tempfile::tempdir().expect("tempdir");
         ferroterm_testkit::snomed::write(dir.path()).expect("writes the edition");
         let fhir = dir.path().join("fhir");
@@ -35,10 +62,29 @@ impl Server {
         let config = Config {
             index: vec![dir.path().to_path_buf()],
             code_systems: if resources { vec![fhir] } else { Vec::new() },
+            resources: persists.then(|| dir.path().join("resources.redb")),
             ..Config::default()
         };
         let state = Arc::new(AppState::load(&config).expect("loads"));
-        Self { _dir: dir, state }
+        Self {
+            _dir: Arc::new(dir),
+            config,
+            state,
+        }
+    }
+
+    /// Any request, answered as the raw response so a test can read its headers.
+    pub(crate) async fn send(&self, request: Request<Body>) -> Response<Body> {
+        self.router().oneshot(request).await.expect("response")
+    }
+
+    /// A `PUT` of a FHIR JSON body, answered as the raw response.
+    pub(crate) async fn put(&self, uri: &str, body: &Value) -> Response<Body> {
+        let request = Request::put(uri)
+            .header(http::header::CONTENT_TYPE, "application/fhir+json")
+            .body(Body::from(body.to_string()))
+            .expect("request");
+        self.send(request).await
     }
 
     pub(crate) fn router(&self) -> Router {
@@ -201,4 +247,13 @@ pub(crate) fn parameters(pairs: &[(&str, Value)]) -> Value {
         })
         .collect();
     serde_json::json!({"resourceType": "Parameters", "parameter": list})
+}
+
+/// A response header as text.
+pub(crate) fn header(response: &Response<Body>, name: http::HeaderName) -> Option<String> {
+    response
+        .headers()
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned)
 }

@@ -16,6 +16,12 @@ pub const LANGUAGE_ENV: &str = "FERROTERM_DEFAULT_LANGUAGE";
 /// Each is a FHIR package's `package/` directory or a directory of JSON files;
 /// the platform's path separator separates them.
 pub const CODESYSTEMS_ENV: &str = "FERROTERM_CODESYSTEMS";
+/// The environment variable naming the database of persisted client resources.
+///
+/// The `CodeSystem`, `ValueSet`, and `ConceptMap` resources written through the
+/// REST API live in this file and are served again after a restart. A
+/// deployment that names none refuses every write.
+pub const RESOURCES_ENV: &str = "FERROTERM_RESOURCES";
 /// The environment variable naming the authentication in front of the server.
 ///
 /// Its value is codes of the FHIR `restful-security-service` value set
@@ -48,6 +54,9 @@ pub struct Config {
     pub index: Vec<PathBuf>,
     /// The directories of FHIR `CodeSystem` resources to load.
     pub code_systems: Vec<PathBuf>,
+    /// The database of persisted client resources; `None` when the deployment
+    /// persists none.
+    pub resources: Option<PathBuf>,
     /// The display language used when a request names none.
     pub default_language: String,
     /// The console log format.
@@ -79,6 +88,7 @@ impl Default for Config {
             listen: String::from("127.0.0.1:8080"),
             index: Vec::new(),
             code_systems: Vec::new(),
+            resources: None,
             default_language: String::from("en"),
             log_format: LogFormat::Auto,
             log_filter: String::from(crate::telemetry::DEFAULT_FILTER),
@@ -104,6 +114,7 @@ impl Config {
             code_systems: std::env::var_os(CODESYSTEMS_ENV)
                 .map(|value| std::env::split_paths(&value).collect())
                 .unwrap_or_default(),
+            resources: std::env::var_os(RESOURCES_ENV).map(PathBuf::from),
             default_language: std::env::var(LANGUAGE_ENV).unwrap_or(defaults.default_language),
             log_format: match std::env::var(FORMAT_ENV) {
                 Ok(text) => text.parse()?,

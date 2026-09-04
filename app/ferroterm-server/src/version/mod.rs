@@ -10,12 +10,49 @@
 //! family macros: `map_r4` for R4 and R4B, `map_r5` for R5 and the R6 ballot,
 //! which share their result shapes and differ in a few inputs.
 
+/// The FHIR versions this server serves, each with the modules of its surface.
+///
+/// A persisted resource records the version it arrived in, so a rebuild of the
+/// served layer converts it with that version's own codec and converter.
+pub const VERSIONS: [&str; 4] = [
+    crate::r4::metadata::FHIR_VERSION,
+    crate::r4b::metadata::FHIR_VERSION,
+    crate::r5::metadata::FHIR_VERSION,
+    crate::r6::metadata::FHIR_VERSION,
+];
+
+/// The model of a resource stored as a JSON object of `fhir_version`.
+///
+/// # Errors
+///
+/// Returns what the codec or the conversion refused, as text, and says so when
+/// `fhir_version` is not one this server serves.
+pub fn loaded_of(
+    fhir_version: &str,
+    object: &fhir_types::codec::Object,
+) -> Result<crate::scope::Loaded, String> {
+    if fhir_version == crate::r4::metadata::FHIR_VERSION {
+        crate::r4::resources::model_of(object)
+    } else if fhir_version == crate::r4b::metadata::FHIR_VERSION {
+        crate::r4b::resources::model_of(object)
+    } else if fhir_version == crate::r5::metadata::FHIR_VERSION {
+        crate::r5::resources::model_of(object)
+    } else if fhir_version == crate::r6::metadata::FHIR_VERSION {
+        crate::r6::resources::model_of(object)
+    } else {
+        Err(format!(
+            "`{fhir_version}` is not a FHIR version this server serves"
+        ))
+    }
+}
+
 pub(crate) mod map_r4;
 pub(crate) mod map_r5;
 pub(crate) mod metadata;
 pub(crate) mod operations;
 pub(crate) mod parameters;
 pub(crate) mod resources;
+pub(crate) mod store;
 pub(crate) mod system;
 
 macro_rules! surface {
@@ -24,6 +61,7 @@ macro_rules! surface {
         crate::version::resources::resources!($fhir);
         crate::version::metadata::metadata!($fhir, $fhir_version, $label, $capabilities);
         crate::version::system::system!($fhir);
+        crate::version::store::store!($fhir);
         crate::version::operations::operations!($fhir);
 
         /// The routes of this version, nested under its root by the crate router.
@@ -33,8 +71,48 @@ macro_rules! surface {
                 .route("/metadata", get(metadata::metadata))
                 .route("/$versions", get(system::versions))
                 .route("/$cache-control", post(system::cache_control))
-                .route("/ValueSet", get(system::value_set_search))
-                .route("/ValueSet/{id}", get(system::value_set_read))
+                .route(
+                    "/CodeSystem",
+                    get(store::code_system_search).post(store::code_system_create),
+                )
+                .route(
+                    "/CodeSystem/{id}",
+                    get(store::code_system_read)
+                        .put(store::code_system_update)
+                        .delete(store::code_system_delete),
+                )
+                .route(
+                    "/CodeSystem/{id}/_history/{version}",
+                    get(store::code_system_version_read),
+                )
+                .route(
+                    "/ValueSet",
+                    get(store::value_set_search).post(store::value_set_create),
+                )
+                .route(
+                    "/ValueSet/{id}",
+                    get(store::value_set_read)
+                        .put(store::value_set_update)
+                        .delete(store::value_set_delete),
+                )
+                .route(
+                    "/ValueSet/{id}/_history/{version}",
+                    get(store::value_set_version_read),
+                )
+                .route(
+                    "/ConceptMap",
+                    get(store::concept_map_search).post(store::concept_map_create),
+                )
+                .route(
+                    "/ConceptMap/{id}",
+                    get(store::concept_map_read)
+                        .put(store::concept_map_update)
+                        .delete(store::concept_map_delete),
+                )
+                .route(
+                    "/ConceptMap/{id}/_history/{version}",
+                    get(store::concept_map_version_read),
+                )
                 .route(
                     "/CodeSystem/$lookup",
                     get(operations::lookup_get).post(operations::lookup_post),

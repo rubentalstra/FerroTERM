@@ -128,7 +128,8 @@ fn code_system_directories_load_and_supplements_apply() {
         Some("Cat"),
         "the supplement {ANIMALS_NL} is loaded but dormant"
     );
-    let named = state
+    let layer = state.layer();
+    let named = layer
         .registry()
         .with_supplements(&[ANIMALS_NL.to_owned()])
         .expect("the supplement is loaded");
