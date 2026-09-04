@@ -3,8 +3,18 @@
 //! One macro produces a module per served version so they cannot drift:
 //! `render::r4b::value_set(&model, true)`, `render::r4b::expansion(&outcome)`.
 //! R5 declares `expansion.property` and `contains.property`
-//! (<https://hl7.org/fhir/R5/valueset.html>); the `element` arms fill them,
-//! the `none` arms are for the versions without them.
+//! (<https://hl7.org/fhir/R5/valueset.html>); the `element` arms fill them.
+//! R4 and R4B carry the same content as the cross-version extensions
+//! `http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.property`
+//! and `…extension-ValueSet.expansion.contains.property`
+//! (<https://hl7.org/fhir/R5/versions.html#extensions>); the `extension` arms fill those.
+
+/// The cross-version extension carrying R5's `ValueSet.expansion.property`.
+const EXPANSION_PROPERTY_EXTENSION: &str =
+    "http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.property";
+/// The cross-version extension carrying R5's `ValueSet.expansion.contains.property`.
+const CONTAINS_PROPERTY_EXTENSION: &str =
+    "http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property";
 
 macro_rules! render_value_set {
     // R6 makes `compose.include.filter.value` optional
@@ -15,7 +25,50 @@ macro_rules! render_value_set {
     (@filter_value optional, $f:ident) => {
         Some($f.value.as_str().into())
     };
-    (@helpers none, $module:ident) => {};
+    (@helpers extension, $module:ident) => {
+        /// A property value as an extension value.
+        fn extension_value(
+            value: &crate::provider::PropertyValue,
+        ) -> fhir_types::$module::extension::ExtensionValue {
+            use crate::provider::PropertyValue;
+            use fhir_types::$module::extension::ExtensionValue;
+            match value {
+                PropertyValue::Code(c) => ExtensionValue::Code(c.as_str().into()),
+                PropertyValue::Uri(u) => ExtensionValue::Uri(u.as_str().into()),
+                PropertyValue::String(s) => ExtensionValue::String(s.as_str().into()),
+                PropertyValue::Coding {
+                    system,
+                    code,
+                    display,
+                } => ExtensionValue::Coding(Coding {
+                    system: Some(system.as_str().into()),
+                    code: Some(code.as_str().into()),
+                    display: display.as_deref().map(Into::into),
+                    ..Default::default()
+                }),
+                PropertyValue::Integer(i) => match i32::try_from(*i) {
+                    Ok(i) => ExtensionValue::Integer(i.into()),
+                    Err(_) => ExtensionValue::String(i.to_string().as_str().into()),
+                },
+                PropertyValue::Boolean(b) => ExtensionValue::Boolean((*b).into()),
+                PropertyValue::DateTime(d) => ExtensionValue::DateTime(d.as_str().into()),
+                PropertyValue::Decimal(d) => ExtensionValue::Decimal(d.as_str().into()),
+            }
+        }
+
+        /// One sub-extension of a cross-version extension: the child element
+        /// `url` with its value.
+        fn part(
+            url: &str,
+            value: fhir_types::$module::extension::ExtensionValue,
+        ) -> fhir_types::$module::extension::Extension {
+            fhir_types::$module::extension::Extension {
+                url: url.to_owned(),
+                value: Some(value),
+                ..Default::default()
+            }
+        }
+    };
     (@helpers element, $module:ident) => {
         render_value_set!(
             @value_fn property_value,
@@ -55,9 +108,35 @@ macro_rules! render_value_set {
             }
         }
     };
-    (@properties none, $module:ident, $entry:expr, $item:ident) => {
-        $entry
-    };
+    (@properties extension, $module:ident, $entry:expr, $item:ident) => {{
+        let mut entry = $entry;
+        entry.extension = $item
+            .properties
+            .iter()
+            .map(|p| {
+                let mut parts = vec![
+                    part("code", fhir_types::$module::extension::ExtensionValue::Code(p.code.as_str().into())),
+                    part("value", extension_value(&p.value)),
+                ];
+                parts.extend(p.subproperties.iter().map(|s| {
+                    fhir_types::$module::extension::Extension {
+                        url: String::from("subProperty"),
+                        extension: vec![
+                            part("code", fhir_types::$module::extension::ExtensionValue::Code(s.code.as_str().into())),
+                            part("value", extension_value(&s.value)),
+                        ],
+                        ..Default::default()
+                    }
+                }));
+                fhir_types::$module::extension::Extension {
+                    url: String::from(super::CONTAINS_PROPERTY_EXTENSION),
+                    extension: parts,
+                    ..Default::default()
+                }
+            })
+            .collect();
+        entry
+    }};
     (@properties element, $module:ident, $entry:expr, $item:ident) => {{
         let mut entry = $entry;
         entry.property = $item
@@ -86,9 +165,31 @@ macro_rules! render_value_set {
             .collect();
         entry
     }};
-    (@expansion_properties none, $module:ident, $expansion:expr, $outcome:ident) => {
-        $expansion
-    };
+    (@expansion_properties extension, $module:ident, $expansion:expr, $outcome:ident) => {{
+        let mut expansion = $expansion;
+        expansion.extension = $outcome
+            .properties
+            .iter()
+            .map(|p| {
+                let mut parts = vec![part(
+                    "code",
+                    fhir_types::$module::extension::ExtensionValue::Code(p.code.as_str().into()),
+                )];
+                if let Some(uri) = &p.uri {
+                    parts.push(part(
+                        "uri",
+                        fhir_types::$module::extension::ExtensionValue::Uri(uri.as_str().into()),
+                    ));
+                }
+                fhir_types::$module::extension::Extension {
+                    url: String::from(super::EXPANSION_PROPERTY_EXTENSION),
+                    extension: parts,
+                    ..Default::default()
+                }
+            })
+            .collect();
+        expansion
+    }};
     (@expansion_properties element, $module:ident, $expansion:expr, $outcome:ident) => {{
         let mut expansion = $expansion;
         expansion.property = $outcome
@@ -287,7 +388,7 @@ macro_rules! render_value_set {
     };
 }
 
-render_value_set!(r4, none, required);
-render_value_set!(r4b, none, required);
+render_value_set!(r4, extension, required);
+render_value_set!(r4b, extension, required);
 render_value_set!(r5, element, required);
 render_value_set!(r6, element, optional);

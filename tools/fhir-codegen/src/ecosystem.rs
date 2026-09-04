@@ -137,6 +137,7 @@ const PRE_ADOPTED: &[(&str, ParameterUse, &str)] = &[
     (CODE_SYSTEM_LOOKUP, ParameterUse::In, "useSupplement"),
     (VALUE_SET_VALIDATE_CODE, ParameterUse::In, "useSupplement"),
     (VALUE_SET_EXPAND, ParameterUse::In, "useSupplement"),
+    (VALUE_SET_EXPAND, ParameterUse::In, "property"),
     (
         VALUE_SET_EXPAND,
         ParameterUse::In,

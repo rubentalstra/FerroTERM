@@ -147,6 +147,15 @@ pub struct ValueSetExpandRequest {
     /// Supplement\](<https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-valueset-supplement.html>)
     pub use_supplement: Vec<super::super::primitives::Canonical>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
+    /// request to return a particular property in the expansion. The returned
+    /// property may include subproperties. May be either a code from the code
+    /// system definition (convenient) or a the formal URI that refers to the
+    /// property. Note that property names can clash, so using a URI is
+    /// recommended. The special value '\*' means all properties and their
+    /// sub-properties known to the server
+    pub property: Vec<super::super::primitives::String>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
     /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
     /// Specifies a version to use for a valueset, if the reference to the value
     /// set does not specify which version to use. The format is the same as a
@@ -240,6 +249,7 @@ impl ValueSetExpandRequest {
         let mut field_check_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
         let mut field_force_system_version: Vec<super::super::primitives::Canonical> = Vec::new();
         let mut field_use_supplement: Vec<super::super::primitives::Canonical> = Vec::new();
+        let mut field_property: Vec<super::super::primitives::String> = Vec::new();
         let mut field_default_valueset_version: Vec<super::super::primitives::Canonical> =
             Vec::new();
         let mut field_check_valueset_version: Vec<super::super::primitives::Canonical> = Vec::new();
@@ -994,6 +1004,51 @@ impl ValueSetExpandRequest {
                         }
                     });
                 }
+                "property" => {
+                    field_property.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Id(value)) => {
+                            super::super::primitives::String {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::Markdown(
+                            value,
+                        )) => super::super::primitives::String {
+                            id: value.id.clone(),
+                            extension: value.extension.clone(),
+                            value: value.value.clone(),
+                        },
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "property",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "property",
+                                },
+                            );
+                        }
+                    });
+                }
                 "default-valueset-version" => {
                     field_default_valueset_version.push(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Canonical(
@@ -1099,6 +1154,7 @@ impl ValueSetExpandRequest {
             check_system_version: field_check_system_version,
             force_system_version: field_force_system_version,
             use_supplement: field_use_supplement,
+            property: field_property,
             default_valueset_version: field_default_valueset_version,
             check_valueset_version: field_check_valueset_version,
             force_valueset_version: field_force_valueset_version,
@@ -1303,6 +1359,15 @@ impl ValueSetExpandRequest {
                 value: Some(
                     super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
                 ),
+                ..Default::default()
+            });
+        }
+        for value in &self.property {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "property".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
                 ..Default::default()
             });
         }
@@ -1693,6 +1758,15 @@ pub const VALUE_SET_EXPAND: super::super::super::operation::Operation =
                 usage: super::super::super::operation::ParameterUse::In,
                 cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
                 type_code: Some("canonical"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "property",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("string"),
                 scope: &[],
                 source: super::super::super::operation::ParameterSource::PreAdopted,
                 parts: &[],

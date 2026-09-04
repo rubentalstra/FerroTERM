@@ -560,7 +560,11 @@ macro_rules! family_map {
                     default_valueset_version: canonicals(&request.default_valueset_version),
                     check_valueset_version: canonicals(&request.check_valueset_version),
                     force_valueset_version: canonicals(&request.force_valueset_version),
-                    property: Vec::new(),
+                    property: request
+                        .property
+                        .iter()
+                        .filter_map(|p| p.value.clone())
+                        .collect(),
                     use_supplement: canonicals(&request.use_supplement),
                 }
             }
