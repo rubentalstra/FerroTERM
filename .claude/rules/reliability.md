@@ -163,7 +163,7 @@ chapters, and the Clippy book.
 ## Deviations from the API Guidelines (deliberate)
 
 - **C-PERMISSIVE is not followed: the Business Source License 1.1 for the
-  project's own code** (the owner's decision, 2026-09-04, as FerroEHR): free
+  project's own code** (the owner's decision, 2026-09-04): free
   for non-production and non-commercial production use, a commercial licence
   for other production use, Apache 2.0 four years after each version. SNOMED
   CT content is licensed separately by SNOMED International and is NEVER distributed here

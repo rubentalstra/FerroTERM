@@ -148,9 +148,9 @@ The short form:
 ## Licensing
 
 The software is source-available under the Business Source License 1.1
-([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)), the same terms as FerroEHR, with
-no open-core tier: every crate, the server, and the tools are in this
-repository under the one licence.
+([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)), with no open-core tier: the
+engine, the server, and the tools are in this repository under the one
+licence, and nothing is held back to be sold back to you.
 
 The licence lets you read, build, modify, and redistribute the source without
 a fee and without asking anyone, and it covers every non-production use:
