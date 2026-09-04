@@ -25,4 +25,10 @@ RUN apt-get update \
 WORKDIR /work
 COPY --from=build /src/target/release/ferroterm /src/target/release/ferroterm-build /src/target/release/ferroterm-bench /usr/local/bin/
 COPY bench/systems.json /work/bench/systems.json
+# The harness reads the owner's licensed releases and writes its records through
+# bind mounts, so it runs as a normal user; the image installs nothing at run
+# time. The served image is distroless and its own user (docker/Dockerfile).
+RUN useradd --uid 65532 --create-home --shell /usr/sbin/nologin bench \
+  && chown -R 65532:65532 /work
+USER 65532:65532
 ENTRYPOINT ["ferroterm-bench", "--server", "/usr/local/bin/ferroterm", "--build", "/usr/local/bin/ferroterm-build"]

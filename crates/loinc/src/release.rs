@@ -118,7 +118,7 @@ impl Release {
             .iter()
             .filter(|p| {
                 p.file_name()
-                    .and_then(|f| f.to_str())
+                    .and_then(std::ffi::OsStr::to_str)
                     .is_some_and(|f| f.eq_ignore_ascii_case(name))
             })
             .min_by_key(|p| p.components().count())
@@ -131,7 +131,7 @@ impl Release {
             .iter()
             .filter(|p| {
                 p.file_name()
-                    .and_then(|f| f.to_str())
+                    .and_then(std::ffi::OsStr::to_str)
                     .is_some_and(|f| f.ends_with(VARIANT_SUFFIX))
             })
             .map(PathBuf::as_path)

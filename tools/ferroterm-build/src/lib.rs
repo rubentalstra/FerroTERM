@@ -165,7 +165,7 @@ pub fn run(cli: &Cli) -> Result<Report, RunError> {
         let version = cli.rxnorm_version.clone().or_else(|| {
             rxnorm
                 .file_name()
-                .and_then(|n| n.to_str())
+                .and_then(std::ffi::OsStr::to_str)
                 .map(|n| n.trim_end_matches(".zip"))
                 .and_then(|n| n.rsplit_once('_').map(|(_, tail)| tail.to_owned()))
                 .filter(|tail| tail.len() == 8 && tail.bytes().all(|b| b.is_ascii_digit()))
@@ -233,10 +233,13 @@ fn run_classification(cli: &Cli) -> Result<Option<classification::Report>, RunEr
         let scratch;
         let root = if dhd.is_file() {
             scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
-            let name = dhd.file_name().and_then(|n| n.to_str()).map_or_else(
-                || String::from("delivery"),
-                |n| n.trim_end_matches(".zip").to_owned(),
-            );
+            let name = dhd
+                .file_name()
+                .and_then(std::ffi::OsStr::to_str)
+                .map_or_else(
+                    || String::from("delivery"),
+                    |n| n.trim_end_matches(".zip").to_owned(),
+                );
             archive::unpack_dhd(dhd, &scratch.path().join(name))?
         } else {
             dhd.clone()

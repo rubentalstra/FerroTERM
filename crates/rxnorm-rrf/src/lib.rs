@@ -142,7 +142,7 @@ impl Release {
             .iter()
             .find(|p| {
                 p.file_name()
-                    .and_then(|f| f.to_str())
+                    .and_then(std::ffi::OsStr::to_str)
                     .is_some_and(|f| f.eq_ignore_ascii_case(name))
             })
             .cloned()
@@ -162,7 +162,7 @@ impl Release {
         from_readme.or_else(|| {
             self.root
                 .file_name()
-                .and_then(|n| n.to_str())
+                .and_then(std::ffi::OsStr::to_str)
                 .and_then(date_suffix)
         })
     }

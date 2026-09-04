@@ -13,7 +13,10 @@ fn root_set_files(package: &str) -> Vec<PathBuf> {
         .expect("package dir")
         .map(|entry| entry.expect("entry").path())
         .filter(|path| {
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let name = path
+                .file_name()
+                .and_then(std::ffi::OsStr::to_str)
+                .unwrap_or("");
             path.extension()
                 .is_some_and(|e| e.eq_ignore_ascii_case("json"))
                 && [
@@ -83,7 +86,10 @@ fn round_trip_all<T: Json>(package: &str) {
     let mut failures = Vec::new();
     let mut rejected = 0;
     for file in &files {
-        let name = file.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let name = file
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .unwrap_or("");
         match (
             round_trip::<T>(file, "Resource"),
             rejections.iter().find(|(f, _)| *f == name),

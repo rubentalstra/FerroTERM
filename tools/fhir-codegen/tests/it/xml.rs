@@ -18,7 +18,10 @@ fn root_set_files(package: &str) -> Vec<PathBuf> {
         .expect("package dir")
         .map(|entry| entry.expect("entry").path())
         .filter(|path| {
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let name = path
+                .file_name()
+                .and_then(std::ffi::OsStr::to_str)
+                .unwrap_or("");
             path.extension()
                 .is_some_and(|e| e.eq_ignore_ascii_case("json"))
                 && [
@@ -70,7 +73,10 @@ fn round_trip_all<T: Json>(package: &str, schemas: &Schemas) {
     let mut passed = 0;
     let mut unknown_resources = 0;
     for file in &files {
-        let name = file.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let name = file
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .unwrap_or("");
         let Some(canonical) = canonical::<T>(file) else {
             continue;
         };
@@ -138,10 +144,14 @@ fn the_xml_of_examples_is_pinned() {
         .into_iter()
         .find(|p| {
             p.file_name()
-                .and_then(|n| n.to_str())
+                .and_then(std::ffi::OsStr::to_str)
                 .is_some_and(|n| n.starts_with("ConceptMap-"))
         })
-        .and_then(|p| p.file_name().and_then(|n| n.to_str()).map(str::to_owned))
+        .and_then(|p| {
+            p.file_name()
+                .and_then(std::ffi::OsStr::to_str)
+                .map(str::to_owned)
+        })
         .expect("a ConceptMap example");
     for file in [
         "ValueSet-administrative-gender.json",

@@ -122,7 +122,7 @@ impl<T: Versioned> VersionedStore<T> {
 
     /// Every stored resource, by `url` then `version`.
     pub fn iter(&self) -> impl Iterator<Item = &Arc<T>> {
-        self.by_url.values().flat_map(|versions| versions.values())
+        self.by_url.values().flat_map(BTreeMap::values)
     }
 
     /// The number of stored resources.

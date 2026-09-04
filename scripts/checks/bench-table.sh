@@ -42,7 +42,7 @@ target_marker() {
 newest_set() {
   local dir
   dir="$(find "$RECORDS" -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
-  if [ -z "$dir" ]; then
+  if [[ -z "$dir" ]]; then
     echo "bench-table: no record set under $RECORDS" >&2
     return 1
   fi
@@ -53,7 +53,7 @@ render() {
   local target="$1" dir="${2:-$(newest_set)}"
   local files
   files="$(find "$dir" -maxdepth 1 -name '*.json' | sort)"
-  if [ -z "$files" ]; then
+  if [[ -z "$files" ]]; then
     echo "bench-table: no records under $dir" >&2
     return 1
   fi
@@ -67,7 +67,7 @@ check_one() {
   marker="$(target_marker "$target")"
   rendered="$(render "$target" "$dir")" || { echo "bench-table: rendering $target failed" >&2; return 1; }
   current="$(awk -v m="$marker" '$0 ~ "<!-- " m ":begin -->" {p=1; next} $0 ~ "<!-- " m ":end -->" {p=0} p' "$file")"
-  if [ "$rendered" != "$current" ]; then
+  if [[ "$rendered" != "$current" ]]; then
     echo "bench-table: $file differs from the records; run: scripts/checks/bench-table.sh render $target" >&2
     diff <(printf '%s\n' "$current") <(printf '%s\n' "$rendered") >&2 || true
     return 1
@@ -79,7 +79,7 @@ check() {
   for target in readme book figures benchmarks; do
     check_one "$target" "$dir" || status=1
   done
-  [ "$status" -eq 0 ] && echo "bench-table: OK (the README, the book, the landing page, and the benchmarks page match the records)."
+  [[ "$status" -eq 0 ]] && echo "bench-table: OK (the README, the book, the landing page, and the benchmarks page match the records)."
   return "$status"
 }
 

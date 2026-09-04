@@ -182,21 +182,20 @@ async fn the_value_set_and_concept_map_operations_answer_under_r4() {
 #[tokio::test]
 async fn a_later_version_parameter_is_refused_under_r4() {
     let server = Server::start_with_resources();
-    for parameter_name in ["filterProperty"] {
-        let (status, body) = server
-            .get(&format!(
-                "/r4/ValueSet/$expand?url={VS_PETS}&{parameter_name}=x"
-            ))
-            .await;
-        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
-        assert_eq!(body["resourceType"], "OperationOutcome");
-        assert_eq!(body["issue"][0]["code"], "invalid");
-        let diagnostics = body["issue"][0]["diagnostics"].as_str().unwrap();
-        assert!(
-            diagnostics.contains(&format!("does not declare a parameter `{parameter_name}`")),
-            "{diagnostics}"
-        );
-    }
+    let parameter_name = "filterProperty";
+    let (status, body) = server
+        .get(&format!(
+            "/r4/ValueSet/$expand?url={VS_PETS}&{parameter_name}=x"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["resourceType"], "OperationOutcome");
+    assert_eq!(body["issue"][0]["code"], "invalid");
+    let diagnostics = body["issue"][0]["diagnostics"].as_str().unwrap();
+    assert!(
+        diagnostics.contains(&format!("does not declare a parameter `{parameter_name}`")),
+        "{diagnostics}"
+    );
     let (status, body) = server
         .post(
             "/r4/ValueSet/$expand",

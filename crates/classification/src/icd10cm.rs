@@ -97,7 +97,7 @@ pub fn locate(roots: &[PathBuf]) -> Result<Files, Icd10cmError> {
     let mut order = None;
     for root in roots {
         walk(root, &mut |path| {
-            let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+            let Some(name) = path.file_name().and_then(std::ffi::OsStr::to_str) else {
                 return;
             };
             let lower = name.to_ascii_lowercase();

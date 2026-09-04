@@ -31,7 +31,7 @@ fi
 workspace_dependencies() {
   awk '/^\[workspace\.dependencies\]/{p=1; next} /^\[/{p=0} p && /^[A-Za-z0-9_-]+[[:space:]]*=/{sub(/[[:space:]]*=.*/, ""); print}'
 }
-if [ "$packaged" -eq 0 ] && printf '%s\n' "$changed" | grep -qx 'Cargo.toml'; then
+if [[ "$packaged" -eq 0 ]] && printf '%s\n' "$changed" | grep -qx 'Cargo.toml'; then
   diff_names="$(git diff "$base" "$head" -- Cargo.toml | grep -E '^[+-][A-Za-z0-9_-]+[[:space:]]*=' | sed -E 's/^[+-]//; s/[[:space:]]*=.*//' | sort -u || true)"
   dependency_names="$( { git show "$head:Cargo.toml"; git show "$base:Cargo.toml"; } | workspace_dependencies)"
   for name in $diff_names; do
@@ -46,7 +46,7 @@ if [ "$packaged" -eq 0 ] && printf '%s\n' "$changed" | grep -qx 'Cargo.toml'; th
   done
 fi
 
-if [ "$packaged" -eq 0 ]; then
+if [[ "$packaged" -eq 0 ]]; then
   echo "crate-version-guard: no packaged content of crates/* changed."
   exit 0
 fi
@@ -56,7 +56,7 @@ package_version() {
 }
 old_ver="$(git show "$base:crates/fhir-types/Cargo.toml" 2>/dev/null | package_version || true)"
 new_ver="$(package_version < crates/fhir-types/Cargo.toml)"
-if [ -n "$old_ver" ] && [ "$old_ver" = "$new_ver" ]; then
+if [[ -n "$old_ver" ]] && [[ "$old_ver" = "$new_ver" ]]; then
   echo "::error::packaged content of crates/* changed but the crate version is still $new_ver. Bump every crates/*/Cargo.toml 'version' and every internal 'version =' requirement in the root Cargo.toml to the next 0.x, refresh Cargo.lock, or apply the 'no-crate-bump' label when the diff provably does not alter packaged bytes." >&2
   exit 1
 fi
@@ -64,12 +64,12 @@ fi
 fail=0
 for manifest in crates/*/Cargo.toml; do
   ver="$(package_version < "$manifest")"
-  [ "$ver" = "$new_ver" ] || { echo "::error::$manifest is at $ver, the crate line is $new_ver (bumps are lockstep)." >&2; fail=1; }
+  [[ "$ver" = "$new_ver" ]] || { echo "::error::$manifest is at $ver, the crate line is $new_ver (bumps are lockstep)." >&2; fail=1; }
   name="$(awk -F'"' '/^\[package\]/{p=1} p && /^name = /{print $2; exit}' "$manifest")"
   req="$(grep -E "^${name} = \{ path = \"crates/${name}\", version = \"" Cargo.toml | sed -E 's/.*version = "([^"]+)".*/\1/' || true)"
-  [ "$req" = "$new_ver" ] || { echo "::error::root Cargo.toml requires $name $req, the crate line is $new_ver." >&2; fail=1; }
+  [[ "$req" = "$new_ver" ]] || { echo "::error::root Cargo.toml requires $name $req, the crate line is $new_ver." >&2; fail=1; }
   locked="$(awk -v n="\"$name\"" '$1 == "name" && $3 == n { hit = 1; next } hit && $1 == "version" { gsub(/"/, "", $3); print $3; exit }' Cargo.lock)"
-  [ "$locked" = "$new_ver" ] || { echo "::error::Cargo.lock records $name ${locked:-nothing}, the crate line is $new_ver; run cargo update -w and commit the lock." >&2; fail=1; }
+  [[ "$locked" = "$new_ver" ]] || { echo "::error::Cargo.lock records $name ${locked:-nothing}, the crate line is $new_ver; run cargo update -w and commit the lock." >&2; fail=1; }
 done
-[ "$fail" -eq 0 ] || exit 1
+[[ "$fail" -eq 0 ]] || exit 1
 echo "crate-version-guard: packaged content changed and the crate line moved ${old_ver:-<new>} -> $new_ver, lockstep and locked."

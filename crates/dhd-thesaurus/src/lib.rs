@@ -167,12 +167,16 @@ impl Delivery {
         files.sort();
         let names: Vec<String> = files
             .iter()
-            .filter_map(|p| p.file_name().and_then(|n| n.to_str()).map(str::to_owned))
+            .filter_map(|p| {
+                p.file_name()
+                    .and_then(std::ffi::OsStr::to_str)
+                    .map(str::to_owned)
+            })
             .collect();
         let date = names.iter().find_map(|n| date_from_name(n));
         let version = root
             .file_name()
-            .and_then(|n| n.to_str())
+            .and_then(std::ffi::OsStr::to_str)
             .and_then(version_from_name);
         let delivery = Self {
             root: root.to_path_buf(),
@@ -216,7 +220,7 @@ impl Delivery {
             .iter()
             .find(|p| {
                 p.file_name()
-                    .and_then(|n| n.to_str())
+                    .and_then(std::ffi::OsStr::to_str)
                     .is_some_and(|n| n.to_lowercase().ends_with(&suffix))
             })
             .cloned()

@@ -353,7 +353,7 @@ pub fn read_bst801(path: &Path, version: Option<&str>) -> Result<Classification,
 pub fn read(path: &Path, version: Option<&str>) -> Result<Classification, AtcError> {
     let name = path
         .file_name()
-        .and_then(|n| n.to_str())
+        .and_then(std::ffi::OsStr::to_str)
         .unwrap_or_default()
         .to_ascii_uppercase();
     if name.starts_with("BST801") {

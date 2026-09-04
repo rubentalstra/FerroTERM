@@ -60,6 +60,30 @@ fn csv(header: &[&str], rows: &[Vec<String>]) -> String {
     text
 }
 
+/// One row of `Loinc.csv`: the columns the fixture varies per term.
+struct Term<'a> {
+    /// `LOINC_NUM`, without the check digit the fixture adds.
+    num: &'a str,
+    /// `COMPONENT`.
+    component: &'a str,
+    /// `CLASS`.
+    class: &'a str,
+    /// `STATUS`.
+    status: &'a str,
+    /// `CONSUMER_NAME`.
+    consumer: &'a str,
+    /// `SHORTNAME`.
+    short: &'a str,
+    /// `ORDER_OBS`.
+    order_obs: &'a str,
+    /// `EXTERNAL_COPYRIGHT_NOTICE`.
+    copyright: &'a str,
+    /// `LONG_COMMON_NAME`.
+    long: &'a str,
+    /// `CLASSTYPE`.
+    class_type: &'a str,
+}
+
 /// Writes the release under `root`.
 ///
 /// The files are `LoincTable/Loinc.csv`, `PartFile/Part.csv`,
@@ -118,16 +142,19 @@ pub fn write_release(root: &Path) -> std::io::Result<()> {
         "ValidHL7AttachmentRequest",
         "DisplayName",
     ];
-    let term = |num: &str,
-                component: &str,
-                class: &str,
-                status: &str,
-                consumer: &str,
-                short: &str,
-                order_obs: &str,
-                copyright: &str,
-                long: &str,
-                class_type: &str| {
+    let term = |term: &Term<'_>| {
+        let Term {
+            num,
+            component,
+            class,
+            status,
+            consumer,
+            short,
+            order_obs,
+            copyright,
+            long,
+            class_type,
+        } = *term;
         let mut row = vec![String::new(); term_header.len()];
         let set = |row: &mut Vec<String>, name: &str, value: &str| {
             if let Some(slot) = term_header
@@ -157,54 +184,54 @@ pub fn write_release(root: &Path) -> std::io::Result<()> {
         row
     };
     let terms = vec![
-        term(
-            GLUCOSE,
-            "Glucose",
-            "CHEM",
-            "ACTIVE",
-            "Glucose",
-            "Glucose Bld-mCnc",
-            "Both",
-            "",
-            "Glucose [Mass/volume] in Blood",
-            "1",
-        ),
-        term(
-            SODIUM,
-            "Sodium",
-            "CHEM",
-            "ACTIVE",
-            "Sodium",
-            "Sodium SerPl-sCnc",
-            "Both",
-            "Copyright example third party",
-            "Sodium [Moles/volume] in Serum or Plasma",
-            "1",
-        ),
-        term(
-            OLD_GLUCOSE,
-            "Glucose",
-            "CHEM",
-            "DEPRECATED",
-            "",
-            "Glucose Bld-mCnc old",
-            "Observation",
-            "",
-            "Glucose [Mass/volume] in Blood (superseded)",
-            "1",
-        ),
-        term(
-            SURVEY,
-            "Fasting status",
-            "PANEL.CHEM",
-            "ACTIVE",
-            "",
-            "Fasting",
-            "Order",
-            "",
-            "Fasting status [Presence]",
-            "4",
-        ),
+        term(&Term {
+            num: GLUCOSE,
+            component: "Glucose",
+            class: "CHEM",
+            status: "ACTIVE",
+            consumer: "Glucose",
+            short: "Glucose Bld-mCnc",
+            order_obs: "Both",
+            copyright: "",
+            long: "Glucose [Mass/volume] in Blood",
+            class_type: "1",
+        }),
+        term(&Term {
+            num: SODIUM,
+            component: "Sodium",
+            class: "CHEM",
+            status: "ACTIVE",
+            consumer: "Sodium",
+            short: "Sodium SerPl-sCnc",
+            order_obs: "Both",
+            copyright: "Copyright example third party",
+            long: "Sodium [Moles/volume] in Serum or Plasma",
+            class_type: "1",
+        }),
+        term(&Term {
+            num: OLD_GLUCOSE,
+            component: "Glucose",
+            class: "CHEM",
+            status: "DEPRECATED",
+            consumer: "",
+            short: "Glucose Bld-mCnc old",
+            order_obs: "Observation",
+            copyright: "",
+            long: "Glucose [Mass/volume] in Blood (superseded)",
+            class_type: "1",
+        }),
+        term(&Term {
+            num: SURVEY,
+            component: "Fasting status",
+            class: "PANEL.CHEM",
+            status: "ACTIVE",
+            consumer: "",
+            short: "Fasting",
+            order_obs: "Order",
+            copyright: "",
+            long: "Fasting status [Presence]",
+            class_type: "4",
+        }),
     ];
     let files: Vec<(&str, String)> = vec![
         ("LoincTable/Loinc.csv", csv(&term_header, &terms)),

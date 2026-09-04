@@ -17,7 +17,7 @@ names="$(awk '/code-systems:begin/{p=1; next} /code-systems:end/{p=0} p && /^\| 
   | tail -n +2 \
   | awk -F'|' '{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); gsub(/`/, "", $2); print $2}')"
 
-if [ -z "$names" ]; then
+if [[ -z "$names" ]]; then
   echo "code-systems: no rows found between the markers in $TABLE" >&2
   exit 1
 fi
@@ -26,7 +26,7 @@ status=0
 while IFS= read -r name; do
   for target in "${TARGETS[@]}"; do
     section="$(awk '/code-systems:begin/{p=1; next} /code-systems:end/{p=0} p' "$target" | tr -d '`' | tr '\n' ' ' | tr -s ' ')"
-    if [ -z "$section" ]; then
+    if [[ -z "$section" ]]; then
       echo "code-systems: $target has no code-systems:begin/end markers" >&2
       status=1
       continue
@@ -38,7 +38,7 @@ while IFS= read -r name; do
   done
 done <<< "$names"
 
-if [ "$status" -eq 0 ]; then
+if [[ "$status" -eq 0 ]]; then
   count="$(printf '%s\n' "$names" | wc -l | tr -d ' ')"
   echo "code-systems: OK ($count systems listed in the book, the README, and the landing page)."
 fi

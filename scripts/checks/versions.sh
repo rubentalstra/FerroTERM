@@ -21,9 +21,9 @@ bad() { printf '  DRIFT: %s\n' "$*" >&2; fail=1; }
 
 # --- the server bin is named `ferroterm`, as release-build.yml packages it -------
 echo "== server binary name (app/ferroterm-server/Cargo.toml <-> release-build.yml)"
-if [ -f app/ferroterm-server/Cargo.toml ]; then
+if [[ -f app/ferroterm-server/Cargo.toml ]]; then
   bin_name="$(awk '/^\[\[bin\]\]/{f=1;next} /^\[/{f=0} f && /^name[[:space:]]*=/{gsub(/[" ]/,""); sub(/^name=/,""); print; exit}' app/ferroterm-server/Cargo.toml || true)"
-  if [ "$bin_name" != "ferroterm" ]; then
+  if [[ "$bin_name" != "ferroterm" ]]; then
     bad "app/ferroterm-server/Cargo.toml [[bin]] name is '${bin_name:-unset}', release-build.yml packages 'ferroterm'"
   else
     note "OK: the bin is ferroterm"
@@ -34,12 +34,12 @@ fi
 
 # --- compose.yaml image tag default == root Cargo.toml workspace version --------
 echo "== quickstart image tag (compose.yaml <-> Cargo.toml)"
-if [ -f compose.yaml ] && [ -f Cargo.toml ]; then
+if [[ -f compose.yaml ]] && [[ -f Cargo.toml ]]; then
   compose_ver="$(grep -m1 'image: ghcr.io/rubentalstra/ferroterm:' compose.yaml | sed -E 's/.*:-([^}]*)\}.*/\1/' | tr -d '[:space:]' || true)"
   cargo_ver_c="$(awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/[" ]/,""); sub(/^version=/,""); print; exit}' Cargo.toml || true)"
-  if [ -z "$compose_ver" ]; then
+  if [[ -z "$compose_ver" ]]; then
     bad "compose.yaml has no ghcr.io/rubentalstra/ferroterm image tag default"
-  elif [ "$compose_ver" != "$cargo_ver_c" ]; then
+  elif [[ "$compose_ver" != "$cargo_ver_c" ]]; then
     bad "compose.yaml image tag default ($compose_ver) != Cargo.toml workspace version ($cargo_ver_c)"
   else
     note "OK: the quickstart pulls $compose_ver"
@@ -52,14 +52,14 @@ fi
 echo "== product version (CITATION.cff <-> Cargo.toml)"
 cff_ver=""
 [ -f CITATION.cff ] && cff_ver="$(grep -m1 '^version:' CITATION.cff | sed -E 's/^version:[[:space:]]*//; s/["'\'']//g' | tr -d '[:space:]' || true)"
-if [ -f Cargo.toml ]; then
+if [[ -f Cargo.toml ]]; then
   # The version line inside the [workspace.package] table.
   cargo_ver="$(awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/[" ]/,""); sub(/^version=/,""); print; exit}' Cargo.toml || true)"
-  if [ -z "$cff_ver" ]; then
+  if [[ -z "$cff_ver" ]]; then
     bad "Cargo.toml exists but CITATION.cff has no version"
-  elif [ -z "$cargo_ver" ]; then
+  elif [[ -z "$cargo_ver" ]]; then
     note "Cargo.toml has no [workspace.package] version yet — skipped"
-  elif [ "$cff_ver" != "$cargo_ver" ]; then
+  elif [[ "$cff_ver" != "$cargo_ver" ]]; then
     bad "CITATION.cff version ($cff_ver) != Cargo.toml workspace version ($cargo_ver)"
   else
     note "OK: both are $cff_ver"
@@ -74,21 +74,21 @@ fi
 # current one. A version below the workspace version is stale; a higher one is
 # the roadmap and is allowed. The changelog and the lock file keep history.
 echo "== stale product versions (README, website, docs <-> Cargo.toml)"
-if [ -f Cargo.toml ]; then
+if [[ -f Cargo.toml ]]; then
   current="$(awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/[" ]/,""); sub(/^version=/,""); print; exit}' Cargo.toml || true)"
-  if [ -n "$current" ]; then
+  if [[ -n "$current" ]]; then
     stale=0
     while IFS= read -r hit; do
-      [ -n "$hit" ] || continue
+      [[ -n "$hit" ]] || continue
       found="${hit##*:}"
       lowest="$(printf '%s\n%s\n' "$found" "$current" | sort -V | head -n1)"
-      if [ "$found" != "$current" ] && [ "$lowest" = "$found" ]; then
+      if [[ "$found" != "$current" ]] && [[ "$lowest" = "$found" ]]; then
         bad "stale version $found (current is $current) at ${hit%:*}"
         stale=1
       fi
     done < <(git grep -n -o -E '(^|[^0-9.])0\.0\.[0-9]+([^0-9.]|$)' -- README.md CITATION.cff compose.yaml docs website/landing website/book/src \
       | sed -E 's/^([^:]+:[0-9]+):.*[^0-9.]?(0\.0\.[0-9]+).*$/\1:\2/' || true)
-    [ "$stale" -eq 0 ] && note "OK: every release mention is $current or a later milestone"
+    [[ "$stale" -eq 0 ]] && note "OK: every release mention is $current or a later milestone"
   else
     note "Cargo.toml has no [workspace.package] version yet — skipped"
   fi
@@ -99,14 +99,14 @@ fi
 # --- The vendored ECL grammar tag == docs/VERSIONS.md ECL pin ------------------
 echo "== vendored ECL grammar (PROVENANCE.md <-> docs/VERSIONS.md)"
 ecl_prov="crates/sct-ecl/vendor/PROVENANCE.md"
-if [ -f "$ecl_prov" ]; then
+if [[ -f "$ecl_prov" ]]; then
   ecl_tag="$(sed -nE 's/^- Tag:[[:space:]]*//p' "$ecl_prov" | head -n1 | tr -d '[:space:]')"
   ecl_pin="$(awk -F'|' '$2 ~ /^[[:space:]]*ECL[[:space:]]*$/ { v = $3; gsub(/^[[:space:]]+/, "", v); split(v, w, /[[:space:]]/); print w[1]; exit }' docs/VERSIONS.md)"
-  if [ -z "$ecl_tag" ]; then
+  if [[ -z "$ecl_tag" ]]; then
     bad "$ecl_prov has no '- Tag:' line"
-  elif [ -z "$ecl_pin" ]; then
+  elif [[ -z "$ecl_pin" ]]; then
     bad "docs/VERSIONS.md has no ECL row"
-  elif [ "$ecl_tag" != "$ecl_pin" ]; then
+  elif [[ "$ecl_tag" != "$ecl_pin" ]]; then
     bad "ECL grammar: PROVENANCE.md says $ecl_tag, docs/VERSIONS.md pins $ecl_pin"
   else
     note "OK: ECL grammar $ecl_tag"
@@ -119,13 +119,13 @@ fi
 # The project's own code is BUSL-1.1 (LICENSE); a header, manifest, badge, or
 # image label still saying MIT or Apache-2.0 is a stale claim. Third-party files keep theirs.
 echo "== licence (LICENSE <-> SPDX headers, manifests, badges, labels)"
-if [ -f LICENSE ]; then
+if [[ -f LICENSE ]]; then
   stale=0
   if ! grep -q 'Business Source License 1.1' LICENSE; then
     bad "LICENSE is not the Business Source License 1.1"; stale=1
   fi
   while IFS= read -r hit; do
-    [ -n "$hit" ] || continue
+    [[ -n "$hit" ]] || continue
     bad "stale licence claim at $hit"; stale=1
   done < <(git grep -n -E 'SPDX-License-Identifier: (MIT|Apache-2\.0)|License-MIT|License-Apache|^license = "(MIT|Apache-2\.0)"|^license: (MIT|Apache-2\.0)|image\.licenses="?(MIT|Apache)' \
     -- ':!scripts/checks/versions.sh' ':!tools/fhir-codegen/vendor' ':!crates/sct-ecl/vendor' ':!crates/fhir-types' ':!crates/rf2' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
@@ -136,24 +136,24 @@ if [ -f LICENSE ]; then
       bad "$apache is not Apache-2.0 in its manifest and LICENSE"; stale=1
     fi
   done
-  [ "$stale" -eq 0 ] && note "OK: the project's own files name BUSL-1.1"
+  [[ "$stale" -eq 0 ]] && note "OK: the project's own files name BUSL-1.1"
 else
   note "no LICENSE yet — skipped"
 fi
 
 # --- Conformance suite pin: the suite script and the badges read the same commit
 echo "== conformance suite (tx-ecosystem.sh <-> docs/VERSIONS.md)"
-if [ -f scripts/checks/tx-ecosystem.sh ]; then
+if [[ -f scripts/checks/tx-ecosystem.sh ]]; then
   script_commit="$(grep -m1 '^SUITE_COMMIT=' scripts/checks/tx-ecosystem.sh | sed 's/^SUITE_COMMIT=//' | tr -d '[:space:]')"
   table_commit="$(grep -oE 'fhir-tx-ecosystem-ig. at .[0-9a-f]{40}' docs/VERSIONS.md | head -1 | grep -oE '[0-9a-f]{40}' || true)"
-  if [ -z "$table_commit" ]; then
+  if [[ -z "$table_commit" ]]; then
     bad "docs/VERSIONS.md names no tx-ecosystem suite commit"
-  elif [ "$script_commit" != "$table_commit" ]; then
+  elif [[ "$script_commit" != "$table_commit" ]]; then
     bad "tx-ecosystem.sh pins suite commit $script_commit, docs/VERSIONS.md says $table_commit"
   else
     note "OK: the suite commit is $table_commit"
   fi
-  [ -f conformance/tx-ecosystem/total.txt ] || bad "conformance/tx-ecosystem/total.txt is missing (the badges need the suite total)"
+  [[ -f conformance/tx-ecosystem/total.txt ]] || bad "conformance/tx-ecosystem/total.txt is missing (the badges need the suite total)"
   grep -qE 'test cases [0-9]+\.[0-9]+\.[0-9]+' docs/VERSIONS.md || bad "docs/VERSIONS.md names no suite test-case version (the badge label needs it)"
 else
   note "no scripts/checks/tx-ecosystem.sh yet — skipped"
@@ -166,8 +166,8 @@ if ls crates/*/Cargo.toml >/dev/null 2>&1; then
   for manifest in crates/*/Cargo.toml; do
     dir="$(dirname "$manifest")"
     name="$(awk -F'"' '/^\[package\]/{p=1} p && /^name = /{print $2; exit}' "$manifest")"
-    [ -f "$dir/README.md" ] || bad "$dir has no README.md (published crate)"
-    [ -f "$dir/LICENSE" ] || bad "$dir has no LICENSE (published crate)"
+    [[ -f "$dir/README.md" ]] || bad "$dir has no README.md (published crate)"
+    [[ -f "$dir/LICENSE" ]] || bad "$dir has no LICENSE (published crate)"
     case "$dir" in
       # the two Apache-2.0 crates carry the Apache text, checked above
       crates/fhir-types|crates/rf2) ;;
@@ -177,7 +177,7 @@ if ls crates/*/Cargo.toml >/dev/null 2>&1; then
     grep -q '^readme = "README.md"' "$manifest" || bad "$manifest names no readme"
     grep -q '^description = ' "$manifest" || bad "$manifest has no description"
     ver="$(awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' "$manifest")"
-    [ "$ver" = "$line" ] || bad "$manifest is at $ver, the crate line is $line"
+    [[ "$ver" = "$line" ]] || bad "$manifest is at $ver, the crate line is $line"
     grep -qE "^${name} = \{ path = \"crates/${name}\", version = \"${line}\" \}" Cargo.toml \
       || bad "root Cargo.toml does not require $name at $line"
   done
@@ -188,7 +188,7 @@ fi
 
 # --- rust-toolchain.toml present (sanity; channel recorded in VERSIONS.md) -----
 echo "== rust toolchain"
-if [ -f rust-toolchain.toml ]; then
+if [[ -f rust-toolchain.toml ]]; then
   chan="$(grep -m1 -E '^channel[[:space:]]*=' rust-toolchain.toml | sed -E 's/.*=[[:space:]]*//; s/["'\'']//g' | tr -d '[:space:]' || true)"
   note "rust-toolchain.toml channel: ${chan:-unset}"
 else
@@ -197,10 +197,10 @@ fi
 
 # --- Vendored FHIR package pins == docs/VERSIONS.md table ----------------------
 echo "== vendored FHIR package pins (PROVENANCE.md <-> docs/VERSIONS.md)"
-if [ -d tools/fhir-codegen/vendor ]; then
+if [[ -d tools/fhir-codegen/vendor ]]; then
   found=0
   for prov in tools/fhir-codegen/vendor/*/PROVENANCE.md; do
-    [ -f "$prov" ] || continue
+    [[ -f "$prov" ]] || continue
     found=1
     pkg="$(basename "$(dirname "$prov")")"
     prov_ver="$(sed -nE 's/^- Version:[[:space:]]*//p' "$prov" | head -n1 | tr -d '[:space:]')"
@@ -209,25 +209,25 @@ if [ -d tools/fhir-codegen/vendor ]; then
     pkg_json="tools/fhir-codegen/vendor/$pkg/package/package.json"
     json_ver=""
     [ -f "$pkg_json" ] && json_ver="$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$pkg_json" | head -n1)"
-    if [ -z "$prov_ver" ]; then
+    if [[ -z "$prov_ver" ]]; then
       bad "$prov has no '- Version:' line"
-    elif [ -z "$pin_ver" ]; then
+    elif [[ -z "$pin_ver" ]]; then
       bad "$pkg is vendored ($prov_ver) but has no row in the docs/VERSIONS.md FHIR table"
-    elif [ "$prov_ver" != "$pin_ver" ]; then
+    elif [[ "$prov_ver" != "$pin_ver" ]]; then
       bad "$pkg: PROVENANCE.md says $prov_ver, docs/VERSIONS.md pins $pin_ver"
-    elif [ -n "$json_ver" ] && [ "$json_ver" != "$prov_ver" ]; then
+    elif [[ -n "$json_ver" ]] && [[ "$json_ver" != "$prov_ver" ]]; then
       bad "$pkg: package.json says $json_ver, PROVENANCE.md says $prov_ver"
     else
       note "OK: $pkg $prov_ver (PROVENANCE.md, package.json, and the pin table agree)"
     fi
   done
-  [ "$found" -eq 1 ] || note "vendor/ present but holds no PROVENANCE.md yet — skipped"
+  [[ "$found" -eq 1 ]] || note "vendor/ present but holds no PROVENANCE.md yet — skipped"
 else
   note "no vendored FHIR packages yet — skipped"
 fi
 
 echo
-if [ "$fail" -ne 0 ]; then
+if [[ "$fail" -ne 0 ]]; then
   echo "versions: DRIFT detected (see above)." >&2
   exit 1
 fi

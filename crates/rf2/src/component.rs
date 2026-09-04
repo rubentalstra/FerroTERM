@@ -13,7 +13,7 @@ use crate::time::EffectiveTime;
 /// A row type of a component file.
 pub trait Component: Sized {
     /// The header the file must carry.
-    const COLUMNS: &'static [&'static str];
+    const COLUMNS: &[&str];
 
     /// Parses one record.
     ///
@@ -101,7 +101,7 @@ pub struct Concept {
 }
 
 impl Component for Concept {
-    const COLUMNS: &'static [&'static str] = &[
+    const COLUMNS: &[&str] = &[
         "id",
         "effectiveTime",
         "active",
@@ -138,7 +138,7 @@ pub struct Description {
 }
 
 impl Component for Description {
-    const COLUMNS: &'static [&'static str] = &[
+    const COLUMNS: &[&str] = &[
         "id",
         "effectiveTime",
         "active",
@@ -189,7 +189,7 @@ pub struct Relationship {
 }
 
 impl Component for Relationship {
-    const COLUMNS: &'static [&'static str] = &[
+    const COLUMNS: &[&str] = &[
         "id",
         "effectiveTime",
         "active",
@@ -288,7 +288,7 @@ pub struct ConcreteRelationship {
 }
 
 impl Component for ConcreteRelationship {
-    const COLUMNS: &'static [&'static str] = &[
+    const COLUMNS: &[&str] = &[
         "id",
         "effectiveTime",
         "active",
@@ -333,7 +333,7 @@ pub struct AlternateIdentifier {
 }
 
 impl Component for AlternateIdentifier {
-    const COLUMNS: &'static [&'static str] = &[
+    const COLUMNS: &[&str] = &[
         "alternateIdentifier",
         "effectiveTime",
         "active",

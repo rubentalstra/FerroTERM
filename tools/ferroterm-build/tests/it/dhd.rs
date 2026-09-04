@@ -112,7 +112,10 @@ fn the_delivery_builds_from_a_directory_or_a_zip_with_its_concept_maps() {
     let mut zip = zip::ZipWriter::new(file);
     for entry in std::fs::read_dir(&root).expect("reads") {
         let path = entry.expect("entry").path();
-        let name = path.file_name().and_then(|n| n.to_str()).expect("name");
+        let name = path
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .expect("name");
         zip.start_file(
             format!("{DIRECTORY}/{name}"),
             zip::write::SimpleFileOptions::default(),
