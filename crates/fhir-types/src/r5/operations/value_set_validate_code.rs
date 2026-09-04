@@ -102,6 +102,12 @@ pub struct ValueSetValidateCodeRequest {
     /// to be 'false', i.e. the validation will fail.
     pub lenient_display_validation: Option<super::super::primitives::Boolean>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// When 'true', the server will not perform the additional validation tasks
+    /// beyond validating membership in the value set (e.g. the server won't
+    /// check displays, etc.)
+    pub valueset_membership_only: Option<super::super::primitives::Boolean>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
     /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). If
     /// true, the terminology server is required to infer the system from
     /// evaluation of the value set definition. The inferSystem parameter is
@@ -267,6 +273,7 @@ impl ValueSetValidateCodeRequest {
         let mut field_display_language: Option<super::super::primitives::Code> = None;
         let mut field_use_supplement: Vec<super::super::primitives::Canonical> = Vec::new();
         let mut field_lenient_display_validation: Option<super::super::primitives::Boolean> = None;
+        let mut field_valueset_membership_only: Option<super::super::primitives::Boolean> = None;
         let mut field_infer_system: Option<super::super::primitives::Boolean> = None;
         let mut field_system_version_canonical: Vec<super::super::primitives::Canonical> =
             Vec::new();
@@ -877,6 +884,36 @@ impl ValueSetValidateCodeRequest {
                         }
                     });
                 }
+                "valueset-membership-only" => {
+                    if field_valueset_membership_only.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "valueset-membership-only",
+                        });
+                    }
+                    field_valueset_membership_only = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "valueset-membership-only",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "valueset-membership-only",
+                                },
+                            );
+                        }
+                    });
+                }
                 "inferSystem" => {
                     if field_infer_system.is_some() {
                         return Err(super::super::super::operation::ParametersError::Repeated {
@@ -1107,6 +1144,7 @@ impl ValueSetValidateCodeRequest {
             display_language: field_display_language,
             use_supplement: field_use_supplement,
             lenient_display_validation: field_lenient_display_validation,
+            valueset_membership_only: field_valueset_membership_only,
             infer_system: field_infer_system,
             system_version_canonical: field_system_version_canonical,
             check_system_version: field_check_system_version,
@@ -1252,6 +1290,15 @@ impl ValueSetValidateCodeRequest {
         if let Some(value) = &self.lenient_display_validation {
             out.push(super::super::parameters::ParametersParameter {
                 name: "lenient-display-validation".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.valueset_membership_only {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "valueset-membership-only".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
                     value.clone(),
                 )),
@@ -2151,6 +2198,18 @@ pub const VALUE_SET_VALIDATE_CODE: super::super::super::operation::Operation =
             },
             super::super::super::operation::Parameter {
                 name: "lenient-display-validation",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("boolean"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "valueset-membership-only",
                 usage: super::super::super::operation::ParameterUse::In,
                 cardinality: super::super::super::operation::Cardinality {
                     min: 0,

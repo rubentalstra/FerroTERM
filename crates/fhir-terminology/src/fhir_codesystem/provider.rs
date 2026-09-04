@@ -177,7 +177,19 @@ impl FhirCodeSystem {
         }
     }
 
-    fn status_of(entry: &ConceptEntry) -> Status {
+    /// Whether `code` is the standard `notSelectable` property: by its code, or
+    /// by a declaration under the standard URI
+    /// (<https://hl7.org/fhir/R4B/codesystem-concept-properties.html>).
+    fn abstract_property(&self, code: &str) -> bool {
+        code == NOT_SELECTABLE
+            || self.model.properties.iter().any(|p| {
+                p.code == code
+                    && p.uri.as_deref()
+                        == Some("http://hl7.org/fhir/concept-properties#notSelectable")
+            })
+    }
+
+    fn status_of(&self, entry: &ConceptEntry) -> Status {
         let mut active = true;
         let mut abstract_concept = false;
         let mut reason = None;
@@ -197,7 +209,9 @@ impl FhirCodeSystem {
                     active = false;
                     reason.get_or_insert_with(|| format!("deprecated {when}"));
                 }
-                (NOT_SELECTABLE, PropertyValue::Boolean(true)) => abstract_concept = true,
+                (code, PropertyValue::Boolean(true)) if self.abstract_property(code) => {
+                    abstract_concept = true;
+                }
                 _ => {}
             }
         }
@@ -280,7 +294,10 @@ impl CodeSystemProvider for FhirCodeSystem {
     }
 
     fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
-        Ok(self.entry(concept).map(Self::status_of).unwrap_or_default())
+        Ok(self
+            .entry(concept)
+            .map(|entry| self.status_of(entry))
+            .unwrap_or_default())
     }
 
     fn designations(
@@ -310,7 +327,7 @@ impl CodeSystemProvider for FhirCodeSystem {
         let Some(entry) = self.entry(concept) else {
             return Ok(Vec::new());
         };
-        let status = Self::status_of(entry);
+        let status = self.status_of(entry);
         let mut out = vec![Property {
             code: INACTIVE.to_owned(),
             value: PropertyValue::Boolean(!status.active),
@@ -325,7 +342,7 @@ impl CodeSystemProvider for FhirCodeSystem {
         }
         for property in &entry.properties {
             if property.code == INACTIVE
-                || property.code == NOT_SELECTABLE
+                || (property.code == NOT_SELECTABLE && status.abstract_concept)
                 || property.code == PARENT
                 || property.code == CHILD
             {

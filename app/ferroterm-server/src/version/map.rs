@@ -335,6 +335,10 @@ macro_rules! map {
                     force_valueset_version: canonicals(&request.force_valueset_version),
                     infer_system: request.infer_system.as_ref().and_then(|b| b.value),
                     active_only: request.active_only.as_ref().and_then(|b| b.value),
+                    membership_only: request
+                        .valueset_membership_only
+                        .as_ref()
+                        .and_then(|b| b.value),
                     lenient_display_validation: request
                         .lenient_display_validation
                         .as_ref()

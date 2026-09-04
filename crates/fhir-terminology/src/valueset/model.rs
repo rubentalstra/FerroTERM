@@ -10,6 +10,9 @@ pub struct ValueSetModel {
     pub url: String,
     /// `version`.
     pub version: Option<String>,
+    /// `language`: the language of the value set's displays, the default
+    /// display language of its expansions and validations.
+    pub language: Option<String>,
     /// The supplements the value set asks for (`valueset-supplement`
     /// extension, canonicals).
     pub supplements: Vec<String>,

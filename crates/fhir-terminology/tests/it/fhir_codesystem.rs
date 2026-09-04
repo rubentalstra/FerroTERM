@@ -546,3 +546,58 @@ fn standards_status_marks_deprecated_concepts_and_withdrawn_designations() {
         None
     );
 }
+
+#[test]
+fn not_selectable_is_known_by_its_standard_uri_and_a_declared_false_stays_a_property() {
+    use fhir_types::codec::{Json, Path};
+    let build = |property_code: &str| {
+        let object = serde_json::json!({
+            "resourceType": "CodeSystem", "url": "http://example.org/fhir/CodeSystem/selectable",
+            "version": "1", "status": "active", "content": "complete", "caseSensitive": true,
+            "property": [{"code": property_code, "uri": "http://hl7.org/fhir/concept-properties#notSelectable", "type": "boolean"}],
+            "concept": [
+                {"code": "codeU", "display": "Unknown"},
+                {"code": "codeS", "display": "Selectable", "property": [{"code": property_code, "valueBoolean": false}]},
+                {"code": "codeNS", "display": "Not selectable", "property": [{"code": property_code, "valueBoolean": true}]}
+            ]
+        });
+        let resource = fhir_types::r5::code_system::CodeSystem::from_json(
+            object.as_object().expect("object"),
+            &mut Path::root("CodeSystem"),
+        )
+        .expect("decodes");
+        let model =
+            fhir_terminology::fhir_codesystem::convert::r5::convert(&resource).expect("converts");
+        FhirCodeSystem::new(model).expect("builds")
+    };
+    for property_code in ["notSelectable", "not-selectable"] {
+        let provider = build(property_code);
+        let ns = provider.locate("codeNS").expect("locates").expect("codeNS");
+        assert!(
+            provider
+                .status(ns.concept)
+                .expect("status")
+                .abstract_concept,
+            "{property_code}: the standard URI marks the concept abstract"
+        );
+        let s = provider.locate("codeS").expect("locates").expect("codeS");
+        assert!(!provider.status(s.concept).expect("status").abstract_concept);
+        let declared_false = provider
+            .properties(s.concept)
+            .expect("properties")
+            .into_iter()
+            .any(|p| p.code == property_code && p.value == PropertyValue::Boolean(false));
+        assert!(
+            declared_false,
+            "{property_code}: an explicit false is still listed"
+        );
+        let selectable = provider
+            .filter(&Filter {
+                property: property_code.to_owned(),
+                op: FilterOperator::Equal,
+                value: String::from("false"),
+            })
+            .expect("filters");
+        assert_eq!(codes(&provider, &selectable), ["codeS"], "{property_code}");
+    }
+}

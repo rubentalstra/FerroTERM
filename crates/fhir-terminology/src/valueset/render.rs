@@ -118,6 +118,7 @@ macro_rules! render_value_set {
                 ValueSet {
                     url: Some(model.url.as_str().into()),
                     version: model.version.as_deref().map(Into::into),
+                    language: model.language.as_deref().map(Into::into),
                     name: model.name.as_deref().map(Into::into),
                     title: model.title.as_deref().map(Into::into),
                     status: model.status.as_str().into(),

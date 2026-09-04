@@ -90,6 +90,11 @@ const PRE_ADOPTED: &[(&str, ParameterUse, &str)] = &[
     (
         VALUE_SET_VALIDATE_CODE,
         ParameterUse::In,
+        "valueset-membership-only",
+    ),
+    (
+        VALUE_SET_VALIDATE_CODE,
+        ParameterUse::In,
         "lenient-display-validation",
     ),
     (VALUE_SET_VALIDATE_CODE, ParameterUse::Out, "code"),
