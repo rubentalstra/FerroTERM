@@ -149,7 +149,7 @@ fn find(root: &Path, prefix: &'static str) -> Result<Option<PathBuf>, GStandaard
         if path.is_file()
             && path
                 .file_name()
-                .and_then(|n| n.to_str())
+                .and_then(std::ffi::OsStr::to_str)
                 .is_some_and(|n| n.to_ascii_uppercase().starts_with(prefix))
         {
             return Ok(Some(path));

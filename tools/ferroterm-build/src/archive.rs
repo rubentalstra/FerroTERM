@@ -169,7 +169,7 @@ pub fn unpack_loinc(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveErro
         let Some(name) = entry.enclosed_name() else {
             continue;
         };
-        let Some(file_name) = name.file_name().and_then(|f| f.to_str()) else {
+        let Some(file_name) = name.file_name().and_then(std::ffi::OsStr::to_str) else {
             continue;
         };
         let wanted = LOINC_FILES
@@ -227,7 +227,7 @@ fn unpack_matching(
         let Some(name) = entry.enclosed_name() else {
             continue;
         };
-        let Some(file_name) = name.file_name().and_then(|f| f.to_str()) else {
+        let Some(file_name) = name.file_name().and_then(std::ffi::OsStr::to_str) else {
             continue;
         };
         if entry.is_dir() || !wanted(file_name) {
@@ -325,7 +325,7 @@ pub fn unpack_rxnorm(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveErr
     })?;
     let has_conso = written.iter().any(|p| {
         p.file_name()
-            .and_then(|f| f.to_str())
+            .and_then(std::ffi::OsStr::to_str)
             .is_some_and(|f| f.eq_ignore_ascii_case(rxnorm_rrf::CONSO))
     });
     if !has_conso {
@@ -370,7 +370,7 @@ pub fn unpack_labcodeset(zip_path: &Path, into: &Path) -> Result<PathBuf, Archiv
     let written = unpack_matching(zip_path, into, &|name| {
         let path = Path::new(name);
         path.file_stem()
-            .and_then(|n| n.to_str())
+            .and_then(std::ffi::OsStr::to_str)
             .is_some_and(|n| n.starts_with("labconcepts"))
             && path
                 .extension()

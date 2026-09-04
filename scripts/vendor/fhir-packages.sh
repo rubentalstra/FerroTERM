@@ -47,7 +47,7 @@ pin_for() {
 vendor_one() {
   local pkg="$1" ver dest meta shasum tarball_url tmp got sha256 license fetched
   ver="$(pin_for "$pkg")"
-  [ -n "$ver" ] || die "no pin for $pkg in $pins (add a row to the FHIR table)"
+  [[ -n "$ver" ]] || die "no pin for $pkg in $pins (add a row to the FHIR table)"
   case "$ver" in
     *[!A-Za-z0-9.-]*) die "pin for $pkg is not a plain version: '$ver'" ;;
   esac
@@ -61,24 +61,24 @@ vendor_one() {
     hl7.fhir.r6.*) meta_url="$registry2/$pkg" ;;
     *) meta_url="$registry/$pkg" ;;
   esac
-  meta="$(curl -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" "$meta_url")" \
+  meta="$(curl --proto '=https' --tlsv1.2 -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" "$meta_url")" \
     || die "cannot read registry metadata for $pkg"
   shasum="$(printf '%s' "$meta" | jq -r --arg v "$ver" '.versions[$v].dist.shasum // empty')"
   tarball_url="$(printf '%s' "$meta" | jq -r --arg v "$ver" '.versions[$v].dist.tarball // empty')"
-  [ -n "$shasum" ] || die "the registry lists no version $ver of $pkg"
+  [[ -n "$shasum" ]] || die "the registry lists no version $ver of $pkg"
 
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' RETURN
-  [ -n "$tarball_url" ] || die "the registry lists no tarball for $pkg $ver"
-  curl -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" -o "$tmp/pkg.tgz" "$tarball_url" \
+  [[ -n "$tarball_url" ]] || die "the registry lists no tarball for $pkg $ver"
+  curl --proto '=https' --tlsv1.2 -fsSL -A "ferroterm-vendor (scripts/vendor/fhir-packages.sh)" -o "$tmp/pkg.tgz" "$tarball_url" \
     || die "download of $pkg $ver failed"
   got="$(shasum -a 1 "$tmp/pkg.tgz" | cut -d' ' -f1)"
-  [ "$got" = "$shasum" ] || die "checksum mismatch for $pkg $ver: registry $shasum, downloaded $got"
+  [[ "$got" = "$shasum" ]] || die "checksum mismatch for $pkg $ver: registry $shasum, downloaded $got"
   sha256="$(shasum -a 256 "$tmp/pkg.tgz" | cut -d' ' -f1)"
 
   mkdir -p "$tmp/x"
   tar -xzf "$tmp/pkg.tgz" -C "$tmp/x"
-  [ -f "$tmp/x/package/package.json" ] || die "$pkg $ver has no package/package.json"
+  [[ -f "$tmp/x/package/package.json" ]] || die "$pkg $ver has no package/package.json"
   # A FHIR package never carries SNOMED CT release files; refuse anything that
   # looks like RF2 before it can reach the tree (.claude/rules/vendored-inputs.md).
   if find "$tmp/x" -type f \( -name 'sct2_*' -o -name 'der2_*' -o -name '*.rf2' \) | grep -q .; then
@@ -111,7 +111,7 @@ PROV
 }
 
 packages=("$@")
-[ "${#packages[@]}" -gt 0 ] || packages=("${default_packages[@]}")
+[[ "${#packages[@]}" -gt 0 ]] || packages=("${default_packages[@]}")
 for pkg in "${packages[@]}"; do
   vendor_one "$pkg"
 done

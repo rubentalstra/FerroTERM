@@ -374,7 +374,7 @@ fn collect(
             collect(&path, release_type, out)?;
             continue;
         }
-        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        let Some(name) = path.file_name().and_then(std::ffi::OsStr::to_str) else {
             continue;
         };
         if let Ok(parsed) = FileName::parse(name)

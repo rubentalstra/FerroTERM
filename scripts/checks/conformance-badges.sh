@@ -18,17 +18,17 @@ mkdir -p "$out"
 total="$(tr -d '[:space:]' < conformance/tx-ecosystem/total.txt)"
 # The suite version the pin table names (docs/VERSIONS.md is the source of truth).
 suite="$(grep -oE 'test cases [0-9]+\.[0-9]+\.[0-9]+' docs/VERSIONS.md | head -1 | sed 's/test cases //')"
-[ -n "$suite" ] || { echo "conformance-badges: docs/VERSIONS.md names no suite version" >&2; exit 1; }
+[[ -n "$suite" ]] || { echo "conformance-badges: docs/VERSIONS.md names no suite version" >&2; exit 1; }
 
 for version in r4 r4b r5 r6; do
   list=conformance/tx-ecosystem/passing.txt
-  [ "$version" = r4b ] || list="conformance/tx-ecosystem/passing-$version.txt"
-  [ -f "$list" ] || continue
+  [[ "$version" = r4b ]] || list="conformance/tx-ecosystem/passing-$version.txt"
+  [[ -f "$list" ]] || continue
   passed="$(grep -c . "$list" || true)"
   # Colour by share: grey below a quarter, orange to three quarters, green above.
   share=$((passed * 100 / total))
-  if [ "$share" -lt 25 ]; then colour=lightgrey
-  elif [ "$share" -lt 75 ]; then colour=orange
+  if [[ "$share" -lt 25 ]]; then colour=lightgrey
+  elif [[ "$share" -lt 75 ]]; then colour=orange
   else colour=brightgreen
   fi
   label="tx-ecosystem $suite $(printf '%s' "$version" | tr '[:lower:]' '[:upper:]')"

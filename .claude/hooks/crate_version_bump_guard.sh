@@ -18,14 +18,14 @@ if command -v jq >/dev/null 2>&1; then
 else
   cmd="$payload"
 fi
-[ -n "${cmd:-}" ] || exit 0
+[[ -n "${cmd:-}" ]] || exit 0
 printf '%s' "$cmd" | grep -qE '(^|[;&|[:space:]])git[[:space:]]+push([[:space:]]|$)' || exit 0
 printf '%s' "$cmd" | grep -q 'FERROTERM_SKIP_CRATE_BUMP_GUARD=1' && exit 0
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
-[ -n "$base" ] || exit 0
-[ -x scripts/checks/crate-version-guard.sh ] || exit 0
+[[ -n "$base" ]] || exit 0
+[[ -x scripts/checks/crate-version-guard.sh ]] || exit 0
 
 if ! out="$(scripts/checks/crate-version-guard.sh "$base" HEAD 2>&1)"; then
   printf '%s\n' "$out" >&2

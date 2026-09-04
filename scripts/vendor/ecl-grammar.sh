@@ -29,16 +29,16 @@ done
 
 # The pin: the first word of the second cell of the ECL row.
 tag="$(awk -F'|' '$2 ~ /^[[:space:]]*ECL[[:space:]]*$/ { v = $3; gsub(/^[[:space:]]+/, "", v); split(v, w, /[[:space:]]/); print w[1]; exit }' "$pins")"
-[ -n "$tag" ] || die "no ECL row in $pins"
+[[ -n "$tag" ]] || die "no ECL row in $pins"
 case "$tag" in *[!0-9.]*) die "ECL pin is not a plain tag: '$tag'" ;; esac
 
 sha="$(git ls-remote --tags "$repo" "refs/tags/$tag" | awk '{ print $1; exit }')"
-[ -n "$sha" ] || die "tag $tag not found at $repo"
+[[ -n "$sha" ]] || die "tag $tag not found at $repo"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 echo "== ECL $tag ($sha)"
-curl -sfL "$repo/archive/$sha.tar.gz" -o "$tmp/ecl.tar.gz"
+curl --proto '=https' --tlsv1.2 -sfL "$repo/archive/$sha.tar.gz" -o "$tmp/ecl.tar.gz"
 tar -xzf "$tmp/ecl.tar.gz" -C "$tmp"
 src="$(find "$tmp" -mindepth 1 -maxdepth 1 -type d | head -n1)"
 

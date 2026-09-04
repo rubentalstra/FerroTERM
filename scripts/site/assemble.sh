@@ -36,7 +36,7 @@ cp -R website/book/book/. "$OUT/docs/"
 
 block="$(mktemp)"
 trap 'rm -f "$block"' EXIT
-if roadmap > "$block" 2>/dev/null && [ -s "$block" ]; then
+if roadmap > "$block" 2>/dev/null && [[ -s "$block" ]]; then
   awk -v blockfile="$block" '
     /<!-- roadmap:begin -->/ { print; while ((getline line < blockfile) > 0) print line; skip = 1; next }
     /<!-- roadmap:end -->/ { skip = 0 }

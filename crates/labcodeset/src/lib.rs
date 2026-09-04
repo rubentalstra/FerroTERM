@@ -384,7 +384,7 @@ fn find_document(root: &Path) -> Result<PathBuf, LabcodesetError> {
 /// Whether `path` names a `labconcepts-*.xml` document.
 fn is_document(path: &Path) -> bool {
     path.file_stem()
-        .and_then(|n| n.to_str())
+        .and_then(std::ffi::OsStr::to_str)
         .is_some_and(|n| n.starts_with("labconcepts"))
         && path
             .extension()

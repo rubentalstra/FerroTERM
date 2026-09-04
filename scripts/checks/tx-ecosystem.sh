@@ -26,7 +26,7 @@ out=target/tx-ecosystem/out
 mode=general
 fhir=r4b
 index=""
-while [ $# -gt 0 ]; do
+while [[ $# -gt 0 ]]; do
   case "$1" in
     --server) server=$2; shift 2 ;;
     --out) out=$2; shift 2 ;;
@@ -41,10 +41,10 @@ case "$fhir" in
   *) echo "--fhir must be r4, r4b, or r5, not '$fhir'" >&2; exit 2 ;;
 esac
 PASSING=conformance/tx-ecosystem/passing
-if [ "$fhir" != r4b ]; then
+if [[ "$fhir" != r4b ]]; then
   PASSING=$PASSING-$fhir
 fi
-if [ "$mode" != general ]; then
+if [[ "$mode" != general ]]; then
   PASSING=$PASSING-$mode
 fi
 PASSING=$PASSING.txt
@@ -52,15 +52,15 @@ PASSING=$PASSING.txt
 work=target/tx-ecosystem
 mkdir -p "$work"
 jar=$work/validator_cli-$VALIDATOR_VERSION.jar
-if [ ! -f "$jar" ]; then
+if [[ ! -f "$jar" ]]; then
   echo "fetching validator_cli.jar $VALIDATOR_VERSION"
-  curl -sSL -o "$jar.tmp" "https://github.com/hapifhir/org.hl7.fhir.core/releases/download/$VALIDATOR_VERSION/validator_cli.jar"
+  curl --proto '=https' --tlsv1.2 -sSL -o "$jar.tmp" "https://github.com/hapifhir/org.hl7.fhir.core/releases/download/$VALIDATOR_VERSION/validator_cli.jar"
   mv "$jar.tmp" "$jar"
 fi
 echo "$VALIDATOR_SHA256  $jar" | shasum -a 256 -c - >/dev/null
 
 suite=$work/suite
-if [ ! -d "$suite/tests" ]; then
+if [[ ! -d "$suite/tests" ]]; then
   echo "fetching the suite at $SUITE_COMMIT"
   rm -rf "$suite"
   git init -q "$suite"
@@ -71,9 +71,9 @@ if [ ! -d "$suite/tests" ]; then
 fi
 
 started=""
-if [ -z "$server" ]; then
+if [[ -z "$server" ]]; then
   server=http://127.0.0.1:8098/$fhir
-  if [ -n "$index" ]; then
+  if [[ -n "$index" ]]; then
     export FERROTERM_INDEX="$index"
   fi
   FERROTERM_LISTEN=127.0.0.1:8098 FERROTERM_LOG_FORMAT=json target/release/ferroterm > "$work/server.log" 2>&1 &
@@ -89,20 +89,20 @@ rm -rf "$out"
 mkdir -p "$out"
 # The runner exits non-zero while any test fails; the pass list decides here.
 modes=(-mode "$mode")
-if [ "$mode" != general ]; then
+if [[ "$mode" != general ]]; then
   modes=(-mode '!general' -mode "$mode")
 fi
 java -jar "$jar" txTests -tx "$server" -test-version "$suite/tests" "${modes[@]}" \
   -output "$out" -ssrf-protection-enabled=false > "$out/runner.log" 2>&1 || true
 report=$out/report.json
-if [ ! -f "$report" ]; then
+if [[ ! -f "$report" ]]; then
   echo "the runner produced no report; see $out/runner.log" >&2
   tail -n 40 "$out/runner.log" >&2
   exit 1
 fi
 
 total=$(jq '(.test // []) | length' "$report")
-if [ "$total" = 0 ]; then
+if [[ "$total" = 0 ]]; then
   echo "the runner ran no test; see $out/runner.log and $work/server.log" >&2
   tail -n 20 "$out/runner.log" >&2
   tail -n 5 "$work/server.log" >&2 2>/dev/null || true
@@ -113,7 +113,7 @@ fi
 # (icd-11, tx.fhir.org, ...) selects a subset, so only the general run is held
 # to it.
 committed_total=$(tr -d '[:space:]' < conformance/tx-ecosystem/total.txt)
-if [ "$mode" = general ] && [ "$committed_total" != "$total" ]; then
+if [[ "$mode" = general ]] && [[ "$committed_total" != "$total" ]]; then
   echo "tx-ecosystem: the suite ran $total tests but conformance/tx-ecosystem/total.txt says $committed_total; update it in this change" >&2
   exit 1
 fi
@@ -123,11 +123,11 @@ echo "tx-ecosystem: $passed of $total $mode tests pass on /$fhir ($(grep -a -o '
 
 regressions=$(comm -23 "$PASSING" "$out/passing.txt")
 gains=$(comm -13 "$PASSING" "$out/passing.txt")
-if [ -n "$gains" ]; then
+if [[ -n "$gains" ]]; then
   echo "newly passing (add them to $PASSING):"
   for name in $gains; do echo "  + $name"; done
 fi
-if [ -n "$regressions" ]; then
+if [[ -n "$regressions" ]]; then
   echo "REGRESSION: on the pass list but failing now:" >&2
   for name in $regressions; do
     echo "  - $name" >&2
