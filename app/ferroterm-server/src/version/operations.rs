@@ -149,7 +149,37 @@ macro_rules! operations {
                 parameters::respond(&map::value_set_validation_parameters(&validation))
             }
 
+            /// The refusal of `reverse` on a version that does not declare it.
+            ///
+            /// R5 replaced `reverse` with the `target*` inputs
+            /// (<https://hl7.org/fhir/R5/conceptmap-operation-translate.html>); the
+            /// ecosystem wants `not-supported` naming them.
+            fn reverse_refusal<'a>(mut names: impl Iterator<Item = &'a str>) -> Result<(), Failure> {
+                if CONCEPT_MAP_TRANSLATE
+                    .parameter(fhir_types::operation::ParameterUse::In, "reverse")
+                    .is_none()
+                    && names.any(|name| name == "reverse")
+                {
+                    return Err(Failure::new(
+                        axum::http::StatusCode::BAD_REQUEST,
+                        "not-supported",
+                        format!(
+                            "The 'reverse' parameter is not defined in {}: name the target concept with targetCode, targetCoding or targetCodeableConcept instead",
+                            stringify!($fhir).to_uppercase()
+                        ),
+                    )
+                    .kind("not-supported"));
+                }
+                Ok(())
+            }
+
             fn run_translate(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
+                reverse_refusal(
+                    parameters
+                        .parameter
+                        .iter()
+                        .filter_map(|p| p.name.value.as_deref()),
+                )?;
                 let request = ConceptMapTranslateRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let translation =
@@ -343,7 +373,8 @@ macro_rules! operations {
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
                 finish(
-                    from_query(&state, &CONCEPT_MAP_TRANSLATE, &headers, &query)
+                    reverse_refusal(query.iter().map(|(name, _)| name.as_str()))
+                        .and_then(|()| from_query(&state, &CONCEPT_MAP_TRANSLATE, &headers, &query))
                         .and_then(|(scope, p)| run_translate(&scope, &p)),
                 )
             }

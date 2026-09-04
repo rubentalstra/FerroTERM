@@ -146,14 +146,16 @@ fn no_map_and_unmapped_rules_still_answer() {
         ..TranslateInput::default()
     };
     let translation = run(&world, &fish);
-    assert!(!translation.result);
+    // NOTE: an explicit `noMap` is an answer, so `result` is true and there is no
+    // message (the ecosystem's `translate-4`, <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/>).
+    assert!(translation.result);
     assert_eq!(equivalence(&translation.matches[0]), "unmatched");
     assert!(translation.matches[0].origin.no_map);
     assert_eq!(
         translation.matches[0].origin.source_comment.as_deref(),
         Some("fish have no colour")
     );
-    assert!(translation.message.is_some());
+    assert!(translation.message.is_none());
     let kitten = TranslateInput {
         url: Some(CM_ANIMALS_COLOURS.to_owned()),
         code: Some(String::from("kitten")),
@@ -178,7 +180,13 @@ fn no_map_and_unmapped_rules_still_answer() {
     );
     assert_eq!(
         translation.matches[0].origin.origin_map,
-        format!("{CM_ANIMALS_COLOURS}|1.0")
+        format!("{CM_FALLBACK}|1.0"),
+        "a chained match is the referring map's"
+    );
+    assert_eq!(
+        translation.used_concept_maps,
+        [format!("{CM_ANIMALS_COLOURS}|1.0")],
+        "the chained map is reported as used"
     );
 }
 

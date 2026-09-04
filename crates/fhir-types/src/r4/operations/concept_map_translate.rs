@@ -71,6 +71,11 @@ pub struct ConceptMapTranslateRequest {
     pub reverse: Option<super::super::primitives::Boolean>,
     /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
     /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The code that is to be translated. If a code is provided, a system must
+    /// be provided
+    pub source_code: Option<super::super::primitives::Code>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
     /// The system for the sourceCode to be translated. Note: the previous name
     /// of this input parameter was \`system\`, and servers MAY choose to still
     /// accept that name
@@ -81,6 +86,49 @@ pub struct ConceptMapTranslateRequest {
     /// previous name of this input parameter was \`version\`, and servers MAY
     /// choose to still accept that name.
     pub source_version: Option<super::super::primitives::String>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Limits the scope of the $translate operation to source codes
+    /// (ConceptMap.group.element.code) that are members of this value set.
+    pub source_scope: Option<super::super::primitives::Uri>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
+    /// coding to translate
+    pub source_coding: Option<super::super::coding::Coding>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
+    /// full codeableConcept to validate. The server can translate any of the
+    /// coding values (e.g. existing translations) as it chooses
+    pub source_codeable_concept: Option<super::super::codeable_concept::CodeableConcept>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The target code that is to be translated to. If a code is provided, a
+    /// system must be provided
+    pub target_code: Option<super::super::primitives::Code>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
+    /// target coding to translate to
+    pub target_coding: Option<super::super::coding::Coding>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>). A
+    /// full codeableConcept to validate. The server can translate any of the
+    /// coding values (e.g. existing translations) as it chooses
+    pub target_codeable_concept: Option<super::super::codeable_concept::CodeableConcept>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// Limits the scope of the $translate operation to target codes
+    /// (ConceptMap.group.element.target.code) that are members of this value
+    /// set.
+    pub target_scope: Option<super::super::primitives::Uri>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// identifies a target code system in which a mapping is sought. This
+    /// parameter is an alternative to the targetScope parameter - only one is
+    /// required. Searching for any translation to a target code system
+    /// irrespective of the context (e.g. target valueset) may lead to unsafe
+    /// results, and it is at the discretion of the server to decide when to
+    /// support this operation
+    pub target_system: Option<super::super::primitives::Uri>,
 }
 
 /// The parts of the `dependency` parameter.
@@ -107,6 +155,16 @@ pub struct ConceptMapTranslateResponse {
     /// may be multiple matches of equal or differing equivalence, and the
     /// matches may include equivalence values that mean that there is no match
     pub r#match: Vec<ConceptMapTranslateResponseMatch>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. A concept map the translation consulted
+    /// beyond the ones its matches name, one parameter per map.
+    pub used_conceptmap: Vec<super::super::primitives::Uri>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. A code system version the translation drew
+    /// on, one parameter per system.
+    pub used_system: Vec<super::super::primitives::Uri>,
 }
 
 /// The parts of the `match` parameter.
@@ -121,9 +179,33 @@ pub struct ConceptMapTranslateResponseMatch {
     pub concept: Option<super::super::coding::Coding>,
     /// Another element that is the product of this mapping
     pub product: Vec<ConceptMapTranslateResponseMatchProduct>,
+    /// Typed as the terminology ecosystem answers it
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
     /// The canonical reference to the concept map from which this mapping comes
     /// from
-    pub source: Option<super::super::primitives::Uri>,
+    pub source: Option<super::super::primitives::Canonical>,
+    /// Pre-adopted from the FHIR R6 ballot for the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>).
+    /// The canonical reference to the concept map from which this mapping comes
+    /// from
+    pub origin_map: Option<super::super::primitives::Canonical>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. The source concept the match translates.
+    pub source_concept: Option<super::super::coding::Coding>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. The comment on the source element.
+    pub source_comment: Option<super::super::primitives::String>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. The comment on the target.
+    pub target_comment: Option<super::super::primitives::String>,
+    /// Defined by the terminology ecosystem
+    /// (\<<https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html>\>),
+    /// declared by no FHIR version. Whether the source element is explicitly
+    /// not mapped.
+    pub no_map: Option<super::super::primitives::Boolean>,
 }
 
 /// The parts of the `product` parameter.
@@ -178,8 +260,21 @@ impl ConceptMapTranslateRequest {
         let mut field_targetsystem: Option<super::super::primitives::Uri> = None;
         let mut field_dependency: Vec<ConceptMapTranslateRequestDependency> = Vec::new();
         let mut field_reverse: Option<super::super::primitives::Boolean> = None;
+        let mut field_source_code: Option<super::super::primitives::Code> = None;
         let mut field_source_system: Option<super::super::primitives::Uri> = None;
         let mut field_source_version: Option<super::super::primitives::String> = None;
+        let mut field_source_scope: Option<super::super::primitives::Uri> = None;
+        let mut field_source_coding: Option<super::super::coding::Coding> = None;
+        let mut field_source_codeable_concept: Option<
+            super::super::codeable_concept::CodeableConcept,
+        > = None;
+        let mut field_target_code: Option<super::super::primitives::Code> = None;
+        let mut field_target_coding: Option<super::super::coding::Coding> = None;
+        let mut field_target_codeable_concept: Option<
+            super::super::codeable_concept::CodeableConcept,
+        > = None;
+        let mut field_target_scope: Option<super::super::primitives::Uri> = None;
+        let mut field_target_system: Option<super::super::primitives::Uri> = None;
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -554,6 +649,36 @@ impl ConceptMapTranslateRequest {
                         }
                     });
                 }
+                "sourceCode" => {
+                    if field_source_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "sourceCode",
+                        });
+                    }
+                    field_source_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "sourceCode",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "sourceCode",
+                                },
+                            );
+                        }
+                    });
+                }
                 "sourceSystem" => {
                     if field_source_system.is_some() {
                         return Err(super::super::super::operation::ParametersError::Repeated {
@@ -614,6 +739,250 @@ impl ConceptMapTranslateRequest {
                         }
                     });
                 }
+                "sourceScope" => {
+                    if field_source_scope.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "sourceScope",
+                        });
+                    }
+                    field_source_scope = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "sourceScope",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "sourceScope",
+                                },
+                            );
+                        }
+                    });
+                }
+                "sourceCoding" => {
+                    if field_source_coding.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "sourceCoding",
+                        });
+                    }
+                    field_source_coding = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "sourceCoding",
+                                    expected: "Coding",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "sourceCoding",
+                                },
+                            );
+                        }
+                    });
+                }
+                "sourceCodeableConcept" => {
+                    if field_source_codeable_concept.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "sourceCodeableConcept",
+                        });
+                    }
+                    field_source_codeable_concept = Some(match &parameter.value {
+                        Some(
+                            super::super::parameters::ParametersParameterValue::CodeableConcept(
+                                value,
+                            ),
+                        ) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "sourceCodeableConcept",
+                                    expected: "CodeableConcept",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "sourceCodeableConcept",
+                                },
+                            );
+                        }
+                    });
+                }
+                "targetCode" => {
+                    if field_target_code.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "targetCode",
+                        });
+                    }
+                    field_target_code = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "targetCode",
+                                    expected: "Code",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "targetCode",
+                                },
+                            );
+                        }
+                    });
+                }
+                "targetCoding" => {
+                    if field_target_coding.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "targetCoding",
+                        });
+                    }
+                    field_target_coding = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "targetCoding",
+                                    expected: "Coding",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "targetCoding",
+                                },
+                            );
+                        }
+                    });
+                }
+                "targetCodeableConcept" => {
+                    if field_target_codeable_concept.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "targetCodeableConcept",
+                        });
+                    }
+                    field_target_codeable_concept = Some(match &parameter.value {
+                        Some(
+                            super::super::parameters::ParametersParameterValue::CodeableConcept(
+                                value,
+                            ),
+                        ) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "targetCodeableConcept",
+                                    expected: "CodeableConcept",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "targetCodeableConcept",
+                                },
+                            );
+                        }
+                    });
+                }
+                "targetScope" => {
+                    if field_target_scope.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "targetScope",
+                        });
+                    }
+                    field_target_scope = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "targetScope",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "targetScope",
+                                },
+                            );
+                        }
+                    });
+                }
+                "targetSystem" => {
+                    if field_target_system.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "targetSystem",
+                        });
+                    }
+                    field_target_system = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "targetSystem",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "targetSystem",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -638,8 +1007,17 @@ impl ConceptMapTranslateRequest {
             targetsystem: field_targetsystem,
             dependency: field_dependency,
             reverse: field_reverse,
+            source_code: field_source_code,
             source_system: field_source_system,
             source_version: field_source_version,
+            source_scope: field_source_scope,
+            source_coding: field_source_coding,
+            source_codeable_concept: field_source_codeable_concept,
+            target_code: field_target_code,
+            target_coding: field_target_coding,
+            target_codeable_concept: field_target_codeable_concept,
+            target_scope: field_target_scope,
+            target_system: field_target_system,
         })
     }
     /// Writes the fields as a parameter list.
@@ -763,6 +1141,15 @@ impl ConceptMapTranslateRequest {
                 ..Default::default()
             });
         }
+        if let Some(value) = &self.source_code {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "sourceCode".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
         if let Some(value) = &self.source_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceSystem".into(),
@@ -776,6 +1163,82 @@ impl ConceptMapTranslateRequest {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceVersion".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.source_scope {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "sourceScope".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.source_coding {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "sourceCoding".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Coding(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.source_codeable_concept {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "sourceCodeableConcept".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(
+                        value.clone(),
+                    ),
+                ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.target_code {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "targetCode".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Code(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.target_coding {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "targetCoding".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Coding(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.target_codeable_concept {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "targetCodeableConcept".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(
+                        value.clone(),
+                    ),
+                ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.target_scope {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "targetScope".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.target_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "targetSystem".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
                     value.clone(),
                 )),
                 ..Default::default()
@@ -942,6 +1405,8 @@ impl ConceptMapTranslateResponse {
         let mut field_result: Option<super::super::primitives::Boolean> = None;
         let mut field_message: Option<super::super::primitives::String> = None;
         let mut field_match: Vec<ConceptMapTranslateResponseMatch> = Vec::new();
+        let mut field_used_conceptmap: Vec<super::super::primitives::Uri> = Vec::new();
+        let mut field_used_system: Vec<super::super::primitives::Uri> = Vec::new();
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -1014,6 +1479,54 @@ impl ConceptMapTranslateResponse {
                         &parameter.part,
                     )?);
                 }
+                "used-conceptmap" => {
+                    field_used_conceptmap.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "used-conceptmap",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "used-conceptmap",
+                                },
+                            );
+                        }
+                    });
+                }
+                "used-system" => {
+                    field_used_system.push(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "used-system",
+                                    expected: "Uri",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "used-system",
+                                },
+                            );
+                        }
+                    });
+                }
                 other => {
                     return Err(
                         super::super::super::operation::ParametersError::Undeclared {
@@ -1033,6 +1546,8 @@ impl ConceptMapTranslateResponse {
             )?,
             message: field_message,
             r#match: field_match,
+            used_conceptmap: field_used_conceptmap,
+            used_system: field_used_system,
         })
     }
     /// Writes the fields as a parameter list.
@@ -1065,6 +1580,24 @@ impl ConceptMapTranslateResponse {
                 ..Default::default()
             });
         }
+        for value in &self.used_conceptmap {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "used-conceptmap".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        for value in &self.used_system {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "used-system".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
         out
     }
 }
@@ -1083,7 +1616,12 @@ impl ConceptMapTranslateResponseMatch {
         let mut field_equivalence: Option<super::super::primitives::Code> = None;
         let mut field_concept: Option<super::super::coding::Coding> = None;
         let mut field_product: Vec<ConceptMapTranslateResponseMatchProduct> = Vec::new();
-        let mut field_source: Option<super::super::primitives::Uri> = None;
+        let mut field_source: Option<super::super::primitives::Canonical> = None;
+        let mut field_origin_map: Option<super::super::primitives::Canonical> = None;
+        let mut field_source_concept: Option<super::super::coding::Coding> = None;
+        let mut field_source_comment: Option<super::super::primitives::String> = None;
+        let mut field_target_comment: Option<super::super::primitives::String> = None;
+        let mut field_no_map: Option<super::super::primitives::Boolean> = None;
         for parameter in list {
             let parameter_name = parameter.name.value.as_deref().ok_or(
                 super::super::super::operation::ParametersError::Unnamed {
@@ -1166,15 +1704,15 @@ impl ConceptMapTranslateResponseMatch {
                         });
                     }
                     field_source = Some(match &parameter.value {
-                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
-                            value.clone()
-                        }
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
                                     operation: OPERATION,
                                     name: "match.source",
-                                    expected: "Uri",
+                                    expected: "Canonical",
                                 },
                             );
                         }
@@ -1183,6 +1721,156 @@ impl ConceptMapTranslateResponseMatch {
                                 super::super::super::operation::ParametersError::MissingValue {
                                     operation: OPERATION,
                                     name: "match.source",
+                                },
+                            );
+                        }
+                    });
+                }
+                "originMap" => {
+                    if field_origin_map.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.originMap",
+                        });
+                    }
+                    field_origin_map = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Canonical(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.originMap",
+                                    expected: "Canonical",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.originMap",
+                                },
+                            );
+                        }
+                    });
+                }
+                "sourceConcept" => {
+                    if field_source_concept.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.sourceConcept",
+                        });
+                    }
+                    field_source_concept = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.sourceConcept",
+                                    expected: "Coding",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.sourceConcept",
+                                },
+                            );
+                        }
+                    });
+                }
+                "sourceComment" => {
+                    if field_source_comment.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.sourceComment",
+                        });
+                    }
+                    field_source_comment = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.sourceComment",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.sourceComment",
+                                },
+                            );
+                        }
+                    });
+                }
+                "targetComment" => {
+                    if field_target_comment.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.targetComment",
+                        });
+                    }
+                    field_target_comment = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            value.clone()
+                        }
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.targetComment",
+                                    expected: "String",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.targetComment",
+                                },
+                            );
+                        }
+                    });
+                }
+                "noMap" => {
+                    if field_no_map.is_some() {
+                        return Err(super::super::super::operation::ParametersError::Repeated {
+                            operation: OPERATION,
+                            name: "match.noMap",
+                        });
+                    }
+                    field_no_map = Some(match &parameter.value {
+                        Some(super::super::parameters::ParametersParameterValue::Boolean(
+                            value,
+                        )) => value.clone(),
+                        Some(_) => {
+                            return Err(
+                                super::super::super::operation::ParametersError::WrongType {
+                                    operation: OPERATION,
+                                    name: "match.noMap",
+                                    expected: "Boolean",
+                                },
+                            );
+                        }
+                        None => {
+                            return Err(
+                                super::super::super::operation::ParametersError::MissingValue {
+                                    operation: OPERATION,
+                                    name: "match.noMap",
                                 },
                             );
                         }
@@ -1203,6 +1891,11 @@ impl ConceptMapTranslateResponseMatch {
             concept: field_concept,
             product: field_product,
             source: field_source,
+            origin_map: field_origin_map,
+            source_concept: field_source_concept,
+            source_comment: field_source_comment,
+            target_comment: field_target_comment,
+            no_map: field_no_map,
         })
     }
     /// Writes the fields as a parameter list.
@@ -1237,7 +1930,52 @@ impl ConceptMapTranslateResponseMatch {
         if let Some(value) = &self.source {
             out.push(super::super::parameters::ParametersParameter {
                 name: "source".into(),
-                value: Some(super::super::parameters::ParametersParameterValue::Uri(
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.origin_map {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "originMap".into(),
+                value: Some(
+                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
+                ),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.source_concept {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "sourceConcept".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Coding(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.source_comment {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "sourceComment".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.target_comment {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "targetComment".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::String(
+                    value.clone(),
+                )),
+                ..Default::default()
+            });
+        }
+        if let Some(value) = &self.no_map {
+            out.push(super::super::parameters::ParametersParameter {
+                name: "noMap".into(),
+                value: Some(super::super::parameters::ParametersParameterValue::Boolean(
                     value.clone(),
                 )),
                 ..Default::default()
@@ -1557,6 +2295,18 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                 parts: &[],
             },
             super::super::super::operation::Parameter {
+                name: "sourceCode",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("code"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
                 name: "sourceSystem",
                 usage: super::super::super::operation::ParameterUse::In,
                 cardinality: super::super::super::operation::Cardinality {
@@ -1576,6 +2326,102 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                     max: Some(1),
                 },
                 type_code: Some("string"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "sourceScope",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("uri"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "sourceCoding",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("Coding"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "sourceCodeableConcept",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("CodeableConcept"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "targetCode",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("code"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "targetCoding",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("Coding"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "targetCodeableConcept",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("CodeableConcept"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "targetScope",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("uri"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::PreAdopted,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "targetSystem",
+                usage: super::super::super::operation::ParameterUse::In,
+                cardinality: super::super::super::operation::Cardinality {
+                    min: 0,
+                    max: Some(1),
+                },
+                type_code: Some("uri"),
                 scope: &[],
                 source: super::super::super::operation::ParameterSource::PreAdopted,
                 parts: &[],
@@ -1680,12 +2526,90 @@ pub const CONCEPT_MAP_TRANSLATE: super::super::super::operation::Operation =
                             min: 0,
                             max: Some(1),
                         },
-                        type_code: Some("uri"),
+                        type_code: Some("canonical"),
                         scope: &[],
-                        source: super::super::super::operation::ParameterSource::Version,
+                        source: super::super::super::operation::ParameterSource::Ecosystem,
+                        parts: &[],
+                    },
+                    super::super::super::operation::Parameter {
+                        name: "originMap",
+                        usage: super::super::super::operation::ParameterUse::Out,
+                        cardinality: super::super::super::operation::Cardinality {
+                            min: 0,
+                            max: Some(1),
+                        },
+                        type_code: Some("canonical"),
+                        scope: &[],
+                        source: super::super::super::operation::ParameterSource::PreAdopted,
+                        parts: &[],
+                    },
+                    super::super::super::operation::Parameter {
+                        name: "sourceConcept",
+                        usage: super::super::super::operation::ParameterUse::Out,
+                        cardinality: super::super::super::operation::Cardinality {
+                            min: 0,
+                            max: Some(1),
+                        },
+                        type_code: Some("Coding"),
+                        scope: &[],
+                        source: super::super::super::operation::ParameterSource::Ecosystem,
+                        parts: &[],
+                    },
+                    super::super::super::operation::Parameter {
+                        name: "sourceComment",
+                        usage: super::super::super::operation::ParameterUse::Out,
+                        cardinality: super::super::super::operation::Cardinality {
+                            min: 0,
+                            max: Some(1),
+                        },
+                        type_code: Some("string"),
+                        scope: &[],
+                        source: super::super::super::operation::ParameterSource::Ecosystem,
+                        parts: &[],
+                    },
+                    super::super::super::operation::Parameter {
+                        name: "targetComment",
+                        usage: super::super::super::operation::ParameterUse::Out,
+                        cardinality: super::super::super::operation::Cardinality {
+                            min: 0,
+                            max: Some(1),
+                        },
+                        type_code: Some("string"),
+                        scope: &[],
+                        source: super::super::super::operation::ParameterSource::Ecosystem,
+                        parts: &[],
+                    },
+                    super::super::super::operation::Parameter {
+                        name: "noMap",
+                        usage: super::super::super::operation::ParameterUse::Out,
+                        cardinality: super::super::super::operation::Cardinality {
+                            min: 0,
+                            max: Some(1),
+                        },
+                        type_code: Some("boolean"),
+                        scope: &[],
+                        source: super::super::super::operation::ParameterSource::Ecosystem,
                         parts: &[],
                     },
                 ],
+            },
+            super::super::super::operation::Parameter {
+                name: "used-conceptmap",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("uri"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
+                parts: &[],
+            },
+            super::super::super::operation::Parameter {
+                name: "used-system",
+                usage: super::super::super::operation::ParameterUse::Out,
+                cardinality: super::super::super::operation::Cardinality { min: 0, max: None },
+                type_code: Some("uri"),
+                scope: &[],
+                source: super::super::super::operation::ParameterSource::Ecosystem,
+                parts: &[],
             },
         ],
     };

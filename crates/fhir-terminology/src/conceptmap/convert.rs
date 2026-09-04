@@ -56,7 +56,9 @@ macro_rules! convert_concept_map {
                 ConceptMapModel, DependsOn, Element, Group, ModelError, Relationship, Target,
                 Unmapped, UnmappedMode,
             };
-            use super::text;
+            use fhir_types::$module::extension::ExtensionValue;
+
+            use super::{ELEMENT_COMMENT, text};
 
             fn depends_on(d: &ConceptMapGroupElementTargetDependsOn) -> DependsOn {
                 DependsOn {
@@ -70,8 +72,17 @@ macro_rules! convert_concept_map {
             fn element(e: &ConceptMapGroupElement) -> Result<Element, ModelError> {
                 let code = text(e.code.as_ref().and_then(|c| c.value.as_deref()));
                 let mut targets = Vec::with_capacity(e.target.len());
+                let mut no_map = false;
                 for t in &e.target {
                     let target_code = text(t.code.as_ref().and_then(|c| c.value.as_deref()));
+                    // NOTE: R4 spells an explicitly unmapped element as a target with
+                    // `equivalence = unmatched` and no code
+                    // (<https://hl7.org/fhir/R4B/conceptmap.html#unmapped>).
+                    if target_code.is_none() && t.equivalence.value.as_deref() == Some("unmatched")
+                    {
+                        no_map = true;
+                        continue;
+                    }
                     targets.push(Target {
                         relationship: super::relationship(
                             Relationship::from_equivalence,
@@ -87,10 +98,17 @@ macro_rules! convert_concept_map {
                     });
                 }
                 Ok(Element {
-                    no_map: targets.is_empty(),
+                    no_map: no_map || targets.is_empty(),
                     code,
                     display: text(e.display.as_ref().and_then(|s| s.value.as_deref())),
-                    comment: None,
+                    comment: e
+                        .extension
+                        .iter()
+                        .find(|x| x.url == ELEMENT_COMMENT)
+                        .and_then(|x| match &x.value {
+                            Some(ExtensionValue::String(s)) => text(s.value.as_deref()),
+                            _ => None,
+                        }),
                     targets,
                 })
             }

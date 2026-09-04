@@ -40,7 +40,7 @@ use fhir_types::r5::operations::value_set_validate_code::{
     ValueSetValidateCodeRequest, ValueSetValidateCodeResponse,
 };
 use fhir_types::r5::parameters::{Parameters, ParametersParameterValue};
-use fhir_types::r5::primitives::{Boolean, Canonical, Integer};
+use fhir_types::r5::primitives::{Boolean, Canonical, Integer, Uri};
 
 /// A generated `Coding` as the engine's coding.
 #[must_use]
@@ -382,6 +382,12 @@ fn coding_of(coding: &CodingRef) -> Coding {
 #[must_use]
 pub fn translate_input(request: &ConceptMapTranslateRequest) -> TranslateInput {
     let target_code = request.target_code.as_ref().and_then(|v| v.value.clone());
+    // NOTE: a `target*` input names a code of the target system and reads the
+    // map in reverse (<https://hl7.org/fhir/R5/conceptmap-operation-translate.html>).
+    let targeted = target_code.is_some()
+        || request.target_coding.is_some()
+        || request.target_codeable_concept.is_some();
+    let uri = |value: &Option<Uri>| value.as_ref().and_then(|v| v.value.clone());
     TranslateInput {
         url: request.url.as_ref().and_then(|v| v.value.clone()),
         concept_map_version: request
@@ -397,42 +403,65 @@ pub fn translate_input(request: &ConceptMapTranslateRequest) -> TranslateInput {
             .as_ref()
             .and_then(|v| v.value.clone())
             .or_else(|| target_code.clone()),
-        system: request
-            .system
-            .as_ref()
-            .or(request.source_system.as_ref())
-            .and_then(|v| v.value.clone()),
+        system: if targeted {
+            uri(&request.target_system).or_else(|| uri(&request.system))
+        } else {
+            uri(&request.system).or_else(|| uri(&request.source_system))
+        },
         version: request
             .version
             .as_ref()
             .or(request.source_version.as_ref())
             .and_then(|v| v.value.clone()),
-        coding: request.source_coding.as_ref().map(coding_ref),
+        coding: request
+            .source_coding
+            .as_ref()
+            .or(request.target_coding.as_ref())
+            .map(coding_ref),
         codeable_concept: request
             .source_codeable_concept
             .as_ref()
+            .or(request.target_codeable_concept.as_ref())
             .map(|concept| concept.coding.iter().map(coding_ref).collect()),
-        source: request.source_scope.as_ref().and_then(|v| v.value.clone()),
-        target: request.target_scope.as_ref().and_then(|v| v.value.clone()),
-        target_system: request.target_system.as_ref().and_then(|v| v.value.clone()),
-        reverse: target_code.is_some().then_some(true),
+        source: uri(&request.source_scope),
+        target: uri(&request.target_scope),
+        target_system: if targeted {
+            uri(&request.source_system)
+        } else {
+            uri(&request.target_system)
+        },
+        reverse: targeted.then_some(true),
+        target_input: targeted,
         dependency: !request.dependency.is_empty(),
     }
 }
 
-/// The `$translate` outcome as the R5 `Parameters`: `result`, `message`, and
-/// each `match` with `relationship`, `concept`, `product` (an `attribute` and
-/// a `value`), and `originMap`.
+/// The `$translate` outcome as the R5 `Parameters`.
+///
+/// `result`, `message`, and each `match` with `relationship`, `concept`,
+/// `product` (an `attribute` and a `value`), and `originMap`, plus the
+/// overlay's `sourceConcept`, the comments, `noMap`, and `used-conceptmap`; a
+/// `noMap` match has no `relationship`.
 #[must_use]
 pub fn translation_parameters(translation: &Translation) -> Parameters {
     ConceptMapTranslateResponse {
         result: translation.result.into(),
         message: translation.message.as_deref().map(Into::into),
+        used_conceptmap: translation
+            .used_concept_maps
+            .iter()
+            .map(|c| c.as_str().into())
+            .collect(),
+        used_system: Vec::new(),
         r#match: translation
             .matches
             .iter()
             .map(|m| ConceptMapTranslateResponseMatch {
-                relationship: Some(m.relationship.relationship().into()),
+                relationship: (!m.origin.no_map).then(|| m.relationship.relationship().into()),
+                source_concept: m.origin.source_concept.as_ref().map(coding_of),
+                source_comment: m.origin.source_comment.as_deref().map(Into::into),
+                target_comment: m.origin.target_comment.as_deref().map(Into::into),
+                no_map: m.origin.no_map.then_some(true.into()),
                 concept: m.concept.as_ref().map(coding_of),
                 property: Vec::new(),
                 product: m

@@ -211,6 +211,15 @@ impl OperationContract {
             {
                 field.source = entry.source;
             }
+            for part in &mut field.parts {
+                let dotted = format!("{}.{}", field.fhir_name, part.fhir_name);
+                if let Some(entry) = added
+                    .iter()
+                    .find(|a| a.usage == field.usage && a.name == dotted)
+                {
+                    part.source = entry.source;
+                }
+            }
         }
         Ok(contract)
     }
