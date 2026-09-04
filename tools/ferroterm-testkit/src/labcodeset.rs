@@ -26,10 +26,29 @@ pub const REFSET: &str = "2581000146104";
 #[must_use]
 pub fn document() -> String {
     format!(
+        "{}{}{}{}{}",
+        header(),
+        glucose(),
+        old_sodium(),
+        culture(),
+        tables()
+    )
+}
+
+/// The publication's head, up to the concept list.
+fn header() -> String {
+    format!(
         r#"<publication type="simple" effectiveDate="{EFFECTIVE_DATE}" user="fixture"><!--Synthetic content: no LOINC, SNOMED CT, or UCUM release was used.-->
     <desc>01-01-2026: Synthetic Labcodeset publication</desc>
     <lab_concepts>
-        <lab_concept status="active">
+"#
+    )
+}
+
+/// The active glucose concept.
+fn glucose() -> String {
+    format!(
+        r#"        <lab_concept status="active">
             <loincConcept loinc_num="{GLUCOSE}" status="ACTIVE">
                 <component>Glucose</component>
                 <property>MCnc</property>
@@ -62,7 +81,14 @@ pub fn document() -> String {
                 <unit ref="1"/>
             </units>
         </lab_concept>
-        <lab_concept status="retired">
+"#
+    )
+}
+
+/// The retired sodium concept.
+fn old_sodium() -> String {
+    format!(
+        r#"        <lab_concept status="retired">
             <loincConcept loinc_num="{OLD_SODIUM}" status="DEPRECATED">
                 <component>Sodium</component>
                 <property>SCnc</property>
@@ -87,7 +113,14 @@ pub fn document() -> String {
             <retired-replacement>{SODIUM}</retired-replacement>
             <releasenote>Vervangen in januari 2026</releasenote>
         </lab_concept>
-        <lab_concept status="active">
+"#
+    )
+}
+
+/// The active culture panel concept.
+fn culture() -> String {
+    format!(
+        r#"        <lab_concept status="active">
             <loincConcept loinc_num="{CULTURE}" status="ACTIVE">
                 <component>Bacteria identified</component>
                 <property>Prid</property>
@@ -120,7 +153,15 @@ pub fn document() -> String {
                 <refset conceptId="{REFSET}" preferredTerm="referentieset voor micro-organismen" src="https://example.org/refset/{REFSET}"/>
             </outcomes>
         </lab_concept>
-    </lab_concepts>
+"#
+    )
+}
+
+/// The material and unit tables, the ordinal and nominal lists, and the
+/// document's end.
+fn tables() -> String {
+    format!(
+        r#"    </lab_concepts>
     <map>
         <material code="{SERUM}" displayName="Serum specimen (specimen)" system="Ser"/>
         <material code="123038009" displayName="Specimen (specimen)" system="XXX"/>
