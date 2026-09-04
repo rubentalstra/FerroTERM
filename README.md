@@ -16,10 +16,6 @@ A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD-10, ICD-11,
 RxNorm, UCUM, and any FHIR `CodeSystem`, served from one static binary over a
 memory-mapped index. No JVM, no Elasticsearch, no database to run.
 
-> **FerroTERM** is the official name: Ferro for the Rust family it shares with
-> [FerroEHR](https://github.com/rubentalstra/FerroEHR), TERM for terminology.
-> The site is <https://ferroterm.eu>; the book is <https://ferroterm.eu/docs/>.
-
 ## Five minutes to a running server
 
 The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration,

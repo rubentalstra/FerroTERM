@@ -143,6 +143,10 @@ jobs:
         with:
           dockerfile: docker/Dockerfile
           failure-threshold: warning
+      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: bench/Dockerfile
+          failure-threshold: warning
 
   # versions — the version-drift guard. Runs NOW, before any Rust exists:
   # scripts/checks/versions.sh compares every present config file against
