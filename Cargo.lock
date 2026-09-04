@@ -336,7 +336,7 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
 name = "classification"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "csv",
  "ferroterm-testkit",
@@ -372,7 +372,7 @@ dependencies = [
 
 [[package]]
 name = "concept-graph"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "proptest",
  "rf2",
@@ -382,13 +382,24 @@ dependencies = [
 
 [[package]]
 name = "concept-store"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "concept-graph",
  "redb",
  "rf2",
  "tempfile",
  "thiserror",
+]
+
+[[package]]
+name = "console"
+version = "0.16.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fe5f465a4f6fee88fad41b85d990f84c835335e85b5d9e6e63e0d06d28cba7c"
+dependencies = [
+ "encode_unicode",
+ "libc",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -545,7 +556,7 @@ dependencies = [
 
 [[package]]
 name = "designation-index"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "concept-graph",
  "fst",
@@ -558,7 +569,7 @@ dependencies = [
 
 [[package]]
 name = "dhd-thesaurus"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "classification",
  "csv",
@@ -589,6 +600,12 @@ name = "either"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "252afb9ae5eaa683babdc6a068b3f5726eb19e05070c731f9b2a23a7c3e8ed34"
+
+[[package]]
+name = "encode_unicode"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 
 [[package]]
 name = "equivalent"
@@ -685,6 +702,8 @@ dependencies = [
  "anyhow",
  "clap",
  "fhir-types",
+ "insta",
+ "proptest",
  "serde",
  "serde_json",
  "tempfile",
@@ -693,7 +712,7 @@ dependencies = [
 
 [[package]]
 name = "fhir-terminology"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "concept-graph",
  "concept-store",
@@ -723,8 +742,9 @@ dependencies = [
 
 [[package]]
 name = "fhir-types"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
+ "quick-xml",
  "serde",
  "serde_json",
 ]
@@ -861,7 +881,7 @@ dependencies = [
 
 [[package]]
 name = "gstandaard"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "classification",
  "ferroterm-testkit",
@@ -998,7 +1018,7 @@ dependencies = [
 
 [[package]]
 name = "icd11"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "ferroterm-testkit",
  "reqwest",
@@ -1119,6 +1139,19 @@ checksum = "07aa2048142242915a31d35844fb311e0e53fcca590c3a0a40dcf1b841fa09eb"
 dependencies = [
  "equivalent",
  "hashbrown",
+]
+
+[[package]]
+name = "insta"
+version = "1.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86f0f8fee8c926415c58d6ae43a08523a26faccb2323f5e6b644fe7dd4ef6b82"
+dependencies = [
+ "console",
+ "once_cell",
+ "serde",
+ "similar",
+ "tempfile",
 ]
 
 [[package]]
@@ -1335,7 +1368,7 @@ dependencies = [
 
 [[package]]
 name = "loinc"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "csv",
  "ferroterm-testkit",
@@ -1802,7 +1835,7 @@ dependencies = [
 
 [[package]]
 name = "rf2"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "csv",
  "jiff",
@@ -1957,7 +1990,7 @@ dependencies = [
 
 [[package]]
 name = "rxnorm-rrf"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "csv",
  "ferroterm-testkit",
@@ -1991,7 +2024,7 @@ dependencies = [
 
 [[package]]
 name = "sct-ecl"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "concept-graph",
  "logos",
@@ -2136,6 +2169,12 @@ name = "simdutf8"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
+
+[[package]]
+name = "similar"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "slab"

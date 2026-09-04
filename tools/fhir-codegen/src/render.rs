@@ -48,6 +48,7 @@ pub fn render_lib(models: &[VersionModule]) -> Result<String, fmt::Error> {
     out.push_str("#![allow(\n    clippy::doc_markdown,\n    clippy::large_enum_variant,\n    clippy::module_name_repetitions,\n    clippy::struct_field_names,\n    clippy::too_many_lines,\n    clippy::similar_names,\n    reason = \"generated from the FHIR specification: the documentation is the specification's own text, choice enums hold every allowed type, modules mirror FHIR type names, and the codec of a large resource is one long function over FHIR-named locals\"\n)]\n\n");
     writeln!(out, "pub mod codec;")?;
     writeln!(out, "pub mod operation;")?;
+    writeln!(out, "pub mod xml;")?;
     for model in models {
         writeln!(out, "pub mod {};", model.name)?;
     }
@@ -72,6 +73,7 @@ pub fn render_version_mod(model: &VersionModule) -> Result<String, fmt::Error> {
         writeln!(out, "pub mod {module};")?;
     }
     writeln!(out, "pub mod operations;")?;
+    writeln!(out, "pub mod schema;")?;
     Ok(out)
 }
 

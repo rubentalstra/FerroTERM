@@ -21,6 +21,7 @@ mod operations;
 mod package;
 mod roots;
 mod snapshot;
+mod xml;
 
 /// The vendored R4B core package, loaded once for every test.
 static R4B: LazyLock<Package> = LazyLock::new(|| {

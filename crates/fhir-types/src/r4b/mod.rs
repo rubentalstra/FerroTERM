@@ -43,6 +43,7 @@ pub mod reference;
 pub mod related_artifact;
 pub mod resource;
 pub mod sampled_data;
+pub mod schema;
 pub mod signature;
 pub mod terminology_capabilities;
 pub mod timing;

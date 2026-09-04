@@ -22,6 +22,7 @@ pub mod operations;
 pub mod package;
 pub mod render;
 pub mod render_codec;
+pub mod render_schema;
 pub mod roots;
 pub mod snapshot;
 
