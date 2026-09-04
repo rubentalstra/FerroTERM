@@ -46,6 +46,9 @@ pub struct ValidationOutcome {
     pub display: Option<String>,
     /// The code that was checked, when one was.
     pub code: Option<String>,
+    /// The code as the system spells it when `code` is spelled otherwise
+    /// (`normalized-code`, the ecosystem's output).
+    pub normalized_code: Option<String>,
     /// The system it was checked against.
     pub system: Option<String>,
     /// The version it was checked against.
@@ -84,6 +87,7 @@ fn unserved(
     let (canonical, issue) =
         super::unknown_system(url, version, super::at(expression, "system"), &valid);
     ValidationOutcome {
+        normalized_code: None,
         result: false,
         message: Some(issue.text.clone()),
         display: None,
@@ -116,6 +120,7 @@ fn supplement_as_system(
         "CodeSystem {canonical} is a supplement, so can't be used as a value in Coding.system"
     );
     ValidationOutcome {
+        normalized_code: None,
         result: false,
         message: Some(text.clone()),
         display: None,
@@ -306,6 +311,7 @@ fn check_codeable_concept(
         message: Some(message.clone()),
         display: None,
         code: None,
+        normalized_code: None,
         system: Some(target),
         version: Some(identity.version.clone()),
         issues: vec![Issue {
@@ -342,6 +348,7 @@ fn check(
             message: Some(text.clone()),
             display: None,
             code: Some(code.to_owned()),
+            normalized_code: None,
             system: Some(identity.url.clone()),
             version,
             issues: vec![Issue {
@@ -418,7 +425,8 @@ fn check(
         result,
         message: (!messages.is_empty()).then(|| messages.join("; ")),
         display: preferred,
-        code: Some(located.code),
+        code: Some(code.to_owned()),
+        normalized_code: (located.code != code).then(|| located.code.clone()),
         system: Some(identity.url.clone()),
         version,
         issues,

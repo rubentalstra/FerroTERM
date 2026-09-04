@@ -520,7 +520,9 @@ impl Issue {
             "vs-invalid" => "VALUESET_VALUE_MISMATCH",
             "version-error" => "VALUESET_VERSION_CHECK",
             "code-rule" if text.contains("is abstract") => "ABSTRACT_CODE_NOT_ALLOWED",
-            "code-rule" if text.contains("by case") => "CODE_CASE_DIFFERENCE",
+            "code-rule" if text.contains("by case") || text.contains("alternate form") => {
+                "CODE_CASE_DIFFERENCE"
+            }
             "code-rule" => "STATUS_CODE_WARNING_CODE",
             "code-comment" if text.contains("is marked with a status of deprecated") => {
                 "CONCEPT_DEPRECATED_IN_VALUESET"

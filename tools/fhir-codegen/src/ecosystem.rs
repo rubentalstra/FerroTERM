@@ -292,6 +292,13 @@ fn validation_outputs() -> Vec<OperationParameter> {
         )
     };
     vec![
+        ecosystem_parameter(
+            "normalized-code",
+            ParameterUse::Out,
+            "1",
+            "code",
+            "The code as the code system spells it, when the request spelled it otherwise (a case difference, an alternate form such as a URI); the ecosystem asks for it on case-insensitive systems and systems with a grammar.",
+        ),
         unknown_system(),
         unknown_system_of_concept(),
         inactive(),
@@ -348,7 +355,7 @@ fn ecosystem_parameters(url: &str) -> Vec<OperationParameter> {
                 ParameterUse::Out,
                 "1",
                 "code",
-                "The code that was looked up, as the code system spells it.",
+                "The code that was looked up, as the request spelled it.",
             ),
             ecosystem_parameter(
                 "system",

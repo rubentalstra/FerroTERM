@@ -13,6 +13,14 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- `normalized-code` on both `$validate-code` operations (the terminology ecosystem's output): the code as the system spells it when the request spelled it otherwise, with a `code-rule` note for an alternate form; `code` echoes the request's spelling, on `$lookup` too. `$expand` keeps the compose's spelling of an enumerated code. The capability statements list `property` among the expansion parameters on every version and name the release date of a released build.
+
+### Fixed
+
+- ICD-11: `postcoordinationValues` subproperties carry each value under its own code; an unknown ICF dotted qualifier is an unknown code; a codeless entity answers `notSelectable` as a property, not `abstract`. The `icd-11` suite mode passes 41 of 52 cases (from 28).
+
 ### Changed
 
 - The licence of the project's own code is the Business Source License 1.1

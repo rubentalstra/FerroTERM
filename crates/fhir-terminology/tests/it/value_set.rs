@@ -637,11 +637,14 @@ fn validate_code_checks_display_case_and_inactive_codes() {
     let validation =
         value_set_validate_code::validate_code(&world.sources(), &case).expect("validates");
     assert!(validation.result, "colours is case-insensitive");
+    // The ecosystem asks for `normalized-code` on a case-insensitive system: the
+    // request's spelling is echoed and the system's comes beside it.
     assert_eq!(
         validation.code.as_deref(),
-        Some("RED"),
-        "the system's spelling is echoed"
+        Some("red"),
+        "the request's spelling is echoed"
     );
+    assert_eq!(validation.normalized_code.as_deref(), Some("RED"));
     let inactive = ValueSetValidateInput {
         url: Some(VS_ALL.to_owned()),
         value_set_version: Some(String::from("1.0")),
@@ -1317,7 +1320,8 @@ fn validate_code_speaks_the_ecosystems_words_for_codes_membership_abstract_and_c
         ..ValueSetValidateInput::default()
     });
     assert!(cased.result, "{cased:?}");
-    assert_eq!(cased.code.as_deref(), Some("RED"));
+    assert_eq!(cased.code.as_deref(), Some("red"));
+    assert_eq!(cased.normalized_code.as_deref(), Some("RED"));
     assert_eq!(cased.issues[0].kind, "code-rule");
     assert_eq!(cased.issues[0].severity, "warning");
     assert_eq!(

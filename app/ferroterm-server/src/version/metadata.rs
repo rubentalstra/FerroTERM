@@ -48,6 +48,9 @@ macro_rules! metadata {
             const FEATURE: &str = "http://hl7.org/fhir/uv/application-feature/StructureDefinition/feature";
             /// The terminology ecosystem requirements the overlay rests on.
             const ECOSYSTEM_REQUIREMENTS: &str = "https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/requirements.html";
+            /// The release date of this version from the changelog (`build.rs`), `None`
+            /// for an unreleased version.
+            const RELEASE_DATE: Option<&str> = option_env!("FERROTERM_RELEASE_DATE");
 
             /// The terminology ecosystem overlay of `operation`, for the operation's
             /// `documentation`: what the server accepts and answers beyond the version's
@@ -214,6 +217,7 @@ macro_rules! metadata {
                     software: Some(CapabilityStatementSoftware {
                         name: "FerroTERM".into(),
                         version: Some(state.software_version().into()),
+                        release_date: RELEASE_DATE.map(Into::into),
                         ..Default::default()
                     }),
                     description: ballot_note().map(Into::into),

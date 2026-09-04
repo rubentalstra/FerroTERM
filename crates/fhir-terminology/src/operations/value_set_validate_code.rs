@@ -41,6 +41,9 @@ pub struct Validation {
     pub version: Option<String>,
     /// The code as the system spells it, when the code is known.
     pub code: Option<String>,
+    /// The code as the system spells it when `code` is spelled otherwise
+    /// (`normalized-code`, the ecosystem's output).
+    pub normalized_code: Option<String>,
     /// The issues behind the result.
     pub issues: Vec<Issue>,
     /// The canonicals of the systems the server does not serve
@@ -519,6 +522,12 @@ fn subject_system(
     })
 }
 
+/// Checks one code against the value set: its system, the code, membership,
+/// and the display, in order.
+#[expect(
+    clippy::too_many_lines,
+    reason = "one validation step after another, read top to bottom"
+)]
 fn check(
     sources: &Sources<'_>,
     model: &ValueSetModel,
@@ -624,7 +633,8 @@ fn check(
         display,
         system: Some(system),
         version: Some(version).filter(|v| !v.is_empty()),
-        code: Some(located.code),
+        code: Some(subject.code.to_owned()),
+        normalized_code: (located.code != subject.code).then(|| located.code.clone()),
         issues,
         unknown_systems: target.unknown_systems,
         x_unknown_systems: Vec::new(),
@@ -1218,6 +1228,7 @@ fn failed_target(system: &str, version: String, target: Target) -> Validation {
         system: Some(system.to_owned()),
         version: Some(version).filter(|v| !v.is_empty()),
         code: None,
+        normalized_code: None,
         issues: target.issues,
         unknown_systems: target.unknown_systems,
         x_unknown_systems: Vec::new(),
@@ -1490,6 +1501,7 @@ fn failed(system: Option<String>, version: Option<String>, issue: Issue) -> Vali
         system,
         version,
         code: None,
+        normalized_code: None,
         issues: vec![issue],
         unknown_systems: Vec::new(),
         x_unknown_systems: Vec::new(),

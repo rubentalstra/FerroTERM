@@ -190,7 +190,7 @@ pub fn lookup(
     let properties = properties(provider.as_ref(), concept, &asked)?;
     let abstract_concept = provider.status(concept)?.abstract_concept;
     Ok(LookupOutcome {
-        code: located.code.clone(),
+        code: String::from(code),
         system: identity.url.clone(),
         abstract_concept,
         name: identity
