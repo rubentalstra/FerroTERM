@@ -17,7 +17,8 @@ macro_rules! metadata {
             use fhir_types::codec::Json;
             use fhir_types::$fhir::capability_statement::{
                 CapabilityStatement, CapabilityStatementImplementation, CapabilityStatementRest,
-                CapabilityStatementRestResource, CapabilityStatementRestResourceInteraction,
+                CapabilityStatementRestInteraction, CapabilityStatementRestResource,
+                CapabilityStatementRestResourceInteraction,
                 CapabilityStatementRestResourceOperation, CapabilityStatementRestResourceSearchParam,
                 CapabilityStatementRestSecurity,
                 CapabilityStatementSoftware,
@@ -346,6 +347,12 @@ macro_rules! metadata {
                     rest: vec![CapabilityStatementRest {
                         mode: "server".into(),
                         security: Some(security(state)),
+                        // NOTE: `batch` is a system interaction, the one this server answers at
+                        // its root (<https://hl7.org/fhir/R4B/http.html#transaction>).
+                        interaction: vec![CapabilityStatementRestInteraction {
+                            code: "batch".into(),
+                            ..Default::default()
+                        }],
                         resource: rest_resources(state),
                         operation: vec![
                             operation("versions", super::system::VERSIONS_URL),

@@ -46,6 +46,7 @@ pub fn loaded_of(
     }
 }
 
+pub(crate) mod batch;
 pub(crate) mod map_r4;
 pub(crate) mod map_r5;
 pub(crate) mod metadata;
@@ -62,12 +63,14 @@ macro_rules! surface {
         crate::version::metadata::metadata!($fhir, $fhir_version, $label, $capabilities);
         crate::version::system::system!($fhir);
         crate::version::store::store!($fhir);
+        crate::version::batch::batch!($fhir);
         crate::version::operations::operations!($fhir);
 
         /// The routes of this version, nested under its root by the crate router.
         pub fn router() -> axum::Router<std::sync::Arc<crate::state::AppState>> {
             use axum::routing::{get, post};
             axum::Router::new()
+                .route("/", post(batch::batch))
                 .route("/metadata", get(metadata::metadata))
                 .route("/$versions", get(system::versions))
                 .route("/$cache-control", post(system::cache_control))
