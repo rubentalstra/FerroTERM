@@ -55,8 +55,9 @@ that is removed when the build ends; the Full and Delta trees are never read.
 With the container image the same build is one compose command (see
 [Install and run](install.md)). The build reads the concepts, descriptions,
 language reference sets, and inferred relationships, computes the transitive
-closure, and writes the store, the hierarchy, and the text index. The Dutch
-edition of June 2026 takes 49 s and 591 MB.
+closure, and writes the store, the hierarchy, and the text index. The
+[benchmarks page](../evaluate/benchmarks.md) records how long each release
+takes and how large its index is.
 
 The edition and version come from the release itself (the module and
 effective time), and `$lookup` returns them as the version URI

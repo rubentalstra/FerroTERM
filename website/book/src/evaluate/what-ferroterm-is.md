@@ -52,10 +52,12 @@ Snowstorm, runs on Elasticsearch. That stack works, and it asks for a lot of
 memory: a machine serving an edition wants 16 to 32 GB of RAM, most of it
 Elasticsearch heap, plus a search cluster to operate.
 
-The data is smaller than that. The Dutch edition is 548,949 concepts, active
-and inactive; FerroTERM builds it into a 591 MB index in 49 seconds and serves
-it from one process that started in half a second. The goal is plain: run a
-clinical terminology server on hardware you already have.
+The data is smaller than that: a few hundred thousand concepts, a million
+descriptions, a million relationships. FerroTERM builds an edition into one
+memory-mapped index once and serves it from one process; the
+[benchmarks page](benchmarks.md) has what that costs in build time, disk, and
+resident memory for each code system, measured and recorded. The goal is plain:
+run a clinical terminology server on hardware you already have.
 
 ## Who uses it
 

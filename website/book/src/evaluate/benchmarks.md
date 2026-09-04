@@ -75,15 +75,32 @@ record is written, so a record never holds the latency of an error response. A
 cell reads `n/a` when the system defines no such operation, for instance a
 code system with no whole-system value set to expand.
 
-## The README table
+## The published figures
 
-The README's speed and footprint table is rendered from a committed record set,
-one directory under `bench/records/` named by the date and the machine, by
-`scripts/checks/bench-table.sh render`; CI runs `check` and fails when the table
-and the records disagree. Every record in a set comes from the same machine,
-FerroTERM version, and FHIR version, or the renderer refuses the set. A new set
-is a new directory copied from `bench/results/` by hand, so the numbers on the
-README always name the run they came from.
+The README table, the figure tiles on the landing page, and the tables on the
+site's [benchmarks page](https://ferroterm.eu/benchmarks.html) are rendered
+from one committed record set, a directory under `bench/records/` named by the
+date and the machine, by `scripts/checks/bench-table.sh render <target>`; CI
+runs `check` and fails when any of the three and the records disagree. Every
+record in a set comes from the same machine, FerroTERM version, and FHIR
+version, or the renderer refuses the set. A new set is a new directory copied
+from `bench/results/` by hand, so every published number names the run it came
+from and links to its record.
+
+## The current record set
+
+<!-- bench-table:begin -->
+| Code system | Release | Concepts | Build | Peak build memory | Index on disk | Resident | `$lookup` | `$validate-code` | `$subsumes` | `$expand` (small) | `$expand` (large) | Search | Snowstorm |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [ICD-10-CM](https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/icd-10-cm-2026-09-04T09-16-57-858505552Z.json) | 2026 | 98,827 | 1.7 s | 319 MB | 40 MB | 45 MB | 104 µs | 103 µs | 111 µs | n/a | n/a | n/a | not run |
+| [ICD-11 MMS](https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/icd-11-mms-2026-09-04T09-17-03-558396221Z.json) | 2026-01 | 37,211 | n/a | n/a | 34 MB | 60 MB | 263 µs | 115 µs | n/a | 126 µs | 125 µs | 139 µs | not run |
+| [LOINC](https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/loinc-2026-09-04T09-16-55-946117093Z.json) | 2.83 | 257,266 | 12.89 s | 2.27 GB | 260 MB | 124 MB | 265 µs | 116 µs | n/a | 127 µs | 6.46 ms | 1.45 ms | not run |
+| [RxNorm (prescribable subset)](https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/rxnorm-prescribable-subset-2026-09-04T09-17-03-166797554Z.json) | 09082026 | 81,468 | 4.49 s | 568 MB | 72 MB | 86 MB | 1.41 ms | 134 µs | n/a | n/a | n/a | n/a | not run |
+| [SNOMED CT (International edition)](https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/snomed-ct-international-edition-2026-09-04T09-16-41-025864294Z.json) | 20260901 | 535,502 | 36.81 s | 2.49 GB | 486 MB | 402 MB | 915 µs | 116 µs | 111 µs | 526 µs | 3.9 ms | 357 µs | not run |
+| [SNOMED CT (Netherlands edition)](https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/snomed-ct-netherlands-edition-2026-09-04T09-16-02-189844762Z.json) | 20260630 | 548,949 | 62.92 s | 3.41 GB | 668 MB | 475 MB | 934 µs | 118 µs | 112 µs | 838 µs | 6.91 ms | 869 µs | not run |
+
+Warm p50 over 200 HTTP round trips on one machine, inside a Docker container (Apple aarch64 (implementer 0x61, part 0x000), 8.22 GB, linux/aarch64), FerroTERM 0.0.9 serving FHIR R4B, taken 2026-09-04. The records are under `bench/records/`; the [benchmarks page](https://ferroterm.eu/benchmarks.html) has the method, the cold and tail latencies, and how to reproduce a record.
+<!-- bench-table:end -->
 
 ## Reading the numbers
 

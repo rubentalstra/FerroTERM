@@ -85,14 +85,14 @@ when the table drifts from the records under `bench/records/`.
 <!-- bench-table:begin -->
 | Code system | Release | Concepts | Build | Peak build memory | Index on disk | Resident | `$lookup` | `$validate-code` | `$subsumes` | `$expand` (small) | `$expand` (large) | Search | Snowstorm |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| [ICD-10-CM](bench/records/2026-09-04-docker-apple-m2/icd-10-cm-2026-09-04T09-16-57-858505552Z.json) | 2026 | 98827 | 1.7 s | 319 MB | 40 MB | 45 MB | 104 µs | 103 µs | 111 µs | n/a | n/a | n/a | not run |
-| [ICD-11 MMS](bench/records/2026-09-04-docker-apple-m2/icd-11-mms-2026-09-04T09-17-03-558396221Z.json) | 2026-01 | 37211 | n/a | n/a | 34 MB | 60 MB | 263 µs | 115 µs | n/a | 126 µs | 125 µs | 139 µs | not run |
-| [LOINC](bench/records/2026-09-04-docker-apple-m2/loinc-2026-09-04T09-16-55-946117093Z.json) | 2.83 | 257266 | 12.89 s | 2.27 GB | 260 MB | 124 MB | 265 µs | 116 µs | n/a | 127 µs | 6.46 ms | 1.45 ms | not run |
-| [RxNorm (prescribable subset)](bench/records/2026-09-04-docker-apple-m2/rxnorm-prescribable-subset-2026-09-04T09-17-03-166797554Z.json) | 09082026 | 81468 | 4.49 s | 568 MB | 72 MB | 86 MB | 1.41 ms | 134 µs | n/a | n/a | n/a | n/a | not run |
-| [SNOMED CT (International edition)](bench/records/2026-09-04-docker-apple-m2/snomed-ct-international-edition-2026-09-04T09-16-41-025864294Z.json) | 20260901 | 535502 | 36.81 s | 2.49 GB | 486 MB | 402 MB | 915 µs | 116 µs | 111 µs | 526 µs | 3.9 ms | 357 µs | not run |
-| [SNOMED CT (Netherlands edition)](bench/records/2026-09-04-docker-apple-m2/snomed-ct-netherlands-edition-2026-09-04T09-16-02-189844762Z.json) | 20260630 | 548949 | 62.92 s | 3.41 GB | 668 MB | 475 MB | 934 µs | 118 µs | 112 µs | 838 µs | 6.91 ms | 869 µs | not run |
+| [ICD-10-CM](bench/records/2026-09-04-docker-apple-m2/icd-10-cm-2026-09-04T09-16-57-858505552Z.json) | 2026 | 98,827 | 1.7 s | 319 MB | 40 MB | 45 MB | 104 µs | 103 µs | 111 µs | n/a | n/a | n/a | not run |
+| [ICD-11 MMS](bench/records/2026-09-04-docker-apple-m2/icd-11-mms-2026-09-04T09-17-03-558396221Z.json) | 2026-01 | 37,211 | n/a | n/a | 34 MB | 60 MB | 263 µs | 115 µs | n/a | 126 µs | 125 µs | 139 µs | not run |
+| [LOINC](bench/records/2026-09-04-docker-apple-m2/loinc-2026-09-04T09-16-55-946117093Z.json) | 2.83 | 257,266 | 12.89 s | 2.27 GB | 260 MB | 124 MB | 265 µs | 116 µs | n/a | 127 µs | 6.46 ms | 1.45 ms | not run |
+| [RxNorm (prescribable subset)](bench/records/2026-09-04-docker-apple-m2/rxnorm-prescribable-subset-2026-09-04T09-17-03-166797554Z.json) | 09082026 | 81,468 | 4.49 s | 568 MB | 72 MB | 86 MB | 1.41 ms | 134 µs | n/a | n/a | n/a | n/a | not run |
+| [SNOMED CT (International edition)](bench/records/2026-09-04-docker-apple-m2/snomed-ct-international-edition-2026-09-04T09-16-41-025864294Z.json) | 20260901 | 535,502 | 36.81 s | 2.49 GB | 486 MB | 402 MB | 915 µs | 116 µs | 111 µs | 526 µs | 3.9 ms | 357 µs | not run |
+| [SNOMED CT (Netherlands edition)](bench/records/2026-09-04-docker-apple-m2/snomed-ct-netherlands-edition-2026-09-04T09-16-02-189844762Z.json) | 20260630 | 548,949 | 62.92 s | 3.41 GB | 668 MB | 475 MB | 934 µs | 118 µs | 112 µs | 838 µs | 6.91 ms | 869 µs | not run |
 
-Warm p50 over 200 HTTP round trips on one machine, inside a Docker container (Apple aarch64 (implementer 0x61, part 0x000), 8.22 GB, linux/aarch64), FerroTERM 0.0.9 serving FHIR R4B, taken 2026-09-04. The records are under `bench/records/`; the [benchmarks page](https://ferroterm.eu/docs/evaluate/benchmarks.html) has the method, the cold and tail latencies, and how to reproduce a record.
+Warm p50 over 200 HTTP round trips on one machine, inside a Docker container (Apple aarch64 (implementer 0x61, part 0x000), 8.22 GB, linux/aarch64), FerroTERM 0.0.9 serving FHIR R4B, taken 2026-09-04. The records are under `bench/records/`; the [benchmarks page](https://ferroterm.eu/benchmarks.html) has the method, the cold and tail latencies, and how to reproduce a record.
 <!-- bench-table:end -->
 
 ## The API
