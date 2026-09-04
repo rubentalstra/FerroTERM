@@ -1,0 +1,15 @@
+# The benchmark harness in a container. From the repository root:
+#   docker compose -f bench/compose.yaml run --rm bench --skip-ingest
+#   docker compose -f bench/compose.yaml run --rm bench --only LOINC
+# The releases and artifacts are the owner's, mounted read-only; the records
+# land in bench/results/ on the host.
+services:
+  bench:
+    build:
+      context: ..
+      dockerfile: bench/Dockerfile
+    image: ferroterm-bench:local
+    volumes:
+      - ../data:/work/data:ro
+      - ../artifacts:/work/artifacts:ro
+      - ./results:/work/bench/results

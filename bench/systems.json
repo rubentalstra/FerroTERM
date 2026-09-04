@@ -1,0 +1,106 @@
+{
+  "fhir": "r4b",
+  "warm_requests": 200,
+  "systems": [
+    {
+      "name": "SNOMED CT (Netherlands edition)",
+      "artifact": "artifacts/nl",
+      "release": "data/snomed/SnomedCT_ManagedServiceNL_PRODUCTION_NL1000146_20260630T120000Z.zip",
+      "build": [
+        "--rf2"
+      ],
+      "uri": "http://snomed.info/sct",
+      "lookup": "404684003",
+      "validate": "404684003",
+      "subsumes": [
+        "138875005",
+        "404684003"
+      ],
+      "expand": "http://snomed.info/sct?fhir_vs=isa/404684003",
+      "expand_small": "http://snomed.info/sct?fhir_vs=isa/22298006",
+      "search": "hart"
+    },
+    {
+      "name": "SNOMED CT (International edition)",
+      "artifact": "artifacts/int",
+      "release": "data/snomed/SnomedCT_InternationalRF2_PRODUCTION_20260901T120000Z.zip",
+      "build": [
+        "--rf2"
+      ],
+      "uri": "http://snomed.info/sct",
+      "lookup": "404684003",
+      "validate": "404684003",
+      "subsumes": [
+        "138875005",
+        "404684003"
+      ],
+      "expand": "http://snomed.info/sct?fhir_vs=isa/404684003",
+      "expand_small": "http://snomed.info/sct?fhir_vs=isa/22298006",
+      "search": "heart"
+    },
+    {
+      "name": "LOINC",
+      "artifact": "artifacts/loinc",
+      "release": "data/loinc/Loinc_2.83.zip",
+      "build": [
+        "--loinc"
+      ],
+      "uri": "http://loinc.org",
+      "lookup": "2160-0",
+      "validate": "2160-0",
+      "subsumes": null,
+      "expand": "http://loinc.org/vs",
+      "expand_small": "http://loinc.org/vs/LL1971-2",
+      "search": "glucose"
+    },
+    {
+      "name": "ICD-10-CM",
+      "artifact": "artifacts/icd10cm",
+      "release": null,
+      "build": [
+        "--icd10cm",
+        "data/icd10cm/tables.zip",
+        "--icd10cm",
+        "data/icd10cm/tabular-order.zip"
+      ],
+      "uri": "http://hl7.org/fhir/sid/icd-10-cm",
+      "lookup": "E11.9",
+      "validate": "E11.9",
+      "subsumes": [
+        "E11",
+        "E11.9"
+      ],
+      "expand": null,
+      "expand_small": null,
+      "search": "diabetes"
+    },
+    {
+      "name": "RxNorm (prescribable subset)",
+      "artifact": "artifacts/rxnorm",
+      "release": "data/rxnorm/RxNorm_full_prescribe_current.zip",
+      "build": [
+        "--rxnorm"
+      ],
+      "uri": "http://www.nlm.nih.gov/research/umls/rxnorm",
+      "lookup": "1049502",
+      "validate": "1049502",
+      "subsumes": null,
+      "expand": null,
+      "expand_small": null,
+      "search": "metformin"
+    },
+    {
+      "name": "ICD-11 MMS",
+      "artifact": "artifacts/icd11/mms",
+      "release": null,
+      "build": null,
+      "uri": "http://id.who.int/icd/release/11/mms",
+      "lookup": "1A00",
+      "validate": "1A00",
+      "subsumes": null,
+      "expand": "http://id.who.int/icd/release/11/mms/257068234/postcoordinationScale/infectiousAgent",
+      "expand_small": "http://id.who.int/icd/release/11/mms/257068234/postcoordinationScale/infectiousAgent",
+      "search": "cholera"
+    }
+  ]
+}

@@ -35,6 +35,22 @@
             </SchemaInfo>
           </value>
         </entry>
+        <entry key="Hadolint">
+          <value>
+            <SchemaInfo>
+              <option name="name" value="Hadolint" />
+              <option name="relativePathToSchema" value="https://raw.githubusercontent.com/hadolint/hadolint/master/contrib/hadolint.json" />
+              <option name="applicationDefined" value="true" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value=".hadolint.yaml" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
         <entry key="actionlint">
           <value>
             <SchemaInfo>

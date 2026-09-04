@@ -45,3 +45,7 @@ der2_*
 /dist/
 # The rendered book (mdbook build-dir); .github/workflows/docs.yml renders it.
 /website/book/book/
+# Benchmark records are taken over licensed data on the owner's machines and
+# published from the records the owner commits by hand.
+/bench/results/*.json
+!/bench/results/.gitkeep

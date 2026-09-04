@@ -8,6 +8,7 @@
 - [Architecture at a glance](evaluate/architecture.md)
 - [How it compares](evaluate/comparison.md)
 - [Code systems served](evaluate/code-systems.md)
+- [Benchmarks](evaluate/benchmarks.md)
 - [Conformance](evaluate/conformance.md)
 
 # Operate
