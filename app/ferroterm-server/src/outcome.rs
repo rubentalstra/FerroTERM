@@ -20,7 +20,7 @@ use http::StatusCode;
 use http::header::CONTENT_TYPE;
 
 /// The media type of every FHIR response.
-pub const FHIR_JSON: &str = "application/fhir+json; charset=utf-8";
+pub const FHIR_JSON: &str = crate::wire::FHIR_JSON;
 
 /// A failure to answer, as the wire sees it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -107,14 +107,23 @@ impl From<OperationError> for Failure {
     }
 }
 
-impl IntoResponse for Failure {
-    fn into_response(self) -> Response {
+impl Failure {
+    /// The response in `wire`: the `OperationOutcome` as FHIR JSON or XML (the
+    /// R4B shape, which every served version declares alike).
+    #[must_use]
+    pub fn respond(&self, wire: crate::wire::Wire) -> Response {
         match self.outcome().to_json() {
-            Ok(object) => fhir_json(self.status, &serde_json::Value::Object(object)),
+            Ok(object) => wire.response(self.status, &object, &fhir_types::r4b::schema::SCHEMAS),
             // NOTE: encoding a hand-built OperationOutcome cannot fail; if the
             // codec ever refuses, a bare status still tells the client the truth.
             Err(_) => self.status.into_response(),
         }
+    }
+}
+
+impl IntoResponse for Failure {
+    fn into_response(self) -> Response {
+        self.respond(crate::wire::Wire::Json)
     }
 }
 
@@ -127,12 +136,14 @@ pub fn fhir_json(status: StatusCode, value: &serde_json::Value) -> Response {
         .unwrap_or_else(|_| status.into_response())
 }
 
-/// The fallback for a path the server does not define.
-pub async fn not_found() -> Response {
+/// The fallback for a path the server does not define, in the format `Accept`
+/// asks for.
+pub async fn not_found(headers: http::HeaderMap) -> Response {
+    let wire = crate::wire::Wire::negotiate(&[], &headers).unwrap_or_default();
     Failure::new(
         StatusCode::NOT_FOUND,
         "not-found",
         "no such resource or operation on this server",
     )
-    .into_response()
+    .respond(wire)
 }

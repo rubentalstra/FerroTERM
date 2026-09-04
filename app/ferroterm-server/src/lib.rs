@@ -23,6 +23,7 @@ pub mod scope;
 pub mod state;
 pub mod telemetry;
 pub mod version;
+pub mod wire;
 
 use std::future::Future;
 use std::sync::Arc;

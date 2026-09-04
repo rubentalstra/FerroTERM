@@ -46,6 +46,7 @@ macro_rules! operations {
             use crate::outcome::Failure;
             use crate::scope::{Scope, scope_of};
             use crate::state::AppState;
+            use crate::wire::{Wire, without_format};
 
             type Handled = Result<Response, Failure>;
 
@@ -94,18 +95,20 @@ macro_rules! operations {
                 scope: &Scope<'_>,
                 invocation: &Invocation,
                 parameters: &Parameters,
+                wire: Wire,
             ) -> Handled {
                 let request = CodeSystemLookupRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let outcome =
                     lookup::lookup(scope.registry(), invocation, &map::lookup_input(&request))?;
-                parameters::respond(&map::lookup_response(outcome).to_parameters())
+                parameters::respond(&map::lookup_response(outcome).to_parameters(), wire)
             }
 
             fn run_validate_code(
                 scope: &Scope<'_>,
                 invocation: &Invocation,
                 parameters: &Parameters,
+                wire: Wire,
             ) -> Handled {
                 let request = CodeSystemValidateCodeRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
@@ -114,13 +117,14 @@ macro_rules! operations {
                     invocation,
                     &map::validate_code_input(&request),
                 )?;
-                parameters::respond(&map::validate_code_response(outcome).to_parameters())
+                parameters::respond(&map::validate_code_response(outcome).to_parameters(), wire)
             }
 
             fn run_subsumes(
                 scope: &Scope<'_>,
                 invocation: &Invocation,
                 parameters: &Parameters,
+                wire: Wire,
             ) -> Handled {
                 let request = CodeSystemSubsumesRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
@@ -129,24 +133,24 @@ macro_rules! operations {
                     invocation,
                     &map::subsumes_input(&request),
                 )?;
-                parameters::respond(&map::subsumes_response(outcome).to_parameters())
+                parameters::respond(&map::subsumes_response(outcome).to_parameters(), wire)
             }
 
-            fn run_expand(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
+            fn run_expand(scope: &Scope<'_>, parameters: &Parameters, wire: Wire) -> Handled {
                 let request = ValueSetExpandRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let outcome = expand::expand(&scope.sources(), &map::expand_input(&request))?;
-                parameters::respond_resource(&render::$fhir::expansion(&outcome))
+                parameters::respond_resource(&render::$fhir::expansion(&outcome), wire)
             }
 
-            fn run_value_set_validate_code(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
+            fn run_value_set_validate_code(scope: &Scope<'_>, parameters: &Parameters, wire: Wire) -> Handled {
                 let request = ValueSetValidateCodeRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let validation = value_set_validate_code::validate_code(
                     &scope.sources(),
                     &map::value_set_validate_input(&request),
                 )?;
-                parameters::respond(&map::value_set_validation_parameters(&validation))
+                parameters::respond(&map::value_set_validation_parameters(&validation), wire)
             }
 
             /// The refusal of `reverse` on a version that does not declare it.
@@ -173,7 +177,7 @@ macro_rules! operations {
                 Ok(())
             }
 
-            fn run_translate(scope: &Scope<'_>, parameters: &Parameters) -> Handled {
+            fn run_translate(scope: &Scope<'_>, parameters: &Parameters, wire: Wire) -> Handled {
                 reverse_refusal(
                     parameters
                         .parameter
@@ -184,14 +188,24 @@ macro_rules! operations {
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let translation =
                     translate::translate(&scope.sources(), &map::translate_input(&request))?;
-                parameters::respond(&map::translation_parameters(&translation))
+                parameters::respond(&map::translation_parameters(&translation), wire)
             }
 
-            fn finish(handled: Handled) -> Response {
+            /// The response of a handled invocation, a failure rendered in `wire`.
+            fn finish(handled: Handled, wire: Wire) -> Response {
                 match handled {
                     Ok(response) => response,
-                    Err(failure) => failure.into_response(),
+                    Err(failure) => failure.respond(wire),
                 }
+            }
+
+            /// The negotiated format and the query less `_format`; a format the server
+            /// does not speak is refused (in JSON, at the call site).
+            fn negotiated(
+                headers: &HeaderMap,
+                query: &[(String, String)],
+            ) -> Result<(Wire, Vec<(String, String)>), Failure> {
+                Wire::negotiate(query, headers).map(|wire| (wire, without_format(query)))
             }
 
             /// `GET /CodeSystem/$lookup`.
@@ -200,22 +214,29 @@ macro_rules! operations {
                 headers: HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_query(&state, &CODE_SYSTEM_LOOKUP, &headers, &query)
-                        .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p)),
-                )
+                        .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p, wire)), wire)
             }
 
             /// `POST /CodeSystem/$lookup`.
             pub async fn lookup_post(
                 State(state): State<Arc<AppState>>,
                 headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
                 body: Bytes,
             ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_body(&state, &CODE_SYSTEM_LOOKUP, &headers, &body)
-                        .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p)),
-                )
+                        .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p, wire)), wire)
             }
 
             /// `GET /CodeSystem/$validate-code`.
@@ -224,22 +245,29 @@ macro_rules! operations {
                 headers: HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_query(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &query)
-                        .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p)),
-                )
+                        .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p, wire)), wire)
             }
 
             /// `POST /CodeSystem/$validate-code`.
             pub async fn validate_code_post(
                 State(state): State<Arc<AppState>>,
                 headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
                 body: Bytes,
             ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_body(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p)),
-                )
+                        .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p, wire)), wire)
             }
 
             /// `GET /CodeSystem/{id}/$validate-code`.
@@ -249,10 +277,14 @@ macro_rules! operations {
                 headers: HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(instance(&state, &id).and_then(|invocation| {
                     from_query(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &query)
-                        .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p))
-                }))
+                        .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p, wire))
+                }), wire)
             }
 
             /// `POST /CodeSystem/{id}/$validate-code`.
@@ -260,12 +292,20 @@ macro_rules! operations {
                 State(state): State<Arc<AppState>>,
                 UrlPath(id): UrlPath<String>,
                 headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
                 body: Bytes,
             ) -> Response {
-                finish(instance(&state, &id).and_then(|invocation| {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    instance(&state, &id).and_then(|invocation| {
                     from_body(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p))
-                }))
+                        .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p, wire))
+}),
+                    wire,
+                )
             }
 
             /// `GET /CodeSystem/$subsumes`.
@@ -274,22 +314,29 @@ macro_rules! operations {
                 headers: HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_query(&state, &CODE_SYSTEM_SUBSUMES, &headers, &query)
-                        .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p)),
-                )
+                        .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p, wire)), wire)
             }
 
             /// `POST /CodeSystem/$subsumes`.
             pub async fn subsumes_post(
                 State(state): State<Arc<AppState>>,
                 headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
                 body: Bytes,
             ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_body(&state, &CODE_SYSTEM_SUBSUMES, &headers, &body)
-                        .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p)),
-                )
+                        .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p, wire)), wire)
             }
 
             /// `GET /CodeSystem/{id}/$subsumes`.
@@ -299,10 +346,14 @@ macro_rules! operations {
                 headers: HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(instance(&state, &id).and_then(|invocation| {
                     from_query(&state, &CODE_SYSTEM_SUBSUMES, &headers, &query)
-                        .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p))
-                }))
+                        .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p, wire))
+                }), wire)
             }
 
             /// `POST /CodeSystem/{id}/$subsumes`.
@@ -310,12 +361,20 @@ macro_rules! operations {
                 State(state): State<Arc<AppState>>,
                 UrlPath(id): UrlPath<String>,
                 headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
                 body: Bytes,
             ) -> Response {
-                finish(instance(&state, &id).and_then(|invocation| {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    instance(&state, &id).and_then(|invocation| {
                     from_body(&state, &CODE_SYSTEM_SUBSUMES, &headers, &body)
-                        .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p))
-                }))
+                        .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p, wire))
+}),
+                    wire,
+                )
             }
 
             /// `GET /ValueSet/$expand`.
@@ -324,22 +383,29 @@ macro_rules! operations {
                 headers: HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_query(&state, &VALUE_SET_EXPAND, &headers, &query)
-                        .and_then(|(scope, p)| run_expand(&scope, &p)),
-                )
+                        .and_then(|(scope, p)| run_expand(&scope, &p, wire)), wire)
             }
 
             /// `POST /ValueSet/$expand`.
             pub async fn expand_post(
                 State(state): State<Arc<AppState>>,
                 headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
                 body: Bytes,
             ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_body(&state, &VALUE_SET_EXPAND, &headers, &body)
-                        .and_then(|(scope, p)| run_expand(&scope, &p)),
-                )
+                        .and_then(|(scope, p)| run_expand(&scope, &p, wire)), wire)
             }
 
             /// `GET /ValueSet/$validate-code`.
@@ -348,22 +414,29 @@ macro_rules! operations {
                 headers: HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)),
-                )
+                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p, wire)), wire)
             }
 
             /// `POST /ValueSet/$validate-code`.
             pub async fn value_set_validate_code_post(
                 State(state): State<Arc<AppState>>,
                 headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
                 body: Bytes,
             ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)),
-                )
+                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p, wire)), wire)
             }
 
             /// `GET /ConceptMap/$translate`.
@@ -372,23 +445,30 @@ macro_rules! operations {
                 headers: HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     reverse_refusal(query.iter().map(|(name, _)| name.as_str()))
                         .and_then(|()| from_query(&state, &CONCEPT_MAP_TRANSLATE, &headers, &query))
-                        .and_then(|(scope, p)| run_translate(&scope, &p)),
-                )
+                        .and_then(|(scope, p)| run_translate(&scope, &p, wire)), wire)
             }
 
             /// `POST /ConceptMap/$translate`.
             pub async fn translate_post(
                 State(state): State<Arc<AppState>>,
                 headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
                 body: Bytes,
             ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
                 finish(
                     from_body(&state, &CONCEPT_MAP_TRANSLATE, &headers, &body)
-                        .and_then(|(scope, p)| run_translate(&scope, &p)),
-                )
+                        .and_then(|(scope, p)| run_translate(&scope, &p, wire)), wire)
             }
         }
     };
