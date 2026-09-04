@@ -236,6 +236,21 @@ impl Default for Standing {
     }
 }
 
+/// The metadata an implicit value set carries beside its compose.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ImplicitMetadata {
+    /// `ValueSet.version`.
+    pub version: Option<String>,
+    /// `ValueSet.name`.
+    pub name: Option<String>,
+    /// `ValueSet.title`.
+    pub title: Option<String>,
+    /// `ValueSet.experimental`.
+    pub experimental: Option<bool>,
+    /// `ValueSet.date`.
+    pub date: Option<String>,
+}
+
 /// The status of a concept, for `inactive` and `abstract` on the wire.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Status {
@@ -570,6 +585,14 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// error when it is malformed. The default declares none.
     fn implicit_value_set(&self, _url: &str) -> Option<Result<Compose, ProviderError>> {
         None
+    }
+
+    /// The metadata of the implicit value set `url` denotes: the fields the
+    /// returned `ValueSet` carries beside its compose. The default carries
+    /// none; a system whose implicit sets have a version or a name of their
+    /// own says so.
+    fn implicit_metadata(&self, _url: &str) -> ImplicitMetadata {
+        ImplicitMetadata::default()
     }
 
     /// The concepts a filter selects.

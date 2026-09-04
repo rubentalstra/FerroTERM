@@ -269,3 +269,38 @@ async fn expand_and_validate_code_answer_an_ecl_implicit_value_set() {
     assert_eq!(body["resourceType"], "OperationOutcome");
     assert_eq!(body["issue"][0]["code"], "code-invalid", "{body}");
 }
+
+#[tokio::test]
+async fn an_expansion_carries_the_publisher_only_with_the_definition() {
+    let server = Server::start_with_resources();
+    let (status, body) = server
+        .get(&format!("/r4b/ValueSet/$expand?url={VS_PETS}"))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(body.get("publisher").is_none(), "{body}");
+    assert!(body.get("compose").is_none(), "{body}");
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/ValueSet/$expand?url={VS_PETS}&includeDefinition=true"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["publisher"], "FerroTERM tests");
+    assert!(body.get("compose").is_some(), "{body}");
+    // An unusable displayLanguage is refused as a processing error.
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/ValueSet/$expand?url={VS_PETS}&displayLanguage=zz"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["issue"][0]["code"], "processing");
+    assert_eq!(
+        body["issue"][0]["details"]["coding"][0]["code"],
+        "invalid-display"
+    );
+    assert_eq!(
+        body["issue"][0]["details"]["text"],
+        "Invalid displayLanguage: 'zz'"
+    );
+}

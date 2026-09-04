@@ -388,10 +388,9 @@ async fn lookup_answers_code_system_and_abstract_on_every_version() {
             ))
             .await;
         assert_eq!(status, StatusCode::OK, "{version}: {body}");
-        assert_eq!(
-            parameter(&body, "abstract").unwrap()["valueBoolean"],
-            false,
-            "{version}"
+        assert!(
+            parameter(&body, "abstract").is_none(),
+            "a selectable concept answers no `abstract`: {version}: {body}"
         );
     }
 }
@@ -615,8 +614,14 @@ async fn every_issue_and_outcome_carries_the_ecosystems_message_id() {
             ))
             .await;
         assert_eq!(status, StatusCode::NOT_FOUND, "{version}: {body}");
+        // The outcome of a refused request carries no message id; the ids live on
+        // the itemised `issues` above.
+        assert!(
+            body["issue"][0].get("extension").is_none(),
+            "{version}: {body}"
+        );
         assert_eq!(
-            body["issue"][0]["extension"][0]["valueString"], "Unable_to_resolve_value_Set_",
+            body["issue"][0]["details"]["coding"][0]["code"], "not-found",
             "{version}: {body}"
         );
         // A versionless system answers no version on $lookup.

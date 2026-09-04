@@ -258,6 +258,19 @@ impl Registry {
             .find_map(|resolved| resolved.provider.implicit_value_set(url))
     }
 
+    /// The metadata of the implicit value set `url` denotes, from the system
+    /// that defines it; empty when no registered system does.
+    #[must_use]
+    pub fn implicit_metadata(&self, url: &str) -> crate::provider::ImplicitMetadata {
+        self.systems
+            .keys()
+            .filter(|system| url.starts_with(system.as_str()))
+            .filter_map(|system| self.resolve(system, None).ok())
+            .find(|resolved| resolved.provider.implicit_value_set(url).is_some())
+            .map(|resolved| resolved.provider.implicit_metadata(url))
+            .unwrap_or_default()
+    }
+
     /// The registered system URIs, sorted.
     pub fn systems(&self) -> impl Iterator<Item = &str> {
         self.systems.keys().map(String::as_str)

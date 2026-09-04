@@ -252,6 +252,7 @@ pub fn validate_code(
     sources: &Sources<'_>,
     input: &ValueSetValidateInput,
 ) -> Result<Validation, OperationError> {
+    language::check(input.display_language.as_deref())?;
     if let Some(name) = input.unsupported.first() {
         return Err(OperationError::NotSupported(format!(
             "`{name}` is not supported by this server"

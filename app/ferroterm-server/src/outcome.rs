@@ -9,12 +9,11 @@
 
 use axum::body::Body;
 use axum::response::{IntoResponse, Response};
+use fhir_terminology::operations::OperationError;
 use fhir_terminology::operations::value_set_validate_code::TX_ISSUE_TYPE;
-use fhir_terminology::operations::{MESSAGE_ID_URL, OperationError};
 use fhir_types::codec::Json;
 use fhir_types::r4b::codeable_concept::CodeableConcept;
 use fhir_types::r4b::coding::Coding;
-use fhir_types::r4b::extension::{Extension, ExtensionValue};
 use fhir_types::r4b::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
 use http::StatusCode;
 use http::header::CONTENT_TYPE;
@@ -33,8 +32,6 @@ pub struct Failure {
     pub diagnostics: String,
     /// The `tx-issue-type` code in `issue.details.coding`, when one applies.
     pub kind: Option<&'static str>,
-    /// The ecosystem's message id, when one applies.
-    pub message_id: Option<&'static str>,
 }
 
 impl Failure {
@@ -46,7 +43,6 @@ impl Failure {
             code,
             diagnostics: diagnostics.into(),
             kind: None,
-            message_id: None,
         }
     }
 
@@ -65,16 +61,10 @@ impl Failure {
     #[must_use]
     pub fn outcome(&self) -> OperationOutcome {
         OperationOutcome {
+            // NOTE: the ecosystem's message ids live on the itemised `issues` of a
+            // validation; the outcome of a refused request carries none (its test
+            // cases expect a bare issue, <https://hl7.org/fhir/uv/tx-ecosystem/1.9.3/>).
             issue: vec![OperationOutcomeIssue {
-                extension: self
-                    .message_id
-                    .map(|id| Extension {
-                        url: String::from(MESSAGE_ID_URL),
-                        value: Some(ExtensionValue::String(id.into())),
-                        ..Default::default()
-                    })
-                    .into_iter()
-                    .collect(),
                 severity: "error".into(),
                 code: self.code.into(),
                 details: Some(CodeableConcept {
@@ -100,10 +90,7 @@ fn tx_issue_coding(kind: &str) -> Coding {
 
 impl From<OperationError> for Failure {
     fn from(error: OperationError) -> Self {
-        let mut failure = Self::new(error.status(), error.issue_code(), error.to_string())
-            .kind(error.tx_issue_type());
-        failure.message_id = Some(error.message_id());
-        failure
+        Self::new(error.status(), error.issue_code(), error.to_string()).kind(error.tx_issue_type())
     }
 }
 

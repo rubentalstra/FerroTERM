@@ -373,10 +373,14 @@ fn invalid_composes_and_unknown_codes_are_typed_errors() {
         }),
         Err(ComposeError::ConceptsAndFilters)
     ));
-    assert!(matches!(
-        run(Include { system: Some(system(None)), concepts: concepts(&["unicorn"]), ..Include::default() }),
-        Err(ComposeError::UnknownCode { code, .. }) if code == "unicorn"
-    ));
+    // An enumerated code the system does not define leaves the expansion.
+    let dropped = run(Include {
+        system: Some(system(None)),
+        concepts: concepts(&["unicorn", "cat"]),
+        ..Include::default()
+    })
+    .expect("expands");
+    assert_eq!(dropped.total, 1);
     assert!(matches!(
         run(Include {
             system: Some(system(Some("1999"))),

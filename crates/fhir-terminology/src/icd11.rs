@@ -1006,6 +1006,23 @@ impl CodeSystemProvider for Icd11Provider {
         }))
     }
 
+    /// A scale's value set carries the release as its version and date, and a
+    /// name and title built from the stem and the axis (the WHO ICD-API's
+    /// shape, which the ecosystem's `icd-11` cases expect).
+    fn implicit_metadata(&self, url: &str) -> crate::provider::ImplicitMetadata {
+        let Some((entity, axis)) = url.rsplit_once(SCALE_SEGMENT) else {
+            return crate::provider::ImplicitMetadata::default();
+        };
+        let stem = entity.rsplit('/').next().unwrap_or(entity);
+        crate::provider::ImplicitMetadata {
+            version: Some(self.release.clone()),
+            name: Some(format!("PostcoordinationScale_{stem}_{axis}")),
+            title: Some(format!("Postcoordination scale {axis} of {entity}")),
+            experimental: Some(false),
+            date: Some(self.release.clone()),
+        }
+    }
+
     fn all(&self) -> Result<ConceptSet, ProviderError> {
         Ok((0..self.concepts).collect())
     }

@@ -236,6 +236,12 @@ impl Parsing<'_> {
     }
 }
 
+/// Parses `text` against the vendored IANA registry ([`analyze`]).
+#[must_use]
+pub fn analyze_tag(text: &str) -> Analysis {
+    analyze(text, &REGISTRY_DATA)
+}
+
 /// Parses `text` against RFC 5646 §2.1 and checks each subtag against
 /// `registry` (RFC 5646 §2.2.9).
 #[must_use]

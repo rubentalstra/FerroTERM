@@ -113,7 +113,9 @@ macro_rules! family_map {
                         .collect(),
                     code: Some(outcome.code.into()),
                     system: Some(outcome.system.into()),
-                    r#abstract: Some(outcome.abstract_concept.into()),
+                    // NOTE: `abstract` is answered for an abstract concept only; the
+                    // ecosystem's cases expect no `abstract = false`.
+                    r#abstract: outcome.abstract_concept.then_some(true.into()),
                 }
             }
 

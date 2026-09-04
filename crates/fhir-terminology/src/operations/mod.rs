@@ -57,6 +57,9 @@ pub enum OperationError {
     /// Parameters contradict each other or the invocation.
     #[error("{0}")]
     Invalid(String),
+    /// A `displayLanguage` that is not a valid BCP 47 language range list.
+    #[error("Invalid displayLanguage: '{0}'")]
+    InvalidLanguage(String),
     /// A `check-system-version` parameter forbids the version a value set
     /// uses (the ecosystem's `version-error`, an `exception`).
     #[error("{0}")]
@@ -129,6 +132,7 @@ impl OperationError {
             Self::Required(_) => "required",
             Self::InvalidCode { .. } => "code-invalid",
             Self::Invalid(_) | Self::ValueSetInvalid(_) => "invalid",
+            Self::InvalidLanguage(_) => "processing",
             Self::NotSupported(_) | Self::CannotDetermine(_) => "not-supported",
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
@@ -148,6 +152,7 @@ impl OperationError {
     pub const fn tx_issue_type(&self) -> &'static str {
         match self {
             Self::Required(_) | Self::Invalid(_) => "invalid-data",
+            Self::InvalidLanguage(_) => "invalid-display",
             Self::NotSupported(_) | Self::Provider(_) => "not-supported",
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
@@ -180,6 +185,7 @@ impl OperationError {
             Self::NotSupported(_) => "CODESYSTEM_NOT_ENUMERABLE",
             Self::UnknownCode { .. } | Self::InvalidCode { .. } => "Unknown_Code_in_Version",
             Self::ValueSetInvalid(_) => "VALUESET_CIRCULAR_REFERENCE",
+            Self::InvalidLanguage(_) => "INVALID_DISPLAY_NAME",
             Self::Required(_)
             | Self::Invalid(_)
             | Self::CannotDetermine(_)
@@ -198,6 +204,7 @@ impl OperationError {
         match self {
             Self::Required(_)
             | Self::Invalid(_)
+            | Self::InvalidLanguage(_)
             | Self::VersionCheck(_)
             | Self::UnknownCode { .. }
             | Self::InvalidCode { .. }
@@ -418,23 +425,26 @@ impl<'a> Sources<'a> {
                     return Ok(model);
                 }
                 match self.registry.implicit_value_set(url) {
-                    Some(Ok(compose)) => Ok(Arc::new(crate::valueset::model::ValueSetModel {
-                        expansion_parameters: Vec::new(),
-                        language: None,
-                        url: url.to_owned(),
-                        version: None,
-                        supplements: Vec::new(),
-                        standards_status: None,
-                        name: None,
-                        title: None,
-                        status: String::from("active"),
-                        experimental: None,
-                        date: None,
-                        publisher: None,
-                        description: None,
-                        immutable: None,
-                        compose,
-                    })),
+                    Some(Ok(compose)) => {
+                        let metadata = self.registry.implicit_metadata(url);
+                        Ok(Arc::new(crate::valueset::model::ValueSetModel {
+                            expansion_parameters: Vec::new(),
+                            language: None,
+                            url: url.to_owned(),
+                            version: metadata.version,
+                            supplements: Vec::new(),
+                            standards_status: None,
+                            name: metadata.name,
+                            title: metadata.title,
+                            status: String::from("active"),
+                            experimental: metadata.experimental,
+                            date: metadata.date,
+                            publisher: None,
+                            description: None,
+                            immutable: None,
+                            compose,
+                        }))
+                    }
                     Some(Err(source)) => Err(source.into()),
                     None => Err(OperationError::UnknownValueSet(match version {
                         Some(version) => format!("{url}|{version}"),
