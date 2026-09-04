@@ -15,9 +15,10 @@ run.
 v0.0.8 is the current release. It ships as Linux binaries for `x86_64` and
 `aarch64` (glibc and musl), as a container image for `linux/amd64` and
 `linux/arm64`, and as a Compose file, all built with signed provenance. The
-server answers FHIR R4 under `/r4`, R4B under `/r4b`, and R5 under `/r5`; the
-CI lane runs the HL7 terminology ecosystem suite against each on every change
-and holds a committed pass list per version.
+server answers FHIR R4 under `/r4`, R4B under `/r4b`, R5 under `/r5`, and the
+R6 ballot under `/r6`; the CI lane runs the HL7 terminology ecosystem suite
+against the published versions on every change and holds a committed pass list
+per version.
 
 Some of what a mature terminology server does is still on the roadmap, and
 this book says so where it matters: ECL and the SNOMED implicit value sets

@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 
 use crate::fixture::{Server, parameter};
 
-const VERSIONS: [&str; 3] = ["r4", "r4b", "r5"];
+const VERSIONS: [&str; 4] = ["r4", "r4b", "r5", "r6"];
 
 #[tokio::test]
 async fn the_version_negotiation_parameters_are_accepted_on_every_version() {
@@ -166,7 +166,7 @@ async fn infer_system_and_lenient_display_validation_apply_on_every_version() {
 async fn translate_accepts_the_r6_source_system_and_source_version_names() {
     let server = Server::start_with_resources();
     for version in VERSIONS {
-        let code = if version == "r5" {
+        let code = if matches!(version, "r5" | "r6") {
             "sourceCode"
         } else {
             "code"
@@ -226,7 +226,7 @@ async fn the_capability_statement_documents_the_overlay_per_operation() {
             .nth(1)
             .and_then(|o| o["documentation"].as_str())
             .unwrap_or_default();
-        if version == "r5" {
+        if matches!(version, "r5" | "r6") {
             assert!(
                 !value_set_validate.contains("`issues`"),
                 "{version} declares issues itself: {value_set_validate}"
@@ -237,10 +237,19 @@ async fn the_capability_statement_documents_the_overlay_per_operation() {
                 "{version}: {value_set_validate}"
             );
         }
-        assert!(
-            value_set_validate.contains("`check-system-version`"),
-            "{version}: {value_set_validate}"
-        );
+        // The R6 ballot declares the version trio itself; the earlier versions
+        // pre-adopt it.
+        if version == "r6" {
+            assert!(
+                !value_set_validate.contains("`check-system-version`"),
+                "{version}: {value_set_validate}"
+            );
+        } else {
+            assert!(
+                value_set_validate.contains("`check-system-version`"),
+                "{version}: {value_set_validate}"
+            );
+        }
     }
 }
 
@@ -648,7 +657,7 @@ async fn expand_flags_inactive_concepts_with_their_status_on_every_version() {
             .find(|c| c["code"] == "fish")
             .expect("fish");
         assert_eq!(fish["inactive"], true, "{version}: {fish}");
-        if version == "r5" {
+        if matches!(version, "r5" | "r6") {
             assert_eq!(fish["property"][0]["code"], "status", "{version}: {fish}");
             assert_eq!(
                 fish["property"][0]["valueCode"], "retired",

@@ -19,6 +19,7 @@ mod metadata;
 mod operations;
 mod r4;
 mod r5;
+mod r6;
 mod scope;
 mod shutdown;
 mod telemetry;

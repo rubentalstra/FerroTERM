@@ -63,6 +63,9 @@ pub struct Validation {
 /// served versions declare.
 #[derive(Debug, Default)]
 pub struct ValueSetValidateInput {
+    /// The names of parameters the version declares that the server does not
+    /// implement; a request naming one is refused, never absorbed.
+    pub unsupported: Vec<String>,
     /// The value set URL (`url`).
     pub url: Option<String>,
     /// The value set version (`valueSetVersion`).
@@ -249,6 +252,11 @@ pub fn validate_code(
     sources: &Sources<'_>,
     input: &ValueSetValidateInput,
 ) -> Result<Validation, OperationError> {
+    if let Some(name) = input.unsupported.first() {
+        return Err(OperationError::NotSupported(format!(
+            "`{name}` is not supported by this server"
+        )));
+    }
     if input.context {
         return Err(OperationError::NotSupported(String::from(
             "`context` is not supported; name the value set with `url` or `valueSet`",

@@ -1,6 +1,6 @@
-//! The generated request and response contracts of one version mapped to and from the engine's neutral inputs and outcomes.
+//! The generated request and response contracts of the R4 family (R4 and R4B) mapped to and from the engine's neutral inputs and outcomes.
 
-macro_rules! map {
+macro_rules! family_map {
     ($fhir:ident) => {
         pub mod map {
             //! The wire of the operations for one version.
@@ -301,6 +301,7 @@ macro_rules! map {
                 request: &ValueSetValidateCodeRequest,
             ) -> ValueSetValidateInput {
                 ValueSetValidateInput {
+                    unsupported: Vec::new(),
                     url: request.url.as_ref().and_then(|v| v.value.clone()),
                     value_set_version: request
                         .value_set_version
@@ -521,6 +522,7 @@ macro_rules! map {
                     i.as_ref().and_then(|i| i.value).map(i64::from)
                 };
                 ExpandInput {
+                    unsupported: Vec::new(),
                     url: request.url.as_ref().and_then(|v| v.value.clone()),
                     value_set_version: request
                         .value_set_version
@@ -562,4 +564,4 @@ macro_rules! map {
     };
 }
 
-pub(crate) use map;
+pub(crate) use family_map;

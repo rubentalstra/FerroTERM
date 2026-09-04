@@ -27,6 +27,9 @@ pub const EXPANSION_LIMIT: u64 = 1000;
 /// declare.
 #[derive(Debug, Default, Clone)]
 pub struct ExpandInput {
+    /// The names of parameters the version declares that the server does not
+    /// implement; a request naming one is refused, never absorbed.
+    pub unsupported: Vec<String>,
     /// The value set URL (`url`).
     pub url: Option<String>,
     /// The value set version (`valueSetVersion`).
@@ -251,6 +254,11 @@ fn with_defaults(input: &ExpandInput, model: &ValueSetModel) -> ExpandInput {
 }
 
 fn refuse_unsupported(input: &ExpandInput) -> Result<(), OperationError> {
+    if let Some(name) = input.unsupported.first() {
+        return Err(OperationError::NotSupported(format!(
+            "`{name}` is not supported by this server"
+        )));
+    }
     if input.context {
         return Err(OperationError::NotSupported(String::from(
             "`context` and `contextDirection` are not supported; name the value set with `url` or `valueSet`",

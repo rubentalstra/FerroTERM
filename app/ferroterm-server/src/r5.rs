@@ -4,9 +4,8 @@
 //! R5 declares shapes the R4 family does not (`$validate-code` `issues` and
 //! the validated `code`, `system`, and `version`; `$lookup` `definition`;
 //! `$expand` `property` and `useSupplement`; the renamed `$translate`
-//! parameters and `relationship`), so its `map` is its own module; the rest
+//! parameters and `relationship`), so its `map` is the R5 family's; the rest
 //! of the surface is the shared per-version instantiation.
 
-pub mod map;
-
+crate::version::map_r5::family_map!(r5, r5);
 crate::version::surface!(r5, "5.0.0", "R5", to_r5);

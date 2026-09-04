@@ -58,7 +58,7 @@ sequence, not a scope limit; the server serves every version.
 - [x] R4B (4.3.0)
 - [x] R5 (5.0.0)
 - [x] R4 (4.0.1)
-- [ ] R6 (ballot, tracked as it moves)
+- [x] R6 (ballot, tracked as it moves)
 - [x] Per-version operation parameter sets generated from each version's
   `OperationDefinition`; one server answers every version at runtime
 

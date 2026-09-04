@@ -17,6 +17,7 @@ pub mod outcome;
 pub mod r4;
 pub mod r4b;
 pub mod r5;
+pub mod r6;
 pub mod request_log;
 pub mod scope;
 pub mod state;
@@ -44,6 +45,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .nest("/r4", r4::router())
         .nest("/r4b", r4b::router())
         .nest("/r5", r5::router())
+        .nest("/r6", r6::router())
         .fallback(outcome::not_found)
         .layer(axum::middleware::from_fn(request_log::log))
         .with_state(state)

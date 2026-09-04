@@ -7,6 +7,14 @@
 //! the `none` arms are for the versions without them.
 
 macro_rules! render_value_set {
+    // R6 makes `compose.include.filter.value` optional
+    // (<https://hl7.org/fhir/6.0.0-ballot5/valueset-definitions.html#ValueSet.compose.include.filter.value>).
+    (@filter_value required, $f:ident) => {
+        $f.value.as_str().into()
+    };
+    (@filter_value optional, $f:ident) => {
+        Some($f.value.as_str().into())
+    };
     (@helpers none, $module:ident) => {};
     (@helpers element, $module:ident) => {
         render_value_set!(
@@ -94,7 +102,7 @@ macro_rules! render_value_set {
             .collect();
         expansion
     }};
-    ($module:ident, $properties:ident) => {
+    ($module:ident, $properties:ident, $filter_value:ident) => {
         /// The `ValueSet` renders of one FHIR version.
         pub mod $module {
             use fhir_types::$module::coding::Coding;
@@ -157,7 +165,7 @@ macro_rules! render_value_set {
                         .map(|f| ValueSetComposeIncludeFilter {
                             property: f.property.as_str().into(),
                             op: f.op.code().into(),
-                            value: f.value.as_str().into(),
+                            value: render_value_set!(@filter_value $filter_value, f),
                             ..Default::default()
                         })
                         .collect(),
@@ -275,6 +283,7 @@ macro_rules! render_value_set {
     };
 }
 
-render_value_set!(r4, none);
-render_value_set!(r4b, none);
-render_value_set!(r5, element);
+render_value_set!(r4, none, required);
+render_value_set!(r4b, none, required);
+render_value_set!(r5, element, required);
+render_value_set!(r6, element, optional);
