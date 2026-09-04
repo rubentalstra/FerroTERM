@@ -109,7 +109,7 @@ pins, inline and request-scoped value sets), `ValueSet/$validate-code`,
 
 Conformance is measured, not asserted: CI runs the HL7 terminology ecosystem
 suite against every pull request and holds a committed pass list per served
-version (500 of the 670 general cases on R5, 479 on R4 and R4B; the rest are
+version (505 of the 670 general cases on R5, 500 on R4, 499 on R4B; the rest are
 features on the roadmap and fixture artefacts, listed by cluster on the
 tracker). Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept`.
 

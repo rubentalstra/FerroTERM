@@ -16,7 +16,7 @@ use std::sync::Arc;
 use super::{CodingRef, Issue, OperationError, Sources};
 use crate::compose::Item;
 use crate::language;
-use crate::provider::CodeSystemProvider;
+use crate::provider::{CodeSystemProvider, Located};
 use crate::valueset::model::{ModelError, ValueSetModel};
 use crate::valueset::negotiation::Negotiation;
 use crate::valueset::store::Resolver;
@@ -526,10 +526,6 @@ fn subject_system(
 
 /// Checks one code against the value set: its system, the code, membership,
 /// and the display, in order.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one validation step after another, read top to bottom"
-)]
 fn check(
     sources: &Sources<'_>,
     model: &ValueSetModel,
@@ -608,19 +604,40 @@ fn check(
         validation.unknown_systems.extend(target.unknown_systems);
         return Ok(validation);
     };
+    conclude(
+        sources, model, resolver, subject, policy, target, &located, &item, display, system,
+        version,
+    )
+}
+
+/// The validation of a code the value set contains: the notes about the code,
+/// the value set, and the code system, then the outputs.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the phases of `check` hand over what they resolved"
+)]
+fn conclude(
+    sources: &Sources<'_>,
+    model: &ValueSetModel,
+    resolver: &Resolver<'_>,
+    subject: &Subject<'_>,
+    policy: &Policy<'_>,
+    target: Target,
+    located: &Located,
+    item: &Item,
+    display: Option<String>,
+    system: String,
+    version: String,
+) -> Result<Validation, OperationError> {
+    let provider = &target.provider;
     let mut issues = target.issues;
-    issues.extend(assess(model, provider, &located, &item, subject, policy)?);
+    issues.extend(assess(model, provider, located, item, subject, policy)?);
     let (inactive, status) = inactive_outputs(&provider.status(located.concept)?);
     // NOTE: the value set's own deprecation note stays out of `message`, the
     // ecosystem's shape (its `CONCEPT_DEPRECATED_IN_VALUESET` cases).
     let message = message_of(&issues);
     if !policy.membership_only {
-        issues.extend(deprecated_in_value_set(
-            model,
-            &item,
-            &located.code,
-            subject,
-        ));
+        issues.extend(deprecated_in_value_set(model, item, &located.code, subject));
         issues.extend(super::standing_note(
             "CodeSystem",
             &format!("{system}|{version}"),
@@ -1261,7 +1278,7 @@ fn failed_target(system: &str, version: String, target: Target) -> Validation {
 /// `validation` with the located code and its display filled in.
 fn with_target(
     mut validation: Validation,
-    located: &crate::provider::Located,
+    located: &Located,
     display: Option<String>,
 ) -> Validation {
     validation.code = Some(located.code.clone());
@@ -1274,7 +1291,7 @@ fn with_target(
 fn assess(
     model: &ValueSetModel,
     provider: &Arc<dyn CodeSystemProvider>,
-    located: &crate::provider::Located,
+    located: &Located,
     item: &Item,
     subject: &Subject<'_>,
     policy: &Policy<'_>,
@@ -1597,7 +1614,7 @@ fn outside_value_set(
     model: &ValueSetModel,
     system: &str,
     version: String,
-    located: &crate::provider::Located,
+    located: &Located,
     display: Option<&str>,
     given: Option<&str>,
     expression: &str,
