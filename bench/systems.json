@@ -82,8 +82,8 @@
         "--rxnorm"
       ],
       "uri": "http://www.nlm.nih.gov/research/umls/rxnorm",
-      "lookup": "1049502",
-      "validate": "1049502",
+      "lookup": "313782",
+      "validate": "313782",
       "subsumes": null,
       "expand": null,
       "expand_small": null,

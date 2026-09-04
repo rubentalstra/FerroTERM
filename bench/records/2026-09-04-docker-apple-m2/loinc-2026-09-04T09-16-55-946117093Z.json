@@ -1,0 +1,84 @@
+{
+  "taken_at": "2026-09-04T09:16:55.946117093Z",
+  "ferroterm_version": "0.0.9",
+  "fhir": "r4b",
+  "machine": {
+    "os": "linux",
+    "arch": "aarch64",
+    "cpu": "Apple aarch64 (implementer 0x61, part 0x000)",
+    "memory_bytes": 8215117824,
+    "container": true
+  },
+  "system": "LOINC",
+  "system_uri": "http://loinc.org",
+  "system_version": "2.83",
+  "concepts": 257266,
+  "artifact_bytes": 260047226,
+  "ingest": {
+    "seconds": 12.889960506,
+    "peak_rss_bytes": 2273824768,
+    "release": "data/loinc/Loinc_2.83.zip"
+  },
+  "ready_seconds": 0.333034333,
+  "rss_open_bytes": 117809152,
+  "rss_warm_bytes": 123502592,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "cold_ms": 7.267458,
+        "p50_ms": 0.26504099999999997,
+        "p95_ms": 0.287792,
+        "p99_ms": 0.30604200000000004,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "cold_ms": 0.150583,
+        "p50_ms": 0.11591699999999999,
+        "p95_ms": 0.12704200000000002,
+        "p99_ms": 0.135625,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-small",
+      {
+        "status": 200,
+        "cold_ms": 4.618917,
+        "p50_ms": 0.127083,
+        "p95_ms": 0.148334,
+        "p99_ms": 0.152417,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-large",
+      {
+        "status": 200,
+        "cold_ms": 11.664208,
+        "p50_ms": 6.460333,
+        "p95_ms": 8.290917,
+        "p99_ms": 11.447000000000001,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "search",
+      {
+        "status": 200,
+        "cold_ms": 5.021249999999999,
+        "p50_ms": 1.450875,
+        "p95_ms": 1.639417,
+        "p99_ms": 1.740167,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: `ps -o rss=` of the server process after ready and after the warm requests; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank); comparison: not run"
+}
