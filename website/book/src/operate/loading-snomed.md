@@ -167,6 +167,42 @@ Each is a flat table: the full name from the names file is the display, the
 short and label names are designations, and the rungs above a concept (`gpk`,
 `prk`, `hpk`), the ATC code, form, route, brand, and firm are properties.
 
+## Loading the Nederlandse Labcodeset
+
+A Labcodeset licensee receives one XML publication per release. Build it as
+it comes; the release date is read from the document:
+
+```console
+$ ferroterm-build --labcodeset Labcodeset_v2026-08.zip --out /path/to/labcodeset
+```
+
+The build writes a directory of FHIR resources under `labcodeset/` in the
+output directory: the value set of the active concepts over LOINC
+(`https://ferroterm.eu/fhir/ValueSet/nl-labcodeset`, Dutch displays, English
+designations), a LOINC supplement carrying the Dutch names and the
+publication's facts as properties (materials, units, outcome lists, statuses,
+replacements), and one value set per ordinal outcome list under its OID
+(`urn:oid:…`). Point `FERROTERM_CODESYSTEMS` at that directory beside a LOINC
+artifact in `FERROTERM_INDEX`; the SNOMED CT materials and outcome refsets
+resolve when a SNOMED CT edition is loaded too. Retired concepts stay in the
+supplement, marked `labcodeset-status = retired`, and leave the value set.
+
+## Loading the NHG ICPC-1 to SNOMED CT map
+
+Nictiz and the NHG distribute the ICPC-1 (NHG table 24) to SNOMED CT mapping
+as a FHIR R4 `ConceptMap`. Put the file in a directory with a `package.json`
+naming its FHIR version, and point `FERROTERM_CODESYSTEMS` at it:
+
+```json
+{"name": "nl.nictiz.nhg-icpc-snomed", "version": "2026-03-31", "fhirVersions": ["4.0.1"]}
+```
+
+`$translate` then answers from `http://hl7.org/fhir/sid/icpc-1-nl` to SNOMED
+CT on every version endpoint. The 2026-03-31 release writes `experimental` as
+the string `"false"`; FHIR JSON requires a boolean there
+(<https://hl7.org/fhir/R4/json.html>), and the server refuses the file until
+it reads `"experimental": false`.
+
 ## Loading RxNorm
 
 The "Current Prescribable Content" subset needs no licence

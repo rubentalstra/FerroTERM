@@ -33,6 +33,7 @@ fn cli(
         dhd_version: version.map(str::to_owned),
         gstandaard: None,
         gstandaard_version: None,
+        labcodeset: None,
         rxnorm_sources: Vec::new(),
         out: out.to_path_buf(),
     }

@@ -15,6 +15,14 @@ fn main() -> anyhow::Result<()> {
             report.words,
             cli.out.display()
         ),
+        ferroterm_build::Report::Labcodeset(report) => println!(
+            "Labcodeset {}: {} active concepts, {} retired, {} ordinal value sets, written to {}",
+            report.release,
+            report.active,
+            report.retired,
+            report.ordinals,
+            report.dir.display()
+        ),
         ferroterm_build::Report::Loinc(report) => println!(
             "LOINC {}: {} terms, {} parts, {} answer lists, {} designations, {} words, written to {}",
             report.version,

@@ -19,6 +19,7 @@ mod fhir_codesystem;
 mod filter;
 mod fixture;
 mod icd11;
+mod labcodeset;
 mod loinc;
 mod operations;
 mod registries;

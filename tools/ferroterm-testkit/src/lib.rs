@@ -12,6 +12,7 @@ pub mod dhd;
 pub mod fhir;
 pub mod gstandaard;
 pub mod icd11;
+pub mod labcodeset;
 pub mod loinc;
 pub mod rxnorm;
 pub mod snomed;

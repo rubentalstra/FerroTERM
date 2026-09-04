@@ -15,6 +15,7 @@ ferroterm-build.workspace = true
 classification.workspace = true
 dhd-thesaurus.workspace = true
 gstandaard.workspace = true
+labcodeset.workspace = true
 icd11.workspace = true
 concept-graph.workspace = true
 loinc.workspace = true

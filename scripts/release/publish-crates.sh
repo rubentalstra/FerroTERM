@@ -37,6 +37,7 @@ readonly CRATES=(
   classification
   dhd-thesaurus
   gstandaard
+  labcodeset
   icd11
   rxnorm-rrf
   fhir-terminology

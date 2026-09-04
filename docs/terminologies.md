@@ -458,7 +458,9 @@ each has a clear provider shape.
   published as one XML document and on the Nictiz server
   (<https://www.nictiz.nl/wat-we-doen/activiteiten/terminologie/nederlandse-labcodeset/>).
   Provider shape: a value set and supplement over the LOINC, SNOMED, and UCUM
-  providers, not a code system of its own.
+  providers, not a code system of its own. `ferroterm-build --labcodeset`
+  reads the publication (`crates/labcodeset`) and writes the value set, the
+  LOINC supplement, and the ordinal outcome value sets as FHIR resources.
 - **Identifier namespaces** (BSN, UZI, URA, BIG, AGB, UZOVI) are
   `NamingSystem`s, not code systems; nothing to load.
 

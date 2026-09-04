@@ -13,6 +13,7 @@ pub mod archive;
 pub mod classification;
 pub mod dhd;
 pub mod icd11;
+pub mod labcodeset;
 pub mod loinc;
 pub mod pipeline;
 pub mod rxnorm;
@@ -87,6 +88,9 @@ pub struct Cli {
     /// The G-Standaard release to record (`202609`); required, the files carry none.
     #[arg(long, value_name = "RELEASE", requires = "gstandaard")]
     pub gstandaard_version: Option<String>,
+    /// A Nederlandse Labcodeset publication: the release zip, or the `labconcepts-*.xml` document or its directory; writes FHIR resources under `<out>/labcodeset`.
+    #[arg(long, value_name = "FILE_DIR_OR_ZIP", conflicts_with_all = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc", "dhd", "gstandaard"])]
+    pub labcodeset: Option<PathBuf>,
     /// The `RxNorm` sources (`SAB`) whose names are kept beside the unrestricted `RXNORM` and `MTHSPL` (a full release under a UMLS licence).
     #[arg(long, value_name = "SAB", value_delimiter = ',', action = clap::ArgAction::Append, requires = "rxnorm")]
     pub rxnorm_sources: Vec<String>,
@@ -107,6 +111,23 @@ pub struct Cli {
 /// Returns [`RunError`] when the zip does not unpack, the release does not
 /// read, the edition cannot be identified, or an artifact cannot be written.
 pub fn run(cli: &Cli) -> Result<Report, RunError> {
+    if let Some(labcodeset) = &cli.labcodeset {
+        let scratch;
+        let root = if labcodeset
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
+        {
+            scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+            archive::unpack_labcodeset(labcodeset, scratch.path())?
+        } else {
+            labcodeset.clone()
+        };
+        let publication = ::labcodeset::read(&root)?;
+        return Ok(Report::Labcodeset(labcodeset::build(
+            &publication,
+            &cli.out,
+        )?));
+    }
     if let (Some(dir), Some(version)) = (&cli.gstandaard, &cli.gstandaard_version) {
         let ladder = ::gstandaard::read(dir, version)?;
         let mut reports = Vec::new();
@@ -307,6 +328,8 @@ pub enum Report {
     RxNorm(rxnorm::Report),
     /// The ICD-11 code systems, one report each.
     Icd11(Vec<icd11::Report>),
+    /// The Nederlandse Labcodeset as FHIR resources.
+    Labcodeset(labcodeset::Report),
 }
 
 /// A failure of the command as a whole.
@@ -350,6 +373,12 @@ pub enum RunError {
     /// The DHD delivery does not read.
     #[error(transparent)]
     Dhd(#[from] ::dhd_thesaurus::DhdError),
+    /// The Labcodeset publication does not read.
+    #[error(transparent)]
+    Labcodeset(#[from] ::labcodeset::LabcodesetError),
+    /// The Labcodeset resources cannot be written.
+    #[error(transparent)]
+    LabcodesetWrite(#[from] labcodeset::WriteError),
     /// The DHD concept maps cannot be written.
     #[error(transparent)]
     DhdMaps(#[from] dhd::MapError),
