@@ -631,7 +631,7 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferroterm-bench"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "anyhow",
  "clap",
@@ -645,7 +645,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-build"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "anyhow",
  "clap",
@@ -671,7 +671,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-server"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "anyhow",
  "axum",
@@ -693,7 +693,7 @@ dependencies = [
 
 [[package]]
 name = "ferroterm-testkit"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "classification",
  "concept-graph",
@@ -713,7 +713,7 @@ dependencies = [
 
 [[package]]
 name = "fhir-codegen"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "anyhow",
  "clap",

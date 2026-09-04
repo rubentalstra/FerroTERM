@@ -68,6 +68,27 @@ else
   note "no Cargo.toml yet — skipped (CITATION.cff version: ${cff_ver:-none})"
 fi
 
+# A benchmark record states the version that produced it, and the rendered
+# blocks (bench-table.sh) repeat it, so a measurement taken with an earlier
+# release is history rather than a stale claim. Every `file:line` inside a
+# rendered block is dropped from the scan above.
+drop_rendered_benchmarks() {
+  local hit file line
+  while IFS= read -r hit; do
+    file="${hit%%:*}"
+    line="${hit#*:}"
+    line="${line%%:*}"
+    if awk -v n="$line" '
+      /<!-- bench-(table|figures):begin -->/ { start = NR }
+      /<!-- bench-(table|figures):end -->/ { if (start && n > start && n < NR) { found = 1 } ; start = 0 }
+      END { exit found ? 0 : 1 }
+    ' "$file"; then
+      continue
+    fi
+    printf '%s\n' "$hit"
+  done
+}
+
 # --- No stale product version anywhere the release is named -------------------
 # Every file that names the release (the README, the landing page, the book,
 # the compose file, the citation file, the version matrix) must name the
@@ -87,7 +108,8 @@ if [[ -f Cargo.toml ]]; then
         stale=1
       fi
     done < <(git grep -n -o -E '(^|[^0-9.])0\.0\.[0-9]+([^0-9.]|$)' -- README.md CITATION.cff compose.yaml docs website/landing website/book/src \
-      | sed -E 's/^([^:]+:[0-9]+):.*[^0-9.]?(0\.0\.[0-9]+).*$/\1:\2/' || true)
+      | sed -E 's/^([^:]+:[0-9]+):.*[^0-9.]?(0\.0\.[0-9]+).*$/\1:\2/' \
+      | drop_rendered_benchmarks || true)
     [[ "$stale" -eq 0 ]] && note "OK: every release mention is $current or a later milestone"
   else
     note "Cargo.toml has no [workspace.package] version yet — skipped"
