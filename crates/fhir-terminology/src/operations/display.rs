@@ -113,13 +113,14 @@ pub fn judge(
     asserted: Asserted<'_>,
     expression: Option<String>,
 ) -> Result<Option<Issue>, ProviderError> {
-    let Some((severity, kind, text)) = judgement(provider, concept, asserted)? else {
+    let Some((severity, kind, message, text)) = judgement(provider, concept, asserted)? else {
         return Ok(None);
     };
     Ok(Some(Issue {
         severity,
         code: "invalid",
         kind,
+        message,
         text,
         expression,
     }))
@@ -132,7 +133,7 @@ fn retired_designation(
     provider: &Arc<dyn CodeSystemProvider>,
     concept: Concept,
     asserted: Asserted<'_>,
-) -> Result<Option<(&'static str, &'static str, String)>, ProviderError> {
+) -> Result<Option<(&'static str, &'static str, super::MessageId, String)>, ProviderError> {
     let wanted = fold(asserted.given);
     let retired = provider
         .designations(concept, None)?
@@ -151,6 +152,7 @@ fn retired_designation(
     Ok(Some((
         severity,
         "display-comment",
+        super::MessageId::InactiveDisplayFound,
         format!(
             "'{}' is no longer considered a correct display for code '{}' (status = {}). The correct display is '{preferred}'",
             asserted.given,
@@ -165,7 +167,7 @@ fn judgement(
     provider: &Arc<dyn CodeSystemProvider>,
     concept: Concept,
     asserted: Asserted<'_>,
-) -> Result<Option<(&'static str, &'static str, String)>, ProviderError> {
+) -> Result<Option<(&'static str, &'static str, super::MessageId, String)>, ProviderError> {
     if let Some(retired) = retired_designation(provider, concept, asserted)? {
         return Ok(Some(retired));
     }
@@ -195,11 +197,17 @@ fn judgement(
         }
         let valid: Vec<&Candidate> = all.iter().collect();
         if all.iter().any(|c| matches(&c)) {
-            return Ok(Some((severity, "invalid-display", whitespace(&valid))));
+            return Ok(Some((
+                severity,
+                "invalid-display",
+                super::MessageId::DisplayNameWsForShouldBeOneOfInsteadOf,
+                whitespace(&valid),
+            )));
         }
         return Ok(Some((
             severity,
             "invalid-display",
+            super::MessageId::DisplayNameForShouldBeOneOfInsteadOf,
             format!(
                 "Wrong Display Name '{given}' for {system}#{code}. {} (for the language(s) '--')",
                 valid_display(&valid)
@@ -230,12 +238,14 @@ fn judgement(
             return Ok(Some((
                 severity,
                 "invalid-display",
+                super::MessageId::DisplayNameWsForShouldBeOneOfInsteadOf,
                 whitespace(&in_language),
             )));
         }
         return Ok(Some((
             severity,
             "invalid-display",
+            super::MessageId::DisplayNameForShouldBeOneOfInsteadOf,
             format!(
                 "Wrong Display Name '{given}' for {system}#{code}. {} (for the language(s) '{requested}')",
                 valid_display(&in_language)
@@ -246,11 +256,26 @@ fn judgement(
         return Ok(Some((
             "information",
             "invalid-display",
+            super::MessageId::NoValidDisplayFoundNoneForLangOk,
             format!(
                 "There are no valid display names found for the code {system}#{code} for language(s) '{requested}'. The display is '{given}' which is a valid display for the default language"
             ),
         )));
     }
+    no_display_for_language(provider, concept, severity, given, system, code, requested)
+}
+
+/// The `invalid-display` for a display that fits no designation, when the
+/// requested language has none: the default display is named.
+fn no_display_for_language(
+    provider: &Arc<dyn CodeSystemProvider>,
+    concept: Concept,
+    severity: &'static str,
+    given: &str,
+    system: &str,
+    code: &str,
+    requested: &str,
+) -> Result<Option<(&'static str, &'static str, super::MessageId, String)>, ProviderError> {
     let default = provider
         .display(
             concept,
@@ -260,14 +285,15 @@ fn judgement(
     Ok(Some((
         severity,
         "invalid-display",
+        super::MessageId::NoValidDisplayFoundNoneForLangErr,
         format!(
             "Wrong Display Name '{given}' for {system}#{code}. There are no valid display names found for language(s) '{requested}'. Default display is '{default}'"
         ),
     )))
 }
 
-/// The `code-rule` warning for a code a case-insensitive system located under
-/// another spelling; `None` when the spelling matches or the system is
+/// The `code-rule` note for a code a case-insensitive system located under
+/// another spelling or form; `None` when the spelling matches or the system is
 /// case-sensitive.
 #[must_use]
 pub fn case_note(
@@ -286,6 +312,7 @@ pub fn case_note(
             severity: "information",
             code: "business-rule",
             kind: "code-rule",
+            message: super::MessageId::CodeCaseDifference,
             text: format!(
                 "The code '{given}' is an alternate form of '{located}', the code as the code system '{}' spells it",
                 provider.identity().url
@@ -296,10 +323,13 @@ pub fn case_note(
     if provider.declaration().case_sensitive {
         return None;
     }
+    // NOTE: the ecosystem's `case-coding-insensitive-code1-2` and `validate-lang-case-language`
+    // answer a case difference as `information`.
     Some(Issue {
-        severity: "warning",
+        severity: "information",
         code: "business-rule",
         kind: "code-rule",
+        message: super::MessageId::CodeCaseDifference,
         text: format!(
             "The code '{given}' differs from the correct code '{located}' by case. Although the code system '{}' is case insensitive, implementers are strongly encouraged to use the correct case anyway",
             provider.identity().url
@@ -308,10 +338,11 @@ pub fn case_note(
     })
 }
 
-/// The `invalid-code` text for a code the system does not have, naming the
-/// version when the system has one and the fragment caveat when it is one.
+/// The `invalid-code` message and text for a code the system does not have,
+/// naming the version when the system has one and the fragment caveat when it
+/// is one.
 #[must_use]
-pub fn unknown_code_text(provider: &dyn CodeSystemProvider, code: &str) -> String {
+pub fn unknown_code(provider: &dyn CodeSystemProvider, code: &str) -> (super::MessageId, String) {
     let identity = provider.identity();
     let version = if identity.version.is_empty() {
         String::new()
@@ -319,14 +350,24 @@ pub fn unknown_code_text(provider: &dyn CodeSystemProvider, code: &str) -> Strin
         format!(" version '{}'", identity.version)
     };
     if matches!(provider.declaration().content, ContentMode::Fragment) {
-        format!(
-            "Unknown Code '{code}' in the CodeSystem '{}'{version} - note that the code system is labeled as a fragment, so the code may be valid in some other fragment",
-            identity.url
-        )
+        return (
+            super::MessageId::UnknownCodeInFragment,
+            format!(
+                "Unknown Code '{code}' in the CodeSystem '{}'{version} - note that the code system is labeled as a fragment, so the code may be valid in some other fragment",
+                identity.url
+            ),
+        );
+    }
+    let message = if identity.version.is_empty() {
+        super::MessageId::UnknownCodeIn
     } else {
+        super::MessageId::UnknownCodeInVersion
+    };
+    (
+        message,
         format!(
             "Unknown code '{code}' in the CodeSystem '{}'{version}",
             identity.url
-        )
-    }
+        ),
+    )
 }
