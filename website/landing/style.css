@@ -19,6 +19,7 @@
   --nt-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   /* layout */
   --nt-max: 1080px;
+  --nt-max-wide: 1320px;
   --nt-radius: 12px;
 }
 
@@ -361,11 +362,13 @@ section { padding: clamp(3rem, 7vw, 4.5rem) 0; }
 .hero-compact { text-align: left; }
 .hero-compact h1 { font-size: clamp(1.75rem, 3vw, 2.5rem); margin-left: 0; max-width: 28ch; }
 .hero-compact .sub { margin-left: 0; text-align: left; }
-.prose-wide { max-width: var(--nt-max); }
-
 .prose { max-width: 80ch; margin: 0 auto; }
 .prose h3 { margin-top: 2.5rem; }
 .prose h4 { margin: 1.75rem 0 0.5rem; font-weight: 600; }
+
+/* A table section runs to the layout width. The rule follows .prose so its
+   wider max-width wins the tie on equal specificity. */
+.prose-wide { max-width: var(--nt-max); }
 
 .table-wrap { overflow-x: auto; border: 1px solid var(--nt-border); border-radius: var(--nt-radius); }
 
@@ -410,25 +413,40 @@ section { padding: clamp(3rem, 7vw, 4.5rem) 0; }
 
 /* ── The comparison page ────────────────────────────────────────────────── */
 
+/* Four columns of sentences need more room than a text column, so the
+   comparison table sections run to the wide measure. */
+.wrap-wide { max-width: var(--nt-max-wide); }
+.wrap-wide .prose-wide { max-width: 100%; }
+
 /* The comparison tables hold sentences, not figures, so they wrap and align
-   to the top instead of inheriting the numeric table's right-aligned nowrap. */
-.table-wrap table.compare { font-variant-numeric: normal; }
+   to the top instead of inheriting the numeric table's right-aligned nowrap.
+   A fixed layout keeps the three server columns even and stops one long cell
+   from pushing the table past its container; the min-width is what the table
+   falls back to on a narrow screen, where .table-wrap scrolls it. */
+.table-wrap table.compare {
+  font-variant-numeric: normal;
+  table-layout: fixed;
+  min-width: 52rem;
+}
 
 .table-wrap table.compare th,
 .table-wrap table.compare td {
+  padding: 0.55rem 0.7rem;
   text-align: left;
   white-space: normal;
   vertical-align: top;
 }
 
-.table-wrap table.compare td { min-width: 17rem; }
+.table-wrap table.compare thead th:first-child,
+.table-wrap table.compare tbody th { width: 11rem; }
 
 .table-wrap table.compare tbody th {
-  width: 11rem;
-  min-width: 9rem;
   font-weight: 600;
   background: var(--nt-surface);
 }
+
+/* A long identifier breaks instead of widening its column. */
+.table-wrap table.compare code { overflow-wrap: anywhere; }
 
 /* The citation that follows a claim. */
 .src {
