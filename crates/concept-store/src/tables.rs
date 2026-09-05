@@ -17,6 +17,9 @@ pub const CODES: TableDefinition<&str, u32> = TableDefinition::new("codes");
 pub const COLUMNS: TableDefinition<&str, &[u8]> = TableDefinition::new("columns");
 /// The `COLUMNS` key of the concept column.
 pub const COLUMN_CONCEPTS: &str = "concepts";
+/// The `COLUMNS` key of the preferred-designation column, the displays the
+/// build chose per concept.
+pub const COLUMN_DISPLAYS: &str = "displays";
 /// `(concept ordinal, designation index)` to an encoded [`crate::record::Designation`].
 pub const DESIGNATIONS: TableDefinition<(u32, u32), &[u8]> = TableDefinition::new("designations");
 /// `(concept ordinal, designation index, language refset ordinal)` to an acceptability ordinal.
@@ -39,7 +42,7 @@ pub const ACCEPTABILITIES: TableDefinition<u32, &str> = TableDefinition::new("ac
 /// The `META` key of the layout version.
 pub const META_LAYOUT: &str = "layout";
 /// The layout version this build writes and reads.
-pub const LAYOUT_VERSION: &str = "3";
+pub const LAYOUT_VERSION: &str = "4";
 /// The `META` key of the code system URI.
 pub const META_SYSTEM: &str = "system";
 /// The `META` key of the code system version string.

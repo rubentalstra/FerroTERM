@@ -90,7 +90,15 @@ fn local(c: &mut Criterion) {
         index: built,
         ..Config::default()
     };
-    let state = Arc::new(AppState::load(&config).expect("loads"));
+    // An artifact of an older layout is as absent as a missing one, as far as
+    // this bench is concerned: it skips rather than failing the bars run.
+    let state = match AppState::load(&config) {
+        Ok(state) => Arc::new(state),
+        Err(error) => {
+            eprintln!("the local artifacts do not open ({error}): skipping the served benchmarks");
+            return;
+        }
+    };
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

@@ -11,7 +11,7 @@ use concept_graph::ordinal::Ordinal;
 use redb::{Database, TableHandle};
 
 use crate::column::Column;
-use crate::record::{Concept, Designation, PropertyValue};
+use crate::record::{self, Concept, Designation, PropertyValue};
 use crate::tables;
 
 /// A failure while building.
@@ -239,6 +239,60 @@ impl StoreBuilder {
         Ok(())
     }
 
+    /// The preferred designation index per `(concept, reference set, use)`:
+    /// the lowest index among those the reference set marks preferred.
+    fn chosen_preferred(&self, rule: &PreferredRule) -> BTreeMap<(u32, u32, u32), u32> {
+        let mut chosen: BTreeMap<(u32, u32, u32), u32> = BTreeMap::new();
+        for ((concept, index, refset), acceptability) in &self.acceptability {
+            if *acceptability != rule.preferred {
+                continue;
+            }
+            let Some(use_ordinal) = self.designation_uses.get(&(*concept, *index)) else {
+                continue;
+            };
+            chosen
+                .entry((*concept, *refset, *use_ordinal))
+                .and_modify(|existing| *existing = (*existing).min(*index))
+                .or_insert(*index);
+        }
+        chosen
+    }
+
+    /// The chosen designations themselves, packed by concept.
+    ///
+    /// Choosing a display is the hottest read the server has, and it should
+    /// not have to find the designation this build already found.
+    fn display_column(&self, chosen: &BTreeMap<(u32, u32, u32), u32>, count: u32) -> Vec<u8> {
+        let mut by_concept: BTreeMap<u32, Vec<(u32, u32, Designation)>> = BTreeMap::new();
+        for ((concept, refset, use_ordinal), index) in chosen {
+            let Some(bytes) = self.designations.get(&(*concept, *index)) else {
+                continue;
+            };
+            let Ok(designation) = Designation::decode(bytes) else {
+                continue;
+            };
+            by_concept
+                .entry(*concept)
+                .or_default()
+                .push((*refset, *use_ordinal, designation));
+        }
+        let packed: BTreeMap<u32, Vec<u8>> = by_concept
+            .into_iter()
+            .map(|(concept, entries)| {
+                let borrowed: Vec<(u32, u32, &Designation)> = entries
+                    .iter()
+                    .map(|(refset, use_ordinal, d)| (*refset, *use_ordinal, d))
+                    .collect();
+                (concept, record::Preferred::encode(&borrowed))
+            })
+            .collect();
+        Column::pack(
+            count,
+            packed
+                .iter()
+                .map(|(concept, bytes)| (Ordinal::new(*concept), bytes.as_slice())),
+        )
+    }
     /// Writes every buffered row in key order, computes the preferred
     /// designations per language reference set and use, records the concept
     /// count, and commits.
@@ -264,16 +318,16 @@ impl StoreBuilder {
                 codes.insert(code.as_str(), *ordinal)?;
             }
         }
+        // The count is the highest ordinal, not the entry count, so a gap in
+        // the ordinals cannot push a record off the end of a column.
+        let count = self
+            .concepts
+            .keys()
+            .next_back()
+            .map_or(0, |highest| highest.saturating_add(1));
         {
             // An ordinal is a position, so the concepts are one dense column
             // rather than a b-tree keyed by that position.
-            // The count is the highest ordinal, not the entry count, so a gap
-            // in the ordinals cannot push a record off the end of the column.
-            let count = self
-                .concepts
-                .keys()
-                .next_back()
-                .map_or(0, |highest| highest.saturating_add(1));
             let packed = Column::pack(
                 count,
                 self.concepts
@@ -315,25 +369,14 @@ impl StoreBuilder {
             }
         }
         {
-            // The preferred designation per (concept, refset, use): the lowest
-            // index among those the refset marks preferred.
-            let mut chosen: BTreeMap<(u32, u32, u32), u32> = BTreeMap::new();
-            for ((concept, index, refset), acceptability) in &self.acceptability {
-                if *acceptability != rule.preferred {
-                    continue;
-                }
-                let Some(use_ordinal) = self.designation_uses.get(&(*concept, *index)) else {
-                    continue;
-                };
-                chosen
-                    .entry((*concept, *refset, *use_ordinal))
-                    .and_modify(|existing| *existing = (*existing).min(*index))
-                    .or_insert(*index);
-            }
+            let chosen = self.chosen_preferred(rule);
             let mut preferred = txn.open_table(tables::PREFERRED)?;
             for (key, index) in &chosen {
                 preferred.insert(*key, *index)?;
             }
+            let column = self.display_column(&chosen, count);
+            let mut columns = txn.open_table(tables::COLUMNS)?;
+            columns.insert(tables::COLUMN_DISPLAYS, column.as_slice())?;
         }
         txn.commit()?;
         // redb grows the file in regions ahead of use; compaction returns the
