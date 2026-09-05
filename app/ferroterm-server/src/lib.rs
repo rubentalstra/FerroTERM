@@ -13,6 +13,7 @@
 
 pub mod banner;
 pub mod config;
+pub mod metrics;
 pub mod outcome;
 pub mod persistence;
 pub mod r4;
@@ -52,8 +53,12 @@ pub fn router(state: Arc<AppState>) -> Router {
         .nest("/r4b", r4b::router())
         .nest("/r5", r5::router())
         .nest("/r6", r6::router())
+        .route("/metrics", get(metrics_scrape))
         .fallback(outcome::not_found)
-        .layer(axum::middleware::from_fn(request_log::log))
+        .layer(axum::middleware::from_fn_with_state(
+            Arc::clone(&state),
+            request_log::log,
+        ))
         .with_state(state)
 }
 
@@ -121,4 +126,31 @@ pub async fn shutdown_signal() {
 
 async fn health() -> StatusCode {
     StatusCode::OK
+}
+
+/// `GET /metrics`: the Prometheus exposition of this server.
+///
+/// The endpoint is off the FHIR base path, so a scrape is never a terminology
+/// request and no FHIR content negotiation applies. It answers the text
+/// exposition format Prometheus reads
+/// (<https://prometheus.io/docs/instrumenting/exposition_formats/>).
+async fn metrics_scrape(
+    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    match state.metrics().exposition() {
+        Ok(text) => (
+            StatusCode::OK,
+            [(
+                http::header::CONTENT_TYPE,
+                "application/openmetrics-text; version=1.0.0; charset=utf-8",
+            )],
+            text,
+        )
+            .into_response(),
+        Err(error) => {
+            tracing::error!(%error, "the metrics registry cannot be written");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }

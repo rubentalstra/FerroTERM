@@ -331,6 +331,8 @@ pub struct AppState {
     /// The authentication the deployment declares, as codes of the FHIR
     /// `restful-security-service` value set.
     security_services: Vec<String>,
+    /// The metrics a scrape reads, seeded with what this state loaded.
+    metrics: Arc<crate::metrics::Metrics>,
 }
 
 /// The persisted client resources and the layer they form over the loaded
@@ -468,6 +470,7 @@ impl AppState {
                 );
         }
         state.reload_persisted().map_err(LoadError::Persisted)?;
+        state.seed_metrics();
         Ok(state)
     }
 
@@ -519,7 +522,22 @@ impl AppState {
             paths: BTreeMap::new(),
             software_version: env!("CARGO_PKG_VERSION"),
             security_services: Vec::new(),
+            metrics: Arc::new(crate::metrics::Metrics::new()),
         }
+    }
+
+    /// Declares every loaded code system version to the metrics registry.
+    fn seed_metrics(&self) {
+        for (_, url, version) in self.instances() {
+            self.metrics.loaded(url, version);
+        }
+    }
+
+    /// The metrics of this server, for the scrape endpoint and the request
+    /// middleware.
+    #[must_use]
+    pub fn metrics(&self) -> &crate::metrics::Metrics {
+        &self.metrics
     }
 
     /// What is loaded, one entry per code system version, sorted by id.

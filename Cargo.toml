@@ -33,6 +33,7 @@ petgraph = "0.8.3"
 unicode-normalization = "0.1.25"
 # HTTP and async.
 axum = "0.8.9"
+prometheus-client = "0.25.1"
 tower = "0.5.3"
 tower-http = "0.7.1"
 hyper = "1.11.1"

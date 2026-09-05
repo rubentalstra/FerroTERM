@@ -19,6 +19,7 @@ mod ecosystem;
 mod fixture;
 mod health;
 mod metadata;
+mod metrics;
 mod operations;
 mod persisted;
 mod r4;
