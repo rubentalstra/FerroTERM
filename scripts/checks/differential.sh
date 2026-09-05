@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+# The differential check against Snowstorm, the reference server, over one
+# licensed SNOMED CT edition.
+#
+#   scripts/checks/differential.sh --index DIR [--snowstorm URL] [--server URL]
+#                                  [--fhir r4|r4b|r5] [--out DIR] [--requests FILE]
+#
+# Both servers answer the same requests over the same edition and the harness
+# diffs a projection of each answer. A divergence is a defect in FerroTERM or a
+# recorded, spec-cited deviation, never a silent difference: where Snowstorm and
+# the specification disagree the specification wins, and the divergence is worth
+# a note (.claude/rules/testing.md, oracles).
+#
+# The two servers answer the same question in different shapes, so the raw
+# bodies are never compared. Each request names the projection to diff, and the
+# projections below are the answer, not the wire form:
+#
+#   display   the display `$lookup` returns
+#   result    the boolean `$validate-code` returns
+#   outcome   the code `$subsumes` returns
+#   codes     the sorted set of codes an expansion contains
+#   targets   the sorted set of `system|code` a translation matches
+#
+# Without --server the script starts target/release/ferroterm on 127.0.0.1:8099
+# over --index (build it first: cargo build --release -p ferroterm-server).
+# --snowstorm is the base of a running Snowstorm FHIR endpoint, for example
+# http://127.0.0.1:8080/fhir; the harness never starts one, because a Snowstorm
+# deployment wants Elasticsearch and 16 to 32 GB of RAM.
+#
+# The request sample carries SNOMED CT identifiers and nothing else, so it
+# distributes no licensed content (.claude/rules/vendored-inputs.md).
+set -euo pipefail
+
+index=""
+snowstorm=""
+server=""
+fhir=r4b
+out=target/differential
+requests=conformance/differential/requests.json
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --index) index=$2; shift 2 ;;
+    --snowstorm) snowstorm=$2; shift 2 ;;
+    --server) server=$2; shift 2 ;;
+    --fhir) fhir=$2; shift 2 ;;
+    --out) out=$2; shift 2 ;;
+    --requests) requests=$2; shift 2 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+case "$fhir" in
+  r4|r4b|r5) ;;
+  *) echo "--fhir must be r4, r4b, or r5, not '$fhir'" >&2; exit 2 ;;
+esac
+if [[ -z "$snowstorm" ]]; then
+  echo "differential: --snowstorm is required; the harness never starts one" >&2
+  exit 2
+fi
+if [[ ! -f "$requests" ]]; then
+  echo "differential: no request sample at $requests" >&2
+  exit 2
+fi
+
+started=""
+if [[ -z "$server" ]]; then
+  if [[ -z "$index" ]]; then
+    echo "differential: --index names the edition to serve, or --server names a running one" >&2
+    exit 2
+  fi
+  mkdir -p "$(dirname "$out")"
+  FERROTERM_INDEX="$index" FERROTERM_LISTEN=127.0.0.1:8099 FERROTERM_LOG_FORMAT=json \
+    target/release/ferroterm > "$out.server.log" 2>&1 &
+  started=$!
+  trap 'kill "$started" 2>/dev/null || true' EXIT
+  for _ in $(seq 1 100); do
+    curl -sf "http://127.0.0.1:8099/health" >/dev/null 2>&1 && break
+    sleep 0.2
+  done
+  server="http://127.0.0.1:8099/$fhir"
+fi
+
+rm -rf "$out"
+mkdir -p "$out"
+system=$(jq -r '.system' "$requests")
+
+# The edition each server reports, so a divergence is never blamed on the
+# content when the two are serving different releases.
+ours=$(curl -sf "$server/CodeSystem/\$lookup?system=$system&code=138875005" \
+  | jq -r '[.parameter[]? | select(.name == "version") | .valueString] | first // "unknown"')
+theirs=$(curl -sf "$snowstorm/CodeSystem/\$lookup?system=$system&code=138875005" \
+  | jq -r '[.parameter[]? | select(.name == "version") | .valueString] | first // "unknown"')
+echo "differential: FerroTERM serves $ours"
+echo "differential: Snowstorm serves $theirs"
+if [[ "$ours" != "$theirs" ]]; then
+  echo "differential: the two servers report different editions; load the same release in both" >&2
+  exit 1
+fi
+
+# The URL of one request against one base, per operation.
+url_of() {
+  local base=$1 operation=$2 parameters=$3 query
+  case "$operation" in
+    lookup)
+      query="system=$system&code=$(jq -r '.code' <<<"$parameters")"
+      printf "%s/CodeSystem/\$lookup?%s" "$base" "$query"
+      ;;
+    validate-code)
+      query="url=$system&code=$(jq -r '.code' <<<"$parameters")"
+      local display
+      display=$(jq -r '.display // empty' <<<"$parameters")
+      [[ -n "$display" ]] && query="$query&display=$(jq -rR '@uri' <<<"$display")"
+      printf "%s/CodeSystem/\$validate-code?%s" "$base" "$query"
+      ;;
+    subsumes)
+      query="system=$system&codeA=$(jq -r '.codeA' <<<"$parameters")&codeB=$(jq -r '.codeB' <<<"$parameters")"
+      printf "%s/CodeSystem/\$subsumes?%s" "$base" "$query"
+      ;;
+    expand)
+      local ecl isa vs count
+      count=$(jq -r '.count // "100"' <<<"$parameters")
+      ecl=$(jq -r '.ecl // empty' <<<"$parameters")
+      isa=$(jq -r '.isa // empty' <<<"$parameters")
+      if [[ -n "$ecl" ]]; then
+        vs="$system?fhir_vs=ecl/$(jq -rR '@uri' <<<"$ecl")"
+      else
+        vs="$system?fhir_vs=isa/$isa"
+      fi
+      printf "%s/ValueSet/\$expand?url=%s&count=%s" "$base" "$(jq -rR '@uri' <<<"$vs")" "$count"
+      ;;
+    translate)
+      local cm
+      cm=$(jq -r '.cm' <<<"$parameters")
+      query="url=$(jq -rR '@uri' <<<"$system?fhir_cm=$cm")&system=$system&code=$(jq -r '.code' <<<"$parameters")"
+      printf "%s/ConceptMap/\$translate?%s" "$base" "$query"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+# The projection of one answer, by the comparison the request names.
+project() {
+  local compare=$1
+  case "$compare" in
+    display)
+      jq -r '[.parameter[]? | select(.name == "display") | .valueString] | first // "«none»"'
+      ;;
+    result)
+      jq -r '[.parameter[]? | select(.name == "result") | .valueBoolean] | first
+             | if . == null then "«none»" else tostring end'
+      ;;
+    outcome)
+      jq -r '[.parameter[]? | select(.name == "outcome") | .valueCode] | first // "«none»"'
+      ;;
+    codes)
+      # A server may nest `contains`, so the set of codes is read through the
+      # whole tree (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>).
+      jq -r '[.expansion | recurse(.contains[]?) | .code? // empty]
+             | sort | unique | join(",")'
+      ;;
+    targets)
+      jq -r '[.parameter[]? | select(.name == "match") | .part[]?
+              | select(.name == "concept") | .valueCoding
+              | "\(.system // "")|\(.code // "")"] | sort | unique | join(",")'
+      ;;
+    *)
+      echo "«unknown projection $compare»"
+      ;;
+  esac
+}
+
+total=0
+diverged=0
+hollow=""
+: > "$out/divergences.txt"
+echo "[]" > "$out/divergences.json"
+
+while IFS= read -r request; do
+  name=$(jq -r '.name' <<<"$request")
+  operation=$(jq -r '.operation' <<<"$request")
+  compare=$(jq -r '.compare' <<<"$request")
+  parameters=$(jq -c '.parameters' <<<"$request")
+  total=$((total + 1))
+
+  if ! ours_url=$(url_of "$server" "$operation" "$parameters"); then
+    echo "differential: $name names an operation the harness does not replay: $operation" >&2
+    exit 2
+  fi
+  theirs_url=$(url_of "$snowstorm" "$operation" "$parameters")
+
+  curl -sf "$ours_url" -o "$out/$name.ours.json" 2>/dev/null || echo '{}' > "$out/$name.ours.json"
+  curl -sf "$theirs_url" -o "$out/$name.theirs.json" 2>/dev/null || echo '{}' > "$out/$name.theirs.json"
+
+  ours_value=$(project "$compare" < "$out/$name.ours.json")
+  theirs_value=$(project "$compare" < "$out/$name.theirs.json")
+
+  # Two servers that both answer nothing agree while proving nothing, so a
+  # hollow answer is reported even when the run passes.
+  if [[ -z "$ours_value" || "$ours_value" == "«none»" ]]; then
+    hollow="$hollow $name"
+  fi
+
+  if [[ "$ours_value" != "$theirs_value" ]]; then
+    diverged=$((diverged + 1))
+    {
+      printf '%s (%s, %s)\n' "$name" "$operation" "$compare"
+      printf '  FerroTERM: %s\n' "${ours_value:0:400}"
+      printf '  Snowstorm: %s\n' "${theirs_value:0:400}"
+      printf '  request:   %s\n' "$ours_url"
+    } >> "$out/divergences.txt"
+    jq --arg n "$name" --arg o "$operation" --arg c "$compare" \
+       --arg a "$ours_value" --arg b "$theirs_value" --arg u "$ours_url" \
+       '. + [{name: $n, operation: $o, compare: $c, ferroterm: $a, snowstorm: $b, request: $u}]' \
+       "$out/divergences.json" > "$out/divergences.json.tmp"
+    mv "$out/divergences.json.tmp" "$out/divergences.json"
+  fi
+done < <(jq -c '.requests[]' "$requests")
+
+echo "differential: $((total - diverged)) of $total requests agree over $ours"
+if [[ -n "$hollow" ]]; then
+  echo "differential: answered nothing, so these compare nothing:$hollow" >&2
+fi
+if [[ "$diverged" -gt 0 ]]; then
+  echo "DIVERGENCE: $diverged of $total requests answer differently:" >&2
+  cat "$out/divergences.txt" >&2
+  echo "differential: a divergence is a defect in FerroTERM or a spec-cited deviation; the specification decides, not Snowstorm" >&2
+  exit 1
+fi
+echo "differential: no divergence against Snowstorm"
