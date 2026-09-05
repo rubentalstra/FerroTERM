@@ -407,3 +407,35 @@ section { padding: clamp(3rem, 7vw, 4.5rem) 0; }
 
 .roadmap .tag { margin: 0; }
 .roadmap .due { color: var(--nt-muted); font-size: 0.9rem; }
+
+/* ── The comparison page ────────────────────────────────────────────────── */
+
+/* The comparison tables hold sentences, not figures, so they wrap and align
+   to the top instead of inheriting the numeric table's right-aligned nowrap. */
+.table-wrap table.compare { font-variant-numeric: normal; }
+
+.table-wrap table.compare th,
+.table-wrap table.compare td {
+  text-align: left;
+  white-space: normal;
+  vertical-align: top;
+}
+
+.table-wrap table.compare td { min-width: 17rem; }
+
+.table-wrap table.compare tbody th {
+  width: 11rem;
+  min-width: 9rem;
+  font-weight: 600;
+  background: var(--nt-surface);
+}
+
+/* The citation that follows a claim. */
+.src {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--nt-muted);
+}
+.src a { color: var(--nt-muted); text-decoration: underline; }
+.src a:hover { color: var(--nt-teal); }
