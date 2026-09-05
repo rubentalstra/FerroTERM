@@ -1,0 +1,80 @@
+{
+  "taken_at": "2026-09-05T15:10:13.927646Z",
+  "ferroterm_version": "0.0.11",
+  "fhir": "r4b",
+  "machine": {
+    "os": "macos",
+    "arch": "aarch64",
+    "cpu": "Apple M2",
+    "memory_bytes": 17179869184,
+    "container": false
+  },
+  "system": "ICD-11 MMS",
+  "system_uri": "http://id.who.int/icd/release/11/mms",
+  "system_version": "2026-01",
+  "concepts": 37211,
+  "artifact_bytes": 34450168,
+  "ingest": null,
+  "ready_seconds": 0.20888025,
+  "rss_open_bytes": 71417856,
+  "rss_warm_bytes": 74268672,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "cold_ms": 2.5848329999999997,
+        "p50_ms": 0.2175,
+        "p95_ms": 0.308875,
+        "p99_ms": 0.411917,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "cold_ms": 0.081,
+        "p50_ms": 0.060917,
+        "p95_ms": 0.089417,
+        "p99_ms": 0.24441699999999997,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-small",
+      {
+        "status": 200,
+        "cold_ms": 2.938875,
+        "p50_ms": 0.062833,
+        "p95_ms": 0.095584,
+        "p99_ms": 0.126917,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-large",
+      {
+        "status": 200,
+        "cold_ms": 0.057417,
+        "p50_ms": 0.076708,
+        "p95_ms": 0.093333,
+        "p99_ms": 0.098792,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "search",
+      {
+        "status": 200,
+        "cold_ms": 0.14275,
+        "p50_ms": 0.088333,
+        "p95_ms": 0.108625,
+        "p99_ms": 0.129333,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: `ps -o rss=` of the server process after ready and after the warm requests; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank); comparison: not run"
+}
