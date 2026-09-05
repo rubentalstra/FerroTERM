@@ -28,6 +28,10 @@ const NAMESPACE: &str = "1234567";
 pub const EDITION: &str = "http://snomed.info/sct/91234567105";
 /// The edition version URI (the `version` the provider serves).
 pub const VERSION: &str = "http://snomed.info/sct/91234567105/version/20260101";
+/// The item number of the second edition's module.
+const SECOND_MODULE: u32 = 90;
+/// The release date of the second synthetic edition, as an RF2 `effectiveTime`.
+pub const SECOND_DATE: &str = "20260201";
 /// The GB English language reference set (a published SCTID, metadata only).
 pub const GB_REFSET: &str = "900000000000508004";
 /// The Dutch language reference set (a published SCTID, metadata only).
@@ -76,6 +80,9 @@ pub const ALTERNATIVE: u32 = 15;
 pub const MODULE_DEPENDENCY: u32 = 16;
 /// The edition module, a concept and the member of the Module Dependency set.
 pub const MODULE_CONCEPT: u32 = 17;
+/// The bird, under the animal and a member of the pets reference set; only the
+/// second edition ([`write_second`]) holds it.
+pub const BIRD: u32 = 18;
 /// The published SCTID of the Module Dependency reference set.
 pub const MODULE_DEPENDENCY_SCTID: &str = "900000000000534007";
 /// The published SCTID of the historical association reference set root.
@@ -227,17 +234,73 @@ impl From<std::io::Error> for FixtureError {
     }
 }
 
+/// What tells one synthetic edition from another.
+struct Shape<'a> {
+    edition: &'a str,
+    version: &'a str,
+    release_date: &'a str,
+    /// Whether the edition holds [`BIRD`].
+    bird: bool,
+}
+
+/// The edition URI of the second synthetic edition ([`write_second`]).
+#[must_use]
+pub fn second_edition() -> String {
+    format!("http://snomed.info/sct/{}", sctid(SECOND_MODULE))
+}
+
+/// The edition version URI of the second synthetic edition.
+#[must_use]
+pub fn second_version() -> String {
+    format!("{}/version/{SECOND_DATE}", second_edition())
+}
+
 /// Writes the edition under `dir` (`store.redb`, `hierarchy.bin`, `text.bin`, `refsets.bin`, `attributes.bin`, `members.bin`, `identifiers.bin`, and `manifest.json`).
 ///
 /// # Errors
 ///
 /// Returns [`FixtureError`] when a writer fails; the fixture is fixed content,
 /// so a failure means the writers or the directory are at fault.
+pub fn write(dir: &Path) -> Result<(), FixtureError> {
+    write_shape(
+        dir,
+        &Shape {
+            edition: EDITION,
+            version: VERSION,
+            release_date: DATE,
+            bird: false,
+        },
+    )
+}
+
+/// Writes a second synthetic edition under `dir`, so a test can load two
+/// editions of SNOMED CT at once.
+///
+/// It carries another module and release date, and one concept the first
+/// edition lacks ([`BIRD`]), so the same implicit value set answers a
+/// different membership from each edition.
+///
+/// # Errors
+///
+/// Returns [`FixtureError`] when a writer fails; the fixture is fixed content,
+/// so a failure means the writers or the directory are at fault.
+pub fn write_second(dir: &Path) -> Result<(), FixtureError> {
+    write_shape(
+        dir,
+        &Shape {
+            edition: &second_edition(),
+            version: &second_version(),
+            release_date: SECOND_DATE,
+            bird: true,
+        },
+    )
+}
+
 #[expect(
     clippy::too_many_lines,
     reason = "one synthetic edition, read top to bottom"
 )]
-pub fn write(dir: &Path) -> Result<(), FixtureError> {
+fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
     let module = sctid(99);
     let fsn = 0;
     let syn = 1;
@@ -507,7 +570,8 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
             ],
         },
     ];
-    let is_a = [
+    let mut rows = Vec::from(rows);
+    let mut is_a = vec![
         (ANIMAL, TOP),
         (CAT, ANIMAL),
         (DOG, ANIMAL),
@@ -525,8 +589,27 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         (MODULE_CONCEPT, TOP),
         (SCHEME, TOP),
     ];
-    let mut builder =
-        StoreBuilder::create(&dir.join("store.redb"), "http://snomed.info/sct", VERSION)?;
+    if shape.bird {
+        rows.push(Row {
+            ordinal: BIRD,
+            code: None,
+            active: true,
+            defined: false,
+            designations: vec![
+                ("Bird (synthetic)", "en", fsn, true, vec![(gb, preferred)]),
+                ("Bird", "en", syn, true, vec![(gb, preferred)]),
+                ("Vogel", "nl", syn, true, vec![(nl, preferred)]),
+            ],
+        });
+        is_a.push((BIRD, ANIMAL));
+    }
+    let rows = rows;
+    let is_a = is_a;
+    let mut builder = StoreBuilder::create(
+        &dir.join("store.redb"),
+        "http://snomed.info/sct",
+        shape.version,
+    )?;
     for (i, key) in ["parent", "definitionStatus", "module"].iter().enumerate() {
         builder.vocabulary(Vocabulary::PropertyKeys, ord(i), key)?;
     }
@@ -665,6 +748,9 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     let alternative = refset_id(ALTERNATIVE)?;
     memberships.insert(pets, Ordinal::new(CAT));
     memberships.insert(pets, Ordinal::new(DOG));
+    if shape.bird {
+        memberships.insert(pets, Ordinal::new(BIRD));
+    }
     memberships.insert(codes_map, Ordinal::new(CAT));
     memberships.insert(codes_map, Ordinal::new(DOG));
     memberships.insert(same_as, Ordinal::new(FISH));
@@ -681,8 +767,12 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         values,
     };
     let mut tables = RefsetMembers::new();
+    let mut pet_rows = vec![member(CAT, vec![]), member(DOG, vec![])];
+    if shape.bird {
+        pet_rows.push(member(BIRD, vec![]));
+    }
     tables
-        .insert(pets, &[], vec![member(CAT, vec![]), member(DOG, vec![])])
+        .insert(pets, &[], pet_rows)
         .map_err(|e| graph_error(&e))?;
     // The Module Dependency reference set states which module an edition was
     // built on, in the columns RF2 gives it.
@@ -796,9 +886,9 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     let manifest = serde_json::json!({
         "manifest": 2,
         "system": "http://snomed.info/sct",
-        "edition": EDITION,
-        "version": VERSION,
-        "releaseDate": "20260101",
+        "edition": shape.edition,
+        "version": shape.version,
+        "releaseDate": shape.release_date,
         "store": "store.redb",
         "storeLayout": tables::LAYOUT_VERSION,
         "hierarchy": "hierarchy.bin",

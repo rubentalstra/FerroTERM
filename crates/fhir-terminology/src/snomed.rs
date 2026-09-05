@@ -627,17 +627,24 @@ impl SnomedProvider {
 
     /// The `version` an implicit URI on `base` resolves to: `None` for the
     /// bare system URI, this edition's version URI for its own edition or
-    /// version base, and the reason it does not fit otherwise.
-    pub(crate) fn implicit_version(&self, base: &str) -> Result<Option<String>, String> {
+    /// version base.
+    ///
+    /// A base naming another edition is
+    /// [`ProviderError::UnservedImplicitVersion`], never a malformed URI: the
+    /// FHIR SNOMED CT page admits any edition version as the base
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets"), so
+    /// the caller asks the other loaded editions before the server answers
+    /// that it holds no such version.
+    pub(crate) fn implicit_version(&self, base: &str) -> Result<Option<String>, ProviderError> {
         if base == SYSTEM {
             Ok(None)
         } else if base == self.edition || base == self.identity.version {
             Ok(Some(self.identity.version.clone()))
         } else {
-            Err(format!(
-                "`{base}` is not the served edition `{}`",
-                self.identity.version
-            ))
+            Err(ProviderError::UnservedImplicitVersion {
+                url: SYSTEM.to_owned(),
+                version: base.to_owned(),
+            })
         }
     }
 
@@ -1024,8 +1031,8 @@ impl CodeSystemProvider for SnomedProvider {
         // NOTE: the base must be this edition or the bare system URI; the map itself
         // always states the served version
         // (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
-        if let Err(reason) = self.implicit_version(base) {
-            return Some(Err(malformed(reason)));
+        if let Err(error) = self.implicit_version(base) {
+            return Some(Err(error));
         }
         let Some(decoded) = percent_decode(form) else {
             return Some(Err(malformed(format!(
@@ -1046,7 +1053,7 @@ impl CodeSystemProvider for SnomedProvider {
         };
         let version = match self.implicit_version(base) {
             Ok(version) => version,
-            Err(reason) => return Some(Err(malformed(reason))),
+            Err(error) => return Some(Err(error)),
         };
         let system = SystemRef {
             url: SYSTEM.to_owned(),

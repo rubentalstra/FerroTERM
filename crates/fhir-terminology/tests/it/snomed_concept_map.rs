@@ -278,15 +278,19 @@ fn an_unknown_reference_set_is_not_found_and_a_malformed_one_is_invalid() {
         translate(&world.sources(), &input(&map_url("not-an-sctid"))),
         Err(OperationError::Invalid(_))
     ));
+    // The base may be any edition version (<https://hl7.org/fhir/R4B/snomedct.html>,
+    // "Implicit Concept Maps"), so one the server does not hold is that version
+    // missing, not a malformed URI.
     assert!(
         matches!(
             translate(
                 &world.sources(),
                 &input("http://snomed.info/sct/999?fhir_cm=900000000000527005")
             ),
-            Err(OperationError::Invalid(_))
+            Err(OperationError::UnknownVersion { ref url, ref version })
+                if url == SYSTEM && version == "http://snomed.info/sct/999"
         ),
-        "another edition's base is refused"
+        "an edition the server does not serve is not found"
     );
 }
 

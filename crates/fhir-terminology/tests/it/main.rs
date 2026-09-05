@@ -28,6 +28,7 @@ mod rxnorm;
 mod scaled;
 mod snomed;
 mod snomed_concept_map;
+mod snomed_editions;
 mod supplement;
 mod ucum;
 mod value_set;

@@ -29,8 +29,12 @@ A verdict is one of three:
   tracks it.
 - **Not offered.** FerroTERM does not do this, and the row says why.
 
-37 expectations were checked: 27 met, 7 partially met, 3 not offered. Some
+37 expectations were checked: 28 met, 6 partially met, 3 not offered. Some
 appear in two sources, and where they do the detail says so.
+
+A row that a later change fixes is re-checked the same way, on a server built
+from that change over the same two artifact directories, and the detail says
+which issue moved it. [C22](#c22-detail) was re-checked on issue #361.
 
 ## Where the expectations come from
 
@@ -101,7 +105,7 @@ the observed ECL coverage sits under [A3](#a3) as its evidence.
 | <a id="c19"></a>C19 | §.8.3 By SNOMED Expression Constraint: property `constraint`, operator `=` | **Met** | [C17](#c17-detail) · `::ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set` |
 | <a id="c20"></a>C20 | §.8.4 By whether post-coordination is allowed: property `expressions`, operator `=`, values true or false | **Met** | [C17](#c17-detail) |
 | <a id="c21"></a>C21 | §.9: the five query forms `?fhir_vs`, `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, `?fhir_vs=refset/[sctid]`, `?fhir_vs=ecl/[ecl]`, the ECL URI-encoded | **Met** | [C21](#c21-detail) · `::the_implicit_value_sets_follow_the_snomed_ct_page`, `::malformed_and_unknown_implicit_value_sets_are_refused` |
-| <a id="c22"></a>C22 | §.9: "The base URL is either `http://snomed.info/sct`, or the URI for the edition version" | **Partially met** | With two editions loaded, only the default edition's base is accepted. [C22](#c22-detail), issue #361 |
+| <a id="c22"></a>C22 | §.9: "The base URL is either `http://snomed.info/sct`, or the URI for the edition version" | **Met** | [C22](#c22-detail) · `crates/fhir-terminology/tests/it/snomed_editions.rs` (7 tests) |
 | <a id="c23"></a>C23 | §.9: "`?fhir_vs=refset` - all concept ids that correspond to reference sets that are explicitly defined in the specified SNOMED CT edition" | **Partially met** | The language reference sets are missing from the list. [C23](#c23-detail), issue #363 |
 | <a id="c24"></a>C24 | §.9: "the content of the resource must conform to the template provided" (`url`, `version`, `name`, `description`, `copyright`, `status`, `compose`) | **Partially met** | `version`, `name`, `description`, and `copyright` are absent. [C24](#c24-detail), issue #362 |
 | <a id="c25"></a>C25 | §.9: "If no version or edition is specified, the terminology service SHALL use the latest version available for its default edition" | **Met** | [C11](#c11-detail) |
@@ -413,6 +417,53 @@ which [S-IMP-1] requires:
    `nonsense/1` is not a `fhir_vs` form
 ```
 
+<a id="c22-detail"></a>**C22. The edition in the base picks the edition.**
+Issue #361.
+
+§.9 says "The base URL is either `http://snomed.info/sct`, or the URI for the
+edition version", and that the membership "will depend on the edition used
+when it is expanded". With the NL and the International editions loaded
+together, each base answers from the edition it names, and the totals split
+per edition:
+
+```
+                                 NL base      International base
+?fhir_vs                         548,949      535,502
+?fhir_vs=isa/74400008                 35           35
+?fhir_vs=refset                       75           25
+?fhir_vs=refset/447562003        137,425      137,678
+?fhir_vs=ecl/%3C%3C%2074400008        35           35
+```
+
+Each expansion echoes the edition it used, and only the NL base returns the
+Dutch preferred terms:
+
+```
+$expand url=…/11000146104/version/20260630?fhir_vs=isa/74400008 displayLanguage=nl
+-> used-codesystem http://snomed.info/sct|http://snomed.info/sct/11000146104/version/20260630
+   "acute obstructieve appendicitis", "atypische appendicitis"
+
+$expand url=…/449080006/version/20260901?fhir_vs=isa/74400008 displayLanguage=nl
+-> used-codesystem http://snomed.info/sct|http://snomed.info/sct/449080006/version/20260901
+   "Acute obstructive appendicitis", "Atypical appendicitis"
+```
+
+The bare `http://snomed.info/sct` base still answers from the default
+edition, shown under [C11](#c11-detail). An edition version no loaded edition
+serves is that version missing, which is what the same URI already answers
+for an explicit `version` parameter:
+
+```
+$expand url=http://snomed.info/sct/32506021000036107/version/20260101?fhir_vs
+-> 404 not-found, not-found
+   version `http://snomed.info/sct/32506021000036107/version/20260101` of code
+   system `http://snomed.info/sct` is not served
+```
+
+The implicit concept maps resolve by the same rule: `?fhir_cm=` on either
+edition's base answers, and on an edition the server does not hold it is the
+same 404.
+
 <a id="c26-detail"></a>**C26, C27. The implicit concept maps.** All four
 association reference sets and the map reference sets answer `$translate`,
 on both editions. An active concept with no association returns no match,
@@ -501,31 +552,6 @@ CT distribution: `http://snomed.info/sct/[sctid]`", and says the service
 distribution". The defaulting is a `may`, so refusing breaks no `SHALL`. It
 refuses a form the page tells clients to send, while exactly one version of
 that edition is loaded and could answer.
-
-<a id="c22-detail"></a>**C22. An edition-based implicit value set fails when a
-second edition is loaded.** Issue #361.
-
-With one edition loaded, the edition base works. With the NL and the
-International loaded together, only the default edition's base is accepted:
-
-```
-$expand url=http://snomed.info/sct/11000146104/version/20260630?fhir_vs
--> 422 invalid, vs-invalid
-   implicit value set `…11000146104/version/20260630?fhir_vs` is malformed:
-   `http://snomed.info/sct/11000146104/version/20260630` is not the served edition
-   `http://snomed.info/sct/449080006/version/20260901`
-```
-
-The same refusal covers all five forms. §.9 says "The base URL is either
-`http://snomed.info/sct`, or the URI for the edition version", and that the
-membership "will depend on the edition used when it is expanded", so the
-edition in the base is the whole point of the form. The parsing and the
-evaluation are right: the identical request answers when NL is the only
-artifact loaded. Only the edition resolution is wrong, and the refusal is
-also mis-typed, calling an unserved edition a malformed URL.
-
-The explicit `compose.include.version` path is unaffected and routes to
-either edition correctly.
 
 <a id="c23-detail"></a>**A4, C23. The reference set list omits the language
 reference sets.** Issue #363.

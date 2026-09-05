@@ -254,46 +254,99 @@ impl Registry {
         })
     }
 
-    /// The compose an implicit value set URI denotes, asking the default
+    /// The providers to ask about the implicit URI `url`: for every system
+    /// whose URI prefixes it, the default version first, then its other
+    /// loaded versions.
+    ///
+    /// An implicit URI may carry a version of its own (a SNOMED CT edition
+    /// version, <https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value
+    /// Sets"), so every loaded version of the system is a candidate and the
+    /// default only decides the versionless form.
+    fn implicit_candidates(&self, url: &str) -> Vec<Arc<dyn CodeSystemProvider>> {
+        let mut candidates = Vec::new();
+        for (canonical, system) in &self.systems {
+            if !url.starts_with(canonical.as_str()) {
+                continue;
+            }
+            let Ok(resolved) = self.resolve(canonical, None) else {
+                continue;
+            };
+            let default = resolved.provider.identity().version.clone();
+            candidates.push(resolved.provider);
+            candidates.extend(
+                system
+                    .versions
+                    .iter()
+                    .filter(|(version, _)| **version != default)
+                    .map(|(_, provider)| Arc::clone(provider)),
+            );
+        }
+        candidates
+    }
+
+    /// The compose an implicit value set URI denotes, asking every loaded
     /// version of every system whose URI prefixes `url`.
     ///
-    /// `None` when no system claims the URI.
+    /// `None` when no system claims the URI; the unknown-version error when a
+    /// system claims it but no loaded version of it serves the version the URI
+    /// names.
     #[must_use]
     pub fn implicit_value_set(&self, url: &str) -> Option<Result<Compose, ProviderError>> {
-        self.systems
-            .keys()
-            .filter(|system| url.starts_with(system.as_str()))
-            .filter_map(|system| self.resolve(system, None).ok())
-            .find_map(|resolved| resolved.provider.implicit_value_set(url))
+        let mut unserved = None;
+        for provider in self.implicit_candidates(url) {
+            match provider.implicit_value_set(url) {
+                None => {}
+                Some(Err(error @ ProviderError::UnservedImplicitVersion { .. })) => {
+                    if unserved.is_none() {
+                        unserved = Some(error);
+                    }
+                }
+                Some(answer) => return Some(answer),
+            }
+        }
+        unserved.map(Err)
     }
 
     /// The metadata of the implicit value set `url` denotes, from the system
-    /// that defines it; empty when no registered system does.
+    /// version that defines it; empty when no registered version does.
     #[must_use]
     pub fn implicit_metadata(&self, url: &str) -> crate::provider::ImplicitMetadata {
-        self.systems
-            .keys()
-            .filter(|system| url.starts_with(system.as_str()))
-            .filter_map(|system| self.resolve(system, None).ok())
-            .find(|resolved| resolved.provider.implicit_value_set(url).is_some())
-            .map(|resolved| resolved.provider.implicit_metadata(url))
+        self.implicit_candidates(url)
+            .into_iter()
+            .find(|provider| {
+                !matches!(
+                    provider.implicit_value_set(url),
+                    None | Some(Err(ProviderError::UnservedImplicitVersion { .. }))
+                )
+            })
+            .map(|provider| provider.implicit_metadata(url))
             .unwrap_or_default()
     }
 
-    /// The `ConceptMap` an implicit concept map URI denotes, asking the
-    /// default version of every system whose URI prefixes `url`.
+    /// The `ConceptMap` an implicit concept map URI denotes, asking every
+    /// loaded version of every system whose URI prefixes `url`.
     ///
-    /// `None` when no system claims the URI.
+    /// `None` when no system claims the URI; the unknown-version error when a
+    /// system claims it but no loaded version of it serves the version the URI
+    /// names.
     #[must_use]
     pub fn implicit_concept_map(
         &self,
         url: &str,
     ) -> Option<Result<crate::conceptmap::model::ConceptMapModel, ProviderError>> {
-        self.systems
-            .keys()
-            .filter(|system| url.starts_with(system.as_str()))
-            .filter_map(|system| self.resolve(system, None).ok())
-            .find_map(|resolved| resolved.provider.implicit_concept_map(url))
+        let mut unserved = None;
+        for provider in self.implicit_candidates(url) {
+            match provider.implicit_concept_map(url) {
+                None => {}
+                Some(Err(error @ ProviderError::UnservedImplicitVersion { .. })) => {
+                    if unserved.is_none() {
+                        unserved = Some(error);
+                    }
+                }
+                Some(answer) => return Some(answer),
+            }
+        }
+        unserved.map(Err)
     }
 
     /// The registered system URIs, sorted.

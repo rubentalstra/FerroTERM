@@ -414,11 +414,15 @@ fn malformed_and_unknown_implicit_value_sets_are_refused() {
             .expect("implicit"),
         Err(ProviderError::MalformedImplicitValueSet { .. })
     ));
+    // The base may be any edition version (<https://hl7.org/fhir/R4B/snomedct.html>,
+    // "Implicit Value Sets"), so another edition is a version this provider does
+    // not serve, which the registry asks its other editions about.
     assert!(
         matches!(
             p.implicit_value_set("http://snomed.info/sct/999?fhir_vs")
                 .expect("implicit"),
-            Err(ProviderError::MalformedImplicitValueSet { .. })
+            Err(ProviderError::UnservedImplicitVersion { ref url, ref version })
+                if url == SYSTEM && version == "http://snomed.info/sct/999"
         ),
         "another edition"
     );
