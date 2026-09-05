@@ -72,5 +72,68 @@ fn requests(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, requests);
+/// The same router over the local `RxNorm` and SNOMED artifacts, when they are
+/// built, so the served figure a record reports has a bench behind it: a
+/// record measures a socket too, this measures everything above it (#304).
+fn local(c: &mut Criterion) {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts");
+    let built: Vec<std::path::PathBuf> = ["rxnorm", "nl"]
+        .iter()
+        .map(|name| root.join(name))
+        .filter(|dir| dir.join("manifest.json").exists())
+        .collect();
+    if built.is_empty() {
+        eprintln!("no local artifacts: skipping the served read benchmarks");
+        return;
+    }
+    let config = Config {
+        index: built,
+        ..Config::default()
+    };
+    let state = Arc::new(AppState::load(&config).expect("loads"));
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("runtime");
+    let router = ferroterm_server::router(Arc::clone(&state));
+    let answer = |uri: &str| {
+        let router = router.clone();
+        let request = Request::get(uri).body(Body::empty()).expect("request");
+        runtime.block_on(async {
+            let response = router.oneshot(request).await.expect("response");
+            axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("body")
+        })
+    };
+    let mut group = c.benchmark_group("served");
+    let rxnorm = "http%3A%2F%2Fwww.nlm.nih.gov%2Fresearch%2Fumls%2Frxnorm";
+    group.bench_function("rxnorm_lookup", |b| {
+        b.iter(|| {
+            answer(&format!(
+                "/r4b/CodeSystem/$lookup?system={rxnorm}&code=313782"
+            ))
+        });
+    });
+    let sct = "http%3A%2F%2Fsnomed.info%2Fsct";
+    group.bench_function("snomed_lookup", |b| {
+        b.iter(|| {
+            answer(&format!(
+                "/r4b/CodeSystem/$lookup?system={sct}&code=404684003"
+            ))
+        });
+    });
+    // What writing the same body costs once the object exists, so the served
+    // figure splits into building the object and serializing it (#304).
+    let body = answer(&format!(
+        "/r4b/CodeSystem/$lookup?system={rxnorm}&code=313782"
+    ));
+    let object: fhir_types::codec::Object = serde_json::from_slice(&body).expect("the body parses");
+    group.bench_function("rxnorm_serialize", |b| {
+        b.iter(|| serde_json::to_vec(&object).expect("serializes"));
+    });
+    group.finish();
+}
+
+criterion_group!(benches, requests, local);
 criterion_main!(benches);
