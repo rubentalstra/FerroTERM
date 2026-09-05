@@ -45,6 +45,30 @@ The wordmark is set in Bricolage Grotesque (700). Body copy pairs with IBM Plex
 Sans, and data and labels with IBM Plex Mono. The lockup SVGs reference these
 with a system-sans fallback; outline the wordmark to paths before any print use.
 
+## Intrinsic size
+
+Each SVG here carries two sizes that do different jobs. The `viewBox` is the
+coordinate space the artwork is drawn in, and it stays as drawn. The `width` and
+`height` attributes are the file's natural size, which is what a consumer that
+rasterizes the file takes when nothing tells it how big to render. At a natural
+size of 48 a package registry, a listing header, or an icon cache that wants
+several hundred pixels stores a 48-pixel bitmap and shows it blurry. The artwork
+is vector and reads at any size, so the two attributes are the only cap.
+
+| File | `viewBox` | Natural size |
+|---|---|---|
+| `ferroterm-icon.svg` | `0 0 48 48` | 512 x 512 |
+| `ferroterm-icon-mono.svg` | `0 0 48 48` | 512 x 512 |
+| `ferroterm-icon-dark.svg` | `0 0 48 48` | 512 x 512 |
+| `favicon.svg` | `0 0 32 32` | 32 x 32 |
+| the three lockups | `0 0 184 56` | 184 x 56 |
+
+The square icons ship at 512 so a rasterizing consumer gets a sharp bitmap.
+`favicon.svg` keeps a small natural size, because a browser tab asks for a small
+icon. The lockups keep their own natural width, because they are drawn to a
+fixed aspect, so a consumer scales them by picking one dimension and letting the
+other follow. Any square icon added here starts at 512.
+
 ## Usage
 
 - Keep clear space around the mark equal to the diameter of one node.
