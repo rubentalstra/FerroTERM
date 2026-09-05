@@ -54,7 +54,7 @@ fn the_local_artifact_footprint_by_table() {
     let txn = db.begin_read().expect("read txn");
     report(&txn, tables::META);
     report(&txn, tables::CODES);
-    report(&txn, tables::CONCEPTS);
+    report(&txn, tables::COLUMNS);
     report(&txn, tables::DESIGNATIONS);
     report(&txn, tables::ACCEPTABILITY);
     report(&txn, tables::PREFERRED);

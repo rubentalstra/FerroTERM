@@ -782,9 +782,9 @@ impl CodeSystemProvider for SnomedProvider {
     fn code(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
         Ok(self
             .store
-            .concept(Self::ordinal(concept))
+            .code(Self::ordinal(concept))
             .map_err(storage)?
-            .map(|c| c.code))
+            .map(ToOwned::to_owned))
     }
 
     fn display(

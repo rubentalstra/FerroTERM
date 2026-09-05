@@ -239,8 +239,23 @@ impl Concept {
     ///
     /// Returns [`RecordError`] when the code is truncated or not UTF-8.
     pub fn decode_code(bytes: &[u8]) -> Result<String, RecordError> {
-        Reader { bytes, at: 0 }.str()
+        code(bytes).map(str::to_owned)
     }
+}
+
+/// The native code a concept record starts with, borrowed from `bytes`.
+///
+/// # Errors
+///
+/// Returns [`RecordError`] when the code is truncated or not UTF-8.
+pub fn code(bytes: &[u8]) -> Result<&str, RecordError> {
+    let mut reader = Reader { bytes, at: 0 };
+    let Ok(len) = usize::try_from(reader.u32()?) else {
+        return Err(RecordError::Truncated { at: reader.at });
+    };
+    let at = reader.at;
+    let taken = reader.take(len)?;
+    std::str::from_utf8(taken).map_err(|source| RecordError::Utf8 { at, source })
 }
 
 impl Designation {

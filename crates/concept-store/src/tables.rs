@@ -11,8 +11,12 @@ use redb::TableDefinition;
 pub const META: TableDefinition<&str, &str> = TableDefinition::new("meta");
 /// Native code to concept ordinal.
 pub const CODES: TableDefinition<&str, u32> = TableDefinition::new("codes");
-/// Concept ordinal to its encoded [`crate::record::Concept`].
-pub const CONCEPTS: TableDefinition<u32, &[u8]> = TableDefinition::new("concepts");
+/// Packed columns by name, each a [`crate::column::Column`] addressed by
+/// ordinal. `concepts` holds the encoded [`crate::record::Concept`] of every
+/// ordinal.
+pub const COLUMNS: TableDefinition<&str, &[u8]> = TableDefinition::new("columns");
+/// The `COLUMNS` key of the concept column.
+pub const COLUMN_CONCEPTS: &str = "concepts";
 /// `(concept ordinal, designation index)` to an encoded [`crate::record::Designation`].
 pub const DESIGNATIONS: TableDefinition<(u32, u32), &[u8]> = TableDefinition::new("designations");
 /// `(concept ordinal, designation index, language refset ordinal)` to an acceptability ordinal.
@@ -35,7 +39,7 @@ pub const ACCEPTABILITIES: TableDefinition<u32, &str> = TableDefinition::new("ac
 /// The `META` key of the layout version.
 pub const META_LAYOUT: &str = "layout";
 /// The layout version this build writes and reads.
-pub const LAYOUT_VERSION: &str = "2";
+pub const LAYOUT_VERSION: &str = "3";
 /// The `META` key of the code system URI.
 pub const META_SYSTEM: &str = "system";
 /// The `META` key of the code system version string.
