@@ -26,6 +26,16 @@ pub enum ParseError {
     /// A character no token starts with.
     #[error(transparent)]
     Lex(#[from] LexError),
+    /// The expression nests deeper than the parser will descend.
+    #[error("the expression nests {depth} deep at byte {offset}; the limit is {limit}")]
+    TooDeep {
+        /// The byte offset of the bracket that crossed the limit.
+        offset: usize,
+        /// The nesting depth reached there.
+        depth: usize,
+        /// The deepest nesting the parser admits.
+        limit: usize,
+    },
     /// The tokens do not form an expression constraint.
     #[error("expected {expected} at byte {offset}, found {found}")]
     Syntax {
@@ -44,9 +54,41 @@ impl ParseError {
     pub fn offset(&self) -> usize {
         match self {
             Self::Lex(error) => error.offset,
-            Self::Syntax { offset, .. } => *offset,
+            Self::TooDeep { offset, .. } | Self::Syntax { offset, .. } => *offset,
         }
     }
+}
+
+/// The deepest nesting of `(`, `{`, `{{`, or `[` an expression may carry.
+///
+/// No specification governs this: our own design. The grammar is recursive and
+/// the parser descends with it, so nesting costs stack; an expression a client
+/// sends is refused here rather than run until the process aborts, which no
+/// `OperationOutcome` survives. Real expressions nest a handful deep.
+pub const NESTING_LIMIT: usize = 64;
+
+/// The byte offset and depth of the first bracket past [`NESTING_LIMIT`].
+fn too_deep(tokens: &[lexer::Token<'_>]) -> Option<(usize, usize)> {
+    let mut depth = 0_usize;
+    for token in tokens {
+        match token.kind {
+            lexer::Kind::LeftParen
+            | lexer::Kind::LeftBrace
+            | lexer::Kind::DoubleLeftBrace
+            | lexer::Kind::LeftBracket => {
+                depth = depth.saturating_add(1);
+                if depth > NESTING_LIMIT {
+                    return Some((token.span.start, depth));
+                }
+            }
+            lexer::Kind::RightParen
+            | lexer::Kind::RightBrace
+            | lexer::Kind::DoubleRightBrace
+            | lexer::Kind::RightBracket => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Parses an expression constraint.
@@ -66,6 +108,13 @@ impl ParseError {
 /// ```
 pub fn parse(input: &str) -> Result<ExpressionConstraint, ParseError> {
     let tokens = lexer::lex(input)?;
+    if let Some((offset, depth)) = too_deep(&tokens) {
+        return Err(ParseError::TooDeep {
+            offset,
+            depth,
+            limit: NESTING_LIMIT,
+        });
+    }
     parser::whole
         .parse(TokenSlice::new(&tokens))
         .map_err(|error| {
