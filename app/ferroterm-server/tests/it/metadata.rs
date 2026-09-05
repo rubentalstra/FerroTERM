@@ -98,7 +98,10 @@ async fn the_capability_statements_state_the_configured_base_url() {
         "the version prefix is part of the endpoint: {body}"
     );
     let (_, body) = server.get("/r5/metadata").await;
-    assert_eq!(body["implementation"]["url"], "https://tx.example.org/fhir/r5");
+    assert_eq!(
+        body["implementation"]["url"],
+        "https://tx.example.org/fhir/r5"
+    );
     let (_, body) = server.get("/r4b/metadata?mode=terminology").await;
     assert_eq!(
         body["implementation"]["url"], "https://tx.example.org/fhir/r4b",
