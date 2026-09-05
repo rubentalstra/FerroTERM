@@ -1,0 +1,1 @@
+{"resourceType":"ConceptMap","status":"active","url":"http://example.org/cm","group":[{"source":"http://example.org/a","target":"http://example.org/b","element":[{"code":"a","target":[{"code":"b","equivalence":"equal"}]}]}]}

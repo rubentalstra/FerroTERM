@@ -305,3 +305,33 @@ async fn an_expansion_carries_the_publisher_only_with_the_definition() {
         "Invalid displayLanguage: 'zz'"
     );
 }
+
+/// An expression that nests deeper than the parser descends is refused, not
+/// descended into.
+///
+/// The parser is recursive, so an unbounded nesting from a client would
+/// exhaust the stack and abort the process; a panic unwinds into a 500, but a
+/// stack overflow takes the server with it
+/// (`.claude/rules/reliability.md`). Found by the `ecl_parse` fuzz target.
+#[tokio::test]
+async fn a_deeply_nested_expression_is_an_operation_outcome() {
+    let server = Server::start();
+    let deep = format!("{}138875005{}", "(".repeat(5_000), ")".repeat(5_000));
+    let (status, body) = server
+        .post(
+            "/r4b/ValueSet/$expand",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": format!("http://snomed.info/sct?fhir_vs=ecl/{deep}")}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(body["resourceType"], "OperationOutcome");
+    assert_eq!(body["issue"][0]["code"], "invalid");
+    assert!(
+        body["issue"][0]["details"]["text"]
+            .as_str()
+            .is_some_and(|t| t.contains("nests")),
+        "the outcome says the expression nests too deep: {body}"
+    );
+}

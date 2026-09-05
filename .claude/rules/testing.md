@@ -80,6 +80,24 @@ expectations and the reference servers, NOT a bespoke conformance runner.
   reference-server comparison runs against a locally-provisioned licensed
   edition that is never committed.
 
+## Fuzzing (the parsers a client can reach)
+
+Every hand-written parser an untrusted input reaches has a `cargo-fuzz` target
+under `fuzz/`: ECL, the FHIR JSON and XML bodies, the SNOMED implicit URI
+forms, and the RF2 fields. The crate sits outside the workspace because
+cargo-fuzz needs nightly, and the weekly `fuzz.yml` lane runs each target for a
+bounded time (`fuzz/README.md`).
+
+- **A crash is a defect, and it is fixed, never tolerated.** The reproducing
+  input is shrunk (`cargo fuzz tmin`) and pinned by a test in the crate that
+  owns the parser, so the same input never regresses.
+- **A hang and a stack overflow count as crashes.** A panic unwinds into a
+  clean 500; a stack overflow aborts the process, so recursive descent over
+  client input carries a depth limit (`sct_ecl::NESTING_LIMIT`).
+- **Seeds are committed, corpora are not.** `fuzz/seeds/` holds the shapes each
+  parser admits, written with identifiers only, so it distributes no SNOMED CT
+  content; a run's own corpus and artifacts stay out of the repository.
+
 ## Where tests live
 
 Unit tests live beside the code they test (`#[cfg(test)] mod tests` in the
