@@ -106,17 +106,18 @@
         </div>
         <div class="prose prose-wide">
           <!-- bench-table:begin -->
-<p class="conditions">Warm p50 over 200 HTTP round trips on one machine, inside a Docker container (Apple aarch64 (implementer 0x61, part 0x000), 8.22 GB, linux/aarch64), FerroTERM 0.0.9 serving FHIR R4B, taken 2026-09-04.</p>
+<p class="conditions">Warm p50 over 200 HTTP round trips on one machine (Apple M2, 17.18 GB, macos/aarch64), FerroTERM 0.0.11 serving FHIR R4B, taken 2026-09-05.</p>
 <h3>Footprint</h3>
 <div class="table-wrap"><table>
 <thead><tr><th>Code system</th><th>Release</th><th>Concepts</th><th>Build</th><th>Peak build memory</th><th>Index on disk</th><th>Time to ready</th><th>Resident, open</th><th>Resident, warm</th></tr></thead>
 <tbody>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/icd-10-cm-2026-09-04T09-16-57-858505552Z.json" rel="noopener">ICD-10-CM</a></th><td>2026</td><td>98,827</td><td>1.7 s</td><td>319 MB</td><td>40 MB</td><td>111.98 ms</td><td>43 MB</td><td>45 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/icd-11-mms-2026-09-04T09-17-03-558396221Z.json" rel="noopener">ICD-11 MMS</a></th><td>2026-01</td><td>37,211</td><td>n/a</td><td>n/a</td><td>34 MB</td><td>213.37 ms</td><td>57 MB</td><td>60 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/loinc-2026-09-04T09-16-55-946117093Z.json" rel="noopener">LOINC</a></th><td>2.83</td><td>257,266</td><td>12.89 s</td><td>2.27 GB</td><td>260 MB</td><td>333.03 ms</td><td>118 MB</td><td>124 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/rxnorm-prescribable-subset-2026-09-04T09-17-03-166797554Z.json" rel="noopener">RxNorm (prescribable subset)</a></th><td>09082026</td><td>81,468</td><td>4.49 s</td><td>568 MB</td><td>72 MB</td><td>459.46 ms</td><td>73 MB</td><td>86 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/snomed-ct-international-edition-2026-09-04T09-16-41-025864294Z.json" rel="noopener">SNOMED CT (International edition)</a></th><td>20260901</td><td>535,502</td><td>36.81 s</td><td>2.49 GB</td><td>486 MB</td><td>648.55 ms</td><td>393 MB</td><td>402 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-04-docker-apple-m2/snomed-ct-netherlands-edition-2026-09-04T09-16-02-189844762Z.json" rel="noopener">SNOMED CT (Netherlands edition)</a></th><td>20260630</td><td>548,949</td><td>62.92 s</td><td>3.41 GB</td><td>668 MB</td><td>873.6 ms</td><td>465 MB</td><td>475 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/icd-10-cm-2026-09-05T15-10-06-83923Z.json" rel="noopener">ICD-10-CM</a></th><td>2026</td><td>98,827</td><td>1.57 s</td><td>353 MB</td><td>40 MB</td><td>106.7 ms</td><td>61 MB</td><td>62 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/icd-10-nl-2026-09-05T15-10-08-117769Z.json" rel="noopener">ICD-10-NL</a></th><td>2021</td><td>42,769</td><td>1.1 s</td><td>226 MB</td><td>20 MB</td><td>107.04 ms</td><td>35 MB</td><td>36 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/icd-11-mms-2026-09-05T15-10-13-927646Z.json" rel="noopener">ICD-11 MMS</a></th><td>2026-01</td><td>37,211</td><td>n/a</td><td>n/a</td><td>34 MB</td><td>208.88 ms</td><td>71 MB</td><td>74 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/loinc-2026-09-05T15-10-05-088125Z.json" rel="noopener">LOINC</a></th><td>2.83</td><td>257,266</td><td>10.38 s</td><td>1.84 GB</td><td>262 MB</td><td>211.3 ms</td><td>165 MB</td><td>171 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/rxnorm-prescribable-subset-2026-09-05T15-10-13-591366Z.json" rel="noopener">RxNorm (prescribable subset)</a></th><td>09082026</td><td>81,468</td><td>4.87 s</td><td>645 MB</td><td>72 MB</td><td>312.81 ms</td><td>106 MB</td><td>119 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/snomed-ct-international-edition-2026-09-05T15-09-52-723078Z.json" rel="noopener">SNOMED CT (International edition)</a></th><td>20260901</td><td>535,502</td><td>35.84 s</td><td>2.48 GB</td><td>498 MB</td><td>418.55 ms</td><td>570 MB</td><td>588 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/snomed-ct-netherlands-edition-2026-09-05T15-09-15-207213Z.json" rel="noopener">SNOMED CT (Netherlands edition)</a></th><td>20260630</td><td>548,949</td><td>51.28 s</td><td>2.55 GB</td><td>679 MB</td><td>1.25 s</td><td>670 MB</td><td>691 MB</td></tr>
 </tbody></table></div>
 <h3>Latency per operation</h3>
 <p>Each operation: the first request cold, then the nearest-rank p50, p95, and p99 over the warm requests.</p>
@@ -124,72 +125,79 @@
 <div class="table-wrap"><table>
 <thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
 <tbody>
-<tr><th scope="row">ICD-10-CM</th><td>2.11 ms</td><td>104 µs</td><td>134 µs</td><td>176 µs</td></tr>
-<tr><th scope="row">ICD-11 MMS</th><td>2.87 ms</td><td>263 µs</td><td>290 µs</td><td>312 µs</td></tr>
-<tr><th scope="row">LOINC</th><td>7.27 ms</td><td>265 µs</td><td>288 µs</td><td>306 µs</td></tr>
-<tr><th scope="row">RxNorm (prescribable subset)</th><td>13.05 ms</td><td>1.41 ms</td><td>1.58 ms</td><td>1.75 ms</td></tr>
-<tr><th scope="row">SNOMED CT (International edition)</th><td>29.73 ms</td><td>915 µs</td><td>968 µs</td><td>985 µs</td></tr>
-<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>52.28 ms</td><td>934 µs</td><td>1.09 ms</td><td>1.38 ms</td></tr>
+<tr><th scope="row">ICD-10-CM</th><td>2.82 ms</td><td>113 µs</td><td>155 µs</td><td>187 µs</td></tr>
+<tr><th scope="row">ICD-10-NL</th><td>3.02 ms</td><td>116 µs</td><td>172 µs</td><td>201 µs</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>2.58 ms</td><td>218 µs</td><td>309 µs</td><td>412 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>8.15 ms</td><td>184 µs</td><td>227 µs</td><td>291 µs</td></tr>
+<tr><th scope="row">RxNorm (prescribable subset)</th><td>5.13 ms</td><td>1.07 ms</td><td>1.52 ms</td><td>2.02 ms</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>10.28 ms</td><td>527 µs</td><td>582 µs</td><td>658 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>5.7 ms</td><td>550 µs</td><td>657 µs</td><td>741 µs</td></tr>
 </tbody></table></div>
 <h4><code>$validate-code</code></h4>
 <div class="table-wrap"><table>
 <thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
 <tbody>
-<tr><th scope="row">ICD-10-CM</th><td>79 µs</td><td>103 µs</td><td>352 µs</td><td>560 µs</td></tr>
-<tr><th scope="row">ICD-11 MMS</th><td>125 µs</td><td>115 µs</td><td>125 µs</td><td>131 µs</td></tr>
-<tr><th scope="row">LOINC</th><td>151 µs</td><td>116 µs</td><td>127 µs</td><td>136 µs</td></tr>
-<tr><th scope="row">RxNorm (prescribable subset)</th><td>195 µs</td><td>134 µs</td><td>148 µs</td><td>155 µs</td></tr>
-<tr><th scope="row">SNOMED CT (International edition)</th><td>157 µs</td><td>116 µs</td><td>127 µs</td><td>135 µs</td></tr>
-<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>1.72 ms</td><td>118 µs</td><td>127 µs</td><td>139 µs</td></tr>
+<tr><th scope="row">ICD-10-CM</th><td>116 µs</td><td>52 µs</td><td>71 µs</td><td>92 µs</td></tr>
+<tr><th scope="row">ICD-10-NL</th><td>113 µs</td><td>55 µs</td><td>80 µs</td><td>96 µs</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>81 µs</td><td>61 µs</td><td>89 µs</td><td>244 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>744 µs</td><td>45 µs</td><td>57 µs</td><td>62 µs</td></tr>
+<tr><th scope="row">RxNorm (prescribable subset)</th><td>205 µs</td><td>120 µs</td><td>278 µs</td><td>474 µs</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>776 µs</td><td>84 µs</td><td>107 µs</td><td>140 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>164 µs</td><td>78 µs</td><td>103 µs</td><td>143 µs</td></tr>
 </tbody></table></div>
 <h4><code>$subsumes</code></h4>
 <div class="table-wrap"><table>
 <thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
 <tbody>
-<tr><th scope="row">ICD-10-CM</th><td>212 µs</td><td>111 µs</td><td>120 µs</td><td>126 µs</td></tr>
+<tr><th scope="row">ICD-10-CM</th><td>1.42 ms</td><td>55 µs</td><td>70 µs</td><td>79 µs</td></tr>
+<tr><th scope="row">ICD-10-NL</th><td>63 µs</td><td>46 µs</td><td>57 µs</td><td>61 µs</td></tr>
 <tr><th scope="row">ICD-11 MMS</th><td class="na" colspan="4">n/a</td></tr>
 <tr><th scope="row">LOINC</th><td class="na" colspan="4">n/a</td></tr>
 <tr><th scope="row">RxNorm (prescribable subset)</th><td class="na" colspan="4">n/a</td></tr>
-<tr><th scope="row">SNOMED CT (International edition)</th><td>1.24 ms</td><td>111 µs</td><td>122 µs</td><td>127 µs</td></tr>
-<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>728 µs</td><td>112 µs</td><td>121 µs</td><td>132 µs</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>652 µs</td><td>68 µs</td><td>96 µs</td><td>111 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>692 µs</td><td>73 µs</td><td>91 µs</td><td>219 µs</td></tr>
 </tbody></table></div>
 <h4><code>$expand (a small value set)</code></h4>
 <div class="table-wrap"><table>
 <thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
 <tbody>
 <tr><th scope="row">ICD-10-CM</th><td class="na" colspan="4">n/a</td></tr>
-<tr><th scope="row">ICD-11 MMS</th><td>1.91 ms</td><td>126 µs</td><td>139 µs</td><td>148 µs</td></tr>
-<tr><th scope="row">LOINC</th><td>4.62 ms</td><td>127 µs</td><td>148 µs</td><td>152 µs</td></tr>
+<tr><th scope="row">ICD-10-NL</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>2.94 ms</td><td>63 µs</td><td>96 µs</td><td>127 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>3.73 ms</td><td>60 µs</td><td>80 µs</td><td>100 µs</td></tr>
 <tr><th scope="row">RxNorm (prescribable subset)</th><td class="na" colspan="4">n/a</td></tr>
-<tr><th scope="row">SNOMED CT (International edition)</th><td>30.25 ms</td><td>526 µs</td><td>556 µs</td><td>584 µs</td></tr>
-<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>40.04 ms</td><td>838 µs</td><td>895 µs</td><td>1.34 ms</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>21.82 ms</td><td>379 µs</td><td>413 µs</td><td>450 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>25.01 ms</td><td>536 µs</td><td>586 µs</td><td>650 µs</td></tr>
 </tbody></table></div>
 <h4><code>$expand (the whole system, one page)</code></h4>
 <div class="table-wrap"><table>
 <thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
 <tbody>
 <tr><th scope="row">ICD-10-CM</th><td class="na" colspan="4">n/a</td></tr>
-<tr><th scope="row">ICD-11 MMS</th><td>123 µs</td><td>125 µs</td><td>138 µs</td><td>141 µs</td></tr>
-<tr><th scope="row">LOINC</th><td>11.66 ms</td><td>6.46 ms</td><td>8.29 ms</td><td>11.45 ms</td></tr>
+<tr><th scope="row">ICD-10-NL</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>57 µs</td><td>77 µs</td><td>93 µs</td><td>99 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>10.81 ms</td><td>7.97 ms</td><td>8.42 ms</td><td>9.14 ms</td></tr>
 <tr><th scope="row">RxNorm (prescribable subset)</th><td class="na" colspan="4">n/a</td></tr>
-<tr><th scope="row">SNOMED CT (International edition)</th><td>10.76 ms</td><td>3.9 ms</td><td>4.55 ms</td><td>5.78 ms</td></tr>
-<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>16.86 ms</td><td>6.91 ms</td><td>9.08 ms</td><td>14.76 ms</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>138.01 ms</td><td>3.52 ms</td><td>3.87 ms</td><td>4.01 ms</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>168.54 ms</td><td>5.1 ms</td><td>5.62 ms</td><td>5.96 ms</td></tr>
 </tbody></table></div>
 <h4><code>$expand with filter (designation search)</code></h4>
 <div class="table-wrap"><table>
 <thead><tr><th>Code system</th><th>Cold</th><th>p50</th><th>p95</th><th>p99</th></tr></thead>
 <tbody>
 <tr><th scope="row">ICD-10-CM</th><td class="na" colspan="4">n/a</td></tr>
-<tr><th scope="row">ICD-11 MMS</th><td>167 µs</td><td>139 µs</td><td>153 µs</td><td>162 µs</td></tr>
-<tr><th scope="row">LOINC</th><td>5.02 ms</td><td>1.45 ms</td><td>1.64 ms</td><td>1.74 ms</td></tr>
+<tr><th scope="row">ICD-10-NL</th><td class="na" colspan="4">n/a</td></tr>
+<tr><th scope="row">ICD-11 MMS</th><td>143 µs</td><td>88 µs</td><td>109 µs</td><td>129 µs</td></tr>
+<tr><th scope="row">LOINC</th><td>3.03 ms</td><td>239 µs</td><td>259 µs</td><td>283 µs</td></tr>
 <tr><th scope="row">RxNorm (prescribable subset)</th><td class="na" colspan="4">n/a</td></tr>
-<tr><th scope="row">SNOMED CT (International edition)</th><td>4.99 ms</td><td>357 µs</td><td>389 µs</td><td>405 µs</td></tr>
-<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>4.44 ms</td><td>869 µs</td><td>908 µs</td><td>1.23 ms</td></tr>
+<tr><th scope="row">SNOMED CT (International edition)</th><td>4.86 ms</td><td>339 µs</td><td>376 µs</td><td>439 µs</td></tr>
+<tr><th scope="row">SNOMED CT (Netherlands edition)</th><td>6.39 ms</td><td>814 µs</td><td>892 µs</td><td>971 µs</td></tr>
 </tbody></table></div>
 <h3>Reference-server comparison</h3>
 <p>A comparison is stated only when the reference server ran on the same machine over the same release, with its configuration recorded in the record.</p>
 <ul>
 <li><strong>ICD-10-CM:</strong> not run</li>
+<li><strong>ICD-10-NL:</strong> not run</li>
 <li><strong>ICD-11 MMS:</strong> not run</li>
 <li><strong>LOINC:</strong> not run</li>
 <li><strong>RxNorm (prescribable subset):</strong> not run</li>
