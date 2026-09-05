@@ -130,37 +130,7 @@ impl SnomedProvider {
                     actual.is_some_and(|a| types.contains(&a)) == (*operator == Equality::Equal)
                 }
                 DescriptionPredicate::Dialect { operator, dialects } => {
-                    let mut hit = false;
-                    for (refset, allowed) in dialects {
-                        let Some((ordinal, _)) = self
-                            .keys
-                            .refsets
-                            .iter()
-                            .find(|(_, sctid)| sctid.parse::<u64>().ok() == Some(*refset))
-                        else {
-                            continue;
-                        };
-                        let Some(acceptability) = self
-                            .store
-                            .acceptability(concept, index, *ordinal)
-                            .map_err(|e| storage(&e))?
-                        else {
-                            continue;
-                        };
-                        let name = self
-                            .store
-                            .vocabulary(Vocabulary::Acceptabilities, acceptability)
-                            .map_err(|e| storage(&e))?;
-                        let actual = if name.as_deref() == Some(&constants::PREFERRED.to_string()) {
-                            Acceptability::Preferred
-                        } else {
-                            Acceptability::Acceptable
-                        };
-                        if allowed.is_empty() || allowed.contains(&actual) {
-                            hit = true;
-                            break;
-                        }
-                    }
+                    let hit = self.dialect_hit(concept, index, dialects)?;
                     hit == (*operator == Equality::Equal)
                 }
                 DescriptionPredicate::Active(active) => {
@@ -183,6 +153,46 @@ impl SnomedProvider {
         // the reference servers answer; the specification's filters describe
         // the active description set (ECL, "Description filters").
         Ok(active_asked || designation.active)
+    }
+
+    /// Whether the designation is acceptable in one of the language reference
+    /// sets, at one of the acceptabilities that set admits.
+    fn dialect_hit(
+        &self,
+        concept: Ordinal,
+        index: u32,
+        dialects: &[(u64, Vec<Acceptability>)],
+    ) -> Result<bool, EvalError> {
+        for (refset, allowed) in dialects {
+            let Some((ordinal, _)) = self
+                .keys
+                .refsets
+                .iter()
+                .find(|(_, sctid)| sctid.parse::<u64>().ok() == Some(*refset))
+            else {
+                continue;
+            };
+            let Some(acceptability) = self
+                .store
+                .acceptability(concept, index, *ordinal)
+                .map_err(|e| storage(&e))?
+            else {
+                continue;
+            };
+            let name = self
+                .store
+                .vocabulary(Vocabulary::Acceptabilities, acceptability)
+                .map_err(|e| storage(&e))?;
+            let actual = if name.as_deref() == Some(&constants::PREFERRED.to_string()) {
+                Acceptability::Preferred
+            } else {
+                Acceptability::Acceptable
+            };
+            if allowed.is_empty() || allowed.contains(&actual) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     /// The designations the index narrows a description filter to, when a
@@ -212,6 +222,64 @@ impl SnomedProvider {
             }
         }
         None
+    }
+
+    /// The concepts of `within` a candidate designation of the index carries,
+    /// each candidate re-checked against every predicate.
+    fn matching_indexed(
+        &self,
+        within: &RoaringBitmap,
+        candidates: &RoaringBitmap,
+        predicates: &[DescriptionPredicate],
+    ) -> Result<RoaringBitmap, EvalError> {
+        let mut out = RoaringBitmap::new();
+        for designation in candidates {
+            let Some(entry) = self.text.entry(designation) else {
+                continue;
+            };
+            if !within.contains(entry.concept.index()) || out.contains(entry.concept.index()) {
+                continue;
+            }
+            let designations = self
+                .store
+                .designations(entry.concept)
+                .map_err(|e| storage(&e))?;
+            let Some(record) = designations.get(concept_graph::ordinal::to_usize(entry.index))
+            else {
+                continue;
+            };
+            if self.designation_passes(entry.concept, entry.index, record, predicates)? {
+                out.insert(entry.concept.index());
+            }
+        }
+        Ok(out)
+    }
+
+    /// The concepts of `within` with a designation satisfying every predicate,
+    /// read from the store one concept at a time.
+    fn matching_scanned(
+        &self,
+        within: &RoaringBitmap,
+        predicates: &[DescriptionPredicate],
+    ) -> Result<RoaringBitmap, EvalError> {
+        let mut out = RoaringBitmap::new();
+        for concept in within {
+            let ordinal = Ordinal::new(concept);
+            for (index, record) in self
+                .store
+                .designations(ordinal)
+                .map_err(|e| storage(&e))?
+                .iter()
+                .enumerate()
+            {
+                let index = u32::try_from(index).unwrap_or(u32::MAX);
+                if self.designation_passes(ordinal, index, record, predicates)? {
+                    out.insert(concept);
+                    break;
+                }
+            }
+        }
+        Ok(out)
     }
 }
 
@@ -330,46 +398,10 @@ impl Model for SnomedProvider {
         within: &RoaringBitmap,
         predicates: &[DescriptionPredicate],
     ) -> Result<RoaringBitmap, EvalError> {
-        let mut out = RoaringBitmap::new();
-        if let Some(candidates) = self.indexed_candidates(predicates) {
-            for designation in candidates {
-                let Some(entry) = self.text.entry(designation) else {
-                    continue;
-                };
-                if !within.contains(entry.concept.index()) || out.contains(entry.concept.index()) {
-                    continue;
-                }
-                let designations = self
-                    .store
-                    .designations(entry.concept)
-                    .map_err(|e| storage(&e))?;
-                let Some(record) = designations.get(concept_graph::ordinal::to_usize(entry.index))
-                else {
-                    continue;
-                };
-                if self.designation_passes(entry.concept, entry.index, record, predicates)? {
-                    out.insert(entry.concept.index());
-                }
-            }
-            return Ok(out);
+        match self.indexed_candidates(predicates) {
+            Some(candidates) => self.matching_indexed(within, &candidates, predicates),
+            None => self.matching_scanned(within, predicates),
         }
-        for concept in within {
-            let ordinal = Ordinal::new(concept);
-            for (index, record) in self
-                .store
-                .designations(ordinal)
-                .map_err(|e| storage(&e))?
-                .iter()
-                .enumerate()
-            {
-                let index = u32::try_from(index).unwrap_or(u32::MAX);
-                if self.designation_passes(ordinal, index, record, predicates)? {
-                    out.insert(concept);
-                    break;
-                }
-            }
-        }
-        Ok(out)
     }
 }
 
