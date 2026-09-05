@@ -481,6 +481,7 @@ fn read_concepts(releases: &[Release]) -> Result<Vec<Concept>, Error> {
 
 /// The active inferred relationships: is-a edges as (child, parent) ordinals,
 /// sorted, and every other attribute as a property value per (source, type).
+#[derive(Default)]
 struct Relationships {
     is_a: Vec<(Ordinal, Ordinal)>,
     /// Attribute type SCTIDs, sorted; the position is the key ordinal offset.
@@ -511,93 +512,114 @@ impl Relationships {
     }
 }
 
+/// The ordinal of `concept`, named by the relationship that references it.
+fn ordinal_of_concept(
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+    relationship: &str,
+    concept: ConceptId,
+) -> Result<Ordinal, Error> {
+    ordinals
+        .get(&concept)
+        .copied()
+        .ok_or_else(|| Error::UnknownConcept {
+            relationship: relationship.to_owned(),
+            concept,
+        })
+}
+
+/// Reads one RF2 relationship file: an active is-a row becomes a hierarchy
+/// edge, every other one an attribute value on its source.
+fn read_relationship_file(
+    path: &Path,
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+    out: &mut Relationships,
+) -> Result<(), Error> {
+    for relationship in Rows::<_, Relationship>::open(path)? {
+        let relationship = relationship?;
+        if !relationship.base.active {
+            continue;
+        }
+        let id = relationship.id.to_string();
+        let source = ordinal_of_concept(ordinals, &id, relationship.source_id)?;
+        let destination = ordinal_of_concept(ordinals, &id, relationship.destination_id)?;
+        if relationship.type_id == constants::IS_A {
+            out.is_a.push((source, destination));
+        } else {
+            out.attributes
+                .entry((source, relationship.type_id))
+                .or_default()
+                .push(record::PropertyValue::Concept(destination));
+            out.edges.push((
+                source,
+                relationship.relationship_group,
+                relationship.type_id,
+                attributes::Value::Concept(destination),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Reads one RF2 concrete-value relationship file: every active row is an
+/// attribute whose value is a number or a string.
+fn read_concrete_relationship_file(
+    path: &Path,
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+    out: &mut Relationships,
+) -> Result<(), Error> {
+    for relationship in Rows::<_, ConcreteRelationship>::open(path)? {
+        let relationship = relationship?;
+        if !relationship.base.active {
+            continue;
+        }
+        let id = relationship.id.to_string();
+        let source = ordinal_of_concept(ordinals, &id, relationship.source_id)?;
+        // NOTE: RF2 spells a numeric concrete value with a `#` prefix and a
+        // string one in quotes; the reader strips both and keeps the kind.
+        let (value, edge) = match relationship.value {
+            ConcreteValue::Number(number) => (
+                record::PropertyValue::Decimal(number.clone()),
+                attributes::Value::Number(number),
+            ),
+            ConcreteValue::String(text) => (
+                record::PropertyValue::String(text.clone()),
+                attributes::Value::String(text),
+            ),
+        };
+        out.attributes
+            .entry((source, relationship.type_id))
+            .or_default()
+            .push(value);
+        out.edges.push((
+            source,
+            relationship.relationship_group,
+            relationship.type_id,
+            edge,
+        ));
+    }
+    Ok(())
+}
+
 fn read_relationships(
     releases: &[Release],
     ordinals: &BTreeMap<ConceptId, Ordinal>,
 ) -> Result<Relationships, Error> {
-    let mut is_a = Vec::new();
-    let mut attributes: BTreeMap<(Ordinal, ConceptId), Vec<record::PropertyValue>> =
-        BTreeMap::new();
-    let mut edges = Vec::new();
-    let lookup = |relationship: &str, concept: ConceptId| {
-        ordinals
-            .get(&concept)
-            .copied()
-            .ok_or_else(|| Error::UnknownConcept {
-                relationship: relationship.to_owned(),
-                concept,
-            })
-    };
+    let mut out = Relationships::default();
     for release in releases {
         for file in release.of_type(&ContentType::Relationship) {
-            for relationship in Rows::<_, Relationship>::open(&file.path)? {
-                let relationship = relationship?;
-                if !relationship.base.active {
-                    continue;
-                }
-                let id = relationship.id.to_string();
-                let source = lookup(&id, relationship.source_id)?;
-                let destination = lookup(&id, relationship.destination_id)?;
-                if relationship.type_id == constants::IS_A {
-                    is_a.push((source, destination));
-                } else {
-                    attributes
-                        .entry((source, relationship.type_id))
-                        .or_default()
-                        .push(record::PropertyValue::Concept(destination));
-                    edges.push((
-                        source,
-                        relationship.relationship_group,
-                        relationship.type_id,
-                        attributes::Value::Concept(destination),
-                    ));
-                }
-            }
+            read_relationship_file(&file.path, ordinals, &mut out)?;
         }
         for file in release.of_type(&ContentType::RelationshipConcreteValues) {
-            for relationship in Rows::<_, ConcreteRelationship>::open(&file.path)? {
-                let relationship = relationship?;
-                if !relationship.base.active {
-                    continue;
-                }
-                let id = relationship.id.to_string();
-                let source = lookup(&id, relationship.source_id)?;
-                // NOTE: RF2 spells a numeric concrete value with a `#` prefix and a
-                // string one in quotes; the reader strips both and keeps the kind.
-                let (value, edge) = match relationship.value {
-                    ConcreteValue::Number(number) => (
-                        record::PropertyValue::Decimal(number.clone()),
-                        attributes::Value::Number(number),
-                    ),
-                    ConcreteValue::String(text) => (
-                        record::PropertyValue::String(text.clone()),
-                        attributes::Value::String(text),
-                    ),
-                };
-                attributes
-                    .entry((source, relationship.type_id))
-                    .or_default()
-                    .push(value);
-                edges.push((
-                    source,
-                    relationship.relationship_group,
-                    relationship.type_id,
-                    edge,
-                ));
-            }
+            read_concrete_relationship_file(&file.path, ordinals, &mut out)?;
         }
     }
-    is_a.sort_unstable();
-    is_a.dedup();
-    let mut attribute_types: Vec<ConceptId> = attributes.keys().map(|(_, t)| *t).collect();
+    out.is_a.sort_unstable();
+    out.is_a.dedup();
+    let mut attribute_types: Vec<ConceptId> = out.attributes.keys().map(|(_, t)| *t).collect();
     attribute_types.sort_unstable();
     attribute_types.dedup();
-    Ok(Relationships {
-        is_a,
-        attribute_types,
-        attributes,
-        edges,
-    })
+    out.attribute_types = attribute_types;
+    Ok(out)
 }
 
 /// One designation, placed under its concept.
@@ -760,31 +782,42 @@ fn read_memberships(
     let mut memberships = Memberships::new();
     for release in releases {
         for file in release.refsets() {
-            if refset_kind(file)? == RefsetKind::Language {
-                continue;
-            }
-            let ContentType::Refset(kinds) = &file.name.content_type else {
-                continue;
-            };
-            for member in Members::open(&file.path, kinds)? {
-                let member = member?;
-                if !member.active {
-                    continue;
-                }
-                // NOTE: every reference set of the edition is served, the metadata ones
-                // included (<https://hl7.org/fhir/R4B/snomedct.html>, #272).
-                // NOTE: a member referencing a description or a relationship is not a
-                // concept membership; that is "absent" here, not a defect of the file.
-                let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
-                    continue;
-                };
-                if let Some(ordinal) = ordinals.get(&concept) {
-                    memberships.insert(member.refset_id.concept().value(), *ordinal);
-                }
-            }
+            read_membership_file(file, ordinals, &mut memberships)?;
         }
     }
     Ok(memberships)
+}
+
+/// Reads the active concept members of one reference set file into
+/// `memberships`; a language reference set holds none.
+fn read_membership_file(
+    file: &ReleaseFile,
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+    memberships: &mut Memberships,
+) -> Result<(), Error> {
+    if refset_kind(file)? == RefsetKind::Language {
+        return Ok(());
+    }
+    let ContentType::Refset(kinds) = &file.name.content_type else {
+        return Ok(());
+    };
+    for member in Members::open(&file.path, kinds)? {
+        let member = member?;
+        if !member.active {
+            continue;
+        }
+        // NOTE: every reference set of the edition is served, the metadata ones
+        // included (<https://hl7.org/fhir/R4B/snomedct.html>, #272).
+        // NOTE: a member referencing a description or a relationship is not a
+        // concept membership; that is "absent" here, not a defect of the file.
+        let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
+            continue;
+        };
+        if let Some(ordinal) = ordinals.get(&concept) {
+            memberships.insert(member.refset_id.concept().value(), *ordinal);
+        }
+    }
+    Ok(())
 }
 
 /// The `YYYYMMDD` of an effective time as a number.
@@ -804,70 +837,93 @@ fn read_member_tables(
 ) -> Result<RefsetMembers, Error> {
     let mut tables: BTreeMap<u64, PendingTable> = BTreeMap::new();
     for file in releases.iter().flat_map(Release::refsets) {
-        if refset_kind(file)? != RefsetKind::Content {
-            continue;
-        }
-        let ContentType::Refset(kinds) = &file.name.content_type else {
-            continue;
-        };
-        for member in Members::open(&file.path, kinds)? {
-            let member = member?;
-            if !member.active {
-                continue;
-            }
-            let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
-                continue;
-            };
-            let Some(&ordinal) = ordinals.get(&concept) else {
-                continue;
-            };
-            let entry = tables
-                .entry(member.refset_id.concept().value())
-                .or_insert_with(|| {
-                    let fields = member
-                        .fields
-                        .iter()
-                        .zip(kinds)
-                        .map(|((name, _), kind)| {
-                            (
-                                name.clone(),
-                                match kind {
-                                    FieldKind::Component => refsets::FieldKind::Component,
-                                    FieldKind::Integer => refsets::FieldKind::Integer,
-                                    FieldKind::String => refsets::FieldKind::String,
-                                },
-                            )
-                        })
-                        .collect();
-                    (fields, Vec::new())
-                });
-            let values = member
-                .fields
-                .into_iter()
-                .map(|(_, value)| match value {
-                    FieldValue::Component(id) => ConceptId::try_from(id)
-                        .ok()
-                        .and_then(|c| ordinals.get(&c))
-                        .map_or(refsets::FieldValue::Component(id.value()), |o| {
-                            refsets::FieldValue::Concept(*o)
-                        }),
-                    FieldValue::Integer(value) => refsets::FieldValue::Integer(value),
-                    FieldValue::String(text) => refsets::FieldValue::String(text),
-                })
-                .collect();
-            entry.1.push(MemberRow {
-                concept: ordinal,
-                effective_time: compact_time(member.effective_time),
-                module: member.module_id.concept().value(),
-                values,
-            });
-        }
+        read_member_table_file(file, ordinals, &mut tables)?;
     }
     let mut members = RefsetMembers::new();
     for (refset, (fields, rows)) in tables {
         members.insert(refset, &fields, rows)?;
     }
     Ok(members)
+}
+
+/// Reads the active members of one reference set file into the table of its
+/// reference set; only a content reference set has fields to store.
+fn read_member_table_file(
+    file: &ReleaseFile,
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+    tables: &mut BTreeMap<u64, PendingTable>,
+) -> Result<(), Error> {
+    if refset_kind(file)? != RefsetKind::Content {
+        return Ok(());
+    }
+    let ContentType::Refset(kinds) = &file.name.content_type else {
+        return Ok(());
+    };
+    for member in Members::open(&file.path, kinds)? {
+        let member = member?;
+        if !member.active {
+            continue;
+        }
+        let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
+            continue;
+        };
+        let Some(&ordinal) = ordinals.get(&concept) else {
+            continue;
+        };
+        let entry = tables
+            .entry(member.refset_id.concept().value())
+            .or_insert_with(|| (field_columns(&member.fields, kinds), Vec::new()));
+        entry.1.push(MemberRow {
+            concept: ordinal,
+            effective_time: compact_time(member.effective_time),
+            module: member.module_id.concept().value(),
+            values: field_values(member.fields, ordinals),
+        });
+    }
+    Ok(())
+}
+
+/// The stored columns of a reference set: the member's field names under the
+/// kinds the file header declares.
+fn field_columns(
+    fields: &[(String, FieldValue)],
+    kinds: &[FieldKind],
+) -> Vec<(String, refsets::FieldKind)> {
+    fields
+        .iter()
+        .zip(kinds)
+        .map(|((name, _), kind)| {
+            (
+                name.clone(),
+                match kind {
+                    FieldKind::Component => refsets::FieldKind::Component,
+                    FieldKind::Integer => refsets::FieldKind::Integer,
+                    FieldKind::String => refsets::FieldKind::String,
+                },
+            )
+        })
+        .collect()
+}
+
+/// The stored values of one member's fields; a component field that names a
+/// loaded concept is stored as its ordinal.
+fn field_values(
+    fields: Vec<(String, FieldValue)>,
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+) -> Vec<refsets::FieldValue> {
+    fields
+        .into_iter()
+        .map(|(_, value)| match value {
+            FieldValue::Component(id) => ConceptId::try_from(id)
+                .ok()
+                .and_then(|c| ordinals.get(&c))
+                .map_or(refsets::FieldValue::Component(id.value()), |o| {
+                    refsets::FieldValue::Concept(*o)
+                }),
+            FieldValue::Integer(value) => refsets::FieldValue::Integer(value),
+            FieldValue::String(text) => refsets::FieldValue::String(text),
+        })
+        .collect()
 }
 
 /// The active alternate identifiers of every release's concepts.

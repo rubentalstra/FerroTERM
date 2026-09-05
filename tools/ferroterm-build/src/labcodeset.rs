@@ -292,6 +292,56 @@ fn coding(system: &str, code: &str, display: Option<&str>) -> CodeSystemConceptP
     })
 }
 
+/// The Dutch axis names and class of a concept's LOINC translation.
+fn translation_properties(
+    translation: &::labcodeset::Translation,
+    properties: &mut Vec<CodeSystemConceptProperty>,
+) {
+    let mut push = |code: &str, value: CodeSystemConceptPropertyValue| {
+        properties.push(CodeSystemConceptProperty {
+            id: None,
+            extension: Vec::new(),
+            modifier_extension: Vec::new(),
+            code: code.into(),
+            value,
+        });
+    };
+    let text = |s: &str| CodeSystemConceptPropertyValue::String(s.into());
+    let axes = &translation.axes;
+    push("nl-component", text(&axes.component));
+    for (name, value) in [
+        ("nl-property", &axes.property),
+        ("nl-timing", &axes.timing),
+        ("nl-system", &axes.system),
+        ("nl-scale", &axes.scale),
+        ("nl-method", &axes.method),
+        ("nl-class", &translation.class),
+    ] {
+        if let Some(value) = value {
+            push(name, text(value));
+        }
+    }
+}
+
+/// The retirement notes and the release note a concept states.
+fn note_properties(concept: &LabConcept, properties: &mut Vec<CodeSystemConceptProperty>) {
+    for (name, value) in [
+        ("retired-reason", &concept.retired_reason),
+        ("retired-replacement", &concept.retired_replacement),
+        ("release-note", &concept.release_note),
+    ] {
+        if let Some(value) = value {
+            properties.push(CodeSystemConceptProperty {
+                id: None,
+                extension: Vec::new(),
+                modifier_extension: Vec::new(),
+                code: name.into(),
+                value: CodeSystemConceptPropertyValue::String(value.as_str().into()),
+            });
+        }
+    }
+}
+
 fn concept_entry(publication: &Publication, concept: &LabConcept) -> CodeSystemConcept {
     let mut properties = Vec::new();
     let mut push = |code: &str, value: CodeSystemConceptPropertyValue| {
@@ -342,30 +392,9 @@ fn concept_entry(publication: &Publication, concept: &LabConcept) -> CodeSystemC
     if let Some(replacement) = &concept.loinc.replacement {
         push("replaced-by", code(&replacement.to));
     }
-    for (name, value) in [
-        ("retired-reason", &concept.retired_reason),
-        ("retired-replacement", &concept.retired_replacement),
-        ("release-note", &concept.release_note),
-    ] {
-        if let Some(value) = value {
-            push(name, text(value));
-        }
-    }
+    note_properties(concept, &mut properties);
     if let Some(translation) = &concept.loinc.translation {
-        let axes = &translation.axes;
-        push("nl-component", text(&axes.component));
-        for (name, value) in [
-            ("nl-property", &axes.property),
-            ("nl-timing", &axes.timing),
-            ("nl-system", &axes.system),
-            ("nl-scale", &axes.scale),
-            ("nl-method", &axes.method),
-            ("nl-class", &translation.class),
-        ] {
-            if let Some(value) = value {
-                push(name, text(value));
-            }
-        }
+        translation_properties(translation, &mut properties);
     }
     CodeSystemConcept {
         code: concept.loinc.code.as_str().into(),

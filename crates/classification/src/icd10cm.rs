@@ -237,6 +237,39 @@ impl Tabular {
         }
     }
 
+    /// A closed `name` or `desc`: the buffered text names the open node, or describes it.
+    fn close_name_or_desc(&mut self, element: &str) {
+        let text = collapse(&self.buffer);
+        self.text_into = None;
+        if let Some(open) = self.stack.last_mut() {
+            if element == "name" {
+                open.name = text;
+            } else {
+                open.desc = text;
+            }
+        }
+    }
+
+    /// A closed `note` or `extension`: its text becomes a rubric of the open node,
+    /// prefixed by the seventh character when the element names one.
+    fn close_note(&mut self, language: &str) {
+        if let (Some((kind, reading)), Some(open)) = (&mut self.note, self.stack.last_mut())
+            && *reading
+        {
+            let text = collapse(&self.buffer);
+            let text = match self.extension.take() {
+                Some(c) => format!("{c}: {text}"),
+                None => text,
+            };
+            open.rubrics.push(Rubric {
+                kind: kind.clone(),
+                language: language.to_owned(),
+                text,
+            });
+            *reading = false;
+        }
+    }
+
     fn end(&mut self, name: &str, language: &str) {
         match name {
             "version" => {
@@ -244,33 +277,9 @@ impl Tabular {
                 self.text_into = None;
             }
             "name" | "desc" if self.text_into.as_deref() == Some(name) => {
-                let text = collapse(&self.buffer);
-                self.text_into = None;
-                if let Some(open) = self.stack.last_mut() {
-                    if name == "name" {
-                        open.name = text;
-                    } else {
-                        open.desc = text;
-                    }
-                }
+                self.close_name_or_desc(name);
             }
-            "note" | "extension" => {
-                if let (Some((kind, reading)), Some(open)) = (&mut self.note, self.stack.last_mut())
-                    && *reading
-                {
-                    let text = collapse(&self.buffer);
-                    let text = match self.extension.take() {
-                        Some(c) => format!("{c}: {text}"),
-                        None => text,
-                    };
-                    open.rubrics.push(Rubric {
-                        kind: kind.clone(),
-                        language: language.to_owned(),
-                        text,
-                    });
-                    *reading = false;
-                }
-            }
+            "note" | "extension" => self.close_note(language),
             kind if NOTE_KINDS.contains(&kind) || kind == "sevenChrDef" => self.note = None,
             "chapter" | "section" | "diag" => {
                 if let Some(open) = self.stack.pop() {
