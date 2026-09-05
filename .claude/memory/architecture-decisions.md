@@ -28,11 +28,13 @@ streams, 2026-09-02).
   production server (Snowstorm, Ontoserver, Hermes) uses a materialized index;
   graph DBs lose on ECL's deep-reachability queries. This honors the owner's
   (correct) graph intuition while implementing it the fast way.
-- **Persistence = `redb`** (pure-Rust, memory-mapped, ACID): the persistence
-  FORMAT, not the query-time path. The hot closure is loaded RESIDENT at startup
-  (ordinal-indexed `Vec<RoaringBitmap>` / zero-copy layout), never
+- **Persistence = `redb`** (pure-Rust, disk-backed, ACID; NOT memory-mapped,
+  it dropped its mmap backend in 0.14.0 and the workspace forbids `unsafe`):
+  the persistence FORMAT, not the query-time path. The hot closure is read
+  RESIDENT at startup (ordinal-indexed `Vec<RoaringBitmap>`), never
   redb-get-and-deserialize per `$subsumes` (that would forfeit the µs goal). The
-  columnar store stays on mmap for point reads. Closure ~100 to 300 MB resident.
+  dense concept/display columns are read in at open; the rest of the store is
+  point-read through redb's page cache. Closure ~100 to 300 MB resident.
 - **Offline classification default = COMPUTE the transitive closure from the
   inferred Relationship file** (SNOMED ships NO transitive-closure file for the
   International edition, only a script); consume a shipped TC file only where an

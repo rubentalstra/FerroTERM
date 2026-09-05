@@ -3,8 +3,8 @@
 FerroTERM is a pure-Rust FHIR terminology server for SNOMED CT, LOINC,
 and other clinical code systems, SNOMED CT first. It serves the HL7 FHIR
 terminology API across R4, R4B, R5, and R6 from one running server, backed by a
-memory-mapped, precomputed concept index per loaded code system, with no JVM,
-no Elasticsearch, and no graph database.
+precomputed concept index per loaded code system, built offline and read at
+startup, with no JVM, no Elasticsearch, and no graph database.
 
 This document is the design authority. It is grounded in the terminology-server
 literature and the graph-reachability literature, cited inline, rather than in
@@ -176,40 +176,48 @@ sequencing choice, not a drop of R4.)
 
 ### 3. Persistence is a pure-Rust embedded engine; the hot closure is resident
 
-The built structures (the CSR adjacency, the roaring closure bitmaps, the
-columnar concept/description store) are persisted in **`redb`**, a pure-Rust,
-memory-mapped, ACID embedded key-value engine. This is deliberate: it is
-disk-backed and a real storage engine, so it is neither a hand-rolled file
-format nor a service, while staying pure Rust and a single self-contained
-binary. The build tool writes these artifacts once per edition; the server
-opens them read-only.
+The concept and description store is persisted in **`redb`**, a pure-Rust,
+disk-backed, ACID embedded key-value engine. This is deliberate: it is a real
+storage engine on disk, so the store is neither a hand-rolled file format nor a
+service, while staying pure Rust inside the same binary. The CSR adjacency and
+the roaring closure bitmaps sit beside it in their own artifact files, whose
+layout this project owns (no FHIR/SNOMED spec governs it: our own design). The
+build tool writes all of them once per edition; the server opens them read-only.
+
+`redb` reads its file with ordinary file reads and caches the pages it reads.
+It has no memory-mapped backend, and has had none since 0.14.0 removed
+`create_mmapped()`/`open_mmapped()` "because it was infeasible to prove that it
+was sound", which "makes the redb API entirely safe"
+(<https://github.com/cberner/redb/blob/master/CHANGELOG.md>). That suits this
+workspace: mapping a file takes `unsafe`, and `unsafe_code = "forbid"` is set
+workspace-wide, so nothing here can map one.
 
 **`redb` is the persistence FORMAT, not the query-time path for the hot
 structures.** `redb.get()` yields the value *bytes*, and a `roaring` bitmap has
 no query-over-serialized-bytes API: deserializing an ancestor bitmap on every
 `$subsumes` would be O(bitmap size) per call and would forfeit the
-microsecond-subsumption goal. So at startup the server loads the closure into a
+microsecond-subsumption goal. So at startup the server reads the closure into a
 **resident, ordinal-indexed structure** (an SCTID→ordinal map plus
-`Vec<RoaringBitmap>` for the ancestor and descendant closures, or an equivalent
-zero-copy mmap layout that answers membership without materializing), and
-subsumption is then a membership test against the resident bitmap. The columnar
-concept/description store stays on the mmap for point reads (`$lookup`); only
-the reachability closure and the CSR adjacency need to be resident. This is how
-Hermes reaches tens-of-microseconds subsumption, realized in pure Rust.
+`Vec<RoaringBitmap>` for the ancestor and descendant closures), and subsumption
+is then a membership test against the resident bitmap. The dense concept and
+display columns, addressed by ordinal, are read in at open for the same reason.
+The rest of the store (designations, acceptability, properties) stays in the
+`redb` file and is point-read through the engine's page cache on `$lookup`. This
+is how Hermes reaches tens-of-microseconds subsumption, realized in pure Rust.
 
 Footprint: the transitive closure is tens of millions of ancestor/descendant
 pairs (both directions are stored: subsumption needs one, ECL returns each set
 directly, a deliberate ~2× space cost). Roaring compresses SNOMED-shaped sets
 heavily (dense high-level sets to bitmap containers, sparse leaves to array
 containers), so the resident closure lands at roughly 100 to 300 MB, plus tens of
-MB for CSR adjacency and the `fst` index and an mmap'd columnar text store,
+MB for CSR adjacency, the `fst` word dictionary, and the dense concept columns,
 near the ~500 MB the reference Snowstorm Lite needs, and far under a 2 to 4 GB box.
 
-Serving concurrency: point reads against hot mmap pages and resident-bitmap
-subsumption run inline in the async handler. A heavy `$expand` that materializes
-a 100k-member set, and any cold read that page-faults from disk, run on a
-blocking pool (`tokio::task::spawn_blocking`) so they never stall the runtime.
-The blocking seam sits at the `fhir-terminology` engine boundary and is
+Serving concurrency: point reads against the store's page cache and
+resident-bitmap subsumption run inline in the async handler. A heavy `$expand`
+that materializes a 100k-member set, and any cold read that reaches the file,
+run on a blocking pool (`tokio::task::spawn_blocking`) so they never stall the
+runtime. The blocking seam sits at the `fhir-terminology` engine boundary and is
 designed in from the start, not retrofitted.
 
 ### 4. The SNOMED semantics are hand-written and owned
@@ -312,7 +320,7 @@ expanding a typed prefix to its matching word ids; the query intersects those
 words' postings, ANDs the language-refset and active-status filter bitmaps, and
 sorts the surviving descriptions by matched-term length. The `fst` alone is not
 the index. It is the prefix front end over the inverted postings. Pure Rust,
-memory-mapped, built once per edition.
+built once per edition and read into memory when the server opens the artifact.
 
 ## Workspace layout
 
@@ -326,13 +334,13 @@ code system adds a loader crate (`rf2` is the first) that feeds them.
 | `crates/fhir-types` | Generated per-version FHIR types + terminology operation contracts (R4/R4B/R5/R6) | generated |
 | `crates/rf2` | SNOMED CT RF2 loader (inferred relationships, descriptions, refsets, transitive-closure file) + typed component model; the first code system loader | hand-written |
 | `crates/concept-graph` | The materialized hierarchy of a loaded code system: CSR adjacency (is-a + per-relationship-type) and roaring transitive-closure bitmaps; subsumption + ECL set algebra | hand-written |
-| `crates/concept-store` | The memory-mapped (`redb`) columnar concept and designation store, one per code system version: point reads for `$lookup`/`$validate-code` | hand-written |
+| `crates/concept-store` | The `redb`-backed columnar concept and designation store, one per code system version: point reads for `$lookup`/`$validate-code` | hand-written |
 | `crates/designation-index` | The `fst` + roaring designation search index (prefix, language and use filter, term-length sort) | hand-written |
 | `crates/sct-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `concept-graph`) | hand-written |
 | `crates/fhir-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
 | `app/ferroterm-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
 | `tools/fhir-codegen` | The generator: vendored FHIR packages → `fhir-types` | tooling |
-| `tools/ferroterm-build` | The offline build: a code system release (RF2 first) → the memory-mapped graph/store/text artifacts, once per release | tooling |
+| `tools/ferroterm-build` | The offline build: a code system release (RF2 first) → the graph/store/text artifacts the server reads, once per release | tooling |
 
 Dependencies point one way (app/tools → crates); nothing depends upward into the
 server.
@@ -402,5 +410,5 @@ vendored verbatim with provenance as codegen input.
 
 No existing Rust project is a complete, standards-generated, multi-version FHIR
 terminology server. FerroTERM fills that gap, built the way the evidence supports: a
-graph model, an offline classification pass, and a memory-mapped
-index-materialized store, not a graph database and not live traversal.
+graph model, an offline classification pass, and an index-materialized store
+read at startup, not a graph database and not live traversal.

@@ -26,8 +26,9 @@ licence.
 ## The offline build
 
 The running server never parses a release. `ferroterm-build` turns it into the
-memory-mapped index once, and the server opens the index read-only. The tool
-ships in every release tarball beside `ferroterm` and in the container image.
+index once, and the server opens the index read-only and reads it in at
+startup. The tool ships in every release tarball beside `ferroterm` and in the
+container image.
 
 ```mermaid
 graph LR

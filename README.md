@@ -14,8 +14,9 @@
 [![tx-ecosystem R5](https://img.shields.io/endpoint?url=https%3A%2F%2Fferroterm.eu%2Fconformance%2Fr5.json)](https://ferroterm.eu/docs/evaluate/conformance.html)
 
 A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD-10, ICD-11,
-RxNorm, UCUM, and any FHIR `CodeSystem`, served from one static binary over a
-memory-mapped index. No JVM, no Elasticsearch, no database to run.
+RxNorm, UCUM, and any FHIR `CodeSystem`, served from one binary over an index
+built once per release and read at startup. No JVM, no Elasticsearch, no
+database to run.
 
 ## Five minutes to a running server
 

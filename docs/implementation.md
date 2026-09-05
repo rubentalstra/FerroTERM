@@ -147,7 +147,8 @@ sequence, not a scope limit; the server serves every version.
 
 ## Deployment and operations
 
-- [ ] Single static binary; container image
+- [ ] Server and build-tool binaries per target (statically linked on the musl
+  targets); container image
 - [ ] Configuration surface
 - [ ] Code system release loading with licence enforcement (bring-your-own,
   content never committed)

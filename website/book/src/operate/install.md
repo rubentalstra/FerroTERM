@@ -1,7 +1,7 @@
 # Install and run
 
-FerroTERM ships as a single static binary and as a container image. Both carry
-the whole server and the build tool: there is no JVM to install, no
+FerroTERM ships as a release tarball and as a container image. Each holds two
+binaries, the server and the build tool, so there is no JVM to install, no
 Elasticsearch to run, and no database to provision. The registry systems
 (UCUM, BCP 47, BCP 13, ISO 3166-1) are inside the binary; every other code
 system is an index you build from a release you are licensed for

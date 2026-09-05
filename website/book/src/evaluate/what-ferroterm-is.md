@@ -64,7 +64,7 @@ Elasticsearch heap, plus a search cluster to operate.
 
 The data is smaller than that: a few hundred thousand concepts, a million
 descriptions, a million relationships. FerroTERM builds an edition into one
-memory-mapped index once and serves it from one process; the
+index once, reads it at startup, and serves it from one process; the
 [benchmarks page](benchmarks.md) has what that costs in build time, disk, and
 resident memory for each code system, measured and recorded. The goal is plain:
 run a clinical terminology server on hardware you already have.

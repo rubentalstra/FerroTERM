@@ -146,8 +146,8 @@
             <p>
               A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD-10,
               ICD-11, RxNorm, UCUM, and any FHIR <code>CodeSystem</code>, served
-              from one static binary over a memory-mapped index built once per
-              release. No JVM, no Elasticsearch, no database to run. It checks
+              from one binary over an index built once per release and read at
+              startup. No JVM, no Elasticsearch, no database to run. It checks
               its own answers against Snowstorm, which is the behavioural
               reference for the cases the specification leaves open.
             </p>
@@ -452,7 +452,7 @@
               <tr>
                 <th scope="row">Deployment shape</th>
                 <td>
-                  One static binary or a distroless container image, over an
+                  One binary or a distroless container image, over an
                   artifact directory built once per release by
                   <code>ferroterm-build</code>. Releases carry signed SLSA
                   Build Level 3 provenance and SBOMs.

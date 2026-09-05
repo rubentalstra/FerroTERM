@@ -37,7 +37,7 @@ Ontoserver, and Hermes.
 | Snowstorm Lite | Java (JVM) | Lucene | about 500 MB | JVM service |
 | Ontoserver | Java (JVM) | Postgres plus Lucene | server plus database | JVM plus Postgres |
 | Hermes | Clojure (JVM) | memory-mapped store plus Lucene | modest | JVM service |
-| FerroTERM 0.0.11 | Rust | `redb` and dense columns | 596 to 823 MB on disk, 669 to 847 MB resident, per SNOMED edition | one binary or a distroless image |
+| FerroTERM 0.0.11 | Rust | `redb` plus roaring and `fst` artifacts, read at startup | 596 to 823 MB on disk, 669 to 847 MB resident, per SNOMED edition | one binary (statically linked on the musl targets) or a distroless image |
 
 ## What FerroTERM trades
 
