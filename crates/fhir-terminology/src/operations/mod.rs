@@ -93,6 +93,17 @@ pub enum OperationError {
         /// The code.
         code: String,
     },
+    /// The code is written in the code system's compositional grammar, which
+    /// this server does not evaluate.
+    #[error(
+        "code `{code}` is an expression in the compositional grammar of code system `{system}`, which this server does not evaluate"
+    )]
+    UnsupportedGrammar {
+        /// The system.
+        system: String,
+        /// The code as given.
+        code: String,
+    },
     /// The code is malformed for the code system's grammar.
     #[error("code `{code}` is invalid: {reason}")]
     InvalidCode {
@@ -134,7 +145,9 @@ impl OperationError {
             Self::InvalidCode { .. } => "code-invalid",
             Self::Invalid(_) | Self::ValueSetInvalid(_) => "invalid",
             Self::InvalidLanguage(_) => "processing",
-            Self::NotSupported(_) | Self::CannotDetermine(_) => "not-supported",
+            Self::NotSupported(_) | Self::CannotDetermine(_) | Self::UnsupportedGrammar { .. } => {
+                "not-supported"
+            }
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
             | Self::UnknownCode { .. }
@@ -154,7 +167,9 @@ impl OperationError {
         match self {
             Self::Required(_) | Self::Invalid(_) => "invalid-data",
             Self::InvalidLanguage(_) => "invalid-display",
-            Self::NotSupported(_) | Self::Provider(_) => "not-supported",
+            Self::NotSupported(_) | Self::Provider(_) | Self::UnsupportedGrammar { .. } => {
+                "not-supported"
+            }
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
             | Self::UnknownValueSet(_)
@@ -191,6 +206,7 @@ impl OperationError {
             | Self::Invalid(_)
             | Self::CannotDetermine(_)
             | Self::UnknownConceptMap(_)
+            | Self::UnsupportedGrammar { .. }
             | Self::Provider(_) => "TX_GENERAL_ERROR",
         }
     }
@@ -209,6 +225,7 @@ impl OperationError {
             | Self::VersionCheck(_)
             | Self::UnknownCode { .. }
             | Self::InvalidCode { .. }
+            | Self::UnsupportedGrammar { .. }
             | Self::NotSupported(_) => StatusCode::BAD_REQUEST,
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
@@ -322,15 +339,29 @@ pub fn resolve(
 
 /// Locates `code` in `provider`, as the unknown-code error when absent.
 ///
+/// A code the system's compositional grammar defines and this server does not
+/// evaluate is refused for the grammar instead: the code system has the code,
+/// the server has no answer for it, and the two are different failures
+/// (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>).
+///
 /// # Errors
 ///
-/// Returns [`OperationError::UnknownCode`] or the provider's error.
+/// Returns [`OperationError::UnsupportedGrammar`],
+/// [`OperationError::UnknownCode`], or the provider's error.
 pub fn locate(
     provider: &Arc<dyn CodeSystemProvider>,
     code: &str,
 ) -> Result<crate::provider::Located, OperationError> {
     provider.locate(code)?.ok_or_else(|| {
         let identity = provider.identity();
+        if provider.declaration().compositional == crate::provider::Compositional::Defined
+            && provider.is_expression(code)
+        {
+            return OperationError::UnsupportedGrammar {
+                system: identity.url.clone(),
+                code: code.to_owned(),
+            };
+        }
         OperationError::UnknownCode {
             system: identity.url.clone(),
             version: identity.version.clone(),

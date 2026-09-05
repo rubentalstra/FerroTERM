@@ -11,9 +11,9 @@ use super::model::{
     CHILD, CodeSystemModel, ConceptEntry, DEPRECATED, INACTIVE, NOT_SELECTABLE, PARENT, STATUS,
 };
 use crate::provider::{
-    Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
-    Hierarchy, HierarchyMeaning, Identity, Located, Property, PropertyDefinition, PropertyKind,
-    PropertyValue, ProviderError, Status,
+    Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
+    Designation, Hierarchy, HierarchyMeaning, Identity, Located, Property, PropertyDefinition,
+    PropertyKind, PropertyValue, ProviderError, Status,
 };
 use crate::text_match;
 
@@ -145,7 +145,14 @@ impl FhirCodeSystem {
             content: model.content,
             case_sensitive: model.case_sensitive,
             hierarchy_meaning: model.hierarchy_meaning,
-            compositional: model.compositional,
+            // NOTE: this provider serves the concepts a resource enumerates and
+            // evaluates no grammar, so a declared grammar is `Defined`: the code
+            // system has it, this server does not support it.
+            compositional: if model.compositional {
+                Compositional::Defined
+            } else {
+                Compositional::None
+            },
             languages,
             properties,
             filters: model.filters.clone(),

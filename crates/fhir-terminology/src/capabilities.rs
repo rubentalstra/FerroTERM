@@ -26,7 +26,10 @@ pub struct VersionSummary {
     pub code: String,
     /// Whether it is the default.
     pub is_default: bool,
-    /// Whether compositional grammar is supported.
+    /// `TerminologyCapabilities.codeSystem.version.compositional`: "If the
+    /// compositional grammar defined by the code system is supported"
+    /// (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>),
+    /// a statement about this server, not about the code system.
     pub compositional: bool,
     /// The designation languages.
     pub languages: Vec<String>,
@@ -105,7 +108,7 @@ impl Summary {
                 versions.push(VersionSummary {
                     code: identity.version.clone(),
                     is_default: default == Some(identity.version.as_str()),
-                    compositional: declaration.compositional,
+                    compositional: declaration.compositional.supported(),
                     languages: declaration.languages.clone(),
                     filters,
                     properties: declaration

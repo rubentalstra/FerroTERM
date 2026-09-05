@@ -5,8 +5,9 @@ use std::sync::Arc;
 use concept_graph::subsumption::Outcome;
 use fhir_terminology::capabilities::Summary;
 use fhir_terminology::filter::{Filter, FilterOperator};
+use fhir_terminology::operations::{Invocation, OperationError, lookup, validate_code};
 use fhir_terminology::provider::{
-    Capability, CodeSystemProvider, Concept, PropertyValue, ProviderError,
+    Capability, CodeSystemProvider, Compositional, Concept, PropertyValue, ProviderError,
 };
 use fhir_terminology::registry::Registry;
 use fhir_terminology::snomed::{OpenError, SYSTEM, SnomedProvider};
@@ -272,7 +273,10 @@ fn a_registry_with_the_provider_renders_terminology_capabilities() {
     assert!(system.subsumption);
     assert_eq!(system.versions[0].code, VERSION);
     assert!(system.versions[0].is_default);
-    assert!(system.versions[0].compositional);
+    // NOTE: the element is "If the compositional grammar defined by the code
+    // system is supported"
+    // (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>).
+    assert!(!system.versions[0].compositional);
     assert_eq!(system.versions[0].languages, ["en", "nl"]);
     assert!(
         system.versions[0]
@@ -573,5 +577,115 @@ fn the_module_dependency_reference_set_is_served_like_any_other() {
         selected.iter().collect::<Vec<_>>(),
         [MODULE_CONCEPT],
         "the members are the edition's modules"
+    );
+}
+
+#[test]
+fn the_defined_grammar_and_the_supported_grammar_are_two_declarations() {
+    let (_dir, p) = provider();
+    // `CodeSystem.compositional` is "The code system defines a compositional
+    // (post-coordination) grammar"
+    // (<https://hl7.org/fhir/R4B/codesystem-definitions.html#CodeSystem.compositional>),
+    // which SNOMED CT does (<http://snomed.org/scg>).
+    assert!(p.declaration().compositional.defined());
+    // `TerminologyCapabilities.codeSystem.version.compositional` is "If the
+    // compositional grammar defined by the code system is supported"
+    // (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>),
+    // which this server does not: every expression is refused.
+    assert!(!p.declaration().compositional.supported());
+    assert_eq!(p.declaration().compositional, Compositional::Defined);
+    let mut registry = Registry::new();
+    registry.register(Arc::new(p)).expect("registers");
+    let summary = Summary::of(&registry);
+    let date = "2026-09-05T00:00:00Z";
+    let flags = [
+        (
+            "r4",
+            summary.to_r4(date).code_system[0].version[0]
+                .compositional
+                .as_ref()
+                .and_then(|f| f.value),
+        ),
+        (
+            "r4b",
+            summary.to_r4b(date).code_system[0].version[0]
+                .compositional
+                .as_ref()
+                .and_then(|f| f.value),
+        ),
+        (
+            "r5",
+            summary.to_r5(date).code_system[0].version[0]
+                .compositional
+                .as_ref()
+                .and_then(|f| f.value),
+        ),
+        (
+            "r6",
+            summary.to_r6(date).code_system[0].version[0]
+                .compositional
+                .as_ref()
+                .and_then(|f| f.value),
+        ),
+    ];
+    for (version, value) in flags {
+        assert_eq!(
+            value,
+            Some(false),
+            "{version} declares the grammar unsupported"
+        );
+    }
+}
+
+#[test]
+fn a_post_coordinated_expression_is_refused_for_the_grammar_not_as_an_unknown_concept() {
+    let (_dir, p) = provider();
+    let mut registry = Registry::new();
+    registry.register(Arc::new(p)).expect("registers");
+    // NOTE: SNOMED CT Expressions in Compositional Grammar are valid codes
+    // (<https://hl7.org/fhir/R4B/snomedct.html>, "Code"), so a server that will
+    // not evaluate one says that instead of reporting an unknown concept.
+    let expression = format!("{}:{}={}", sctid(CAT), sctid(COVERING), sctid(FUR));
+    let input = lookup::LookupInput {
+        system: Some(SYSTEM.to_owned()),
+        code: Some(expression.clone()),
+        ..lookup::LookupInput::default()
+    };
+    let error = lookup::lookup(&registry, &Invocation::Type, &input).expect_err("refuses");
+    assert!(
+        matches!(&error, OperationError::UnsupportedGrammar { system, code }
+            if system == SYSTEM && *code == expression),
+        "{error:?}"
+    );
+    assert_eq!(error.issue_code(), "not-supported");
+    assert_eq!(error.tx_issue_type(), "not-supported");
+    // `$validate-code` answers `false` for the same code, and its message says
+    // which of the two failures it is.
+    let request = validate_code::ValidateCodeInput {
+        url: Some(SYSTEM.to_owned()),
+        code: Some(expression.clone()),
+        ..validate_code::ValidateCodeInput::default()
+    };
+    let outcome =
+        validate_code::validate_code(&registry, &Invocation::Type, &request).expect("validates");
+    assert!(!outcome.result);
+    let message = outcome.message.expect("a message");
+    assert!(
+        message.contains(
+            "compositional grammar of the code system, which this server does not evaluate"
+        ),
+        "{message}"
+    );
+
+    // A code that is no expression at all stays the unknown-code outcome.
+    let unknown = lookup::LookupInput {
+        system: Some(SYSTEM.to_owned()),
+        code: Some(String::from("138875004999")),
+        ..lookup::LookupInput::default()
+    };
+    let error = lookup::lookup(&registry, &Invocation::Type, &unknown).expect_err("refuses");
+    assert!(
+        matches!(error, OperationError::UnknownCode { .. }),
+        "{error:?}"
     );
 }

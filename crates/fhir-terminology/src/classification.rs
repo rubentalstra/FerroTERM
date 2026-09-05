@@ -24,9 +24,9 @@ use serde::Deserialize;
 
 use crate::filter::FilterOperator;
 use crate::provider::{
-    Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
-    DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located, Property,
-    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
+    Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
+    Designation, DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located,
+    Property, PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
 };
 
 /// The manifest `kind` of an artifact this provider opens.
@@ -556,7 +556,7 @@ fn declaration(keys: &BTreeMap<u32, String>, languages: Vec<String>, tree: bool)
         content: ContentMode::NotPresent,
         case_sensitive: true,
         hierarchy_meaning: tree.then_some(HierarchyMeaning::ClassifiedWith),
-        compositional: false,
+        compositional: Compositional::None,
         languages,
         properties,
         filters,

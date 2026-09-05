@@ -24,9 +24,9 @@ use serde::Deserialize;
 use crate::compose::{Compose, ConceptRef, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
-    Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
-    DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located, Property,
-    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
+    Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
+    Designation, DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located,
+    Property, PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
 };
 
 /// The system URI.
@@ -971,7 +971,7 @@ fn declaration(keys: &BTreeMap<u32, String>, languages: Vec<String>) -> Declarat
         content: ContentMode::NotPresent,
         case_sensitive: false,
         hierarchy_meaning: Some(HierarchyMeaning::IsA),
-        compositional: false,
+        compositional: Compositional::None,
         languages,
         properties,
         filters,
