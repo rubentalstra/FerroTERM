@@ -109,9 +109,15 @@ impl Wire {
     #[must_use]
     pub fn response(self, status: StatusCode, object: &Object, schemas: &Schemas) -> Response {
         let body = match self {
-            Self::Json => serde_json::Value::Object(object.clone()).to_string(),
+            // NOTE: the map serializes by reference
+            // (<https://docs.rs/serde_json/1/serde_json/fn.to_vec.html>); wrapping it
+            // in a `Value` would deep-copy the whole resource to serialize it.
+            Self::Json => match serde_json::to_vec(object) {
+                Ok(json) => json,
+                Err(_) => return status.into_response(),
+            },
             Self::Xml => match fhir_types::xml::to_xml(schemas, object) {
-                Ok(xml) => xml,
+                Ok(xml) => xml.into_bytes(),
                 // NOTE: a resource the server built always has an XML form; if the
                 // codec ever refuses, the status alone still tells the client.
                 Err(_) => return status.into_response(),
