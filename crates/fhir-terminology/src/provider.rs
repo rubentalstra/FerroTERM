@@ -767,3 +767,45 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
         Ok(None)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{ContentMode, HierarchyMeaning, PropertyKind};
+
+    // The three enums below cross the wire: `content` and `hierarchyMeaning`
+    // on a CodeSystem, and `type` on a property definition. Each variant's code
+    // is fixed by the specification, so each is pinned rather than left to
+    // whichever variant a provider happens to use.
+
+    #[test]
+    fn a_content_mode_carries_the_code_the_specification_defines() {
+        // <https://hl7.org/fhir/R4B/valueset-codesystem-content-mode.html>
+        assert_eq!(ContentMode::NotPresent.code(), "not-present");
+        assert_eq!(ContentMode::Example.code(), "example");
+        assert_eq!(ContentMode::Fragment.code(), "fragment");
+        assert_eq!(ContentMode::Complete.code(), "complete");
+        assert_eq!(ContentMode::Supplement.code(), "supplement");
+    }
+
+    #[test]
+    fn a_hierarchy_meaning_carries_the_code_the_specification_defines() {
+        // <https://hl7.org/fhir/R4B/valueset-codesystem-hierarchy-meaning.html>
+        assert_eq!(HierarchyMeaning::GroupedBy.code(), "grouped-by");
+        assert_eq!(HierarchyMeaning::IsA.code(), "is-a");
+        assert_eq!(HierarchyMeaning::PartOf.code(), "part-of");
+        assert_eq!(HierarchyMeaning::ClassifiedWith.code(), "classified-with");
+    }
+
+    #[test]
+    fn a_property_kind_carries_the_code_the_specification_defines() {
+        // <https://hl7.org/fhir/R4B/valueset-concept-property-type.html>;
+        // `Coding` is the one code of the set that is not lower case.
+        assert_eq!(PropertyKind::Code.code(), "code");
+        assert_eq!(PropertyKind::Coding.code(), "Coding");
+        assert_eq!(PropertyKind::String.code(), "string");
+        assert_eq!(PropertyKind::Integer.code(), "integer");
+        assert_eq!(PropertyKind::Boolean.code(), "boolean");
+        assert_eq!(PropertyKind::DateTime.code(), "dateTime");
+        assert_eq!(PropertyKind::Decimal.code(), "decimal");
+    }
+}
