@@ -185,7 +185,7 @@ fn anchored(value: &str) -> Result<Regex, regex::Error> {
     Regex::new(&format!("^(?:{value})$"))
 }
 
-fn boolean(filter: &Filter) -> Result<bool, ProviderError> {
+pub(crate) fn boolean(filter: &Filter) -> Result<bool, ProviderError> {
     match filter.value.trim() {
         "true" => Ok(true),
         "false" => Ok(false),

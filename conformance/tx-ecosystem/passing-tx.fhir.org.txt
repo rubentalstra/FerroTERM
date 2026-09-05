@@ -4,6 +4,10 @@ bugs/x12-bad
 metadata/term-caps
 tx.fhir.org/loinc-expand-enum
 tx.fhir.org/loinc-expand-enum-bad
+tx.fhir.org/loinc-expand-filter-answer-list
+tx.fhir.org/loinc-expand-filter-answers-for1
+tx.fhir.org/loinc-expand-filter-answers-for2
+tx.fhir.org/loinc-expand-filter-list-request-parameters
 tx.fhir.org/loinc-expand-parent
 tx.fhir.org/loinc-expand-prop-method
 tx.fhir.org/loinc-validate-answer
@@ -13,6 +17,9 @@ tx.fhir.org/loinc-validate-code-supp2
 tx.fhir.org/loinc-validate-enum-good
 tx.fhir.org/loinc-validate-filter-class-regex-bad
 tx.fhir.org/loinc-validate-filter-classtype-bad
+tx.fhir.org/loinc-validate-filter-dockind-bad
+tx.fhir.org/loinc-validate-filter-list-bad
+tx.fhir.org/loinc-validate-filter-list-type-good
 tx.fhir.org/loinc-validate-filter-prop-component-bad
 tx.fhir.org/loinc-validate-filter-prop-component-good
 tx.fhir.org/loinc-validate-filter-scale-type-bad

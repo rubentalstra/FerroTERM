@@ -53,6 +53,36 @@ const FHIR_PROPERTIES: [(&str, PropertyKind); 12] = [
     ("DOCUMENT_SECTION", PropertyKind::String),
 ];
 
+/// The filter that selects the answers of an answer list, as tx.fhir.org
+/// spells it.
+const LIST_FILTER: &str = "LIST";
+/// The same, under the other name that server answers to; its value is an
+/// answer list or a term whose answers are wanted.
+const ANSWERS_FOR_FILTER: &str = "answers-for";
+
+/// The Document Ontology axes: the kebab-case filter name tx.fhir.org answers
+/// to, and the `PartTypeName` the release writes and the artifact stores.
+///
+/// No specification defines the kebab-case spelling, so the mapping is ours.
+const DOCUMENT_AXES: [(&str, &str); 5] = [
+    ("document-kind", "Document.Kind"),
+    ("document-role", "Document.Role"),
+    ("document-setting", "Document.Setting"),
+    (
+        "document-subject-matter-domain",
+        "Document.SubjectMatterDomain",
+    ),
+    ("document-type-of-service", "Document.TypeOfService"),
+];
+
+/// The stored property key of a Document Ontology filter name.
+fn document_axis(property: &str) -> Option<&'static str> {
+    DOCUMENT_AXES
+        .iter()
+        .find(|(name, _)| *name == property)
+        .map(|(_, key)| *key)
+}
+
 /// The property keys the build adds (`ferroterm-build`'s LOINC pipeline).
 const COPYRIGHT_KEY: &str = "copyright";
 const ANSWER_LIST_KEY: &str = "answer-list";
@@ -675,6 +705,17 @@ impl CodeSystemProvider for LoincProvider {
     /// filter is the generic evaluation over the stored fields.
     fn filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
         match (filter.property.as_str(), filter.op) {
+            // NOTE: no specification defines these; they are what tx.fhir.org answers,
+            // and the FHIR LOINC page has carried a `TODO: Document Ontology`
+            // placeholder since STU3 (<https://hl7.org/fhir/R4B/loinc.html>, #277).
+            (LIST_FILTER | ANSWERS_FOR_FILTER, FilterOperator::Equal) => {
+                self.answers_filter(&filter.value)
+            }
+            (property, FilterOperator::Equal | FilterOperator::Exists)
+                if document_axis(property).is_some() =>
+            {
+                self.document_filter(property, filter)
+            }
             (
                 "COMPONENT" | "PROPERTY" | "TIME_ASPCT" | "SYSTEM" | "SCALE_TYP" | "METHOD_TYP",
                 FilterOperator::Equal | FilterOperator::In | FilterOperator::Regex,
@@ -717,6 +758,73 @@ impl LoincProvider {
                     })
                     .collect()
             }))
+    }
+
+    /// The answer codes `value` asks for: the answers of an answer list, or the
+    /// answers of the list a term is linked to.
+    ///
+    /// No specification defines this filter; it is what tx.fhir.org answers
+    /// (#277).
+    fn answers_filter(&self, value: &str) -> Result<ConceptSet, ProviderError> {
+        let mut lists: Vec<String> = Vec::new();
+        if self.answers_of(value)?.is_some() {
+            lists.push(value.to_owned());
+        } else if let Some(ordinal) = self.store.ordinal(value).map_err(storage)?
+            && let Some(key) = self.key_of(ANSWER_LIST_KEY)
+        {
+            let properties = self.store.properties(ordinal).map_err(storage)?;
+            if let Some((_, values)) = properties.iter().find(|(k, _)| *k == key) {
+                for linked in values {
+                    if let record::PropertyValue::Code(code) = linked {
+                        lists.push(code.clone());
+                    }
+                }
+            }
+        }
+        let mut set = ConceptSet::new();
+        for list in lists {
+            for answer in self.answers_of(&list)?.unwrap_or_default() {
+                if let Some(ordinal) = self.store.ordinal(&answer).map_err(storage)? {
+                    set.insert(ordinal.index());
+                }
+            }
+        }
+        Ok(set)
+    }
+
+    /// The concepts a Document Ontology filter selects: those with any part on
+    /// the axis (`exists`), or those whose part on it the value names (`=`).
+    fn document_filter(
+        &self,
+        property: &str,
+        filter: &Filter,
+    ) -> Result<ConceptSet, ProviderError> {
+        let Some(axis) = document_axis(property) else {
+            return Ok(ConceptSet::new());
+        };
+        let Some(key) = self.key_of(axis) else {
+            return Ok(ConceptSet::new());
+        };
+        if filter.op == FilterOperator::Exists {
+            let wanted = crate::filter::boolean(filter)?;
+            let mut set = ConceptSet::new();
+            for index in 0..self.concepts {
+                let ordinal = Ordinal::new(index);
+                let properties = self.store.properties(ordinal).map_err(storage)?;
+                let has = properties
+                    .iter()
+                    .any(|(k, values)| *k == key && !values.is_empty());
+                if has == wanted {
+                    set.insert(index);
+                }
+            }
+            return Ok(set);
+        }
+        self.axis_filter(&Filter {
+            property: axis.to_owned(),
+            op: filter.op,
+            value: filter.value.clone(),
+        })
     }
 }
 
@@ -781,6 +889,33 @@ fn declaration(keys: &BTreeMap<u32, String>, languages: Vec<String>) -> Declarat
             operators: vec![FilterOperator::Equal, FilterOperator::In],
             value: String::from("a part code"),
         });
+    }
+    // NOTE: no specification defines these four; they are what tx.fhir.org
+    // answers, and the FHIR LOINC page has carried a `TODO: Document Ontology`
+    // placeholder since STU3 (<https://hl7.org/fhir/R4B/loinc.html>, #277).
+    for (code, description) in [
+        (LIST_FILTER, "The answers of the answer list"),
+        (
+            ANSWERS_FOR_FILTER,
+            "The answers of the answer list, or of the list the term is linked to",
+        ),
+    ] {
+        filters.push(FilterDefinition {
+            code: code.to_owned(),
+            description: Some(description.to_owned()),
+            operators: vec![FilterOperator::Equal],
+            value: String::from("an answer list code, or a term code"),
+        });
+    }
+    for (code, key) in DOCUMENT_AXES {
+        if keys.values().any(|name| name == key) {
+            filters.push(FilterDefinition {
+                code: code.to_owned(),
+                description: Some(format!("The Document Ontology `{key}` axis of the term")),
+                operators: vec![FilterOperator::Equal, FilterOperator::Exists],
+                value: String::from("a part code or name, or a boolean for `exists`"),
+            });
+        }
     }
     Declaration {
         content: ContentMode::NotPresent,
