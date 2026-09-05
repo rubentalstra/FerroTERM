@@ -324,3 +324,28 @@ fn axis_filters_reach_the_linked_parts_and_class_parts_carry_their_terms() {
         "the term hangs under the class part"
     );
 }
+
+/// A property the loaded release does not carry is not declared.
+///
+/// The FHIR LOINC page's property table still lists `DOCUMENT_SECTION`
+/// (<https://hl7.org/fhir/R4B/loinc.html>), a column `Loinc.csv` no longer
+/// has, so declaring it would advertise a property no concept can carry and a
+/// filter that can only answer nothing (#278).
+#[test]
+fn the_declaration_names_only_the_properties_the_release_carries() {
+    let (_dir, provider) = provider();
+    let declared: Vec<&str> = provider
+        .declaration()
+        .properties
+        .iter()
+        .map(|p| p.code.as_str())
+        .collect();
+    assert!(
+        declared.contains(&"COMPONENT"),
+        "a column the release has: {declared:?}"
+    );
+    assert!(
+        !declared.contains(&"DOCUMENT_SECTION"),
+        "a column the release does not have: {declared:?}"
+    );
+}
