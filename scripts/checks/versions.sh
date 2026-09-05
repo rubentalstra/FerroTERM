@@ -51,7 +51,7 @@ fi
 # --- CITATION.cff version == root Cargo.toml [workspace.package] version -------
 echo "== product version (CITATION.cff <-> Cargo.toml)"
 cff_ver=""
-[ -f CITATION.cff ] && cff_ver="$(grep -m1 '^version:' CITATION.cff | sed -E 's/^version:[[:space:]]*//; s/["'\'']//g' | tr -d '[:space:]' || true)"
+[[ -f CITATION.cff ]] && cff_ver="$(grep -m1 '^version:' CITATION.cff | sed -E 's/^version:[[:space:]]*//; s/["'\'']//g' | tr -d '[:space:]' || true)"
 if [[ -f Cargo.toml ]]; then
   # The version line inside the [workspace.package] table.
   cargo_ver="$(awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/[" ]/,""); sub(/^version=/,""); print; exit}' Cargo.toml || true)"
@@ -230,7 +230,7 @@ if [[ -d tools/fhir-codegen/vendor ]]; then
     pin_ver="$(awk -F'|' -v pkg="$pkg" '$2 ~ "^[[:space:]]*`" pkg "`" { v = $3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); print v; exit }' docs/VERSIONS.md)"
     pkg_json="tools/fhir-codegen/vendor/$pkg/package/package.json"
     json_ver=""
-    [ -f "$pkg_json" ] && json_ver="$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$pkg_json" | head -n1)"
+    [[ -f "$pkg_json" ]] && json_ver="$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$pkg_json" | head -n1)"
     if [[ -z "$prov_ver" ]]; then
       bad "$prov has no '- Version:' line"
     elif [[ -z "$pin_ver" ]]; then
