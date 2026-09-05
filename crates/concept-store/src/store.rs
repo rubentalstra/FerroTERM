@@ -76,6 +76,9 @@ pub struct Store {
     /// The concepts, read once at open. An ordinal is a position, so this
     /// column answers by slicing where a b-tree would search.
     concepts: Column,
+    /// The preferred designations the build chose, per concept, so choosing a
+    /// display reads no table at all.
+    displays: Column,
 }
 
 impl std::fmt::Debug for Store {
@@ -111,6 +114,7 @@ impl Store {
             path: path.to_path_buf(),
             db,
             concepts: Column::default(),
+            displays: Column::default(),
         };
         let layout = store.meta(tables::META_LAYOUT)?;
         if layout.as_deref() != Some(tables::LAYOUT_VERSION) {
@@ -120,6 +124,7 @@ impl Store {
             });
         }
         store.concepts = store.column(tables::COLUMN_CONCEPTS)?;
+        store.displays = store.column(tables::COLUMN_DISPLAYS)?;
         Ok(store)
     }
 
@@ -296,22 +301,16 @@ impl Store {
         language_refset: u32,
         use_ordinal: u32,
     ) -> Result<Option<Designation>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let preferred = open_table!(txn, tables::PREFERRED)?;
-        let Some(index) = preferred.get((ordinal.index(), language_refset, use_ordinal))? else {
+        let Some(bytes) = self.displays.get(ordinal) else {
             return Ok(None);
         };
-        let designations = open_table!(txn, tables::DESIGNATIONS)?;
-        designations
-            .get((ordinal.index(), index.value()))?
-            .map(|v| {
-                Designation::decode(v.value()).map_err(|source| StoreError::Record {
-                    table: tables::DESIGNATIONS.name().to_owned(),
-                    key: format!("({ordinal}, {})", index.value()),
-                    source,
-                })
-            })
-            .transpose()
+        record::Preferred::find(bytes, language_refset, use_ordinal).map_err(|source| {
+            StoreError::Record {
+                table: tables::COLUMN_DISPLAYS.to_owned(),
+                key: ordinal.to_string(),
+                source,
+            }
+        })
     }
 
     /// The preferred designation of `ordinal` in the first of `language_refsets`
@@ -333,22 +332,20 @@ impl Store {
         use_ordinal: u32,
         accept: impl Fn(&Designation) -> bool,
     ) -> Result<Option<Designation>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let preferred = open_table!(txn, tables::PREFERRED)?;
-        let designations = open_table!(txn, tables::DESIGNATIONS)?;
+        let Some(bytes) = self.displays.get(ordinal) else {
+            return Ok(None);
+        };
+        let damaged = |source| StoreError::Record {
+            table: tables::COLUMN_DISPLAYS.to_owned(),
+            key: ordinal.to_string(),
+            source,
+        };
         for refset in language_refsets {
-            let Some(index) = preferred.get((ordinal.index(), refset, use_ordinal))? else {
+            let Some(designation) =
+                record::Preferred::find(bytes, refset, use_ordinal).map_err(damaged)?
+            else {
                 continue;
             };
-            let Some(value) = designations.get((ordinal.index(), index.value()))? else {
-                continue;
-            };
-            let designation =
-                Designation::decode(value.value()).map_err(|source| StoreError::Record {
-                    table: tables::DESIGNATIONS.name().to_owned(),
-                    key: format!("({ordinal}, {})", index.value()),
-                    source,
-                })?;
             if accept(&designation) {
                 return Ok(Some(designation));
             }

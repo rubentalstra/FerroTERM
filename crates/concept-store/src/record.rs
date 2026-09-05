@@ -243,6 +243,61 @@ impl Concept {
     }
 }
 
+/// The preferred designations of one concept, as the build chose them.
+///
+/// Each entry names the language reference set and the designation use that
+/// chose it, so a reader looking for a display walks the reference sets it
+/// wants without touching the designation table.
+pub struct Preferred;
+
+impl Preferred {
+    /// The bytes of `entries`, each a reference set, a use, and a designation.
+    ///
+    /// Entries are written in the order given, which is the order a reader
+    /// scans them in.
+    #[must_use]
+    pub fn encode(entries: &[(u32, u32, &Designation)]) -> Vec<u8> {
+        let mut w = Writer(Vec::new());
+        w.u32(u32::try_from(entries.len()).unwrap_or(u32::MAX));
+        for (refset, use_ordinal, designation) in entries {
+            w.u32(*refset);
+            w.u32(*use_ordinal);
+            let bytes = designation.encode();
+            w.u32(u32::try_from(bytes.len()).unwrap_or(u32::MAX));
+            w.0.extend_from_slice(&bytes);
+        }
+        w.0
+    }
+
+    /// The designation `refset` and `use_ordinal` chose, if the concept has one.
+    ///
+    /// Only the matching entry is decoded; the rest are stepped over by their
+    /// length, so a concept with many preferred designations costs one decode.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecordError`] when the entries are truncated or a matching
+    /// designation is damaged.
+    pub fn find(
+        bytes: &[u8],
+        refset: u32,
+        use_ordinal: u32,
+    ) -> Result<Option<Designation>, RecordError> {
+        let mut r = Reader { bytes, at: 0 };
+        let count = r.u32()?;
+        for _ in 0..count {
+            let entry_refset = r.u32()?;
+            let entry_use = r.u32()?;
+            let len = usize::try_from(r.u32()?).map_err(|_| RecordError::Truncated { at: r.at })?;
+            let entry = r.take(len)?;
+            if entry_refset == refset && entry_use == use_ordinal {
+                return Designation::decode(entry).map(Some);
+            }
+        }
+        Ok(None)
+    }
+}
+
 /// The native code a concept record starts with, borrowed from `bytes`.
 ///
 /// # Errors
