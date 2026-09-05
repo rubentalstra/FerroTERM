@@ -10,6 +10,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use concept_graph::ordinal::{self, Ordinal};
+use concept_store::store::Store;
 use criterion::{Criterion, criterion_group, criterion_main};
 use fhir_terminology::compose::{Expander, Options};
 use fhir_terminology::operations::{Invocation, lookup, subsumes, validate_code};
@@ -24,6 +26,38 @@ const ROOT: &str = "138875005";
 const FINDING: &str = "404684003";
 /// `73211009 |Diabetes mellitus|`, deep in the tree with few children.
 const LEAF: &str = "73211009";
+
+/// A dense offsets-and-blob code column, the layout a dense integer key
+/// admits, built here to measure what the b-tree costs (#304).
+struct Column {
+    offsets: Vec<u32>,
+    blob: String,
+}
+
+impl Column {
+    fn code(&self, ordinal: Ordinal) -> &str {
+        let at = ordinal::to_usize(ordinal.index());
+        let start = self.offsets.get(at).copied().unwrap_or_default();
+        let end = self.offsets.get(at + 1).copied().unwrap_or_default();
+        self.blob
+            .get(ordinal::to_usize(start)..ordinal::to_usize(end))
+            .unwrap_or_default()
+    }
+}
+
+fn column(store: &Store, count: u32) -> Column {
+    let codes = store
+        .codes((0..count).map(Ordinal::new))
+        .expect("the store reads");
+    let mut offsets = Vec::with_capacity(codes.len() + 1);
+    let mut blob = String::new();
+    for code in codes {
+        offsets.push(u32::try_from(blob.len()).expect("the blob fits u32"));
+        blob.push_str(code.as_deref().unwrap_or_default());
+    }
+    offsets.push(u32::try_from(blob.len()).expect("the blob fits u32"));
+    Column { offsets, blob }
+}
 
 fn artifact() -> Option<PathBuf> {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/nl");
@@ -73,6 +107,42 @@ fn reads(c: &mut Criterion) {
         b.iter(|| provider.properties(leaf).expect("reads"));
     });
     group.bench_function("subsumes", |b| b.iter(|| hierarchy.subsumes(root, finding)));
+    group.finish();
+
+    // The two batch reads behind the `child` properties, over the same
+    // ordinals: the whole record against the code alone (#304).
+    let ordinals: Vec<Ordinal> = hierarchy
+        .children(finding)
+        .iter()
+        .map(Ordinal::new)
+        .collect();
+    let store = Store::open(&dir.join("store.redb")).expect("the NL store opens");
+    let mut group = c.benchmark_group("store");
+    group.bench_function("concepts_children", |b| {
+        b.iter(|| store.concepts(ordinals.iter().copied()).expect("reads"));
+    });
+    group.bench_function("codes_children", |b| {
+        b.iter(|| store.codes(ordinals.iter().copied()).expect("reads"));
+    });
+    // The same reads against a dense offsets-and-blob column, the layout a
+    // dense integer key admits: what the b-tree descent costs, measured (#304).
+    let count: u32 = store
+        .meta(concept_store::tables::META_CONCEPTS)
+        .expect("reads")
+        .and_then(|c| c.parse().ok())
+        .expect("the artifact records its concept count");
+    let column = column(&store, count);
+    group.bench_function("column_children", |b| {
+        b.iter(|| {
+            ordinals
+                .iter()
+                .map(|o| column.code(*o))
+                .collect::<Vec<&str>>()
+        });
+    });
+    group.finish();
+
+    let mut group = c.benchmark_group("provider");
     group.bench_function("search_hart_nl", |b| {
         b.iter(|| provider.search("hart", Some("nl")).expect("reads"));
     });

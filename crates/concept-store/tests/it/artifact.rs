@@ -187,6 +187,31 @@ fn point_reads_return_what_the_build_wrote() {
 }
 
 #[test]
+fn a_batch_read_answers_in_the_order_asked_and_marks_what_is_absent() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let store = build(&dir.path().join("synthetic.redb"));
+    let asked = [Ordinal::new(1), Ordinal::new(7), Ordinal::new(0)];
+    let concepts = store.concepts(asked).expect("batch read");
+    assert_eq!(
+        concepts.iter().map(Option::is_some).collect::<Vec<_>>(),
+        vec![true, false, true]
+    );
+    assert_eq!(
+        concepts
+            .iter()
+            .map(|c| c.as_ref().map(|c| c.code.as_str()))
+            .collect::<Vec<_>>(),
+        vec![Some("1001"), None, Some("1000")]
+    );
+    // The code-only decode reads the same codes as the whole record.
+    assert_eq!(
+        store.codes(asked).expect("batch read"),
+        vec![Some("1001".to_owned()), None, Some("1000".to_owned())]
+    );
+    assert!(store.codes([]).expect("batch read").is_empty());
+}
+
+#[test]
 fn preferred_designations_are_precomputed_per_refset_and_use() {
     let dir = tempfile::tempdir().expect("tempdir");
     let store = build(&dir.path().join("synthetic.redb"));

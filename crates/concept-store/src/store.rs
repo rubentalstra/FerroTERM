@@ -190,6 +190,41 @@ impl Store {
         Ok(out)
     }
 
+    /// The native codes at `ordinals`, in the order given, `None` where the
+    /// store has no such concept.
+    ///
+    /// One read transaction answers the whole batch, and each record is
+    /// decoded only as far as its code. A caller that names concepts by code
+    /// (the children of one concept, the members of a page) pays neither the
+    /// transaction per concept nor the rest of the record.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when the database cannot be read or a code is
+    /// damaged.
+    pub fn codes(
+        &self,
+        ordinals: impl IntoIterator<Item = Ordinal>,
+    ) -> Result<Vec<Option<String>>, StoreError> {
+        let txn = self.db.begin_read()?;
+        let table = open_table!(txn, tables::CONCEPTS)?;
+        let mut out = Vec::new();
+        for ordinal in ordinals {
+            let found = table
+                .get(ordinal.index())?
+                .map(|v| {
+                    Concept::decode_code(v.value()).map_err(|source| StoreError::Record {
+                        table: tables::CONCEPTS.name().to_owned(),
+                        key: ordinal.to_string(),
+                        source,
+                    })
+                })
+                .transpose()?;
+            out.push(found);
+        }
+        Ok(out)
+    }
+
     /// Every designation of `ordinal`, in index order.
     ///
     /// # Errors

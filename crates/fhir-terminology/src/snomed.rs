@@ -741,11 +741,11 @@ impl SnomedProvider {
         let ordinals = set.into_iter().map(Ordinal::new);
         Ok(self
             .store
-            .concepts(ordinals)
+            .codes(ordinals)
             .map_err(storage)?
             .into_iter()
             .flatten()
-            .map(|concept| PropertyValue::Code(concept.code))
+            .map(PropertyValue::Code)
             .collect())
     }
 }
