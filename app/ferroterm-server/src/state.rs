@@ -33,7 +33,7 @@ use fhir_terminology::valueset::store::ValueSetStore;
 use fhir_terminology::versioned::Duplicate;
 
 use crate::config::Config;
-use crate::persistence::{Record, ResourceStore, ResourceType, StoreError};
+use crate::persistence::{Closure, Record, ResourceStore, ResourceType, StoreError};
 use crate::scope::Caches;
 
 /// A failure to load the state.
@@ -718,6 +718,28 @@ impl AppState {
     ) -> Result<Option<Record>, PersistError> {
         let store = self.store.as_ref().ok_or(PersistError::NotConfigured)?;
         Ok(store.version(resource_type, id, version_id)?)
+    }
+
+    /// The closure table named `name`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PersistError::NotConfigured`] when the deployment persists no
+    /// resources, and [`PersistError::Store`] when the store cannot be read.
+    pub fn closure(&self, name: &str) -> Result<Option<Closure>, PersistError> {
+        let store = self.store.as_ref().ok_or(PersistError::NotConfigured)?;
+        Ok(store.closure(name)?)
+    }
+
+    /// Writes the closure table `closure`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PersistError::NotConfigured`] when the deployment persists no
+    /// resources, and [`PersistError::Store`] when the write does not commit.
+    pub fn put_closure(&self, closure: &Closure) -> Result<(), PersistError> {
+        let store = self.store.as_ref().ok_or(PersistError::NotConfigured)?;
+        Ok(store.put_closure(closure)?)
     }
 
     /// Persists `resource` as `resource_type` with `id`, raising

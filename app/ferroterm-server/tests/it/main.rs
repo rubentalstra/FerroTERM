@@ -12,6 +12,7 @@
 )]
 
 mod batch;
+mod closure;
 mod config;
 mod ecosystem;
 mod fixture;

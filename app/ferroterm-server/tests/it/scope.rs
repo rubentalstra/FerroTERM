@@ -215,7 +215,7 @@ async fn versions_and_the_capability_statement_carry_what_the_runner_reads() {
         .iter()
         .filter_map(|o| o["name"].as_str())
         .collect();
-    assert_eq!(system_ops, ["versions", "cache-control"]);
+    assert_eq!(system_ops, ["versions", "cache-control", "closure"]);
     let value_set = body["rest"][0]["resource"]
         .as_array()
         .expect("resources")

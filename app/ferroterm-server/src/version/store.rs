@@ -388,7 +388,7 @@ fn gone_or_missing(request: &Request<'_>, id: &str) -> Failure {
 }
 
 /// The failure a store error answers with.
-fn persist_failure(error: &PersistError) -> Failure {
+pub(crate) fn persist_failure(error: &PersistError) -> Failure {
     let (status, code) = match error {
         PersistError::NotConfigured => (StatusCode::UNPROCESSABLE_ENTITY, "not-supported"),
         PersistError::Convert { .. } | PersistError::Layer(_) => {

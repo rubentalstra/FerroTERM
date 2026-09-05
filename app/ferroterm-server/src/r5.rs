@@ -8,4 +8,4 @@
 //! of the surface is the shared per-version instantiation.
 
 crate::version::map_r5::family_map!(r5, r5);
-crate::version::surface!(r5, "5.0.0", "R5", to_r5);
+crate::version::surface!(r5, "5.0.0", "R5", to_r5, closure);
