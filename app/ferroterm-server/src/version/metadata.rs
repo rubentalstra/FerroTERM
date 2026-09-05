@@ -357,6 +357,7 @@ macro_rules! metadata {
                     description: ballot_note().map(Into::into),
                     implementation: Some(CapabilityStatementImplementation {
                         description: "FerroTERM terminology server".into(),
+                        url: endpoint(state).map(Into::into),
                         ..Default::default()
                     }),
                     rest: vec![CapabilityStatementRest {
@@ -376,6 +377,19 @@ macro_rules! metadata {
                 }
             }
 
+            /// The URL clients reach this version at, when the deployment named a
+            /// base.
+            ///
+            /// A server behind a proxy answers on an address it never sees, so the
+            /// value is configured rather than guessed, and it carries the version
+            /// prefix this surface is served under
+            /// (<https://hl7.org/fhir/R4B/capabilitystatement-definitions.html#CapabilityStatement.implementation.url>).
+            fn endpoint(state: &AppState) -> Option<String> {
+                state
+                    .base_url()
+                    .map(|base| format!("{base}/{}", stringify!($fhir)))
+            }
+
             /// The `TerminologyCapabilities` of this server, from the loaded providers.
             #[must_use]
             pub fn terminology_capabilities(state: &AppState) -> TerminologyCapabilities {
@@ -392,6 +406,7 @@ macro_rules! metadata {
                 capabilities.description = ballot_note().map(Into::into);
                 capabilities.implementation = Some(TerminologyCapabilitiesImplementation {
                     description: "FerroTERM terminology server".into(),
+                    url: endpoint(state).map(Into::into),
                     ..Default::default()
                 });
                 capabilities

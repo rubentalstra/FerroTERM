@@ -331,6 +331,9 @@ pub struct AppState {
     /// The authentication the deployment declares, as codes of the FHIR
     /// `restful-security-service` value set.
     security_services: Vec<String>,
+    /// The base URL clients reach this server at, when the deployment named
+    /// one; the capability statements state it per version.
+    base_url: Option<String>,
     /// The metrics a scrape reads, seeded with what this state loaded.
     metrics: Arc<crate::metrics::Metrics>,
 }
@@ -449,6 +452,7 @@ impl AppState {
         state
             .security_services
             .clone_from(&config.security_services);
+        state.base_url.clone_from(&config.base_url);
         for model in value_sets.iter() {
             let id = unique_id_of(
                 &state.value_set_instances,
@@ -522,6 +526,7 @@ impl AppState {
             paths: BTreeMap::new(),
             software_version: env!("CARGO_PKG_VERSION"),
             security_services: Vec::new(),
+            base_url: None,
             metrics: Arc::new(crate::metrics::Metrics::new()),
         }
     }
@@ -680,6 +685,13 @@ impl AppState {
     #[must_use]
     pub fn security_services(&self) -> &[String] {
         &self.security_services
+    }
+
+    /// The base URL clients reach this server at, without a version prefix,
+    /// when the deployment named one.
+    #[must_use]
+    pub fn base_url(&self) -> Option<&str> {
+        self.base_url.as_deref()
     }
 
     /// The default provider of a system, for callers that need one.
