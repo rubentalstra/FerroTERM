@@ -22,12 +22,18 @@ const SCT: &str = "http://snomed.info/sct";
 const ROOT: &str = "138875005";
 /// `404684003 |Clinical finding|`, a top-level hierarchy present in every edition.
 const FINDING: &str = "404684003";
+/// `73211009 |Diabetes mellitus|`, deep in the tree with few children.
+const LEAF: &str = "73211009";
 
 fn artifact() -> Option<PathBuf> {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/nl");
     dir.join("manifest.json").exists().then_some(dir)
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "one benchmark group per read, read top to bottom"
+)]
 fn reads(c: &mut Criterion) {
     let Some(dir) = artifact() else {
         eprintln!("no artifacts/nl: skipping the NL read benchmarks");
@@ -53,6 +59,18 @@ fn reads(c: &mut Criterion) {
     });
     group.bench_function("properties", |b| {
         b.iter(|| provider.properties(finding).expect("reads"));
+    });
+    // The children of a concept are a `child` property each, and each code is a
+    // store read, so the cost of `$lookup` follows the child count (#304).
+    let children = provider
+        .hierarchy()
+        .expect("snomed has a hierarchy")
+        .children(finding)
+        .len();
+    eprintln!("the finding has {children} children");
+    let leaf = provider.locate(LEAF).expect("reads").expect("leaf").concept;
+    group.bench_function("properties_leaf", |b| {
+        b.iter(|| provider.properties(leaf).expect("reads"));
     });
     group.bench_function("subsumes", |b| b.iter(|| hierarchy.subsumes(root, finding)));
     group.bench_function("search_hart_nl", |b| {

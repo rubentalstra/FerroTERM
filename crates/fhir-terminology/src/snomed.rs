@@ -732,17 +732,21 @@ impl SnomedProvider {
         })
     }
 
+    /// The codes of `set`, read in one transaction: a concept with hundreds of
+    /// children costs one read of the store rather than one per child (#304).
     fn codes(
         &self,
         set: impl IntoIterator<Item = u32>,
     ) -> Result<Vec<PropertyValue>, ProviderError> {
-        let mut out = Vec::new();
-        for index in set {
-            if let Some(concept) = self.store.concept(Ordinal::new(index)).map_err(storage)? {
-                out.push(PropertyValue::Code(concept.code));
-            }
-        }
-        Ok(out)
+        let ordinals = set.into_iter().map(Ordinal::new);
+        Ok(self
+            .store
+            .concepts(ordinals)
+            .map_err(storage)?
+            .into_iter()
+            .flatten()
+            .map(|concept| PropertyValue::Code(concept.code))
+            .collect())
     }
 }
 
