@@ -60,7 +60,8 @@ fn animals() -> serde_json::Value {
              {"code": "dog", "display": "Dog", "property": [{"code": "legs", "valueInteger": 4}],
               "designation": [{"language": "en", "value": "Hound",
                 "extension": [{"url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status", "valueCode": "withdrawn"}]}]},
-             {"code": "fish", "display": "Fish", "property": [{"code": "legs", "valueInteger": 0}, {"code": "status", "valueCode": "retired"}]}
+             {"code": "fish", "display": "Fish", "property": [{"code": "legs", "valueInteger": 0}, {"code": "status", "valueCode": "retired"}],
+              "designation": [{"use": {"system": "http://example.org/fhir/CodeSystem/designations", "code": "fishy"}, "value": "Old fish name"}]}
            ]},
           {"code": "plant", "display": "Plant",
            "extension": [{"url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status", "valueCode": "deprecated"}]}

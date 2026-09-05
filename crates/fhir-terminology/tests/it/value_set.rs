@@ -2511,3 +2511,45 @@ fn entry<'a>(contains: &'a [Contains], code: &str) -> Option<&'a Contains> {
     }
     None
 }
+
+/// A designation the concept accepts is not always one to suggest.
+///
+/// A designation whose `use` is a project's own code, with no language, is a
+/// term the concept carries for another purpose: it validates a display that
+/// matches it, and the message that lists the valid displays leaves it out.
+/// No FHIR version fixes this, and the terminology ecosystem IG says the
+/// behaviour "is effectively specified by the test cases"
+/// (<https://hl7.org/fhir/uv/tx-ecosystem/languages.html>), which is where the
+/// rule comes from (#290).
+#[test]
+fn a_designation_with_its_own_use_validates_a_display_without_being_offered() {
+    let world = World::load();
+    let fish = |display: &str| ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        code: Some(String::from("fish")),
+        system: Some(ANIMALS.to_owned()),
+        display: Some(String::from(display)),
+        ..ValueSetValidateInput::default()
+    };
+    let run = |input: &ValueSetValidateInput| {
+        value_set_validate_code::validate_code(&world.sources(), input).expect("validates")
+    };
+    assert!(
+        run(&fish("Old fish name")).result,
+        "the designation still validates the display"
+    );
+    let wrong = run(&fish("Trout"));
+    assert!(!wrong.result);
+    let display_issue = wrong
+        .issues
+        .iter()
+        .find(|issue| issue.text.starts_with("Wrong Display Name"))
+        .expect("the display issue");
+    assert_eq!(
+        display_issue.text,
+        format!(
+            "Wrong Display Name 'Trout' for {ANIMALS}#fish. Valid display is 'Fish' (en) (for the language(s) '--')"
+        ),
+        "the suggestion names the display alone"
+    );
+}

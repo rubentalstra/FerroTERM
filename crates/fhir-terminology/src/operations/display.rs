@@ -16,6 +16,39 @@ use crate::text_match;
 struct Candidate {
     text: String,
     language: Option<String>,
+    /// Whether the message offers it as a display to use. A designation the
+    /// concept accepts is not always one to suggest.
+    offered: bool,
+}
+
+/// The designation uses that make a designation a display to offer.
+///
+/// A designation with no use is a display; a use of `preferredForLanguage`, or
+/// SNOMED CT's fully specified name, preferred term, or synonym, is a display;
+/// any other use is a term the concept carries for some other purpose, so it is
+/// accepted as a display and never suggested as one. No FHIR version fixes
+/// this, and the terminology ecosystem IG says the behaviour "is effectively
+/// specified by the test cases"
+/// (<https://hl7.org/fhir/uv/tx-ecosystem/languages.html>), which is where the
+/// list comes from (#290).
+const DISPLAY_USES: [(&str, &str); 4] = [
+    (
+        "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+        "preferredForLanguage",
+    ),
+    ("http://snomed.info/sct", "900000000000003001"),
+    ("http://snomed.info/sct", "900000000000548007"),
+    ("http://snomed.info/sct", "900000000000013009"),
+];
+
+/// Whether a designation's use makes it a display to offer.
+fn offered(use_: Option<&crate::provider::DesignationUse>) -> bool {
+    let Some(use_) = use_ else {
+        return true;
+    };
+    DISPLAY_USES
+        .iter()
+        .any(|(system, code)| *system == use_.system && *code == use_.code)
 }
 
 impl Candidate {
@@ -47,6 +80,7 @@ fn candidates(
         out.push(Candidate {
             text: display,
             language: provider.language().map(str::to_owned),
+            offered: true,
         });
     }
     for designation in provider.designations(concept, None)? {
@@ -58,6 +92,7 @@ fn candidates(
             .any(|c| c.text == designation.value && c.language == designation.language);
         if !duplicate {
             out.push(Candidate {
+                offered: offered(designation.use_.as_ref()),
                 text: designation.value,
                 language: designation.language,
             });
@@ -68,6 +103,10 @@ fn candidates(
 
 /// `Valid display is 'a' (en)`, or `one of N choices: 'a' (en) or 'b' (de)`.
 fn valid_display(list: &[&Candidate]) -> String {
+    // NOTE: a display the concept accepts is not always one to suggest; the
+    // offered ones are the displays, and the rest stay valid (#290).
+    let offered: Vec<&Candidate> = list.iter().filter(|c| c.offered).copied().collect();
+    let list: &[&Candidate] = if offered.is_empty() { list } else { &offered };
     match list {
         [one] => format!("Valid display is {}", one.quoted()),
         many => {
