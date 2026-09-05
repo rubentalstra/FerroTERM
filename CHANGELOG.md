@@ -15,6 +15,8 @@ fresh link reference.
 
 ### Added
 
+- `GET /metrics`: the Prometheus exposition of the requests answered (a counter and a duration histogram per method, matched route, and status) and the code system versions loaded (one gauge each). The route is off the FHIR base path, so a scrape is never a terminology request, and the labels name the matched route rather than the URI, so the series count stays bounded whatever codes clients ask about.
+- `X-Request-Id` on every response: the client's own value when it sent a usable one, a fresh UUID otherwise, and the same id in the request's log line. An id that is empty, over 128 characters, or not printable ASCII is replaced rather than echoed.
 - `$batch-validate-code` on `ValueSet` and `CodeSystem`, on every served version: one `POST` carries the shared inputs once, a `validation` parameter per validation, each a `Parameters` of that validation's own inputs, and the answer repeats `validation` in the same order with that validation's `$validate-code` outputs. A validation states its own value for an input the request also states, and a validation the server cannot run answers an `OperationOutcome` in its own slot while the others still answer. No `OperationDefinition` declares the operation anywhere, so the contract is the terminology ecosystem suite's cases, whose `batch/batch-validate` now passes on `/r4b`, `/r4` and `/r5`.
 - The fuzz targets under `fuzz/`: every parser an untrusted input reaches (ECL, the FHIR JSON and XML bodies, the SNOMED CT implicit `?fhir_vs=` and `?fhir_cm=` forms, and the RF2 file names, effective times, and identifiers) is fed arbitrary bytes by `cargo-fuzz`, weekly in CI and by hand for longer runs. The seeds are committed; a crash uploads the input that reproduces it.
 

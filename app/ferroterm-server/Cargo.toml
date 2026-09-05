@@ -21,6 +21,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true
+prometheus-client.workspace = true
 fhir-types.workspace = true
 fhir-terminology.workspace = true
 concept-graph.workspace = true
