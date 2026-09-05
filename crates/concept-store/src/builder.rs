@@ -62,6 +62,12 @@ pub enum BuildError {
 pub struct PreferredRule {
     /// The acceptability ordinal meaning preferred.
     pub preferred: u32,
+    /// The designation use whose preferred designation is a concept display
+    /// (for SNOMED, the synonym), or `None` when the system has no such use.
+    ///
+    /// Only this use goes into the display column. Carrying every use made the
+    /// column a second copy of most of the designations (#322).
+    pub display_use: Option<u32>,
 }
 
 /// An artifact under construction.
@@ -262,28 +268,37 @@ impl StoreBuilder {
     ///
     /// Choosing a display is the hottest read the server has, and it should
     /// not have to find the designation this build already found.
-    fn display_column(&self, chosen: &BTreeMap<(u32, u32, u32), u32>, count: u32) -> Vec<u8> {
-        let mut by_concept: BTreeMap<u32, Vec<(u32, u32, Designation)>> = BTreeMap::new();
+    fn display_column(
+        &self,
+        chosen: &BTreeMap<(u32, u32, u32), u32>,
+        display_use: u32,
+        count: u32,
+    ) -> Vec<u8> {
+        let mut by_concept: BTreeMap<u32, Vec<(u32, String, String)>> = BTreeMap::new();
         for ((concept, refset, use_ordinal), index) in chosen {
+            if *use_ordinal != display_use {
+                continue;
+            }
             let Some(bytes) = self.designations.get(&(*concept, *index)) else {
                 continue;
             };
             let Ok(designation) = Designation::decode(bytes) else {
                 continue;
             };
-            by_concept
-                .entry(*concept)
-                .or_default()
-                .push((*refset, *use_ordinal, designation));
+            by_concept.entry(*concept).or_default().push((
+                *refset,
+                designation.language,
+                designation.term,
+            ));
         }
         let packed: BTreeMap<u32, Vec<u8>> = by_concept
             .into_iter()
             .map(|(concept, entries)| {
-                let borrowed: Vec<(u32, u32, &Designation)> = entries
+                let borrowed: Vec<(u32, &str, &str)> = entries
                     .iter()
-                    .map(|(refset, use_ordinal, d)| (*refset, *use_ordinal, d))
+                    .map(|(refset, language, term)| (*refset, language.as_str(), term.as_str()))
                     .collect();
-                (concept, record::Preferred::encode(&borrowed))
+                (concept, record::Displays::encode(&borrowed))
             })
             .collect();
         Column::pack(
@@ -293,6 +308,7 @@ impl StoreBuilder {
                 .map(|(concept, bytes)| (Ordinal::new(*concept), bytes.as_slice())),
         )
     }
+
     /// Writes every buffered row in key order, computes the preferred
     /// designations per language reference set and use, records the concept
     /// count, and commits.
@@ -374,9 +390,11 @@ impl StoreBuilder {
             for (key, index) in &chosen {
                 preferred.insert(*key, *index)?;
             }
-            let column = self.display_column(&chosen, count);
-            let mut columns = txn.open_table(tables::COLUMNS)?;
-            columns.insert(tables::COLUMN_DISPLAYS, column.as_slice())?;
+            if let Some(display_use) = rule.display_use {
+                let column = self.display_column(&chosen, display_use, count);
+                let mut columns = txn.open_table(tables::COLUMNS)?;
+                columns.insert(tables::COLUMN_DISPLAYS, column.as_slice())?;
+            }
         }
         txn.commit()?;
         // redb grows the file in regions ahead of use; compaction returns the

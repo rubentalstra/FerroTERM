@@ -388,7 +388,12 @@ pub fn build(cached: &Cached, release: Option<&str>, out: &Path) -> Result<Repor
         source: io::Error::other(source),
     })?;
     std::fs::write(&scales_path, scales_text).map_err(io_error(&scales_path))?;
-    builder.finish(&PreferredRule { preferred: 0 })?;
+    builder.finish(&PreferredRule {
+        preferred: 0,
+        // Nothing reads a display column for this system; its provider
+        // chooses a display from the designations it already reads.
+        display_use: None,
+    })?;
     let title = cached
         .titles
         .get("en")

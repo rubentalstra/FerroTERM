@@ -115,6 +115,7 @@ fn build(path: &Path) -> Store {
     builder
         .finish(&PreferredRule {
             preferred: PREFERRED,
+            display_use: Some(SYNONYM),
         })
         .expect("finishes");
     Store::open(path).expect("opens")
@@ -247,40 +248,35 @@ fn the_first_accepted_reference_set_answers_and_the_walk_stops_there() {
     // the reference sets are asked in decides, and an unacceptable one is
     // walked past rather than returned.
     let english = store
-        .preferred_first(Ordinal::new(0), [EN_GB, NL], SYNONYM, |_| true)
+        .display(Ordinal::new(0), [EN_GB, NL], |_| true)
         .expect("read")
         .expect("present");
-    assert_eq!(english.term, "Root synonym two");
+    assert_eq!(english, "Root synonym two");
     assert_eq!(
         store
-            .preferred_first(Ordinal::new(0), [NL, EN_GB], SYNONYM, |d| d.language
-                == "en")
-            .expect("read")
-            .map(|d| d.term),
+            .display(Ordinal::new(0), [NL, EN_GB], |l| l == "en")
+            .expect("read"),
         Some(String::from("Root synonym two")),
         "a reference set that names none is walked past"
     );
     assert!(
         store
-            .preferred_first(Ordinal::new(0), [EN_GB, NL], SYNONYM, |d| d.language
-                == "nl")
+            .display(Ordinal::new(0), [EN_GB, NL], |l| l == "nl")
             .expect("read")
             .is_none(),
         "no reference set carries a Dutch synonym for the root"
     );
     assert!(
         store
-            .preferred_first(Ordinal::new(0), [], SYNONYM, |_| true)
+            .display(Ordinal::new(0), [], |_| true)
             .expect("read")
             .is_none()
     );
     let dutch = store
-        .preferred_first(Ordinal::new(1), [EN_GB, NL], SYNONYM, |d| {
-            d.language == "nl"
-        })
+        .display(Ordinal::new(1), [EN_GB, NL], |l| l == "nl")
         .expect("read")
         .expect("present");
-    assert_eq!(dutch.term, "Synthetisch kind");
+    assert_eq!(dutch, "Synthetisch kind");
 }
 
 #[test]

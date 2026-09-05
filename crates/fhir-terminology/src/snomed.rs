@@ -571,12 +571,10 @@ impl SnomedProvider {
         &self,
         ordinal: Ordinal,
         language: &str,
-    ) -> Result<Option<record::Designation>, ProviderError> {
+    ) -> Result<Option<String>, ProviderError> {
         let refsets = self.keys.refsets.iter().map(|(refset, _)| *refset);
         self.store
-            .preferred_first(ordinal, refsets, self.keys.synonym, |designation| {
-                primary_subtag(&designation.language) == language
-            })
+            .display(ordinal, refsets, |found| primary_subtag(found) == language)
             .map_err(storage)
     }
 
@@ -590,8 +588,8 @@ impl SnomedProvider {
         language: Option<&str>,
     ) -> Result<Option<String>, ProviderError> {
         let wanted = language.map_or_else(|| self.default_language.clone(), primary_subtag);
-        if let Some(preferred) = self.preferred_in(ordinal, &wanted)? {
-            return Ok(Some(preferred.term));
+        if let Some(term) = self.preferred_in(ordinal, &wanted)? {
+            return Ok(Some(term));
         }
         let designations = self.store.designations(ordinal).map_err(storage)?;
         if let Some(synonym) = designations.iter().find(|d| {
@@ -600,9 +598,9 @@ impl SnomedProvider {
             return Ok(Some(synonym.term.clone()));
         }
         if wanted != self.default_language
-            && let Some(preferred) = self.preferred_in(ordinal, &self.default_language)?
+            && let Some(term) = self.preferred_in(ordinal, &self.default_language)?
         {
-            return Ok(Some(preferred.term));
+            return Ok(Some(term));
         }
         if let Some(fsn) = designations
             .iter()

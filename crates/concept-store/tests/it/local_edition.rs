@@ -158,7 +158,10 @@ fn the_local_edition_builds_an_artifact_and_opens_fast() {
         }
     }
     builder
-        .finish(&PreferredRule { preferred: 0 })
+        .finish(&PreferredRule {
+            preferred: 0,
+            display_use: Some(1),
+        })
         .expect("finishes");
     let built = started.elapsed();
     let size = std::fs::metadata(&path).expect("metadata").len();
