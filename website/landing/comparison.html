@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>FerroTERM, Snowstorm, and Snowstorm Lite compared</title>
+  <meta name="description" content="A sourced feature comparison of FerroTERM and SNOMED International's two terminology servers, Snowstorm and Snowstorm Lite: code systems served, FHIR versions, ECL coverage, the terminology operations, runtime dependencies, deployment shape, and licence. Every claim about a Snowstorm server links that project's own documentation.">
+  <link rel="icon" type="image/svg+xml" href="./assets/logo-mark.svg">
+  <link rel="canonical" href="https://ferroterm.eu/comparison.html">
+  <meta property="og:url" content="https://ferroterm.eu/comparison.html">
+  <link rel="stylesheet" href="./style.css">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="FerroTERM, Snowstorm, and Snowstorm Lite compared">
+  <meta property="og:description" content="What each of the three servers serves, what each needs to run, and what each costs to licence, with every competitor claim linked to that project's own documentation.">
+  <meta property="og:site_name" content="FerroTERM">
+</head>
+<body>
+
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="./">
+        <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
+        <span>FerroTERM</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="./docs/">Docs</a>
+        <a href="./docs/evaluate/code-systems.html" class="hide-sm">Code systems</a>
+        <a href="./benchmarks.html">Benchmarks</a>
+        <a href="./comparison.html" class="hide-sm" aria-current="page">Comparison</a>
+        <a href="https://github.com/rubentalstra/FerroTERM" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+
+    <section class="hero hero-compact">
+      <div class="wrap">
+        <span class="eyebrow">Comparison</span>
+        <h1>FerroTERM, Snowstorm, and Snowstorm Lite, side by side</h1>
+        <p class="sub">
+          SNOMED International develops and maintains two terminology servers,
+          Snowstorm and Snowstorm Lite. This page sets them beside FerroTERM on
+          the points you choose by: what each one serves, what each one needs to
+          run, and what each one costs to licence. Every claim about a Snowstorm
+          server links the sentence in that project's own documentation that
+          carries it.
+        </p>
+      </div>
+    </section>
+
+    <section id="how-to-read" class="surface">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">How to read this page</span>
+          <h2>Sourced, dated, and free of numbers nobody measured</h2>
+        </div>
+        <div class="prose">
+          <p>
+            Every cell about Snowstorm or Snowstorm Lite comes from that
+            project's own documentation, linked in the cell and listed again
+            under <a href="#sources">Sources</a>. A claim that could not be
+            sourced was left off the page, so a row you expect and do not find
+            means the evidence was missing, never that the feature is. Every
+            cell about FerroTERM is checkable in the FerroTERM repository, and
+            the cell says where.
+          </p>
+          <p>
+            The Snowstorm documentation was read on 5 September 2026, from the
+            <code>master</code> branch of each repository. The current release
+            on that date was
+            <a href="https://github.com/IHTSDO/snowstorm/releases/tag/11.0.0" rel="noopener">Snowstorm 11.0.0</a>
+            (2 September 2026) and
+            <a href="https://github.com/IHTSDO/snowstorm-lite/releases/tag/2.5.2" rel="noopener">Snowstorm Lite 2.5.2</a>
+            (20 July 2026). SNOMED International's
+            <a href="https://www.implementation.snomed.org/terminology-services" rel="noopener">terminology services page</a>
+            was read the same day. The FerroTERM column describes release
+            0.0.11.
+          </p>
+          <p>
+            Snowstorm Lite serves SNOMED CT and nothing else, by design. Rows
+            about other code systems read <em>not in scope</em> in its column.
+            That is where the project drew its boundary, and reading it as a
+            missing feature would misrepresent it.
+          </p>
+          <p>
+            This page compares features and carries no latency figure for any
+            of the three. A latency number is worth reading when the servers ran
+            on one machine over one release, and that run has not been made. The
+            <a href="./benchmarks.html">benchmarks page</a> has FerroTERM's own
+            measurements, each with the machine, the method, and the record it
+            came from.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="servers">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">The three servers</span>
+          <h2>What each project says it is</h2>
+        </div>
+        <div class="grid audiences">
+
+          <article class="card audience" id="snowstorm">
+            <span class="tag">SNOMED International</span>
+            <h3>Snowstorm</h3>
+            <p>
+              &ldquo;An open source terminology server with special support for
+              SNOMED CT&rdquo;, built on Elasticsearch &ldquo;with a focus on
+              performance and enterprise scalability&rdquo;. It runs the SNOMED
+              International Browser for the International edition and around
+              fourteen national editions, and it runs the Authoring Platform.
+              SNOMED International states that it is not able to offer
+              commercial support for the product, and that support comes from
+              the community.
+            </p>
+            <p class="src">
+              <a href="https://github.com/IHTSDO/snowstorm/blob/master/README.md" rel="noopener">Snowstorm README</a>
+            </p>
+          </article>
+
+          <article class="card audience" id="snowstorm-lite">
+            <span class="tag">SNOMED International</span>
+            <h3>Snowstorm Lite</h3>
+            <p>
+              &ldquo;A fast FHIR Terminology Server for SNOMED CT with a small
+              memory footprint.&rdquo; Its use cases are scaling architectures,
+              responsive search behind data entry, and SNOMED CT offline in
+              places with poor connectivity or in trusted research
+              environments. The readme states plainly that it is
+              &ldquo;<em>Not</em> suitable as a national terminology
+              server&rdquo;.
+            </p>
+            <p class="src">
+              <a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">Snowstorm Lite readme</a>
+            </p>
+          </article>
+
+          <article class="card audience" id="ferroterm">
+            <span class="tag">FerroTERM</span>
+            <h3>FerroTERM</h3>
+            <p>
+              A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD-10,
+              ICD-11, RxNorm, UCUM, and any FHIR <code>CodeSystem</code>, served
+              from one static binary over a memory-mapped index built once per
+              release. No JVM, no Elasticsearch, no database to run. It checks
+              its own answers against Snowstorm, which is the behavioural
+              reference for the cases the specification leaves open.
+            </p>
+            <p class="src">
+              <a href="https://github.com/rubentalstra/FerroTERM#readme" rel="noopener">FerroTERM README</a>
+            </p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <section id="serves" class="surface">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Content and API</span>
+          <h2>What each one serves</h2>
+        </div>
+        <div class="prose prose-wide">
+          <div class="table-wrap"><table class="compare">
+            <thead>
+              <tr><th scope="col"></th><th scope="col">FerroTERM 0.0.11</th><th scope="col">Snowstorm</th><th scope="col">Snowstorm Lite</th></tr>
+            </thead>
+            <tbody>
+
+              <tr>
+                <th scope="row">Code systems</th>
+                <td>
+                  SNOMED CT, LOINC, UCUM, ICD-10 in the WHO, Dutch, and US
+                  versions, ICD-11, RxNorm, ATC/DDD, ICPC-2, the Dutch national
+                  code systems, the BCP and ISO registries, and any FHIR
+                  <code>CodeSystem</code>, <code>ValueSet</code>, and
+                  <code>ConceptMap</code> resource.
+                  <span class="src"><a href="./docs/evaluate/code-systems.html">Code systems page</a></span>
+                </td>
+                <td>
+                  &ldquo;Supports SNOMED CT, LOINC, ICD-10, ICD-10-CM and other
+                  code systems&rdquo;. Anything else loads through a custom code
+                  system format that carries a single display term, a simple
+                  hierarchy, and properties.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/README.md" rel="noopener">README</a>, <a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-the-fhir-api.md" rel="noopener">Using the FHIR API</a></span>
+                </td>
+                <td>
+                  SNOMED CT only: &ldquo;A fast FHIR Terminology Server for
+                  SNOMED CT&rdquo;.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">SNOMED editions in one server</th>
+                <td>
+                  Each artifact directory is one code system version, and a
+                  server loads several. Resolving a default across several
+                  SNOMED editions through the Module Dependency Reference Set is
+                  still an open item on the checklist.
+                  <span class="src"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/implementation.md" rel="noopener">implementation.md</a></span>
+                </td>
+                <td>
+                  &ldquo;Hosting multiple extensions alongside the International
+                  Edition of SNOMED CT&rdquo;.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/README.md" rel="noopener">README</a></span>
+                </td>
+                <td>
+                  One: &ldquo;Only supports one release of SNOMED CT Edition at
+                  this time&rdquo;. Extension and derivative packages import on
+                  top of that edition.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">FHIR version</th>
+                <td>
+                  R4 (4.0.1) under <code>/r4</code>, R4B (4.3.0) under
+                  <code>/r4b</code>, R5 (5.0.0) under <code>/r5</code>, and the
+                  R6 ballot under <code>/r6</code>, each in its own version's
+                  shapes, in JSON or XML.
+                  <span class="src"><a href="./docs/integrate/fhir-versions.html">FHIR versions</a></span>
+                </td>
+                <td>
+                  R4: &ldquo;The Snowstorm HL7 FHIR API implements the
+                  terminology module, version R4.&rdquo; JSON or XML, by the
+                  <code>Accept</code> header.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-the-fhir-api.md" rel="noopener">Using the FHIR API</a></span>
+                </td>
+                <td>
+                  R4: the readme's FHIR features cite the R4 implicit value sets
+                  and implicit maps, and no other version is documented.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">Terminology operations</th>
+                <td>
+                  <code>CodeSystem/$lookup</code>,
+                  <code>$validate-code</code>, <code>$subsumes</code>,
+                  <code>ValueSet/$expand</code>,
+                  <code>ValueSet/$validate-code</code>,
+                  <code>ConceptMap/$translate</code>,
+                  <code>ConceptMap/$closure</code>, <code>$versions</code>,
+                  <code>metadata</code>, and
+                  <code>metadata?mode=terminology</code>.
+                  <span class="src"><a href="./docs/integrate/fhir-api.html">The FHIR terminology API</a></span>
+                </td>
+                <td>
+                  <code>CodeSystem</code> lookup, validate-code, and subsumes;
+                  <code>ValueSet</code> expand and validate-code, with search,
+                  create, replace, update, and delete;
+                  <code>ConceptMap</code> translate; <code>metadata</code> and
+                  <code>metadata?mode=terminology</code>.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-the-fhir-api.md" rel="noopener">Using the FHIR API</a></span>
+                </td>
+                <td>
+                  <code>CodeSystem</code> lookup and
+                  <code>$validate-code</code>; <code>ValueSet</code>
+                  create, edit, delete, <code>$expand</code>, and
+                  <code>$validate-code</code>; <code>ConceptMap</code> create,
+                  edit, delete, and <code>$translate</code>.
+                  <code>CodeSystem $subsumes</code> arrived in 2.3.0.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a>, <a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/CHANGELOG.md" rel="noopener">changelog</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">Client-authored value sets and maps</th>
+                <td>
+                  A server reads and searches the <code>ValueSet</code> and
+                  <code>ConceptMap</code> resources loaded with its artifacts,
+                  and takes a client's resource inline in the request or through
+                  <code>$cache-control</code>. Creating and editing resources
+                  over REST is not served.
+                  <span class="src"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/app/ferroterm-server/src/version/system.rs" rel="noopener">system.rs</a></span>
+                </td>
+                <td>
+                  <code>ValueSet</code> search, create, replace, update, and
+                  delete over the FHIR API.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-the-fhir-api.md" rel="noopener">Using the FHIR API</a></span>
+                </td>
+                <td>
+                  <code>ValueSet</code> and <code>ConceptMap</code> create,
+                  edit, and delete over the FHIR API.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">SNOMED implicit value sets and maps</th>
+                <td>
+                  <code>?fhir_vs</code>, <code>?fhir_vs=isa/[sctid]</code>,
+                  <code>?fhir_vs=ecl/[ecl]</code>,
+                  <code>?fhir_vs=refset</code>,
+                  <code>?fhir_vs=refset/[sctid]</code>, and
+                  <code>?fhir_cm=[sctid]</code>.
+                  <span class="src"><a href="./docs/integrate/ecl-value-sets.html">Value sets and ECL</a></span>
+                </td>
+                <td>
+                  &ldquo;The SNOMED CT URI, filters, properties, implicit value
+                  sets, and implicit concept maps&rdquo;.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-the-fhir-api.md" rel="noopener">Using the FHIR API</a></span>
+                </td>
+                <td>
+                  SNOMED CT implicit value sets, with the <code>isa</code> and
+                  <code>ecl</code> filters supported, and SNOMED CT implicit
+                  maps.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">ECL</th>
+                <td>
+                  ECL 2.2, from a parser written to the official ANTLR
+                  <code>ECL.g4</code> grammar, vendored with its example corpus;
+                  malformed ECL comes back as an <code>OperationOutcome</code>.
+                  <span class="src"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/VERSIONS.md" rel="noopener">VERSIONS.md</a>, <a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/implementation.md" rel="noopener">implementation.md</a></span>
+                </td>
+                <td>
+                  &ldquo;Fully ECL v2.0 compliant&rdquo; in the README; SNOMED
+                  International's terminology services page says
+                  &ldquo;Fully ECL v2.1 compliant&rdquo;.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/README.md" rel="noopener">README</a>, <a href="https://www.implementation.snomed.org/terminology-services" rel="noopener">terminology services</a></span>
+                </td>
+                <td>
+                  &ldquo;ECL Core, a subset of ECL&rdquo;, and
+                  &ldquo;Full ECL support is not planned&rdquo;: the readme
+                  says it covers the most used features without the complexity
+                  and memory demands of the full specification.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">Languages</th>
+                <td>
+                  Displays and designations per language from the language
+                  reference set and RF2 acceptability, selected with
+                  <code>displayLanguage</code>.
+                  <span class="src"><a href="https://github.com/rubentalstra/FerroTERM#readme" rel="noopener">README</a></span>
+                </td>
+                <td>
+                  &ldquo;Multi-lingual search and content retrieval&rdquo;, with
+                  a documented guide to language-specific search behaviour.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/README.md" rel="noopener">README</a></span>
+                </td>
+                <td>
+                  &ldquo;Multiple language support with configurable character
+                  folding&rdquo;, and a language-aware preferred term in the
+                  mini-browser.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">SNOMED authoring, browser, history</th>
+                <td>
+                  None. The server is read-only over an index built offline
+                  from a release.
+                  <span class="src"><a href="https://github.com/rubentalstra/FerroTERM#readme" rel="noopener">README</a></span>
+                </td>
+                <td>
+                  Authoring of the International edition, nine national
+                  editions, and community extensions; the API behind the SNOMED
+                  International Browser; &ldquo;Full history (depends on full
+                  RF2 import)&rdquo;.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/README.md" rel="noopener">README</a></span>
+                </td>
+                <td>
+                  &ldquo;Does not support SNOMED CT authoring or the SNOMED CT
+                  Browser&rdquo;.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="runtime">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Runtime and licence</span>
+          <h2>What each one needs to run</h2>
+        </div>
+        <div class="prose prose-wide">
+          <div class="table-wrap"><table class="compare">
+            <thead>
+              <tr><th scope="col"></th><th scope="col">FerroTERM 0.0.11</th><th scope="col">Snowstorm</th><th scope="col">Snowstorm Lite</th></tr>
+            </thead>
+            <tbody>
+
+              <tr>
+                <th scope="row">Runtime dependencies</th>
+                <td>
+                  The binary and its artifact directory. No JVM, no
+                  Elasticsearch, no database.
+                  <span class="src"><a href="https://github.com/rubentalstra/FerroTERM#readme" rel="noopener">README</a></span>
+                </td>
+                <td>
+                  Java 17 and Elasticsearch 8, tested against 8.11.1; an HTTP
+                  proxy for SSL is recommended.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/getting-started.md" rel="noopener">Getting started</a></span>
+                </td>
+                <td>
+                  JDK 17. Apache Lucene runs inside the application, so there is
+                  &ldquo;no need for Elasticsearch&rdquo;.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a>, <a href="https://www.implementation.snomed.org/terminology-services" rel="noopener">terminology services</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">Memory each project asks for</th>
+                <td>
+                  The sizing guide puts an edition on a 2 to 4 GB box with two
+                  cores; the committed record for the International edition
+                  shows 402 MB resident after the warm requests.
+                  <span class="src"><a href="./docs/operate/hardware-sizing.html">Hardware sizing</a>, <a href="./benchmarks.html">benchmarks</a></span>
+                </td>
+                <td>
+                  &ldquo;At least 8G of memory&rdquo;: as a minimum 2G for
+                  Snowstorm and 4G for Elasticsearch, with another 4G left free
+                  for disk caching. The Docker quickstart uses 8Gb across its
+                  three containers.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/getting-started.md" rel="noopener">Getting started</a>, <a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-docker.md" rel="noopener">Using Docker</a></span>
+                </td>
+                <td>
+                  &ldquo;After creating the index the app can run with just
+                  500mb memory&rdquo;, and the index for the International
+                  edition builds inside 1 GB.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a>, <a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/docs/running-with-java.md" rel="noopener">running with Java</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">Deployment shape</th>
+                <td>
+                  One static binary or a distroless container image, over an
+                  artifact directory built once per release by
+                  <code>ferroterm-build</code>. Releases carry signed SLSA
+                  Build Level 3 provenance and SBOMs.
+                  <span class="src"><a href="./docs/operate/install.html">Install and run</a></span>
+                </td>
+                <td>
+                  A Spring Boot jar on the JVM beside an Elasticsearch install,
+                  or <code>docker compose</code> with a Snowstorm container, an
+                  Elasticsearch container, and the browser.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/getting-started.md" rel="noopener">Getting started</a>, <a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-docker.md" rel="noopener">Using Docker</a></span>
+                </td>
+                <td>
+                  A &ldquo;self-contained application&rdquo;: the
+                  <code>snomedinternational/snowstorm-lite</code> Docker image
+                  over a Lucene index volume, or the jar on Java 17.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a>, <a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/docs/running-with-java.md" rel="noopener">running with Java</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">Getting the content in</th>
+                <td>
+                  You bring the release you are licensed for and build it into
+                  an index offline, once per release. There is no syndication
+                  client.
+                  <span class="src"><a href="./docs/operate/loading-snomed.html">Loading code systems</a></span>
+                </td>
+                <td>
+                  RF2 import through the native SNOMED CT API, which is also the
+                  only way to create a SNOMED CT code system. Other systems load
+                  through the HAPI FHIR CLI or a FHIR package upload.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-the-fhir-api.md" rel="noopener">Using the FHIR API</a></span>
+                </td>
+                <td>
+                  Upload an RF2 archive, or let the server download a release
+                  from SNOMED International's MLDS syndication service by
+                  itself. The import takes about five minutes.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
+              <tr>
+                <th scope="row">Licence of the software</th>
+                <td>
+                  Business Source License 1.1: free outside production and for
+                  non-commercial production use, a commercial licence for other
+                  production use, Apache 2.0 four years after each version.
+                  <span class="src"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/LICENSE" rel="noopener">LICENSE</a></span>
+                </td>
+                <td>
+                  Apache 2.0.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/LICENSE.md" rel="noopener">LICENSE.md</a></span>
+                </td>
+                <td>
+                  Apache 2.0.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/LICENSE.md" rel="noopener">LICENSE.md</a></span>
+                </td>
+              </tr>
+
+            </tbody>
+          </table></div>
+          <p class="conditions">
+            The memory row is what each project states for its own deployment
+            on its own hardware, so the three figures were measured in
+            different places under different loads. Read it as a sizing
+            starting point. None of the three code systems' content is included
+            with any of these servers: SNOMED CT stays licensed by SNOMED
+            International, and you bring the release you hold a licence for.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="ahead" class="surface">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Where the Snowstorm servers are ahead</span>
+          <h2>The honest side of the table</h2>
+        </div>
+        <div class="prose">
+          <ul>
+            <li>
+              <strong>Snowstorm authors content; FerroTERM only serves it.</strong>
+              Snowstorm maintains the International edition, nine national
+              editions, and community extensions, and it answers for the SNOMED
+              International Browser. FerroTERM is read-only over an index built
+              from a finished release, and it checks its own answers against
+              Snowstorm.
+            </li>
+            <li>
+              <strong>Both Snowstorm servers let a client write resources.</strong>
+              You can create, replace, and delete <code>ValueSet</code>
+              resources in Snowstorm, and <code>ValueSet</code> and
+              <code>ConceptMap</code> resources in Snowstorm Lite. FerroTERM
+              reads what its artifacts carry and takes a resource inline in the
+              request.
+            </li>
+            <li>
+              <strong>Snowstorm Lite fetches its own content.</strong> Give it
+              your MLDS credentials and it downloads the edition you are
+              licensed for. FerroTERM has no syndication client, so you download
+              the release and run the build tool.
+            </li>
+            <li>
+              <strong>Both Snowstorm servers are Apache 2.0.</strong> That is a
+              more permissive licence than FerroTERM's Business Source License
+              1.1, which asks for a commercial licence for commercial
+              production use until each version converts to Apache 2.0 four
+              years after its release.
+            </li>
+            <li>
+              <strong>Both have years of production behind them.</strong>
+              Snowstorm carries the SNOMED International Browser and the
+              Authoring Platform. FerroTERM is at release 0.0.11 and states its
+              open items on its checklist.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="sources">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Sources</span>
+          <h2>Every document behind a cell</h2>
+          <p>
+            Read on 5 September 2026 from the <code>master</code> branch of
+            each repository.
+          </p>
+        </div>
+        <div class="prose">
+          <h3>Snowstorm, release 11.0.0 of 2 September 2026</h3>
+          <ul>
+            <li><a href="https://github.com/IHTSDO/snowstorm" rel="noopener">The repository</a> and its <a href="https://github.com/IHTSDO/snowstorm/blob/master/README.md" rel="noopener">README</a>: the APIs, the code systems, ECL v2.0, multi-lingual search, extensions, history, authoring, the licence.</li>
+            <li><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/getting-started.md" rel="noopener">Getting started</a>: Java 17, Elasticsearch 8, and the memory requirements.</li>
+            <li><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-docker.md" rel="noopener">Using Docker</a>: the three containers and their 8Gb.</li>
+            <li><a href="https://github.com/IHTSDO/snowstorm/blob/master/docs/using-the-fhir-api.md" rel="noopener">Using the FHIR API</a>: FHIR R4, the operations, the code systems and how each loads, JSON and XML.</li>
+            <li><a href="https://github.com/IHTSDO/snowstorm/blob/master/LICENSE.md" rel="noopener">LICENSE.md</a>: Apache 2.0.</li>
+          </ul>
+
+          <h3>Snowstorm Lite, release 2.5.2 of 20 July 2026</h3>
+          <ul>
+            <li><a href="https://github.com/IHTSDO/snowstorm-lite" rel="noopener">The repository</a> and its <a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a>: the use cases, the features, the limitations, ECL Core, the technical details, the quick start.</li>
+            <li><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/CHANGELOG.md" rel="noopener">Changelog</a>: <code>CodeSystem $subsumes</code> in 2.3.0, <code>CodeSystem $validate-code</code> and the syndication dashboard in 2.5.0.</li>
+            <li><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/docs/running-with-java.md" rel="noopener">Running with Java</a>: the jar, the index build inside 1 GB, the syndication and load options.</li>
+            <li><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/LICENSE.md" rel="noopener">LICENSE.md</a>: Apache 2.0.</li>
+          </ul>
+
+          <h3>SNOMED International</h3>
+          <ul>
+            <li><a href="https://www.implementation.snomed.org/terminology-services" rel="noopener">Terminology services</a>: how SNOMED International describes both servers, including ECL v2.1 for Snowstorm and &ldquo;no need for Elasticsearch&rdquo; for Snowstorm Lite.</li>
+          </ul>
+
+          <h3>FerroTERM, release 0.0.11</h3>
+          <ul>
+            <li><a href="https://github.com/rubentalstra/FerroTERM#readme" rel="noopener">README</a> and the <a href="./docs/">book</a>: the API, the code systems, the languages, the deployment.</li>
+            <li><a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/implementation.md" rel="noopener">implementation.md</a>: what is built and what is open, including multi-edition resolution.</li>
+            <li><a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/VERSIONS.md" rel="noopener">VERSIONS.md</a>: the pinned FHIR packages and the ECL 2.2 grammar tag.</li>
+            <li><a href="./benchmarks.html">Benchmarks</a>: the committed records the resident-memory figure comes from.</li>
+          </ul>
+
+          <p>
+            The book's <a href="./docs/evaluate/comparison.html">How it compares</a>
+            page sets FerroTERM beside Ontoserver and Hermes as well. If a cell
+            here is out of date, or a claim reads unfairly,
+            <a href="https://github.com/rubentalstra/FerroTERM/issues" rel="noopener">open an issue</a>
+            and it gets corrected against the source.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="./">
+            <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
+            <span>FerroTERM</span>
+          </a>
+          <p>
+            A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD, RxNorm, and every FHIR code system.
+            The software is licensed under the
+            <a href="https://github.com/rubentalstra/FerroTERM/blob/main/LICENSE" rel="noopener">Business Source License 1.1</a>.
+            SNOMED CT is a registered trademark of SNOMED International; each
+            code system's content is licensed separately by its owner.
+          </p>
+        </div>
+        <div class="footer-links">
+          <div>
+            <h4>Read</h4>
+            <ul>
+              <li><a href="./docs/">Documentation</a></li>
+              <li><a href="./docs/evaluate/code-systems.html">Code systems</a></li>
+              <li><a href="./benchmarks.html">Benchmarks</a></li>
+              <li><a href="./comparison.html">Comparison</a></li>
+              <li><a href="./docs/integrate/fhir-api.html">FHIR terminology API</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Project</h4>
+            <ul>
+              <li><a href="https://github.com/rubentalstra/FerroTERM" rel="noopener">GitHub</a></li>
+              <li><a href="https://github.com/rubentalstra/FerroTERM/releases" rel="noopener">Releases</a></li>
+              <li><a href="https://github.com/rubentalstra/FerroTERM/issues" rel="noopener">Issues</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="footer-note">
+        <span>FerroTERM, a FerroEHR sibling project. ferroterm.eu</span>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
