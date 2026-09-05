@@ -666,6 +666,7 @@ dependencies = [
  "icd11",
  "labcodeset",
  "loinc",
+ "rayon",
  "rf2",
  "rxnorm-rrf",
  "serde",
