@@ -252,6 +252,7 @@ fn the_command_line_builds_claml_and_icd10cm_from_zips() {
 fn no_input() -> ferroterm_build::Cli {
     ferroterm_build::Cli {
         rf2: None,
+        rf2_refset: Vec::new(),
         loinc: None,
         loinc_version: None,
         claml: None,

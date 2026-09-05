@@ -23,8 +23,8 @@ use rf2::component::{
 };
 use rf2::constants;
 use rf2::edition::{Edition, EditionError};
-use rf2::file::{ContentType, FieldKind, Release, ReleaseError, ReleaseType};
-use rf2::id::{ConceptId, DescriptionId, RefsetId};
+use rf2::file::{ContentType, FieldKind, Release, ReleaseError, ReleaseFile, ReleaseType};
+use rf2::id::{ConceptId, DescriptionId, ModuleId, RefsetId};
 use rf2::reader::Rf2Error;
 use rf2::refset::{FieldValue, LanguageMember, Members, ModuleDependencyMember, ViewError};
 use rf2::time::EffectiveTime;
@@ -95,6 +95,26 @@ pub enum Error {
     /// The module dependency reference set does not identify one edition.
     #[error("cannot identify the edition")]
     Edition(#[from] EditionError),
+    /// A layered package names a module the edition does not carry.
+    #[error("{package}: module {module} is not in the edition")]
+    UnknownModule {
+        /// The package.
+        package: PathBuf,
+        /// The module it depends on.
+        module: String,
+    },
+    /// A layered package needs a module version the edition predates.
+    #[error("{package}: module {module} is needed at {required}, the edition is {edition}")]
+    UnmetDependency {
+        /// The package.
+        package: PathBuf,
+        /// The module it depends on.
+        module: String,
+        /// The `targetEffectiveTime` the dependency asks for.
+        required: String,
+        /// The edition's release date.
+        edition: String,
+    },
     /// A relationship names a concept the release does not define.
     #[error("relationship {relationship} names unknown concept {concept}")]
     UnknownConcept {
@@ -197,29 +217,33 @@ fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Error + '_ {
     }
 }
 
-/// Builds the artifacts for the Snapshot under `rf2` into `out`.
+/// Builds the artifacts for the Snapshot under `rf2`, with every
+/// refset-only package under `refsets` layered onto it, into `out`.
 ///
 /// # Errors
 ///
-/// Returns [`Error`] when the release does not read, the edition cannot be
-/// identified, the hierarchy has a cycle, or an artifact cannot be written.
-pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
+/// Returns [`Error`] when a release does not read, the edition cannot be
+/// identified, a layered package's module dependency is unmet, the hierarchy
+/// has a cycle, or an artifact cannot be written.
+pub fn build(rf2: &Path, refsets: &[PathBuf], out: &Path) -> Result<Report, Error> {
     let release = Release::open(rf2, ReleaseType::Snapshot)?;
     let edition = identify_edition(&release)?;
+    let release_date = release.date();
+    let (releases, layered) = open_layers(release, &edition, refsets)?;
     std::fs::create_dir_all(out).map_err(io_error(out))?;
 
-    let concepts = read_concepts(&release)?;
+    let concepts = read_concepts(&releases)?;
     let ordinals: BTreeMap<ConceptId, Ordinal> = concepts
         .iter()
         .enumerate()
         .map(|(i, concept)| Ok((concept.id, Ordinal::new(ordinal_of(i, "concepts")?))))
         .collect::<Result<_, Error>>()?;
-    let relationships = read_relationships(&release, &ordinals)?;
-    let designations = read_designations(&release, &ordinals)?;
-    let (refsets, acceptabilities) = read_acceptabilities(&release, &designations)?;
-    let memberships = read_memberships(&release, &ordinals)?;
-    let member_tables = read_member_tables(&release, &ordinals)?;
-    let identifiers = read_identifiers(&release, &ordinals)?;
+    let relationships = read_relationships(&releases, &ordinals)?;
+    let designations = read_designations(&releases, &ordinals)?;
+    let (refsets, acceptabilities) = read_acceptabilities(&releases, &designations)?;
+    let memberships = read_memberships(&releases, &ordinals)?;
+    let member_tables = read_member_tables(&releases, &ordinals)?;
+    let identifiers = read_identifiers(&releases, &ordinals)?;
     let attribute_graph = relationships.graph(ordinal_of(concepts.len(), "concepts")?)?;
 
     let store_path = out.join(STORE_FILE);
@@ -255,12 +279,12 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
     builder.finish(&PreferredRule { preferred: 0 })?;
 
     let manifest_path = out.join(MANIFEST_FILE);
-    let manifest = json!({
+    let mut manifest = json!({
         "manifest": MANIFEST_VERSION,
         "system": "http://snomed.info/sct",
         "edition": edition.edition_uri(),
         "version": version_uri,
-        "releaseDate": release.date().to_string(),
+        "releaseDate": release_date.to_string(),
         "store": STORE_FILE,
         "storeLayout": tables::LAYOUT_VERSION,
         "hierarchy": HIERARCHY_FILE,
@@ -280,6 +304,9 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
         "words": words,
         "languages": languages,
     });
+    if let (Some(object), false) = (manifest.as_object_mut(), layered.is_empty()) {
+        object.insert(String::from("layered"), layers_manifest(&layered));
+    }
     let text = serde_json::to_string_pretty(&manifest).map_err(|source| Error::Io {
         path: manifest_path.clone(),
         source: io::Error::other(source),
@@ -306,31 +333,150 @@ pub fn build(rf2: &Path, out: &Path) -> Result<Report, Error> {
 }
 
 fn identify_edition(release: &Release) -> Result<Edition, Error> {
+    let members = module_dependencies(release)?;
+    Ok(Edition::identify(&members, release.date())?)
+}
+
+/// The module dependency reference set members of one release.
+///
+/// The file is found by its summary and the rows by their `refsetId`: a
+/// derivative package prefixes the summary with its own name
+/// (`der2_ssRefset_ICNPModuleDependencySnapshot`), so an exact summary match
+/// reads no package's dependencies.
+fn module_dependencies(release: &Release) -> Result<Vec<ModuleDependencyMember>, Error> {
     let file = release
         .refsets()
-        .find(|f| f.name.summary == "ModuleDependency")
+        .find(|f| f.name.summary.contains("ModuleDependency"))
         .ok_or(Error::MissingFile("module dependency reference set"))?;
     let ContentType::Refset(kinds) = &file.name.content_type else {
         return Err(Error::MissingFile("module dependency reference set"));
     };
     let mut members = Vec::new();
     for member in Members::open(&file.path, kinds)? {
-        members.push(ModuleDependencyMember::try_from(member?)?);
+        let member = member?;
+        if member.refset_id != constants::MODULE_DEPENDENCY_REFSET {
+            continue;
+        }
+        members.push(ModuleDependencyMember::try_from(member)?);
     }
-    Ok(Edition::identify(&members, release.date())?)
+    Ok(members)
 }
 
-/// Every concept row, sorted by identifier so ordinals are stable.
-fn read_concepts(release: &Release) -> Result<Vec<Concept>, Error> {
-    let file = release
-        .of_type(&ContentType::Concept)
-        .next()
-        .ok_or(Error::MissingFile("concept"))?;
+/// Opens every layered package, checks it against `edition`, and returns the
+/// releases to read (the edition first) with what each package layers.
+fn open_layers(
+    edition_release: Release,
+    edition: &Edition,
+    refsets: &[PathBuf],
+) -> Result<(Vec<Release>, Vec<Layered>), Error> {
+    let release_date = edition_release.date();
+    let mut releases = Vec::with_capacity(refsets.len().saturating_add(1));
+    releases.push(edition_release);
+    let mut layered = Vec::with_capacity(refsets.len());
+    for path in refsets {
+        let package = Release::open(path, ReleaseType::Snapshot)?;
+        layered.push(layer(path, &package, edition, release_date)?);
+        releases.push(package);
+    }
+    layered.sort();
+    Ok((releases, layered))
+}
+
+/// The manifest's `layered` array: one object per package, module then version.
+fn layers_manifest(layered: &[Layered]) -> serde_json::Value {
+    let packages: Vec<serde_json::Value> = layered
+        .iter()
+        .map(|package| {
+            json!({
+                "module": package.module.to_string(),
+                "version": package.version.compact(),
+            })
+        })
+        .collect();
+    json!(packages)
+}
+
+/// The module and version one layered package contributes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct Layered {
+    module: ModuleId,
+    version: EffectiveTime,
+}
+
+/// Checks a layered package against `edition` and reports what it layers.
+///
+/// Every active module dependency row states the version of a module the
+/// package needs. SNOMED CT assembles an edition from its modules at
+/// compatible versions
+/// (<https://docs.snomed.org/snomed-ct-practical-guides/snomed-ct-extension-guide/4-logical-design/4.4-editions>),
+/// so a package whose dependency the edition does not meet is refused rather
+/// than layered into a partial edition. The specifications give no
+/// consumer-side rule for an edition NEWER than a dependency asks for;
+/// counting it as met is our own design.
+///
+/// # Errors
+///
+/// Returns [`Error::UnknownModule`] when a row names a module outside the
+/// edition, and [`Error::UnmetDependency`] when the edition predates the
+/// version a row asks for.
+fn layer(
+    path: &Path,
+    package: &Release,
+    edition: &Edition,
+    release_date: EffectiveTime,
+) -> Result<Layered, Error> {
+    let members = module_dependencies(package)?;
+    for member in members.iter().filter(|m| m.member.active) {
+        // The error names the offending target; the id error adds nothing.
+        let Ok(module) =
+            ConceptId::try_from(member.member.referenced_component_id).map(ModuleId::from)
+        else {
+            return Err(Error::UnknownModule {
+                package: path.to_path_buf(),
+                module: member.member.referenced_component_id.to_string(),
+            });
+        };
+        if !edition.modules.contains_key(&module) {
+            return Err(Error::UnknownModule {
+                package: path.to_path_buf(),
+                module: module.to_string(),
+            });
+        }
+        // NOTE: an edition at or after the required version meets the
+        // dependency; the ICNP package asks for 20260101 while the
+        // International Edition in use is 20260901.
+        if release_date < member.target_effective_time {
+            return Err(Error::UnmetDependency {
+                package: path.to_path_buf(),
+                module: module.to_string(),
+                required: member.target_effective_time.compact(),
+                edition: release_date.compact(),
+            });
+        }
+    }
+    let identified = Edition::identify(&members, package.date())?;
+    Ok(Layered {
+        module: identified.module,
+        version: identified.effective_time,
+    })
+}
+
+/// Every concept row of every release, sorted by identifier so ordinals are
+/// stable; a concept a layered package restates keeps the edition's row,
+/// which the stable sort leaves first.
+fn read_concepts(releases: &[Release]) -> Result<Vec<Concept>, Error> {
     let mut concepts = Vec::new();
-    for concept in Rows::<_, Concept>::open(&file.path)? {
-        concepts.push(concept?);
+    for release in releases {
+        let file = release
+            .of_type(&ContentType::Concept)
+            .next()
+            .ok_or(Error::MissingFile("concept"))?;
+        for concept in Rows::<_, Concept>::open(&file.path)? {
+            concepts.push(concept?);
+        }
     }
     concepts.sort_by_key(|concept| concept.id);
+    concepts.dedup_by_key(|concept| concept.id);
     Ok(concepts)
 }
 
@@ -367,7 +513,7 @@ impl Relationships {
 }
 
 fn read_relationships(
-    release: &Release,
+    releases: &[Release],
     ordinals: &BTreeMap<ConceptId, Ordinal>,
 ) -> Result<Relationships, Error> {
     let mut is_a = Vec::new();
@@ -383,61 +529,63 @@ fn read_relationships(
                 concept,
             })
     };
-    for file in release.of_type(&ContentType::Relationship) {
-        for relationship in Rows::<_, Relationship>::open(&file.path)? {
-            let relationship = relationship?;
-            if !relationship.base.active {
-                continue;
+    for release in releases {
+        for file in release.of_type(&ContentType::Relationship) {
+            for relationship in Rows::<_, Relationship>::open(&file.path)? {
+                let relationship = relationship?;
+                if !relationship.base.active {
+                    continue;
+                }
+                let id = relationship.id.to_string();
+                let source = lookup(&id, relationship.source_id)?;
+                let destination = lookup(&id, relationship.destination_id)?;
+                if relationship.type_id == constants::IS_A {
+                    is_a.push((source, destination));
+                } else {
+                    attributes
+                        .entry((source, relationship.type_id))
+                        .or_default()
+                        .push(record::PropertyValue::Concept(destination));
+                    edges.push((
+                        source,
+                        relationship.relationship_group,
+                        relationship.type_id,
+                        attributes::Value::Concept(destination),
+                    ));
+                }
             }
-            let id = relationship.id.to_string();
-            let source = lookup(&id, relationship.source_id)?;
-            let destination = lookup(&id, relationship.destination_id)?;
-            if relationship.type_id == constants::IS_A {
-                is_a.push((source, destination));
-            } else {
+        }
+        for file in release.of_type(&ContentType::RelationshipConcreteValues) {
+            for relationship in Rows::<_, ConcreteRelationship>::open(&file.path)? {
+                let relationship = relationship?;
+                if !relationship.base.active {
+                    continue;
+                }
+                let id = relationship.id.to_string();
+                let source = lookup(&id, relationship.source_id)?;
+                // NOTE: RF2 spells a numeric concrete value with a `#` prefix and a
+                // string one in quotes; the reader strips both and keeps the kind.
+                let (value, edge) = match relationship.value {
+                    ConcreteValue::Number(number) => (
+                        record::PropertyValue::Decimal(number.clone()),
+                        attributes::Value::Number(number),
+                    ),
+                    ConcreteValue::String(text) => (
+                        record::PropertyValue::String(text.clone()),
+                        attributes::Value::String(text),
+                    ),
+                };
                 attributes
                     .entry((source, relationship.type_id))
                     .or_default()
-                    .push(record::PropertyValue::Concept(destination));
+                    .push(value);
                 edges.push((
                     source,
                     relationship.relationship_group,
                     relationship.type_id,
-                    attributes::Value::Concept(destination),
+                    edge,
                 ));
             }
-        }
-    }
-    for file in release.of_type(&ContentType::RelationshipConcreteValues) {
-        for relationship in Rows::<_, ConcreteRelationship>::open(&file.path)? {
-            let relationship = relationship?;
-            if !relationship.base.active {
-                continue;
-            }
-            let id = relationship.id.to_string();
-            let source = lookup(&id, relationship.source_id)?;
-            // NOTE: RF2 spells a numeric concrete value with a `#` prefix and a
-            // string one in quotes; the reader strips both and keeps the kind.
-            let (value, edge) = match relationship.value {
-                ConcreteValue::Number(number) => (
-                    record::PropertyValue::Decimal(number.clone()),
-                    attributes::Value::Number(number),
-                ),
-                ConcreteValue::String(text) => (
-                    record::PropertyValue::String(text.clone()),
-                    attributes::Value::String(text),
-                ),
-            };
-            attributes
-                .entry((source, relationship.type_id))
-                .or_default()
-                .push(value);
-            edges.push((
-                source,
-                relationship.relationship_group,
-                relationship.type_id,
-                edge,
-            ));
         }
     }
     is_a.sort_unstable();
@@ -462,16 +610,19 @@ struct Placed {
     record: record::Designation,
 }
 
-/// Every description and text definition, numbered per concept in identifier order.
+/// Every description and text definition of every release, numbered per
+/// concept in identifier order.
 fn read_designations(
-    release: &Release,
+    releases: &[Release],
     ordinals: &BTreeMap<ConceptId, Ordinal>,
 ) -> Result<Vec<Placed>, Error> {
     let mut rows: Vec<Description> = Vec::new();
-    for content in [ContentType::Description, ContentType::TextDefinition] {
-        for file in release.of_type(&content) {
-            for description in Rows::<_, Description>::open(&file.path)? {
-                rows.push(description?);
+    for release in releases {
+        for content in [ContentType::Description, ContentType::TextDefinition] {
+            for file in release.of_type(&content) {
+                for description in Rows::<_, Description>::open(&file.path)? {
+                    rows.push(description?);
+                }
             }
         }
     }
@@ -509,12 +660,21 @@ fn read_designations(
     Ok(placed)
 }
 
+/// Whether a reference set file holds language reference set members.
+///
+/// A derivative package names its files after itself
+/// (`der2_cRefset_ICNPLanguageSnapshot-en`), so the summary carries the
+/// reference set type rather than being it.
+fn is_language(file: &ReleaseFile) -> bool {
+    file.name.summary.contains("Language")
+}
+
 type Acceptabilities = BTreeMap<(Ordinal, u32), Vec<(u32, u32)>>;
 
 /// The language reference sets (by ordinal) and, per designation, its
 /// (refset ordinal, acceptability ordinal) memberships.
 fn read_acceptabilities(
-    release: &Release,
+    releases: &[Release],
     designations: &[Placed],
 ) -> Result<(Vec<RefsetId>, Acceptabilities), Error> {
     let by_id: BTreeMap<DescriptionId, (Ordinal, u32)> = designations
@@ -522,30 +682,33 @@ fn read_acceptabilities(
         .map(|d| (d.id, (d.ordinal, d.index)))
         .collect();
     let mut members: Vec<(RefsetId, DescriptionId, u32)> = Vec::new();
-    for file in release.refsets().filter(|f| f.name.summary == "Language") {
-        let ContentType::Refset(kinds) = &file.name.content_type else {
-            continue;
-        };
-        for member in Members::open(&file.path, kinds)? {
-            let member = LanguageMember::try_from(member?)?;
-            if !member.member.active {
+    for release in releases {
+        for file in release.refsets().filter(|f| is_language(f)) {
+            let ContentType::Refset(kinds) = &file.name.content_type else {
                 continue;
-            }
-            // The error names the member and component; the id error adds nothing.
-            let Ok(description) = DescriptionId::try_from(member.member.referenced_component_id)
-            else {
-                return Err(Error::NotADescription {
-                    member: member.member.id.to_string(),
-                    component: member.member.referenced_component_id.to_string(),
-                });
             };
-            let acceptability = ACCEPTABILITIES
-                .iter()
-                .position(|a| *a == member.acceptability_id)
-                .map(|p| ordinal_of(p, "acceptabilities"))
-                .transpose()?
-                .unwrap_or(1);
-            members.push((member.member.refset_id, description, acceptability));
+            for member in Members::open(&file.path, kinds)? {
+                let member = LanguageMember::try_from(member?)?;
+                if !member.member.active {
+                    continue;
+                }
+                // The error names the member and component; the id error adds nothing.
+                let Ok(description) =
+                    DescriptionId::try_from(member.member.referenced_component_id)
+                else {
+                    return Err(Error::NotADescription {
+                        member: member.member.id.to_string(),
+                        component: member.member.referenced_component_id.to_string(),
+                    });
+                };
+                let acceptability = ACCEPTABILITIES
+                    .iter()
+                    .position(|a| *a == member.acceptability_id)
+                    .map(|p| ordinal_of(p, "acceptabilities"))
+                    .transpose()?
+                    .unwrap_or(1);
+                members.push((member.member.refset_id, description, acceptability));
+            }
         }
     }
     members.sort_unstable();
@@ -574,26 +737,28 @@ fn read_acceptabilities(
 /// sets, whatever their content; the language reference sets reference
 /// descriptions and are read as acceptabilities instead.
 fn read_memberships(
-    release: &Release,
+    releases: &[Release],
     ordinals: &BTreeMap<ConceptId, Ordinal>,
 ) -> Result<Memberships, Error> {
     let mut memberships = Memberships::new();
-    for file in release.refsets().filter(|f| f.name.summary != "Language") {
-        let ContentType::Refset(kinds) = &file.name.content_type else {
-            continue;
-        };
-        for member in Members::open(&file.path, kinds)? {
-            let member = member?;
-            if !member.active {
-                continue;
-            }
-            // NOTE: a member referencing a description or a relationship is not a
-            // concept membership; that is "absent" here, not a defect of the file.
-            let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
+    for release in releases {
+        for file in release.refsets().filter(|f| !is_language(f)) {
+            let ContentType::Refset(kinds) = &file.name.content_type else {
                 continue;
             };
-            if let Some(ordinal) = ordinals.get(&concept) {
-                memberships.insert(member.refset_id.concept().value(), *ordinal);
+            for member in Members::open(&file.path, kinds)? {
+                let member = member?;
+                if !member.active {
+                    continue;
+                }
+                // NOTE: a member referencing a description or a relationship is not a
+                // concept membership; that is "absent" here, not a defect of the file.
+                let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
+                    continue;
+                };
+                if let Some(ordinal) = ordinals.get(&concept) {
+                    memberships.insert(member.refset_id.concept().value(), *ordinal);
+                }
             }
         }
     }
@@ -612,14 +777,15 @@ type PendingTable = (Vec<(String, refsets::FieldKind)>, Vec<MemberRow>);
 /// fields; the language reference sets live in the store as acceptability and
 /// the OWL axiom reference sets carry text no ECL filter reads.
 fn read_member_tables(
-    release: &Release,
+    releases: &[Release],
     ordinals: &BTreeMap<ConceptId, Ordinal>,
 ) -> Result<RefsetMembers, Error> {
     let mut tables: BTreeMap<u64, PendingTable> = BTreeMap::new();
-    for file in release
-        .refsets()
-        .filter(|f| f.name.summary != "Language" && !f.name.summary.starts_with("OWL"))
-    {
+    for file in releases.iter().flat_map(|release| {
+        release
+            .refsets()
+            .filter(|f| !is_language(f) && !f.name.summary.contains("OWL"))
+    }) {
         let ContentType::Refset(kinds) = &file.name.content_type else {
             continue;
         };
@@ -683,27 +849,29 @@ fn read_member_tables(
     Ok(members)
 }
 
-/// The active alternate identifiers of the release's concepts.
+/// The active alternate identifiers of every release's concepts.
 fn read_identifiers(
-    release: &Release,
+    releases: &[Release],
     ordinals: &BTreeMap<ConceptId, Ordinal>,
 ) -> Result<Identifiers, Error> {
     let mut entries = Vec::new();
-    for file in release.of_type(&ContentType::Identifier) {
-        for identifier in Rows::<_, AlternateIdentifier>::open(&file.path)? {
-            let identifier = identifier?;
-            if !identifier.base.active {
-                continue;
-            }
-            let Ok(concept) = ConceptId::try_from(identifier.referenced_component_id) else {
-                continue;
-            };
-            if let Some(&ordinal) = ordinals.get(&concept) {
-                entries.push((
-                    identifier.identifier_scheme_id.value(),
-                    identifier.alternate_identifier,
-                    ordinal,
-                ));
+    for release in releases {
+        for file in release.of_type(&ContentType::Identifier) {
+            for identifier in Rows::<_, AlternateIdentifier>::open(&file.path)? {
+                let identifier = identifier?;
+                if !identifier.base.active {
+                    continue;
+                }
+                let Ok(concept) = ConceptId::try_from(identifier.referenced_component_id) else {
+                    continue;
+                };
+                if let Some(&ordinal) = ordinals.get(&concept) {
+                    entries.push((
+                        identifier.identifier_scheme_id.value(),
+                        identifier.alternate_identifier,
+                        ordinal,
+                    ));
+                }
             }
         }
     }

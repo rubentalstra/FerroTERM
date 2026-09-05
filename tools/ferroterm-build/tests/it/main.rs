@@ -14,6 +14,7 @@ mod fixture;
 mod gstandaard;
 mod icd11;
 mod labcodeset;
+mod layered;
 mod local_edition;
 mod loinc;
 mod pipeline;

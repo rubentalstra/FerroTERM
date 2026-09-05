@@ -61,6 +61,7 @@ fn a_release_zip_builds_the_same_bytes_as_the_directory() {
     let from_zip = tempfile::tempdir().expect("tempdir");
     ferroterm_build::run(&Cli {
         rf2: Some(release.path().to_path_buf()),
+        rf2_refset: Vec::new(),
         loinc: None,
         loinc_version: None,
         claml: None,
@@ -86,6 +87,7 @@ fn a_release_zip_builds_the_same_bytes_as_the_directory() {
     .expect("builds from the directory");
     ferroterm_build::run(&Cli {
         rf2: Some(zip_path),
+        rf2_refset: Vec::new(),
         loinc: None,
         loinc_version: None,
         claml: None,
@@ -149,6 +151,7 @@ fn only_the_snapshot_is_unpacked_and_a_zip_without_one_is_refused() {
     assert!(matches!(
         ferroterm_build::run(&Cli {
             rf2: Some(empty),
+            rf2_refset: Vec::new(),
             loinc: None,
             loinc_version: None,
             claml: None,

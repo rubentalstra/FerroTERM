@@ -1,4 +1,5 @@
-//! A synthetic SNOMED CT edition as an artifact directory.
+//! A synthetic SNOMED CT edition as an artifact directory, and a refset-only
+//! RF2 package to layer onto one.
 //!
 //! Written with the store, graph, and text writers the way `ferroterm-build`
 //! lays it out: invented concepts in an invented namespace with valid check
@@ -731,5 +732,250 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     let text = serde_json::to_string_pretty(&manifest)
         .map_err(|e| FixtureError::Io(std::io::Error::other(e)))?;
     std::fs::write(dir.join("manifest.json"), text)?;
+    Ok(())
+}
+/// The item number of the refset-only package's module concept.
+pub const PACKAGE_MODULE: u32 = 200;
+/// The item number of the refset-only package's reference set concept.
+pub const PACKAGE_REFSET: u32 = 201;
+/// The release date the fixture writes, as an RF2 `effectiveTime`.
+pub const DATE: &str = "20260101";
+
+/// Case insensitive (`900000000000448009`), the case significance every
+/// fixture description carries.
+const CASE_INSENSITIVE: &str = "900000000000448009";
+
+/// A description identifier in the invented namespace.
+fn description_id(item: u32) -> String {
+    with_check_digit(&format!("{item}{NAMESPACE}11"))
+}
+
+/// A reference set member identifier (RF2 spells it as a UUID).
+fn member_id(item: u32) -> String {
+    format!("00000000-0000-4000-8000-{item:012}")
+}
+
+/// What a refset-only package depends on and holds.
+#[derive(Debug, Clone, Copy)]
+pub struct Package<'a> {
+    /// The edition module the package's module dependency row names.
+    pub depends_on: &'a str,
+    /// The version that row asks of that module (`YYYYMMDD`).
+    pub target: &'a str,
+    /// The edition concepts the package's simple reference set holds.
+    pub members: &'a [String],
+}
+
+/// Writes one RF2 file: a tab-separated header and rows, CRLF-terminated.
+fn write_rf2(
+    dir: &Path,
+    relative: &str,
+    header: &[&str],
+    rows: &[Vec<String>],
+) -> std::io::Result<()> {
+    let path = dir.join(relative);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let mut text = header.join("\t");
+    text.push_str("\r\n");
+    for row in rows {
+        text.push_str(&row.join("\t"));
+        text.push_str("\r\n");
+    }
+    std::fs::write(&path, text)
+}
+
+/// Writes a refset-only RF2 Snapshot package under `dir`, the shape SNOMED
+/// International publishes for a package dependent on an edition.
+///
+/// The package carries its own module and one simple reference set, both as
+/// concepts with a fully specified name and a synonym, the language reference
+/// set rows those descriptions need, the reference set's members over the
+/// edition's concepts, and the module dependency row stating what it needs of
+/// the edition. Its file names carry the package's own name the way a
+/// derivative package does (`der2_Refset_ICNPSimpleSnapshot`), so no reader
+/// may match a file summary exactly.
+///
+/// # Errors
+///
+/// Returns [`FixtureError`] when a file cannot be written; the content is
+/// fixed, so a failure means the directory is at fault.
+pub fn write_refset_package(dir: &Path, package: &Package<'_>) -> Result<(), FixtureError> {
+    write_package_terminology(dir)?;
+    write_package_refsets(dir, package)?;
+    Ok(())
+}
+
+/// The package's two concepts and their descriptions.
+fn write_package_terminology(dir: &Path) -> Result<(), FixtureError> {
+    let module = sctid(PACKAGE_MODULE);
+    let refset = sctid(PACKAGE_REFSET);
+    let s = |v: &[&str]| v.iter().map(|x| (*x).to_owned()).collect::<Vec<String>>();
+    let fsn = constants::FULLY_SPECIFIED_NAME.to_string();
+    let synonym = constants::SYNONYM.to_string();
+    write_rf2(
+        dir,
+        &format!("Snapshot/Terminology/sct2_Concept_ZooSnapshot_XX{NAMESPACE}_{DATE}.txt"),
+        &[
+            "id",
+            "effectiveTime",
+            "active",
+            "moduleId",
+            "definitionStatusId",
+        ],
+        &[
+            s(&[
+                &module,
+                DATE,
+                "1",
+                &module,
+                &constants::PRIMITIVE.to_string(),
+            ]),
+            s(&[
+                &refset,
+                DATE,
+                "1",
+                &module,
+                &constants::PRIMITIVE.to_string(),
+            ]),
+        ],
+    )?;
+    let describe = |item: u32, concept: &str, kind: &str, term: &str| {
+        s(&[
+            &description_id(item),
+            DATE,
+            "1",
+            &module,
+            concept,
+            "en",
+            kind,
+            term,
+            CASE_INSENSITIVE,
+        ])
+    };
+    write_rf2(
+        dir,
+        &format!("Snapshot/Terminology/sct2_Description_ZooSnapshot-en_XX{NAMESPACE}_{DATE}.txt"),
+        &[
+            "id",
+            "effectiveTime",
+            "active",
+            "moduleId",
+            "conceptId",
+            "languageCode",
+            "typeId",
+            "term",
+            "caseSignificanceId",
+        ],
+        // The four descriptions are items 200 to 203: the module's fully
+        // specified name and synonym, then the reference set's.
+        &[
+            describe(
+                200,
+                &module,
+                &fsn,
+                "Zoo nursing module (core metadata concept)",
+            ),
+            describe(201, &module, &synonym, "Zoo nursing module"),
+            describe(
+                202,
+                &refset,
+                &fsn,
+                "Zoo nursing reference set (foundation metadata concept)",
+            ),
+            describe(203, &refset, &synonym, "Zoo nursing reference set"),
+        ],
+    )?;
+    Ok(())
+}
+
+/// The package's language reference set, simple reference set, and module
+/// dependency rows.
+fn write_package_refsets(dir: &Path, package: &Package<'_>) -> Result<(), FixtureError> {
+    let module = sctid(PACKAGE_MODULE);
+    let refset = sctid(PACKAGE_REFSET);
+    let s = |v: &[&str]| v.iter().map(|x| (*x).to_owned()).collect::<Vec<String>>();
+    let accept = |item: u32| {
+        s(&[
+            &member_id(item),
+            DATE,
+            "1",
+            &module,
+            GB_REFSET,
+            &description_id(item),
+            &constants::PREFERRED.to_string(),
+        ])
+    };
+    write_rf2(
+        dir,
+        &format!(
+            "Snapshot/Refset/Language/der2_cRefset_ZooLanguageSnapshot-en_XX{NAMESPACE}_{DATE}.txt"
+        ),
+        &[
+            "id",
+            "effectiveTime",
+            "active",
+            "moduleId",
+            "refsetId",
+            "referencedComponentId",
+            "acceptabilityId",
+        ],
+        &[accept(200), accept(201), accept(202), accept(203)],
+    )?;
+    let members: Vec<Vec<String>> = package
+        .members
+        .iter()
+        .enumerate()
+        .map(|(i, member)| {
+            s(&[
+                &member_id(300 + ord(i)),
+                DATE,
+                "1",
+                &module,
+                &refset,
+                member,
+            ])
+        })
+        .collect();
+    write_rf2(
+        dir,
+        &format!("Snapshot/Refset/Content/der2_Refset_ZooSimpleSnapshot_XX{NAMESPACE}_{DATE}.txt"),
+        &[
+            "id",
+            "effectiveTime",
+            "active",
+            "moduleId",
+            "refsetId",
+            "referencedComponentId",
+        ],
+        &members,
+    )?;
+    write_rf2(
+        dir,
+        &format!(
+            "Snapshot/Refset/Metadata/der2_ssRefset_ZooModuleDependencySnapshot_XX{NAMESPACE}_{DATE}.txt"
+        ),
+        &[
+            "id",
+            "effectiveTime",
+            "active",
+            "moduleId",
+            "refsetId",
+            "referencedComponentId",
+            "sourceEffectiveTime",
+            "targetEffectiveTime",
+        ],
+        &[s(&[
+            &member_id(400),
+            DATE,
+            "1",
+            &module,
+            &constants::MODULE_DEPENDENCY_REFSET.to_string(),
+            package.depends_on,
+            DATE,
+            package.target,
+        ])],
+    )?;
     Ok(())
 }

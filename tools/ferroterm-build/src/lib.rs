@@ -34,6 +34,9 @@ pub struct Cli {
         required_unless_present_any = ["loinc", "claml", "icd10cm", "rxnorm", "icd11", "atc", "dhd", "gstandaard"]
     )]
     pub rf2: Option<PathBuf>,
+    /// A refset-only RF2 package layered onto the edition `--rf2` names (repeatable).
+    #[arg(long, value_name = "DIR_OR_ZIP", action = clap::ArgAction::Append, requires = "rf2")]
+    pub rf2_refset: Vec<PathBuf>,
     /// The LOINC release: the unpacked `Loinc_<version>` directory, or the release zip.
     #[arg(long, value_name = "DIR_OR_ZIP", conflicts_with_all = ["claml", "icd10cm", "rxnorm"])]
     pub loinc: Option<PathBuf>,
@@ -101,15 +104,17 @@ pub struct Cli {
 
 /// Runs the build the CLI describes.
 ///
-/// A zip is unpacked (the Snapshot tree of an RF2 release, the tables of a
-/// LOINC release, the XML of a `ClaML` classification, the two files of an
-/// ICD-10-CM release, the `RRF` tables of an `RxNorm` release) to a temporary directory that is removed when the
-/// build ends; a directory is read in place.
+/// A zip is unpacked (the Snapshot tree of an RF2 release and of every
+/// refset-only package layered onto it, the tables of a LOINC release, the XML
+/// of a `ClaML` classification, the two files of an ICD-10-CM release, the
+/// `RRF` tables of an `RxNorm` release) to a temporary directory that is
+/// removed when the build ends; a directory is read in place.
 ///
 /// # Errors
 ///
 /// Returns [`RunError`] when the zip does not unpack, the release does not
-/// read, the edition cannot be identified, or an artifact cannot be written.
+/// read, the edition cannot be identified, a layered package's module
+/// dependency is unmet, or an artifact cannot be written.
 pub fn run(cli: &Cli) -> Result<Report, RunError> {
     if let Some(labcodeset) = &cli.labcodeset {
         let scratch;
@@ -195,15 +200,33 @@ pub fn run(cli: &Cli) -> Result<Report, RunError> {
             &cli.out,
         )?));
     }
+    Ok(Report::Snomed(run_snomed(cli)?))
+}
+
+/// The SNOMED CT build: the edition `--rf2` names with every `--rf2-refset`
+/// package layered onto it.
+fn run_snomed(cli: &Cli) -> Result<pipeline::Report, RunError> {
     let Some(rf2) = &cli.rf2 else {
         return Err(RunError::NoInput);
     };
-    if rf2.is_file() {
-        let scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
-        let root = archive::unpack_snapshot(rf2, scratch.path())?;
-        return Ok(Report::Snomed(pipeline::build(&root, &cli.out)?));
+    // The scratch directories hold the unpacked releases; they are removed
+    // when this function returns, so they outlive the build.
+    let mut scratch = Vec::new();
+    let mut unpack = |release: &PathBuf| -> Result<PathBuf, RunError> {
+        if !release.is_file() {
+            return Ok(release.clone());
+        }
+        let directory = tempfile::tempdir().map_err(RunError::Scratch)?;
+        let root = archive::unpack_snapshot(release, directory.path())?;
+        scratch.push(directory);
+        Ok(root)
+    };
+    let root = unpack(rf2)?;
+    let mut refsets = Vec::with_capacity(cli.rf2_refset.len());
+    for package in &cli.rf2_refset {
+        refsets.push(unpack(package)?);
     }
-    Ok(Report::Snomed(pipeline::build(rf2, &cli.out)?))
+    Ok(pipeline::build(&root, &refsets, &cli.out)?)
 }
 
 /// The classification builds (`--claml`, `--atc`, `--icd10cm`), when the

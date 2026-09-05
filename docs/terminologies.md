@@ -70,8 +70,10 @@ engine. Each row is a tracker issue under the program issue.
   `.claude/rules/snomed-terminology.md`.
 - **Size.** International edition: about 360,000 concepts, 1.2 million
   descriptions, 1.5 million relationships.
-- **Served.** `ferroterm-build --rf2 <release zip|dir> --out <dir>` builds the
-  Snapshot into the artifact layout, and beside it the reference set
+- **Served.** `ferroterm-build --rf2 <release zip|dir> [--rf2-refset <package>]…
+  --out <dir>` builds the Snapshot into the artifact layout, layering any
+  derivative reference set package onto the edition it depends on, and beside
+  it the reference set
   memberships of every concept-referencing reference set (`refsets.bin`), the
   attribute relationships with their role groups and concrete values
   (`attributes.bin`), the active member rows of those reference sets with
