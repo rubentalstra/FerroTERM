@@ -566,6 +566,24 @@ impl Parser<'_> {
         }
     }
 
+    /// Hands every `element` child of the list element `list` to `handle`; a
+    /// child of any other name is an error.
+    fn items(
+        &mut self,
+        list: &Child<'_>,
+        element: &str,
+        mut handle: impl FnMut(&mut Self, &Child<'_>) -> Result<(), LabcodesetError>,
+    ) -> Result<(), LabcodesetError> {
+        let parent = list.start.clone();
+        self.children(&parent, list.empty, |parser, item| {
+            if item.name() == element {
+                handle(parser, item)
+            } else {
+                Err(parser.unexpected(&parent, item))
+            }
+        })
+    }
+
     fn unexpected(&self, parent: &BytesStart<'_>, child: &Child<'_>) -> LabcodesetError {
         LabcodesetError::Unexpected {
             path: self.path.clone(),
@@ -593,65 +611,30 @@ impl Parser<'_> {
         self.children(start, false, |parser, child| {
             match child.name().as_str() {
                 "desc" => description = parser.text(child)?,
-                "lab_concepts" => {
-                    let parent = child.start.clone();
-                    parser.children(&parent, child.empty, |parser, item| {
-                        if item.name() == "lab_concept" {
-                            concepts.push(parser.lab_concept(item)?);
-                            Ok(())
-                        } else {
-                            Err(parser.unexpected(&parent, item))
-                        }
-                    })?;
-                }
-                "map" => {
-                    let parent = child.start.clone();
-                    parser.children(&parent, child.empty, |parser, item| {
-                        if item.name() == "material" {
-                            materials.push(Material {
-                                code: parser.required(&item.start, "code")?,
-                                display_name: parser.required(&item.start, "displayName")?,
-                                system: parser.attribute(&item.start, "system")?,
-                            });
-                            parser.skip(item)
-                        } else {
-                            Err(parser.unexpected(&parent, item))
-                        }
-                    })?;
-                }
-                "units" => {
-                    let parent = child.start.clone();
-                    parser.children(&parent, child.empty, |parser, item| {
-                        if item.name() == "unit" {
-                            units.push(parser.unit(item)?);
-                            Ok(())
-                        } else {
-                            Err(parser.unexpected(&parent, item))
-                        }
-                    })?;
-                }
-                "ordinals" => {
-                    let parent = child.start.clone();
-                    parser.children(&parent, child.empty, |parser, item| {
-                        if item.name() == "valueSet" {
-                            ordinals.push(parser.ordinal(item)?);
-                            Ok(())
-                        } else {
-                            Err(parser.unexpected(&parent, item))
-                        }
-                    })?;
-                }
-                "nominals" => {
-                    let parent = child.start.clone();
-                    parser.children(&parent, child.empty, |parser, item| {
-                        if item.name() == "refset" {
-                            nominals.push(parser.refset(item)?);
-                            Ok(())
-                        } else {
-                            Err(parser.unexpected(&parent, item))
-                        }
-                    })?;
-                }
+                "lab_concepts" => parser.items(child, "lab_concept", |parser, item| {
+                    concepts.push(parser.lab_concept(item)?);
+                    Ok(())
+                })?,
+                "map" => parser.items(child, "material", |parser, item| {
+                    materials.push(Material {
+                        code: parser.required(&item.start, "code")?,
+                        display_name: parser.required(&item.start, "displayName")?,
+                        system: parser.attribute(&item.start, "system")?,
+                    });
+                    parser.skip(item)
+                })?,
+                "units" => parser.items(child, "unit", |parser, item| {
+                    units.push(parser.unit(item)?);
+                    Ok(())
+                })?,
+                "ordinals" => parser.items(child, "valueSet", |parser, item| {
+                    ordinals.push(parser.ordinal(item)?);
+                    Ok(())
+                })?,
+                "nominals" => parser.items(child, "refset", |parser, item| {
+                    nominals.push(parser.refset(item)?);
+                    Ok(())
+                })?,
                 "panels" => parser.skip(child)?,
                 _ => return Err(parser.unexpected(start, child)),
             }
@@ -691,20 +674,13 @@ impl Parser<'_> {
         self.children(&start, node.empty, |parser, child| {
             match child.name().as_str() {
                 "loincConcept" => loinc = Some(parser.loinc_concept(child)?),
-                "materials" => {
-                    let parent = child.start.clone();
-                    parser.children(&parent, child.empty, |parser, item| {
-                        if item.name() == "material" {
-                            materials.push(MaterialRef {
-                                code: parser.required(&item.start, "code")?,
-                                display_name: parser.required(&item.start, "displayName")?,
-                            });
-                            parser.skip(item)
-                        } else {
-                            Err(parser.unexpected(&parent, item))
-                        }
-                    })?;
-                }
+                "materials" => parser.items(child, "material", |parser, item| {
+                    materials.push(MaterialRef {
+                        code: parser.required(&item.start, "code")?,
+                        display_name: parser.required(&item.start, "displayName")?,
+                    });
+                    parser.skip(item)
+                })?,
                 "outcomes" => {
                     let parent = child.start.clone();
                     parser.children(&parent, child.empty, |parser, item| {
@@ -720,17 +696,10 @@ impl Parser<'_> {
                         Ok(())
                     })?;
                 }
-                "units" => {
-                    let parent = child.start.clone();
-                    parser.children(&parent, child.empty, |parser, item| {
-                        if item.name() == "unit" {
-                            units.push(parser.required(&item.start, "ref")?);
-                            parser.skip(item)
-                        } else {
-                            Err(parser.unexpected(&parent, item))
-                        }
-                    })?;
-                }
+                "units" => parser.items(child, "unit", |parser, item| {
+                    units.push(parser.required(&item.start, "ref")?);
+                    parser.skip(item)
+                })?,
                 "retired-reason" => retired_reason = Some(parser.text(child)?),
                 "retired-replacement" => retired_replacement = Some(parser.text(child)?),
                 "releasenote" => release_note = Some(parser.text(child)?),

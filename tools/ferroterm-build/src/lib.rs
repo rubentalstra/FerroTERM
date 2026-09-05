@@ -117,91 +117,127 @@ pub struct Cli {
 /// read, the edition cannot be identified, a layered package's module
 /// dependency is unmet, or an artifact cannot be written.
 pub fn run(cli: &Cli) -> Result<Report, RunError> {
-    if let Some(labcodeset) = &cli.labcodeset {
-        let scratch;
-        let root = if labcodeset
-            .extension()
-            .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
-        {
-            scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
-            archive::unpack_labcodeset(labcodeset, scratch.path())?
-        } else {
-            labcodeset.clone()
-        };
-        let publication = ::labcodeset::read(&root)?;
-        return Ok(Report::Labcodeset(labcodeset::build(
-            &publication,
-            &cli.out,
-        )?));
+    if let Some(report) = run_labcodeset(cli)? {
+        return Ok(Report::Labcodeset(report));
     }
-    if let (Some(dir), Some(version)) = (&cli.gstandaard, &cli.gstandaard_version) {
-        let ladder = ::gstandaard::read(dir, version)?;
-        let mut reports = Vec::new();
-        for (name, system, classification) in ladder.rungs() {
-            reports.push(classification::build(
-                classification,
-                system,
-                Some(version),
-                &cli.out.join(name),
-            )?);
-        }
+    if let Some(reports) = run_gstandaard(cli)? {
         return Ok(Report::Classifications(reports));
     }
     if let Some(report) = run_classification(cli)? {
         return Ok(Report::Classification(report));
     }
-    if let Some(cache) = &cli.icd11 {
-        if let Some(api) = &cli.icd11_api {
-            fetch_icd11(cache, api, cli)?;
-        }
-        return Ok(Report::Icd11(icd11::build_all(
-            cache,
-            cli.icd11_release.as_deref(),
-            &cli.out,
-        )?));
+    if let Some(reports) = run_icd11(cli)? {
+        return Ok(Report::Icd11(reports));
     }
-    if let Some(rxnorm) = &cli.rxnorm {
-        let scratch;
-        let root = if rxnorm.is_file() {
-            scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
-            archive::unpack_rxnorm(rxnorm, scratch.path())?
-        } else {
-            rxnorm.clone()
-        };
-        let version = cli.rxnorm_version.clone().or_else(|| {
-            rxnorm
-                .file_name()
-                .and_then(std::ffi::OsStr::to_str)
-                .map(|n| n.trim_end_matches(".zip"))
-                .and_then(|n| n.rsplit_once('_').map(|(_, tail)| tail.to_owned()))
-                .filter(|tail| tail.len() == 8 && tail.bytes().all(|b| b.is_ascii_digit()))
-        });
-        return Ok(Report::RxNorm(rxnorm::build(
-            &root,
-            version.as_deref(),
-            &cli.rxnorm_sources,
-            &cli.out,
-        )?));
+    if let Some(report) = run_rxnorm(cli)? {
+        return Ok(Report::RxNorm(report));
     }
-    if let Some(loinc) = &cli.loinc {
-        let scratch;
-        let root = if loinc.is_file() {
-            scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
-            archive::unpack_loinc(loinc, scratch.path())?
-        } else {
-            loinc.clone()
-        };
-        let version = cli
-            .loinc_version
-            .clone()
-            .or_else(|| loinc::version_from_name(loinc));
-        return Ok(Report::Loinc(loinc::build(
-            &root,
-            version.as_deref(),
-            &cli.out,
-        )?));
+    if let Some(report) = run_loinc(cli)? {
+        return Ok(Report::Loinc(report));
     }
     Ok(Report::Snomed(run_snomed(cli)?))
+}
+
+/// The Nederlandse Labcodeset build (`--labcodeset`), when the command line
+/// asks for one.
+fn run_labcodeset(cli: &Cli) -> Result<Option<labcodeset::Report>, RunError> {
+    let Some(labcodeset) = &cli.labcodeset else {
+        return Ok(None);
+    };
+    let scratch;
+    let root = if labcodeset
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
+    {
+        scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+        archive::unpack_labcodeset(labcodeset, scratch.path())?
+    } else {
+        labcodeset.clone()
+    };
+    let publication = ::labcodeset::read(&root)?;
+    Ok(Some(labcodeset::build(&publication, &cli.out)?))
+}
+
+/// The G-Standaard product ladder (`--gstandaard`), one report per rung, when
+/// the command line asks for one.
+fn run_gstandaard(cli: &Cli) -> Result<Option<Vec<classification::Report>>, RunError> {
+    let (Some(dir), Some(version)) = (&cli.gstandaard, &cli.gstandaard_version) else {
+        return Ok(None);
+    };
+    let ladder = ::gstandaard::read(dir, version)?;
+    let mut reports = Vec::new();
+    for (name, system, classification) in ladder.rungs() {
+        reports.push(classification::build(
+            classification,
+            system,
+            Some(version),
+            &cli.out.join(name),
+        )?);
+    }
+    Ok(Some(reports))
+}
+
+/// The ICD-11 builds (`--icd11`), one report per code system the cache holds,
+/// when the command line asks for one.
+fn run_icd11(cli: &Cli) -> Result<Option<Vec<icd11::Report>>, RunError> {
+    let Some(cache) = &cli.icd11 else {
+        return Ok(None);
+    };
+    if let Some(api) = &cli.icd11_api {
+        fetch_icd11(cache, api, cli)?;
+    }
+    Ok(Some(icd11::build_all(
+        cache,
+        cli.icd11_release.as_deref(),
+        &cli.out,
+    )?))
+}
+
+/// The `RxNorm` build (`--rxnorm`), when the command line asks for one.
+fn run_rxnorm(cli: &Cli) -> Result<Option<rxnorm::Report>, RunError> {
+    let Some(rxnorm) = &cli.rxnorm else {
+        return Ok(None);
+    };
+    let scratch;
+    let root = if rxnorm.is_file() {
+        scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+        archive::unpack_rxnorm(rxnorm, scratch.path())?
+    } else {
+        rxnorm.clone()
+    };
+    let version = cli.rxnorm_version.clone().or_else(|| {
+        rxnorm
+            .file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .map(|n| n.trim_end_matches(".zip"))
+            .and_then(|n| n.rsplit_once('_').map(|(_, tail)| tail.to_owned()))
+            .filter(|tail| tail.len() == 8 && tail.bytes().all(|b| b.is_ascii_digit()))
+    });
+    Ok(Some(rxnorm::build(
+        &root,
+        version.as_deref(),
+        &cli.rxnorm_sources,
+        &cli.out,
+    )?))
+}
+
+/// The LOINC build (`--loinc`), when the command line asks for one.
+fn run_loinc(cli: &Cli) -> Result<Option<loinc::Report>, RunError> {
+    let Some(loinc) = &cli.loinc else {
+        return Ok(None);
+    };
+    let scratch;
+    let root = if loinc.is_file() {
+        scratch = tempfile::tempdir().map_err(RunError::Scratch)?;
+        archive::unpack_loinc(loinc, scratch.path())?
+    } else {
+        loinc.clone()
+    };
+    let version = cli
+        .loinc_version
+        .clone()
+        .or_else(|| loinc::version_from_name(loinc));
+    Ok(Some(loinc::build(&root, version.as_deref(), &cli.out)?))
 }
 
 /// The SNOMED CT build: the edition `--rf2` names with every `--rf2-refset`

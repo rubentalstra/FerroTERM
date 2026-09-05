@@ -154,6 +154,144 @@ struct Placed {
     record: Designation,
 }
 
+/// The ordinal of the property key `name`.
+fn property_key(name: &str) -> Result<u32, Error> {
+    PROPERTY_KEYS
+        .iter()
+        .position(|k| *k == name)
+        .and_then(|i| u32::try_from(i).ok())
+        .ok_or(Error::TooMany)
+}
+
+/// The designations of one entity: its titles, fully specified names,
+/// inclusions, and index terms, numbered in that order.
+fn entity_designations(
+    entity: &::icd11::entity::Entity,
+    ordinal: Ordinal,
+    placed: &mut Vec<Placed>,
+    languages: &mut BTreeSet<String>,
+) {
+    let mut index = 0u32;
+    let mut place = |texts: &[::icd11::entity::Text], use_ordinal: u32| {
+        for text in texts {
+            languages.insert(text.language.clone());
+            placed.push(Placed {
+                ordinal,
+                index,
+                record: Designation {
+                    id: None,
+                    term: text.value.clone(),
+                    language: text.language.clone(),
+                    use_ordinal,
+                    active: true,
+                },
+            });
+            index = index.saturating_add(1);
+        }
+    };
+    place(&entity.titles, 0);
+    place(&entity.fully_specified, 1);
+    place(&entity.inclusions, 2);
+    place(&entity.index_terms, 3);
+}
+
+/// The parent edges of one entity; a parent outside the cache has no edge.
+fn entity_edges(
+    entity: &::icd11::entity::Entity,
+    ordinal: Ordinal,
+    ordinals: &BTreeMap<&str, Ordinal>,
+    edges: &mut Vec<(Ordinal, Ordinal)>,
+) {
+    for parent in &entity.parents {
+        if let Some(&parent_ordinal) = ordinals.get(parent.as_str()) {
+            edges.push((ordinal, parent_ordinal));
+        }
+    }
+}
+
+/// The properties of one entity, each under its key.
+fn entity_properties(
+    builder: &mut StoreBuilder,
+    entity: &::icd11::entity::Entity,
+    id: &str,
+    ordinal: Ordinal,
+    linearization: Linearization,
+) -> Result<(), Error> {
+    builder.properties(
+        ordinal,
+        property_key("id")?,
+        &[PropertyValue::Code(linearization.uri(id))],
+    )?;
+    if let Some(kind) = &entity.class_kind {
+        builder.properties(
+            ordinal,
+            property_key("classKind")?,
+            &[PropertyValue::Code(kind.clone())],
+        )?;
+    }
+    if entity.code.is_none() {
+        builder.properties(
+            ordinal,
+            property_key("notSelectable")?,
+            &[PropertyValue::Boolean(true)],
+        )?;
+    }
+    if !entity.definitions.is_empty() {
+        let values: Vec<PropertyValue> = entity
+            .definitions
+            .iter()
+            .map(|t| PropertyValue::String(t.value.clone()))
+            .collect();
+        builder.properties(ordinal, property_key("definition")?, &values)?;
+    }
+    if !entity.exclusions.is_empty() {
+        let values: Vec<PropertyValue> = entity
+            .exclusions
+            .iter()
+            .map(|t| PropertyValue::String(t.value.clone()))
+            .collect();
+        builder.properties(ordinal, property_key("exclusion")?, &values)?;
+    }
+    if let Some(source) = &entity.source {
+        builder.properties(
+            ordinal,
+            property_key("source")?,
+            &[PropertyValue::Code(source.clone())],
+        )?;
+    }
+    if let Some(url) = &entity.browser_url {
+        builder.properties(
+            ordinal,
+            property_key("browserUrl")?,
+            &[PropertyValue::String(url.clone())],
+        )?;
+    }
+    Ok(())
+}
+
+/// The postcoordination scales of one entity, their axis entities numbered.
+fn entity_scales(
+    entity: &::icd11::entity::Entity,
+    ordinal: Ordinal,
+    ordinals: &BTreeMap<&str, Ordinal>,
+    scales: &mut Vec<StoredScale>,
+) {
+    for scale in &entity.scales {
+        let entities: Vec<u32> = scale
+            .entities
+            .iter()
+            .filter_map(|e| ordinals.get(e.as_str()).map(|o| o.index()))
+            .collect();
+        scales.push(StoredScale {
+            stem: ordinal.index(),
+            axis: scale.axis.clone(),
+            required: scale.required,
+            multiple: scale.multiple.clone(),
+            entities,
+        });
+    }
+}
+
 /// Builds the artifacts for `cached` into `out`, with `release` overriding
 /// the release the cache names.
 ///
@@ -184,13 +322,6 @@ pub fn build(cached: &Cached, release: Option<&str>, out: &Path) -> Result<Repor
     for (i, name) in PROPERTY_KEYS.iter().enumerate() {
         builder.vocabulary(Vocabulary::PropertyKeys, ordinal(i)?.index(), name)?;
     }
-    let key = |name: &str| {
-        PROPERTY_KEYS
-            .iter()
-            .position(|k| *k == name)
-            .and_then(|i| u32::try_from(i).ok())
-            .ok_or(Error::TooMany)
-    };
     let mut placed: Vec<Placed> = Vec::new();
     let mut keys: Vec<(u64, u32)> = Vec::new();
     let mut edges: Vec<(Ordinal, Ordinal)> = Vec::new();
@@ -213,96 +344,10 @@ pub fn build(cached: &Cached, release: Option<&str>, out: &Path) -> Result<Repor
                 module: None,
             },
         )?;
-        for parent in &entity.parents {
-            if let Some(&parent_ordinal) = ordinals.get(parent.as_str()) {
-                edges.push((ordinal, parent_ordinal));
-            }
-        }
-        let mut index = 0u32;
-        let mut place = |texts: &[::icd11::entity::Text], use_ordinal: u32| {
-            for text in texts {
-                languages.insert(text.language.clone());
-                placed.push(Placed {
-                    ordinal,
-                    index,
-                    record: Designation {
-                        id: None,
-                        term: text.value.clone(),
-                        language: text.language.clone(),
-                        use_ordinal,
-                        active: true,
-                    },
-                });
-                index = index.saturating_add(1);
-            }
-        };
-        place(&entity.titles, 0);
-        place(&entity.fully_specified, 1);
-        place(&entity.inclusions, 2);
-        place(&entity.index_terms, 3);
-        builder.properties(
-            ordinal,
-            key("id")?,
-            &[PropertyValue::Code(linearization.uri(id))],
-        )?;
-        if let Some(kind) = &entity.class_kind {
-            builder.properties(
-                ordinal,
-                key("classKind")?,
-                &[PropertyValue::Code(kind.clone())],
-            )?;
-        }
-        if entity.code.is_none() {
-            builder.properties(
-                ordinal,
-                key("notSelectable")?,
-                &[PropertyValue::Boolean(true)],
-            )?;
-        }
-        if !entity.definitions.is_empty() {
-            let values: Vec<PropertyValue> = entity
-                .definitions
-                .iter()
-                .map(|t| PropertyValue::String(t.value.clone()))
-                .collect();
-            builder.properties(ordinal, key("definition")?, &values)?;
-        }
-        if !entity.exclusions.is_empty() {
-            let values: Vec<PropertyValue> = entity
-                .exclusions
-                .iter()
-                .map(|t| PropertyValue::String(t.value.clone()))
-                .collect();
-            builder.properties(ordinal, key("exclusion")?, &values)?;
-        }
-        if let Some(source) = &entity.source {
-            builder.properties(
-                ordinal,
-                key("source")?,
-                &[PropertyValue::Code(source.clone())],
-            )?;
-        }
-        if let Some(url) = &entity.browser_url {
-            builder.properties(
-                ordinal,
-                key("browserUrl")?,
-                &[PropertyValue::String(url.clone())],
-            )?;
-        }
-        for scale in &entity.scales {
-            let entities: Vec<u32> = scale
-                .entities
-                .iter()
-                .filter_map(|e| ordinals.get(e.as_str()).map(|o| o.index()))
-                .collect();
-            scales.push(StoredScale {
-                stem: ordinal.index(),
-                axis: scale.axis.clone(),
-                required: scale.required,
-                multiple: scale.multiple.clone(),
-                entities,
-            });
-        }
+        entity_edges(entity, ordinal, &ordinals, &mut edges);
+        entity_designations(entity, ordinal, &mut placed, &mut languages);
+        entity_properties(&mut builder, entity, id, ordinal, linearization)?;
+        entity_scales(entity, ordinal, &ordinals, &mut scales);
     }
     for p in &placed {
         builder.designation(p.ordinal, p.index, &p.record)?;
