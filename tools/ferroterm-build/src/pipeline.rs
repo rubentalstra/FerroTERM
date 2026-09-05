@@ -26,7 +26,9 @@ use rf2::edition::{Edition, EditionError};
 use rf2::file::{ContentType, FieldKind, Release, ReleaseError, ReleaseFile, ReleaseType};
 use rf2::id::{ConceptId, DescriptionId, ModuleId, RefsetId};
 use rf2::reader::Rf2Error;
-use rf2::refset::{FieldValue, LanguageMember, Members, ModuleDependencyMember, ViewError};
+use rf2::refset::{
+    FieldValue, LanguageMember, Members, ModuleDependencyMember, RefsetKind, ViewError,
+};
 use rf2::time::EffectiveTime;
 use serde_json::json;
 
@@ -339,14 +341,11 @@ fn identify_edition(release: &Release) -> Result<Edition, Error> {
 
 /// The module dependency reference set members of one release.
 ///
-/// The file is found by its summary and the rows by their `refsetId`: a
-/// derivative package prefixes the summary with its own name
-/// (`der2_ssRefset_ICNPModuleDependencySnapshot`), so an exact summary match
-/// reads no package's dependencies.
+/// The file is found by the columns its header names and the rows by their
+/// `refsetId`. A file name's summary is free-form and a derivative package
+/// writes its own name into it, so the columns decide (`rf2::refset::kind`).
 fn module_dependencies(release: &Release) -> Result<Vec<ModuleDependencyMember>, Error> {
-    let file = release
-        .refsets()
-        .find(|f| f.name.summary.contains("ModuleDependency"))
+    let file = refset_of(release, RefsetKind::ModuleDependency)?
         .ok_or(Error::MissingFile("module dependency reference set"))?;
     let ContentType::Refset(kinds) = &file.name.content_type else {
         return Err(Error::MissingFile("module dependency reference set"));
@@ -660,13 +659,28 @@ fn read_designations(
     Ok(placed)
 }
 
-/// Whether a reference set file holds language reference set members.
+/// The first reference set file of `release` of `wanted`, `None` when it has
+/// none.
 ///
-/// A derivative package names its files after itself
-/// (`der2_cRefset_ICNPLanguageSnapshot-en`), so the summary carries the
-/// reference set type rather than being it.
-fn is_language(file: &ReleaseFile) -> bool {
-    file.name.summary.contains("Language")
+/// # Errors
+///
+/// Returns [`Error`] when a reference set file cannot be read.
+fn refset_of(release: &Release, wanted: RefsetKind) -> Result<Option<&ReleaseFile>, Error> {
+    for file in release.refsets() {
+        if rf2::refset::kind(&file.path)? == wanted {
+            return Ok(Some(file));
+        }
+    }
+    Ok(None)
+}
+
+/// The kind of one reference set file, from the columns its header names.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the file cannot be read.
+fn refset_kind(file: &ReleaseFile) -> Result<RefsetKind, Error> {
+    Ok(rf2::refset::kind(&file.path)?)
 }
 
 type Acceptabilities = BTreeMap<(Ordinal, u32), Vec<(u32, u32)>>;
@@ -683,7 +697,10 @@ fn read_acceptabilities(
         .collect();
     let mut members: Vec<(RefsetId, DescriptionId, u32)> = Vec::new();
     for release in releases {
-        for file in release.refsets().filter(|f| is_language(f)) {
+        for file in release.refsets() {
+            if refset_kind(file)? != RefsetKind::Language {
+                continue;
+            }
             let ContentType::Refset(kinds) = &file.name.content_type else {
                 continue;
             };
@@ -742,7 +759,10 @@ fn read_memberships(
 ) -> Result<Memberships, Error> {
     let mut memberships = Memberships::new();
     for release in releases {
-        for file in release.refsets().filter(|f| !is_language(f)) {
+        for file in release.refsets() {
+            if refset_kind(file)? == RefsetKind::Language {
+                continue;
+            }
             let ContentType::Refset(kinds) = &file.name.content_type else {
                 continue;
             };
@@ -783,11 +803,10 @@ fn read_member_tables(
     ordinals: &BTreeMap<ConceptId, Ordinal>,
 ) -> Result<RefsetMembers, Error> {
     let mut tables: BTreeMap<u64, PendingTable> = BTreeMap::new();
-    for file in releases.iter().flat_map(|release| {
-        release
-            .refsets()
-            .filter(|f| !is_language(f) && !f.name.summary.contains("OWL"))
-    }) {
+    for file in releases.iter().flat_map(Release::refsets) {
+        if refset_kind(file)? != RefsetKind::Content {
+            continue;
+        }
         let ContentType::Refset(kinds) = &file.name.content_type else {
             continue;
         };

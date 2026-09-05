@@ -856,8 +856,11 @@ fn write_rf2(
 /// set rows those descriptions need, the reference set's members over the
 /// edition's concepts, and the module dependency row stating what it needs of
 /// the edition. Its file names carry the package's own name the way a
-/// derivative package does (`der2_Refset_ICNPSimpleSnapshot`), so no reader
-/// may match a file summary exactly.
+/// derivative package does, and in both positions a real package uses: before
+/// the reference set type (`der2_Refset_ICNPSimpleSnapshot`) and after it
+/// (`sct2_sRefset_OWLExpressionICNPFull`). One file names no reference set type
+/// at all (`der2_cRefset_ZooTermsSnapshot-en` is a language reference set), so
+/// a reader that matches the file summary reads this package wrong (#273).
 ///
 /// # Errors
 ///
@@ -972,7 +975,7 @@ fn write_package_refsets(dir: &Path, package: &Package<'_>) -> Result<(), Fixtur
     write_rf2(
         dir,
         &format!(
-            "Snapshot/Refset/Language/der2_cRefset_ZooLanguageSnapshot-en_XX{NAMESPACE}_{DATE}.txt"
+            "Snapshot/Refset/Language/der2_cRefset_ZooTermsSnapshot-en_XX{NAMESPACE}_{DATE}.txt"
         ),
         &[
             "id",
@@ -1016,7 +1019,7 @@ fn write_package_refsets(dir: &Path, package: &Package<'_>) -> Result<(), Fixtur
     write_rf2(
         dir,
         &format!(
-            "Snapshot/Refset/Metadata/der2_ssRefset_ZooModuleDependencySnapshot_XX{NAMESPACE}_{DATE}.txt"
+            "Snapshot/Refset/Metadata/der2_ssRefset_DependencyZooSnapshot_XX{NAMESPACE}_{DATE}.txt"
         ),
         &[
             "id",
