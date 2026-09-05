@@ -72,15 +72,17 @@
           <p>
             A request that answers anything other than a 2xx status fails the
             run for that system and no record is written, so a record never
-            holds the latency of an error response. Runs for this page are
-            taken inside the repository's benchmark container
+            holds the latency of an error response. Every record states the
+            machine it was taken on, and whether that machine was a container;
+            the repository carries one
             (<code>bench/compose.yaml</code>), which builds the server, the
             build tool, and the harness on digest-pinned images and mounts the
-            licensed releases read-only, so the environment is the same from
-            one machine to the next. Resident memory is mostly the
-            memory-mapped index the kernel has paged in; it moves with the
-            page cache and shrinks under pressure. Units fit the value:
-            seconds, milliseconds, or microseconds; GB, MB, or KB.
+            licensed releases read-only, but a record is only from it when the
+            record says so. Resident memory is what starting the server loads:
+            the hierarchy, the text index, and the other structures it reads
+            whole, so it is close to steady once the server is ready and does
+            not fall back under pressure. Units fit the value: seconds,
+            milliseconds, or microseconds; GB, MB, or KB.
           </p>
           <p>
             The repository ships no code system content. To take a record over
@@ -111,13 +113,13 @@
 <div class="table-wrap"><table>
 <thead><tr><th>Code system</th><th>Release</th><th>Concepts</th><th>Build</th><th>Peak build memory</th><th>Index on disk</th><th>Time to ready</th><th>Resident, open</th><th>Resident, warm</th></tr></thead>
 <tbody>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2-perf/icd-10-cm-2026-09-05T18-09-15-675891Z.json" rel="noopener">ICD-10-CM</a></th><td>2026</td><td>98,827</td><td>1.59 s</td><td>347 MB</td><td>40 MB</td><td>102.81 ms</td><td>61 MB</td><td>62 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2-perf/icd-10-nl-2026-09-05T18-09-16-926249Z.json" rel="noopener">ICD-10-NL</a></th><td>2021</td><td>42,769</td><td>1.08 s</td><td>229 MB</td><td>20 MB</td><td>102.9 ms</td><td>35 MB</td><td>36 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2-perf/icd-11-mms-2026-09-05T18-09-22-369439Z.json" rel="noopener">ICD-11 MMS</a></th><td>2026-01</td><td>37,211</td><td>n/a</td><td>n/a</td><td>34 MB</td><td>204.89 ms</td><td>71 MB</td><td>74 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2-perf/loinc-2026-09-05T18-09-13-913049Z.json" rel="noopener">LOINC</a></th><td>2.83</td><td>257,266</td><td>11.12 s</td><td>1.92 GB</td><td>262 MB</td><td>205.43 ms</td><td>164 MB</td><td>145 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2-perf/rxnorm-prescribable-subset-2026-09-05T18-09-22-040425Z.json" rel="noopener">RxNorm (prescribable subset)</a></th><td>09082026</td><td>81,468</td><td>4.55 s</td><td>646 MB</td><td>72 MB</td><td>306.63 ms</td><td>107 MB</td><td>119 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2-perf/snomed-ct-international-edition-2026-09-05T18-09-00-784641Z.json" rel="noopener">SNOMED CT (International edition)</a></th><td>20260901</td><td>535,502</td><td>19.19 s</td><td>2.44 GB</td><td>626 MB</td><td>410.38 ms</td><td>693 MB</td><td>702 MB</td></tr>
-<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2-perf/snomed-ct-netherlands-edition-2026-09-05T18-08-40-456544Z.json" rel="noopener">SNOMED CT (Netherlands edition)</a></th><td>20260630</td><td>548,949</td><td>32.96 s</td><td>3.03 GB</td><td>864 MB</td><td>1.23 s</td><td>878 MB</td><td>888 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/icd-10-cm-2026-09-05T18-09-15-675891Z.json" rel="noopener">ICD-10-CM</a></th><td>2026</td><td>98,827</td><td>1.59 s</td><td>347 MB</td><td>40 MB</td><td>102.81 ms</td><td>61 MB</td><td>62 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/icd-10-nl-2026-09-05T18-09-16-926249Z.json" rel="noopener">ICD-10-NL</a></th><td>2021</td><td>42,769</td><td>1.08 s</td><td>229 MB</td><td>20 MB</td><td>102.9 ms</td><td>35 MB</td><td>36 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/icd-11-mms-2026-09-05T18-09-22-369439Z.json" rel="noopener">ICD-11 MMS</a></th><td>2026-01</td><td>37,211</td><td>n/a</td><td>n/a</td><td>34 MB</td><td>204.89 ms</td><td>71 MB</td><td>74 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/loinc-2026-09-05T18-09-13-913049Z.json" rel="noopener">LOINC</a></th><td>2.83</td><td>257,266</td><td>11.12 s</td><td>1.92 GB</td><td>262 MB</td><td>205.43 ms</td><td>164 MB</td><td>145 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/rxnorm-prescribable-subset-2026-09-05T18-09-22-040425Z.json" rel="noopener">RxNorm (prescribable subset)</a></th><td>09082026</td><td>81,468</td><td>4.55 s</td><td>646 MB</td><td>72 MB</td><td>306.63 ms</td><td>107 MB</td><td>119 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/snomed-ct-international-edition-2026-09-05T18-09-00-784641Z.json" rel="noopener">SNOMED CT (International edition)</a></th><td>20260901</td><td>535,502</td><td>19.19 s</td><td>2.44 GB</td><td>626 MB</td><td>410.38 ms</td><td>693 MB</td><td>702 MB</td></tr>
+<tr><th scope="row"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-05-apple-m2/snomed-ct-netherlands-edition-2026-09-05T18-08-40-456544Z.json" rel="noopener">SNOMED CT (Netherlands edition)</a></th><td>20260630</td><td>548,949</td><td>32.96 s</td><td>3.03 GB</td><td>864 MB</td><td>1.23 s</td><td>878 MB</td><td>888 MB</td></tr>
 </tbody></table></div>
 <h3>Latency per operation</h3>
 <p>Each operation: the first request cold, then the nearest-rank p50, p95, and p99 over the warm requests.</p>

@@ -43,6 +43,9 @@ Size the disk for the indexes you load; the benchmarks page gives each index's s
 offline build is the CPU-heavy step, once per release, in `ferroterm-build`.
 Serving is a point read or a bitmap operation, so a modest CPU handles it: a
 2 to 4 GB box with two cores serves an edition beside other services. A paged
-`$expand` is cut from the bitmaps before any concept is read, so a page of
-ten out of 133,736 descendants costs the same as a page of ten out of ten;
+`$expand` is cut from the selection before any concept is read, so the
+concepts a page reads are the concepts it returns, not the whole selection;
 an unpaged expansion beyond 1,000 members is refused with `too-costly`.
+Finding the page still costs something on a large selection: the committed
+records put a hundred members of a SNOMED subtree at 253 microseconds and a
+thousand at 2.5 milliseconds on the Netherlands edition.
