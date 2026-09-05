@@ -109,7 +109,7 @@ pins, inline and request-scoped value sets), `ValueSet/$validate-code`,
 `metadata?mode=terminology`. Every failure is an `OperationOutcome` with a
 `tx-issue-type` coding.
 
-Conformance is measured, not asserted: CI runs the HL7 terminology ecosystem
+Conformance is measured. CI runs the HL7 terminology ecosystem
 suite against every pull request and holds a committed pass list per served
 version (523 of the 670 general cases on R5, 518 on R4, 517 on R4B; the rest are
 features on the roadmap and fixture artefacts, listed by cluster on the
