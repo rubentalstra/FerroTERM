@@ -723,8 +723,11 @@ impl LoincProvider {
 /// What the provider declares: the FHIR page's properties, every table field
 /// as a filter, `copyright`, `parent`, and `ancestor`.
 fn declaration(keys: &BTreeMap<u32, String>, languages: Vec<String>) -> Declaration {
+    // NOTE: a property the loaded release does not carry is not declared: the FHIR
+    // page still lists `DOCUMENT_SECTION`, which `Loinc.csv` dropped (#278).
     let mut properties: Vec<PropertyDefinition> = FHIR_PROPERTIES
         .iter()
+        .filter(|(code, _)| keys.values().any(|key| key == code))
         .map(|(code, kind)| PropertyDefinition {
             code: (*code).to_owned(),
             uri: None,
