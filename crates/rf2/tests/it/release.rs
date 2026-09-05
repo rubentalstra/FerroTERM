@@ -310,3 +310,57 @@ fn a_sibling_root_module_is_reported_and_the_release_date_picks_the_edition() {
         Err(rf2::edition::EditionError::MalformedTarget { .. })
     ));
 }
+
+// The International Edition ships the ICD-10 mapping module, which depends on
+// the core and model modules and is depended on by neither, so the graph alone
+// makes it the only root. The URI Standard names the edition by its core
+// module instead (§2 Table 2.1), which is what this pins (#359).
+#[test]
+fn an_international_release_is_its_core_module_not_the_mapping_module_that_roots_the_graph() {
+    use rf2::id::{MemberId, ModuleId, RefsetId, Sctid};
+    use rf2::refset::{FieldValue, Member};
+    use rf2::time::EffectiveTime;
+
+    let module = |text: &str| ModuleId::parse(text).expect("module");
+    let time = |text: &str| EffectiveTime::parse(text).expect("time");
+    let dependency = |item: u32, source: &str, target: &str| {
+        ModuleDependencyMember::try_from(Member {
+            id: MemberId::parse(&fixture::member(item)).expect("uuid"),
+            effective_time: time(fixture::DATE),
+            active: true,
+            module_id: module(source),
+            refset_id: RefsetId::parse(fixture::MODULE_DEPENDENCY_REFSET).expect("refset"),
+            referenced_component_id: Sctid::parse(target).expect("sctid"),
+            fields: vec![
+                (
+                    String::from("sourceEffectiveTime"),
+                    FieldValue::String(fixture::DATE.to_owned()),
+                ),
+                (
+                    String::from("targetEffectiveTime"),
+                    FieldValue::String(fixture::DATE.to_owned()),
+                ),
+            ],
+        })
+        .expect("dependency view")
+    };
+    // `449080006 |SNOMED CT to ICD-10 rule-based mapping module|`, as the
+    // International release ships it. No module here carries a namespace.
+    let mapping = "449080006";
+    let members = vec![
+        dependency(1, mapping, fixture::CORE_MODULE),
+        dependency(2, mapping, fixture::MODEL_MODULE),
+        dependency(3, fixture::CORE_MODULE, fixture::MODEL_MODULE),
+    ];
+    let edition = Edition::identify(&members, time(fixture::DATE)).expect("identifies");
+    assert_eq!(
+        edition.module.to_string(),
+        fixture::CORE_MODULE,
+        "the edition is the core module the URI Standard names, not the graph's only root"
+    );
+    assert_eq!(
+        edition.edition_uri(),
+        "http://snomed.info/sct/900000000000207008"
+    );
+    assert_eq!(edition.sibling_roots, vec![module(mapping)]);
+}

@@ -8,6 +8,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::constants;
 use crate::id::{ConceptId, ModuleId};
 use crate::refset::ModuleDependencyMember;
 use crate::time::EffectiveTime;
@@ -55,16 +56,28 @@ impl Edition {
     /// Identifies the edition from the active module dependency members.
     ///
     /// The root modules are those that depend on others and are depended on
-    /// by none. With one root it is the edition; with several, the one whose
-    /// `sourceEffectiveTime` equals `release` is, and the others are reported
-    /// as `sibling_roots`.
+    /// by none. An extension's focus module is a root, so a root carrying a
+    /// namespace identifies the edition; with several such roots the one whose
+    /// `sourceEffectiveTime` equals `release` does, and the others are
+    /// reported as `sibling_roots`.
+    ///
+    /// A release with no namespaced root is the International Edition, whose
+    /// module the URI Standard names as
+    /// `900000000000207008 |SNOMED CT core module|` (§2 SNOMED CT URI Space,
+    /// Table 2.1, and the §3 table)
+    /// (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-uri-standard>).
+    /// The graph alone does not give that answer: the International release
+    /// ships `449080006 |SNOMED CT to ICD-10 rule-based mapping module|`,
+    /// which depends on the core module and on the model component module and
+    /// is depended on by neither, so it is the only root and it is not the
+    /// edition.
     ///
     /// The specifications define an edition by its focus module, the module
     /// dependent on every other module
     /// (<https://docs.snomed.org/snomed-ct-practical-guides/snomed-ct-extension-guide/4-logical-design/4.4-editions>),
-    /// and give no consumer-side rule for a release with several roots; the
-    /// date rule is our own design for packages such as the NL edition, which
-    /// ships the ICD-10 mapping module as a sibling root.
+    /// and give no consumer-side rule for a release with several namespaced
+    /// roots; the date rule is our own design for packages such as the NL
+    /// edition, which ships the mapping module as a sibling root.
     ///
     /// # Errors
     ///
@@ -107,8 +120,32 @@ impl Edition {
             .filter(|m| !depended_on.contains(*m))
             .copied()
             .collect();
-        let module = match roots.as_slice() {
+        // A namespaced root is an extension's focus module. Without one the
+        // release is the International Edition, which the URI Standard names
+        // by its core module rather than by the graph.
+        let namespaced: Vec<ModuleId> = roots
+            .iter()
+            .filter(|m| m.concept().sctid().namespace().is_some())
+            .copied()
+            .collect();
+        let module = match namespaced.as_slice() {
             [only] => *only,
+            [] => {
+                let core = ModuleId::from(constants::CORE_MODULE);
+                if modules.contains_key(&core) {
+                    core
+                } else {
+                    match roots.as_slice() {
+                        [only] => *only,
+                        many => {
+                            return Err(EditionError::AmbiguousRoot {
+                                release: release.compact(),
+                                roots: many.iter().map(ToString::to_string).collect(),
+                            });
+                        }
+                    }
+                }
+            }
             many => *many
                 .iter()
                 .find(|m| modules.get(*m) == Some(&release))
