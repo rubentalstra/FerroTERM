@@ -17,6 +17,8 @@ use concept_store::record;
 use concept_store::store::Vocabulary;
 use concept_store::tables;
 use designation_index::index::{IndexBuilder, Input};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::slice::ParallelSliceMut;
 use rf2::component::{
     AlternateIdentifier, Concept, ConcreteRelationship, ConcreteValue, Description, Relationship,
     Rows,
@@ -234,51 +236,12 @@ pub fn build(rf2: &Path, refsets: &[PathBuf], out: &Path) -> Result<Report, Erro
     let (releases, layered) = open_layers(release, &edition, refsets)?;
     std::fs::create_dir_all(out).map_err(io_error(out))?;
 
-    let concepts = read_concepts(&releases)?;
-    let ordinals: BTreeMap<ConceptId, Ordinal> = concepts
-        .iter()
-        .enumerate()
-        .map(|(i, concept)| Ok((concept.id, Ordinal::new(ordinal_of(i, "concepts")?))))
-        .collect::<Result<_, Error>>()?;
-    let relationships = read_relationships(&releases, &ordinals)?;
-    let designations = read_designations(&releases, &ordinals)?;
-    let (refsets, acceptabilities) = read_acceptabilities(&releases, &designations)?;
-    let memberships = read_memberships(&releases, &ordinals)?;
-    let member_tables = read_member_tables(&releases, &ordinals)?;
-    let identifiers = read_identifiers(&releases, &ordinals)?;
-    let attribute_graph = relationships.graph(ordinal_of(concepts.len(), "concepts")?)?;
-
-    let store_path = out.join(STORE_FILE);
+    let loaded = read_release(&releases)?;
+    let attribute_graph = loaded
+        .relationships
+        .graph(ordinal_of(loaded.concepts.len(), "concepts")?)?;
     let version_uri = edition.version_uri();
-    let mut builder = StoreBuilder::create(&store_path, "http://snomed.info/sct", &version_uri)?;
-    write_vocabularies(&mut builder, &refsets, &relationships.attribute_types)?;
-    let is_a_edges = write_concepts(&mut builder, &concepts, &ordinals, &relationships)?;
-    let designation_count = write_designations(&mut builder, &designations)?;
-    for ((ordinal, index), memberships) in &acceptabilities {
-        for (refset, acceptability) in memberships {
-            builder.acceptability(*ordinal, *index, *refset, *acceptability)?;
-        }
-    }
-    let hierarchy = build_hierarchy(&concepts, &relationships.is_a)?;
-    let hierarchy_path = out.join(HIERARCHY_FILE);
-    let mut graph_bytes = Vec::new();
-    hierarchy.write_to(&mut graph_bytes)?;
-    std::fs::write(&hierarchy_path, &graph_bytes).map_err(io_error(&hierarchy_path))?;
-    let (text_bytes, words) = build_text(&designations, &acceptabilities)?;
-    let mut languages: Vec<String> = designations
-        .iter()
-        .map(|placed| placed.record.language.clone())
-        .collect();
-    languages.sort();
-    languages.dedup();
-    let text_path = out.join(TEXT_FILE);
-    std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
-    let mut member_bytes = Vec::new();
-    memberships.write_to(&mut member_bytes)?;
-    let refsets_path = out.join(REFSETS_FILE);
-    std::fs::write(&refsets_path, &member_bytes).map_err(io_error(&refsets_path))?;
-    write_ecl_files(out, &attribute_graph, &member_tables, &identifiers)?;
-    builder.finish(&PreferredRule { preferred: 0 })?;
+    let written = write_artifacts(&loaded, &attribute_graph, out, &version_uri)?;
 
     let manifest_path = out.join(MANIFEST_FILE);
     let mut manifest = json!({
@@ -295,16 +258,16 @@ pub fn build(rf2: &Path, refsets: &[PathBuf], out: &Path) -> Result<Report, Erro
         "attributes": ATTRIBUTES_FILE,
         "members": MEMBERS_FILE,
         "identifiers": IDENTIFIERS_FILE,
-        "concepts": concepts.len(),
-        "designations": designation_count,
-        "isAEdges": is_a_edges,
-        "referenceSets": memberships.len(),
-        "memberships": memberships.total(),
+        "concepts": loaded.concepts.len(),
+        "designations": written.designations,
+        "isAEdges": written.is_a_edges,
+        "referenceSets": loaded.memberships.len(),
+        "memberships": loaded.memberships.total(),
         "attributeRows": attribute_graph.edges(),
-        "memberRows": member_tables.total(),
-        "alternateIdentifiers": identifiers.len(),
-        "words": words,
-        "languages": languages,
+        "memberRows": loaded.member_tables.total(),
+        "alternateIdentifiers": loaded.identifiers.len(),
+        "words": written.words,
+        "languages": written.languages,
     });
     if let (Some(object), false) = (manifest.as_object_mut(), layered.is_empty()) {
         object.insert(String::from("layered"), layers_manifest(&layered));
@@ -318,17 +281,163 @@ pub fn build(rf2: &Path, refsets: &[PathBuf], out: &Path) -> Result<Report, Erro
     Ok(Report {
         edition_uri: edition.edition_uri(),
         version_uri,
-        store: store_path,
-        hierarchy: hierarchy_path,
-        text: text_path,
+        store: out.join(STORE_FILE),
+        hierarchy: out.join(HIERARCHY_FILE),
+        text: out.join(TEXT_FILE),
         manifest: manifest_path,
-        concepts: u64::try_from(concepts.len()).unwrap_or(u64::MAX),
-        designations: designation_count,
-        is_a_edges,
-        refsets: u64::try_from(memberships.len()).unwrap_or(u64::MAX),
+        concepts: u64::try_from(loaded.concepts.len()).unwrap_or(u64::MAX),
+        designations: written.designations,
+        is_a_edges: written.is_a_edges,
+        refsets: u64::try_from(loaded.memberships.len()).unwrap_or(u64::MAX),
         attributes: u64::try_from(attribute_graph.edges()).unwrap_or(u64::MAX),
-        member_rows: member_tables.total(),
-        identifiers: u64::try_from(identifiers.len()).unwrap_or(u64::MAX),
+        member_rows: loaded.member_tables.total(),
+        identifiers: u64::try_from(loaded.identifiers.len()).unwrap_or(u64::MAX),
+        words: written.words,
+        languages: written.languages,
+    })
+}
+
+/// Everything the release yields, numbered and joined.
+struct Loaded {
+    concepts: Vec<Concept>,
+    ordinals: BTreeMap<ConceptId, Ordinal>,
+    relationships: Relationships,
+    designations: Vec<Placed>,
+    refsets: Vec<RefsetId>,
+    acceptabilities: Acceptabilities,
+    memberships: Memberships,
+    member_tables: RefsetMembers,
+    identifiers: Identifiers,
+}
+
+/// What the artifact writers counted.
+struct Written {
+    is_a_edges: u64,
+    designations: u64,
+    words: u64,
+    languages: Vec<String>,
+}
+
+/// Reads every release into its numbered rows.
+///
+/// The concepts are numbered first because everything else is keyed by the
+/// ordinal that numbering gives. The four reads that follow cover disjoint
+/// parts of the release, so they run together; each collects its files in
+/// path order, so what it returns does not depend on which worker won.
+fn read_release(releases: &[Release]) -> Result<Loaded, Error> {
+    let concepts = read_concepts(releases)?;
+    let ordinals: BTreeMap<ConceptId, Ordinal> = concepts
+        .iter()
+        .enumerate()
+        .map(|(i, concept)| Ok((concept.id, Ordinal::new(ordinal_of(i, "concepts")?))))
+        .collect::<Result<_, Error>>()?;
+    let (relationships, (designations, (refset_pass, identifiers))) = rayon::join(
+        || read_relationships(releases, &ordinals),
+        || {
+            rayon::join(
+                || read_designations(releases, &ordinals),
+                || {
+                    rayon::join(
+                        || read_refsets(releases, &ordinals),
+                        || read_identifiers(releases, &ordinals),
+                    )
+                },
+            )
+        },
+    );
+    let designations = designations?;
+    let refset_pass = refset_pass?;
+    let (refsets, acceptabilities) = place_acceptabilities(refset_pass.language, &designations)?;
+    Ok(Loaded {
+        concepts,
+        ordinals,
+        relationships: relationships?,
+        designations,
+        refsets,
+        acceptabilities,
+        memberships: refset_pass.memberships,
+        member_tables: refset_pass.member_tables,
+        identifiers: identifiers?,
+    })
+}
+
+/// Writes the store, the designation index, and the graph files into `out`.
+///
+/// The three are outputs over the same rows, each written from its own inputs
+/// alone, so they are built together and every file's bytes stay a function of
+/// those inputs.
+fn write_artifacts(
+    loaded: &Loaded,
+    attribute_graph: &Attributes,
+    out: &Path,
+    version_uri: &str,
+) -> Result<Written, Error> {
+    let store_path = out.join(STORE_FILE);
+    let hierarchy_path = out.join(HIERARCHY_FILE);
+    let text_path = out.join(TEXT_FILE);
+    let refsets_path = out.join(REFSETS_FILE);
+    let (store, (text, graph)) = rayon::join(
+        || -> Result<(u64, u64), Error> {
+            let mut builder =
+                StoreBuilder::create(&store_path, "http://snomed.info/sct", version_uri)?;
+            write_vocabularies(
+                &mut builder,
+                &loaded.refsets,
+                &loaded.relationships.attribute_types,
+            )?;
+            let is_a_edges = write_concepts(
+                &mut builder,
+                &loaded.concepts,
+                &loaded.ordinals,
+                &loaded.relationships,
+            )?;
+            let designations = write_designations(&mut builder, &loaded.designations)?;
+            for ((ordinal, index), memberships) in &loaded.acceptabilities {
+                for (refset, acceptability) in memberships {
+                    builder.acceptability(*ordinal, *index, *refset, *acceptability)?;
+                }
+            }
+            builder.finish(&PreferredRule { preferred: 0 })?;
+            Ok((is_a_edges, designations))
+        },
+        || {
+            rayon::join(
+                || -> Result<u64, Error> {
+                    let (bytes, words) = build_text(&loaded.designations, &loaded.acceptabilities)?;
+                    std::fs::write(&text_path, &bytes).map_err(io_error(&text_path))?;
+                    Ok(words)
+                },
+                || -> Result<(), Error> {
+                    let hierarchy = build_hierarchy(&loaded.concepts, &loaded.relationships.is_a)?;
+                    let mut bytes = Vec::new();
+                    hierarchy.write_to(&mut bytes)?;
+                    std::fs::write(&hierarchy_path, &bytes).map_err(io_error(&hierarchy_path))?;
+                    bytes.clear();
+                    loaded.memberships.write_to(&mut bytes)?;
+                    std::fs::write(&refsets_path, &bytes).map_err(io_error(&refsets_path))?;
+                    write_ecl_files(
+                        out,
+                        attribute_graph,
+                        &loaded.member_tables,
+                        &loaded.identifiers,
+                    )
+                },
+            )
+        },
+    );
+    let (is_a_edges, designations) = store?;
+    let words = text?;
+    graph?;
+    let mut languages: Vec<String> = loaded
+        .designations
+        .iter()
+        .map(|placed| placed.record.language.clone())
+        .collect();
+    languages.sort();
+    languages.dedup();
+    Ok(Written {
+        is_a_edges,
+        designations,
         words,
         languages,
     })
@@ -464,19 +573,49 @@ fn layer(
 /// stable; a concept a layered package restates keeps the edition's row,
 /// which the stable sort leaves first.
 fn read_concepts(releases: &[Release]) -> Result<Vec<Concept>, Error> {
-    let mut concepts = Vec::new();
-    for release in releases {
-        let file = release
-            .of_type(&ContentType::Concept)
-            .next()
-            .ok_or(Error::MissingFile("concept"))?;
-        for concept in Rows::<_, Concept>::open(&file.path)? {
-            concepts.push(concept?);
-        }
-    }
-    concepts.sort_by_key(|concept| concept.id);
+    let paths: Vec<&Path> = releases
+        .iter()
+        .map(|release| {
+            release
+                .of_type(&ContentType::Concept)
+                .next()
+                .map(|file| file.path.as_path())
+                .ok_or(Error::MissingFile("concept"))
+        })
+        .collect::<Result<_, Error>>()?;
+    let mut concepts = concat(read_files(&paths, component_rows::<Concept>)?);
+    // The sort is stable and the release order is fixed, so a concept a
+    // layered package restates keeps the edition's row, which stays first.
+    concepts.par_sort_by_key(|concept| concept.id);
     concepts.dedup_by_key(|concept| concept.id);
     Ok(concepts)
+}
+
+/// Reads every path in parallel and returns what each one yielded, in the
+/// order the paths were given.
+fn read_files<T: Send>(
+    paths: &[&Path],
+    read: impl Fn(&Path) -> Result<T, Error> + Sync,
+) -> Result<Vec<T>, Error> {
+    paths.par_iter().map(|path| read(path)).collect()
+}
+
+/// Every row of one component file.
+fn component_rows<T: rf2::component::Component>(path: &Path) -> Result<Vec<T>, Error> {
+    let mut out = Vec::new();
+    for row in Rows::<_, T>::open(path)? {
+        out.push(row?);
+    }
+    Ok(out)
+}
+
+/// The parts of a per-file read, joined in file order.
+fn concat<T>(parts: Vec<Vec<T>>) -> Vec<T> {
+    let mut out = Vec::with_capacity(parts.iter().map(Vec::len).sum());
+    for part in parts {
+        out.extend(part);
+    }
+    out
 }
 
 /// The active inferred relationships: is-a edges as (child, parent) ordinals,
@@ -604,16 +743,40 @@ fn read_relationships(
     releases: &[Release],
     ordinals: &BTreeMap<ConceptId, Ordinal>,
 ) -> Result<Relationships, Error> {
-    let mut out = Relationships::default();
+    let mut files: Vec<(&Path, bool)> = Vec::new();
     for release in releases {
-        for file in release.of_type(&ContentType::Relationship) {
-            read_relationship_file(&file.path, ordinals, &mut out)?;
-        }
-        for file in release.of_type(&ContentType::RelationshipConcreteValues) {
-            read_concrete_relationship_file(&file.path, ordinals, &mut out)?;
-        }
+        files.extend(
+            release
+                .of_type(&ContentType::Relationship)
+                .map(|file| (file.path.as_path(), false)),
+        );
+        files.extend(
+            release
+                .of_type(&ContentType::RelationshipConcreteValues)
+                .map(|file| (file.path.as_path(), true)),
+        );
     }
-    out.is_a.sort_unstable();
+    let parts: Vec<Relationships> = files
+        .par_iter()
+        .map(|(path, concrete)| {
+            let mut part = Relationships::default();
+            if *concrete {
+                read_concrete_relationship_file(path, ordinals, &mut part)?;
+            } else {
+                read_relationship_file(path, ordinals, &mut part)?;
+            }
+            Ok(part)
+        })
+        .collect::<Result<_, Error>>()?;
+    let mut out = Relationships::default();
+    for part in parts {
+        out.is_a.extend(part.is_a);
+        for (key, values) in part.attributes {
+            out.attributes.entry(key).or_default().extend(values);
+        }
+        out.edges.extend(part.edges);
+    }
+    out.is_a.par_sort_unstable();
     out.is_a.dedup();
     let mut attribute_types: Vec<ConceptId> = out.attributes.keys().map(|(_, t)| *t).collect();
     attribute_types.sort_unstable();
@@ -637,17 +800,17 @@ fn read_designations(
     releases: &[Release],
     ordinals: &BTreeMap<ConceptId, Ordinal>,
 ) -> Result<Vec<Placed>, Error> {
-    let mut rows: Vec<Description> = Vec::new();
+    let described = [ContentType::Description, ContentType::TextDefinition];
+    let mut paths: Vec<&Path> = Vec::new();
     for release in releases {
-        for content in [ContentType::Description, ContentType::TextDefinition] {
-            for file in release.of_type(&content) {
-                for description in Rows::<_, Description>::open(&file.path)? {
-                    rows.push(description?);
-                }
-            }
+        for content in &described {
+            paths.extend(release.of_type(content).map(|file| file.path.as_path()));
         }
     }
-    rows.sort_by_key(|row| row.id);
+    let mut rows: Vec<Description> = concat(read_files(&paths, |path| {
+        component_rows::<Description>(path)
+    })?);
+    rows.par_sort_by_key(|row| row.id);
     let mut per_concept: BTreeMap<Ordinal, u32> = BTreeMap::new();
     let mut placed = Vec::with_capacity(rows.len());
     for row in rows {
@@ -709,50 +872,16 @@ type Acceptabilities = BTreeMap<(Ordinal, u32), Vec<(u32, u32)>>;
 
 /// The language reference sets (by ordinal) and, per designation, its
 /// (refset ordinal, acceptability ordinal) memberships.
-fn read_acceptabilities(
-    releases: &[Release],
+fn place_acceptabilities(
+    mut members: Vec<(RefsetId, DescriptionId, u32)>,
     designations: &[Placed],
 ) -> Result<(Vec<RefsetId>, Acceptabilities), Error> {
     let by_id: BTreeMap<DescriptionId, (Ordinal, u32)> = designations
         .iter()
         .map(|d| (d.id, (d.ordinal, d.index)))
         .collect();
-    let mut members: Vec<(RefsetId, DescriptionId, u32)> = Vec::new();
-    for release in releases {
-        for file in release.refsets() {
-            if refset_kind(file)? != RefsetKind::Language {
-                continue;
-            }
-            let ContentType::Refset(kinds) = &file.name.content_type else {
-                continue;
-            };
-            for member in Members::open(&file.path, kinds)? {
-                let member = LanguageMember::try_from(member?)?;
-                if !member.member.active {
-                    continue;
-                }
-                // The error names the member and component; the id error adds nothing.
-                let Ok(description) =
-                    DescriptionId::try_from(member.member.referenced_component_id)
-                else {
-                    return Err(Error::NotADescription {
-                        member: member.member.id.to_string(),
-                        component: member.member.referenced_component_id.to_string(),
-                    });
-                };
-                let acceptability = ACCEPTABILITIES
-                    .iter()
-                    .position(|a| *a == member.acceptability_id)
-                    .map(|p| ordinal_of(p, "acceptabilities"))
-                    .transpose()?
-                    .unwrap_or(1);
-                members.push((member.member.refset_id, description, acceptability));
-            }
-        }
-    }
-    members.sort_unstable();
+    members.par_sort_unstable();
     let mut refsets: Vec<RefsetId> = members.iter().map(|m| m.0).collect();
-    refsets.sort_unstable();
     refsets.dedup();
     let mut acceptabilities: Acceptabilities = BTreeMap::new();
     for (refset, description, acceptability) in members {
@@ -771,38 +900,90 @@ fn read_acceptabilities(
     Ok((refsets, acceptabilities))
 }
 
-/// The active concept members of every reference set that references
-/// concepts: the simple, association, attribute value, and map reference
-/// sets, whatever their content; the language reference sets reference
-/// descriptions and are read as acceptabilities instead.
-fn read_memberships(
-    releases: &[Release],
-    ordinals: &BTreeMap<ConceptId, Ordinal>,
-) -> Result<Memberships, Error> {
-    let mut memberships = Memberships::new();
-    for release in releases {
-        for file in release.refsets() {
-            read_membership_file(file, ordinals, &mut memberships)?;
-        }
-    }
-    Ok(memberships)
+/// The fields and rows of one reference set before they become a table.
+type PendingTable = (Vec<(String, refsets::FieldKind)>, Vec<MemberRow>);
+
+/// What one pass over the reference set files of a release yields.
+struct RefsetPass {
+    /// The active concept members of every reference set that references
+    /// concepts: the simple, association, attribute value, and map reference
+    /// sets, whatever their content.
+    memberships: Memberships,
+    /// The active members of every content reference set, with their fields;
+    /// the OWL axiom reference sets carry text no ECL filter reads.
+    member_tables: RefsetMembers,
+    /// The active language reference set members, in file order.
+    language: Vec<(RefsetId, DescriptionId, u32)>,
 }
 
-/// Reads the active concept members of one reference set file into
-/// `memberships`; a language reference set holds none.
-fn read_membership_file(
+/// What one reference set file yields, before the files are joined.
+#[derive(Default)]
+struct RefsetFile {
+    memberships: Vec<(u64, Ordinal)>,
+    tables: BTreeMap<u64, PendingTable>,
+    language: Vec<(RefsetId, DescriptionId, u32)>,
+}
+
+/// Reads every reference set file of every release, once.
+///
+/// The concept memberships, the member tables of the content reference sets,
+/// and the language reference set members come from the same rows, so one
+/// pass yields all three. The files are read together and joined in path
+/// order, so a row's place in its table is the file's, never a worker's.
+fn read_refsets(
+    releases: &[Release],
+    ordinals: &BTreeMap<ConceptId, Ordinal>,
+) -> Result<RefsetPass, Error> {
+    let files: Vec<&ReleaseFile> = releases.iter().flat_map(Release::refsets).collect();
+    let parts: Vec<RefsetFile> = files
+        .par_iter()
+        .map(|file| read_refset_file(file, ordinals))
+        .collect::<Result<_, Error>>()?;
+    let mut memberships = Memberships::new();
+    let mut tables: BTreeMap<u64, PendingTable> = BTreeMap::new();
+    let mut language = Vec::new();
+    for part in parts {
+        for (refset, ordinal) in part.memberships {
+            memberships.insert(refset, ordinal);
+        }
+        for (refset, (fields, rows)) in part.tables {
+            tables
+                .entry(refset)
+                .or_insert_with(|| (fields, Vec::new()))
+                .1
+                .extend(rows);
+        }
+        language.extend(part.language);
+    }
+    let mut member_tables = RefsetMembers::new();
+    for (refset, (fields, rows)) in tables {
+        member_tables.insert(refset, &fields, rows)?;
+    }
+    Ok(RefsetPass {
+        memberships,
+        member_tables,
+        language,
+    })
+}
+
+/// Reads one reference set file: its language members when it is a language
+/// reference set, its concept memberships otherwise, and its member rows with
+/// their fields when it is a content reference set.
+fn read_refset_file(
     file: &ReleaseFile,
     ordinals: &BTreeMap<ConceptId, Ordinal>,
-    memberships: &mut Memberships,
-) -> Result<(), Error> {
-    if refset_kind(file)? == RefsetKind::Language {
-        return Ok(());
-    }
+) -> Result<RefsetFile, Error> {
+    let kind = refset_kind(file)?;
+    let mut out = RefsetFile::default();
     let ContentType::Refset(kinds) = &file.name.content_type else {
-        return Ok(());
+        return Ok(out);
     };
     for member in Members::open(&file.path, kinds)? {
         let member = member?;
+        if kind == RefsetKind::Language {
+            read_language_member(member, &mut out.language)?;
+            continue;
+        }
         if !member.active {
             continue;
         }
@@ -813,65 +994,17 @@ fn read_membership_file(
         let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
             continue;
         };
-        if let Some(ordinal) = ordinals.get(&concept) {
-            memberships.insert(member.refset_id.concept().value(), *ordinal);
-        }
-    }
-    Ok(())
-}
-
-/// The `YYYYMMDD` of an effective time as a number.
-fn compact_time(time: EffectiveTime) -> u32 {
-    time.compact().parse().unwrap_or_default()
-}
-
-/// The fields and rows of one reference set before they become a table.
-type PendingTable = (Vec<(String, refsets::FieldKind)>, Vec<MemberRow>);
-
-/// The active members of every concept-referencing reference set, with their
-/// fields; the language reference sets live in the store as acceptability and
-/// the OWL axiom reference sets carry text no ECL filter reads.
-fn read_member_tables(
-    releases: &[Release],
-    ordinals: &BTreeMap<ConceptId, Ordinal>,
-) -> Result<RefsetMembers, Error> {
-    let mut tables: BTreeMap<u64, PendingTable> = BTreeMap::new();
-    for file in releases.iter().flat_map(Release::refsets) {
-        read_member_table_file(file, ordinals, &mut tables)?;
-    }
-    let mut members = RefsetMembers::new();
-    for (refset, (fields, rows)) in tables {
-        members.insert(refset, &fields, rows)?;
-    }
-    Ok(members)
-}
-
-/// Reads the active members of one reference set file into the table of its
-/// reference set; only a content reference set has fields to store.
-fn read_member_table_file(
-    file: &ReleaseFile,
-    ordinals: &BTreeMap<ConceptId, Ordinal>,
-    tables: &mut BTreeMap<u64, PendingTable>,
-) -> Result<(), Error> {
-    if refset_kind(file)? != RefsetKind::Content {
-        return Ok(());
-    }
-    let ContentType::Refset(kinds) = &file.name.content_type else {
-        return Ok(());
-    };
-    for member in Members::open(&file.path, kinds)? {
-        let member = member?;
-        if !member.active {
-            continue;
-        }
-        let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {
-            continue;
-        };
         let Some(&ordinal) = ordinals.get(&concept) else {
             continue;
         };
-        let entry = tables
-            .entry(member.refset_id.concept().value())
+        let refset = member.refset_id.concept().value();
+        out.memberships.push((refset, ordinal));
+        if kind != RefsetKind::Content {
+            continue;
+        }
+        let entry = out
+            .tables
+            .entry(refset)
             .or_insert_with(|| (field_columns(&member.fields, kinds), Vec::new()));
         entry.1.push(MemberRow {
             concept: ordinal,
@@ -880,7 +1013,39 @@ fn read_member_table_file(
             values: field_values(member.fields, ordinals),
         });
     }
+    Ok(out)
+}
+
+/// Reads one language reference set member: the reference set, the
+/// description it places, and the acceptability ordinal.
+fn read_language_member(
+    member: rf2::refset::Member,
+    out: &mut Vec<(RefsetId, DescriptionId, u32)>,
+) -> Result<(), Error> {
+    let member = LanguageMember::try_from(member)?;
+    if !member.member.active {
+        return Ok(());
+    }
+    // The error names the member and component; the id error adds nothing.
+    let Ok(description) = DescriptionId::try_from(member.member.referenced_component_id) else {
+        return Err(Error::NotADescription {
+            member: member.member.id.to_string(),
+            component: member.member.referenced_component_id.to_string(),
+        });
+    };
+    let acceptability = ACCEPTABILITIES
+        .iter()
+        .position(|a| *a == member.acceptability_id)
+        .map(|p| ordinal_of(p, "acceptabilities"))
+        .transpose()?
+        .unwrap_or(1);
+    out.push((member.member.refset_id, description, acceptability));
     Ok(())
+}
+
+/// The `YYYYMMDD` of an effective time as a number.
+fn compact_time(time: EffectiveTime) -> u32 {
+    time.compact().parse().unwrap_or_default()
 }
 
 /// The stored columns of a reference set: the member's field names under the

@@ -8,6 +8,11 @@ the input, and the store, graph, and text crates own their formats.
   the server's, not this tool's (`.claude/rules/reliability.md`).
 - Determinism is a requirement: two builds of the same release produce
   byte-identical artifacts.
+- The build reads and writes on several threads (`rayon`), and every parallel
+  stage is ordered by construction: a per-file read collects into a position
+  keyed structure and is joined in path order, and each artifact is written
+  from its own inputs alone. Never let a result depend on which worker
+  finished first.
 - The output directory is never committed (`.gitignore` refuses `*.redb`,
   `*.fst`, and `/artifacts/`); neither is any RF2 input
   (`.claude/rules/vendored-inputs.md`).

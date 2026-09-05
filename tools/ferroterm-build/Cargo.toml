@@ -29,6 +29,7 @@ concept-graph.workspace = true
 icd11.workspace = true
 rxnorm-rrf.workspace = true
 loinc.workspace = true
+rayon.workspace = true
 rf2.workspace = true
 concept-store.workspace = true
 designation-index.workspace = true

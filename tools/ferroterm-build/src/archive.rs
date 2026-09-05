@@ -12,6 +12,8 @@ use std::fs::File;
 use std::io;
 use std::path::{Component, Path, PathBuf};
 
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+
 /// A failure to unpack a release zip.
 #[derive(Debug, thiserror::Error)]
 pub enum ArchiveError {
@@ -70,14 +72,11 @@ pub fn unpack_snapshot(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveE
         path: zip_path.to_path_buf(),
         source,
     };
-    let file = File::open(zip_path).map_err(|source| ArchiveError::Read {
-        path: zip_path.to_path_buf(),
-        source: zip::result::ZipError::Io(source),
-    })?;
-    let mut archive = zip::ZipArchive::new(file).map_err(read)?;
+    let mut archive = open(zip_path)?;
     let mut root: Option<PathBuf> = None;
+    let mut wanted: Vec<(usize, PathBuf)> = Vec::new();
     for index in 0..archive.len() {
-        let mut entry = archive.by_index(index).map_err(read)?;
+        let entry = archive.by_index(index).map_err(read)?;
         let Some(name) = entry.enclosed_name() else {
             continue;
         };
@@ -100,22 +99,59 @@ pub fn unpack_snapshot(zip_path: &Path, into: &Path) -> Result<PathBuf, ArchiveE
             }
             Some(_) => {}
         }
-        let target = into.join(&name);
-        let entry_name = entry.name().to_owned();
-        let unpack = |source| ArchiveError::Unpack {
-            entry: entry_name.clone(),
-            source,
-        };
-        if let Some(parent) = target.parent() {
-            std::fs::create_dir_all(parent).map_err(unpack)?;
-        }
-        let mut out = File::create(&target).map_err(unpack)?;
-        io::copy(&mut entry, &mut out).map_err(unpack)?;
+        wanted.push((index, name));
     }
     let root = root.ok_or_else(|| ArchiveError::NoSnapshot {
         path: zip_path.to_path_buf(),
     })?;
+    for (_, name) in &wanted {
+        if let Some(parent) = into.join(name).parent() {
+            std::fs::create_dir_all(parent).map_err(|source| ArchiveError::Unpack {
+                entry: name.display().to_string(),
+                source,
+            })?;
+        }
+    }
+    // Every entry decompresses on its own, and a worker reads the archive
+    // through its own handle because `ZipArchive` seeks. The files land at
+    // fixed paths, so which worker wrote which one does not show.
+    wanted
+        .par_iter()
+        .try_for_each(|entry| extract(zip_path, entry, into))?;
     Ok(into.join(root))
+}
+
+/// Opens the zip at `path` for reading.
+fn open(path: &Path) -> Result<zip::ZipArchive<File>, ArchiveError> {
+    let file = File::open(path).map_err(|source| ArchiveError::Read {
+        path: path.to_path_buf(),
+        source: zip::result::ZipError::Io(source),
+    })?;
+    zip::ZipArchive::new(file).map_err(|source| ArchiveError::Read {
+        path: path.to_path_buf(),
+        source,
+    })
+}
+
+/// Writes the entry of `zip_path` that `entry` indexes to the path it names
+/// under `into`.
+fn extract(zip_path: &Path, entry: &(usize, PathBuf), into: &Path) -> Result<(), ArchiveError> {
+    let (index, name) = entry;
+    let mut archive = open(zip_path)?;
+    let unpack = |source| ArchiveError::Unpack {
+        entry: name.display().to_string(),
+        source,
+    };
+    let mut source = archive
+        .by_index(*index)
+        .map_err(|source| ArchiveError::Read {
+            path: zip_path.to_path_buf(),
+            source,
+        })?;
+    let target = into.join(name);
+    let mut out = File::create(&target).map_err(unpack)?;
+    io::copy(&mut source, &mut out).map_err(unpack)?;
+    Ok(())
 }
 
 /// The path up to (not including) the `Snapshot` component of `name`, when

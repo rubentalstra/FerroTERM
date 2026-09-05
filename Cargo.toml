@@ -48,6 +48,8 @@ miette = "7.6.0"
 ariadne = "0.6.0"
 # RF2 (tab-delimited, streamed); releases arrive zipped.
 csv = "1.4.0"
+# Data parallelism for the offline build (order-preserving collection).
+rayon = "1.12.0"
 zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 # The UCUM essence (unit definitions) is XML.
 quick-xml = "0.42.0"
