@@ -436,6 +436,13 @@ fn read_terms(
 /// Reads `ThesaurusConceptRelaties`: the replacements and splits of the ended
 /// concepts, as properties of the concept they leave.
 ///
+/// The table is read whole, where every other table drops a row that is not
+/// current at the delivery date. A relation exists because the concept it
+/// leaves has ended, and that concept is served (inactive), so filtering the
+/// relation by the same date would drop exactly the successor a client of the
+/// inactive concept has to follow. No published DHD documentation states this,
+/// so it is our own design, pinned by a test (#269).
+///
 /// # Errors
 ///
 /// Returns [`DhdError`] when the table does not read.

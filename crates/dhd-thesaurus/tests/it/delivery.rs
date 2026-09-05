@@ -71,7 +71,14 @@ fn the_delivery_reads_into_a_flat_classification() {
     assert_eq!(texts(sprain, MAPPING), ["ICPC-2: L99"]);
     let old = class(&c.classes, OLD);
     assert!(!old.active, "ended before the delivery date");
-    assert_eq!(texts(old, REPLACED_BY), [FRACTURE]);
+    // NOTE: the relations table is read whole, so the successor of an ended
+    // concept stays followable even after the relation's own validity ended
+    // (`crates/dhd-thesaurus/src/lib.rs`, `read_relations`; #269).
+    assert_eq!(
+        texts(old, REPLACED_BY),
+        [FRACTURE, SPRAIN],
+        "the current replacement and the one whose validity ended"
+    );
     assert!(
         texts(old, PREFERRED).is_empty(),
         "its term ended with it and is skipped"
