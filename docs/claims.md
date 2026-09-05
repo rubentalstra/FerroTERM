@@ -389,7 +389,8 @@ record set is `bench/records/2026-09-05-apple-m2-perf/`, and every record in it
 carries `"machine": {"os": "macos", "container": false}`. The run was native on
 a laptop. The generated footer under the table is correct and says nothing
 about a container; only this hand-written sentence claims one. A container set
-does exist (`bench/records/2026-09-04-docker-apple-m2/`, FerroTERM 0.0.9), but
+does exist (`bench/records/2026-09-04-docker-apple-m2/`, from an earlier
+release), but
 the table is not rendered from it.
 
 <a id="b2"></a>**B2. "Runs for this page are taken inside the repository's
@@ -402,8 +403,8 @@ come from the native record set.
 402 MB resident after the warm requests"**
 (`website/landing/comparison.html:429`). 402 MB is
 `bench/records/2026-09-04-docker-apple-m2/snomed-ct-international-edition-*.json`,
-a superseded container set taken on FerroTERM 0.0.9. The published set for
-0.0.11 shows 702 MB resident for the same edition. The cell says "the committed
+a superseded container set from an earlier release. The current published set
+shows 702 MB resident for the same edition. The cell says "the committed
 record", which now reads as the published one.
 
 <a id="b4"></a>**B4. "637 MB on disk, 420 to 580 MB resident with two more
