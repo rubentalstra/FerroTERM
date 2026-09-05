@@ -146,6 +146,26 @@ fn write_resource(
     write_complex(schemas, writer, schema, object, start, &["resourceType"])
 }
 
+/// Whether `object` carries `field`, so an element with no child is written
+/// empty rather than opened and closed.
+///
+/// A primitive is present under its own name or under the `_name` object that
+/// carries its id and extensions, and a choice is present under any of its
+/// suffixed names.
+fn present(field: &FieldSchema, object: &Object) -> bool {
+    match field.kind {
+        Kind::Attribute => false,
+        Kind::Choice(variants) => variants.iter().any(|(suffix, _)| {
+            object.contains_key(&format!("{}{suffix}", field.name))
+                || object.contains_key(&format!("_{}{suffix}", field.name))
+        }),
+        Kind::Primitive(_) => {
+            object.contains_key(field.name) || object.contains_key(&format!("_{}", field.name))
+        }
+        _ => object.contains_key(field.name),
+    }
+}
+
 /// Writes one complex element: its attributes on the start tag, then its
 /// children in schema order.
 fn write_complex(
@@ -163,24 +183,10 @@ fn write_complex(
             start.push_attribute((field.name, text.as_str()));
         }
     }
-    let mut children = false;
-    for field in schema.fields {
-        let present = match field.kind {
-            Kind::Attribute => false,
-            Kind::Choice(variants) => variants.iter().any(|(suffix, _)| {
-                object.contains_key(&format!("{}{suffix}", field.name))
-                    || object.contains_key(&format!("_{}{suffix}", field.name))
-            }),
-            Kind::Primitive(_) => {
-                object.contains_key(field.name) || object.contains_key(&format!("_{}", field.name))
-            }
-            _ => object.contains_key(field.name),
-        };
-        if present && !skip.contains(&field.name) {
-            children = true;
-            break;
-        }
-    }
+    let children = schema
+        .fields
+        .iter()
+        .any(|field| !skip.contains(&field.name) && present(field, object));
     if !children {
         writer.write_event(Event::Empty(start)).map_err(xml_error)?;
         return Ok(());
@@ -196,6 +202,69 @@ fn write_complex(
     writer
         .write_event(Event::End(BytesEnd::new(name)))
         .map_err(xml_error)
+}
+
+/// Writes a primitive field: its value, its `_name` id and extensions, or both.
+///
+/// A repeating primitive writes one element per position, and the two arrays
+/// need not be the same length, so the longer decides how many elements there
+/// are (<https://hl7.org/fhir/R4B/json.html#primitive>).
+fn write_primitive_field(
+    schemas: &Schemas,
+    writer: &mut Writer<Vec<u8>>,
+    field: &FieldSchema,
+    name: &str,
+    object: &Object,
+) -> Result<(), EncodeError> {
+    let values = object.get(name);
+    let elements = object.get(&format!("_{name}"));
+    if values.is_none() && elements.is_none() {
+        return Ok(());
+    }
+    if !field.many {
+        return write_primitive(
+            schemas,
+            writer,
+            name,
+            values.filter(|v| !v.is_null()),
+            elements.and_then(Value::as_object),
+        );
+    }
+    let values = values.and_then(Value::as_array);
+    let elements = elements.and_then(Value::as_array);
+    let len = values.map_or(0, Vec::len).max(elements.map_or(0, Vec::len));
+    for index in 0..len {
+        let value = values.and_then(|v| v.get(index)).filter(|v| !v.is_null());
+        let element = elements
+            .and_then(|e| e.get(index))
+            .and_then(Value::as_object);
+        write_primitive(schemas, writer, name, value, element)?;
+    }
+    Ok(())
+}
+
+/// Writes a complex field: one element per item, each over the named type's
+/// own schema.
+fn write_complex_field(
+    schemas: &Schemas,
+    writer: &mut Writer<Vec<u8>>,
+    field: &FieldSchema,
+    name: &str,
+    type_name: &str,
+    object: &Object,
+) -> Result<(), EncodeError> {
+    let schema = schemas
+        .type_named(type_name)
+        .ok_or_else(|| EncodeError::Xml {
+            reason: format!("no schema for the type `{type_name}`"),
+        })?;
+    for item in items(object.get(name), field.many) {
+        let item = item.as_object().ok_or_else(|| EncodeError::Xml {
+            reason: format!("`{name}` is not an object"),
+        })?;
+        write_complex(schemas, writer, schema, item, BytesStart::new(name), &[])?;
+    }
+    Ok(())
 }
 
 fn write_field(
@@ -215,47 +284,9 @@ fn write_field(
             }
             Ok(())
         }
-        Kind::Primitive(_) => {
-            let values = object.get(name);
-            let elements = object.get(&format!("_{name}"));
-            if values.is_none() && elements.is_none() {
-                return Ok(());
-            }
-            if field.many {
-                let values = values.and_then(Value::as_array);
-                let elements = elements.and_then(Value::as_array);
-                let len = values.map_or(0, Vec::len).max(elements.map_or(0, Vec::len));
-                for index in 0..len {
-                    let value = values.and_then(|v| v.get(index)).filter(|v| !v.is_null());
-                    let element = elements
-                        .and_then(|e| e.get(index))
-                        .and_then(Value::as_object);
-                    write_primitive(schemas, writer, name, value, element)?;
-                }
-                Ok(())
-            } else {
-                write_primitive(
-                    schemas,
-                    writer,
-                    name,
-                    values.filter(|v| !v.is_null()),
-                    elements.and_then(Value::as_object),
-                )
-            }
-        }
+        Kind::Primitive(_) => write_primitive_field(schemas, writer, field, name, object),
         Kind::Complex(type_name) => {
-            let schema = schemas
-                .type_named(type_name)
-                .ok_or_else(|| EncodeError::Xml {
-                    reason: format!("no schema for the type `{type_name}`"),
-                })?;
-            for item in items(object.get(name), field.many) {
-                let item = item.as_object().ok_or_else(|| EncodeError::Xml {
-                    reason: format!("`{name}` is not an object"),
-                })?;
-                write_complex(schemas, writer, schema, item, BytesStart::new(name), &[])?;
-            }
-            Ok(())
+            write_complex_field(schemas, writer, field, name, type_name, object)
         }
         Kind::Resource => {
             for item in items(object.get(name), field.many) {
@@ -516,8 +547,20 @@ impl Collector {
         object: &mut Object,
         path: &mut Path,
     ) -> Result<(), DecodeError> {
-        let mut seen: Vec<String> = Vec::new();
-        for (name, value) in self.values {
+        Self::place_values(self.values, schema, object, path)?;
+        Self::place_primitives(self.primitives, schema, object, path)?;
+        drop_null_arrays(object);
+        Ok(())
+    }
+
+    /// Places the complex and resource children, one key per element name.
+    fn place_values(
+        values: Vec<(String, Value)>,
+        schema: &TypeSchema,
+        object: &mut Object,
+        path: &mut Path,
+    ) -> Result<(), DecodeError> {
+        for (name, value) in values {
             let many = field_of(schema, &name).is_some_and(|(f, _, _)| f.many);
             match object.get_mut(&name) {
                 None if many => {
@@ -534,65 +577,93 @@ impl Collector {
                 }
             }
         }
-        for (name, value, element) in self.primitives {
+        Ok(())
+    }
+
+    /// Places the primitive children: the value under its name, the id and
+    /// extensions under `_name`.
+    fn place_primitives(
+        primitives: Vec<(String, Option<Value>, Option<Value>)>,
+        schema: &TypeSchema,
+        object: &mut Object,
+        path: &mut Path,
+    ) -> Result<(), DecodeError> {
+        let mut seen: Vec<String> = Vec::new();
+        for (name, value, element) in primitives {
             let many = field_of(schema, &name).is_some_and(|(f, _, _)| f.many);
-            let element_key = format!("_{name}");
-            if !many {
-                if seen.contains(&name) {
-                    return path.with(&name, |path| {
-                        Err(path.error(DecodeErrorKind::WrongCardinality))
-                    });
-                }
-                seen.push(name.clone());
-                if let Some(value) = value {
-                    object.insert(name, value);
-                }
-                if let Some(element) = element {
-                    object.insert(element_key, element);
-                }
+            if many {
+                push_primitive(object, &name, value, element, path)?;
                 continue;
             }
-            match object
-                .entry(name.clone())
-                .or_insert_with(|| Value::Array(Vec::new()))
-            {
-                Value::Array(values) => values.push(value.unwrap_or(Value::Null)),
-                _ => {
-                    return path.with(&name, |path| {
-                        Err(path.error(DecodeErrorKind::WrongCardinality))
-                    });
-                }
+            if seen.contains(&name) {
+                return path.with(&name, |path| {
+                    Err(path.error(DecodeErrorKind::WrongCardinality))
+                });
             }
-            match object
-                .entry(element_key)
-                .or_insert_with(|| Value::Array(Vec::new()))
-            {
-                Value::Array(elements) => elements.push(element.unwrap_or(Value::Null)),
-                _ => {
-                    return path.with(&name, |path| {
-                        Err(path.error(DecodeErrorKind::WrongCardinality))
-                    });
-                }
+            seen.push(name.clone());
+            let element_key = format!("_{name}");
+            if let Some(value) = value {
+                object.insert(name, value);
             }
-        }
-        // A repeating primitive without any value keeps only its `_name` array,
-        // and without any element only its values (<https://hl7.org/fhir/R4B/json.html#primitive>).
-        let names: Vec<String> = object
-            .keys()
-            .filter(|k| k.starts_with('_'))
-            .cloned()
-            .collect();
-        for element_key in names {
-            let all_null = |v: &Value| v.as_array().is_some_and(|a| a.iter().all(Value::is_null));
-            if object.get(&element_key).is_some_and(all_null) {
-                object.remove(&element_key);
-            }
-            let name = element_key.trim_start_matches('_').to_owned();
-            if object.get(&name).is_some_and(all_null) {
-                object.remove(&name);
+            if let Some(element) = element {
+                object.insert(element_key, element);
             }
         }
         Ok(())
+    }
+}
+
+/// Appends one occurrence of a repeating primitive to both its arrays, so the
+/// value and its `_name` element stay at the same position.
+fn push_primitive(
+    object: &mut Object,
+    name: &str,
+    value: Option<Value>,
+    element: Option<Value>,
+    path: &mut Path,
+) -> Result<(), DecodeError> {
+    let wrong = |path: &mut Path| {
+        path.with(name, |path| {
+            Err(path.error(DecodeErrorKind::WrongCardinality))
+        })
+    };
+    match object
+        .entry(name.to_owned())
+        .or_insert_with(|| Value::Array(Vec::new()))
+    {
+        Value::Array(values) => values.push(value.unwrap_or(Value::Null)),
+        _ => return wrong(path),
+    }
+    match object
+        .entry(format!("_{name}"))
+        .or_insert_with(|| Value::Array(Vec::new()))
+    {
+        Value::Array(elements) => elements.push(element.unwrap_or(Value::Null)),
+        _ => return wrong(path),
+    }
+    Ok(())
+}
+
+/// Drops the arrays a repeating primitive left all null.
+///
+/// A repeating primitive without any value keeps only its `_name` array, and
+/// without any element only its values
+/// (<https://hl7.org/fhir/R4B/json.html#primitive>).
+fn drop_null_arrays(object: &mut Object) {
+    let names: Vec<String> = object
+        .keys()
+        .filter(|k| k.starts_with('_'))
+        .cloned()
+        .collect();
+    for element_key in names {
+        let all_null = |v: &Value| v.as_array().is_some_and(|a| a.iter().all(Value::is_null));
+        if object.get(&element_key).is_some_and(all_null) {
+            object.remove(&element_key);
+        }
+        let name = element_key.trim_start_matches('_').to_owned();
+        if object.get(&name).is_some_and(all_null) {
+            object.remove(&name);
+        }
     }
 }
 
