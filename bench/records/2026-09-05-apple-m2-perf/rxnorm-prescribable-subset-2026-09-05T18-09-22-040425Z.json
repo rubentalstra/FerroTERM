@@ -1,0 +1,51 @@
+{
+  "taken_at": "2026-09-05T18:09:22.040425Z",
+  "ferroterm_version": "0.0.11",
+  "fhir": "r4b",
+  "machine": {
+    "os": "macos",
+    "arch": "aarch64",
+    "cpu": "Apple M2",
+    "memory_bytes": 17179869184,
+    "container": false
+  },
+  "system": "RxNorm (prescribable subset)",
+  "system_uri": "http://www.nlm.nih.gov/research/umls/rxnorm",
+  "system_version": "09082026",
+  "concepts": 81468,
+  "artifact_bytes": 71873136,
+  "ingest": {
+    "seconds": 4.545778417,
+    "peak_rss_bytes": 646447104,
+    "release": "data/rxnorm/RxNorm_full_prescribe_current.zip"
+  },
+  "ready_seconds": 0.30662925,
+  "rss_open_bytes": 106921984,
+  "rss_warm_bytes": 118669312,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "cold_ms": 3.3570840000000004,
+        "p50_ms": 1.0239159999999998,
+        "p95_ms": 1.334917,
+        "p99_ms": 1.411375,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "cold_ms": 0.162833,
+        "p50_ms": 0.123041,
+        "p95_ms": 0.16525,
+        "p99_ms": 0.198291,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: `ps -o rss=` of the server process after ready and after the warm requests; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank); comparison: not run"
+}
