@@ -5,6 +5,7 @@
 # Evaluate
 
 - [What FerroTERM is](evaluate/what-ferroterm-is.md)
+- [What stable means](evaluate/what-stable-means.md)
 - [Architecture at a glance](evaluate/architecture.md)
 - [How it compares](evaluate/comparison.md)
 - [Code systems served](evaluate/code-systems.md)
