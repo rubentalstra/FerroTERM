@@ -197,6 +197,14 @@ impl Hierarchy for SnomedHierarchy {
             .collect()
     }
 
+    fn any_parent_in(&self, concept: Concept, set: &ConceptSet) -> bool {
+        self.graph
+            .is_a
+            .neighbours(Ordinal::new(concept.index()))
+            .iter()
+            .any(|parent| set.contains(*parent))
+    }
+
     fn children(&self, concept: Concept) -> ConceptSet {
         self.children
             .neighbours(Ordinal::new(concept.index()))
@@ -1097,7 +1105,7 @@ impl CodeSystemProvider for SnomedProvider {
     }
 
     fn all(&self) -> Result<ConceptSet, ProviderError> {
-        Ok((0..self.concepts).collect())
+        Ok(crate::provider::every(self.concepts))
     }
 
     fn search(&self, text: &str, language: Option<&str>) -> Result<ConceptSet, ProviderError> {

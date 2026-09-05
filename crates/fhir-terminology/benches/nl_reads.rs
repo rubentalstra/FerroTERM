@@ -14,6 +14,7 @@ use concept_graph::ordinal::{self, Ordinal};
 use concept_store::store::Store;
 use criterion::{Criterion, criterion_group, criterion_main};
 use fhir_terminology::compose::{Expander, Options};
+use fhir_terminology::filter::{Filter, FilterOperator};
 use fhir_terminology::operations::{Invocation, lookup, subsumes, validate_code};
 use fhir_terminology::provider::CodeSystemProvider;
 use fhir_terminology::registry::Registry;
@@ -145,6 +146,22 @@ fn reads(c: &mut Criterion) {
     let mut group = c.benchmark_group("provider");
     group.bench_function("search_hart_nl", |b| {
         b.iter(|| provider.search("hart", Some("nl")).expect("reads"));
+    });
+    // The steps a page of an expansion pays before it cuts anything (#309).
+    let isa = Filter {
+        property: String::from("concept"),
+        op: FilterOperator::IsA,
+        value: FINDING.to_owned(),
+    };
+    group.bench_function("filter_isa_finding", |b| {
+        b.iter(|| provider.filter(&isa).expect("filters"));
+    });
+    group.bench_function("parents", |b| {
+        b.iter(|| hierarchy.parents(finding));
+    });
+    group.bench_function("all", |b| b.iter(|| provider.all().expect("enumerates")));
+    group.bench_function("inactive", |b| {
+        b.iter(|| provider.inactive().expect("enumerates"));
     });
     group.finish();
 

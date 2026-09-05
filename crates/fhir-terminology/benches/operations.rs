@@ -93,6 +93,17 @@ fn operations(c: &mut Criterion) {
     group.bench_function("isa_root_page_10", |b| {
         b.iter(|| expander.expand(&descendants, &page).expect("expands"));
     });
+    // The first page of the whole edition: ten items off the front of a set of
+    // every concept. It costs the page, so its bar is the point-read bar, and a
+    // walk that flattens the set before it cuts breaches it (#309).
+    let first = Options {
+        count: Some(10),
+        offset: 0,
+        ..Options::default()
+    };
+    group.bench_function("isa_root_first_10", |b| {
+        b.iter(|| expander.expand(&descendants, &first).expect("expands"));
+    });
     group.finish();
 }
 
