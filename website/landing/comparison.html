@@ -279,9 +279,14 @@
                   A server reads and searches the <code>ValueSet</code> and
                   <code>ConceptMap</code> resources loaded with its artifacts,
                   and takes a client's resource inline in the request or through
-                  <code>$cache-control</code>. Creating and editing resources
-                  over REST is not served.
-                  <span class="src"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/app/ferroterm-server/src/version/system.rs" rel="noopener">system.rs</a></span>
+                  <code>$cache-control</code>. A deployment that names a
+                  database in <code>FERROTERM_RESOURCES</code> also serves
+                  <code>POST</code>, <code>PUT</code>, <code>GET</code>,
+                  <code>DELETE</code>, <code>_history</code> reads, and
+                  <code>?url=</code> search of <code>CodeSystem</code>,
+                  <code>ValueSet</code>, and <code>ConceptMap</code>, with
+                  <code>ETag</code> and <code>If-Match</code>.
+                  <span class="src"><a href="https://github.com/rubentalstra/FerroTERM/blob/main/app/ferroterm-server/src/version/store.rs" rel="noopener">store.rs</a></span>
                 </td>
                 <td>
                   <code>ValueSet</code> search, create, replace, update, and
@@ -426,7 +431,7 @@
                 <td>
                   The sizing guide puts an edition on a 2 to 4 GB box with two
                   cores; the committed record for the International edition
-                  shows 402 MB resident after the warm requests.
+                  shows 669 MB resident after the warm requests.
                   <span class="src"><a href="./docs/operate/hardware-sizing.html">Hardware sizing</a>, <a href="./benchmarks.html">benchmarks</a></span>
                 </td>
                 <td>
@@ -538,12 +543,14 @@
               Snowstorm.
             </li>
             <li>
-              <strong>Both Snowstorm servers let a client write resources.</strong>
+              <strong>Both Snowstorm servers write client resources with no
+              extra configuration.</strong>
               You can create, replace, and delete <code>ValueSet</code>
               resources in Snowstorm, and <code>ValueSet</code> and
               <code>ConceptMap</code> resources in Snowstorm Lite. FerroTERM
-              reads what its artifacts carry and takes a resource inline in the
-              request.
+              serves the same interactions only where the deployment names a
+              database in <code>FERROTERM_RESOURCES</code>; a deployment that
+              names none refuses every write with a <code>422</code>.
             </li>
             <li>
               <strong>Snowstorm Lite fetches its own content.</strong> Give it

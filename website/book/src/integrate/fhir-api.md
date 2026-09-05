@@ -61,12 +61,20 @@ system with a hierarchy, plus each system's own (LOINC's `parent` and
 `ancestor` and its table fields, RxNorm's `STY`, `SAB`, `TTY`, `REL`, and
 `RELA`, UCUM's `canonical` and `property`, ICD-10's note kinds). `$expand`
 honours `count` and `offset` (at most 1,000 members without `count`), `filter`
-(word-prefix text search over designations), `activeOnly`,
+(word-prefix text search over designations), `activeOnly`, `excludeNested`,
 `includeDesignations`, `displayLanguage`, `system-version`,
 `check-system-version`, `force-system-version`, and `exclude-system`, and
 echoes every effective parameter plus one `used-codesystem` per system version
-the expansion drew on. Expansions are flat today; nested `contains` is the
-v0.0.11 milestone.
+the expansion drew on.
+
+An expansion nests where the compose is the system's own hierarchy: one include
+of one system, taken whole or narrowed by `is-a` or `descendent-of`, with
+nothing enumerated and nothing excluded. Each root then carries its children
+under `contains`
+(<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.expansion.contains>),
+`total` counts every member rather than the roots, and a page is the slice of
+the pre-order walk. `excludeNested=true` flattens it, and a text `filter` over a
+whole system is flat already, because its matches have no root to hang from.
 
 ## Request-scoped resources
 

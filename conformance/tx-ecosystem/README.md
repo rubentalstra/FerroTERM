@@ -1,30 +1,71 @@
 # The HL7 terminology ecosystem suite
 
-`passing.txt` lists the tests of the HL7 terminology ecosystem suite
-(<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>, `general` mode) that
-FerroTERM passes on its R4B surface, one name per line, sorted;
-`passing-r4.txt` and `passing-r5.txt` are the same lists on `/r4` and `/r5`
-(`--fhir r4`, `--fhir r5`), which CI runs too. R5 is the version the suite
-speaks natively, so its list is the longest; the R4-family lists stop where a
-case expects an R5-only output. CI runs the
-suite with the FHIR Validator's `txTests` command
+The suite (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>) groups its
+cases into modes, and a run picks one. This directory holds one committed pass
+list per mode and served surface: the tests FerroTERM passes, one name per
+line, sorted. CI runs the suite with the FHIR Validator's `txTests` command
 (`scripts/checks/tx-ecosystem.sh`, the validator and the suite commit pinned
 there) and fails when a listed test stops passing. A test that starts passing
 is printed by the script; add it to the list in the same change that earns it.
-The remaining failures and their adjudication are recorded on the tracker
-(issue #89). `total.txt` records the number of cases the suite runs; the script
+`total.txt` records the number of cases the `general` mode runs; the script
 fails when a run disagrees with it, and `scripts/checks/conformance-badges.sh`
 turns the lists and the total into the README's badges at site build time.
 
-`passing-icd-11.txt` is the same list for the suite's `icd-11` mode, run by
-hand over the three ICD-11 artifacts built from the WHO ICD-API local
-deployment (`scripts/checks/tx-ecosystem.sh --mode icd-11 --index
-<mms>:<icf>:<entity>`); the artifacts need the WHO container and its licence,
-so this mode does not run in CI. The failures and their clusters are recorded
-on issue #18.
+## What is committed, per mode
 
-`passing-tx.fhir.org.txt` is the list for the suite's `tx.fhir.org` mode,
-which holds the LOINC cases; run by hand over a LOINC artifact
-(`scripts/checks/tx-ecosystem.sh --mode tx.fhir.org --index <loinc>`), since
-the release needs a LOINC account. The failures and their classes are recorded
-on issue #13.
+Recorded on 2026-09-05 with validator 6.10.3 and suite
+`eaec771d82fba4eac596c14963546f39b4ecffe7` (tests v1.9.3). Every mode run also
+carries the two mode-independent `metadata` cases, so a mode's count is two
+above the suite's own.
+
+| mode | surface | pass list | passed of ran | needs | open failures |
+|---|---|---|---|---|---|
+| `general` | `/r4b` | `passing.txt` | 517 of 670 | nothing | #353 |
+| `general` | `/r4` | `passing-r4.txt` | 518 of 670 | nothing | #353 |
+| `general` | `/r5` | `passing-r5.txt` | 523 of 670 | nothing | #353 |
+| `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
+| `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
+| `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 29 of 227 | a LOINC release | #348, #305 |
+| `tx.fhir.org` | `/r5` | `passing-r5-tx.fhir.org.txt` | 30 of 227 | a LOINC release | #348, #305 |
+| `mimetypes` | `/r4b` | `passing-mimetypes.txt` | 21 of 37 | nothing | #351 |
+| `omop` | `/r4b` | `passing-omop.txt` | 1 of 28 | an OMOP vocabulary the server does not load | #345 |
+
+`general` is the only mode CI runs, on all three surfaces. The others need
+licensed content or a code system the server does not serve, so they are run by
+hand before a release and their lists are refreshed in the same change.
+
+## What each mode needs to run
+
+- **`general`** needs nothing: the runner supplies every code system and value
+  set the cases use as `tx-resource` parameters.
+- **`snomed`** needs a SNOMED CT artifact
+  (`--mode snomed --index <edition>`). It scores 1 of 170 whatever edition you
+  point it at, because every case pins the reference server's own edition
+  (`http://snomed.info/xsct/31000003106/version/20250909`), which no release
+  centre distributes. #344 holds the evidence.
+- **`icd-11`** needs the three ICD-11 artifacts built from the WHO ICD-API
+  local deployment (`--mode icd-11 --index <mms>:<icf>:<entity>`); the
+  artifacts need the WHO container and its licence.
+- **`tx.fhir.org`** needs a LOINC artifact (`--mode tx.fhir.org --index
+  <loinc>`), since the release needs a LOINC account. The suite's own
+  `tests/readme.md` says this mode is "for tests that are intended to be and
+  written specifically for tx.fhir.org - internal QA. There is no need for
+  other servers to pass these tests", so the LOINC subset is the part this
+  project chases; 61 of its cases call a `ValueSet/$compare` operation no
+  version's `OperationDefinition` declares, and answer 405.
+- **`mimetypes`** needs nothing: BCP 13 is served from the vendored IANA media
+  types registry.
+- **`omop`** needs the OMOP standardized vocabularies, which this server does
+  not load and which OHDSI distributes through Athena under per-vocabulary
+  licences. The mode runs and scores 1 of 28. Its setup ValueSet is also
+  missing the required `ValueSet.status`, so every case is refused before the
+  vocabulary would be reached. #345 holds both findings.
+
+## Known failures that cut across every mode
+
+- **`$subsumes` never reaches the server.** Validator 6.10.3 throws
+  `Unknown Operation subsumes` before it connects, which costs 98 cases across
+  four modes. #346.
+- **The `metadata` case fails on `/r4b`.** It asserts
+  `CapabilityStatement.fhirVersion` is `4.0.1`; `/r4b` correctly reports
+  `4.3.0`. It is on the `/r4` and `/r5` lists and off every `/r4b` one.

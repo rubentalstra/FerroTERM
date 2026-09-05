@@ -37,18 +37,20 @@ Ontoserver, and Hermes.
 | Snowstorm Lite | Java (JVM) | Lucene | about 500 MB | JVM service |
 | Ontoserver | Java (JVM) | Postgres plus Lucene | server plus database | JVM plus Postgres |
 | Hermes | Clojure (JVM) | memory-mapped store plus Lucene | modest | JVM service |
-| FerroTERM 0.0.11 | Rust | `redb` plus roaring and `fst` artifacts, read at startup | 637 MB on disk, 420 to 580 MB resident with two more systems loaded | one binary (statically linked on the musl targets) or a distroless image |
+| FerroTERM 0.0.11 | Rust | `redb` plus roaring and `fst` artifacts, read at startup | 596 to 823 MB on disk, 669 to 847 MB resident, per SNOMED edition | one binary (statically linked on the musl targets) or a distroless image |
 
 ## What FerroTERM trades
 
-FerroTERM is younger. The mature servers carry features that are still on
-FerroTERM's roadmap: hierarchical expansion, persisted client resources,
-batch, `$closure`, and the SNOMED implicit concept maps (v0.0.11), and MRCM
-validation of postcoordinated expressions (unscheduled). ECL, the SNOMED
-implicit value sets, the R4, R4B, R5, and R6 endpoints, and XML are served. What it serves, it serves from one
-binary with signed provenance, over more code systems than the SNOMED-only
-servers, and with its conformance measured by the HL7 terminology ecosystem
-suite on every change.
+FerroTERM is younger. Hierarchical expansion, persisted client resources,
+`Bundle` batch, `$closure`, the SNOMED implicit value sets and implicit concept
+maps, ECL, the R4, R4B, R5, and R6 endpoints, and XML are served; the persisted
+resources and the closure tables need a deployment that names a database in
+`FERROTERM_RESOURCES`. FerroTERM serves an index built from a finished release,
+so it authors no SNOMED content and has no syndication client to download one,
+and MRCM validation of postcoordinated expressions is unscheduled. What
+it serves, it serves from one binary with signed provenance, over more code
+systems than the SNOMED-only servers, and with its conformance measured by the
+HL7 terminology ecosystem suite on every change.
 
 Every production server in this list converges on a materialized index rather
 than live graph traversal. FerroTERM takes the same shape in pure Rust, with a
