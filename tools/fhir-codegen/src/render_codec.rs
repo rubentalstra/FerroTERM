@@ -334,6 +334,23 @@ fn render_choice(
     variants: &[crate::lower::Variant],
 ) -> fmt::Result {
     writeln!(out, "\nimpl {} {{", ty.name)?;
+    render_choice_to_json_parts(model, out, variants)?;
+    render_choice_from_json_parts(model, out, variants)?;
+    writeln!(out, "}}")
+}
+
+/// Whether the variant holds a FHIR primitive, which travels as value plus
+/// `_name`.
+fn holds_primitive(model: &VersionModule, variant: &crate::lower::Variant) -> bool {
+    matches!(&variant.target, Target::Named(name) if model.types.get(name).is_some_and(|ty| ty.is_primitive))
+}
+
+/// The choice enum's `to_json_parts`, one match arm per variant.
+fn render_choice_to_json_parts(
+    model: &VersionModule,
+    out: &mut String,
+    variants: &[crate::lower::Variant],
+) -> fmt::Result {
     writeln!(
         out,
         "    /// The key suffix, the value part, and the `_name` part of this form."
@@ -352,8 +369,7 @@ fn render_choice(
     writeln!(out, "        match self {{")?;
     for variant in variants {
         let suffix = type_name(&variant.code);
-        let is_primitive = matches!(&variant.target, Target::Named(n) if model.types.get(n).is_some_and(|t| t.is_primitive));
-        if is_primitive {
+        if holds_primitive(model, variant) {
             writeln!(
                 out,
                 "            Self::{}(inner) => Ok(({suffix:?}, {C}::Primitive::value_json(inner)?, {C}::Primitive::element_json(inner)?)),",
@@ -372,7 +388,15 @@ fn render_choice(
             )?;
         }
     }
-    writeln!(out, "        }}\n    }}\n")?;
+    writeln!(out, "        }}\n    }}\n")
+}
+
+/// The choice enum's `from_json_parts`, one match arm per variant suffix.
+fn render_choice_from_json_parts(
+    model: &VersionModule,
+    out: &mut String,
+    variants: &[crate::lower::Variant],
+) -> fmt::Result {
     writeln!(
         out,
         "    /// Decodes the form named by `suffix` from its value and `_name` parts."
@@ -393,8 +417,7 @@ fn render_choice(
     writeln!(out, "        match suffix {{")?;
     for variant in variants {
         let suffix = type_name(&variant.code);
-        let is_primitive = matches!(&variant.target, Target::Named(n) if model.types.get(n).is_some_and(|t| t.is_primitive));
-        if is_primitive {
+        if holds_primitive(model, variant) {
             writeln!(
                 out,
                 "            {suffix:?} => Ok(Self::{}({C}::Primitive::from_json_parts(value, element, path)?)),",
@@ -429,7 +452,7 @@ fn render_choice(
         out,
         "            _ => Err(path.error({C}::DecodeErrorKind::UnknownProperty)),"
     )?;
-    writeln!(out, "        }}\n    }}\n}}")
+    writeln!(out, "        }}\n    }}")
 }
 
 fn render_resource_enum(out: &mut String, ty: &TypeDef, resources: &[String]) -> fmt::Result {
@@ -787,130 +810,146 @@ fn render_from_json(
     writeln!(out, "    }}")
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "one match arm per FHIR field shape and cardinality; splitting scatters the table"
-)]
 fn render_field_builders(model: &VersionModule, out: &mut String, fields: &[Field]) -> fmt::Result {
     // Build each field from its raw slot into a `field_` local, so a FHIR element
     // named `path` or `object` cannot shadow the decoder's own bindings.
     for field in fields {
-        let slot = field.name.trim_start_matches("r#").to_owned();
-        let key = &field.fhir_name;
-        let name = &format!("field_{slot}");
-        match (shape(model, field), field.ty.card) {
-            (Shape::Scalar(scalar), card) => {
-                let decode = scalar_from_value(scalar, None);
-                match card {
-                    Cardinality::Optional => writeln!(
-                        out,
-                        "        let {name} = raw_{slot}.map(|value| path.with({key:?}, |path| {{ let value = {C}::expect_single(value, path)?; {decode} }})).transpose()?;"
-                    )?,
-                    Cardinality::One => writeln!(
-                        out,
-                        "        let {name} = path.with({key:?}, |path| {{ let value = raw_{slot}.ok_or_else(|| path.error({C}::DecodeErrorKind::MissingProperty))?; let value = {C}::expect_single(value, path)?; {decode} }})?;"
-                    )?,
-                    Cardinality::Many => {
-                        writeln!(out, "        let mut {name} = Vec::new();")?;
-                        writeln!(out, "        if let Some(raw) = raw_{slot} {{")?;
-                        writeln!(
-                            out,
-                            "            for (index, value) in {C}::expect_array(raw, path)?.iter().enumerate() {{"
-                        )?;
-                        writeln!(
-                            out,
-                            "                {name}.push(path.with_index({key:?}, index, |path| {decode})?);"
-                        )?;
-                        writeln!(out, "            }}")?;
-                        writeln!(out, "        }}")?;
-                    }
-                }
-            }
-            (Shape::Primitive, Cardinality::Optional) => {
-                writeln!(
-                    out,
-                    "        let {name} = match (raw_{slot}, raw_{slot}_element) {{"
-                )?;
-                writeln!(out, "            (None, None) => None,")?;
-                writeln!(
-                    out,
-                    "            (value, element) => Some(path.with({key:?}, |path| {C}::Primitive::from_json_parts(value, element, path))?),"
-                )?;
-                writeln!(out, "        }};")?;
-            }
-            (Shape::Primitive, Cardinality::One) => {
-                writeln!(
-                    out,
-                    "        let {name} = path.with({key:?}, |path| {C}::Primitive::from_json_parts(raw_{slot}, raw_{slot}_element, path))?;"
-                )?;
-            }
-            (Shape::Primitive, Cardinality::Many) => {
-                writeln!(out, "        let mut {name} = Vec::new();")?;
-                writeln!(
-                    out,
-                    "        for (index, (value, element)) in {C}::pair_arrays(raw_{slot}, raw_{slot}_element, path)?.into_iter().enumerate() {{"
-                )?;
-                writeln!(
-                    out,
-                    "            {name}.push(path.with_index({key:?}, index, |path| {C}::Primitive::from_json_parts(value, element, path))?);"
-                )?;
-                writeln!(out, "        }}")?;
-            }
-            (Shape::Complex, card) => {
-                let wrap_map = if field.ty.boxed { ".map(Box::new)" } else { "" };
-                let decode = format!(
-                    "{C}::Json::from_json({C}::expect_object({C}::expect_single(value, path)?, path)?, path){wrap_map}"
-                );
-                match card {
-                    Cardinality::Optional => writeln!(
-                        out,
-                        "        let {name} = raw_{slot}.map(|value| path.with({key:?}, |path| {decode})).transpose()?;"
-                    )?,
-                    Cardinality::One => writeln!(
-                        out,
-                        "        let {name} = path.with({key:?}, |path| {{ let value = raw_{slot}.ok_or_else(|| path.error({C}::DecodeErrorKind::MissingProperty))?; {decode} }})?;"
-                    )?,
-                    Cardinality::Many => {
-                        writeln!(out, "        let mut {name} = Vec::new();")?;
-                        writeln!(out, "        if let Some(raw) = raw_{slot} {{")?;
-                        writeln!(
-                            out,
-                            "            for (index, value) in {C}::expect_array(raw, path)?.iter().enumerate() {{"
-                        )?;
-                        writeln!(
-                            out,
-                            "                {name}.push(path.with_index({key:?}, index, |path| {C}::Json::from_json({C}::expect_object(value, path)?, path){wrap_map})?);"
-                        )?;
-                        writeln!(out, "            }}")?;
-                        writeln!(out, "        }}")?;
-                    }
-                }
-            }
-            (Shape::Choice(choice), card) => {
-                let stem = key.trim_end_matches("[x]");
-                let decode = format!(
-                    "{}::from_json_parts(suffix, raw_{slot}.value, raw_{slot}.element, path)",
-                    choice.name
-                );
-                match card {
-                    Cardinality::Optional => {
-                        writeln!(out, "        let {name} = match raw_{slot}.suffix {{")?;
-                        writeln!(out, "            None => None,")?;
-                        writeln!(
-                            out,
-                            "            Some(suffix) => Some(path.with({stem:?}, |path| {decode})?),"
-                        )?;
-                        writeln!(out, "        }};")?;
-                    }
-                    _ => {
-                        writeln!(
-                            out,
-                            "        let {name} = path.with({stem:?}, |path| {{ let suffix = raw_{slot}.suffix.ok_or_else(|| path.error({C}::DecodeErrorKind::MissingProperty))?; {decode} }})?;"
-                        )?;
-                    }
-                }
-            }
+        match shape(model, field) {
+            Shape::Scalar(scalar) => render_scalar_builder(out, field, scalar)?,
+            Shape::Primitive => render_primitive_builder(out, field)?,
+            Shape::Complex => render_complex_builder(out, field)?,
+            Shape::Choice(choice) => render_choice_builder(out, field, choice)?,
         }
     }
     Ok(())
+}
+
+/// The decoder lines for a `FHIRPath` system scalar field.
+fn render_scalar_builder(out: &mut String, field: &Field, scalar: Scalar) -> fmt::Result {
+    let slot = field.name.trim_start_matches("r#");
+    let key = &field.fhir_name;
+    let name = format!("field_{slot}");
+    let decode = scalar_from_value(scalar, None);
+    match field.ty.card {
+        Cardinality::Optional => writeln!(
+            out,
+            "        let {name} = raw_{slot}.map(|value| path.with({key:?}, |path| {{ let value = {C}::expect_single(value, path)?; {decode} }})).transpose()?;"
+        ),
+        Cardinality::One => writeln!(
+            out,
+            "        let {name} = path.with({key:?}, |path| {{ let value = raw_{slot}.ok_or_else(|| path.error({C}::DecodeErrorKind::MissingProperty))?; let value = {C}::expect_single(value, path)?; {decode} }})?;"
+        ),
+        Cardinality::Many => {
+            writeln!(out, "        let mut {name} = Vec::new();")?;
+            writeln!(out, "        if let Some(raw) = raw_{slot} {{")?;
+            writeln!(
+                out,
+                "            for (index, value) in {C}::expect_array(raw, path)?.iter().enumerate() {{"
+            )?;
+            writeln!(
+                out,
+                "                {name}.push(path.with_index({key:?}, index, |path| {decode})?);"
+            )?;
+            writeln!(out, "            }}")?;
+            writeln!(out, "        }}")
+        }
+    }
+}
+
+/// The decoder lines for a FHIR primitive field, value plus `_name` sibling.
+fn render_primitive_builder(out: &mut String, field: &Field) -> fmt::Result {
+    let slot = field.name.trim_start_matches("r#");
+    let key = &field.fhir_name;
+    let name = format!("field_{slot}");
+    match field.ty.card {
+        Cardinality::Optional => {
+            writeln!(
+                out,
+                "        let {name} = match (raw_{slot}, raw_{slot}_element) {{"
+            )?;
+            writeln!(out, "            (None, None) => None,")?;
+            writeln!(
+                out,
+                "            (value, element) => Some(path.with({key:?}, |path| {C}::Primitive::from_json_parts(value, element, path))?),"
+            )?;
+            writeln!(out, "        }};")
+        }
+        Cardinality::One => writeln!(
+            out,
+            "        let {name} = path.with({key:?}, |path| {C}::Primitive::from_json_parts(raw_{slot}, raw_{slot}_element, path))?;"
+        ),
+        Cardinality::Many => {
+            writeln!(out, "        let mut {name} = Vec::new();")?;
+            writeln!(
+                out,
+                "        for (index, (value, element)) in {C}::pair_arrays(raw_{slot}, raw_{slot}_element, path)?.into_iter().enumerate() {{"
+            )?;
+            writeln!(
+                out,
+                "            {name}.push(path.with_index({key:?}, index, |path| {C}::Primitive::from_json_parts(value, element, path))?);"
+            )?;
+            writeln!(out, "        }}")
+        }
+    }
+}
+
+/// The decoder lines for a complex, backbone, or resource field.
+fn render_complex_builder(out: &mut String, field: &Field) -> fmt::Result {
+    let slot = field.name.trim_start_matches("r#");
+    let key = &field.fhir_name;
+    let name = format!("field_{slot}");
+    let wrap_map = if field.ty.boxed { ".map(Box::new)" } else { "" };
+    let decode = format!(
+        "{C}::Json::from_json({C}::expect_object({C}::expect_single(value, path)?, path)?, path){wrap_map}"
+    );
+    match field.ty.card {
+        Cardinality::Optional => writeln!(
+            out,
+            "        let {name} = raw_{slot}.map(|value| path.with({key:?}, |path| {decode})).transpose()?;"
+        ),
+        Cardinality::One => writeln!(
+            out,
+            "        let {name} = path.with({key:?}, |path| {{ let value = raw_{slot}.ok_or_else(|| path.error({C}::DecodeErrorKind::MissingProperty))?; {decode} }})?;"
+        ),
+        Cardinality::Many => {
+            writeln!(out, "        let mut {name} = Vec::new();")?;
+            writeln!(out, "        if let Some(raw) = raw_{slot} {{")?;
+            writeln!(
+                out,
+                "            for (index, value) in {C}::expect_array(raw, path)?.iter().enumerate() {{"
+            )?;
+            writeln!(
+                out,
+                "                {name}.push(path.with_index({key:?}, index, |path| {C}::Json::from_json({C}::expect_object(value, path)?, path){wrap_map})?);"
+            )?;
+            writeln!(out, "            }}")?;
+            writeln!(out, "        }}")
+        }
+    }
+}
+
+/// The decoder lines for a choice field, keyed by the suffix its raw slot found.
+fn render_choice_builder(out: &mut String, field: &Field, choice: &TypeDef) -> fmt::Result {
+    let slot = field.name.trim_start_matches("r#");
+    let name = format!("field_{slot}");
+    let stem = field.fhir_name.trim_end_matches("[x]");
+    let decode = format!(
+        "{}::from_json_parts(suffix, raw_{slot}.value, raw_{slot}.element, path)",
+        choice.name
+    );
+    match field.ty.card {
+        Cardinality::Optional => {
+            writeln!(out, "        let {name} = match raw_{slot}.suffix {{")?;
+            writeln!(out, "            None => None,")?;
+            writeln!(
+                out,
+                "            Some(suffix) => Some(path.with({stem:?}, |path| {decode})?),"
+            )?;
+            writeln!(out, "        }};")
+        }
+        _ => writeln!(
+            out,
+            "        let {name} = path.with({stem:?}, |path| {{ let suffix = raw_{slot}.suffix.ok_or_else(|| path.error({C}::DecodeErrorKind::MissingProperty))?; {decode} }})?;"
+        ),
+    }
 }

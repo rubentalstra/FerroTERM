@@ -522,46 +522,77 @@ impl<M: Model> Evaluator<'_, M> {
         whole: bool,
     ) -> RoaringBitmap {
         if whole {
-            let all = self.model.all();
-            return match operator {
-                ConstraintOperator::DescendantOrSelfOf
-                | ConstraintOperator::AncestorOrSelfOf
-                | ConstraintOperator::ChildOrSelfOf
-                | ConstraintOperator::ParentOrSelfOf => all,
-                ConstraintOperator::DescendantOf | ConstraintOperator::ChildOf => {
-                    all - self.model.roots()
-                }
-                ConstraintOperator::AncestorOf | ConstraintOperator::ParentOf => {
-                    all - self.model.leaves()
-                }
-                ConstraintOperator::Top => self.model.roots(),
-                ConstraintOperator::Bottom => self.model.leaves(),
-            };
+            return self.operate_over_edition(operator);
         }
-        let mut out = RoaringBitmap::new();
         match operator {
-            ConstraintOperator::Top => {
-                for concept in set {
-                    if self.model.ancestors(Ordinal::new(concept)).is_disjoint(set) {
-                        out.insert(concept);
-                    }
+            ConstraintOperator::Top => self.top_of_set(set),
+            ConstraintOperator::Bottom => self.bottom_of_set(set),
+            _ => {
+                let mut out = self.related(operator, set);
+                if matches!(
+                    operator,
+                    ConstraintOperator::DescendantOrSelfOf
+                        | ConstraintOperator::AncestorOrSelfOf
+                        | ConstraintOperator::ChildOrSelfOf
+                        | ConstraintOperator::ParentOrSelfOf
+                ) {
+                    out |= set;
                 }
-                return out;
+                out
             }
-            ConstraintOperator::Bottom => {
-                for concept in set {
-                    if self
-                        .model
-                        .descendants(Ordinal::new(concept))
-                        .is_disjoint(set)
-                    {
-                        out.insert(concept);
-                    }
-                }
-                return out;
-            }
-            _ => {}
         }
+    }
+
+    /// The constraint operator over `*`: the whole edition, less the roots or
+    /// the leaves where the operator excludes them.
+    fn operate_over_edition(&self, operator: ConstraintOperator) -> RoaringBitmap {
+        let all = self.model.all();
+        match operator {
+            ConstraintOperator::DescendantOrSelfOf
+            | ConstraintOperator::AncestorOrSelfOf
+            | ConstraintOperator::ChildOrSelfOf
+            | ConstraintOperator::ParentOrSelfOf => all,
+            ConstraintOperator::DescendantOf | ConstraintOperator::ChildOf => {
+                all - self.model.roots()
+            }
+            ConstraintOperator::AncestorOf | ConstraintOperator::ParentOf => {
+                all - self.model.leaves()
+            }
+            ConstraintOperator::Top => self.model.roots(),
+            ConstraintOperator::Bottom => self.model.leaves(),
+        }
+    }
+
+    /// `!!>`: the members of the set with no ancestor in the set.
+    fn top_of_set(&self, set: &RoaringBitmap) -> RoaringBitmap {
+        let mut out = RoaringBitmap::new();
+        for concept in set {
+            if self.model.ancestors(Ordinal::new(concept)).is_disjoint(set) {
+                out.insert(concept);
+            }
+        }
+        out
+    }
+
+    /// `!!<`: the members of the set with no descendant in the set.
+    fn bottom_of_set(&self, set: &RoaringBitmap) -> RoaringBitmap {
+        let mut out = RoaringBitmap::new();
+        for concept in set {
+            if self
+                .model
+                .descendants(Ordinal::new(concept))
+                .is_disjoint(set)
+            {
+                out.insert(concept);
+            }
+        }
+        out
+    }
+
+    /// The concepts the hierarchy operator reaches from the set, without the
+    /// set itself.
+    fn related(&self, operator: ConstraintOperator, set: &RoaringBitmap) -> RoaringBitmap {
+        let mut out = RoaringBitmap::new();
         for concept in set {
             let ordinal = Ordinal::new(concept);
             match operator {
@@ -579,15 +610,6 @@ impl<M: Model> Evaluator<'_, M> {
                 }
                 ConstraintOperator::Top | ConstraintOperator::Bottom => {}
             }
-        }
-        if matches!(
-            operator,
-            ConstraintOperator::DescendantOrSelfOf
-                | ConstraintOperator::AncestorOrSelfOf
-                | ConstraintOperator::ChildOrSelfOf
-                | ConstraintOperator::ParentOrSelfOf
-        ) {
-            out |= set;
         }
         out
     }
@@ -609,28 +631,45 @@ impl<M: Model> Evaluator<'_, M> {
             let Some(table) = self.model.members().table(id.0) else {
                 return Err(EvalError::NotAReferenceSet(id));
             };
-            let columns = Self::selected_columns(id, table, fields)?;
-            for row in 0..table.len() {
-                if !self.row_passes(table, row, filter_groups)? {
-                    continue;
-                }
-                for column in &columns {
-                    match column {
-                        None => {
-                            if let Some(member) = table.concept(row) {
-                                out.insert(member.index());
-                            }
-                        }
-                        Some(field) => {
-                            if let Some(FieldRef::Concept(value)) = table.value(row, *field) {
-                                out.insert(value.index());
-                            }
-                        }
-                    }
+            out |= self.table_members(id, table, fields, filter_groups)?;
+        }
+        Ok(out)
+    }
+
+    /// The concepts one reference set contributes: the selected columns of
+    /// every row that passes the member filters.
+    fn table_members(
+        &self,
+        refset: Sctid,
+        table: &Table,
+        fields: Option<&RefsetFields>,
+        filter_groups: &[Vec<MemberFilter>],
+    ) -> Result<RoaringBitmap, EvalError> {
+        let columns = Self::selected_columns(refset, table, fields)?;
+        let mut out = RoaringBitmap::new();
+        for row in 0..table.len() {
+            if !self.row_passes(table, row, filter_groups)? {
+                continue;
+            }
+            for column in &columns {
+                if let Some(value) = Self::column_concept(table, row, *column) {
+                    out.insert(value.index());
                 }
             }
         }
         Ok(out)
+    }
+
+    /// The concept one selected column of a row holds: the referenced
+    /// component for `None`, else the field's concept value.
+    fn column_concept(table: &Table, row: usize, column: Option<usize>) -> Option<Ordinal> {
+        match column {
+            None => table.concept(row),
+            Some(field) => match table.value(row, field) {
+                Some(FieldRef::Concept(value)) => Some(value),
+                _ => None,
+            },
+        }
     }
 
     /// The columns a field selection names: `None` is the referenced
@@ -857,102 +896,124 @@ impl<M: Model> Evaluator<'_, M> {
     ) -> Result<Vec<DescriptionPredicate>, EvalError> {
         let mut predicates = Vec::new();
         for filter in filters {
-            predicates.push(match filter {
-                DescriptionFilter::Term { operator, terms } => DescriptionPredicate::Term {
-                    operator: *operator,
-                    terms: terms.clone(),
-                },
-                DescriptionFilter::Language { operator, codes } => DescriptionPredicate::Language {
-                    operator: *operator,
-                    codes: codes.clone(),
-                },
-                DescriptionFilter::TypeId { operator, value } => DescriptionPredicate::Type {
-                    operator: *operator,
-                    types: self.sctids_of(value)?,
-                },
-                DescriptionFilter::Type { operator, tokens } => DescriptionPredicate::Type {
-                    operator: *operator,
-                    types: tokens
-                        .iter()
-                        .map(|t| match t {
-                            TypeToken::Synonym => SYNONYM,
-                            TypeToken::FullySpecifiedName => FULLY_SPECIFIED_NAME,
-                            TypeToken::Definition => DEFINITION,
-                        })
-                        .collect(),
-                },
-                DescriptionFilter::DialectId {
-                    operator,
-                    value,
-                    acceptability,
-                } => {
-                    let shared = Self::acceptabilities(acceptability.as_ref())?;
-                    let dialects = match value {
-                        DialectIdValue::Expression(sub) => self
-                            .sctids_of(&ConceptSet::Expression(sub.clone()))?
-                            .into_iter()
-                            .map(|id| (id, shared.clone()))
-                            .collect(),
-                        DialectIdValue::Set(items) => {
-                            let mut out = Vec::new();
-                            for (reference, own) in items {
-                                let allowed = if own.is_some() {
-                                    Self::acceptabilities(own.as_ref())?
-                                } else {
-                                    shared.clone()
-                                };
-                                out.push((reference.id.0, allowed));
-                            }
-                            out
-                        }
-                    };
-                    DescriptionPredicate::Dialect {
-                        operator: *operator,
-                        dialects,
-                    }
-                }
-                DescriptionFilter::Dialect {
-                    operator,
-                    aliases,
-                    acceptability,
-                } => {
-                    let shared = Self::acceptabilities(acceptability.as_ref())?;
-                    let mut dialects = Vec::new();
-                    for alias in aliases {
-                        let refset = crate::dialects::refset(&alias.alias)
-                            .ok_or_else(|| EvalError::UnknownDialect(alias.alias.clone()))?;
-                        let allowed = if alias.acceptability.is_some() {
-                            Self::acceptabilities(alias.acceptability.as_ref())?
-                        } else {
-                            shared.clone()
-                        };
-                        dialects.push((refset, allowed));
-                    }
-                    DescriptionPredicate::Dialect {
-                        operator: *operator,
-                        dialects,
-                    }
-                }
-                DescriptionFilter::Module { .. } => {
-                    return Err(EvalError::Unsupported(
-                        "a description module filter: the store keeps no description module",
-                    ));
-                }
-                DescriptionFilter::EffectiveTime { .. } => {
-                    return Err(EvalError::Unsupported(
-                        "a description effective time filter: the store keeps no description time",
-                    ));
-                }
-                DescriptionFilter::Active { operator, value } => {
-                    DescriptionPredicate::Active(*value == (*operator == Equality::Equal))
-                }
-                DescriptionFilter::Id { operator, ids } => DescriptionPredicate::Id {
-                    operator: *operator,
-                    ids: ids.iter().map(|id| id.0).collect(),
-                },
-            });
+            predicates.push(self.description_predicate(filter)?);
         }
         Ok(predicates)
+    }
+
+    /// One `{{ D ... }}` filter with its concept sets and aliases resolved.
+    fn description_predicate(
+        &self,
+        filter: &DescriptionFilter,
+    ) -> Result<DescriptionPredicate, EvalError> {
+        Ok(match filter {
+            DescriptionFilter::Term { operator, terms } => DescriptionPredicate::Term {
+                operator: *operator,
+                terms: terms.clone(),
+            },
+            DescriptionFilter::Language { operator, codes } => DescriptionPredicate::Language {
+                operator: *operator,
+                codes: codes.clone(),
+            },
+            DescriptionFilter::TypeId { operator, value } => DescriptionPredicate::Type {
+                operator: *operator,
+                types: self.sctids_of(value)?,
+            },
+            DescriptionFilter::Type { operator, tokens } => DescriptionPredicate::Type {
+                operator: *operator,
+                types: tokens
+                    .iter()
+                    .map(|t| match t {
+                        TypeToken::Synonym => SYNONYM,
+                        TypeToken::FullySpecifiedName => FULLY_SPECIFIED_NAME,
+                        TypeToken::Definition => DEFINITION,
+                    })
+                    .collect(),
+            },
+            DescriptionFilter::DialectId {
+                operator,
+                value,
+                acceptability,
+            } => DescriptionPredicate::Dialect {
+                operator: *operator,
+                dialects: self.dialects_by_id(value, acceptability.as_ref())?,
+            },
+            DescriptionFilter::Dialect {
+                operator,
+                aliases,
+                acceptability,
+            } => DescriptionPredicate::Dialect {
+                operator: *operator,
+                dialects: Self::dialects_by_alias(aliases, acceptability.as_ref())?,
+            },
+            DescriptionFilter::Module { .. } => {
+                return Err(EvalError::Unsupported(
+                    "a description module filter: the store keeps no description module",
+                ));
+            }
+            DescriptionFilter::EffectiveTime { .. } => {
+                return Err(EvalError::Unsupported(
+                    "a description effective time filter: the store keeps no description time",
+                ));
+            }
+            DescriptionFilter::Active { operator, value } => {
+                DescriptionPredicate::Active(*value == (*operator == Equality::Equal))
+            }
+            DescriptionFilter::Id { operator, ids } => DescriptionPredicate::Id {
+                operator: *operator,
+                ids: ids.iter().map(|id| id.0).collect(),
+            },
+        })
+    }
+
+    /// The language reference sets a `dialectId` filter names, each with the
+    /// acceptabilities it admits; an entry's own set wins over the shared one.
+    fn dialects_by_id(
+        &self,
+        value: &DialectIdValue,
+        acceptability: Option<&crate::ast::AcceptabilitySet>,
+    ) -> Result<Vec<(u64, Vec<Acceptability>)>, EvalError> {
+        let shared = Self::acceptabilities(acceptability)?;
+        match value {
+            DialectIdValue::Expression(sub) => Ok(self
+                .sctids_of(&ConceptSet::Expression(sub.clone()))?
+                .into_iter()
+                .map(|id| (id, shared.clone()))
+                .collect()),
+            DialectIdValue::Set(items) => {
+                let mut out = Vec::new();
+                for (reference, own) in items {
+                    let allowed = if own.is_some() {
+                        Self::acceptabilities(own.as_ref())?
+                    } else {
+                        shared.clone()
+                    };
+                    out.push((reference.id.0, allowed));
+                }
+                Ok(out)
+            }
+        }
+    }
+
+    /// The language reference sets a `dialect` filter's aliases name, each
+    /// with the acceptabilities it admits.
+    fn dialects_by_alias(
+        aliases: &[crate::ast::DialectAlias],
+        acceptability: Option<&crate::ast::AcceptabilitySet>,
+    ) -> Result<Vec<(u64, Vec<Acceptability>)>, EvalError> {
+        let shared = Self::acceptabilities(acceptability)?;
+        let mut dialects = Vec::new();
+        for alias in aliases {
+            let refset = crate::dialects::refset(&alias.alias)
+                .ok_or_else(|| EvalError::UnknownDialect(alias.alias.clone()))?;
+            let allowed = if alias.acceptability.is_some() {
+                Self::acceptabilities(alias.acceptability.as_ref())?
+            } else {
+                shared.clone()
+            };
+            dialects.push((refset, allowed));
+        }
+        Ok(dialects)
     }
 
     /// The history supplement: the inactive concepts whose association in the
@@ -962,54 +1023,59 @@ impl<M: Model> Evaluator<'_, M> {
         mut set: RoaringBitmap,
         history: &HistorySupplement,
     ) -> Result<RoaringBitmap, EvalError> {
-        let refsets: Vec<u64> = match history {
-            HistorySupplement::Minimum => vec![SAME_AS],
+        let refsets = self.history_refsets(history)?;
+        let added = self.associated_members(&set, &refsets);
+        set |= added;
+        Ok(set)
+    }
+
+    /// The association reference sets a history supplement follows.
+    fn history_refsets(&self, history: &HistorySupplement) -> Result<Vec<u64>, EvalError> {
+        match history {
+            HistorySupplement::Minimum => Ok(vec![SAME_AS]),
             HistorySupplement::Moderate => {
-                vec![SAME_AS, REPLACED_BY, WAS_A, PARTIALLY_EQUIVALENT_TO]
+                Ok(vec![SAME_AS, REPLACED_BY, WAS_A, PARTIALLY_EQUIVALENT_TO])
             }
             HistorySupplement::Default | HistorySupplement::Maximum => {
                 match self.model.concept(Sctid(HISTORICAL_ASSOCIATION))? {
-                    Some(root) => {
-                        let mut ids = Vec::new();
-                        for concept in self.model.descendants(root) {
-                            if let Some(id) = self.model.sctid(Ordinal::new(concept))? {
-                                ids.push(id.0);
-                            }
-                        }
-                        ids
-                    }
-                    None => Vec::new(),
+                    Some(root) => self.sctids_of_set(self.model.descendants(root)),
+                    None => Ok(Vec::new()),
                 }
             }
             HistorySupplement::Subset(constraint) => {
-                let mut ids = Vec::new();
-                for concept in self.expression(constraint)? {
-                    if let Some(id) = self.model.sctid(Ordinal::new(concept))? {
-                        ids.push(id.0);
-                    }
-                }
-                ids
+                self.sctids_of_set(&self.expression(constraint)?)
             }
-        };
+        }
+    }
+
+    /// The members of the association reference sets whose target lies in
+    /// `set`.
+    fn associated_members(&self, set: &RoaringBitmap, refsets: &[u64]) -> RoaringBitmap {
         let mut added = RoaringBitmap::new();
         for refset in refsets {
-            let Some(table) = self.model.members().table(refset) else {
+            let Some(table) = self.model.members().table(*refset) else {
                 continue;
             };
             let Some(target) = table.field(TARGET_COMPONENT) else {
                 continue;
             };
-            for row in 0..table.len() {
-                if let (Some(FieldRef::Concept(value)), Some(member)) =
-                    (table.value(row, target), table.concept(row))
-                    && set.contains(value.index())
-                {
-                    added.insert(member.index());
-                }
+            added |= Self::members_targeting(table, target, set);
+        }
+        added
+    }
+
+    /// The members of one association table whose target field lies in `set`.
+    fn members_targeting(table: &Table, target: usize, set: &RoaringBitmap) -> RoaringBitmap {
+        let mut out = RoaringBitmap::new();
+        for row in 0..table.len() {
+            if let (Some(FieldRef::Concept(value)), Some(member)) =
+                (table.value(row, target), table.concept(row))
+                && set.contains(value.index())
+            {
+                out.insert(member.index());
             }
         }
-        set |= added;
-        Ok(set)
+        out
     }
 
     /// The attribute type kinds an attribute name names.
@@ -1085,45 +1151,41 @@ impl<M: Model> Evaluator<'_, M> {
             SubRefinement::Group {
                 cardinality,
                 attributes,
-            } => {
-                let tests = self.compile_set(attributes)?;
-                let graph = self.model.attributes();
-                // A concept whose rows satisfy the set within one group satisfies
-                // it over all its rows, so the ungrouped answer (the inverted
-                // index) narrows the concepts whose groups are counted, unless
-                // zero groups may match.
-                let candidates = if cardinality.is_none_or(|c| c.min >= 1) {
-                    self.attribute_set(focus, attributes)?
-                } else {
-                    focus.clone()
-                };
-                let mut out = RoaringBitmap::new();
-                for concept in &candidates {
-                    let rows: Vec<Row<'_>> = graph.rows(Ordinal::new(concept)).collect();
-                    let mut groups: Vec<Vec<&Row<'_>>> = Vec::new();
-                    let mut current: Option<u32> = None;
-                    for row in &rows {
-                        // NOTE: ECL treats each ungrouped relationship (group 0) as
-                        // its own group; the rows arrive sorted by group.
-                        if row.group == 0 || current != Some(row.group) {
-                            groups.push(Vec::new());
-                            current = Some(row.group);
-                        }
-                        if let Some(last) = groups.last_mut() {
-                            last.push(row);
-                        }
-                    }
-                    let matching = groups
-                        .iter()
-                        .filter(|group| set_holds(&tests, group))
-                        .count();
-                    if within(*cardinality, u32::try_from(matching).unwrap_or(u32::MAX)) {
-                        out.insert(concept);
-                    }
-                }
-                Ok(out)
+            } => self.attribute_group(focus, *cardinality, attributes),
+        }
+    }
+
+    /// `eclattributegroup`: the concepts whose relationship groups satisfy the
+    /// attribute set as often as the cardinality demands.
+    fn attribute_group(
+        &self,
+        focus: &RoaringBitmap,
+        cardinality: Option<Cardinality>,
+        attributes: &AttributeSet,
+    ) -> Result<RoaringBitmap, EvalError> {
+        let tests = self.compile_set(attributes)?;
+        let graph = self.model.attributes();
+        // A concept whose rows satisfy the set within one group satisfies
+        // it over all its rows, so the ungrouped answer (the inverted
+        // index) narrows the concepts whose groups are counted, unless
+        // zero groups may match.
+        let candidates = if cardinality.is_none_or(|c| c.min >= 1) {
+            self.attribute_set(focus, attributes)?
+        } else {
+            focus.clone()
+        };
+        let mut out = RoaringBitmap::new();
+        for concept in &candidates {
+            let rows: Vec<Row<'_>> = graph.rows(Ordinal::new(concept)).collect();
+            let matching = relationship_groups(&rows)
+                .iter()
+                .filter(|group| set_holds(&tests, group))
+                .count();
+            if within(cardinality, u32::try_from(matching).unwrap_or(u32::MAX)) {
+                out.insert(concept);
             }
         }
+        Ok(out)
     }
 
     /// An ungrouped attribute set over the focus: each attribute is a set of
@@ -1171,7 +1233,6 @@ impl<M: Model> Evaluator<'_, M> {
         attribute: &Attribute,
     ) -> Result<RoaringBitmap, EvalError> {
         let test = self.compile(attribute)?;
-        let graph = self.model.attributes();
         if attribute.reverse {
             return Ok(self.reverse(focus, &test));
         }
@@ -1182,27 +1243,13 @@ impl<M: Model> Evaluator<'_, M> {
                 negated: false,
             } = &test.value
         {
-            let mut out = RoaringBitmap::new();
-            for kind in test.kinds.iter(graph.types().len()) {
-                match set {
-                    None => {
-                        if let Some(sources) = graph.sources_of_kind(kind) {
-                            out |= sources;
-                        }
-                    }
-                    Some(values) => {
-                        for target in graph.targets_of_kind(kind) {
-                            if values.contains(*target) {
-                                out.extend(
-                                    graph.sources(kind, Ordinal::new(*target)).iter().copied(),
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-            return Ok(out & focus);
+            let sources = match set {
+                None => self.sources_of_kinds(&test.kinds),
+                Some(values) => self.sources_of_values(&test.kinds, values),
+            };
+            return Ok(sources & focus);
         }
+        let graph = self.model.attributes();
         let mut out = RoaringBitmap::new();
         for concept in focus {
             let count = graph
@@ -1217,6 +1264,34 @@ impl<M: Model> Evaluator<'_, M> {
             }
         }
         Ok(out)
+    }
+
+    /// The concepts carrying an attribute of one of `kinds` with any value,
+    /// from the inverted index.
+    fn sources_of_kinds(&self, kinds: &Kinds) -> RoaringBitmap {
+        let graph = self.model.attributes();
+        let mut out = RoaringBitmap::new();
+        for kind in kinds.iter(graph.types().len()) {
+            if let Some(sources) = graph.sources_of_kind(kind) {
+                out |= sources;
+            }
+        }
+        out
+    }
+
+    /// The concepts carrying an attribute of one of `kinds` whose value is in
+    /// `values`, from the inverted index.
+    fn sources_of_values(&self, kinds: &Kinds, values: &RoaringBitmap) -> RoaringBitmap {
+        let graph = self.model.attributes();
+        let mut out = RoaringBitmap::new();
+        for kind in kinds.iter(graph.types().len()) {
+            for target in graph.targets_of_kind(kind) {
+                if values.contains(*target) {
+                    out.extend(graph.sources(kind, Ordinal::new(*target)).iter().copied());
+                }
+            }
+        }
+        out
     }
 
     /// `R attribute = X`: the values of the attribute whose sources are in the
@@ -1345,6 +1420,24 @@ enum CompiledSet {
 enum CompiledItem {
     Attribute(AttributeTest),
     Nested(CompiledSet),
+}
+
+/// The relationship groups of one concept, in row order.
+fn relationship_groups<'row, 'graph>(rows: &'row [Row<'graph>]) -> Vec<Vec<&'row Row<'graph>>> {
+    let mut groups: Vec<Vec<&Row<'_>>> = Vec::new();
+    let mut current: Option<u32> = None;
+    for row in rows {
+        // NOTE: ECL treats each ungrouped relationship (group 0) as
+        // its own group; the rows arrive sorted by group.
+        if row.group == 0 || current != Some(row.group) {
+            groups.push(Vec::new());
+            current = Some(row.group);
+        }
+        if let Some(last) = groups.last_mut() {
+            last.push(row);
+        }
+    }
+    groups
 }
 
 /// Whether the rows of one group satisfy the set.
