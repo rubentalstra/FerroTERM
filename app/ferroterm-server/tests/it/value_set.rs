@@ -335,3 +335,48 @@ async fn a_deeply_nested_expression_is_an_operation_outcome() {
         "the outcome says the expression nests too deep: {body}"
     );
 }
+
+/// The membership-only validation the ecosystem requires, under the name the
+/// specification declares.
+///
+/// The terminology ecosystem IG requires, at SHALL level, that a server
+/// support "the mode/valueSetMode parameter" on `$validate-code`
+/// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>). No published
+/// `OperationDefinition` declares either name, so neither is accepted here:
+/// the behaviour is `valueset-membership-only`, which the R6 definition does
+/// declare and which this server implements (#275).
+#[tokio::test]
+async fn validate_code_checks_membership_only_under_the_declared_name() {
+    let server = Server::start_with_resources();
+    let wrong = format!(
+        "/r4b/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&display=Wrong"
+    );
+    let (status, body) = server
+        .get(&format!("{wrong}&valueset-membership-only=true"))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        param(&body, "result").expect("result")["valueBoolean"],
+        true,
+        "membership holds and no display is judged: {body}"
+    );
+    let (status, body) = server.get(&wrong).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        param(&body, "result").expect("result")["valueBoolean"],
+        false,
+        "without it the wrong display fails the code: {body}"
+    );
+    for undeclared in [
+        "mode=CHECK_MEMBERSHIP_ONLY",
+        "valueSetMode=NO_MEMBERSHIP_CHECK",
+    ] {
+        let (status, body) = server
+            .get(&format!(
+                "/r4b/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&{undeclared}"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{undeclared}: {body}");
+        assert_eq!(body["issue"][0]["code"], "invalid", "{undeclared}: {body}");
+    }
+}
