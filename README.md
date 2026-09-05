@@ -22,7 +22,7 @@ The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration,
 so the first call needs nothing beyond Docker:
 
 ```console
-$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.0.10
+$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.0.11
 $ curl 'http://localhost:8080/r4b/CodeSystem/$lookup?system=http://unitsofmeasure.org&code=mg/dL'
 ```
 
@@ -117,9 +117,6 @@ tracker). Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept`.
 
 The tracker's milestones are the roadmap:
 
-- **v0.0.11**: hierarchical `$expand`, persisted client resources, `Bundle`
-  batch, `$closure`, the SNOMED implicit concept maps, refset-only RF2
-  packages, and the remaining LOINC and ICD-11 suite cases.
 - **v0.1.0**: the differential harness against Snowstorm and the Dutch
   reference server, the latency and ingest bars measured in CI, metrics and
   request identifiers, and the deployment guide.

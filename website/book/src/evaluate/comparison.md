@@ -9,8 +9,10 @@ Ontoserver, and Hermes.
 > The numbers for the other servers come from their own documentation and
 > published work, cited in
 > [`docs/architecture.md`](https://github.com/rubentalstra/FerroTERM/blob/main/docs/architecture.md).
-> FerroTERM's own figures are measurements of v0.0.10 over the licensed Dutch
-> SNOMED CT edition on a laptop; see [Hardware sizing](../operate/hardware-sizing.md).
+> FerroTERM's own figures are measurements over the licensed Dutch SNOMED CT
+> edition on a laptop, and each one links the record that produced it, naming
+> the release it was measured on; see
+> [Benchmarks](benchmarks.md) and [Hardware sizing](../operate/hardware-sizing.md).
 
 ## The servers
 
@@ -35,7 +37,7 @@ Ontoserver, and Hermes.
 | Snowstorm Lite | Java (JVM) | Lucene | about 500 MB | JVM service |
 | Ontoserver | Java (JVM) | Postgres plus Lucene | server plus database | JVM plus Postgres |
 | Hermes | Clojure (JVM) | memory-mapped store plus Lucene | modest | JVM service |
-| FerroTERM 0.0.10 | Rust | `redb`, memory-mapped | 637 MB on disk, 420 to 580 MB resident with two more systems loaded | one static binary or a distroless image |
+| FerroTERM 0.0.11 | Rust | `redb`, memory-mapped | 637 MB on disk, 420 to 580 MB resident with two more systems loaded | one static binary or a distroless image |
 
 ## What FerroTERM trades
 

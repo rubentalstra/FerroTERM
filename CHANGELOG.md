@@ -13,6 +13,8 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.0.11] - 2026-09-05
+
 ### Added
 
 - The build layers derivative reference set packages onto the edition they depend on: `ferroterm-build --rf2 <edition> --rf2-refset <package>` takes the flag repeatably, and each package's concepts, descriptions, and language reference set members join the edition's while its reference sets serve as implicit value sets over it. Every package's module dependency is checked first, so an edition older than the date a package was authored against is refused, naming the module and both dates, and so is a package naming a module the edition does not contain. The manifest records what was layered. The SNOMED CT ICNP Nursing Practice package is the shape this serves.
@@ -597,7 +599,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.10...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.11...HEAD
+[0.0.11]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.11
 [0.0.10]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.10
 [0.0.9]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.9
 [0.0.8]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.8
