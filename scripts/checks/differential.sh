@@ -18,7 +18,9 @@
 #   display   the display `$lookup` returns
 #   result    the boolean `$validate-code` returns
 #   outcome   the code `$subsumes` returns
-#   codes     the sorted set of codes an expansion contains
+#   codes     the sorted set of codes an expansion contains, whichever implicit
+#             value set an `expand` request names (`ecl`, `isa`, or the raw
+#             `vs` form such as `refset`)
 #   targets   the sorted set of `system|code` a translation matches
 #
 # Without --server the script starts target/release/ferroterm on 127.0.0.1:8099
@@ -85,16 +87,22 @@ rm -rf "$out"
 mkdir -p "$out"
 system=$(jq -r '.system' "$requests")
 
-# The edition each server reports, so a divergence is never blamed on the
-# content when the two are serving different releases.
-ours=$(curl -sf "$server/CodeSystem/\$lookup?system=$system&code=138875005" \
+# The version URI each server reports. It names the edition's module and the
+# release date
+# (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-uri-standard/2-snomed-ct-uri-space>).
+# The DATE identifies the content: two servers on different dates hold
+# different concepts and nothing below would compare behaviour, so that stops
+# the run. The MODULE is an answer the two servers compute, so a difference
+# there is a divergence like any other and is recorded, not a reason to stop.
+version_uri="$server/CodeSystem/\$lookup?system=$system&code=138875005"
+ours=$(curl -sf "$version_uri" \
   | jq -r '[.parameter[]? | select(.name == "version") | .valueString] | first // "unknown"')
 theirs=$(curl -sf "$snowstorm/CodeSystem/\$lookup?system=$system&code=138875005" \
   | jq -r '[.parameter[]? | select(.name == "version") | .valueString] | first // "unknown"')
 echo "differential: FerroTERM serves $ours"
 echo "differential: Snowstorm serves $theirs"
-if [[ "$ours" != "$theirs" ]]; then
-  echo "differential: the two servers report different editions; load the same release in both" >&2
+if [[ "${ours##*/}" != "${theirs##*/}" ]]; then
+  echo "differential: the two servers serve different releases; load the same release in both" >&2
   exit 1
 fi
 
@@ -124,8 +132,10 @@ url_of() {
       isa=$(jq -r '.isa // empty' <<<"$parameters")
       if [[ -n "$ecl" ]]; then
         vs="$system?fhir_vs=ecl/$(jq -rR '@uri' <<<"$ecl")"
-      else
+      elif [[ -n "$isa" ]]; then
         vs="$system?fhir_vs=isa/$isa"
+      else
+        vs="$system?fhir_vs=$(jq -r '.vs' <<<"$parameters")"
       fi
       printf "%s/ValueSet/\$expand?url=%s&count=%s" "$base" "$(jq -rR '@uri' <<<"$vs")" "$count"
       ;;
@@ -178,6 +188,29 @@ hollow=""
 : > "$out/divergences.txt"
 echo "[]" > "$out/divergences.json"
 
+# One divergence, in both the readable log and the machine-readable report.
+record() {
+  local name=$1 operation=$2 compare=$3 ours_value=$4 theirs_value=$5 url=$6
+  diverged=$((diverged + 1))
+  {
+    printf '%s (%s, %s)\n' "$name" "$operation" "$compare"
+    printf '  FerroTERM: %s\n' "${ours_value:0:400}"
+    printf '  Snowstorm: %s\n' "${theirs_value:0:400}"
+    printf '  request:   %s\n' "$url"
+  } >> "$out/divergences.txt"
+  jq --arg n "$name" --arg o "$operation" --arg c "$compare" \
+     --arg a "$ours_value" --arg b "$theirs_value" --arg u "$url" \
+     '. + [{name: $n, operation: $o, compare: $c, ferroterm: $a, snowstorm: $b, request: $u}]' \
+     "$out/divergences.json" > "$out/divergences.json.tmp"
+  mv "$out/divergences.json.tmp" "$out/divergences.json"
+}
+
+# The edition URI is an answer, so it is compared like every other request.
+total=$((total + 1))
+if [[ "$ours" != "$theirs" ]]; then
+  record edition-version-uri lookup version "$ours" "$theirs" "$version_uri"
+fi
+
 while IFS= read -r request; do
   name=$(jq -r '.name' <<<"$request")
   operation=$(jq -r '.operation' <<<"$request")
@@ -204,18 +237,7 @@ while IFS= read -r request; do
   fi
 
   if [[ "$ours_value" != "$theirs_value" ]]; then
-    diverged=$((diverged + 1))
-    {
-      printf '%s (%s, %s)\n' "$name" "$operation" "$compare"
-      printf '  FerroTERM: %s\n' "${ours_value:0:400}"
-      printf '  Snowstorm: %s\n' "${theirs_value:0:400}"
-      printf '  request:   %s\n' "$ours_url"
-    } >> "$out/divergences.txt"
-    jq --arg n "$name" --arg o "$operation" --arg c "$compare" \
-       --arg a "$ours_value" --arg b "$theirs_value" --arg u "$ours_url" \
-       '. + [{name: $n, operation: $o, compare: $c, ferroterm: $a, snowstorm: $b, request: $u}]' \
-       "$out/divergences.json" > "$out/divergences.json.tmp"
-    mv "$out/divergences.json.tmp" "$out/divergences.json"
+    record "$name" "$operation" "$compare" "$ours_value" "$theirs_value" "$ours_url"
   fi
 done < <(jq -c '.requests[]' "$requests")
 

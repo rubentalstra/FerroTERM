@@ -51,6 +51,12 @@
       "parameters": { "code": "999999999999" }
     },
     {
+      "name": "validate-code-inactive",
+      "operation": "validate-code",
+      "compare": "result",
+      "parameters": { "code": "106004" }
+    },
+    {
       "name": "validate-code-wrong-display",
       "operation": "validate-code",
       "compare": "result",
@@ -111,6 +117,24 @@
       "parameters": { "ecl": "< 73211009 MINUS < 46635009", "count": "200" }
     },
     {
+      "name": "expand-ecl-disjunction",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "ecl": "< 73211009 OR < 46635009", "count": "200" }
+    },
+    {
+      "name": "expand-ecl-ancestors",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "ecl": "> 22298006", "count": "200" }
+    },
+    {
+      "name": "expand-ecl-self-or-ancestors",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "ecl": ">> 22298006", "count": "200" }
+    },
+    {
       "name": "expand-ecl-member-of",
       "operation": "expand",
       "compare": "codes",
@@ -123,10 +147,22 @@
       "parameters": { "isa": "73211009", "count": "200" }
     },
     {
+      "name": "expand-refset-implicit",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "vs": "refset", "count": "200" }
+    },
+    {
       "name": "translate-historical-same-as",
       "operation": "translate",
       "compare": "targets",
       "parameters": { "code": "106004", "cm": "900000000000527005" }
+    },
+    {
+      "name": "translate-icd10-complex-map",
+      "operation": "translate",
+      "compare": "targets",
+      "parameters": { "code": "22298006", "cm": "447562003" }
     }
   ]
 }

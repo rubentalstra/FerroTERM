@@ -17,10 +17,10 @@
 #                    release, for example https://snowstorm.example/fhir. The
 #                    harness never starts one.
 #
-# The harness refuses to compare two servers that report different editions, so
-# a divergence is always about behaviour. Where Snowstorm and the specification
-# disagree the specification wins, and the divergence is recorded rather than
-# absorbed (.claude/rules/testing.md, oracles).
+# The harness refuses to compare two servers that report different release
+# dates, so a divergence is always about behaviour. Where Snowstorm and the
+# specification disagree the specification wins, and the divergence is recorded
+# rather than absorbed (.claude/rules/testing.md, oracles).
 name: Differential
 
 on:
