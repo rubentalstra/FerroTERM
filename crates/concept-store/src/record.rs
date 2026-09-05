@@ -5,7 +5,7 @@
 
 use std::fmt;
 
-use concept_graph::ordinal::Ordinal;
+use concept_graph::ordinal::{Ordinal, to_usize};
 
 /// A damaged record.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -248,6 +248,7 @@ impl Concept {
 /// Each entry names the language reference set and the designation use that
 /// chose it, so a reader looking for a display walks the reference sets it
 /// wants without touching the designation table.
+#[derive(Debug)]
 pub struct Preferred;
 
 impl Preferred {
@@ -288,7 +289,7 @@ impl Preferred {
         for _ in 0..count {
             let entry_refset = r.u32()?;
             let entry_use = r.u32()?;
-            let len = usize::try_from(r.u32()?).map_err(|_| RecordError::Truncated { at: r.at })?;
+            let len = to_usize(r.u32()?);
             let entry = r.take(len)?;
             if entry_refset == refset && entry_use == use_ordinal {
                 return Designation::decode(entry).map(Some);
