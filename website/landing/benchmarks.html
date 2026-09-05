@@ -72,15 +72,17 @@
           <p>
             A request that answers anything other than a 2xx status fails the
             run for that system and no record is written, so a record never
-            holds the latency of an error response. Runs for this page are
-            taken inside the repository's benchmark container
+            holds the latency of an error response. Every record states the
+            machine it was taken on, and whether that machine was a container;
+            the repository carries one
             (<code>bench/compose.yaml</code>), which builds the server, the
             build tool, and the harness on digest-pinned images and mounts the
-            licensed releases read-only, so the environment is the same from
-            one machine to the next. Resident memory is mostly the
-            memory-mapped index the kernel has paged in; it moves with the
-            page cache and shrinks under pressure. Units fit the value:
-            seconds, milliseconds, or microseconds; GB, MB, or KB.
+            licensed releases read-only, but a record is only from it when the
+            record says so. Resident memory is what starting the server loads:
+            the hierarchy, the text index, and the other structures it reads
+            whole, so it is close to steady once the server is ready and does
+            not fall back under pressure. Units fit the value: seconds,
+            milliseconds, or microseconds; GB, MB, or KB.
           </p>
           <p>
             The repository ships no code system content. To take a record over
