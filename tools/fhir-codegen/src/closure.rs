@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::fhir::{Derivation, StructureKind};
 use crate::package::Package;
 use crate::roots::RootSet;
-use crate::snapshot::{ElementShape, ResolveError, ResolvedStructure};
+use crate::snapshot::{ElementShape, ResolveError, ResolvedElement, ResolvedStructure};
 
 /// Type codes that name a structural base rather than a datatype to emit.
 ///
@@ -71,39 +71,10 @@ impl TypeClosure {
             if structures.contains_key(&code) || STRUCTURAL_TYPES.contains(&code.as_str()) {
                 continue;
             }
-            let definition = package.structure_definition_named(&code).ok_or_else(|| {
-                ClosureError::UnknownType {
-                    path: referrer.clone(),
-                    code: code.clone(),
-                }
-            })?;
-            if definition.derivation == Some(Derivation::Constraint) {
-                return Err(ClosureError::ProfileAsType {
-                    path: referrer,
-                    code,
-                });
-            }
-            let resolved = ResolvedStructure::resolve(definition)?;
+            let resolved = resolve_named(package, &code, &referrer)?;
             if resolved.kind != StructureKind::PrimitiveType {
                 for element in &resolved.elements {
-                    match &element.shape {
-                        ElementShape::Typed(types) | ElementShape::Choice(types) => {
-                            for type_ref in types {
-                                if type_ref.fhirpath_type.is_none() {
-                                    pending.push((type_ref.code.clone(), element.path.clone()));
-                                }
-                            }
-                        }
-                        ElementShape::ContentReference {
-                            structure: Some(url),
-                            ..
-                        } => {
-                            if let Some(target) = package.structure_definitions().get(url) {
-                                pending.push((target.name.clone(), element.path.clone()));
-                            }
-                        }
-                        ElementShape::ContentReference { .. } | ElementShape::Root => {}
-                    }
+                    referenced(package, element, &mut pending);
                 }
             }
             structures.insert(code, resolved);
@@ -131,5 +102,55 @@ impl TypeClosure {
         self.structures
             .values()
             .filter(move |structure| structure.kind == kind)
+    }
+}
+
+/// The structure `code` names, refused when it is undefined or is a profile.
+///
+/// `referrer` is the element path that named it, so a failure says where the
+/// reference came from.
+fn resolve_named(
+    package: &Package,
+    code: &str,
+    referrer: &str,
+) -> Result<ResolvedStructure, ClosureError> {
+    let definition =
+        package
+            .structure_definition_named(code)
+            .ok_or_else(|| ClosureError::UnknownType {
+                path: referrer.to_owned(),
+                code: code.to_owned(),
+            })?;
+    if definition.derivation == Some(Derivation::Constraint) {
+        return Err(ClosureError::ProfileAsType {
+            path: referrer.to_owned(),
+            code: code.to_owned(),
+        });
+    }
+    Ok(ResolvedStructure::resolve(definition)?)
+}
+
+/// Queues every type `element` names that the closure has still to resolve.
+///
+/// A `FHIRPath` type is a primitive the generator maps itself, and a content
+/// reference names its target structure by URL.
+fn referenced(package: &Package, element: &ResolvedElement, pending: &mut Vec<(String, String)>) {
+    match &element.shape {
+        ElementShape::Typed(types) | ElementShape::Choice(types) => {
+            for type_ref in types {
+                if type_ref.fhirpath_type.is_none() {
+                    pending.push((type_ref.code.clone(), element.path.clone()));
+                }
+            }
+        }
+        ElementShape::ContentReference {
+            structure: Some(url),
+            ..
+        } => {
+            if let Some(target) = package.structure_definitions().get(url) {
+                pending.push((target.name.clone(), element.path.clone()));
+            }
+        }
+        ElementShape::ContentReference { .. } | ElementShape::Root => {}
     }
 }
