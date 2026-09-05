@@ -151,6 +151,44 @@ fn by_code(classification: &Classification) -> Result<BTreeMap<&str, &Class>, Er
     Ok(out)
 }
 
+/// The rubrics of one class: a rubric of a designation kind is a designation,
+/// numbered within the class; every other kind is a property of its own name.
+fn class_rubrics(
+    class: &Class,
+    ordinal: Ordinal,
+    designation_kinds: &[String],
+    keys: &BTreeMap<String, u32>,
+    placed: &mut Vec<Placed>,
+    languages: &mut BTreeSet<String>,
+    properties: &mut BTreeMap<u32, Vec<PropertyValue>>,
+) -> Result<(), Error> {
+    let mut index = 0;
+    for rubric in &class.rubrics {
+        languages.insert(rubric.language.clone());
+        match use_ordinal(designation_kinds, &rubric.kind) {
+            Some(use_ordinal) => {
+                placed.push(Placed {
+                    ordinal,
+                    index,
+                    record: Designation {
+                        id: None,
+                        term: rubric.text.clone(),
+                        language: rubric.language.clone(),
+                        use_ordinal,
+                        active: true,
+                    },
+                });
+                index += 1;
+            }
+            None => properties
+                .entry(keys.get(&rubric.kind).copied().ok_or(Error::TooMany)?)
+                .or_default()
+                .push(PropertyValue::String(rubric.text.clone())),
+        }
+    }
+    Ok(())
+}
+
 /// The property keys: the fixed three, then every rubric kind that is not a
 /// designation, sorted.
 fn property_keys(classification: &Classification) -> Vec<String> {
@@ -233,7 +271,6 @@ pub fn build(
             };
             edges.push((ordinal, parent_ordinal));
         }
-        let mut index = 0;
         let mut properties: BTreeMap<u32, Vec<PropertyValue>> = BTreeMap::new();
         properties.insert(
             key(KIND_KEY)?,
@@ -245,29 +282,15 @@ pub fn build(
         if let Some(valid) = class.valid {
             properties.insert(key(VALID_KEY)?, vec![PropertyValue::Boolean(valid)]);
         }
-        for rubric in &class.rubrics {
-            languages.insert(rubric.language.clone());
-            match use_ordinal(&classification.designation_kinds, &rubric.kind) {
-                Some(use_ordinal) => {
-                    placed.push(Placed {
-                        ordinal,
-                        index,
-                        record: Designation {
-                            id: None,
-                            term: rubric.text.clone(),
-                            language: rubric.language.clone(),
-                            use_ordinal,
-                            active: true,
-                        },
-                    });
-                    index += 1;
-                }
-                None => properties
-                    .entry(key(&rubric.kind)?)
-                    .or_default()
-                    .push(PropertyValue::String(rubric.text.clone())),
-            }
-        }
+        class_rubrics(
+            class,
+            ordinal,
+            &classification.designation_kinds,
+            &keys,
+            &mut placed,
+            &mut languages,
+            &mut properties,
+        )?;
         for (key, values) in &properties {
             builder.properties(ordinal, *key, values)?;
         }

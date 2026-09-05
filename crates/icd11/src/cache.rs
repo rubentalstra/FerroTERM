@@ -76,6 +76,42 @@ fn read_json(path: &Path) -> Result<Value, CacheError> {
     })
 }
 
+/// Reads every entity file of one language directory into `entities`, in file
+/// name order; an entity another language already read takes the new language.
+fn read_entities(
+    language_dir: &Path,
+    linearization: Linearization,
+    entities: &mut BTreeMap<String, Entity>,
+) -> Result<(), CacheError> {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(language_dir)
+        .map_err(|source| CacheError::Io {
+            path: language_dir.to_path_buf(),
+            source,
+        })?
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| {
+            p.extension().is_some_and(|e| e == "json")
+                && p.file_name().is_some_and(|n| n != "_root.json")
+        })
+        .collect();
+    files.sort();
+    for path in files {
+        let json = read_json(&path)?;
+        let entity = Entity::parse(&json, linearization).map_err(|source| CacheError::Entity {
+            path: path.clone(),
+            source,
+        })?;
+        match entities.get_mut(&entity.id) {
+            Some(existing) => existing.merge_language(entity),
+            None => {
+                entities.insert(entity.id.clone(), entity);
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Reads `linearization` from `cache`.
 ///
 /// # Errors
@@ -119,30 +155,7 @@ pub fn read(cache: &Path, linearization: Linearization) -> Result<Cached, CacheE
         {
             titles.insert(language.clone(), title.to_owned());
         }
-        let mut files: Vec<PathBuf> = std::fs::read_dir(&language_dir)
-            .map_err(io(&language_dir))?
-            .filter_map(Result::ok)
-            .map(|e| e.path())
-            .filter(|p| {
-                p.extension().is_some_and(|e| e == "json")
-                    && p.file_name().is_some_and(|n| n != "_root.json")
-            })
-            .collect();
-        files.sort();
-        for path in files {
-            let json = read_json(&path)?;
-            let entity =
-                Entity::parse(&json, linearization).map_err(|source| CacheError::Entity {
-                    path: path.clone(),
-                    source,
-                })?;
-            match entities.get_mut(&entity.id) {
-                Some(existing) => existing.merge_language(entity),
-                None => {
-                    entities.insert(entity.id.clone(), entity);
-                }
-            }
-        }
+        read_entities(&language_dir, linearization, &mut entities)?;
     }
     if titles.is_empty() {
         return Err(CacheError::NoRoot {

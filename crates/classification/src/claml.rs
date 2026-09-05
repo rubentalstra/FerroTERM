@@ -118,6 +118,15 @@ fn required(
     })
 }
 
+/// A `Meta` element: the one named `lang` states the document language.
+fn meta(document: &mut Document, start: &BytesStart<'_>) {
+    if attribute(start, "name").as_deref() == Some("lang")
+        && let Some(value) = attribute(start, "value")
+    {
+        document.classification.language = value;
+    }
+}
+
 impl Cursor {
     fn in_label(&self) -> bool {
         self.label.is_some()
@@ -129,6 +138,82 @@ impl Cursor {
         }
     }
 
+    /// An open `ModifierClass`: its titles collect until it closes.
+    fn open_modifier_class(&mut self, start: &BytesStart<'_>) -> Result<(), ClamlError> {
+        let modifier = required(start, "ModifierClass", "modifier")?;
+        let code = required(start, "ModifierClass", "code")?;
+        self.modifier_class = Some((
+            modifier,
+            ModifierClass {
+                code,
+                titles: BTreeMap::new(),
+            },
+        ));
+        Ok(())
+    }
+
+    /// An open `Class`: its rubrics and modifiers collect until it closes.
+    fn open_class(&mut self, start: &BytesStart<'_>) -> Result<(), ClamlError> {
+        let code = required(start, "Class", "code")?;
+        let kind = required(start, "Class", "kind")?;
+        self.class = Some(Parsed {
+            class: Class {
+                code,
+                kind,
+                usage: attribute(start, "usage"),
+                ..Class::default()
+            },
+            ..Parsed::default()
+        });
+        Ok(())
+    }
+
+    /// A `SuperClass`: the first one names the open class's parent.
+    fn super_class(&mut self, start: &BytesStart<'_>) {
+        if let Some(parsed) = &mut self.class
+            && parsed.class.parent.is_none()
+        {
+            parsed.class.parent = attribute(start, "code");
+        }
+    }
+
+    /// A `ModifiedBy`: the open class takes the modifier it names.
+    fn modified_by(&mut self, start: &BytesStart<'_>) -> Result<(), ClamlError> {
+        if let Some(parsed) = &mut self.class {
+            parsed.modified_by.push(ModifiedBy {
+                modifier: required(start, "ModifiedBy", "code")?,
+                valid: Vec::new(),
+            });
+        }
+        Ok(())
+    }
+
+    /// A `ValidModifierClass`: it narrows the last `ModifiedBy` to one modifier class.
+    fn valid_modifier_class(&mut self, start: &BytesStart<'_>) {
+        if let Some(parsed) = &mut self.class
+            && let (Some(last), Some(code)) =
+                (parsed.modified_by.last_mut(), attribute(start, "code"))
+        {
+            last.valid.push(code);
+        }
+    }
+
+    /// An `ExcludeModifier`: the open class drops the modifier it names.
+    fn exclude_modifier(&mut self, start: &BytesStart<'_>) {
+        if let Some(parsed) = &mut self.class
+            && let Some(code) = attribute(start, "code")
+        {
+            parsed.excludes.push(code);
+        }
+    }
+
+    /// A `Reference` inside a label: `class="in brackets"` parenthesizes it.
+    fn open_reference(&mut self, start: &BytesStart<'_>) {
+        let brackets = attribute(start, "class").is_some_and(|c| c == "in brackets");
+        self.append(if brackets { " (" } else { " " });
+        self.reference = Some(brackets);
+    }
+
     fn start(&mut self, document: &mut Document, start: &BytesStart<'_>) -> Result<(), ClamlError> {
         let name = start.name().as_ref().to_owned();
         match name.as_str() {
@@ -138,70 +223,17 @@ impl Cursor {
                 document.classification.version = attribute(start, "version");
                 self.title_text = true;
             }
-            "Meta" if attribute(start, "name").as_deref() == Some("lang") => {
-                if let Some(value) = attribute(start, "value") {
-                    document.classification.language = value;
-                }
-            }
-            "ClassKind" => {
-                if let Some(kind) = attribute(start, "name") {
-                    document.classification.kinds.push(kind);
-                }
-            }
-            "ModifierClass" => {
-                let modifier = required(start, "ModifierClass", "modifier")?;
-                let code = required(start, "ModifierClass", "code")?;
-                self.modifier_class = Some((
-                    modifier,
-                    ModifierClass {
-                        code,
-                        titles: BTreeMap::new(),
-                    },
-                ));
-            }
-            "Class" => {
-                let code = required(start, "Class", "code")?;
-                let kind = required(start, "Class", "kind")?;
-                self.class = Some(Parsed {
-                    class: Class {
-                        code,
-                        kind,
-                        usage: attribute(start, "usage"),
-                        ..Class::default()
-                    },
-                    ..Parsed::default()
-                });
-            }
-            "SuperClass" => {
-                if let Some(parsed) = &mut self.class
-                    && parsed.class.parent.is_none()
-                {
-                    parsed.class.parent = attribute(start, "code");
-                }
-            }
-            "ModifiedBy" => {
-                if let Some(parsed) = &mut self.class {
-                    parsed.modified_by.push(ModifiedBy {
-                        modifier: required(start, "ModifiedBy", "code")?,
-                        valid: Vec::new(),
-                    });
-                }
-            }
-            "ValidModifierClass" => {
-                if let Some(parsed) = &mut self.class
-                    && let (Some(last), Some(code)) =
-                        (parsed.modified_by.last_mut(), attribute(start, "code"))
-                {
-                    last.valid.push(code);
-                }
-            }
-            "ExcludeModifier" => {
-                if let Some(parsed) = &mut self.class
-                    && let Some(code) = attribute(start, "code")
-                {
-                    parsed.excludes.push(code);
-                }
-            }
+            "Meta" => meta(document, start),
+            "ClassKind" => document
+                .classification
+                .kinds
+                .extend(attribute(start, "name")),
+            "ModifierClass" => self.open_modifier_class(start)?,
+            "Class" => self.open_class(start)?,
+            "SuperClass" => self.super_class(start),
+            "ModifiedBy" => self.modified_by(start)?,
+            "ValidModifierClass" => self.valid_modifier_class(start),
+            "ExcludeModifier" => self.exclude_modifier(start),
             "Rubric" if self.class.is_some() || self.modifier_class.is_some() => {
                 self.rubric_kind = Some(required(start, "Rubric", "kind")?);
             }
@@ -210,11 +242,7 @@ impl Cursor {
                     .unwrap_or_else(|| document.classification.language.clone());
                 self.label = Some((language, String::new()));
             }
-            "Reference" if self.in_label() => {
-                let brackets = attribute(start, "class").is_some_and(|c| c == "in brackets");
-                self.append(if brackets { " (" } else { " " });
-                self.reference = Some(brackets);
-            }
+            "Reference" if self.in_label() => self.open_reference(start),
             "Fragment" | "Para" | "Term" | "ListItem" | "Cell" if self.in_label() => {
                 self.append(" ");
             }
@@ -222,6 +250,28 @@ impl Cursor {
         }
         self.path.push(name);
         Ok(())
+    }
+
+    /// A closed `Label`: its text is a modifier title, or a rubric of the open class.
+    fn close_label(&mut self) {
+        let (Some((language, text)), Some(kind)) = (self.label.take(), &self.rubric_kind) else {
+            return;
+        };
+        let text = collapse(&text);
+        if text.is_empty() {
+            return;
+        }
+        if let Some((_, class)) = &mut self.modifier_class {
+            if kind == PREFERRED {
+                class.titles.insert(language, text);
+            }
+        } else if let Some(parsed) = &mut self.class {
+            parsed.class.rubrics.push(Rubric {
+                kind: kind.clone(),
+                language,
+                text,
+            });
+        }
     }
 
     fn end(&mut self, document: &mut Document, name: &str) {
@@ -233,26 +283,7 @@ impl Cursor {
                     self.append(")");
                 }
             }
-            "Label" => {
-                if let (Some((language, text)), Some(kind)) = (self.label.take(), &self.rubric_kind)
-                {
-                    let text = collapse(&text);
-                    if text.is_empty() {
-                        return;
-                    }
-                    if let Some((_, class)) = &mut self.modifier_class {
-                        if kind == PREFERRED {
-                            class.titles.insert(language, text);
-                        }
-                    } else if let Some(parsed) = &mut self.class {
-                        parsed.class.rubrics.push(Rubric {
-                            kind: kind.clone(),
-                            language,
-                            text,
-                        });
-                    }
-                }
-            }
+            "Label" => self.close_label(),
             "Rubric" => self.rubric_kind = None,
             "ModifierClass" => {
                 if let Some((modifier, class)) = self.modifier_class.take() {
@@ -393,19 +424,31 @@ fn periods(document: &mut Document) {
         let Some((category, _)) = code.split_at_checked(3) else {
             continue;
         };
-        let mut seen = BTreeSet::new();
-        let mut current = parents.get(code).copied().flatten();
-        while let Some(ancestor) = current {
-            if ancestor == category {
-                renamed.insert(code.to_owned(), spelled);
-                break;
-            }
-            if !seen.insert(ancestor) {
-                break;
-            }
-            current = parents.get(ancestor).copied().flatten();
+        if descends_from(&parents, code, category) {
+            renamed.insert(code.to_owned(), spelled);
         }
     }
+    respell(document, &renamed);
+}
+
+/// Whether `ancestor` is above `code` in the parent chain.
+fn descends_from(parents: &BTreeMap<&str, Option<&str>>, code: &str, ancestor: &str) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut current = parents.get(code).copied().flatten();
+    while let Some(above) = current {
+        if above == ancestor {
+            return true;
+        }
+        if !seen.insert(above) {
+            return false;
+        }
+        current = parents.get(above).copied().flatten();
+    }
+    false
+}
+
+/// Gives every renamed class, and every class naming one as its parent, its new code.
+fn respell(document: &mut Document, renamed: &BTreeMap<String, String>) {
     for parsed in &mut document.parsed {
         if let Some(spelled) = renamed.get(&parsed.class.code) {
             parsed.class.code.clone_from(spelled);
@@ -442,37 +485,66 @@ fn expand(document: &mut Document) -> Result<(), ClamlError> {
         if modifiers.is_empty() {
             continue;
         }
-        let mut leaves = vec![parsed.class.clone()];
-        for modified_by in &modifiers {
-            let classes = document
-                .modifiers
-                .get(&modified_by.modifier)
-                .ok_or_else(|| ClamlError::UnknownModifier {
-                    class: parsed.class.code.clone(),
-                    modifier: modified_by.modifier.clone(),
-                })?;
-            let mut next = Vec::new();
-            for leaf in &leaves {
-                for class in classes {
-                    if !modified_by.valid.is_empty() && !modified_by.valid.contains(&class.code) {
-                        continue;
-                    }
-                    next.push(modified(leaf, class, &document.classification.language));
-                }
-            }
-            generated.extend(
-                leaves
-                    .iter()
-                    .filter(|l| l.code != parsed.class.code)
-                    .cloned(),
-            );
-            leaves = next;
-        }
-        generated.extend(leaves);
+        generated.extend(modified_classes(document, parsed, &modifiers)?);
     }
     document.classification.classes = document.parsed.iter().map(|p| p.class.clone()).collect();
     document.classification.classes.extend(generated);
     Ok(())
+}
+
+/// The classes `parsed` gains from the modifiers that apply to it, one round
+/// per modifier over the classes the round before produced.
+fn modified_classes(
+    document: &Document,
+    parsed: &Parsed,
+    modifiers: &[ModifiedBy],
+) -> Result<Vec<Class>, ClamlError> {
+    let mut generated: Vec<Class> = Vec::new();
+    let mut leaves = vec![parsed.class.clone()];
+    for modified_by in modifiers {
+        let classes = document
+            .modifiers
+            .get(&modified_by.modifier)
+            .ok_or_else(|| ClamlError::UnknownModifier {
+                class: parsed.class.code.clone(),
+                modifier: modified_by.modifier.clone(),
+            })?;
+        let next = modified_leaves(
+            &leaves,
+            classes,
+            &modified_by.valid,
+            &document.classification.language,
+        );
+        generated.extend(
+            leaves
+                .iter()
+                .filter(|l| l.code != parsed.class.code)
+                .cloned(),
+        );
+        leaves = next;
+    }
+    generated.extend(leaves);
+    Ok(generated)
+}
+
+/// The classes `leaves` becomes under one modifier: every leaf crossed with
+/// every modifier class the `ValidModifierClass` list admits.
+fn modified_leaves(
+    leaves: &[Class],
+    classes: &[ModifierClass],
+    valid: &[String],
+    default_language: &str,
+) -> Vec<Class> {
+    let mut next = Vec::new();
+    for leaf in leaves {
+        for class in classes {
+            if !valid.is_empty() && !valid.contains(&class.code) {
+                continue;
+            }
+            next.push(modified(leaf, class, default_language));
+        }
+    }
+    next
 }
 
 /// The class `leaf` gets from the modifier class `modifier`.
