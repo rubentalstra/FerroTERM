@@ -462,7 +462,7 @@ impl CodeSystemProvider for ClassificationProvider {
     }
 
     fn all(&self) -> Result<ConceptSet, ProviderError> {
-        Ok((0..self.concepts).collect())
+        Ok(crate::provider::every(self.concepts))
     }
 
     fn search(&self, text: &str, language: Option<&str>) -> Result<ConceptSet, ProviderError> {

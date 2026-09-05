@@ -417,8 +417,9 @@ fn paged(compose: &Compose, options: &Options, gathered: &Gathered) -> Result<Pa
             skip = skip.saturating_sub(len);
             continue;
         }
+        let wanted = skip.saturating_add(remaining);
         let cut: Vec<(u32, usize)> = match nests(compose, options)
-            .then(|| preorder(selection))
+            .then(|| preorder(selection, wanted))
             .flatten()
         {
             Some(tree) => {
@@ -826,37 +827,50 @@ fn nests(compose: &Compose, options: &Options) -> bool {
             .is_none_or(|text| text.trim().is_empty())
 }
 
-/// The members of `selection` in pre-order with their depths: each root (a
-/// member no other member subsumes) followed by its children, in the
-/// provider's concept order.
+/// The first `wanted` members of `selection` in pre-order with their depths:
+/// each root (a member no other member subsumes) followed by its children, in
+/// the provider's concept order.
+///
+/// The walk stops at `wanted`, so a page costs the page rather than the
+/// selection. A root has no parent in the selection, so no root lies inside
+/// another root's subtree: visiting the selection in order and walking from
+/// each root as it is reached emits the same sequence as walking every root
+/// after finding them all.
 ///
 /// `None` when the provider has no hierarchy to walk.
-fn preorder(selection: &Selection) -> Option<Vec<(u32, usize)>> {
+fn preorder(selection: &Selection, wanted: usize) -> Option<Vec<(u32, usize)>> {
     let hierarchy = selection.provider.hierarchy()?;
-    let mut roots = Vec::new();
-    for index in &selection.set {
-        let parents = hierarchy.parents(Concept::new(index));
-        if !parents.iter().any(|parent| selection.set.contains(parent)) {
-            roots.push(index);
-        }
-    }
-    let mut out = Vec::with_capacity(selection.set.len().try_into().unwrap_or(usize::MAX));
+    let mut out = Vec::new();
     let mut seen = ConceptSet::new();
-    let mut stack: Vec<(u32, usize)> = roots.into_iter().rev().map(|root| (root, 0)).collect();
-    while let Some((index, depth)) = stack.pop() {
-        if !seen.insert(index) {
+    for index in &selection.set {
+        if out.len() >= wanted {
+            return Some(out);
+        }
+        if hierarchy.any_parent_in(Concept::new(index), &selection.set) {
             continue;
         }
-        out.push((index, depth));
-        let children: Vec<u32> = hierarchy
-            .children(Concept::new(index))
-            .iter()
-            .filter(|child| selection.set.contains(*child) && !seen.contains(*child))
-            .collect();
-        stack.extend(children.into_iter().rev().map(|child| (child, depth + 1)));
+        let mut stack: Vec<(u32, usize)> = vec![(index, 0)];
+        while let Some((index, depth)) = stack.pop() {
+            if !seen.insert(index) {
+                continue;
+            }
+            out.push((index, depth));
+            if out.len() >= wanted {
+                return Some(out);
+            }
+            let children: Vec<u32> = hierarchy
+                .children(Concept::new(index))
+                .iter()
+                .filter(|child| selection.set.contains(*child) && !seen.contains(*child))
+                .collect();
+            stack.extend(children.into_iter().rev().map(|child| (child, depth + 1)));
+        }
     }
     // A cycle or a member no root reaches keeps its place at the end, flat.
     for index in &selection.set {
+        if out.len() >= wanted {
+            break;
+        }
         if !seen.contains(index) {
             out.push((index, 0));
         }

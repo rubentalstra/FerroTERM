@@ -2489,6 +2489,42 @@ fn a_single_hierarchical_include_nests_and_pages_over_the_flattening() {
     );
 }
 
+// The walk that produces the flattening stops at the end of the page (#309), so
+// every page is asserted against the whole, not only the first one.
+#[test]
+fn every_page_of_a_nested_expansion_is_the_slice_of_the_whole_flattening() {
+    let world = World::load();
+    let expand = |input: ExpandInput| expand::expand(&world.sources(), &input).expect("expands");
+    let whole = expand(ExpandInput {
+        url: Some(VS_ALL.to_owned()),
+        value_set_version: Some(String::from("1.0")),
+        ..ExpandInput::default()
+    });
+    let order = flatten(&whole.contains);
+    assert_eq!(order.len(), 9);
+    for offset in 0..=order.len() {
+        for count in 1..=order.len() {
+            let asked_offset = i64::try_from(offset).expect("the fixture is small");
+            let asked_count = i64::try_from(count).expect("the fixture is small");
+            let page = expand(ExpandInput {
+                url: Some(VS_ALL.to_owned()),
+                value_set_version: Some(String::from("1.0")),
+                offset: Some(asked_offset),
+                count: Some(asked_count),
+                ..ExpandInput::default()
+            });
+            let end = offset.saturating_add(count).min(order.len());
+            let expected = order.get(offset.min(order.len())..end).unwrap_or_default();
+            assert_eq!(
+                flatten(&page.contains),
+                expected,
+                "offset {offset}, count {count}"
+            );
+            assert_eq!(page.total, 9, "offset {offset}, count {count}");
+        }
+    }
+}
+
 /// Every code of an expansion tree, in pre-order.
 fn flatten(contains: &[Contains]) -> Vec<&str> {
     let mut out = Vec::new();

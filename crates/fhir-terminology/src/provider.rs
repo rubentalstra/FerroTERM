@@ -37,6 +37,18 @@ impl Concept {
 /// A set of concept handles, in sorted order.
 pub type ConceptSet = RoaringBitmap;
 
+/// Every ordinal below `concepts`, the selection a system's whole content is.
+///
+/// A range fills roaring's containers whole
+/// (<https://docs.rs/roaring/0.11.5/roaring/struct.RoaringBitmap.html#method.insert_range>),
+/// which an insert per ordinal does not.
+#[must_use]
+pub fn every(concepts: u32) -> ConceptSet {
+    let mut set = ConceptSet::new();
+    set.insert_range(0..concepts);
+    set
+}
+
 /// Who a code system version is.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Identity {
@@ -478,6 +490,16 @@ pub enum ProviderError {
 pub trait Hierarchy: fmt::Debug {
     /// The direct parents.
     fn parents(&self, concept: Concept) -> ConceptSet;
+    /// Whether any direct parent of `concept` lies in `set`.
+    ///
+    /// This is the root test of a nested expansion, asked once per member of
+    /// the selection, so the default's set per call is worth overriding wherever
+    /// the adjacency is already a list.
+    fn any_parent_in(&self, concept: Concept, set: &ConceptSet) -> bool {
+        self.parents(concept)
+            .iter()
+            .any(|parent| set.contains(parent))
+    }
     /// The direct children.
     fn children(&self, concept: Concept) -> ConceptSet;
     /// Every ancestor, excluding the concept.

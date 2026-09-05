@@ -1,9 +1,10 @@
 {
   "comment": [
     "The latency bars the project claims, and the benches that measure them.",
-    "Point reads answer in under a millisecond and a page of an expansion in",
-    "under ten (docs/architecture.md, issues #77 and #129); scripts/checks/",
-    "bench-bars.sh runs the benches and fails when a median crosses its bar.",
+    "Every read the server serves answers in under a millisecond, a page of an",
+    "expansion included (the owner's bar, 2026-09-05, tightened from the ten",
+    "milliseconds #129 set for a page); scripts/checks/bench-bars.sh runs the",
+    "benches and fails when a median crosses its bar.",
     "",
     "A bar is the CLAIM, not a machine's measurement: it never moves to match",
     "a slower run. `measured_ms` records what one machine answered, so the",
@@ -31,33 +32,39 @@
     },
     {
       "bench": "expand/isa_root_page_10",
-      "max_ms": 10.0,
-      "measured_ms": 2.139,
-      "claim": "a page of an expansion is cut from the bitmaps in under ten milliseconds"
+      "max_ms": 1.0,
+      "measured_ms": 0.092,
+      "claim": "a page of an expansion is cut from the bitmaps in under a millisecond"
     },
     {
       "bench": "http/lookup",
       "max_ms": 1.0,
-      "measured_ms": 0.041,
+      "measured_ms": 0.047,
       "claim": "the served operation, routing and codec included, stays under a millisecond"
     },
     {
       "bench": "http/validate_code",
       "max_ms": 1.0,
-      "measured_ms": 0.011,
+      "measured_ms": 0.013,
       "claim": "the served operation, routing and codec included, stays under a millisecond"
     },
     {
       "bench": "http/subsumes",
       "max_ms": 1.0,
-      "measured_ms": 0.007,
+      "measured_ms": 0.008,
       "claim": "the served operation, routing and codec included, stays under a millisecond"
     },
     {
       "bench": "http/expand_page_10",
-      "max_ms": 10.0,
-      "measured_ms": 2.16,
-      "claim": "the served page of an expansion stays under ten milliseconds"
+      "max_ms": 1.0,
+      "measured_ms": 0.118,
+      "claim": "the served page of an expansion stays under a millisecond"
+    },
+    {
+      "bench": "expand/isa_root_first_10",
+      "max_ms": 1.0,
+      "measured_ms": 0.031,
+      "claim": "the first page of an expansion costs the page, never the selection"
     }
   ]
 }
