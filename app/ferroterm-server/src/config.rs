@@ -138,8 +138,7 @@ impl Config {
             security_services: security_services()?,
             base_url: std::env::var(BASE_URL_ENV)
                 .ok()
-                .map(|url| url.trim_end_matches('/').to_owned())
-                .filter(|url| !url.is_empty()),
+                .and_then(|url| base_url_of(&url)),
         })
     }
 }
@@ -155,6 +154,20 @@ fn security_services() -> Result<Vec<String>, ConfigError> {
     let Ok(value) = std::env::var(SECURITY_SERVICE_ENV) else {
         return Ok(Vec::new());
     };
+    services_of(&value)
+}
+
+/// The security services `value` lists, comma-separated.
+///
+/// Reading the variable and reading its value are separate so the second can
+/// be tested: setting a variable needs `std::env::set_var`, which is unsafe in
+/// edition 2024 and this workspace forbids unsafe.
+///
+/// # Errors
+///
+/// Returns [`ConfigError::SecurityService`] for a code the value set does not
+/// define.
+fn services_of(value: &str) -> Result<Vec<String>, ConfigError> {
     let mut out = Vec::new();
     for name in value.split(',').map(str::trim).filter(|n| !n.is_empty()) {
         let Some((code, _)) = SECURITY_SERVICES.iter().find(|(code, _)| *code == name) else {
@@ -163,4 +176,56 @@ fn security_services() -> Result<Vec<String>, ConfigError> {
         out.push((*code).to_owned());
     }
     Ok(out)
+}
+
+/// The base URL `value` names, without its trailing slashes, or `None` when it
+/// names nothing.
+///
+/// A trailing slash is dropped so a caller can join a path without doubling
+/// the separator, and a variable set to the empty string means unset.
+fn base_url_of(value: &str) -> Option<String> {
+    let trimmed = value.trim_end_matches('/');
+    (!trimmed.is_empty()).then(|| trimmed.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ConfigError, base_url_of, services_of};
+
+    #[test]
+    fn a_security_service_list_admits_only_the_codes_the_value_set_defines() {
+        assert_eq!(services_of("").expect("empty"), Vec::<String>::new());
+        assert_eq!(
+            services_of("OAuth").expect("one"),
+            vec![String::from("OAuth")]
+        );
+        // Spacing and empty entries are the operator's, not the value set's.
+        assert_eq!(
+            services_of(" OAuth , SMART-on-FHIR ,,").expect("several"),
+            vec![String::from("OAuth"), String::from("SMART-on-FHIR")]
+        );
+        assert!(matches!(
+            services_of("OAuth,Bearer"),
+            Err(ConfigError::SecurityService(name)) if name == "Bearer"
+        ));
+        // The codes are case-sensitive, as the value set defines them.
+        assert!(matches!(
+            services_of("oauth"),
+            Err(ConfigError::SecurityService(name)) if name == "oauth"
+        ));
+    }
+
+    #[test]
+    fn a_base_url_loses_its_trailing_slashes_and_an_empty_one_is_unset() {
+        assert_eq!(
+            base_url_of("https://tx.example.org/fhir"),
+            Some(String::from("https://tx.example.org/fhir"))
+        );
+        assert_eq!(
+            base_url_of("https://tx.example.org/fhir///"),
+            Some(String::from("https://tx.example.org/fhir"))
+        );
+        assert_eq!(base_url_of(""), None);
+        assert_eq!(base_url_of("/"), None, "a slash alone names nothing");
+    }
 }
