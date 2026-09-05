@@ -349,3 +349,55 @@ fn the_declaration_names_only_the_properties_the_release_carries() {
         "a column the release does not have: {declared:?}"
     );
 }
+
+/// The answer-list and Document Ontology filters tx.fhir.org answers.
+///
+/// No specification defines them: the FHIR LOINC page names three filter
+/// families and has carried a `TODO: Document Ontology` placeholder since STU3
+/// (<https://hl7.org/fhir/R4B/loinc.html>), so these are compatibility with one
+/// server and the mapping from its kebab-case names to the release's
+/// `PartTypeName`s is ours (#277).
+#[test]
+fn the_answer_list_and_document_filters_answer_what_tx_fhir_org_answers() {
+    let (_dir, provider) = provider();
+    let codes = |filter: Filter| -> Vec<String> {
+        provider
+            .filter(&filter)
+            .expect("filters")
+            .iter()
+            .map(|index| {
+                provider
+                    .code(Concept::new(index))
+                    .expect("reads")
+                    .unwrap_or_default()
+            })
+            .collect()
+    };
+    let by = |property: &str, op: FilterOperator, value: &str| Filter {
+        property: property.to_owned(),
+        op,
+        value: value.to_owned(),
+    };
+    let answers = codes(by("LIST", FilterOperator::Equal, &code(ANSWER_LIST)));
+    assert!(!answers.is_empty(), "the answers of the list: {answers:?}");
+    assert_eq!(
+        codes(by("answers-for", FilterOperator::Equal, &code(ANSWER_LIST))),
+        answers,
+        "the other name answers the same"
+    );
+    assert_eq!(
+        codes(by("answers-for", FilterOperator::Equal, &code(SURVEY))),
+        answers,
+        "a term answers with the answers of the list it links to"
+    );
+    assert!(
+        codes(by("LIST", FilterOperator::Equal, "no-such-list")).is_empty(),
+        "a value that names neither a list nor a term selects nothing"
+    );
+    assert!(
+        provider
+            .filter(&by("LIST", FilterOperator::Regex, ".*"))
+            .is_err(),
+        "the filter answers `=` alone"
+    );
+}

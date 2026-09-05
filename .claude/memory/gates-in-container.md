@@ -1,15 +1,14 @@
 ---
 name: gates-in-container
-description: "fmt, clippy, doc, and the check scripts run on the host CLI as always; only the test run (cargo nextest, which execs freshly built binaries) runs inside the pinned rust:1.98-bookworm container, because macOS Gatekeeper stalls every fresh unsigned binary about 4 minutes; owner-decided 2026-09-04"
-metadata: 
-  node_type: memory
+description: Every gate, tests included, runs on the host CLI; the pinned-container test run is retired because its target volume grew to 104 GB and crashed Docker
+metadata:
   type: feedback
-  originSessionId: f1d07f84-66e2-401d-8ebd-76aea8bebf4f
-  modified: 2026-09-04T11:57:53.198Z
 ---
 
-Keep `cargo fmt --check`, `cargo clippy -D warnings`, `cargo doc`, `scripts/checks/versions.sh`, and `scripts/checks/crate-version-guard.sh` on the host CLI. Run only `cargo nextest run --workspace --locked` inside the repo's pinned Rust image (the `rust:1.98-bookworm` digest from `bench/Dockerfile`): checkout bind-mounted at `/src`, `CARGO_TARGET_DIR=/target` on the named volume `ferroterm-gates-target`, the registry on `ferroterm-gates-cargo`, cargo-nextest from `https://get.nexte.st/latest/linux-arm`.
+Run every gate on the host: `cargo fmt`, `cargo clippy --workspace --all-targets --all-features`, `RUSTDOCFLAGS="-D warnings" cargo doc`, `scripts/checks/*.sh`, **and `cargo nextest run --workspace --locked`**.
 
-**Why:** on the owner's Mac (Darwin 25.5, 2026-09-04) macOS Gatekeeper (`syspolicyd`) assesses every freshly built unsigned binary on exec, so each nextest `--list` sat at 0% CPU for about 4 minutes and a workspace run would take hours. Compiling (fmt, clippy, doc) execs no fresh binary and is fast on the host. The owner refused running the binaries unsandboxed and said "gates like fmt and clippy should [not] be in the docker, keep it in the cli"; the container is for the test binaries only. `cargo run -p fhir-codegen -- emit` execs one fresh binary and takes the stall once; accept it on the host.
+The pinned `rust:1.98-bookworm` container run is retired (the owner's instruction, 2026-09-05). Its `ferroterm-gates-target` volume reached 104.4 GB and crashed Docker once; both volumes were removed. Do not recreate them and do not run the suite in Docker.
 
-**How to apply:** one `docker run --rm` with the mounts above for nextest, in the background, output to a scratchpad log; the host chain runs concurrently (separate target dirs). Do not edit manifests while either cargo run is in flight. See [[repo-merge-gates]].
+**Why:** the container existed because macOS Gatekeeper stalls a freshly built unsigned test binary for about four minutes on first execution. That cost is the owner's to accept; a runaway 100 GB cache is not. A host run pays the Gatekeeper wait occasionally and nothing else.
+
+**How to apply:** run `cargo nextest run --workspace --locked` in the working copy. If a run seems to hang before any test prints, that is Gatekeeper on the fresh binary; wait it out rather than switching tooling. See [[perl-edit-pitfalls]] for the other local-run trap.
