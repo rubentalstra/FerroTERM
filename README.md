@@ -79,20 +79,20 @@ provider seam, so nothing in an operation is a special case for one system.
 
 ## Speed and footprint
 
-Measured by the benchmark harness in a container on one machine, one record per
+Measured by the benchmark harness on one machine, one record per
 code system, warm p50 per operation; nothing here is typed by hand, and CI fails
 when the table drifts from the records under `bench/records/`.
 
 <!-- bench-table:begin -->
 | Code system | Release | Concepts | Build | Peak build memory | Index on disk | Resident | `$lookup` | `$validate-code` | `$subsumes` | `$expand` (small) | `$expand` (large) | Search | Snowstorm |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| [ICD-10-CM](bench/records/2026-09-05-apple-m2-perf/icd-10-cm-2026-09-05T18-09-15-675891Z.json) | 2026 | 98,827 | 1.59 s | 347 MB | 40 MB | 62 MB | 115 µs | 55 µs | 52 µs | n/a | n/a | n/a | not run |
-| [ICD-10-NL](bench/records/2026-09-05-apple-m2-perf/icd-10-nl-2026-09-05T18-09-16-926249Z.json) | 2021 | 42,769 | 1.08 s | 229 MB | 20 MB | 36 MB | 109 µs | 53 µs | 57 µs | n/a | n/a | n/a | not run |
-| [ICD-11 MMS](bench/records/2026-09-05-apple-m2-perf/icd-11-mms-2026-09-05T18-09-22-369439Z.json) | 2026-01 | 37,211 | n/a | n/a | 34 MB | 74 MB | 216 µs | 68 µs | n/a | 73 µs | 76 µs | 90 µs | not run |
-| [LOINC](bench/records/2026-09-05-apple-m2-perf/loinc-2026-09-05T18-09-13-913049Z.json) | 2.83 | 257,266 | 11.12 s | 1.92 GB | 262 MB | 145 MB | 170 µs | 48 µs | n/a | 65 µs | 8.1 ms | 240 µs | not run |
-| [RxNorm (prescribable subset)](bench/records/2026-09-05-apple-m2-perf/rxnorm-prescribable-subset-2026-09-05T18-09-22-040425Z.json) | 09082026 | 81,468 | 4.55 s | 646 MB | 72 MB | 119 MB | 1.02 ms | 123 µs | n/a | n/a | n/a | n/a | not run |
-| [SNOMED CT (International edition)](bench/records/2026-09-05-apple-m2-perf/snomed-ct-international-edition-2026-09-05T18-09-00-784641Z.json) | 20260901 | 535,502 | 19.19 s | 2.44 GB | 626 MB | 702 MB | 515 µs | 93 µs | 70 µs | 184 µs | 1.88 ms | 305 µs | not run |
-| [SNOMED CT (Netherlands edition)](bench/records/2026-09-05-apple-m2-perf/snomed-ct-netherlands-edition-2026-09-05T18-08-40-456544Z.json) | 20260630 | 548,949 | 32.96 s | 3.03 GB | 864 MB | 888 MB | 541 µs | 97 µs | 67 µs | 254 µs | 2.46 ms | 760 µs | not run |
+| [ICD-10-CM](bench/records/2026-09-05-apple-m2/icd-10-cm-2026-09-05T18-09-15-675891Z.json) | 2026 | 98,827 | 1.59 s | 347 MB | 40 MB | 62 MB | 115 µs | 55 µs | 52 µs | n/a | n/a | n/a | not run |
+| [ICD-10-NL](bench/records/2026-09-05-apple-m2/icd-10-nl-2026-09-05T18-09-16-926249Z.json) | 2021 | 42,769 | 1.08 s | 229 MB | 20 MB | 36 MB | 109 µs | 53 µs | 57 µs | n/a | n/a | n/a | not run |
+| [ICD-11 MMS](bench/records/2026-09-05-apple-m2/icd-11-mms-2026-09-05T18-09-22-369439Z.json) | 2026-01 | 37,211 | n/a | n/a | 34 MB | 74 MB | 216 µs | 68 µs | n/a | 73 µs | 76 µs | 90 µs | not run |
+| [LOINC](bench/records/2026-09-05-apple-m2/loinc-2026-09-05T18-09-13-913049Z.json) | 2.83 | 257,266 | 11.12 s | 1.92 GB | 262 MB | 145 MB | 170 µs | 48 µs | n/a | 65 µs | 8.1 ms | 240 µs | not run |
+| [RxNorm (prescribable subset)](bench/records/2026-09-05-apple-m2/rxnorm-prescribable-subset-2026-09-05T18-09-22-040425Z.json) | 09082026 | 81,468 | 4.55 s | 646 MB | 72 MB | 119 MB | 1.02 ms | 123 µs | n/a | n/a | n/a | n/a | not run |
+| [SNOMED CT (International edition)](bench/records/2026-09-05-apple-m2/snomed-ct-international-edition-2026-09-05T18-09-00-784641Z.json) | 20260901 | 535,502 | 19.19 s | 2.44 GB | 626 MB | 702 MB | 515 µs | 93 µs | 70 µs | 184 µs | 1.88 ms | 305 µs | not run |
+| [SNOMED CT (Netherlands edition)](bench/records/2026-09-05-apple-m2/snomed-ct-netherlands-edition-2026-09-05T18-08-40-456544Z.json) | 20260630 | 548,949 | 32.96 s | 3.03 GB | 864 MB | 888 MB | 541 µs | 97 µs | 67 µs | 254 µs | 2.46 ms | 760 µs | not run |
 
 Warm p50 over 200 HTTP round trips on one machine (Apple M2, 17.18 GB, macos/aarch64), FerroTERM 0.0.11 serving FHIR R4B, taken 2026-09-05. The records are under `bench/records/`; the [benchmarks page](https://ferroterm.eu/benchmarks.html) has the method, the cold and tail latencies, and how to reproduce a record.
 <!-- bench-table:end -->
@@ -109,9 +109,9 @@ pins, inline and request-scoped value sets), `ValueSet/$validate-code`,
 `metadata?mode=terminology`. Every failure is an `OperationOutcome` with a
 `tx-issue-type` coding.
 
-Conformance is measured, not asserted: CI runs the HL7 terminology ecosystem
+Conformance is measured. CI runs the HL7 terminology ecosystem
 suite against every pull request and holds a committed pass list per served
-version (505 of the 670 general cases on R5, 500 on R4, 499 on R4B; the rest are
+version (523 of the 670 general cases on R5, 518 on R4, 517 on R4B; the rest are
 features on the roadmap and fixture artefacts, listed by cluster on the
 tracker). Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept`.
 
