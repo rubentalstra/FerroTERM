@@ -3,12 +3,13 @@
 //! Includes union, criteria within an include intersect, excludes subtract,
 //! and a concept appears once per system, version, and code
 //! (<https://hl7.org/fhir/R4B/valueset.html#compositions>,
-//! <https://hl7.org/fhir/R5/valueset.html#union-intersection>). Order is by
-//! system, version, then the provider's concept order (the ordinal the build
-//! assigns from sorted codes): no version fixes an expansion order, so this is
-//! our own design, chosen so paging is a stable partition that costs nothing to
-//! cut. Includes and excludes are bitmap algebra; only the page asked for is
-//! read from the store.
+//! <https://hl7.org/fhir/R5/valueset.html#union-intersection>). A flat
+//! expansion answers in the order the compose selected: the includes in order,
+//! each include's named concepts as it named them and each filter's concepts in
+//! the provider's concept order, first occurrence winning. No version fixes an
+//! expansion order, and `ValueSet.compose.include.concept` says an expansion
+//! typically follows the compose, so this is our own design. Includes and
+//! excludes are bitmap algebra; only the page asked for is read from the store.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -127,8 +128,7 @@ pub struct Expansion {
     pub total: u64,
     /// The offset of this page.
     pub offset: usize,
-    /// The entries of this page, ordered by system, version, then the
-    /// provider's concept order.
+    /// The entries of this page, in the order the compose selected them.
     pub items: Vec<Item>,
     /// The system versions used.
     pub versions: Vec<UsedVersion>,
@@ -217,12 +217,85 @@ type SelectionKey = (String, String);
 struct Selection {
     provider: Arc<dyn CodeSystemProvider>,
     set: ConceptSet,
+    /// What each include contributed, in the order the includes ran.
+    segments: Vec<Segment>,
+    /// Everything the segments already carry, so an overlapping include adds
+    /// nothing and the first occurrence keeps its place.
+    seen: ConceptSet,
     overrides: BTreeMap<u32, String>,
     /// The compose's spelling of an enumerated code the system spells otherwise.
     // NOTE: no FHIR specification governs which spelling `contains.code` carries when a
     // system admits several (the ecosystem's icd-11 `expand-adhoc-enum-uri` keeps the
     // compose's); the compose's spelling is kept wherever the compose is: our own design.
     spellings: BTreeMap<u32, String>,
+}
+
+/// What one include contributed to a selection.
+enum Segment {
+    /// Concepts the include named, in the order it named them.
+    Named(Vec<u32>),
+    /// Concepts a filter selected, in the provider's concept order.
+    Selected(ConceptSet),
+}
+
+/// One segment's concepts, without deciding the type at the call site.
+enum Concepts<'a> {
+    Named(std::iter::Copied<std::slice::Iter<'a, u32>>),
+    Selected(roaring::bitmap::Iter<'a>),
+}
+
+impl Iterator for Concepts<'_> {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<u32> {
+        match self {
+            Self::Named(iter) => iter.next(),
+            Self::Selected(iter) => iter.next(),
+        }
+    }
+}
+
+impl Selection {
+    /// The concepts of this selection in the order the includes selected them.
+    ///
+    /// A compose of one filter is one segment over the bitmap, so a page still
+    /// comes off the selection without reading a concept.
+    fn ordered(&self) -> impl Iterator<Item = u32> + '_ {
+        self.segments
+            .iter()
+            .flat_map(|segment| match segment {
+                Segment::Named(named) => Concepts::Named(named.iter().copied()),
+                Segment::Selected(set) => Concepts::Selected(set.iter()),
+            })
+            .filter(|index| self.set.contains(*index))
+    }
+
+    /// Adds what another include selected of the same system version.
+    fn absorb(&mut self, part: Self) {
+        for segment in part.segments {
+            let fresh = match segment {
+                Segment::Named(named) => Segment::Named(
+                    named
+                        .into_iter()
+                        .filter(|index| !self.seen.contains(*index))
+                        .collect(),
+                ),
+                Segment::Selected(set) => Segment::Selected(&set - &self.seen),
+            };
+            match &fresh {
+                Segment::Named(named) => self.seen.extend(named.iter().copied()),
+                Segment::Selected(set) => self.seen |= set,
+            }
+            self.segments.push(fresh);
+        }
+        self.set |= &part.set;
+        for (ordinal, display) in part.overrides {
+            self.overrides.entry(ordinal).or_insert(display);
+        }
+        for (ordinal, spelling) in part.spellings {
+            self.spellings.entry(ordinal).or_insert(spelling);
+        }
+    }
 }
 
 /// Sets at most this large check activity concept by concept; larger ones
@@ -264,22 +337,18 @@ impl<'a> Expander<'a> {
     /// version, or code, or a provider failure.
     pub fn expand(&self, compose: &Compose, options: &Options) -> Result<Expansion, ComposeError> {
         let mut selections: BTreeMap<SelectionKey, Selection> = BTreeMap::new();
+        // NOTE: no specification fixes the order of an expansion
+        // (<https://hl7.org/fhir/R4B/valueset.html>), so the systems answer in the
+        // order the compose first named them: our own design.
+        let mut order: Vec<SelectionKey> = Vec::new();
         let mut versions: Vec<UsedVersion> = Vec::new();
         for include in &compose.include {
             for (key, part) in self.evaluate(include, options, &mut versions)? {
-                match selections.get_mut(&key) {
-                    Some(existing) => {
-                        existing.set |= &part.set;
-                        for (ordinal, display) in part.overrides {
-                            existing.overrides.entry(ordinal).or_insert(display);
-                        }
-                        for (ordinal, spelling) in part.spellings {
-                            existing.spellings.entry(ordinal).or_insert(spelling);
-                        }
-                    }
-                    None => {
-                        selections.insert(key, part);
-                    }
+                if let Some(existing) = selections.get_mut(&key) {
+                    existing.absorb(part);
+                } else {
+                    order.push(key.clone());
+                    selections.insert(key, part);
                 }
             }
         }
@@ -310,26 +379,35 @@ impl<'a> Expander<'a> {
         let mut items = Vec::new();
         let mut skip = options.offset;
         let mut remaining = options.count.unwrap_or(usize::MAX);
-        for ((url, version), selection) in &selections {
+        for key in &order {
             if remaining == 0 {
                 break;
             }
+            let (url, version) = key;
+            let Some(selection) = selections.get(key) else {
+                continue;
+            };
             let len = usize::try_from(selection.set.len()).unwrap_or(usize::MAX);
             if skip >= len {
                 skip = skip.saturating_sub(len);
                 continue;
             }
-            let order: Vec<(u32, usize)> = match nests(compose, options)
+            let page: Vec<(u32, usize)> = match nests(compose, options)
                 .then(|| preorder(selection))
                 .flatten()
             {
-                Some(order) => {
+                Some(tree) => {
                     nested = true;
-                    order
+                    tree.into_iter().skip(skip).take(remaining).collect()
                 }
-                None => selection.set.iter().map(|index| (index, 0)).collect(),
+                None => selection
+                    .ordered()
+                    .map(|index| (index, 0))
+                    .skip(skip)
+                    .take(remaining)
+                    .collect(),
             };
-            for (index, depth) in order.into_iter().skip(skip).take(remaining) {
+            for (index, depth) in page {
                 items.push(materialize(url, version, selection, index, depth, options)?);
             }
             remaining = remaining.saturating_sub(len.saturating_sub(skip));
@@ -378,15 +456,25 @@ impl<'a> Expander<'a> {
             });
             let Selected {
                 set,
+                stated,
                 overrides,
                 spellings,
             } = Self::select(provider, include, options)?;
+            // An include either names its concepts or states a filter, so one
+            // include is one segment.
+            let segment = match stated {
+                Some(named) => Segment::Named(named),
+                None => Segment::Selected(set.clone()),
+            };
+            let seen = set.clone();
             let mut selected = BTreeMap::new();
             selected.insert(
                 (identity.url.clone(), identity.version.clone()),
                 Selection {
                     provider: Arc::clone(provider),
                     set,
+                    segments: vec![segment],
+                    seen,
                     overrides,
                     spellings,
                 },
@@ -432,6 +520,8 @@ impl<'a> Expander<'a> {
                     Selection {
                         provider: Arc::clone(&resolved.provider),
                         set: ConceptSet::new(),
+                        segments: vec![Segment::Named(Vec::new())],
+                        seen: ConceptSet::new(),
                         overrides: BTreeMap::new(),
                         spellings: BTreeMap::new(),
                     },
@@ -454,7 +544,13 @@ impl<'a> Expander<'a> {
             else {
                 continue;
             };
-            selection.set.insert(located.concept.index());
+            // The referenced expansion states an order; it carries into this one.
+            if selection.set.insert(located.concept.index()) {
+                selection.seen.insert(located.concept.index());
+                if let Some(Segment::Named(named)) = selection.segments.first_mut() {
+                    named.push(located.concept.index());
+                }
+            }
             if located.code != item.code {
                 selection
                     .spellings
@@ -481,6 +577,8 @@ impl<'a> Expander<'a> {
         };
         let mut overrides = BTreeMap::new();
         let mut spellings = BTreeMap::new();
+        let mut stated: Vec<u32> = Vec::new();
+        let names = !include.concepts.is_empty();
         let mut set = if include.concepts.is_empty() {
             provider.filter_all(&include.filters).map_err(&failed)?
         } else {
@@ -493,7 +591,9 @@ impl<'a> Expander<'a> {
                 {
                     continue;
                 }
-                set.insert(located.concept.index());
+                if set.insert(located.concept.index()) {
+                    stated.push(located.concept.index());
+                }
                 if let Some(display) = &concept.display {
                     overrides.insert(located.concept.index(), display.clone());
                 }
@@ -516,8 +616,10 @@ impl<'a> Expander<'a> {
                 )
                 .map_err(failed)?;
         }
+        stated.retain(|index| set.contains(*index));
         Ok(Selected {
             set,
+            stated: names.then_some(stated),
             overrides,
             spellings,
         })
@@ -528,6 +630,9 @@ impl<'a> Expander<'a> {
 /// overrides and spellings, by ordinal.
 struct Selected {
     set: ConceptSet,
+    /// The enumerated concepts in the order the include named them, or `None`
+    /// when the include stated a filter and named no concept.
+    stated: Option<Vec<u32>>,
     overrides: BTreeMap<u32, String>,
     spellings: BTreeMap<u32, String>,
 }

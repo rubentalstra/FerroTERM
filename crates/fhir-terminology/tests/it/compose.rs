@@ -75,7 +75,9 @@ fn includes_union_criteria_intersect_and_excludes_subtract() {
     let expansion = expander
         .expand(&compose, &Options::default())
         .expect("expands");
-    // cat appears once although two includes select it; order is by code.
+    // cat appears once although two includes select it, and the order is the
+    // compose's: the filter include first, then the codes the second include
+    // named, first occurrence winning.
     assert_eq!(codes(&expansion), ["cat", "kitten", "plant"]);
     assert_eq!(expansion.total, 3);
     assert_eq!(expansion.versions.len(), 1);
@@ -212,7 +214,7 @@ fn text_and_language_apply_per_system() {
 }
 
 #[test]
-fn order_is_system_then_version_then_code_and_displays_can_be_overridden() {
+fn order_follows_the_compose_and_displays_can_be_overridden() {
     let registry = registry();
     let expander = Expander::new(&registry);
     let compose = Compose {
@@ -256,11 +258,15 @@ fn order_is_system_then_version_then_code_and_displays_can_be_overridden() {
             )
         })
         .collect();
+    // The compose named the 2025 system first, so it answers first: no FHIR
+    // version fixes the order of an expansion
+    // (<https://hl7.org/fhir/R4B/valueset.html>), and the compose order is the
+    // one `ValueSet.compose.include.concept` says an expansion typically follows.
     assert_eq!(
         keys,
         [
-            (URL, "2024", "cat"),
             (URL, "2025", "dog"),
+            (URL, "2024", "cat"),
             (FLAT_URL, "1", "cat")
         ]
     );
@@ -420,4 +426,38 @@ fn implicit_value_sets_are_parsed_by_the_system_that_owns_the_uri() {
         registry.implicit_value_set("http://example.org/fixture?vs=refset/1"),
         Some(Err(ProviderError::MalformedImplicitValueSet { .. }))
     ));
+}
+
+/// Paging cuts the compose order, not the provider's.
+///
+/// No FHIR version fixes the order of an expansion
+/// (<https://hl7.org/fhir/R4B/valueset.html>), and
+/// `ValueSet.compose.include.concept` says an expansion typically follows the
+/// compose, so a page of the first two is the first two the compose named
+/// (#276).
+#[test]
+fn count_and_offset_page_over_the_compose_order() {
+    let registry = registry();
+    let expander = Expander::new(&registry);
+    let compose = Compose {
+        include: vec![Include {
+            system: Some(system(None)),
+            concepts: concepts(&["dog", "plant", "cat"]),
+            ..Include::default()
+        }],
+        ..Compose::default()
+    };
+    let page = |offset: usize, count: usize| {
+        let options = Options {
+            offset,
+            count: Some(count),
+            ..Options::default()
+        };
+        let expansion = expander.expand(&compose, &options).expect("expands");
+        codes(&expansion)
+    };
+    assert_eq!(page(0, 3), ["dog", "plant", "cat"], "the order it named");
+    assert_eq!(page(0, 2), ["dog", "plant"], "the first page");
+    assert_eq!(page(2, 2), ["cat"], "the page after it");
+    assert_eq!(page(1, 1), ["plant"], "one from the middle");
 }
