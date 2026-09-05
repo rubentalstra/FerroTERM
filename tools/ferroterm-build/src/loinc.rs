@@ -24,9 +24,9 @@ use concept_store::builder::{BuildError, PreferredRule, StoreBuilder};
 use concept_store::record::{Concept, Designation, PropertyValue};
 use concept_store::store::Vocabulary;
 use concept_store::tables;
-use designation_index::index::{IndexBuilder, Input};
 use serde_json::json;
 
+use crate::common::{self, LanguageKey, PipelineError, Placed, PropertyKeys};
 use crate::pipeline::{HIERARCHY_FILE, MANIFEST_FILE, MANIFEST_VERSION, STORE_FILE, TEXT_FILE};
 
 /// The system URI.
@@ -126,26 +126,33 @@ pub fn version_from_name(path: &Path) -> Option<String> {
         .then(|| rest.to_owned())
 }
 
-fn ordinal(index: usize) -> Result<Ordinal, Error> {
-    // A count past u32::MAX is the whole message; the conversion error adds nothing.
-    let Ok(index) = u32::try_from(index) else {
-        return Err(Error::TooMany);
-    };
-    Ok(Ordinal::new(index))
-}
+impl PipelineError for Error {
+    fn too_many() -> Self {
+        Self::TooMany
+    }
 
-fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Error + '_ {
-    move |source| Error::Io {
-        path: path.to_path_buf(),
-        source,
+    fn io(path: &Path, source: io::Error) -> Self {
+        Self::Io {
+            path: path.to_path_buf(),
+            source,
+        }
+    }
+
+    fn unknown_property_key(key: &str) -> Self {
+        Self::UnknownPropertyKey {
+            key: key.to_owned(),
+        }
     }
 }
 
-/// One designation to write and index.
-struct Placed {
-    ordinal: Ordinal,
-    index: u32,
-    record: Designation,
+/// The ordinal of `index`, in this pipeline's error type.
+fn ordinal(index: usize) -> Result<Ordinal, Error> {
+    common::ordinal(index)
+}
+
+/// A closure naming `path` in this pipeline's I/O failure.
+fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Error + '_ {
+    common::io_error(path)
 }
 
 /// The designations gathered while the concepts are written, numbered per
@@ -356,56 +363,20 @@ fn resolve_version(version: Option<&str>, terms: &term::Terms) -> Result<String,
     }
 }
 
-/// The property keys of the store, by name.
-struct PropertyKeys {
-    keys: BTreeMap<String, u32>,
-}
-
-impl PropertyKeys {
-    /// Writes the property-key vocabulary and returns the keys by name.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error`] when the store does not take the vocabulary or there
-    /// are more keys than an ordinal can number.
-    fn write(
-        builder: &mut StoreBuilder,
-        terms: &term::Terms,
-        linked: &Linked<'_>,
-    ) -> Result<Self, Error> {
-        let mut key_names: Vec<String> = terms.columns.clone();
-        key_names
-            .extend([COPYRIGHT_KEY, ANSWER_LIST_KEY, ANSWERS_KEY, KIND_KEY].map(str::to_owned));
-        // The linked axes: the six of `Loinc.csv` under their column names, every
-        // other link type under its own name.
-        for axis in linked.values().flat_map(|by_axis| by_axis.keys()) {
-            if !key_names.iter().any(|k| k == axis) {
-                key_names.push(axis.clone());
-            }
+/// The property keys of one LOINC release, in the order the store numbers
+/// them: every `Loinc.csv` column, the keys the build adds, then every link
+/// axis the release names.
+fn property_key_names(terms: &term::Terms, linked: &Linked<'_>) -> Vec<String> {
+    let mut names: Vec<String> = terms.columns.clone();
+    names.extend([COPYRIGHT_KEY, ANSWER_LIST_KEY, ANSWERS_KEY, KIND_KEY].map(str::to_owned));
+    // The linked axes: the six of `Loinc.csv` under their column names, every
+    // other link type under its own name.
+    for axis in linked.values().flat_map(|by_axis| by_axis.keys()) {
+        if !names.iter().any(|k| k == axis) {
+            names.push(axis.clone());
         }
-        let mut keys: BTreeMap<String, u32> = BTreeMap::new();
-        for name in &key_names {
-            let key = ordinal(keys.len())?.index();
-            keys.insert(name.clone(), key);
-            builder.vocabulary(Vocabulary::PropertyKeys, key, name)?;
-        }
-        Ok(Self { keys })
     }
-
-    /// The key of `name`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::UnknownPropertyKey`] when the vocabulary holds no such
-    /// key, which is a defect in the build, never a capacity limit.
-    fn key(&self, name: &str) -> Result<u32, Error> {
-        self.keys
-            .get(name)
-            .copied()
-            .ok_or_else(|| Error::UnknownPropertyKey {
-                key: name.to_owned(),
-            })
-    }
+    names
 }
 
 /// Creates the store and writes the designation-use vocabulary.
@@ -429,7 +400,7 @@ fn open_store(path: &Path, version: &str) -> Result<StoreBuilder, Error> {
 fn write_concepts(
     builder: &mut StoreBuilder,
     numbered: &Numbered,
-    keys: &PropertyKeys,
+    keys: &PropertyKeys<Error>,
 ) -> Result<(), Error> {
     for (ordinal, concept, kind) in &numbered.concepts {
         builder.concept(*ordinal, concept)?;
@@ -454,7 +425,7 @@ fn write_terms(
     tables: &Tables,
     numbered: &Numbered,
     linked: &Linked<'_>,
-    keys: &PropertyKeys,
+    keys: &PropertyKeys<Error>,
     designations: &mut Designations,
 ) -> Result<(), Error> {
     let mut answer_lists_of: BTreeMap<&str, Vec<String>> = BTreeMap::new();
@@ -538,7 +509,7 @@ fn write_parts(
     builder: &mut StoreBuilder,
     parts: &[part::Part],
     numbered: &Numbered,
-    keys: &PropertyKeys,
+    keys: &PropertyKeys<Error>,
     designations: &mut Designations,
 ) -> Result<(), Error> {
     for part in parts {
@@ -577,7 +548,7 @@ fn write_class_parts(
     builder: &mut StoreBuilder,
     edges: &[part::Edge],
     numbered: &Numbered,
-    keys: &PropertyKeys,
+    keys: &PropertyKeys<Error>,
     designations: &mut Designations,
 ) -> Result<(), Error> {
     let mut named: BTreeSet<&str> = BTreeSet::new();
@@ -608,7 +579,7 @@ fn write_answer_lists(
     builder: &mut StoreBuilder,
     lists: &BTreeMap<String, answer::AnswerList>,
     numbered: &Numbered,
-    keys: &PropertyKeys,
+    keys: &PropertyKeys<Error>,
     designations: &mut Designations,
 ) -> Result<(), Error> {
     for list in lists.values() {
@@ -640,18 +611,6 @@ fn write_answer_lists(
     Ok(())
 }
 
-/// Writes the gathered designations to the store.
-///
-/// # Errors
-///
-/// Returns [`Error`] when the store does not take a designation.
-fn write_designations(builder: &mut StoreBuilder, placed: &[Placed]) -> Result<(), Error> {
-    for p in placed {
-        builder.designation(p.ordinal, p.index, &p.record)?;
-    }
-    Ok(())
-}
-
 /// Builds the multiaxial hierarchy and writes it beside the store.
 ///
 /// # Errors
@@ -677,40 +636,6 @@ fn write_hierarchy(out: &Path, numbered: &Numbered, edges: &[part::Edge]) -> Res
     let mut graph_bytes = Vec::new();
     hierarchy.write_to(&mut graph_bytes)?;
     std::fs::write(&hierarchy_path, &graph_bytes).map_err(io_error(&hierarchy_path))
-}
-
-/// Builds the text index over the designations, writes it beside the store,
-/// and returns the number of words it holds.
-///
-/// # Errors
-///
-/// Returns [`Error`] when the index cannot be built or written.
-fn write_text_index(out: &Path, placed: &[Placed]) -> Result<usize, Error> {
-    let mut index = IndexBuilder::new();
-    for p in placed {
-        index.add(&Input {
-            concept: p.ordinal,
-            index: p.index,
-            term: &p.record.term,
-            // NOTE: the index keys designations by primary language subtag, the way
-            // the providers query it; the store keeps the full BCP 47 tag.
-            language: p
-                .record
-                .language
-                .split('-')
-                .next()
-                .unwrap_or(&p.record.language),
-            use_ordinal: p.record.use_ordinal,
-            active: p.record.active,
-            refsets: &[],
-        })?;
-    }
-    let index = index.build()?;
-    let mut text_bytes = Vec::new();
-    designation_index::persist::write_to(&index, &mut text_bytes)?;
-    let text_path = out.join(TEXT_FILE);
-    std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
-    Ok(index.words())
 }
 
 /// Writes the manifest beside the store.
@@ -764,7 +689,8 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
     let store_path = out.join(STORE_FILE);
     let mut builder = open_store(&store_path, &version)?;
     let linked = link_parts(&tables.links, &numbered);
-    let keys = PropertyKeys::write(&mut builder, &tables.terms, &linked)?;
+    let keys: PropertyKeys<Error> =
+        PropertyKeys::write(&mut builder, &property_key_names(&tables.terms, &linked))?;
     let mut designations = Designations::default();
     write_concepts(&mut builder, &numbered, &keys)?;
     write_terms(
@@ -796,9 +722,10 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
         &keys,
         &mut designations,
     )?;
-    write_designations(&mut builder, &designations.placed)?;
+    common::write_designations::<Error>(&mut builder, &designations.placed)?;
     write_hierarchy(out, &numbered, &tables.edges)?;
-    let words = write_text_index(out, &designations.placed)?;
+    let words =
+        common::write_text_index::<Error>(out, &designations.placed, LanguageKey::PrimarySubtag)?;
     builder.finish(&PreferredRule { preferred: 0 })?;
     let counts = Counts {
         concepts: numbered.concepts.len(),
@@ -819,7 +746,7 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use concept_store::builder::StoreBuilder;
 
     use super::{Error, PropertyKeys};
 
@@ -827,9 +754,12 @@ mod tests {
     /// so: it is not the capacity limit `TooMany` reports.
     #[test]
     fn an_unregistered_property_key_names_itself() {
-        let keys = PropertyKeys {
-            keys: BTreeMap::from([(String::from("COMPONENT"), 0)]),
-        };
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut builder =
+            StoreBuilder::create(&dir.path().join("store.redb"), super::SYSTEM, "2.83")
+                .expect("store");
+        let keys: PropertyKeys<Error> =
+            PropertyKeys::write(&mut builder, &[String::from("COMPONENT")]).expect("writes");
         assert_eq!(keys.key("COMPONENT").expect("registered"), 0);
         let error = keys.key("SCALE_TYP").expect_err("never registered");
         assert!(

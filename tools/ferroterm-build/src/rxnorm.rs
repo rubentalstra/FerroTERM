@@ -24,11 +24,11 @@ use concept_store::keys::{KeyTable, KeyTableError};
 use concept_store::record::{Concept, Designation, PropertyValue};
 use concept_store::store::Vocabulary;
 use concept_store::tables;
-use designation_index::index::{IndexBuilder, Input};
 use rxnorm_rrf::row::Atom;
 use rxnorm_rrf::{Release, RrfError};
 use serde_json::json;
 
+use crate::common::{self, LanguageKey, PipelineError, Placed, PropertyKeys};
 use crate::pipeline::{MANIFEST_FILE, MANIFEST_VERSION, STORE_FILE, TEXT_FILE};
 
 /// The system URI.
@@ -125,19 +125,33 @@ pub enum Error {
     },
 }
 
-fn ordinal(index: usize) -> Result<Ordinal, Error> {
-    // A count past u32::MAX is the whole message; the conversion error adds nothing.
-    let Ok(index) = u32::try_from(index) else {
-        return Err(Error::TooMany);
-    };
-    Ok(Ordinal::new(index))
+impl PipelineError for Error {
+    fn too_many() -> Self {
+        Self::TooMany
+    }
+
+    fn io(path: &Path, source: io::Error) -> Self {
+        Self::Io {
+            path: path.to_path_buf(),
+            source,
+        }
+    }
+
+    fn unknown_property_key(key: &str) -> Self {
+        Self::UnknownPropertyKey {
+            key: key.to_owned(),
+        }
+    }
 }
 
+/// The ordinal of `index`, in this pipeline's error type.
+fn ordinal(index: usize) -> Result<Ordinal, Error> {
+    common::ordinal(index)
+}
+
+/// A closure naming `path` in this pipeline's I/O failure.
 fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Error + '_ {
-    move |source| Error::Io {
-        path: path.to_path_buf(),
-        source,
-    }
+    common::io_error(path)
 }
 
 /// The BCP 47 tag of an `RRF` language code.
@@ -172,13 +186,6 @@ fn order_atoms(atoms: &mut [Atom]) {
         )
     };
     atoms.sort_by_cached_key(rank);
-}
-
-/// One designation to write and index.
-struct Placed {
-    ordinal: Ordinal,
-    index: u32,
-    record: Designation,
 }
 
 /// The `RXNORM` attributes of the concepts, by `RXCUI` then attribute name.
@@ -371,55 +378,20 @@ fn write_uses<'a>(
     Ok(uses)
 }
 
-/// The property keys of the store, by name.
-struct PropertyKeys {
-    keys: BTreeMap<String, u32>,
-}
-
-impl PropertyKeys {
-    /// Writes the property-key vocabulary and returns the keys by name.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error`] when the store does not take the vocabulary or there
-    /// are more keys than an ordinal can number.
-    fn write(
-        builder: &mut StoreBuilder,
-        semantic_types: &SemanticTypes,
-        attributes: &Attributes,
-    ) -> Result<Self, Error> {
-        let mut key_names: Vec<String> = vec![TTY_KEY.to_owned(), SAB_KEY.to_owned()];
-        if !semantic_types.is_empty() {
-            key_names.push(STY_KEY.to_owned());
-        }
-        let attribute_names: BTreeSet<&str> = attributes
-            .values()
-            .flat_map(|by_name| by_name.keys().map(String::as_str))
-            .collect();
-        key_names.extend(attribute_names.into_iter().map(str::to_owned));
-        let mut keys: BTreeMap<String, u32> = BTreeMap::new();
-        for name in &key_names {
-            let key = ordinal(keys.len())?.index();
-            builder.vocabulary(Vocabulary::PropertyKeys, key, name)?;
-            keys.insert(name.clone(), key);
-        }
-        Ok(Self { keys })
+/// The property keys of one release, in the order the store numbers them: the
+/// term type and source, the semantic type when the release has any, then
+/// every attribute name it carries.
+fn property_key_names(semantic_types: &SemanticTypes, attributes: &Attributes) -> Vec<String> {
+    let mut names: Vec<String> = vec![TTY_KEY.to_owned(), SAB_KEY.to_owned()];
+    if !semantic_types.is_empty() {
+        names.push(STY_KEY.to_owned());
     }
-
-    /// The key of `name`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::UnknownPropertyKey`] when the vocabulary holds no such
-    /// key, which is a defect in the build, never a capacity limit.
-    fn key(&self, name: &str) -> Result<u32, Error> {
-        self.keys
-            .get(name)
-            .copied()
-            .ok_or_else(|| Error::UnknownPropertyKey {
-                key: name.to_owned(),
-            })
-    }
+    let attribute_names: BTreeSet<&str> = attributes
+        .values()
+        .flat_map(|by_name| by_name.keys().map(String::as_str))
+        .collect();
+    names.extend(attribute_names.into_iter().map(str::to_owned));
+    names
 }
 
 /// Writes the concepts with their properties, gathering the designations, the
@@ -433,7 +405,7 @@ fn write_concepts(
     builder: &mut StoreBuilder,
     numbered: &Numbered,
     uses: &BTreeMap<&str, u32>,
-    keys: &PropertyKeys,
+    keys: &PropertyKeys<Error>,
     semantic_types: &SemanticTypes,
     attributes: &Attributes,
 ) -> Result<Gathered, Error> {
@@ -504,45 +476,6 @@ fn write_concepts(
         }
     }
     Ok(gathered)
-}
-
-/// Writes the gathered designations to the store.
-///
-/// # Errors
-///
-/// Returns [`Error`] when the store does not take a designation.
-fn write_designations(builder: &mut StoreBuilder, placed: &[Placed]) -> Result<(), Error> {
-    for p in placed {
-        builder.designation(p.ordinal, p.index, &p.record)?;
-    }
-    Ok(())
-}
-
-/// Builds the text index over the designations, writes it beside the store,
-/// and returns the number of words it holds.
-///
-/// # Errors
-///
-/// Returns [`Error`] when the index cannot be built or written.
-fn write_text_index(out: &Path, placed: &[Placed]) -> Result<usize, Error> {
-    let mut index = IndexBuilder::new();
-    for p in placed {
-        index.add(&Input {
-            concept: p.ordinal,
-            index: p.index,
-            term: &p.record.term,
-            language: &p.record.language,
-            use_ordinal: p.record.use_ordinal,
-            active: p.record.active,
-            refsets: &[],
-        })?;
-    }
-    let index = index.build()?;
-    let mut text_bytes = Vec::new();
-    designation_index::persist::write_to(&index, &mut text_bytes)?;
-    let text_path = out.join(TEXT_FILE);
-    std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
-    Ok(index.words())
 }
 
 /// Writes the typed relationships beside the store.
@@ -640,7 +573,10 @@ pub fn build(
     let store_path = out.join(STORE_FILE);
     let mut builder = StoreBuilder::create(&store_path, SYSTEM, &version)?;
     let uses = write_uses(&mut builder, &numbered)?;
-    let keys = PropertyKeys::write(&mut builder, &semantic_types, &attributes)?;
+    let keys: PropertyKeys<Error> = PropertyKeys::write(
+        &mut builder,
+        &property_key_names(&semantic_types, &attributes),
+    )?;
     let gathered = write_concepts(
         &mut builder,
         &numbered,
@@ -649,8 +585,8 @@ pub fn build(
         &semantic_types,
         &attributes,
     )?;
-    write_designations(&mut builder, &gathered.placed)?;
-    let words = write_text_index(out, &gathered.placed)?;
+    common::write_designations::<Error>(&mut builder, &gathered.placed)?;
+    let words = common::write_text_index::<Error>(out, &gathered.placed, LanguageKey::Whole)?;
     write_relations(out, &relations)?;
     let Gathered {
         placed,
@@ -681,7 +617,7 @@ pub fn build(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use concept_store::builder::StoreBuilder;
 
     use super::{Error, PropertyKeys};
 
@@ -689,9 +625,12 @@ mod tests {
     /// so: it is not the capacity limit `TooMany` reports.
     #[test]
     fn an_unregistered_property_key_names_itself() {
-        let keys = PropertyKeys {
-            keys: BTreeMap::from([(String::from("TTY"), 0)]),
-        };
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut builder =
+            StoreBuilder::create(&dir.path().join("store.redb"), super::SYSTEM, "09082026")
+                .expect("store");
+        let keys: PropertyKeys<Error> =
+            PropertyKeys::write(&mut builder, &[String::from("TTY")]).expect("writes");
         assert_eq!(keys.key("TTY").expect("registered"), 0);
         let error = keys.key("SAB").expect_err("never registered");
         assert!(

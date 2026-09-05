@@ -11,6 +11,7 @@
 
 pub mod archive;
 pub mod classification;
+mod common;
 pub mod dhd;
 pub mod icd11;
 pub mod labcodeset;
