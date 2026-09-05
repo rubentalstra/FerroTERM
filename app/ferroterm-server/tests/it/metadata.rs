@@ -74,3 +74,34 @@ async fn the_capability_statement_names_its_security_service_on_every_version() 
         );
     }
 }
+
+/// A deployment behind a proxy states the URL clients reach it at.
+///
+/// The server answers on an address it never sees when a proxy terminates TLS
+/// in front of it, so `implementation.url` is configured rather than guessed,
+/// and it carries the version prefix the surface is served under
+/// (<https://hl7.org/fhir/R4B/capabilitystatement-definitions.html#CapabilityStatement.implementation.url>,
+/// #123).
+#[tokio::test]
+async fn the_capability_statements_state_the_configured_base_url() {
+    let server = Server::start();
+    let (_, body) = server.get("/r4b/metadata").await;
+    assert!(
+        body["implementation"]["url"].is_null(),
+        "a deployment that names no base states none: {body}"
+    );
+
+    let server = Server::start_with_base_url("https://tx.example.org/fhir");
+    let (_, body) = server.get("/r4b/metadata").await;
+    assert_eq!(
+        body["implementation"]["url"], "https://tx.example.org/fhir/r4b",
+        "the version prefix is part of the endpoint: {body}"
+    );
+    let (_, body) = server.get("/r5/metadata").await;
+    assert_eq!(body["implementation"]["url"], "https://tx.example.org/fhir/r5");
+    let (_, body) = server.get("/r4b/metadata?mode=terminology").await;
+    assert_eq!(
+        body["implementation"]["url"], "https://tx.example.org/fhir/r4b",
+        "the terminology capabilities say the same: {body}"
+    );
+}

@@ -47,6 +47,12 @@ services:
       # sets `json` (one object per line). `RUST_LOG` filters.
       FERROTERM_LOG_FORMAT: ${FERROTERM_LOG_FORMAT:-pretty}
       FERROTERM_DEFAULT_LANGUAGE: ${FERROTERM_DEFAULT_LANGUAGE:-en}
+      # The URL clients reach this server at, when a proxy sits in front: it
+      # becomes `CapabilityStatement.implementation.url`, per version.
+      FERROTERM_BASE_URL: ${FERROTERM_BASE_URL:-}
+      # The authentication the proxy enforces, declared in the capability
+      # statement (`OAuth`, `SMART-on-FHIR`, `Basic`, `Certificates`, ...).
+      FERROTERM_SECURITY_SERVICE: ${FERROTERM_SECURITY_SERVICE:-}
       RUST_LOG: ${RUST_LOG:-info}
     volumes:
       - type: bind
@@ -90,3 +96,55 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+
+  # A TLS terminating reverse proxy in front of the server, under its own
+  # profile so `docker compose up` stays the plain quickstart:
+  #
+  #   FERROTERM_DOMAIN=tx.example.org docker compose --profile proxied up
+  #   curl 'https://tx.example.org/r4b/metadata?mode=terminology'
+  #
+  # Caddy fetches and renews the certificate itself and forwards to the server
+  # over the compose network; the server binds no public port in this profile
+  # (it is reachable as `ferroterm:8080` inside the network alone). With the
+  # default domain, `localhost`, Caddy issues from its own internal CA, so the
+  # quickstart works offline; name a real domain and it uses Let's Encrypt.
+  #
+  # FERROTERM_BASE_URL is what makes `CapabilityStatement.implementation.url`
+  # correct: the server answers on an address it never sees, so it states the
+  # one clients use. Set it to the same scheme and host as the proxy.
+  #
+  # The proxy is the place for authentication and rate limiting: the server has
+  # neither, and `FERROTERM_SECURITY_SERVICE` only declares what you put in
+  # front (`OAuth`, `SMART-on-FHIR`, ...). See the book,
+  # https://ferroterm.eu/book/operate/reverse-proxy.html.
+  proxy:
+    image: docker.io/library/caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    profiles: [proxied]
+    restart: unless-stopped
+    command:
+      - caddy
+      - reverse-proxy
+      - --from
+      - ${FERROTERM_DOMAIN:-localhost}
+      - --to
+      - ferroterm:8080
+    ports:
+      - "${FERROTERM_HTTP_PORT:-80}:80"
+      - "${FERROTERM_HTTPS_PORT:-443}:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - ferroterm
+    cap_drop:
+      - ALL
+    # Binding 80 and 443 inside the container needs the one capability the
+    # image asks for; everything else stays dropped.
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy-data:
+  caddy-config:
