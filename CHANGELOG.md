@@ -13,9 +13,14 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- The fuzz targets under `fuzz/`: every parser an untrusted input reaches (ECL, the FHIR JSON and XML bodies, the SNOMED CT implicit `?fhir_vs=` and `?fhir_cm=` forms, and the RF2 file names, effective times, and identifiers) is fed arbitrary bytes by `cargo-fuzz`, weekly in CI and by hand for longer runs. The seeds are committed; a crash uploads the input that reproduces it.
+
 ### Fixed
 
 - The LOINC and RxNorm builds name a property key they never registered instead of reporting "too many concepts": a defect in the build no longer surfaces as a capacity error. The RxNorm relationship-type lookup is split the same way, and `TooMany` keeps its own meaning.
+- An expression constraint of deeply nested brackets no longer takes the server down. The ECL parser descends with the grammar, so an unbounded nesting exhausted the stack and aborted the process, which no `OperationOutcome` survives; the parser now refuses past `sct_ecl::NESTING_LIMIT` (64) and the server answers the refusal as an `OperationOutcome`. Found by the `ecl_parse` fuzz target.
 
 ## [0.0.11] - 2026-09-05
 

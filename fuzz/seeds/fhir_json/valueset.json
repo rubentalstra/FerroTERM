@@ -1,0 +1,1 @@
+{"resourceType":"ValueSet","status":"active","url":"http://example.org/vs","compose":{"include":[{"system":"http://snomed.info/sct","filter":[{"property":"concept","op":"is-a","value":"138875005"}]}]}}

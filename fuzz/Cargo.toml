@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: BUSL-1.1
+[package]
+name = "ferroterm-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "BUSL-1.1"
+
+# The crate is deliberately OUTSIDE the workspace (the root manifest excludes
+# it): cargo-fuzz builds with sanitizer flags that need a nightly toolchain,
+# and the product stays on the pinned stable one.
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.13"
+fhir-terminology = { path = "../crates/fhir-terminology" }
+fhir-types = { path = "../crates/fhir-types" }
+rf2 = { path = "../crates/rf2" }
+sct-ecl = { path = "../crates/sct-ecl" }
+ferroterm-testkit = { path = "../tools/ferroterm-testkit" }
+serde_json = "1"
+tempfile = "3"
+
+[[bin]]
+name = "ecl_parse"
+path = "fuzz_targets/ecl_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ecl_roundtrip"
+path = "fuzz_targets/ecl_roundtrip.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fhir_json"
+path = "fuzz_targets/fhir_json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "snomed_uri"
+path = "fuzz_targets/snomed_uri.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fhir_xml"
+path = "fuzz_targets/fhir_xml.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "rf2_row"
+path = "fuzz_targets/rf2_row.rs"
+test = false
+doc = false
+bench = false

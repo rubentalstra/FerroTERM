@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: BUSL-1.1
+
+# The fuzz targets, run weekly for a bounded time.
+#
+# Every parser a client or a release can reach is fed arbitrary bytes: ECL, the
+# FHIR JSON and XML bodies, the SNOMED implicit URI forms, and the RF2 fields.
+# A crash is a defect, and the run uploads the input that reproduces it.
+#
+# The lane is the one place a nightly toolchain appears: cargo-fuzz builds with
+# sanitizer flags that need it (https://rust-fuzz.github.io/book/cargo-fuzz.html),
+# and the product stays on the toolchain pinned in rust-toolchain.toml. Nothing
+# built here ships.
+name: Fuzz
+
+on:
+  schedule:
+    - cron: "41 3 * * 3"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: How long to run each target.
+        type: string
+        default: "300"
+
+permissions: {}
+
+concurrency:
+  group: fuzz
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    name: fuzz (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - ecl_parse
+          - ecl_roundtrip
+          - fhir_json
+          - fhir_xml
+          - snomed_uri
+          - rf2_row
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          toolchain: nightly
+          cache-key: fuzz
+      - uses: taiki-e/install-action@0758d235715de2f3551eacc980d9ae8fce9342c3 # v2.87.3
+        with:
+          tool: cargo-fuzz@0.13.2
+      - name: Run the target over its seeds
+        env:
+          TARGET: ${{ matrix.target }}
+          SECONDS_PER_TARGET: ${{ inputs.seconds || '300' }}
+        run: |
+          set -euo pipefail
+          mkdir -p "fuzz/corpus/${TARGET}"
+          cp "fuzz/seeds/${TARGET}"/* "fuzz/corpus/${TARGET}/"
+          cargo fuzz run "${TARGET}" "fuzz/corpus/${TARGET}" \
+            -- -max_total_time="${SECONDS_PER_TARGET}" -rss_limit_mb=4096
+      - name: Upload what reproduces a crash
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          retention-days: 90
+          if-no-files-found: ignore

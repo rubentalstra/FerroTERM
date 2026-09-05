@@ -14,6 +14,7 @@ fn refused(input: &str) -> (usize, String) {
             offset, expected, ..
         }) => (offset, expected),
         Err(ParseError::Lex(error)) => (error.offset, String::from("lex")),
+        Err(ParseError::TooDeep { offset, .. }) => (offset, String::from("nesting")),
         Ok(tree) => panic!("{input:?} parsed: {tree}"),
     }
 }
@@ -483,4 +484,48 @@ fn errors_name_the_offset_and_what_was_expected() {
     let (offset, expected) = refused("< 404684003 )");
     assert_eq!(offset, 12);
     assert!(expected.contains("end of the expression"), "{expected}");
+}
+
+/// An expression nests as deep as the parser will descend, and no deeper.
+///
+/// The grammar is recursive and so is the parser, so an unbounded nesting from
+/// a client would exhaust the stack and abort the process, which no
+/// `OperationOutcome` survives. No specification governs the limit: our own
+/// design, refused as a parse error like any other malformed expression.
+#[test]
+fn nesting_past_the_limit_is_refused_rather_than_descended() {
+    let nested = |depth: usize| format!("{}138875005{}", "(".repeat(depth), ")".repeat(depth));
+    let at_limit = nested(sct_ecl::NESTING_LIMIT);
+    assert!(
+        parse(&at_limit).is_ok(),
+        "an expression at the limit still parses"
+    );
+    match parse(&nested(sct_ecl::NESTING_LIMIT + 1)) {
+        Err(ParseError::TooDeep {
+            offset,
+            depth,
+            limit,
+        }) => {
+            assert_eq!(limit, sct_ecl::NESTING_LIMIT, "the limit is reported");
+            assert_eq!(depth, sct_ecl::NESTING_LIMIT + 1, "the depth reached");
+            assert_eq!(
+                offset,
+                sct_ecl::NESTING_LIMIT,
+                "the bracket that crossed it"
+            );
+        }
+        other => panic!("nesting past the limit gave {other:?}"),
+    }
+    let unbalanced = "(".repeat(10_000);
+    assert!(
+        matches!(parse(&unbalanced), Err(ParseError::TooDeep { .. })),
+        "an unclosed run of brackets is refused before the descent"
+    );
+}
+
+/// Closing a bracket makes room again: a wide expression is not a deep one.
+#[test]
+fn nesting_depth_counts_open_brackets_not_all_of_them() {
+    let wide = format!("{} 138875005", "(138875005) OR ".repeat(200));
+    assert!(parse(&wide).is_ok(), "200 closed groups nest one deep");
 }
