@@ -169,6 +169,14 @@ macro_rules! surface {
                         .post(operations::value_set_validate_code_post),
                 )
                 .route(
+                    "/ValueSet/$batch-validate-code",
+                    post(operations::batch_validate_code_post),
+                )
+                .route(
+                    "/CodeSystem/$batch-validate-code",
+                    post(operations::batch_validate_code_post),
+                )
+                .route(
                     "/ConceptMap/$translate",
                     get(operations::translate_get).post(operations::translate_post),
                 )

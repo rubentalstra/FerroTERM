@@ -12,6 +12,7 @@
 )]
 
 mod batch;
+mod batch_validate;
 mod closure;
 mod config;
 mod ecosystem;
