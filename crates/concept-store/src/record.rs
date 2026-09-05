@@ -229,6 +229,18 @@ impl Concept {
             module,
         })
     }
+
+    /// Decodes the native code of a record and stops there.
+    ///
+    /// The code is the first field, so a caller that wants only the code
+    /// reads one length and one string instead of the whole record.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecordError`] when the code is truncated or not UTF-8.
+    pub fn decode_code(bytes: &[u8]) -> Result<String, RecordError> {
+        Reader { bytes, at: 0 }.str()
+    }
 }
 
 impl Designation {
