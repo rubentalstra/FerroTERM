@@ -30,10 +30,12 @@ Every operation accepts `GET` with query parameters and `POST` with a
 `Parameters` resource, at the type level (`ValueSet/$expand?url=…`) and at
 the instance level (`CodeSystem/{id}/$validate-code`). `$expand` returns the
 expanded `ValueSet`; the others return `Parameters`. Every failure is an
-`OperationOutcome` whose issue carries `severity`, `code`, `details.text`, and
-a `details.coding` from `http://hl7.org/fhir/tools/CodeSystem/tx-issue-type`
-(`invalid-code`, `not-found`, `vs-invalid`, `too-costly`, …), never a bare
-500. The parameter set of each operation is exactly what the R4B
+`OperationOutcome` whose issue carries `severity`, `code`, and `details.text`,
+never a bare 500. A terminology failure adds a `details.coding` from
+`http://hl7.org/fhir/tools/CodeSystem/tx-issue-type` (`invalid-code`,
+`not-found`, `vs-invalid`, `too-costly`, and the rest); a refusal at the wire
+layer, such as an unreadable id or a failed precondition, carries the status
+and the text without one. The parameter set of each operation is exactly what the R4B
 `OperationDefinition` declares; a parameter another version defines is refused.
 
 ## Value sets
@@ -55,11 +57,12 @@ A value set reaches `$expand` and `ValueSet/$validate-code` in five ways:
 
 A `compose` may include whole systems, enumerated concepts, and filters. The
 filters a system answers are the ones its provider declares in
-`TerminologyCapabilities`: the generic `concept is-a`, `descendent-of`,
-`is-not-a`, `generalizes`, `in`, `not-in`, `regex`, and `exists` over any
-system with a hierarchy, plus each system's own (LOINC's `parent` and
-`ancestor` and its table fields, RxNorm's `STY`, `SAB`, `TTY`, `REL`, and
-`RELA`, UCUM's `canonical` and `property`, ICD-10's note kinds). `$expand`
+`TerminologyCapabilities`, and they differ by system, so read the declaration
+rather than assuming a common set. SNOMED CT declares `concept` with `is-a`,
+`descendent-of`, and `in`, then `constraint` for an expression constraint and
+`expressions` for post-coordination. The others declare their own: LOINC's
+`parent` and `ancestor` and its table fields, RxNorm's `STY`, `SAB`, `TTY`,
+`REL`, and `RELA`, UCUM's `canonical` and `property`, ICD-10's note kinds. `$expand`
 honours `count` and `offset` (at most 1,000 members without `count`), `filter`
 (word-prefix text search over designations), `activeOnly`, `excludeNested`,
 `includeDesignations`, `displayLanguage`, `system-version`,

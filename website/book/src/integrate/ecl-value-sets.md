@@ -73,9 +73,12 @@ bitmap plus `X`, `^ X` the members of the reference set, a refinement such as
 value in the set (from an inverted index), a grouped refinement counts the
 role groups that satisfy it, and `AND`, `OR`, and `MINUS` are bitmap
 operations. The parser follows the official ANTLR grammar for ECL 2.2 rule
-for rule and is tested against the published example corpus; every operator,
-the description, concept, and member filters, the history supplements, and
-alternate identifiers evaluate.
+for rule and is tested against the published example corpus. Every operator
+evaluates, as do the concept filters, the history supplements, and alternate
+identifiers. Four filters are refused because the artifact does not carry what
+they ask for: a member filter on inactive members, an acceptability other than
+preferred or acceptable, and the description module and effective time
+filters. Each is refused by name rather than answered wrongly.
 
 ECL reaches the wire two ways: the implicit value set
 `http://snomed.info/sct?fhir_vs=ecl/[expression]` (the expression URI-encoded,

@@ -43,20 +43,25 @@ produces.
 
 ## The artifact layout
 
-Every code system builds into the same four files, so the server opens each
-by its manifest and nothing downstream knows which file format it came from:
+Every code system builds into files with the same names and the same meanings,
+so the server opens each by its manifest and nothing downstream knows which
+file format it came from. Three are always written; a system with a hierarchy
+adds a fourth, and several add files of their own:
 
 | File | Holds |
 |---|---|
 | `store.redb` | concepts, designations with language and use, typed properties, the vocabularies; a pure-Rust, disk-backed, ACID embedded engine |
-| `hierarchy.bin` | the CSR is-a adjacency and the roaring closure bitmaps |
+| `hierarchy.bin` | the CSR is-a adjacency and the roaring closure bitmaps, for a system that has a hierarchy; RxNorm has none and writes none |
 | `text.bin` | the `fst` word dictionary and roaring postings of every designation, by language |
 | `manifest.json` | the system, version, languages, counts, and the files above |
 
-Some systems add a file: RxNorm's typed edges (`relations.bin`) and atom
-identifiers (`atoms.bin`), ICD-11's entity keys (`keys.bin`) and
-postcoordination scales (`scales.json`). No FHIR or SNOMED specification
-governs this layout; it is the project's own design.
+Several systems add files. RxNorm writes its typed edges (`relations.bin`) and
+atom identifiers (`atoms.bin`); ICD-11 writes entity keys (`keys.bin`) and
+postcoordination scales (`scales.json`); SNOMED CT writes reference set members
+(`refsets.bin`, `members.bin`), the concept model attributes ECL evaluates
+(`attributes.bin`), and the alternate identifiers (`identifiers.bin`). A
+SNOMED edition is the largest of them, at seven files. No FHIR or SNOMED
+specification governs this layout; it is the project's own design.
 
 ## The provider seam
 
