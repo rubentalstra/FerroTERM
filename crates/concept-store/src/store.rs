@@ -156,6 +156,40 @@ impl Store {
             .transpose()
     }
 
+    /// The concepts at `ordinals`, in the order given, `None` where the store
+    /// has no such concept.
+    ///
+    /// One read transaction answers the whole batch: a caller that reads many
+    /// concepts (the children of one, the members of a page) pays the
+    /// transaction once rather than per concept.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when the database cannot be read or a record is
+    /// damaged.
+    pub fn concepts(
+        &self,
+        ordinals: impl IntoIterator<Item = Ordinal>,
+    ) -> Result<Vec<Option<Concept>>, StoreError> {
+        let txn = self.db.begin_read()?;
+        let table = open_table!(txn, tables::CONCEPTS)?;
+        let mut out = Vec::new();
+        for ordinal in ordinals {
+            let found = table
+                .get(ordinal.index())?
+                .map(|v| {
+                    Concept::decode(v.value()).map_err(|source| StoreError::Record {
+                        table: tables::CONCEPTS.name().to_owned(),
+                        key: ordinal.to_string(),
+                        source,
+                    })
+                })
+                .transpose()?;
+            out.push(found);
+        }
+        Ok(out)
+    }
+
     /// Every designation of `ordinal`, in index order.
     ///
     /// # Errors
