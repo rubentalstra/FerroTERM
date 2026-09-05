@@ -493,6 +493,15 @@ pub enum ProviderError {
         /// The version the implicit URI names.
         version: String,
     },
+    /// An implicit concept map maps to a code system this server cannot name,
+    /// so its group could state no target system.
+    #[error("implicit concept map `{url}` maps to a code system this server cannot name: {reason}")]
+    UnnamedConceptMapTarget {
+        /// The URI.
+        url: String,
+        /// Which target the server has no code system URI for.
+        reason: String,
+    },
 }
 
 /// The hierarchy of a system whose `hierarchyMeaning` is `is-a`.

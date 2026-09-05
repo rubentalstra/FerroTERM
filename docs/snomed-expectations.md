@@ -482,13 +482,14 @@ $translate url=…?fhir_cm=900000000000527005 code=155728006   (inactive)
 
 `900000000000527005` is SAME AS, which the §.10 table gives the relationship
 `equal`, and that is the equivalence returned. A map reference set returns
-its target with the RF2 columns as `product` parts:
+its target in the code system the reference set maps to, with the RF2 columns
+as `product` parts:
 
 ```
 $translate url=…?fhir_cm=447562003 code=74400008
 -> result true
    equivalence relatedto
-   concept K37
+   concept K37 in http://hl7.org/fhir/sid/icd-10
    product mapGroup 1, mapPriority 1, mapRule TRUE, mapAdvice "ALWAYS K37",
            correlationId 447561005, mapCategoryId 447637006
 ```
