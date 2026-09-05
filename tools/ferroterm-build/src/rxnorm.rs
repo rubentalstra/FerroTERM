@@ -111,6 +111,18 @@ pub enum Error {
     /// More concepts than an ordinal can number.
     #[error("too many concepts")]
     TooMany,
+    /// A property key the build asked for and never registered.
+    #[error("the property key `{key}` is not in the vocabulary")]
+    UnknownPropertyKey {
+        /// The key the build asked for.
+        key: String,
+    },
+    /// A relationship type the build asked for and never gathered.
+    #[error("the relationship type `{name}` is not in the vocabulary")]
+    UnknownRelationshipType {
+        /// The type the build asked for.
+        name: String,
+    },
 }
 
 fn ordinal(index: usize) -> Result<Ordinal, Error> {
@@ -314,13 +326,19 @@ fn build_relations(release: &Release, numbered: &Numbered) -> Result<Relations, 
         }
     }
     let types: Vec<String> = types.into_iter().collect();
-    let kind_of = |name: &str| {
-        types
-            .iter()
-            .position(|t| t == name)
-            .and_then(|i| u32::try_from(i).ok())
-            .ok_or(Error::TooMany)
-    };
+    let kind_of =
+        |name: &str| -> Result<u32, Error> {
+            let index = types.iter().position(|t| t == name).ok_or_else(|| {
+                Error::UnknownRelationshipType {
+                    name: name.to_owned(),
+                }
+            })?;
+            // A count past `u32::MAX` is the whole message, as in `ordinal`.
+            let Ok(kind) = u32::try_from(index) else {
+                return Err(Error::TooMany);
+            };
+            Ok(kind)
+        };
     let mut edges = Vec::with_capacity(raw_edges.len());
     for (source, kind, target) in raw_edges {
         edges.push((source, kind_of(&kind)?, target));
@@ -392,9 +410,15 @@ impl PropertyKeys {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::TooMany`] when the vocabulary holds no such key.
+    /// Returns [`Error::UnknownPropertyKey`] when the vocabulary holds no such
+    /// key, which is a defect in the build, never a capacity limit.
     fn key(&self, name: &str) -> Result<u32, Error> {
-        self.keys.get(name).copied().ok_or(Error::TooMany)
+        self.keys
+            .get(name)
+            .copied()
+            .ok_or_else(|| Error::UnknownPropertyKey {
+                key: name.to_owned(),
+            })
     }
 }
 
@@ -653,4 +677,30 @@ pub fn build(
         relationships: u64::try_from(counts.relationships).unwrap_or(u64::MAX),
         words: u64::try_from(counts.words).unwrap_or(u64::MAX),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::{Error, PropertyKeys};
+
+    /// A key the vocabulary never received is a defect in the build, and says
+    /// so: it is not the capacity limit `TooMany` reports.
+    #[test]
+    fn an_unregistered_property_key_names_itself() {
+        let keys = PropertyKeys {
+            keys: BTreeMap::from([(String::from("TTY"), 0)]),
+        };
+        assert_eq!(keys.key("TTY").expect("registered"), 0);
+        let error = keys.key("SAB").expect_err("never registered");
+        assert!(
+            matches!(&error, Error::UnknownPropertyKey { key } if key == "SAB"),
+            "the key is named: {error:?}"
+        );
+        assert_eq!(
+            error.to_string(),
+            "the property key `SAB` is not in the vocabulary"
+        );
+    }
 }

@@ -13,6 +13,10 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Fixed
+
+- The LOINC and RxNorm builds name a property key they never registered instead of reporting "too many concepts": a defect in the build no longer surfaces as a capacity error. The RxNorm relationship-type lookup is split the same way, and `TooMany` keeps its own meaning.
+
 ## [0.0.11] - 2026-09-05
 
 ### Added

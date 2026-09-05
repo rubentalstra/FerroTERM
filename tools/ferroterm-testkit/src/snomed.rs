@@ -71,6 +71,13 @@ pub const REPLACED_BY: u32 = 13;
 pub const POSSIBLY_EQUIVALENT_TO: u32 = 14;
 /// The ALTERNATIVE association reference set (a published SCTID); the fish points at the cat.
 pub const ALTERNATIVE: u32 = 15;
+/// The Module Dependency reference set (a published SCTID); its member is the
+/// edition module, the way a real edition states what it was built on.
+pub const MODULE_DEPENDENCY: u32 = 16;
+/// The edition module, a concept and the member of the Module Dependency set.
+pub const MODULE_CONCEPT: u32 = 17;
+/// The published SCTID of the Module Dependency reference set.
+pub const MODULE_DEPENDENCY_SCTID: &str = "900000000000534007";
 /// The published SCTID of the historical association reference set root.
 pub const HISTORICAL_SCTID: &str = "900000000000522004";
 /// The published SCTID of the SAME AS association reference set.
@@ -397,6 +404,33 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
             ALTERNATIVE_SCTID,
             "ALTERNATIVE association reference set (foundation metadata concept)",
         ),
+        association(
+            MODULE_DEPENDENCY,
+            MODULE_DEPENDENCY_SCTID,
+            "Module dependency reference set (foundation metadata concept)",
+        ),
+        Row {
+            ordinal: MODULE_CONCEPT,
+            code: None,
+            active: true,
+            defined: false,
+            designations: vec![
+                (
+                    "Synthetic edition module (core metadata concept)",
+                    "en",
+                    fsn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+                (
+                    "Synthetic edition module",
+                    "en",
+                    syn,
+                    true,
+                    vec![(gb, preferred)],
+                ),
+            ],
+        },
     ];
     let is_a = [
         (ANIMAL, TOP),
@@ -412,6 +446,8 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         (REPLACED_BY, HISTORICAL),
         (POSSIBLY_EQUIVALENT_TO, HISTORICAL),
         (ALTERNATIVE, HISTORICAL),
+        (MODULE_DEPENDENCY, TOP),
+        (MODULE_CONCEPT, TOP),
         (SCHEME, TOP),
     ];
     let code_of = |row: &Row| {
@@ -621,6 +657,8 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     memberships.insert(replaced_by, Ordinal::new(FISH));
     memberships.insert(possibly_equivalent_to, Ordinal::new(FISH));
     memberships.insert(alternative, Ordinal::new(FISH));
+    let module_dependency = refset_id(MODULE_DEPENDENCY)?;
+    memberships.insert(module_dependency, Ordinal::new(MODULE_CONCEPT));
     let module_id: u64 = module.parse().unwrap_or_default();
     let member = |concept: u32, values: Vec<refsets::FieldValue>| refsets::MemberRow {
         concept: Ordinal::new(concept),
@@ -631,6 +669,30 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     let mut tables = RefsetMembers::new();
     tables
         .insert(pets, &[], vec![member(CAT, vec![]), member(DOG, vec![])])
+        .map_err(|e| graph_error(&e))?;
+    // The Module Dependency reference set states which module an edition was
+    // built on, in the columns RF2 gives it.
+    tables
+        .insert(
+            module_dependency,
+            &[
+                (
+                    String::from("sourceEffectiveTime"),
+                    refsets::FieldKind::Integer,
+                ),
+                (
+                    String::from("targetEffectiveTime"),
+                    refsets::FieldKind::Integer,
+                ),
+            ],
+            vec![member(
+                MODULE_CONCEPT,
+                vec![
+                    refsets::FieldValue::Integer(20_260_101),
+                    refsets::FieldValue::Integer(20_260_101),
+                ],
+            )],
+        )
         .map_err(|e| graph_error(&e))?;
     tables
         .insert(

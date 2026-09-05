@@ -108,6 +108,12 @@ pub enum Error {
     /// More concepts than an ordinal can number.
     #[error("too many concepts")]
     TooMany,
+    /// A property key the build asked for and never registered.
+    #[error("the property key `{key}` is not in the vocabulary")]
+    UnknownPropertyKey {
+        /// The key the build asked for.
+        key: String,
+    },
 }
 
 /// The version in a release name such as `Loinc_2.82` or `Loinc_2.82.zip`.
@@ -390,9 +396,15 @@ impl PropertyKeys {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::TooMany`] when the vocabulary holds no such key.
+    /// Returns [`Error::UnknownPropertyKey`] when the vocabulary holds no such
+    /// key, which is a defect in the build, never a capacity limit.
     fn key(&self, name: &str) -> Result<u32, Error> {
-        self.keys.get(name).copied().ok_or(Error::TooMany)
+        self.keys
+            .get(name)
+            .copied()
+            .ok_or_else(|| Error::UnknownPropertyKey {
+                key: name.to_owned(),
+            })
     }
 }
 
@@ -803,4 +815,30 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
         designations: u64::try_from(counts.designations).unwrap_or(u64::MAX),
         words: u64::try_from(counts.words).unwrap_or(u64::MAX),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::{Error, PropertyKeys};
+
+    /// A key the vocabulary never received is a defect in the build, and says
+    /// so: it is not the capacity limit `TooMany` reports.
+    #[test]
+    fn an_unregistered_property_key_names_itself() {
+        let keys = PropertyKeys {
+            keys: BTreeMap::from([(String::from("COMPONENT"), 0)]),
+        };
+        assert_eq!(keys.key("COMPONENT").expect("registered"), 0);
+        let error = keys.key("SCALE_TYP").expect_err("never registered");
+        assert!(
+            matches!(&error, Error::UnknownPropertyKey { key } if key == "SCALE_TYP"),
+            "the key is named: {error:?}"
+        );
+        assert_eq!(
+            error.to_string(),
+            "the property key `SCALE_TYP` is not in the vocabulary"
+        );
+    }
 }
