@@ -116,53 +116,7 @@ pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
         packages.push(Package::open(&version.package_dir)?);
     }
     let models = lower_models(&versions, &packages)?;
-
-    let mut files = BTreeMap::new();
-    files.insert(String::from("lib.rs"), render_lib(&models)?);
-    files.insert(
-        String::from("operation.rs"),
-        render_descriptor_module(&crate::render::crate_banner(&models)),
-    );
-    files.insert(
-        String::from("codec.rs"),
-        format!(
-            "{}{}",
-            crate::render::crate_banner(&models),
-            include_str!("templates/codec.rs")
-        ),
-    );
-    files.insert(
-        String::from("xml.rs"),
-        format!(
-            "{}{}",
-            crate::render::crate_banner(&models),
-            include_str!("templates/xml.rs")
-        ),
-    );
-    for model in &models {
-        files.insert(format!("{}/mod.rs", model.name), render_version_mod(model)?);
-        files.insert(
-            format!("{}/schema.rs", model.name),
-            crate::render_schema::render_schema(model)?,
-        );
-        for (module, types) in model.modules() {
-            files.insert(
-                format!("{}/{module}.rs", model.name),
-                render_module(model, module, &types)?,
-            );
-        }
-        let banner = crate::render::banner(model);
-        files.insert(
-            format!("{}/operations/mod.rs", model.name),
-            render_operations_mod(&banner, &model.name.to_uppercase(), &model.operations)?,
-        );
-        for contract in &model.operations {
-            files.insert(
-                format!("{}/operations/{}.rs", model.name, contract.module),
-                render_operation(&banner, contract)?,
-            );
-        }
-    }
+    let files = render_files(&models)?;
 
     let scratch = tempfile::tempdir().map_err(|source| EmitError::Io {
         path: PathBuf::from("(temporary directory)"),
@@ -181,16 +135,7 @@ pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
             return Err(EmitError::Drift { paths: drift });
         }
     } else {
-        for module in &module_names {
-            let version_dir = target_src.join(module);
-            if version_dir.exists() {
-                fs::remove_dir_all(&version_dir).map_err(|source| EmitError::Io {
-                    path: version_dir.clone(),
-                    source,
-                })?;
-            }
-        }
-        write_tree(&target_src, &formatted)?;
+        replace_tree(&target_src, &formatted, &module_names)?;
     }
     Ok(EmitReport {
         types: models
@@ -199,6 +144,80 @@ pub fn emit(options: &EmitOptions) -> Result<EmitReport, EmitError> {
             .collect(),
         files: formatted.keys().cloned().collect(),
     })
+}
+
+/// Renders every file of the generated crate, keyed by its path under `src/`.
+///
+/// The shared files carry the crate banner over the two runtime templates; the
+/// rest are rendered per version module.
+fn render_files(models: &[VersionModule]) -> Result<BTreeMap<String, String>, EmitError> {
+    let crate_banner = crate::render::crate_banner(models);
+    let mut files = BTreeMap::new();
+    files.insert(String::from("lib.rs"), render_lib(models)?);
+    files.insert(
+        String::from("operation.rs"),
+        render_descriptor_module(&crate_banner),
+    );
+    files.insert(
+        String::from("codec.rs"),
+        format!("{crate_banner}{}", include_str!("templates/codec.rs")),
+    );
+    files.insert(
+        String::from("xml.rs"),
+        format!("{crate_banner}{}", include_str!("templates/xml.rs")),
+    );
+    for model in models {
+        render_version_files(model, &mut files)?;
+    }
+    Ok(files)
+}
+
+/// Renders one version module's files into `files`.
+fn render_version_files(
+    model: &VersionModule,
+    files: &mut BTreeMap<String, String>,
+) -> Result<(), EmitError> {
+    files.insert(format!("{}/mod.rs", model.name), render_version_mod(model)?);
+    files.insert(
+        format!("{}/schema.rs", model.name),
+        crate::render_schema::render_schema(model)?,
+    );
+    for (module, types) in model.modules() {
+        files.insert(
+            format!("{}/{module}.rs", model.name),
+            render_module(model, module, &types)?,
+        );
+    }
+    let banner = crate::render::banner(model);
+    files.insert(
+        format!("{}/operations/mod.rs", model.name),
+        render_operations_mod(&banner, &model.name.to_uppercase(), &model.operations)?,
+    );
+    for contract in &model.operations {
+        files.insert(
+            format!("{}/operations/{}.rs", model.name, contract.module),
+            render_operation(&banner, contract)?,
+        );
+    }
+    Ok(())
+}
+
+/// Removes the stale version directories under `target_src`, then writes `files`.
+fn replace_tree(
+    target_src: &Path,
+    files: &BTreeMap<String, String>,
+    version_modules: &[&str],
+) -> Result<(), EmitError> {
+    for module in version_modules {
+        let version_dir = target_src.join(module);
+        if version_dir.exists() {
+            fs::remove_dir_all(&version_dir).map_err(|source| EmitError::Io {
+                path: version_dir.clone(),
+                source,
+            })?;
+        }
+    }
+    write_tree(target_src, files)
 }
 
 /// Lowers every version's module and operation contracts, the terminology

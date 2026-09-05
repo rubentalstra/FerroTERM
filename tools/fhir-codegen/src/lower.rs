@@ -306,28 +306,9 @@ impl VersionModule {
         for ty in self.types.values_mut() {
             let own = component_of.get(&ty.name).copied();
             match &mut ty.kind {
-                TypeKind::Struct { fields } => {
-                    for field in fields.iter_mut() {
-                        if field.ty.card == Cardinality::Many {
-                            continue;
-                        }
-                        if let Target::Named(target) = &field.ty.target
-                            && own.is_some()
-                            && component_of.get(target).copied() == own
-                        {
-                            field.ty.boxed = true;
-                        }
-                    }
-                }
+                TypeKind::Struct { fields } => box_cyclic_fields(fields, own, &component_of),
                 TypeKind::Choice { variants, .. } => {
-                    for variant in variants.iter_mut() {
-                        if let Target::Named(target) = &variant.target
-                            && own.is_some()
-                            && component_of.get(target).copied() == own
-                        {
-                            variant.boxed = true;
-                        }
-                    }
+                    box_cyclic_variants(variants, own, &component_of);
                 }
                 TypeKind::ResourceEnum { .. } | TypeKind::UnknownResource => {}
             }
@@ -340,30 +321,73 @@ impl VersionModule {
         let mut edges: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         for ty in self.types.values() {
             let out = edges.entry(ty.name.clone()).or_default();
-            match &ty.kind {
-                TypeKind::Struct { fields } => {
-                    for field in fields {
-                        if field.ty.card != Cardinality::Many
-                            && let Target::Named(target) = &field.ty.target
-                        {
-                            out.insert(target.clone());
-                        }
-                    }
-                }
-                TypeKind::Choice { variants, .. } => {
-                    for variant in variants {
-                        if let Target::Named(target) = &variant.target {
-                            out.insert(target.clone());
-                        }
-                    }
-                }
-                TypeKind::ResourceEnum { resources } => {
-                    out.extend(resources.iter().cloned());
-                }
-                TypeKind::UnknownResource => {}
-            }
+            contained_types(&ty.kind, out);
         }
         edges
+    }
+}
+
+/// Whether `target` names a type in the component `own`, the caller's cycle.
+fn in_component(
+    component_of: &BTreeMap<String, usize>,
+    own: Option<usize>,
+    target: &Target,
+) -> bool {
+    match target {
+        Target::Named(name) => own.is_some() && component_of.get(name).copied() == own,
+        Target::Inline(_) => false,
+    }
+}
+
+/// Boxes every `T` or `Option<T>` field whose target shares the type's cycle.
+fn box_cyclic_fields(
+    fields: &mut [Field],
+    own: Option<usize>,
+    component_of: &BTreeMap<String, usize>,
+) {
+    for field in fields {
+        if field.ty.card != Cardinality::Many && in_component(component_of, own, &field.ty.target) {
+            field.ty.boxed = true;
+        }
+    }
+}
+
+/// Boxes every choice variant whose target shares the enum's cycle.
+fn box_cyclic_variants(
+    variants: &mut [Variant],
+    own: Option<usize>,
+    component_of: &BTreeMap<String, usize>,
+) {
+    for variant in variants {
+        if in_component(component_of, own, &variant.target) {
+            variant.boxed = true;
+        }
+    }
+}
+
+/// Collects the types `kind` contains directly into `out`.
+fn contained_types(kind: &TypeKind, out: &mut BTreeSet<String>) {
+    match kind {
+        TypeKind::Struct { fields } => {
+            for field in fields {
+                if field.ty.card != Cardinality::Many
+                    && let Target::Named(target) = &field.ty.target
+                {
+                    out.insert(target.clone());
+                }
+            }
+        }
+        TypeKind::Choice { variants, .. } => {
+            for variant in variants {
+                if let Target::Named(target) = &variant.target {
+                    out.insert(target.clone());
+                }
+            }
+        }
+        TypeKind::ResourceEnum { resources } => {
+            out.extend(resources.iter().cloned());
+        }
+        TypeKind::UnknownResource => {}
     }
 }
 
@@ -564,55 +588,7 @@ pub(crate) fn scalar_for(code: &str) -> Scalar {
 
 /// Tarjan's algorithm over the containment graph; components in a stable order.
 fn strongly_connected_components(edges: &BTreeMap<String, BTreeSet<String>>) -> Vec<Vec<String>> {
-    struct State<'a> {
-        edges: &'a BTreeMap<String, BTreeSet<String>>,
-        index: BTreeMap<String, usize>,
-        low: BTreeMap<String, usize>,
-        on_stack: BTreeSet<String>,
-        stack: Vec<String>,
-        next: usize,
-        components: Vec<Vec<String>>,
-    }
-
-    fn visit(state: &mut State<'_>, node: &str) {
-        state.index.insert(node.to_owned(), state.next);
-        state.low.insert(node.to_owned(), state.next);
-        state.next += 1;
-        state.stack.push(node.to_owned());
-        state.on_stack.insert(node.to_owned());
-        let successors: Vec<String> = state
-            .edges
-            .get(node)
-            .map(|set| set.iter().cloned().collect())
-            .unwrap_or_default();
-        for next in successors {
-            if !state.index.contains_key(&next) {
-                visit(state, &next);
-                let next_low = state.low.get(&next).copied().unwrap_or(usize::MAX);
-                let own = state.low.get(node).copied().unwrap_or(usize::MAX);
-                state.low.insert(node.to_owned(), own.min(next_low));
-            } else if state.on_stack.contains(&next) {
-                let next_index = state.index.get(&next).copied().unwrap_or(usize::MAX);
-                let own = state.low.get(node).copied().unwrap_or(usize::MAX);
-                state.low.insert(node.to_owned(), own.min(next_index));
-            }
-        }
-        if state.low.get(node) == state.index.get(node) {
-            let mut component = Vec::new();
-            while let Some(top) = state.stack.pop() {
-                state.on_stack.remove(&top);
-                let done = top == node;
-                component.push(top);
-                if done {
-                    break;
-                }
-            }
-            component.sort();
-            state.components.push(component);
-        }
-    }
-
-    let mut state = State {
+    let mut search = TarjanSearch {
         edges,
         index: BTreeMap::new(),
         low: BTreeMap::new(),
@@ -622,11 +598,69 @@ fn strongly_connected_components(edges: &BTreeMap<String, BTreeSet<String>>) -> 
         components: Vec::new(),
     };
     for node in edges.keys() {
-        if !state.index.contains_key(node) {
-            visit(&mut state, node);
+        if !search.index.contains_key(node) {
+            search.visit(node);
         }
     }
-    state.components
+    search.components
+}
+
+/// One depth-first search of Tarjan's algorithm, and the components it found.
+struct TarjanSearch<'a> {
+    edges: &'a BTreeMap<String, BTreeSet<String>>,
+    index: BTreeMap<String, usize>,
+    low: BTreeMap<String, usize>,
+    on_stack: BTreeSet<String>,
+    stack: Vec<String>,
+    next: usize,
+    components: Vec<Vec<String>>,
+}
+
+impl TarjanSearch<'_> {
+    /// Visits `node`, its unvisited successors, and pops a component at a root.
+    fn visit(&mut self, node: &str) {
+        self.index.insert(node.to_owned(), self.next);
+        self.low.insert(node.to_owned(), self.next);
+        self.next += 1;
+        self.stack.push(node.to_owned());
+        self.on_stack.insert(node.to_owned());
+        let successors: Vec<String> = self
+            .edges
+            .get(node)
+            .map(|set| set.iter().cloned().collect())
+            .unwrap_or_default();
+        for next in successors {
+            if !self.index.contains_key(&next) {
+                self.visit(&next);
+                let next_low = self.low.get(&next).copied().unwrap_or(usize::MAX);
+                let own = self.low.get(node).copied().unwrap_or(usize::MAX);
+                self.low.insert(node.to_owned(), own.min(next_low));
+            } else if self.on_stack.contains(&next) {
+                let next_index = self.index.get(&next).copied().unwrap_or(usize::MAX);
+                let own = self.low.get(node).copied().unwrap_or(usize::MAX);
+                self.low.insert(node.to_owned(), own.min(next_index));
+            }
+        }
+        if self.low.get(node) == self.index.get(node) {
+            let component = self.pop_component(node);
+            self.components.push(component);
+        }
+    }
+
+    /// Pops the stack down to `root`, the component it closes, in name order.
+    fn pop_component(&mut self, root: &str) -> Vec<String> {
+        let mut component = Vec::new();
+        while let Some(top) = self.stack.pop() {
+            self.on_stack.remove(&top);
+            let done = top == root;
+            component.push(top);
+            if done {
+                break;
+            }
+        }
+        component.sort();
+        component
+    }
 }
 
 #[cfg(test)]
