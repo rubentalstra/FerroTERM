@@ -52,15 +52,15 @@ while IFS=$'\t' read -r bench max claim; do
     continue
   fi
   # Criterion records the median in nanoseconds.
-  median=$(jq -r '.median.point_estimate / 1000000' "$estimates")
+  median=$(jq -r '.median.point_estimate / 1000' "$estimates")
   measured=$((measured + 1))
   if jq -e -n --argjson m "$median" --argjson b "$max" '$m > $b' >/dev/null; then
     breached=$((breached + 1))
-    printf 'BREACH %-28s %8.3f ms > %6.3f ms  (%s)\n' "$bench" "$median" "$max" "$claim" >&2
+    printf 'BREACH %-28s %8.1f us > %6.1f us  (%s)\n' "$bench" "$median" "$max" "$claim" >&2
   else
-    printf 'ok     %-28s %8.3f ms <= %6.3f ms\n' "$bench" "$median" "$max"
+    printf 'ok     %-28s %8.1f us <= %6.1f us\n' "$bench" "$median" "$max"
   fi
-done < <(jq -r '.bars[] | [.bench, .max_ms, .claim] | @tsv' "$bars")
+done < <(jq -r '.bars[] | [.bench, .max_us, .claim] | @tsv' "$bars")
 
 echo "bench-bars: $((measured - breached)) of $measured bars hold"
 if [[ "$breached" -gt 0 ]]; then

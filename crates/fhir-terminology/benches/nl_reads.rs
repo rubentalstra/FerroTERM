@@ -108,6 +108,19 @@ fn reads(c: &mut Criterion) {
         b.iter(|| provider.properties(leaf).expect("reads"));
     });
     group.bench_function("subsumes", |b| b.iter(|| hierarchy.subsumes(root, finding)));
+    // The three reads a page materializes per item (#304).
+    group.bench_function("code", |b| {
+        b.iter(|| provider.code(finding).expect("reads"));
+    });
+    group.bench_function("display_none", |b| {
+        b.iter(|| provider.display(finding, None).expect("reads"));
+    });
+    group.bench_function("display_en", |b| {
+        b.iter(|| provider.display(finding, Some("en")).expect("reads"));
+    });
+    group.bench_function("status", |b| {
+        b.iter(|| provider.status(finding).expect("reads"));
+    });
     group.finish();
 
     // The two batch reads behind the `child` properties, over the same
@@ -224,6 +237,14 @@ fn reads(c: &mut Criterion) {
     });
     group.bench_function("all_concepts_page_10", |b| {
         b.iter(|| expander.expand(&everything, &page).expect("expands"));
+    });
+    let thousand = Options {
+        count: Some(1000),
+        offset: 0,
+        ..Options::default()
+    };
+    group.bench_function("isa_finding_page_1000", |b| {
+        b.iter(|| expander.expand(&finding_set, &thousand).expect("expands"));
     });
     let active_page = Options {
         active_only: true,

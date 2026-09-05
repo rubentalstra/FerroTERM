@@ -240,6 +240,50 @@ fn preferred_designations_are_precomputed_per_refset_and_use() {
 }
 
 #[test]
+fn the_first_accepted_reference_set_answers_and_the_walk_stops_there() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let store = build(&dir.path().join("synthetic.redb"));
+    // The root has a preferred synonym in en-GB and none in nl, so the order
+    // the reference sets are asked in decides, and an unacceptable one is
+    // walked past rather than returned.
+    let english = store
+        .preferred_first(Ordinal::new(0), [EN_GB, NL], SYNONYM, |_| true)
+        .expect("read")
+        .expect("present");
+    assert_eq!(english.term, "Root synonym two");
+    assert_eq!(
+        store
+            .preferred_first(Ordinal::new(0), [NL, EN_GB], SYNONYM, |d| d.language
+                == "en")
+            .expect("read")
+            .map(|d| d.term),
+        Some(String::from("Root synonym two")),
+        "a reference set that names none is walked past"
+    );
+    assert!(
+        store
+            .preferred_first(Ordinal::new(0), [EN_GB, NL], SYNONYM, |d| d.language
+                == "nl")
+            .expect("read")
+            .is_none(),
+        "no reference set carries a Dutch synonym for the root"
+    );
+    assert!(
+        store
+            .preferred_first(Ordinal::new(0), [], SYNONYM, |_| true)
+            .expect("read")
+            .is_none()
+    );
+    let dutch = store
+        .preferred_first(Ordinal::new(1), [EN_GB, NL], SYNONYM, |d| {
+            d.language == "nl"
+        })
+        .expect("read")
+        .expect("present");
+    assert_eq!(dutch.term, "Synthetisch kind");
+}
+
+#[test]
 fn two_builds_of_the_same_input_are_byte_identical() {
     let dir = tempfile::tempdir().expect("tempdir");
     let first = dir.path().join("a.redb");

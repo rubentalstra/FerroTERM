@@ -572,17 +572,12 @@ impl SnomedProvider {
         ordinal: Ordinal,
         language: &str,
     ) -> Result<Option<record::Designation>, ProviderError> {
-        for (refset, _) in &self.keys.refsets {
-            if let Some(designation) = self
-                .store
-                .preferred(ordinal, *refset, self.keys.synonym)
-                .map_err(storage)?
-                && primary_subtag(&designation.language) == language
-            {
-                return Ok(Some(designation));
-            }
-        }
-        Ok(None)
+        let refsets = self.keys.refsets.iter().map(|(refset, _)| *refset);
+        self.store
+            .preferred_first(ordinal, refsets, self.keys.synonym, |designation| {
+                primary_subtag(&designation.language) == language
+            })
+            .map_err(storage)
     }
 
     /// The display for `language` (or the default), by the SNOMED rule: the

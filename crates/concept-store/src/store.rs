@@ -295,6 +295,48 @@ impl Store {
             .transpose()
     }
 
+    /// The preferred designation of `ordinal` in the first of `language_refsets`
+    /// that names one `accept` admits.
+    ///
+    /// One read transaction answers the whole walk, and the walk stops at the
+    /// first accepted designation. A caller choosing a display asks the
+    /// reference sets in order until one carries the language it wants, so a
+    /// transaction per reference set would make the cost the match position.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when the database cannot be read or a record is
+    /// damaged.
+    pub fn preferred_first(
+        &self,
+        ordinal: Ordinal,
+        language_refsets: impl IntoIterator<Item = u32>,
+        use_ordinal: u32,
+        accept: impl Fn(&Designation) -> bool,
+    ) -> Result<Option<Designation>, StoreError> {
+        let txn = self.db.begin_read()?;
+        let preferred = open_table!(txn, tables::PREFERRED)?;
+        let designations = open_table!(txn, tables::DESIGNATIONS)?;
+        for refset in language_refsets {
+            let Some(index) = preferred.get((ordinal.index(), refset, use_ordinal))? else {
+                continue;
+            };
+            let Some(value) = designations.get((ordinal.index(), index.value()))? else {
+                continue;
+            };
+            let designation =
+                Designation::decode(value.value()).map_err(|source| StoreError::Record {
+                    table: tables::DESIGNATIONS.name().to_owned(),
+                    key: format!("({ordinal}, {})", index.value()),
+                    source,
+                })?;
+            if accept(&designation) {
+                return Ok(Some(designation));
+            }
+        }
+        Ok(None)
+    }
+
     /// Every property of `ordinal`, as `(property key ordinal, values)`, in key order.
     ///
     /// # Errors
