@@ -11,7 +11,7 @@
 # by `publish_results`) and this repository's code-scanning alerts, so a
 # regression shows up in the Security tab rather than only in a number.
 #
-# TWO CHECKS SCORE LOW FOR A NEW SOLO REPOSITORY AND ALWAYS WILL — recorded
+# FOUR CHECKS SCORE LOW FOR A NEW SOLO REPOSITORY AND ALWAYS WILL — recorded
 # here so the badge does not send the next reader on an investigation that has
 # already been done:
 #
@@ -20,8 +20,17 @@
 #     expires by itself.
 #   * `Code-Review` — wants a second human to approve pull requests. With one
 #     maintainer the only ways to move it are to add a reviewer or to fake one.
+#   * `Branch-Protection` — its top two tiers want the same second human
+#     (a required approving review and a code-owner review). The ruleset already
+#     blocks deletion and force-push, requires signatures, and requires the
+#     `conclusion` check with a strict up-to-date policy, which is every tier a
+#     solo repository can honestly reach. Granting a bypass actor to fake the
+#     rest would score worse, not better.
+#   * `License` — stops at 9/10 because the Business Source License 1.1 is
+#     neither OSI- nor FSF-approved. That is the owner's decision (#221), and
+#     the missing point is its price rather than a defect.
 #
-# The score is an outcome, never the target. Do not chase these two.
+# The score is an outcome, never the target. Do not chase these four.
 #
 # Docs: https://github.com/ossf/scorecard-action
 name: Scorecard

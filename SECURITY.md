@@ -23,14 +23,18 @@ Once the project reaches 1.0 this table will name a supported minor line.
 **Do not open a public issue for a security vulnerability.** Report it
 privately through GitHub's private vulnerability reporting:
 
-1. Go to the repository's **Security** tab.
-2. Choose **Report a vulnerability** (GitHub Security Advisories).
-3. Describe the issue, the affected version or commit, and a reproduction if
+1. Open <https://github.com/rubentalstra/FerroTERM/security/advisories/new>,
+   or go to the repository's **Security** tab and choose **Report a
+   vulnerability**.
+2. Describe the issue, the affected version or commit, and a reproduction if
    you have one.
+3. Submit the report. GitHub documents the flow at
+   <https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability>.
 
 This opens a private advisory visible only to you and the maintainer. If you
-cannot use GitHub's form, contact the maintainer through their GitHub profile
-and ask for a private channel before sending any details.
+cannot use GitHub's form, email <me@rubentalstra.nl> and ask for a private
+channel before sending any details; the maintainer's profile is
+<https://github.com/rubentalstra>.
 
 Please include, where you can:
 
