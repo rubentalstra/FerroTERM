@@ -377,9 +377,11 @@ pub fn case_note(
     })
 }
 
-/// The `invalid-code` message and text for a code the system does not have,
-/// naming the version when the system has one and the fragment caveat when it
-/// is one.
+/// The `invalid-code` message and text for a code the system does not have.
+///
+/// The text names the version when the system has one, the fragment caveat
+/// when the content is a fragment, and the compositional grammar when the code
+/// is an expression this server does not evaluate.
 #[must_use]
 pub fn unknown_code(provider: &dyn CodeSystemProvider, code: &str) -> (super::MessageId, String) {
     let identity = provider.identity();
@@ -387,6 +389,16 @@ pub fn unknown_code(provider: &dyn CodeSystemProvider, code: &str) -> (super::Me
         String::new()
     } else {
         format!(" version '{}'", identity.version)
+    };
+    // NOTE: a code the system's compositional grammar defines is not a code
+    // the system lacks, so the caveat says which of the two this is
+    // (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>).
+    let grammar = if provider.declaration().compositional == crate::provider::Compositional::Defined
+        && provider.is_expression(code)
+    {
+        " - note that the code is an expression in the compositional grammar of the code system, which this server does not evaluate"
+    } else {
+        ""
     };
     if matches!(provider.declaration().content, ContentMode::Fragment) {
         return (
@@ -405,7 +417,7 @@ pub fn unknown_code(provider: &dyn CodeSystemProvider, code: &str) -> (super::Me
     (
         message,
         format!(
-            "Unknown code '{code}' in the CodeSystem '{}'{version}",
+            "Unknown code '{code}' in the CodeSystem '{}'{version}{grammar}",
             identity.url
         ),
     )

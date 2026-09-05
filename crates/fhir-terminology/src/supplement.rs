@@ -116,6 +116,10 @@ impl CodeSystemProvider for Supplemented {
         self.inner.locate(code)
     }
 
+    fn is_expression(&self, code: &str) -> bool {
+        self.inner.is_expression(code)
+    }
+
     fn code(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
         self.inner.code(concept)
     }

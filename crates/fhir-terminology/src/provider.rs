@@ -195,6 +195,48 @@ pub enum Capability {
     NormalizedCodes,
 }
 
+/// What a code system's compositional grammar is, and whether this server
+/// evaluates it.
+///
+/// FHIR states the grammar twice, with two different definitions, so one flag
+/// cannot answer both. `CodeSystem.compositional` is "The code system defines
+/// a compositional (post-coordination) grammar"
+/// (<https://hl7.org/fhir/R4B/codesystem-definitions.html#CodeSystem.compositional>),
+/// a property of the code system.
+/// `TerminologyCapabilities.codeSystem.version.compositional` is "If the
+/// compositional grammar defined by the code system is supported"
+/// (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>),
+/// a property of this server. R4, R5, and R6 define both elements in the same
+/// words. Every state is one of three, so a server that supports a grammar the
+/// code system does not define cannot be spelled.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Compositional {
+    /// The code system defines no compositional grammar.
+    #[default]
+    None,
+    /// The code system defines a grammar, and this server does not evaluate
+    /// it: a code written in the grammar is refused.
+    Defined,
+    /// The code system defines a grammar, and this server evaluates it: a code
+    /// written in the grammar locates.
+    Supported,
+}
+
+impl Compositional {
+    /// `CodeSystem.compositional`: whether the code system defines a grammar.
+    #[must_use]
+    pub const fn defined(self) -> bool {
+        !matches!(self, Self::None)
+    }
+
+    /// `TerminologyCapabilities.codeSystem.version.compositional`: whether this
+    /// server supports the grammar the code system defines.
+    #[must_use]
+    pub const fn supported(self) -> bool {
+        matches!(self, Self::Supported)
+    }
+}
+
 /// What a provider declares about its code system (the `TerminologyCapabilities` input).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Declaration {
@@ -204,8 +246,11 @@ pub struct Declaration {
     pub case_sensitive: bool,
     /// `CodeSystem.hierarchyMeaning`, when the system has a hierarchy.
     pub hierarchy_meaning: Option<HierarchyMeaning>,
-    /// `CodeSystem.compositional`.
-    pub compositional: bool,
+    /// The code system's compositional grammar, and whether this server
+    /// evaluates it: `CodeSystem.compositional` and
+    /// `TerminologyCapabilities.codeSystem.version.compositional` read
+    /// different halves of it.
+    pub compositional: Compositional,
     /// The designation languages the system carries (BCP 47).
     pub languages: Vec<String>,
     /// The declared properties.
@@ -579,6 +624,17 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// Returns [`ProviderError::Storage`] when the substrate fails.
     fn definition(&self, _concept: Concept) -> Result<Option<String>, ProviderError> {
         Ok(None)
+    }
+
+    /// Whether `code` is written in the code system's compositional grammar.
+    ///
+    /// A provider that declares [`Compositional::Defined`] recognises the shape
+    /// of an expression it does not evaluate, so an operation refuses the code
+    /// as a grammar this server does not serve rather than as a concept the
+    /// code system does not have. Every other provider answers `false`: one
+    /// that declares [`Compositional::Supported`] locates such a code instead.
+    fn is_expression(&self, _code: &str) -> bool {
+        false
     }
 
     /// The language of the system's own displays (`CodeSystem.language`),

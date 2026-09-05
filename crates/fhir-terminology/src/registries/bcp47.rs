@@ -15,7 +15,7 @@ use super::subtags::{Kind, REGISTRY_DATA, Registry};
 use crate::compose::Compose;
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
-    CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
+    CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration, Designation,
     FilterDefinition, Hierarchy, Identity, Located, Property, PropertyDefinition, PropertyKind,
     PropertyValue, ProviderError, Status,
 };
@@ -360,7 +360,10 @@ impl Bcp47Provider {
                 content: ContentMode::NotPresent,
                 case_sensitive: false,
                 hierarchy_meaning: None,
-                compositional: true,
+                // NOTE: RFC 5646 §2.1 defines the subtag grammar of a language
+                // tag, and this provider parses it, so the grammar is both
+                // defined and supported.
+                compositional: Compositional::Supported,
                 languages: Vec::new(),
                 properties: vec![
                     code_property("language", "The primary language subtag"),
