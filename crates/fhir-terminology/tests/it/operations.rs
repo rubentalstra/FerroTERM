@@ -201,8 +201,29 @@ fn lookup_refusals_carry_their_issue_code_and_status() {
     })
     .expect("refused");
     assert!(matches!(error, OperationError::UnknownVersion { .. }));
-    // The instance level, which the definition does not declare.
+    // The instance is the system, so a request naming another one disagrees
+    // with it (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
     let error = lookup(
+        &registry,
+        &instance(&registry, URL),
+        &LookupInput {
+            code: Some(String::from("cat")),
+            system: Some(String::from("http://example.org/nowhere")),
+            ..LookupInput::default()
+        },
+    )
+    .expect_err("refused");
+    assert!(matches!(error, OperationError::Invalid(_)));
+    assert_eq!(error.issue_code(), "invalid");
+}
+
+#[test]
+fn lookup_on_an_instance_reads_the_instance_system() {
+    // R5 and the R6 ballot declare `$lookup` at the instance level, where the
+    // instance names the code system
+    // (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
+    let registry = registry();
+    let outcome = lookup(
         &registry,
         &instance(&registry, URL),
         &LookupInput {
@@ -210,9 +231,9 @@ fn lookup_refusals_carry_their_issue_code_and_status() {
             ..LookupInput::default()
         },
     )
-    .expect_err("refused");
-    assert!(matches!(error, OperationError::NotSupported(_)));
-    assert_eq!(error.issue_code(), "not-supported");
+    .expect("looks up");
+    assert_eq!(outcome.system, URL);
+    assert_eq!(outcome.display, "Cat");
 }
 
 // ---- $validate-code -------------------------------------------------------

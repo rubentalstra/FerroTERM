@@ -281,6 +281,10 @@ impl CodeSystemProvider for FhirCodeSystem {
         &self.declaration
     }
 
+    fn code_system(&self) -> Option<&CodeSystemModel> {
+        Some(&self.model)
+    }
+
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
         self.complete_enough()?;
         let key = if self.model.case_sensitive {

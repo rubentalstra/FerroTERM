@@ -45,6 +45,43 @@ impl Server {
         Self::start_with(true, true)
     }
 
+    /// The edition, the testkit's `CodeSystem` resources, and the LOINC and
+    /// `RxNorm` artifacts, so a test reaches a system of every loader beside
+    /// the registry systems the binary always serves.
+    pub(crate) fn start_with_every_loader() -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let snomed = dir.path().join("snomed");
+        let loinc = dir.path().join("loinc");
+        let rxnorm = dir.path().join("rxnorm");
+        let fhir = dir.path().join("fhir");
+        for path in [&snomed, &loinc, &rxnorm, &fhir] {
+            std::fs::create_dir_all(path).expect("creates");
+        }
+        ferroterm_testkit::snomed::write(&snomed).expect("writes the edition");
+        ferroterm_testkit::loinc::write_artifact(&loinc).expect("builds loinc");
+        ferroterm_testkit::rxnorm::write_artifact(&rxnorm).expect("builds rxnorm");
+        ferroterm_testkit::fhir::write_code_systems(&fhir).expect("writes the resources");
+        let config = Config {
+            index: vec![snomed, loinc, rxnorm],
+            code_systems: vec![fhir],
+            ..Config::default()
+        };
+        let state = Arc::new(AppState::load(&config).expect("loads"));
+        Self {
+            _dir: Arc::new(dir),
+            config,
+            state,
+        }
+    }
+
+    /// The `CodeSystem` instance id the server addresses `url` by.
+    pub(crate) fn instance_id_of(&self, url: &str) -> String {
+        self.state
+            .instances()
+            .find(|(_, served, _)| *served == url)
+            .map_or_else(|| panic!("{url} is loaded"), |(id, _, _)| id.to_owned())
+    }
+
     /// The same configuration loaded again, as a restart loads it.
     ///
     /// The running server is dropped first: `redb` holds the database file for

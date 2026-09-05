@@ -50,9 +50,11 @@ Each loaded code system version becomes one `CodeSystem` instance. The id is
 the version URI when that URI carries the system (a SNOMED CT edition is
 `snomed.info-sct-<module>-version-<YYYYMMDD>`), otherwise the system URL and
 the version (`terminology.hl7.org-CodeSystem-v2-0001-2.0.0`), reduced to the
-FHIR id alphabet. An instance-level operation is
-`[base]/r4b/CodeSystem/<id>/$validate-code`. The id is stable for a given
-version and is listed at startup and in `GET /r4b/metadata?mode=terminology`.
+FHIR id alphabet. The instance reads at `[base]/r4b/CodeSystem/<id>`, is found
+by `[base]/r4b/CodeSystem?url=…&version=…`, and takes an instance-level
+operation at `[base]/r4b/CodeSystem/<id>/$validate-code`. The id is stable for
+a given version and is listed at startup and in
+`GET /r4b/metadata?mode=terminology`.
 
 ## What you do not configure
 
