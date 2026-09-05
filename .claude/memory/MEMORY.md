@@ -19,5 +19,5 @@
 - [Sonar MCP triage](sonar-mcp-triage.md), the owner wants every SonarQube finding triaged and fixed through the SonarQube MCP server (#209); advisory, never authority
 - [Benchmark program](benchmark-program.md), trusted per-system benchmarks from container-run records (#212/#213/#214), never hand-typed; #217 audits every claim before v0.1.0
 - [Licence: BUSL 1.1](license-busl.md), BUSL 1.1 on FerroEHR terms since 2026-09-04 (#221) after MIT, BUSL (#147), and an Apache interlude (#150); non-commercial production free, commercial production needs a licence; the versions guard fails on stale MIT or Apache claims
-- [Gates in container](gates-in-container.md), fmt/clippy/doc/check scripts stay on the host CLI; only cargo nextest runs in the pinned rust:1.98-bookworm container because macOS Gatekeeper stalls every fresh test binary about 4 min; owner-decided 2026-09-04
+- [Gates on the host](gates-in-container.md), every gate runs on the host CLI, tests included; the pinned-container run is retired because its target volume hit 104 GB and crashed Docker; owner-decided 2026-09-05
 - [Lint bar parity](lint-bar-parity.md), FerroTERM holds FerroEHR's lint table (owner rule 2026-09-04, #249): all/pedantic deny, as_conversions, pub_use, dead_code, map_err_ignore ...; unwrap/expect stay test-only in both repos; fhir-types findings go through the emitter allow list
