@@ -13,8 +13,9 @@ use fhir_terminology::snomed::{OpenError, SYSTEM, SnomedProvider};
 
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
-    ALTERNATIVE, ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, LEGS, PETS,
-    POSSIBLY_EQUIVALENT_TO, REPLACED_BY, SAME_AS, SCHEME, TOP, VERSION, item, sctid,
+    ALTERNATIVE, ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, LEGS, MODULE_CONCEPT,
+    MODULE_DEPENDENCY, PETS, POSSIBLY_EQUIVALENT_TO, REPLACED_BY, SAME_AS, SCHEME, TOP, VERSION,
+    item, sctid,
 };
 
 fn provider() -> (tempfile::TempDir, SnomedProvider) {
@@ -53,7 +54,7 @@ fn identity_and_declaration_follow_the_manifest() {
     assert!(codes.contains(&sctid(item(COVERING)).as_str()));
     assert!(codes.contains(&sctid(item(LEGS)).as_str()));
     assert_eq!(p.language_refsets(), [snomed::GB_REFSET, snomed::NL_REFSET]);
-    assert_eq!(p.all().expect("all").len(), 16);
+    assert_eq!(p.all().expect("all").len(), 18);
 }
 
 #[test]
@@ -234,7 +235,9 @@ fn the_hierarchy_answers_subsumption_and_the_filters_from_the_closure() {
             SCHEME,
             REPLACED_BY,
             POSSIBLY_EQUIVALENT_TO,
-            ALTERNATIVE
+            ALTERNATIVE,
+            MODULE_DEPENDENCY,
+            MODULE_CONCEPT
         ]
     );
 }
@@ -247,7 +250,7 @@ fn search_reads_the_designation_index() {
     let synth = p.search("synth", None).expect("searches");
     assert_eq!(
         synth.len(),
-        6,
+        7,
         "every FSN except the two attribute FSNs carries the tag"
     );
     let none = p.search("zebra", None).expect("searches");
@@ -350,7 +353,7 @@ fn the_implicit_value_sets_follow_the_snomed_ct_page() {
         .expect("compose");
     assert_eq!(
         refsets.include[0].concepts.len(),
-        6,
+        7,
         "every reference set with concept members"
     );
     assert!(
@@ -358,6 +361,17 @@ fn the_implicit_value_sets_follow_the_snomed_ct_page() {
             .concepts
             .iter()
             .any(|c| c.code == sctid(item(PETS)))
+    );
+    // The FHIR SNOMED CT page defines the set as "all concept ids that
+    // correspond to reference sets that are explicitly defined in the specified
+    // SNOMED CT edition" (<https://hl7.org/fhir/R4B/snomedct.html>), with no
+    // category excluded, so a metadata reference set is listed like any other.
+    assert!(
+        refsets.include[0]
+            .concepts
+            .iter()
+            .any(|c| c.code == snomed::MODULE_DEPENDENCY_SCTID),
+        "the Module Dependency reference set is a reference set of the edition"
     );
     let members = p
         .implicit_value_set(&format!("{base}?fhir_vs=refset/{}", sctid(item(PETS))))
@@ -465,7 +479,7 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
         op: FilterOperator::Equal,
         value: value.to_owned(),
     };
-    assert_eq!(p.filter(&expressions("false")).expect("all").len(), 16);
+    assert_eq!(p.filter(&expressions("false")).expect("all").len(), 18);
     assert!(matches!(
         p.filter(&expressions("true")),
         Err(ProviderError::UnsupportedFilter { .. })
@@ -527,5 +541,32 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
             Some(Ok(_))
         ),
         "an expression without reserved characters needs no encoding"
+    );
+}
+
+/// A metadata reference set is served like any other reference set.
+///
+/// The FHIR SNOMED CT page defines `?fhir_vs=refset` as "all concept ids that
+/// correspond to reference sets that are explicitly defined in the specified
+/// SNOMED CT edition" and `?fhir_vs=refset/[sctid]` as "all concept ids in the
+/// specified reference set" (<https://hl7.org/fhir/R4B/snomedct.html>). Neither
+/// excludes a category, so the Module Dependency reference set, whose members
+/// are the edition's modules, is listed and expands to them (#272).
+#[test]
+fn the_module_dependency_reference_set_is_served_like_any_other() {
+    let (_dir, p) = provider();
+    let members = p
+        .implicit_value_set(&format!(
+            "{SYSTEM}?fhir_vs=refset/{}",
+            snomed::MODULE_DEPENDENCY_SCTID
+        ))
+        .expect("implicit")
+        .expect("compose");
+    assert_eq!(members.include[0].filters[0].op, FilterOperator::In);
+    let selected = p.filter(&members.include[0].filters[0]).expect("filters");
+    assert_eq!(
+        selected.iter().collect::<Vec<_>>(),
+        [MODULE_CONCEPT],
+        "the members are the edition's modules"
     );
 }

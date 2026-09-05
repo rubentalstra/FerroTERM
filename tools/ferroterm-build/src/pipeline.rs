@@ -751,6 +751,8 @@ fn read_memberships(
                 if !member.active {
                     continue;
                 }
+                // NOTE: every reference set of the edition is served, the metadata ones
+                // included (<https://hl7.org/fhir/R4B/snomedct.html>, #272).
                 // NOTE: a member referencing a description or a relationship is not a
                 // concept membership; that is "absent" here, not a defect of the file.
                 let Ok(concept) = ConceptId::try_from(member.referenced_component_id) else {

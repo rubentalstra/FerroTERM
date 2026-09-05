@@ -4,8 +4,8 @@
 //! Appendix D, the quick reference, unless a test cites another section).
 
 use ferroterm_testkit::snomed::{
-    ANIMAL, CAT, CODES_MAP, COVERING, DOG, FISH, FUR, HISTORICAL, LEGS, PETS, SAME_AS_SCTID,
-    SCHEME, TOP, item, sctid,
+    ANIMAL, CAT, CODES_MAP, COVERING, DOG, FISH, FUR, HISTORICAL, LEGS, MODULE_CONCEPT,
+    MODULE_DEPENDENCY, PETS, SAME_AS_SCTID, SCHEME, TOP, item, sctid,
 };
 use fhir_terminology::snomed::SnomedProvider;
 use sct_ecl::eval::{EvalError, evaluate};
@@ -57,7 +57,16 @@ fn the_hierarchy_operators_read_the_closure_and_the_adjacency() {
     assert_eq!(
         set(&p, &format!("<! {}", c(TOP))),
         [
-            ANIMAL, FUR, COVERING, LEGS, PETS, CODES_MAP, HISTORICAL, SCHEME
+            ANIMAL,
+            FUR,
+            COVERING,
+            LEGS,
+            PETS,
+            CODES_MAP,
+            HISTORICAL,
+            SCHEME,
+            MODULE_DEPENDENCY,
+            MODULE_CONCEPT
         ],
         "childOf"
     );
@@ -92,19 +101,19 @@ fn the_hierarchy_operators_read_the_closure_and_the_adjacency() {
         [CAT, DOG],
         "bottom: no descendant in the set"
     );
-    assert_eq!(set(&p, "*").len(), 16, "every concept, active and inactive");
+    assert_eq!(set(&p, "*").len(), 18, "every concept, active and inactive");
     assert_eq!(
         set(&p, "< *").len(),
-        14,
+        16,
         "everything under a root; the top and the fish are roots"
     );
     assert_eq!(set(&p, "!!> *"), [TOP, FISH], "the roots");
     assert_eq!(
         set(&p, "!!< *").len(),
-        13,
+        15,
         "the leaves: the fish has no child either"
     );
-    assert_eq!(set(&p, "<< *").len(), 16);
+    assert_eq!(set(&p, "<< *").len(), 18);
 }
 
 #[test]
@@ -230,7 +239,7 @@ fn refinements_match_attribute_rows_with_their_cardinalities() {
     assert!(set(&p, &format!("< {animals} : [3..*] * = *")).is_empty());
     assert_eq!(
         set(&p, &format!("<< {} : [0..0] {} = *", c(TOP), c(COVERING))).len(),
-        13,
+        15,
         "everything under the top without a covering"
     );
     assert_eq!(
@@ -543,7 +552,7 @@ fn concept_filters_read_the_concept_rows() {
     assert_eq!(set(&p, "* {{ C active = false }}"), [FISH]);
     assert_eq!(set(&p, "* {{ C active = 0 }}"), [FISH]);
     assert_eq!(set(&p, "* {{ C active != true }}"), [FISH]);
-    assert_eq!(set(&p, "* {{ C active = true }}").len(), 15);
+    assert_eq!(set(&p, "* {{ C active = true }}").len(), 17);
     assert_eq!(
         set(
             &p,
@@ -599,7 +608,7 @@ fn concept_filters_read_the_concept_rows() {
         )
         .is_empty()
     );
-    assert_eq!(set(&p, "* {{ C effectiveTime = \"20260101\" }}").len(), 16);
+    assert_eq!(set(&p, "* {{ C effectiveTime = \"20260101\" }}").len(), 18);
     assert!(set(&p, "* {{ C effectiveTime >= \"20270101\" }}").is_empty());
     assert_eq!(
         set(&p, "* {{ C effectiveTime != (\"20250101\" \"20260101\") }}").len(),
