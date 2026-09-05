@@ -77,9 +77,10 @@
             (<code>bench/compose.yaml</code>), which builds the server, the
             build tool, and the harness on digest-pinned images and mounts the
             licensed releases read-only, so the environment is the same from
-            one machine to the next. Resident memory is mostly the
-            memory-mapped index the kernel has paged in; it moves with the
-            page cache and shrinks under pressure. Units fit the value:
+            one machine to the next. Resident memory is what the server
+            has read in: the index is loaded at startup, which is why the
+            figure after start and the figure after the warm requests are
+            close. Units fit the value:
             seconds, milliseconds, or microseconds; GB, MB, or KB.
           </p>
           <p>

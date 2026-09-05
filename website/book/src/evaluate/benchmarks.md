@@ -105,10 +105,11 @@ Warm p50 over 200 HTTP round trips on one machine (Apple M2, 17.18 GB, macos/aar
 
 ## Reading the numbers
 
-A cold request includes the first page faults of the memory-mapped index for
-that path; the warm percentiles are what a busy server answers. The resident
-memory is mostly the memory-mapped files the kernel has paged in; it moves with
-the page cache and shrinks under pressure. The design target for point reads
-is under a millisecond in the release profile on the Dutch edition; a
-millisecond-scale figure is a measurement to improve, never a result to call
-fine.
+A cold request is the first of its kind on a freshly started server, before
+`redb`'s page cache and the query caches hold anything for that path; the warm
+percentiles are what a busy server answers. The resident memory is what the
+server has read in: the index is loaded at startup, which is why the figure
+after start and the figure after the warm requests are close. The design target
+for point reads is under a millisecond in the release profile on the Dutch
+edition; a millisecond-scale figure is a measurement to improve, never a result
+to call fine.

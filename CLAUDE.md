@@ -3,7 +3,7 @@
 **FerroTERM** is a pure-Rust FHIR terminology server for SNOMED CT,
 LOINC, and other clinical code systems, SNOMED CT first. It serves the HL7 FHIR
 terminology API across R4, R4B, R5, and R6 from one running server, backed by a
-memory-mapped concept index, with no JVM and no Elasticsearch. The engine is
+precomputed concept index read at startup, with no JVM and no Elasticsearch. The engine is
 code-system-neutral: the operations talk to a code system provider seam, and
 each system arrives through its own loader (`docs/architecture.md` §5,
 `docs/terminologies.md`). The name is official: Ferro for the Rust family shared
@@ -23,7 +23,7 @@ commits, PRs, issues) to `.claude/rules/writing-style.md`.
   modules (R4/R4B/R5/R6) so the operation surface is correct per version by
   construction.
 - **The engine is HAND-WRITTEN** and is the product: the code-system-neutral
-  memory-mapped concept store, hierarchy graph, and `fst` and `roaring`
+  disk-backed concept store, hierarchy graph, and `fst` and `roaring`
   designation index, the per-system loaders (SNOMED RF2 first), ECL
   evaluation, and the FHIR terminology operations over the provider seam.
   Idiomatic Rust of our own design, with the FHIR and SNOMED specifications
@@ -42,8 +42,8 @@ crate-local discipline.
 - `crates/concept-graph`: the materialized hierarchy of a loaded code system.
   Integer-keyed CSR adjacency (is-a and per-relationship-type) and roaring
   transitive-closure bitmaps; subsumption and ECL set algebra.
-- `crates/concept-store`: the memory-mapped (`redb`) columnar concept and
-  designation store, one per code system version. Point reads for
+- `crates/concept-store`: the `redb`-backed columnar concept and designation
+  store, one per code system version. Point reads for
   `$lookup`/`$validate-code`.
 - `crates/designation-index`: the `fst` and `roaring` designation search index
   (per-word prefix, language and use filters, matched-term-length sort).
@@ -57,7 +57,7 @@ crate-local discipline.
 - `tools/fhir-codegen`: the generator, from vendored FHIR packages to
   `fhir-types`.
 - `tools/ferroterm-build`: the offline build, from an RF2 release to the
-  memory-mapped graph/store/text artifacts, once per edition.
+  graph/store/text artifacts the server reads, once per edition.
 - `tools/ferroterm-testkit`: synthetic fixtures for the test suites (a
   shaped SNOMED edition written the way the build writes it). A
   dev-dependency of any crate's tests, never a runtime dependency, never
@@ -99,10 +99,12 @@ Rust stable, edition 2024, resolver 3, pinned in `rust-toolchain.toml`. No
 `Cargo.toml [workspace.dependencies]`; add to a crate with `dep.workspace =
 true`. The menu:
 
-- **Ontology store/index:** `redb` (pure-Rust, memory-mapped, ACID embedded
+- **Ontology store/index:** `redb` (pure-Rust, disk-backed, ACID embedded
   engine, the persistence substrate), `roaring` (transitive-closure bitmaps),
   `fst` (description term dictionary), `petgraph` (in-memory CSR/graph algorithms
-  for the offline build). Pure Rust, memory-mapped, disk-backed. Not
+  for the offline build). Pure Rust and disk-backed; the artifacts are built
+  ahead of time and read at startup, and nothing maps a file (`redb` dropped
+  its mmap backend in 0.14.0, and the workspace forbids `unsafe`). Not
   Elasticsearch, not a graph database, not a C storage or search library.
 - **HTTP/async:** `axum`, `tower`, `tower-http`, `hyper`, `tokio`.
 - **Parsing (ECL):** `logos` (lexer) and `winnow` (parser). Prefer `winnow` over

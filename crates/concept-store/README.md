@@ -1,6 +1,6 @@
 # concept-store
 
-The memory-mapped concept store.
+The disk-backed concept store.
 
 A [`redb`](https://docs.rs/redb) database holding one code system version's
 concepts, displays, designations, and property values, keyed by dense ordinal,

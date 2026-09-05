@@ -16,7 +16,7 @@ A code system release is turned into served structures once, by
 graph TD
     R["A release (RF2, LOINC, ClaML, RRF, the ICD-API cache, ...)"] --> BUILD["ferroterm-build, once per release"]
     BUILD --> IDX["store.redb + hierarchy.bin + text.bin + manifest.json"]
-    IDX --> SRV["ferroterm, read-only, memory-mapped"]
+    IDX --> SRV["ferroterm, read-only, loaded at startup"]
     SRV --> API["FHIR terminology API (R4B today)"]
 ```
 
@@ -48,7 +48,7 @@ by its manifest and nothing downstream knows which file format it came from:
 
 | File | Holds |
 |---|---|
-| `store.redb` | concepts, designations with language and use, typed properties, the vocabularies; a pure-Rust, memory-mapped, ACID embedded engine |
+| `store.redb` | concepts, designations with language and use, typed properties, the vocabularies; a pure-Rust, disk-backed, ACID embedded engine |
 | `hierarchy.bin` | the CSR is-a adjacency and the roaring closure bitmaps |
 | `text.bin` | the `fst` word dictionary and roaring postings of every designation, by language |
 | `manifest.json` | the system, version, languages, counts, and the files above |

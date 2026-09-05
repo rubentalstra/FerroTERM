@@ -2,9 +2,9 @@
 
 FerroTERM is a pure-Rust FHIR terminology server. It serves SNOMED CT, LOINC,
 ICD-10, ICD-11, RxNorm, UCUM, and any FHIR `CodeSystem` through the HL7 FHIR
-terminology API from one static binary, over a memory-mapped index built once
-per code system release. There is no JVM, no Elasticsearch, and no database to
-run.
+terminology API from one binary, over an index built once per code system
+release and read at startup. There is no JVM, no Elasticsearch, and no database
+to run.
 
 > [!NOTE]
 > The name: Ferro for the Rust family FerroTERM shares with FerroEHR, TERM for

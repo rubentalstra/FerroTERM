@@ -9,14 +9,14 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>FerroTERM: a pure-Rust FHIR terminology server for clinical code systems</title>
-  <meta name="description" content="FerroTERM serves SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR CodeSystem through the HL7 FHIR terminology API from one static binary over a memory-mapped index. No JVM, no Elasticsearch. Business Source License 1.1. Every figure on this page is rendered from a committed benchmark record.">
+  <meta name="description" content="FerroTERM serves SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR CodeSystem through the HL7 FHIR terminology API from one binary over an index built once per release and read at startup. No JVM, no Elasticsearch. Business Source License 1.1. Every figure on this page is rendered from a committed benchmark record.">
   <link rel="icon" type="image/svg+xml" href="./assets/logo-mark.svg">
   <link rel="canonical" href="https://ferroterm.eu/">
   <meta property="og:url" content="https://ferroterm.eu/">
   <link rel="stylesheet" href="./style.css">
   <meta property="og:type" content="website">
   <meta property="og:title" content="FerroTERM: a pure-Rust FHIR terminology server for clinical code systems">
-  <meta property="og:description" content="SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR CodeSystem through the FHIR terminology API, from one static binary over a memory-mapped index. No JVM, no Elasticsearch. Business Source License 1.1.">
+  <meta property="og:description" content="SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR CodeSystem through the FHIR terminology API, from one binary over an index built once per release and read at startup. No JVM, no Elasticsearch. Business Source License 1.1.">
   <meta property="og:site_name" content="FerroTERM">
 
   <!-- Structured data. Browsers never execute an application/ld+json data block
@@ -27,7 +27,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareSourceCode",
     "name": "FerroTERM",
-    "description": "A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR CodeSystem. Serves the HL7 FHIR terminology API from a memory-mapped index, with no JVM and no Elasticsearch.",
+    "description": "A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR CodeSystem. Serves the HL7 FHIR terminology API from a precomputed index read at startup, with no JVM and no Elasticsearch.",
     "codeRepository": "https://github.com/rubentalstra/FerroTERM",
     "programmingLanguage": "Rust",
     "license": "https://www.apache.org/licenses/LICENSE-2.0",
@@ -67,8 +67,8 @@
         <h1>A pure-Rust FHIR terminology server for SNOMED CT, LOINC, ICD, RxNorm, and every FHIR code system, on ordinary hardware.</h1>
         <p class="sub">
           FerroTERM serves the HL7 FHIR terminology API on R4, R4B, R5, and the
-          R6 ballot from one static binary over a memory-mapped index built
-          once per release. No JVM, no search cluster. You bring the release
+          R6 ballot from one binary over an index built once per release and
+          read at startup. No JVM, no search cluster. You bring the release
           you are licensed for; the build tool turns it into an index; the
           server answers from it.
         </p>
@@ -170,7 +170,7 @@
             <span class="tag">Operations</span>
             <h3>How do I run it, and what does it need?</h3>
             <p>
-              One static binary or a distroless container image, a directory of
+              One binary or a distroless container image, a directory of
               artifacts built once per release, and the memory the figures
               above show. Releases are built to SLSA Build Level 3 with signed
               provenance and SBOMs you verify before you run them.

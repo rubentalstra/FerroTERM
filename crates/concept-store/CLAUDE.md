@@ -1,8 +1,11 @@
 # concept-store
 
-The memory-mapped concept store. Hand-written; no spec governs the on-disk
+The disk-backed concept store. Hand-written; no spec governs the on-disk
 layout (our own design, `docs/architecture.md` decision 3). `redb` owns the
-memory mapping and the `unsafe`; this crate stays safe.
+file I/O and its page cache, and maps nothing: it has had no memory-mapped
+backend since 0.14.0 dropped one that could not be proven sound. The dense
+concept and display columns are read into memory when the store opens; every
+other table is point-read from the file.
 
 - Modules: `tables` (the table set and `META` keys), `record` (the byte
   encodings of concepts, designations, and typed property values, decoded with
