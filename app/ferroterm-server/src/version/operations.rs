@@ -48,7 +48,12 @@ macro_rules! operations {
             use crate::state::AppState;
             use crate::wire::{Wire, without_format};
 
-            type Handled = Result<Response, Failure>;
+            /// What one operation produced: the JSON object of its response resource.
+            ///
+            /// Every terminology operation answers `200` with a resource, so an
+            /// invocation over HTTP and one inside a `Bundle` entry differ only in how
+            /// this object is delivered.
+            type Handled = Result<fhir_types::codec::Object, Failure>;
 
             fn instance(state: &AppState, id: &str) -> Result<Invocation, Failure> {
                 state.instance(id).map(Invocation::Instance).ok_or_else(|| {
@@ -95,20 +100,18 @@ macro_rules! operations {
                 scope: &Scope,
                 invocation: &Invocation,
                 parameters: &Parameters,
-                wire: Wire,
             ) -> Handled {
                 let request = CodeSystemLookupRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let outcome =
                     lookup::lookup(scope.registry(), invocation, &map::lookup_input(&request))?;
-                parameters::respond(&map::lookup_response(outcome).to_parameters(), wire)
+                parameters::encode(&map::lookup_response(outcome).to_parameters())
             }
 
             fn run_validate_code(
                 scope: &Scope,
                 invocation: &Invocation,
                 parameters: &Parameters,
-                wire: Wire,
             ) -> Handled {
                 let request = CodeSystemValidateCodeRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
@@ -117,14 +120,13 @@ macro_rules! operations {
                     invocation,
                     &map::validate_code_input(&request),
                 )?;
-                parameters::respond(&map::validate_code_response(outcome).to_parameters(), wire)
+                parameters::encode(&map::validate_code_response(outcome).to_parameters())
             }
 
             fn run_subsumes(
                 scope: &Scope,
                 invocation: &Invocation,
                 parameters: &Parameters,
-                wire: Wire,
             ) -> Handled {
                 let request = CodeSystemSubsumesRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
@@ -133,24 +135,24 @@ macro_rules! operations {
                     invocation,
                     &map::subsumes_input(&request),
                 )?;
-                parameters::respond(&map::subsumes_response(outcome).to_parameters(), wire)
+                parameters::encode(&map::subsumes_response(outcome).to_parameters())
             }
 
-            fn run_expand(scope: &Scope, parameters: &Parameters, wire: Wire) -> Handled {
+            fn run_expand(scope: &Scope, parameters: &Parameters) -> Handled {
                 let request = ValueSetExpandRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let outcome = expand::expand(&scope.sources(), &map::expand_input(&request))?;
-                parameters::respond_resource(&render::$fhir::expansion(&outcome), wire)
+                parameters::encode(&render::$fhir::expansion(&outcome))
             }
 
-            fn run_value_set_validate_code(scope: &Scope, parameters: &Parameters, wire: Wire) -> Handled {
+            fn run_value_set_validate_code(scope: &Scope, parameters: &Parameters) -> Handled {
                 let request = ValueSetValidateCodeRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let validation = value_set_validate_code::validate_code(
                     &scope.sources(),
                     &map::value_set_validate_input(&request),
                 )?;
-                parameters::respond(&map::value_set_validation_parameters(&validation), wire)
+                parameters::encode(&map::value_set_validation_parameters(&validation))
             }
 
             /// The refusal of `reverse` on a version that does not declare it.
@@ -177,7 +179,7 @@ macro_rules! operations {
                 Ok(())
             }
 
-            fn run_translate(scope: &Scope, parameters: &Parameters, wire: Wire) -> Handled {
+            fn run_translate(scope: &Scope, parameters: &Parameters) -> Handled {
                 reverse_refusal(
                     parameters
                         .parameter
@@ -188,13 +190,116 @@ macro_rules! operations {
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let translation =
                     translate::translate(&scope.sources(), &map::translate_input(&request))?;
-                parameters::respond(&map::translation_parameters(&translation), wire)
+                parameters::encode(&map::translation_parameters(&translation))
+            }
+
+            /// Which operation a `Bundle` entry's URL names.
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            enum Which {
+                /// `CodeSystem/$lookup`.
+                Lookup,
+                /// `CodeSystem/$validate-code`.
+                ValidateCode,
+                /// `CodeSystem/$subsumes`.
+                Subsumes,
+                /// `ValueSet/$expand`.
+                Expand,
+                /// `ValueSet/$validate-code`.
+                ValueSetValidateCode,
+                /// `ConceptMap/$translate`.
+                Translate,
+            }
+
+            /// The operation the path `segments` name, with the descriptor that
+            /// declares its parameters and the id an instance invocation carries.
+            fn route(
+                segments: &[&str],
+            ) -> Option<(Which, &'static fhir_types::operation::Operation, Option<String>)> {
+                let (which, operation, id) = match segments {
+                    ["CodeSystem", "$lookup"] => (Which::Lookup, &CODE_SYSTEM_LOOKUP, None),
+                    ["CodeSystem", "$validate-code"] => {
+                        (Which::ValidateCode, &CODE_SYSTEM_VALIDATE_CODE, None)
+                    }
+                    ["CodeSystem", id, "$validate-code"] => (
+                        Which::ValidateCode,
+                        &CODE_SYSTEM_VALIDATE_CODE,
+                        Some((*id).to_owned()),
+                    ),
+                    ["CodeSystem", "$subsumes"] => (Which::Subsumes, &CODE_SYSTEM_SUBSUMES, None),
+                    ["CodeSystem", id, "$subsumes"] => (
+                        Which::Subsumes,
+                        &CODE_SYSTEM_SUBSUMES,
+                        Some((*id).to_owned()),
+                    ),
+                    ["ValueSet", "$expand"] => (Which::Expand, &VALUE_SET_EXPAND, None),
+                    ["ValueSet", "$validate-code"] => {
+                        (Which::ValueSetValidateCode, &VALUE_SET_VALIDATE_CODE, None)
+                    }
+                    ["ConceptMap", "$translate"] => {
+                        (Which::Translate, &CONCEPT_MAP_TRANSLATE, None)
+                    }
+                    _ => return None,
+                };
+                Some((which, operation, id))
+            }
+
+            /// Runs the operation `path` names, for a `Bundle` entry.
+            ///
+            /// `parameters` carries a `POST` entry's `Parameters` resource; a `GET`
+            /// entry passes `None` and its inputs arrive in `query`.
+            ///
+            /// # Errors
+            ///
+            /// A path that names no operation of this server is a `404`, and every
+            /// refusal the operation itself makes is the entry's own.
+            pub(super) fn invoke(
+                state: &AppState,
+                headers: &HeaderMap,
+                path: &str,
+                query: &[(String, String)],
+                sent: Option<Parameters>,
+            ) -> Handled {
+                let segments: Vec<&str> = path.split('/').collect();
+                let Some((which, operation, id)) = route(&segments) else {
+                    return Err(Failure::new(
+                        StatusCode::NOT_FOUND,
+                        "not-found",
+                        format!("`{path}` is not an operation of this server"),
+                    ));
+                };
+                let invocation = match &id {
+                    Some(id) => instance(state, id)?,
+                    None => Invocation::Type,
+                };
+                let (scope, parameters) = match sent {
+                    Some(sent) => {
+                        let (mut own, resources) = split_resources(sent)?;
+                        parameters::apply_accept_language(operation, headers, &mut own);
+                        (scope_of(state, headers, resources)?, own)
+                    }
+                    None => {
+                        if which == Which::Translate {
+                            reverse_refusal(query.iter().map(|(name, _)| name.as_str()))?;
+                        }
+                        from_query(state, operation, headers, query)?
+                    }
+                };
+                match which {
+                    Which::Lookup => run_lookup(&scope, &invocation, &parameters),
+                    Which::ValidateCode => run_validate_code(&scope, &invocation, &parameters),
+                    Which::Subsumes => run_subsumes(&scope, &invocation, &parameters),
+                    Which::Expand => run_expand(&scope, &parameters),
+                    Which::ValueSetValidateCode => run_value_set_validate_code(&scope, &parameters),
+                    Which::Translate => run_translate(&scope, &parameters),
+                }
             }
 
             /// The response of a handled invocation, a failure rendered in `wire`.
             fn finish(handled: Handled, wire: Wire) -> Response {
                 match handled {
-                    Ok(response) => response,
+                    Ok(object) => {
+                        wire.response(StatusCode::OK, &object, &fhir_types::$fhir::schema::SCHEMAS)
+                    }
                     Err(failure) => failure.respond(wire),
                 }
             }
@@ -220,7 +325,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_query(&state, &CODE_SYSTEM_LOOKUP, &headers, &query)
-                        .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p)), wire)
             }
 
             /// `POST /CodeSystem/$lookup`.
@@ -236,7 +341,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_body(&state, &CODE_SYSTEM_LOOKUP, &headers, &body)
-                        .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p)), wire)
             }
 
             /// `GET /CodeSystem/$validate-code`.
@@ -251,7 +356,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_query(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &query)
-                        .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p)), wire)
             }
 
             /// `POST /CodeSystem/$validate-code`.
@@ -267,7 +372,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_body(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_validate_code(&scope, &Invocation::Type, &p)), wire)
             }
 
             /// `GET /CodeSystem/{id}/$validate-code`.
@@ -283,7 +388,7 @@ macro_rules! operations {
                 };
                 finish(instance(&state, &id).and_then(|invocation| {
                     from_query(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &query)
-                        .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p, wire))
+                        .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p))
                 }), wire)
             }
 
@@ -302,7 +407,7 @@ macro_rules! operations {
                 finish(
                     instance(&state, &id).and_then(|invocation| {
                     from_body(&state, &CODE_SYSTEM_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p, wire))
+                        .and_then(|(scope, p)| run_validate_code(&scope, &invocation, &p))
 }),
                     wire,
                 )
@@ -320,7 +425,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_query(&state, &CODE_SYSTEM_SUBSUMES, &headers, &query)
-                        .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p)), wire)
             }
 
             /// `POST /CodeSystem/$subsumes`.
@@ -336,7 +441,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_body(&state, &CODE_SYSTEM_SUBSUMES, &headers, &body)
-                        .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_subsumes(&scope, &Invocation::Type, &p)), wire)
             }
 
             /// `GET /CodeSystem/{id}/$subsumes`.
@@ -352,7 +457,7 @@ macro_rules! operations {
                 };
                 finish(instance(&state, &id).and_then(|invocation| {
                     from_query(&state, &CODE_SYSTEM_SUBSUMES, &headers, &query)
-                        .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p, wire))
+                        .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p))
                 }), wire)
             }
 
@@ -371,7 +476,7 @@ macro_rules! operations {
                 finish(
                     instance(&state, &id).and_then(|invocation| {
                     from_body(&state, &CODE_SYSTEM_SUBSUMES, &headers, &body)
-                        .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p, wire))
+                        .and_then(|(scope, p)| run_subsumes(&scope, &invocation, &p))
 }),
                     wire,
                 )
@@ -389,7 +494,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_query(&state, &VALUE_SET_EXPAND, &headers, &query)
-                        .and_then(|(scope, p)| run_expand(&scope, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_expand(&scope, &p)), wire)
             }
 
             /// `POST /ValueSet/$expand`.
@@ -405,7 +510,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_body(&state, &VALUE_SET_EXPAND, &headers, &body)
-                        .and_then(|(scope, p)| run_expand(&scope, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_expand(&scope, &p)), wire)
             }
 
             /// `GET /ValueSet/$validate-code`.
@@ -420,7 +525,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)), wire)
             }
 
             /// `POST /ValueSet/$validate-code`.
@@ -436,7 +541,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)), wire)
             }
 
             /// `GET /ConceptMap/$translate`.
@@ -452,7 +557,7 @@ macro_rules! operations {
                 finish(
                     reverse_refusal(query.iter().map(|(name, _)| name.as_str()))
                         .and_then(|()| from_query(&state, &CONCEPT_MAP_TRANSLATE, &headers, &query))
-                        .and_then(|(scope, p)| run_translate(&scope, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_translate(&scope, &p)), wire)
             }
 
             /// `POST /ConceptMap/$translate`.
@@ -468,7 +573,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_body(&state, &CONCEPT_MAP_TRANSLATE, &headers, &body)
-                        .and_then(|(scope, p)| run_translate(&scope, &p, wire)), wire)
+                        .and_then(|(scope, p)| run_translate(&scope, &p)), wire)
             }
         }
     };

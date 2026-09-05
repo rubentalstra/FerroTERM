@@ -187,6 +187,21 @@ macro_rules! parameters {
                 respond_resource(parameters, wire)
             }
 
+            /// The JSON object of a FHIR resource, for a response or a `Bundle` entry.
+            ///
+            /// # Errors
+            ///
+            /// Returns a `500` failure when the resource cannot be encoded.
+            pub fn encode<R: Json>(resource: &R) -> Result<fhir_types::codec::Object, Failure> {
+                resource.to_json().map_err(|e| {
+                    Failure::new(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "exception",
+                        format!("cannot encode the response: {e}"),
+                    )
+                })
+            }
+
             /// A `200` response carrying any FHIR resource in `wire`.
             ///
             /// An operation whose only output is a resource named `return` answers with
@@ -196,13 +211,7 @@ macro_rules! parameters {
             ///
             /// Returns a `500` failure when the resource cannot be encoded.
             pub fn respond_resource<R: Json>(resource: &R, wire: Wire) -> Result<Response, Failure> {
-                let object = resource.to_json().map_err(|e| {
-                    Failure::new(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "exception",
-                        format!("cannot encode the response: {e}"),
-                    )
-                })?;
+                let object = encode(resource)?;
                 Ok(wire.response(StatusCode::OK, &object, &fhir_types::$fhir::schema::SCHEMAS))
             }
         }

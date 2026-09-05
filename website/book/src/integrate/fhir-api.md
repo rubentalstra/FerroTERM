@@ -183,3 +183,41 @@ own design. An active concept has no successors.
 A `?fhir_cm=` naming a reference set the edition does not hold, or one that
 maps nothing, is a `not-found`; a base that is not the served edition, or an
 SCTID that does not parse, is a `400`.
+
+## Batch
+
+`POST [base]` with a `Bundle` of type `batch` runs every entry and answers a
+`batch-response` with one entry per request, in the order they were sent
+(<https://hl7.org/fhir/R4B/http.html#transaction>). The entries are
+independent: one that fails answers the `OperationOutcome` that the same
+request would have answered on its own, the rest still answer, and the batch
+itself answers `200`.
+
+Each entry names its request the way it would have been sent on its own:
+
+```json
+{"resourceType": "Bundle", "type": "batch", "entry": [
+  {"request": {"method": "GET", "url": "CodeSystem/$lookup?system=http://loinc.org&code=1963-8"}},
+  {"request": {"method": "POST", "url": "ValueSet/$validate-code"},
+   "resource": {"resourceType": "Parameters", "parameter": [
+     {"name": "url", "valueUri": "http://loinc.org/vs"},
+     {"name": "coding", "valueCoding": {"system": "http://loinc.org", "code": "1963-8"}}
+   ]}}
+]}
+```
+
+A `GET` entry carries the operation's inputs in the query of `request.url`; a
+`POST` entry carries them in a `Parameters` resource on the entry. Every
+terminology operation this server answers is reachable, at the type level and
+at the instance level, and `entry.fullUrl` comes back on the response entry so
+a client can pair the two. `response.status` is the code and its reason, such
+as `200 OK` or `404 Not Found`.
+
+A `transaction` Bundle is refused with `not-supported`: a transaction succeeds
+or fails as one unit across its entries, and this server does not process one.
+
+A failed entry carries its `OperationOutcome` as the entry's `resource`, the
+body the same request would have answered alone. `entry.response.outcome` is
+reserved by the specification for hints and warnings and is "not used for error
+responses in batch/transaction", and no version names another slot for the
+error, so this placement is FerroTERM's reading of an ambiguous rule.

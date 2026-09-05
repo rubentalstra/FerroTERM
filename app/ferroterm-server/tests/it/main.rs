@@ -11,6 +11,7 @@
     reason = "test assertions"
 )]
 
+mod batch;
 mod config;
 mod ecosystem;
 mod fixture;
