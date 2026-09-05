@@ -1,6 +1,6 @@
 {
-  "taken_at": "2026-09-05T18:09:15.675891Z",
-  "ferroterm_version": "0.0.11",
+  "taken_at": "2026-09-05T22:33:19.90564Z",
+  "ferroterm_version": "0.1.0",
   "fhir": "r4b",
   "machine": {
     "os": "macos",
@@ -9,28 +9,28 @@
     "memory_bytes": 17179869184,
     "container": false
   },
-  "system": "ICD-10-CM",
-  "system_uri": "http://hl7.org/fhir/sid/icd-10-cm",
-  "system_version": "2026",
-  "concepts": 98827,
-  "artifact_bytes": 40183293,
+  "system": "ICD-10-NL",
+  "system_uri": "http://hl7.org/fhir/sid/icd-10-nl",
+  "system_version": "2021",
+  "concepts": 42769,
+  "artifact_bytes": 20045068,
   "ingest": {
-    "seconds": 1.591526292,
-    "peak_rss_bytes": 346570752,
-    "release": "--icd10cm data/icd10cm/tables.zip --icd10cm data/icd10cm/tabular-order.zip"
+    "seconds": 1.067423,
+    "peak_rss_bytes": 235044864,
+    "release": "data/icd10/20241128 ICD-10-2021v3.1C.zip"
   },
-  "ready_seconds": 0.102806584,
-  "rss_open_bytes": 60555264,
-  "rss_warm_bytes": 61898752,
+  "ready_seconds": 0.107064792,
+  "rss_open_bytes": 35225600,
+  "rss_warm_bytes": 36487168,
   "latency": [
     [
       "lookup",
       {
         "status": 200,
-        "cold_ms": 2.207333,
-        "p50_ms": 0.115042,
-        "p95_ms": 0.157916,
-        "p99_ms": 0.19283399999999998,
+        "cold_ms": 2.3040000000000003,
+        "p50_ms": 0.092292,
+        "p95_ms": 0.110708,
+        "p99_ms": 0.14391600000000002,
         "warm_requests": 200
       }
     ],
@@ -38,10 +38,10 @@
       "validate-code",
       {
         "status": 200,
-        "cold_ms": 0.075792,
-        "p50_ms": 0.054875,
-        "p95_ms": 0.06754099999999999,
-        "p99_ms": 0.083083,
+        "cold_ms": 0.076041,
+        "p50_ms": 0.059500000000000004,
+        "p95_ms": 0.074167,
+        "p99_ms": 0.113041,
         "warm_requests": 200
       }
     ],
@@ -49,10 +49,10 @@
       "subsumes",
       {
         "status": 200,
-        "cold_ms": 0.28820799999999996,
-        "p50_ms": 0.051791,
-        "p95_ms": 0.067583,
-        "p99_ms": 0.073208,
+        "cold_ms": 0.087208,
+        "p50_ms": 0.054875,
+        "p95_ms": 0.07020900000000001,
+        "p99_ms": 0.075041,
         "warm_requests": 200
       }
     ]

@@ -13,6 +13,8 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-06
+
 ### Added
 
 - `FERROTERM_BASE_URL`: the URL clients reach the server at, stated per version as `CapabilityStatement.implementation.url` and in the terminology capabilities. A server behind a reverse proxy answers on an address it never sees, so the endpoint is configured rather than guessed from a socket or a forgeable header; a deployment that names none states no URL. `compose.yaml` gains a `proxied` profile: Caddy terminates TLS in front and the server publishes no host port.
@@ -621,7 +623,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.0.11...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.1.0
 [0.0.11]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.11
 [0.0.10]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.10
 [0.0.9]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.9

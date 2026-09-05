@@ -1,6 +1,6 @@
 {
-  "taken_at": "2026-09-05T18:09:22.040425Z",
-  "ferroterm_version": "0.0.11",
+  "taken_at": "2026-09-05T22:33:24.820155Z",
+  "ferroterm_version": "0.1.0",
   "fhir": "r4b",
   "machine": {
     "os": "macos",
@@ -15,22 +15,22 @@
   "concepts": 81468,
   "artifact_bytes": 71873136,
   "ingest": {
-    "seconds": 4.545778417,
-    "peak_rss_bytes": 646447104,
+    "seconds": 4.453060334,
+    "peak_rss_bytes": 637108224,
     "release": "data/rxnorm/RxNorm_full_prescribe_current.zip"
   },
-  "ready_seconds": 0.30662925,
-  "rss_open_bytes": 106921984,
-  "rss_warm_bytes": 118669312,
+  "ready_seconds": 0.211242583,
+  "rss_open_bytes": 106676224,
+  "rss_warm_bytes": 118505472,
   "latency": [
     [
       "lookup",
       {
         "status": 200,
-        "cold_ms": 3.3570840000000004,
-        "p50_ms": 1.0239159999999998,
-        "p95_ms": 1.334917,
-        "p99_ms": 1.411375,
+        "cold_ms": 3.33775,
+        "p50_ms": 0.9866670000000001,
+        "p95_ms": 1.212666,
+        "p99_ms": 1.350375,
         "warm_requests": 200
       }
     ],
@@ -38,10 +38,10 @@
       "validate-code",
       {
         "status": 200,
-        "cold_ms": 0.162833,
-        "p50_ms": 0.123041,
-        "p95_ms": 0.16525,
-        "p99_ms": 0.198291,
+        "cold_ms": 0.176083,
+        "p50_ms": 0.11425,
+        "p95_ms": 0.13262500000000002,
+        "p99_ms": 0.154583,
         "warm_requests": 200
       }
     ]
