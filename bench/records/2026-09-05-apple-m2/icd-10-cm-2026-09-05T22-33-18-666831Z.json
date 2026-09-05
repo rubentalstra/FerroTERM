@@ -1,6 +1,6 @@
 {
-  "taken_at": "2026-09-05T18:09:16.926249Z",
-  "ferroterm_version": "0.0.11",
+  "taken_at": "2026-09-05T22:33:18.666831Z",
+  "ferroterm_version": "0.1.0",
   "fhir": "r4b",
   "machine": {
     "os": "macos",
@@ -9,28 +9,28 @@
     "memory_bytes": 17179869184,
     "container": false
   },
-  "system": "ICD-10-NL",
-  "system_uri": "http://hl7.org/fhir/sid/icd-10-nl",
-  "system_version": "2021",
-  "concepts": 42769,
-  "artifact_bytes": 20045068,
+  "system": "ICD-10-CM",
+  "system_uri": "http://hl7.org/fhir/sid/icd-10-cm",
+  "system_version": "2026",
+  "concepts": 98827,
+  "artifact_bytes": 40183293,
   "ingest": {
-    "seconds": 1.079196292,
-    "peak_rss_bytes": 228884480,
-    "release": "data/icd10/20241128 ICD-10-2021v3.1C.zip"
+    "seconds": 1.577797583,
+    "peak_rss_bytes": 345554944,
+    "release": "--icd10cm data/icd10cm/tables.zip --icd10cm data/icd10cm/tabular-order.zip"
   },
-  "ready_seconds": 0.10289775,
-  "rss_open_bytes": 34979840,
-  "rss_warm_bytes": 36372480,
+  "ready_seconds": 0.106759667,
+  "rss_open_bytes": 60735488,
+  "rss_warm_bytes": 61964288,
   "latency": [
     [
       "lookup",
       {
         "status": 200,
-        "cold_ms": 1.9062919999999999,
-        "p50_ms": 0.108542,
-        "p95_ms": 0.156709,
-        "p99_ms": 0.18025,
+        "cold_ms": 3.8839170000000003,
+        "p50_ms": 0.116625,
+        "p95_ms": 0.1395,
+        "p99_ms": 0.163916,
         "warm_requests": 200
       }
     ],
@@ -38,10 +38,10 @@
       "validate-code",
       {
         "status": 200,
-        "cold_ms": 0.10525,
-        "p50_ms": 0.053084,
-        "p95_ms": 0.08904200000000001,
-        "p99_ms": 0.099542,
+        "cold_ms": 0.091625,
+        "p50_ms": 0.049459,
+        "p95_ms": 0.064208,
+        "p99_ms": 0.06983299999999999,
         "warm_requests": 200
       }
     ],
@@ -49,10 +49,10 @@
       "subsumes",
       {
         "status": 200,
-        "cold_ms": 0.066875,
-        "p50_ms": 0.056666999999999995,
-        "p95_ms": 0.07070800000000001,
-        "p99_ms": 0.079542,
+        "cold_ms": 0.05925,
+        "p50_ms": 0.052834000000000006,
+        "p95_ms": 0.069875,
+        "p99_ms": 0.095167,
         "warm_requests": 200
       }
     ]

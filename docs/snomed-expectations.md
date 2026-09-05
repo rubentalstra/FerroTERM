@@ -6,7 +6,7 @@ licensed editions.
 
 Every verdict here comes from a request made to a running server, not from
 reading the code. The server was `cargo build --release -p ferroterm-server`
-at `68e66c767` on `main`, release 0.0.11, bound to `127.0.0.1:8211`, serving
+at `68e66c767` on `main`, release 0.1.0, bound to `127.0.0.1:8211`, serving
 `/r4b`. It was run three times over the artifacts the owner's licensed
 releases build into:
 

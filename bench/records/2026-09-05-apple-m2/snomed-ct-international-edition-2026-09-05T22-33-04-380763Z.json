@@ -1,6 +1,6 @@
 {
-  "taken_at": "2026-09-05T18:09:00.784641Z",
-  "ferroterm_version": "0.0.11",
+  "taken_at": "2026-09-05T22:33:04.380763Z",
+  "ferroterm_version": "0.1.0",
   "fhir": "r4b",
   "machine": {
     "os": "macos",
@@ -11,26 +11,26 @@
   },
   "system": "SNOMED CT (International edition)",
   "system_uri": "http://snomed.info/sct",
-  "system_version": "http://snomed.info/sct/449080006/version/20260901",
+  "system_version": "http://snomed.info/sct/900000000000207008/version/20260901",
   "concepts": 535502,
-  "artifact_bytes": 625664176,
+  "artifact_bytes": 625664194,
   "ingest": {
-    "seconds": 19.185312916,
-    "peak_rss_bytes": 2440577024,
+    "seconds": 18.515815084,
+    "peak_rss_bytes": 2518384640,
     "release": "data/snomed/SnomedCT_InternationalRF2_PRODUCTION_20260901T120000Z.zip"
   },
-  "ready_seconds": 0.410381625,
-  "rss_open_bytes": 692502528,
-  "rss_warm_bytes": 702038016,
+  "ready_seconds": 0.41763475,
+  "rss_open_bytes": 693075968,
+  "rss_warm_bytes": 703348736,
   "latency": [
     [
       "lookup",
       {
         "status": 200,
-        "cold_ms": 8.027291,
-        "p50_ms": 0.515042,
-        "p95_ms": 0.5615,
-        "p99_ms": 0.609334,
+        "cold_ms": 8.956375000000001,
+        "p50_ms": 0.526708,
+        "p95_ms": 0.5995,
+        "p99_ms": 0.77925,
         "warm_requests": 200
       }
     ],
@@ -38,10 +38,10 @@
       "validate-code",
       {
         "status": 200,
-        "cold_ms": 0.970459,
-        "p50_ms": 0.093125,
-        "p95_ms": 0.112792,
-        "p99_ms": 0.125375,
+        "cold_ms": 0.767167,
+        "p50_ms": 0.088625,
+        "p95_ms": 0.1075,
+        "p99_ms": 0.125292,
         "warm_requests": 200
       }
     ],
@@ -49,10 +49,10 @@
       "subsumes",
       {
         "status": 200,
-        "cold_ms": 1.8660409999999998,
-        "p50_ms": 0.069583,
-        "p95_ms": 0.097916,
-        "p99_ms": 0.11637499999999999,
+        "cold_ms": 0.666459,
+        "p50_ms": 0.065708,
+        "p95_ms": 0.096167,
+        "p99_ms": 0.12804200000000002,
         "warm_requests": 200
       }
     ],
@@ -60,10 +60,10 @@
       "expand-small",
       {
         "status": 200,
-        "cold_ms": 2.812083,
-        "p50_ms": 0.1835,
-        "p95_ms": 0.208875,
-        "p99_ms": 0.235,
+        "cold_ms": 2.3357080000000003,
+        "p50_ms": 0.175334,
+        "p95_ms": 0.21208300000000002,
+        "p99_ms": 0.264083,
         "warm_requests": 200
       }
     ],
@@ -71,10 +71,10 @@
       "expand-large",
       {
         "status": 200,
-        "cold_ms": 2.5374999999999996,
-        "p50_ms": 1.879042,
-        "p95_ms": 2.08075,
-        "p99_ms": 2.213583,
+        "cold_ms": 2.375334,
+        "p50_ms": 1.8541670000000001,
+        "p95_ms": 1.936833,
+        "p99_ms": 2.13625,
         "warm_requests": 200
       }
     ],
@@ -82,10 +82,10 @@
       "search",
       {
         "status": 200,
-        "cold_ms": 1.254,
-        "p50_ms": 0.305375,
-        "p95_ms": 0.339541,
-        "p99_ms": 0.354375,
+        "cold_ms": 2.1193750000000002,
+        "p50_ms": 0.304458,
+        "p95_ms": 0.332459,
+        "p99_ms": 0.35375,
         "warm_requests": 200
       }
     ]
