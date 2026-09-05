@@ -1,0 +1,158 @@
+# SPDX-License-Identifier: BUSL-1.1
+
+# The differential check against Snowstorm, the SNOMED CT reference server.
+#
+# This lane cannot run per PR: it needs a licensed SNOMED CT edition (never
+# committed) and a Snowstorm deployment, which wants Elasticsearch and 16 to
+# 32 GB of RAM. So it runs weekly, over content the repository points at but
+# never carries, and files an issue when the two servers answer differently.
+#
+# Two repository secrets configure it, and the run skips cleanly while either
+# is missing:
+#
+#   SNOMED_RF2_URL   a URL the runner can fetch one licensed RF2 release zip
+#                    from. The edition stays the owner's; nothing about it is
+#                    committed here.
+#   SNOWSTORM_URL    the FHIR base of a running Snowstorm loaded with THAT SAME
+#                    release, for example https://snowstorm.example/fhir. The
+#                    harness never starts one.
+#
+# The harness refuses to compare two servers that report different editions, so
+# a divergence is always about behaviour. Where Snowstorm and the specification
+# disagree the specification wins, and the divergence is recorded rather than
+# absorbed (.claude/rules/testing.md, oracles).
+name: Differential
+
+on:
+  schedule:
+    - cron: "23 4 * * 2"
+  workflow_dispatch:
+    inputs:
+      fhir:
+        description: The FHIR version to answer over.
+        type: choice
+        options: [r4b, r4, r5]
+        default: r4b
+
+permissions: {}
+
+concurrency:
+  group: differential
+  cancel-in-progress: false
+
+jobs:
+  # Secrets are unreadable from a job-level `if:`, so the guard is a job that
+  # reads them through env and reports one output.
+  configured:
+    name: edition configured
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Whether both secrets are set
+        id: check
+        env:
+          RF2_URL: ${{ secrets.SNOMED_RF2_URL }}
+          SNOWSTORM_URL: ${{ secrets.SNOWSTORM_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${RF2_URL}" && -n "${SNOWSTORM_URL}" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "the edition and the reference server are configured"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "set SNOMED_RF2_URL and SNOWSTORM_URL to run the differential"
+          fi
+
+  differential:
+    name: differential
+    needs: configured
+    if: needs.configured.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      # File the divergence where the work is tracked.
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: differential
+      - run: cargo build --release --locked -p ferroterm-server -p ferroterm-build
+
+      - name: Fetch the licensed edition
+        env:
+          RF2_URL: ${{ secrets.SNOMED_RF2_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/edition
+          curl -fsSL --retry 3 --retry-delay 5 -o target/edition/rf2.zip "${RF2_URL}"
+
+      - name: Build the index
+        run: target/release/ferroterm-build --rf2 target/edition/rf2.zip --out target/edition/index
+
+      - name: Answer the sample against both servers
+        id: diff
+        env:
+          SNOWSTORM_URL: ${{ secrets.SNOWSTORM_URL }}
+          FHIR: ${{ inputs.fhir || 'r4b' }}
+        run: |
+          set -euo pipefail
+          scripts/checks/differential.sh \
+            --index target/edition/index \
+            --snowstorm "${SNOWSTORM_URL}" \
+            --fhir "${FHIR}"
+
+      # The recorded run: the projections both servers answered with, and the
+      # divergences if any. The manual differential criterion on #39 points at
+      # these artifacts.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: differential-report
+          path: |
+            target/differential/*.json
+            target/differential/divergences.txt
+          retention-days: 90
+
+      - name: File the divergence
+        if: failure() && steps.diff.conclusion == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FHIR: ${{ inputs.fhir || 'r4b' }}
+        run: |
+          set -euo pipefail
+          title="test(conformance): the differential harness diverged from Snowstorm"
+          {
+            echo "The weekly differential run over the configured edition answered"
+            echo "differently from Snowstorm on FHIR ${FHIR}."
+            echo
+            echo "Run: ${RUN_URL}"
+            echo
+            if [[ -s target/differential/divergences.txt ]]; then
+              echo '```text'
+              cat target/differential/divergences.txt
+              echo '```'
+            else
+              echo "The harness failed before it compared anything; read the run log."
+            fi
+            echo
+            echo "A divergence is a defect in FerroTERM or a spec-cited deviation."
+            echo "The specification decides, not Snowstorm"
+            echo "(<https://hl7.org/fhir/R4B/terminology-service.html>)."
+          } > divergence.md
+          open=$(gh issue list --state open --search "$title in:title" \
+            --json number --jq '.[0].number // empty')
+          if [[ -n "$open" ]]; then
+            gh issue comment "$open" --body-file divergence.md
+          else
+            gh issue create --title "$title" --body-file divergence.md \
+              --label test --label P1 --label "spec:SNOMED"
+          fi

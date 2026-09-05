@@ -1,0 +1,132 @@
+{
+  "comment": [
+    "The requests the differential harness replays against FerroTERM and against",
+    "Snowstorm over the same licensed edition. Every entry carries SNOMED CT",
+    "identifiers and nothing else: no term, no definition, no hierarchy, so this",
+    "file distributes no SNOMED CT content. The concepts are the International",
+    "Edition's most stable top-level anchors, chosen so the sample survives a",
+    "release cycle. The inactive concept is stable by construction: an",
+    "inactive concept is never reactivated.",
+    "",
+    "`compare` names the projection the harness diffs, because the two servers",
+    "answer the same question in different shapes. The projections are defined in",
+    "scripts/checks/differential.sh."
+  ],
+  "system": "http://snomed.info/sct",
+  "requests": [
+    {
+      "name": "lookup-clinical-finding",
+      "operation": "lookup",
+      "compare": "display",
+      "parameters": { "code": "404684003" }
+    },
+    {
+      "name": "lookup-body-structure",
+      "operation": "lookup",
+      "compare": "display",
+      "parameters": { "code": "123037004" }
+    },
+    {
+      "name": "lookup-procedure",
+      "operation": "lookup",
+      "compare": "display",
+      "parameters": { "code": "71388002" }
+    },
+    {
+      "name": "lookup-inactive",
+      "operation": "lookup",
+      "compare": "display",
+      "parameters": { "code": "106004" }
+    },
+    {
+      "name": "validate-code-known",
+      "operation": "validate-code",
+      "compare": "result",
+      "parameters": { "code": "404684003" }
+    },
+    {
+      "name": "validate-code-unknown",
+      "operation": "validate-code",
+      "compare": "result",
+      "parameters": { "code": "999999999999" }
+    },
+    {
+      "name": "validate-code-wrong-display",
+      "operation": "validate-code",
+      "compare": "result",
+      "parameters": { "code": "404684003", "display": "Not the display" }
+    },
+    {
+      "name": "subsumes-parent-of",
+      "operation": "subsumes",
+      "compare": "outcome",
+      "parameters": { "codeA": "404684003", "codeB": "22298006" }
+    },
+    {
+      "name": "subsumes-child-of",
+      "operation": "subsumes",
+      "compare": "outcome",
+      "parameters": { "codeA": "22298006", "codeB": "404684003" }
+    },
+    {
+      "name": "subsumes-equivalent",
+      "operation": "subsumes",
+      "compare": "outcome",
+      "parameters": { "codeA": "404684003", "codeB": "404684003" }
+    },
+    {
+      "name": "subsumes-unrelated",
+      "operation": "subsumes",
+      "compare": "outcome",
+      "parameters": { "codeA": "123037004", "codeB": "71388002" }
+    },
+    {
+      "name": "expand-ecl-descendants",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "ecl": "<< 73211009", "count": "200" }
+    },
+    {
+      "name": "expand-ecl-children",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "ecl": "< 73211009", "count": "200" }
+    },
+    {
+      "name": "expand-ecl-refinement",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "ecl": "< 404684003 : 363698007 = << 39057004", "count": "200" }
+    },
+    {
+      "name": "expand-ecl-conjunction",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "ecl": "< 73211009 AND < 64572001", "count": "200" }
+    },
+    {
+      "name": "expand-ecl-exclusion",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "ecl": "< 73211009 MINUS < 46635009", "count": "200" }
+    },
+    {
+      "name": "expand-ecl-member-of",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "ecl": "^ 900000000000538005", "count": "200" }
+    },
+    {
+      "name": "expand-isa-implicit",
+      "operation": "expand",
+      "compare": "codes",
+      "parameters": { "isa": "73211009", "count": "200" }
+    },
+    {
+      "name": "translate-historical-same-as",
+      "operation": "translate",
+      "compare": "targets",
+      "parameters": { "code": "106004", "cm": "900000000000527005" }
+    }
+  ]
+}
