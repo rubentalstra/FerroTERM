@@ -103,10 +103,16 @@ FHIR R4 under `/r4`, R4B under `/r4b`, R5 under `/r5`, and the R6 ballot under
 `/r6`, each in its own version's shapes:
 `CodeSystem/$lookup`, `CodeSystem/$validate-code`,
 `CodeSystem/$subsumes`, `ValueSet/$expand` (paging, `filter`, version
-pins, inline and request-scoped value sets), `ValueSet/$validate-code`,
-`ConceptMap/$translate`, `GET ValueSet/{id}` and `GET ValueSet?url=`,
-`$versions`, `$cache-control`, `metadata`, and
-`metadata?mode=terminology`. Every failure is an `OperationOutcome` with a
+pins, nested `contains`, inline and request-scoped value sets),
+`ValueSet/$validate-code`,
+`ConceptMap/$translate` (loaded, inline, and the SNOMED implicit concept maps),
+`$closure` (on `/r4`, `/r4b`, and `/r5`; the R6 ballot defines none),
+`POST [base]` with a `batch` `Bundle`, `GET ValueSet/{id}` and
+`GET ValueSet?url=`, `$versions`, `$cache-control`, `metadata`, and
+`metadata?mode=terminology`. A deployment that names a database in
+`FERROTERM_RESOURCES` also serves `POST`, `PUT`, `GET`, `DELETE`, `_history`
+reads, and `?url=` search of `CodeSystem`, `ValueSet`, and `ConceptMap`, with
+`ETag` and `If-Match`. Every failure is an `OperationOutcome` with a
 `tx-issue-type` coding.
 
 Conformance is measured, not asserted: CI runs the HL7 terminology ecosystem
@@ -119,9 +125,13 @@ tracker). Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept`.
 
 The tracker's milestones are the roadmap:
 
-- **v0.1.0**: the differential harness against Snowstorm and the Dutch
-  reference server, the latency and ingest bars measured in CI, metrics and
-  request identifiers, and the deployment guide.
+- **v0.1.0**: every public claim on the README, the site, and the book checked
+  against the code and the recorded evidence before the cut.
+- **v0.1.1**: the open HL7 terminology ecosystem suite cases, and the read and
+  build paths measured against the latency and ingest bars.
+- **v0.2.0**: the differential check against the Nictiz Nationale
+  Terminologieserver for the Dutch variants; the Snowstorm differential harness
+  runs today.
 
 ## How it is built
 

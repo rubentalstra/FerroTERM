@@ -20,11 +20,14 @@ R6 ballot under `/r6`; the CI lane runs the HL7 terminology ecosystem suite
 against the published versions on every change and holds a committed pass list
 per version.
 
-Some of what a mature terminology server does is still on the roadmap, and
-this book says so where it matters: hierarchical expansion, persisted client
-resources, `Bundle` batch, `$closure`, and the SNOMED implicit concept maps
-(v0.0.11). Each is an issue with acceptance criteria on the tracker; the
-milestones are the roadmap.
+Hierarchical expansion, persisted client resources, `Bundle` batch, `$closure`,
+and the SNOMED implicit concept maps are served. The persisted resources and the
+closure tables need a deployment that names a database in `FERROTERM_RESOURCES`,
+and `$closure` answers on `/r4`, `/r4b`, and `/r5`, since the R6 ballot defines
+no such operation. Where a mature terminology server does more, such as
+authoring SNOMED content and MRCM validation of post-coordinated expressions,
+this book says so. Each open item is an issue with acceptance criteria on the
+tracker, and the milestones are the roadmap.
 
 ## Who each part of this book is for
 

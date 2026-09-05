@@ -20,9 +20,19 @@ The server exposes the FHIR terminology API on R4B:
   valid, whether its display is right (the correct one comes back when it is
   not), and, for a value set, whether the code is a member.
 - `ValueSet/$expand`: the members of a value set, paged, filtered by text,
-  with version pins, over loaded, inline, and request-scoped value sets.
+  with version pins, over loaded, inline, and request-scoped value sets. A
+  compose of one include over one system comes back as that system's own tree,
+  nested under `contains`.
 - `ConceptMap/$translate`: the targets a code maps to, from loaded or inline
-  maps.
+  maps and from the SNOMED implicit concept maps (`?fhir_cm=[sctid]`).
+- `$closure`: a named transitive closure table the server keeps in step with
+  the codes a client registers, answered as a `ConceptMap` delta.
+- `POST [base]` with a `batch` `Bundle`: every entry answered in the order it
+  was sent, each one independent of the rest.
+- `POST`, `PUT`, `GET`, `DELETE`, `_history` reads, and `?url=` search of
+  `CodeSystem`, `ValueSet`, and `ConceptMap`, with `ETag` and `If-Match`, where
+  the deployment names a database in `FERROTERM_RESOURCES`. The closure tables
+  live in the same database.
 - `metadata` and `metadata?mode=terminology`: what this deployment serves.
 
 ## What it serves
@@ -69,15 +79,12 @@ clinical data repository by the same author. FerroTERM is independent of it.
 
 ## What is not built yet
 
-The build order is the tracker's milestones. As of v0.0.11:
+The build order is the tracker's milestones.
 
-- Post-coordinated SNOMED expressions (`expressions = true`) are v0.0.11; ECL,
-  every implicit value set, and the implicit concept maps (`?fhir_cm=`) are
-  served.
-- The licence-gated providers program (LOINC, ICD-10, the classifications,
-  the Dutch national code systems) closes out in v0.0.11 over owner-licensed
-  data; R4, R4B, R5, and the R6 ballot answer in JSON and XML today.
-- Hierarchical (nested) expansion, persisted client resources, `Bundle`
-  batch, `ConceptMap/$closure`, and the SNOMED implicit concept maps are
-  v0.0.11.
+- Post-coordinated SNOMED expressions are not served: the SNOMED URI's
+  `expressions` parameter answers `false`. ECL, every implicit value set, and
+  the implicit concept maps (`?fhir_cm=`) are served.
 - MRCM validation of postcoordinated SNOMED expressions is not scheduled.
+- FerroTERM serves an index built from a finished release. It authors no
+  code system content, and it has no syndication client, so you download the
+  release yourself and run the build tool over it.
