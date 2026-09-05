@@ -50,5 +50,9 @@ tempfile.workspace = true
 name = "nl_reads"
 harness = false
 
+[[bench]]
+name = "operations"
+harness = false
+
 [lints]
 workspace = true
