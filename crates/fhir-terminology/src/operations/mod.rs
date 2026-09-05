@@ -257,6 +257,12 @@ impl From<ProviderError> for OperationError {
             // (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>).
             ProviderError::MalformedImplicitConceptMap { .. } => Self::Invalid(error.to_string()),
             ProviderError::UnknownImplicitConceptMap { url } => Self::UnknownConceptMap(url),
+            // NOTE: an implicit URI whose base names an edition version the server
+            // does not hold is a version it cannot find, not a malformed value set
+            // (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets").
+            ProviderError::UnservedImplicitVersion { url, version } => {
+                Self::UnknownVersion { url, version }
+            }
             ProviderError::CannotDetermine(_) => Self::CannotDetermine(error.to_string()),
             ProviderError::InvalidCode { code, reason } => Self::InvalidCode { code, reason },
             other @ ProviderError::Storage(_) => Self::Provider(other),

@@ -23,6 +23,7 @@ fresh link reference.
 
 ### Fixed
 
+- A SNOMED CT implicit value set or concept map based on a non-default edition answers when several editions are loaded. The FHIR SNOMED CT page lets any edition version stand as the base URL, and the edition in the base decides the membership, but the server only asked the default version of the system, so every `?fhir_vs` form and `?fhir_cm=` on another loaded edition was refused as a malformed URI. The registry now asks every loaded version, default first, so the bare `http://snomed.info/sct` base still answers from the default edition. A base naming an edition version no loaded version serves is a `not-found` on that version rather than `vs-invalid`.
 - The LOINC and RxNorm builds name a property key they never registered instead of reporting "too many concepts": a defect in the build no longer surfaces as a capacity error. The RxNorm relationship-type lookup is split the same way, and `TooMany` keeps its own meaning.
 - An expression constraint of deeply nested brackets no longer takes the server down. The ECL parser descends with the grammar, so an unbounded nesting exhausted the stack and aborted the process, which no `OperationOutcome` survives; the parser now refuses past `sct_ecl::NESTING_LIMIT` (64) and the server answers the refusal as an `OperationOutcome`. Found by the `ecl_parse` fuzz target.
 

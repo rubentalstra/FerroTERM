@@ -484,6 +484,15 @@ pub enum ProviderError {
         /// The URI.
         url: String,
     },
+    /// An implicit URI of this system names a version of it that this provider
+    /// is not, so another loaded version of the system may answer it.
+    #[error("unknown version `{version}` of code system `{url}`")]
+    UnservedImplicitVersion {
+        /// The system.
+        url: String,
+        /// The version the implicit URI names.
+        version: String,
+    },
 }
 
 /// The hierarchy of a system whose `hierarchyMeaning` is `is-a`.
