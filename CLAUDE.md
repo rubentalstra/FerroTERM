@@ -238,6 +238,7 @@ tx.fhir.org) are behavioural oracles for spec-silent edge cases only.
   scope; this list is what the server must do, and release contents are decided
   during development. See `.claude/rules/writing-style.md` §Scope framing.
 - @docs/ci-cd.md: the CI/CD and supply-chain design.
+- `docs/release.md`: the release checklist (the cut, in order).
 - @docs/VERSIONS.md: the pinned version matrix.
 - `website/book`: the mdBook documentation site (`website/book/src`).
 - `website/landing`: the landing page.

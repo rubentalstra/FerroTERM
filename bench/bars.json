@@ -1,0 +1,63 @@
+{
+  "comment": [
+    "The latency bars the project claims, and the benches that measure them.",
+    "Point reads answer in under a millisecond and a page of an expansion in",
+    "under ten (docs/architecture.md, issues #77 and #129); scripts/checks/",
+    "bench-bars.sh runs the benches and fails when a median crosses its bar.",
+    "",
+    "A bar is the CLAIM, not a machine's measurement: it never moves to match",
+    "a slower run. `measured_ms` records what one machine answered, so the",
+    "headroom a run has is visible, and it is a record, never a gate."
+  ],
+  "machine": "Apple M2 Pro, macOS 25.5, release profile, 20000 synthetic concepts",
+  "bars": [
+    {
+      "bench": "operations/lookup",
+      "max_ms": 1.0,
+      "measured_ms": 0.009,
+      "claim": "a point read answers in under a millisecond"
+    },
+    {
+      "bench": "operations/validate_code",
+      "max_ms": 1.0,
+      "measured_ms": 0.008,
+      "claim": "a point read answers in under a millisecond"
+    },
+    {
+      "bench": "operations/subsumes",
+      "max_ms": 1.0,
+      "measured_ms": 0.002,
+      "claim": "subsumption answers from the closure in under a millisecond"
+    },
+    {
+      "bench": "expand/isa_root_page_10",
+      "max_ms": 10.0,
+      "measured_ms": 2.139,
+      "claim": "a page of an expansion is cut from the bitmaps in under ten milliseconds"
+    },
+    {
+      "bench": "http/lookup",
+      "max_ms": 1.0,
+      "measured_ms": 0.041,
+      "claim": "the served operation, routing and codec included, stays under a millisecond"
+    },
+    {
+      "bench": "http/validate_code",
+      "max_ms": 1.0,
+      "measured_ms": 0.011,
+      "claim": "the served operation, routing and codec included, stays under a millisecond"
+    },
+    {
+      "bench": "http/subsumes",
+      "max_ms": 1.0,
+      "measured_ms": 0.007,
+      "claim": "the served operation, routing and codec included, stays under a millisecond"
+    },
+    {
+      "bench": "http/expand_page_10",
+      "max_ms": 10.0,
+      "measured_ms": 2.16,
+      "claim": "the served page of an expansion stays under ten milliseconds"
+    }
+  ]
+}

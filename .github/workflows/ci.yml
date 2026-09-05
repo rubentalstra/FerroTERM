@@ -369,6 +369,32 @@ jobs:
           cache: false
       - run: cargo publish --workspace --dry-run --locked
 
+  # The latency bars, measured over the generated edition so the lane needs no
+  # licensed release. A bar is the claim, never a machine's measurement:
+  # bench/bars.json holds the claims and the script fails on a breach.
+  bench-bars:
+    name: bench-bars
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: bench-bars
+      - run: scripts/checks/bench-bars.sh
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: bench-bars
+          path: target/criterion/*/*/new/estimates.json
+          retention-days: 14
+
   msrv:
     name: msrv (cargo-hack)
     needs: detect
@@ -483,6 +509,7 @@ jobs:
       - crate-version-guard
       - publish-dry-run
       - msrv
+      - bench-bars
       - tx-ecosystem
       - dependency-review
     if: always()
