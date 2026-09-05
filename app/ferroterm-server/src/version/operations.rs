@@ -38,7 +38,9 @@ macro_rules! operations {
             use fhir_types::$fhir::operations::value_set_validate_code::{
                 VALUE_SET_VALIDATE_CODE, ValueSetValidateCodeRequest,
             };
-            use fhir_types::$fhir::parameters::Parameters;
+            use fhir_types::$fhir::parameters::{Parameters, ParametersParameter};
+            use fhir_types::$fhir::resource::Resource;
+            use fhir_types::codec::Json;
             use http::{HeaderMap, StatusCode};
 
             use super::resources::split_resources;
@@ -146,13 +148,123 @@ macro_rules! operations {
             }
 
             fn run_value_set_validate_code(scope: &Scope, parameters: &Parameters) -> Handled {
+                parameters::encode(&value_set_validation(scope, parameters)?)
+            }
+
+            /// One `ValueSet/$validate-code` as this version's `Parameters`.
+            fn value_set_validation(
+                scope: &Scope,
+                parameters: &Parameters,
+            ) -> Result<Parameters, Failure> {
                 let request = ValueSetValidateCodeRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let validation = value_set_validate_code::validate_code(
                     &scope.sources(),
                     &map::value_set_validate_input(&request),
                 )?;
-                parameters::encode(&map::value_set_validation_parameters(&validation))
+                Ok(map::value_set_validation_parameters(&validation))
+            }
+
+            /// The name of one validation in a batch, in and out.
+            const VALIDATION: &str = "validation";
+
+            /// `$batch-validate-code`: many validations against one value set, in one
+            /// request.
+            ///
+            /// No `OperationDefinition` declares this operation, in any core package or
+            /// in the terminology ecosystem IG, so the contract is the IG's own test
+            /// cases (`batch/batch-validate`, `batch/batch-validate-bad`) plus the
+            /// ecosystem's `$validate-code` semantics: the request carries the shared
+            /// inputs once and a `validation` parameter per validation, each a
+            /// `Parameters` of that validation's own inputs, and the answer repeats
+            /// `validation` in the same order.
+            fn run_batch_validate(scope: &Scope, parameters: &Parameters) -> Handled {
+                let mut shared = Vec::new();
+                let mut validations = Vec::new();
+                for parameter in &parameters.parameter {
+                    if parameter.name.value.as_deref() == Some(VALIDATION) {
+                        validations.push(parameter);
+                    } else {
+                        shared.push(parameter.clone());
+                    }
+                }
+                let answered: Vec<ParametersParameter> = validations
+                    .into_iter()
+                    .map(|validation| answer(scope, &shared, validation))
+                    .collect();
+                parameters::encode(&Parameters {
+                    parameter: answered,
+                    ..Default::default()
+                })
+            }
+
+            /// One validation of a batch, answered in its own slot.
+            ///
+            /// A validation the server cannot run answers an `OperationOutcome` in that
+            /// slot and leaves the others alone, the way a batch `Bundle` entry does
+            /// (<https://hl7.org/fhir/R4B/http.html#transaction>).
+            fn answer(
+                scope: &Scope,
+                shared: &[ParametersParameter],
+                validation: &ParametersParameter,
+            ) -> ParametersParameter {
+                let resource = match own(validation) {
+                    Ok(own) => {
+                        let merged = merge(shared, own);
+                        match value_set_validation(scope, &merged) {
+                            Ok(answered) => Some(Resource::Parameters(Box::new(answered))),
+                            Err(failure) => outcome_resource(&failure),
+                        }
+                    }
+                    Err(failure) => outcome_resource(&failure),
+                };
+                ParametersParameter {
+                    name: VALIDATION.into(),
+                    resource,
+                    ..Default::default()
+                }
+            }
+
+            /// The `Parameters` one `validation` carries.
+            fn own(validation: &ParametersParameter) -> Result<&Parameters, Failure> {
+                match &validation.resource {
+                    Some(Resource::Parameters(parameters)) => Ok(parameters),
+                    _ => Err(Failure::new(
+                        StatusCode::BAD_REQUEST,
+                        "invalid",
+                        format!("each `{VALIDATION}` carries a `Parameters` resource"),
+                    )),
+                }
+            }
+
+            /// The shared inputs with one validation's own on top: a name the
+            /// validation states is the validation's, not the request's.
+            fn merge(shared: &[ParametersParameter], own: &Parameters) -> Parameters {
+                let mut parameter: Vec<ParametersParameter> = shared
+                    .iter()
+                    .filter(|kept| {
+                        !own.parameter
+                            .iter()
+                            .any(|stated| stated.name.value == kept.name.value)
+                    })
+                    .cloned()
+                    .collect();
+                parameter.extend(own.parameter.iter().cloned());
+                Parameters {
+                    parameter,
+                    ..Default::default()
+                }
+            }
+
+            /// A failure as the `OperationOutcome` resource of one slot.
+            fn outcome_resource(failure: &Failure) -> Option<Resource> {
+                failure.outcome().to_json().ok().and_then(|object| {
+                    Resource::from_json(
+                        &object,
+                        &mut fhir_types::codec::Path::root("OperationOutcome"),
+                    )
+                    .ok()
+                })
             }
 
             /// The refusal of `reverse` on a version that does not declare it.
@@ -542,6 +654,28 @@ macro_rules! operations {
                 finish(
                     from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body)
                         .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)), wire)
+            }
+
+            /// `POST /ValueSet/$batch-validate-code` and `POST /CodeSystem/$batch-validate-code`.
+            ///
+            /// The operation changes nothing, but it carries its validations in a body,
+            /// so it is offered on `POST` alone
+            /// (<https://hl7.org/fhir/R4B/operations.html#executing>).
+            pub async fn batch_validate_code_post(
+                State(state): State<Arc<AppState>>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+                body: Bytes,
+            ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body)
+                        .and_then(|(scope, p)| run_batch_validate(&scope, &p)),
+                    wire,
+                )
             }
 
             /// `GET /ConceptMap/$translate`.

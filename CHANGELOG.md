@@ -15,6 +15,7 @@ fresh link reference.
 
 ### Added
 
+- `$batch-validate-code` on `ValueSet` and `CodeSystem`, on every served version: one `POST` carries the shared inputs once, a `validation` parameter per validation, each a `Parameters` of that validation's own inputs, and the answer repeats `validation` in the same order with that validation's `$validate-code` outputs. A validation states its own value for an input the request also states, and a validation the server cannot run answers an `OperationOutcome` in its own slot while the others still answer. No `OperationDefinition` declares the operation anywhere, so the contract is the terminology ecosystem suite's cases, whose `batch/batch-validate` now passes on `/r4b`, `/r4` and `/r5`.
 - The fuzz targets under `fuzz/`: every parser an untrusted input reaches (ECL, the FHIR JSON and XML bodies, the SNOMED CT implicit `?fhir_vs=` and `?fhir_cm=` forms, and the RF2 file names, effective times, and identifiers) is fed arbitrary bytes by `cargo-fuzz`, weekly in CI and by hand for longer runs. The seeds are committed; a crash uploads the input that reproduces it.
 
 ### Fixed

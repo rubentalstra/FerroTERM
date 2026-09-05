@@ -1,3 +1,4 @@
+batch/batch-validate
 big/big-echo-fifty-fifty-limit
 big/big-echo-no-limit
 big/big-echo-zero-fifty-limit
