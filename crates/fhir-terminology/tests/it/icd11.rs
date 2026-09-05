@@ -5,7 +5,8 @@ use ferroterm_testkit::icd11::{BLOCK, CHOLERA, RELEASE, SEPSIS, VIBRIO, write_ar
 use fhir_terminology::filter::{Filter, FilterOperator};
 use fhir_terminology::icd11::{Icd11Provider, OpenError};
 use fhir_terminology::provider::{
-    Capability, CodeSystemProvider, Concept, HierarchyMeaning, PropertyValue, ProviderError,
+    Capability, CodeSystemProvider, Compositional, Concept, HierarchyMeaning, PropertyValue,
+    ProviderError,
 };
 
 const MMS: &str = "http://id.who.int/icd/release/11/mms";
@@ -72,7 +73,6 @@ fn codes_and_entity_uris_in_both_forms_name_the_same_concept() {
         mms.declaration().hierarchy_meaning,
         Some(HierarchyMeaning::ClassifiedWith)
     );
-    assert!(mms.declaration().compositional);
     assert!(mms.declaration().case_sensitive);
     assert_eq!(mms.declaration().languages, ["en", "fr"]);
     let by_code = located(&mms, "1A00");
@@ -632,4 +632,28 @@ fn the_composes_spelling_survives_an_include_merge_and_a_value_set_import() {
         ..Default::default()
     });
     assert_eq!(imported, [cholera_uri], "the imported URI spelling");
+}
+
+#[test]
+fn a_linearizations_grammar_is_defined_and_supported_and_the_foundation_has_none() {
+    let (_dir, mms, icf, foundation) = providers();
+    // `CodeSystem.compositional` is "The code system defines a compositional
+    // (post-coordination) grammar"
+    // (<https://hl7.org/fhir/R4B/codesystem-definitions.html#CodeSystem.compositional>)
+    // and `TerminologyCapabilities.codeSystem.version.compositional` is "If the
+    // compositional grammar defined by the code system is supported"
+    // (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>).
+    // A linearization defines postcoordination clusters and this provider
+    // locates one, so both hold; the foundation defines no such grammar.
+    for provider in [&mms, &icf] {
+        assert_eq!(
+            provider.declaration().compositional,
+            Compositional::Supported
+        );
+        assert!(provider.declaration().compositional.defined());
+        assert!(provider.declaration().compositional.supported());
+    }
+    assert_eq!(foundation.declaration().compositional, Compositional::None);
+    assert!(!foundation.declaration().compositional.defined());
+    assert!(!foundation.declaration().compositional.supported());
 }

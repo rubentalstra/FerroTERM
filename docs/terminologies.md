@@ -50,7 +50,11 @@ engine. Each row is a tracker issue under the program issue.
   `http://snomed.info/sct/[sctid]/version/[YYYYMMDD]`, at minimum
   `http://snomed.info/sct/[sctid]`; a date without an edition SHOULD be refused
   (<https://hl7.org/fhir/R4B/snomedct.html>, §Versions). Codes are concept ids
-  or compositional-grammar expressions; description ids and terms are not codes.
+  or compositional-grammar expressions; description ids and terms are not
+  codes. The grammar SNOMED CT defines is `CodeSystem.compositional`; this
+  server evaluates no expression, so
+  `TerminologyCapabilities.codeSystem.version.compositional` is false and an
+  expression is refused as a grammar the server does not serve.
 - **Distribution and licence.** RF2 release files from SNOMED International or
   a national release centre (the Netherlands: Nictiz), under the SNOMED CT
   Affiliate Licence or a member-country licence

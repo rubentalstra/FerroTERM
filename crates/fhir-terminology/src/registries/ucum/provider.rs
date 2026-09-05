@@ -11,9 +11,9 @@ use super::grammar::{Atom, Expression, parse};
 use crate::compose::{Compose, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
-    Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
-    DesignationUse, FilterDefinition, Hierarchy, Identity, Located, Property, PropertyDefinition,
-    PropertyKind, PropertyValue, ProviderError, Status,
+    Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
+    Designation, DesignationUse, FilterDefinition, Hierarchy, Identity, Located, Property,
+    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
 };
 use crate::registries::interned::Interned;
 
@@ -53,7 +53,10 @@ impl UcumProvider {
                 content: ContentMode::NotPresent,
                 case_sensitive: true,
                 hierarchy_meaning: None,
-                compositional: true,
+                // NOTE: UCUM §2 defines the unit expression grammar, and this
+                // provider parses and canonicalizes it, so the grammar is both
+                // defined and supported.
+                compositional: Compositional::Supported,
                 languages: vec![String::from("en")],
                 properties: vec![
                     PropertyDefinition {

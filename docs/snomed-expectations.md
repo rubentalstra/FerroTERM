@@ -34,7 +34,8 @@ appear in two sources, and where they do the detail says so.
 
 A row that a later change fixes is re-checked the same way, on a server built
 from that change over the same two artifact directories, and the detail says
-which issue moved it. [C22](#c22-detail) was re-checked on issue #361.
+which issue moved it. [C22](#c22-detail) was re-checked on issue #361,
+[C5](#c5-detail) on issue #367.
 
 ## Where the expectations come from
 
@@ -88,7 +89,7 @@ the observed ECL coverage sits under [A3](#a3) as its evidence.
 | <a id="c2"></a>C2 | §.1 Version: a URI for a specific Edition published on a particular date | **Partially met** | Same defect as [B1](#b1-detail), issue #359 |
 | <a id="c3"></a>C3 | §.1 Code: Concept IDs are valid in the `code` element | **Met** | [C3](#c3-detail) · `::locate_accepts_valid_sctids_only` |
 | <a id="c4"></a>C4 | §.1 Code: "SNOMED CT Terms and Description Identifiers are not valid as codes in FHIR" | **Met** | [C3](#c3-detail) · `::locate_accepts_valid_sctids_only` |
-| <a id="c5"></a>C5 | §.1, §.5 Code: SNOMED CT Expressions in Compositional Grammar are valid in the `code` element | **Not offered** | [C5](#c5-detail); the capability statement contradicts the refusal, issue #367 |
+| <a id="c5"></a>C5 | §.1, §.5 Code: SNOMED CT Expressions in Compositional Grammar are valid in the `code` element | **Not offered** | [C5](#c5-detail) · `crates/fhir-terminology/tests/it/snomed.rs::a_post_coordinated_expression_is_refused_for_the_grammar_not_as_an_unknown_concept`; the capability statement says so, issue #367 |
 | <a id="c6"></a>C6 | §.1 Display: "The best display is the preferred term in the relevant language or dialect, as specified in the associated language reference set" | **Met** | [C6](#c6-detail) · `::display_is_the_preferred_term_of_the_language_with_a_stated_fallback` |
 | <a id="c7"></a>C7 | §.1 Inactive: "Inactive codes are identified using the 'inactive' property" | **Met** | [C7](#c7-detail) · `::properties_follow_the_snomed_on_fhir_list` |
 | <a id="c8"></a>C8 | §.1 Subsumption: "based on the \|is a\| relationship defined by SNOMED CT" | **Met** | [C8](#c8-detail) · `::the_hierarchy_answers_subsumption_and_the_filters_from_the_closure` |
@@ -482,13 +483,14 @@ $translate url=…?fhir_cm=900000000000527005 code=155728006   (inactive)
 
 `900000000000527005` is SAME AS, which the §.10 table gives the relationship
 `equal`, and that is the equivalence returned. A map reference set returns
-its target with the RF2 columns as `product` parts:
+its target in the code system the reference set maps to, with the RF2 columns
+as `product` parts:
 
 ```
 $translate url=…?fhir_cm=447562003 code=74400008
 -> result true
    equivalence relatedto
-   concept K37
+   concept K37 in http://hl7.org/fhir/sid/icd-10
    product mapGroup 1, mapPriority 1, mapRule TRUE, mapAdvice "ALWAYS K37",
            correlationId 447561005, mapCategoryId 447637006
 ```
@@ -642,15 +644,18 @@ returns. §.6 RDF describes `http://snomed.info/id/[concept-id]` and
 `system`/`code` pair, which is a representation question rather than a
 terminology API one.
 
-<a id="c5-detail"></a>**C5. Post-coordinated expressions.**
+<a id="c5-detail"></a>**C5. Post-coordinated expressions.** Re-checked on
+issue #367.
 
 SNOMED CT Expressions in Compositional Grammar are valid codes per §.1, and
-FerroTERM refuses them:
+FerroTERM refuses them, naming the grammar as the reason:
 
 ```
 $lookup system=http://snomed.info/sct code=74400008:363698007=66754008
--> 400 invalid-code
-   code `74400008:363698007=66754008` is not in code system `http://snomed.info/sct`
+-> 400 not-supported
+   code `74400008:363698007=66754008` is an expression in the compositional
+   grammar of code system `http://snomed.info/sct`, which this server does
+   not evaluate
 ```
 
 The page provides the way to say so. §.8.4 defines the `expressions` filter
@@ -659,16 +664,22 @@ for exactly this, and FerroTERM declares it with the description
 and refuses `expressions = true`. That is a spec-sanctioned declaration, so
 the absence is recorded here rather than filed.
 
-Two things about it are wrong, and both are issue #367. The capability
-statement contradicts the refusal: it declares
-`TerminologyCapabilities.codeSystem.version.compositional = true`, which the
-R4B definition in the vendored package glosses as "If the compositional
-grammar defined by the code system is supported". One flag feeds that
-element and `CodeSystem.compositional`, whose definition is different ("The
-code system defines a compositional (post-coordination) grammar") and true
-for SNOMED CT. And the refusal answers `invalid-code`, so a client reads
-"no such concept" where the server means "this server does not evaluate
-expressions".
+The capability statement agrees with the refusal since issue #367. The two
+FHIR elements read two different declarations, because their definitions in
+the vendored packages are different. `CodeSystem.compositional` is "The code
+system defines a compositional (post-coordination) grammar", which is true of
+SNOMED CT.
+`TerminologyCapabilities.codeSystem.version.compositional` is "If the
+compositional grammar defined by the code system is supported", which is
+false of this server, and that is what the terminology capabilities now
+carry, on both editions:
+
+```
+GET /r4b/metadata?mode=terminology
+   codeSystem http://snomed.info/sct
+     version http://snomed.info/sct/449080006/version/20260901   compositional false
+     version http://snomed.info/sct/11000146104/version/20260630 compositional false
+```
 
 <a id="c14-detail"></a>**C14. `normalForm` and `normalFormTerse`.** Issue
 #364.

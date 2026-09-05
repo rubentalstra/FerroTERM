@@ -7,9 +7,9 @@ use std::sync::Arc;
 use fhir_terminology::compose::{Compose, Include, SystemRef};
 use fhir_terminology::filter::{Filter, FilterOperator};
 use fhir_terminology::provider::{
-    Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
-    DesignationUse, Hierarchy, HierarchyMeaning, Identity, Located, Property, PropertyDefinition,
-    PropertyKind, PropertyValue, ProviderError, Status,
+    Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
+    Designation, DesignationUse, Hierarchy, HierarchyMeaning, Identity, Located, Property,
+    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
 };
 use fhir_terminology::registry::Registry;
 
@@ -178,7 +178,7 @@ impl Fixture {
                 content: ContentMode::NotPresent,
                 case_sensitive: true,
                 hierarchy_meaning: hierarchical.then_some(HierarchyMeaning::IsA),
-                compositional: false,
+                compositional: Compositional::None,
                 languages: vec![String::from("en"), String::from("nl")],
                 properties: vec![
                     PropertyDefinition {

@@ -15,8 +15,8 @@ use fhir_terminology::valueset::store::ValueSetStore;
 
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
-    ALTERNATIVE_SCTID, CAT, CODES_MAP, DOG, FISH, POSSIBLY_EQUIVALENT_TO_SCTID, REPLACED_BY_SCTID,
-    SAME_AS_SCTID, VERSION, item, sctid,
+    ALTERNATIVE_SCTID, CAT, CODES_MAP, DOG, FISH, ICD10_MAP_SCTID, ICD10_SYSTEM,
+    POSSIBLY_EQUIVALENT_TO_SCTID, REPLACED_BY_SCTID, SAME_AS_SCTID, VERSION, item, sctid,
 };
 
 /// The edition, and a registry holding it.
@@ -164,17 +164,19 @@ fn an_association_map_carries_the_page_s_template() {
 #[test]
 fn a_map_reference_set_translates_to_its_target_code_with_the_rf2_columns() {
     let world = World::new();
-    let matches = world.translate(Some(&map_url(&code(CODES_MAP))), &code(CAT));
+    let matches = world.translate(Some(&map_url(ICD10_MAP_SCTID)), &code(CAT));
     let found = match matches.as_slice() {
         [found] => found,
         other => panic!("one match, not {}", other.len()),
     };
+    let concept = found.concept.as_ref().expect("a target concept");
+    assert_eq!(concept.code.as_deref(), Some("C01"));
+    // The group states the target system, so the match carries it
+    // (<https://hl7.org/fhir/R4B/conceptmap-definitions.html#ConceptMap.group.target>).
+    assert_eq!(concept.system.as_deref(), Some(ICD10_SYSTEM));
     assert_eq!(
-        found
-            .concept
-            .as_ref()
-            .and_then(|concept| concept.code.as_deref()),
-        Some("C01")
+        concept.version, None,
+        "RF2 records no version of the scheme a mapTarget code comes from"
     );
     let parts: Vec<&str> = found
         .products
@@ -201,20 +203,58 @@ fn a_map_reference_set_translates_to_its_target_code_with_the_rf2_columns() {
 }
 
 #[test]
-fn a_map_reference_set_declares_no_target_system() {
+fn a_map_reference_set_names_the_code_system_its_targets_belong_to() {
     let world = World::new();
     let resolved = world.registry.resolve(SYSTEM, None).expect("snomed");
     let map = resolved
         .provider
-        .implicit_concept_map(&map_url(&code(CODES_MAP)))
+        .implicit_concept_map(&map_url(ICD10_MAP_SCTID))
         .expect("an implicit map")
         .expect("it builds");
     let group = map.groups.first().expect("one group");
     assert_eq!(group.source.as_deref(), Some(SYSTEM));
+    assert_eq!(group.source_version.as_deref(), Some(VERSION));
+    // R4B: `group.target` is the absolute URI of the target system, needed unless
+    // the target value set names one system or every target is `unmatched`, and an
+    // implicit map states neither
+    // (<https://hl7.org/fhir/R4B/conceptmap-definitions.html#ConceptMap.group.target>).
     assert_eq!(
-        group.target, None,
-        "no RF2 file records which system a mapTarget belongs to"
+        group.target.as_deref(),
+        Some(ICD10_SYSTEM),
+        "the reference set says which scheme its mapTarget codes come from"
     );
+    assert_eq!(
+        group.target_version, None,
+        "RF2 records no version of that scheme"
+    );
+}
+
+#[test]
+fn a_map_reference_set_of_an_unnamed_scheme_is_refused() {
+    let world = World::new();
+    let resolved = world.registry.resolve(SYSTEM, None).expect("snomed");
+    let url = map_url(&code(CODES_MAP));
+    // A map reference set the server has no code system URI for cannot state
+    // `group.target`, so it is refused rather than answered with a target Coding
+    // that carries a code and no system
+    // (<https://hl7.org/fhir/R4B/conceptmap-definitions.html#ConceptMap.group.target>).
+    assert!(
+        matches!(
+            resolved.provider.implicit_concept_map(&url),
+            Some(Err(ProviderError::UnnamedConceptMapTarget { .. }))
+        ),
+        "an unrecognised map reference set names no target system"
+    );
+    let input = TranslateInput {
+        url: Some(url),
+        code: Some(code(CAT)),
+        system: Some(String::from(SYSTEM)),
+        ..TranslateInput::default()
+    };
+    assert!(matches!(
+        translate(&world.sources(), &input),
+        Err(OperationError::NotSupported(_))
+    ));
 }
 
 #[test]

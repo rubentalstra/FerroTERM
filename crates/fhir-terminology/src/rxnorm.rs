@@ -28,8 +28,8 @@ use serde::Deserialize;
 use crate::compose::{Compose, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
-    Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
-    DesignationUse, FilterDefinition, Identity, Located, Property, PropertyDefinition,
+    Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
+    Designation, DesignationUse, FilterDefinition, Identity, Located, Property, PropertyDefinition,
     PropertyKind, PropertyValue, ProviderError, Status,
 };
 
@@ -599,7 +599,7 @@ fn declaration(
         content: ContentMode::NotPresent,
         case_sensitive: true,
         hierarchy_meaning: None,
-        compositional: false,
+        compositional: Compositional::None,
         languages,
         properties,
         filters,

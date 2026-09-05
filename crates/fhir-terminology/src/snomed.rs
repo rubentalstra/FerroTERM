@@ -40,9 +40,9 @@ use serde::Deserialize;
 use crate::compose::{Compose, ConceptRef, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
-    Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
-    DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located, Property,
-    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
+    Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
+    Designation, DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located,
+    Property, PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
 };
 
 /// The SNOMED CT system URI.
@@ -55,6 +55,14 @@ const FHIR_VS: &str = "fhir_vs";
 /// The query key of an implicit concept map URI
 /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
 const FHIR_CM: &str = "fhir_cm";
+
+/// The characters SNOMED CT Compositional Grammar spends on the structure of
+/// an expression: the definition status prefix (`===`, `<<<`), the `+` between
+/// focus concepts, the `:` before a refinement, the `=` of an attribute, the
+/// braces of an attribute group, the `,` between attributes, and the `|` of a
+/// term (<http://snomed.org/scg>). A concept reference alone carries none of
+/// them, so their presence is what separates an expression from an SCTID.
+const SCG_OPERATORS: [char; 8] = ['+', ':', '=', '{', '}', ',', '|', '<'];
 /// The manifest file inside an artifact directory.
 pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest version this provider reads: the store beside the hierarchy
@@ -351,7 +359,10 @@ impl SnomedProvider {
                 // SNOMED codes are digits, so the flag never changes a lookup.
                 case_sensitive: false,
                 hierarchy_meaning: Some(HierarchyMeaning::IsA),
-                compositional: true,
+                // NOTE: SNOMED CT defines Compositional Grammar
+                // (<http://snomed.org/scg>) and this server evaluates no
+                // expression, so the grammar is defined and not supported.
+                compositional: Compositional::Defined,
                 languages: manifest.languages,
                 properties,
                 // NOTE: the FHIR SNOMED CT page defines `concept is-a` and `concept in`
@@ -782,6 +793,13 @@ impl CodeSystemProvider for SnomedProvider {
                 concept: Concept::new(ordinal.index()),
                 code: code.to_owned(),
             }))
+    }
+
+    // NOTE: SNOMED CT Expressions in Compositional Grammar are valid codes
+    // (<https://hl7.org/fhir/R4B/snomedct.html>, "Code"), so an expression is
+    // refused for the grammar, not as a concept the edition lacks.
+    fn is_expression(&self, code: &str) -> bool {
+        code.contains(SCG_OPERATORS)
     }
 
     fn code(&self, concept: Concept) -> Result<Option<String>, ProviderError> {

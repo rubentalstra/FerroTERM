@@ -1,6 +1,13 @@
 //! `TerminologyCapabilities` from the registry, rendered per FHIR version.
 
+use std::sync::Arc;
+
 use fhir_terminology::capabilities::Summary;
+use fhir_terminology::fhir_codesystem::load::{FhirVersion, load_file};
+use fhir_terminology::fhir_codesystem::provider::FhirCodeSystem;
+use fhir_terminology::provider::{CodeSystemProvider, Compositional};
+use fhir_terminology::registries::ucum::provider::{URL as UCUM, UcumProvider};
+use fhir_terminology::registry::Registry;
 use fhir_types::codec::Json;
 use serde_json::Value;
 
@@ -92,4 +99,70 @@ fn r4_r4b_and_r5_render_their_own_shapes() {
     )
     .expect("decodes");
     assert_eq!(decoded, summary.to_r5("2026-09-02T00:00:00Z"));
+}
+
+/// A `CodeSystem` resource that declares a compositional grammar, written to a
+/// file so the generic provider loads it the way a deployment's package does.
+const GRAMMAR_SYSTEM: &str = "http://example.org/fhir/CodeSystem/grammar";
+
+fn declares_a_grammar() -> (tempfile::TempDir, FhirCodeSystem) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("CodeSystem-grammar.json");
+    let resource = serde_json::json!({
+        "resourceType": "CodeSystem",
+        "url": GRAMMAR_SYSTEM,
+        "version": "1.0",
+        "status": "active",
+        "content": "complete",
+        "caseSensitive": true,
+        "compositional": true,
+        "concept": [{"code": "a", "display": "A"}]
+    });
+    std::fs::write(&path, resource.to_string()).expect("writes");
+    let model = load_file(&path, FhirVersion::R5).expect("loads");
+    assert!(model.compositional, "the resource declares the grammar");
+    let provider = FhirCodeSystem::new(model).expect("builds");
+    (dir, provider)
+}
+
+#[test]
+fn a_declared_grammar_and_a_supported_grammar_are_two_different_statements() {
+    // `CodeSystem.compositional` is "The code system defines a compositional
+    // (post-coordination) grammar"
+    // (<https://hl7.org/fhir/R4B/codesystem-definitions.html#CodeSystem.compositional>);
+    // `TerminologyCapabilities.codeSystem.version.compositional` is "If the
+    // compositional grammar defined by the code system is supported"
+    // (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>).
+    // The generic provider serves the concepts a resource enumerates and
+    // evaluates no grammar, so the two disagree for it.
+    let (_dir, grammar) = declares_a_grammar();
+    assert_eq!(grammar.declaration().compositional, Compositional::Defined);
+    assert!(grammar.declaration().compositional.defined());
+    assert!(!grammar.declaration().compositional.supported());
+    // UCUM's own provider parses the unit expression grammar, so both hold.
+    let ucum = UcumProvider::new();
+    assert_eq!(ucum.declaration().compositional, Compositional::Supported);
+    assert!(ucum.declaration().compositional.defined());
+    assert!(ucum.declaration().compositional.supported());
+
+    let mut registry = Registry::new();
+    registry.register(Arc::new(grammar)).expect("registers");
+    registry.register(Arc::new(ucum)).expect("registers");
+    let summary = Summary::of(&registry);
+    let flags: Vec<(&str, bool)> = summary
+        .systems
+        .iter()
+        .map(|system| (system.url.as_str(), system.versions[0].compositional))
+        .collect();
+    assert_eq!(flags, [(GRAMMAR_SYSTEM, false), (UCUM, true)]);
+    let json = Value::Object(
+        summary
+            .to_r4b("2026-09-05T00:00:00Z")
+            .to_json()
+            .expect("encodes"),
+    );
+    assert_eq!(json["codeSystem"][0]["uri"], GRAMMAR_SYSTEM);
+    assert_eq!(json["codeSystem"][0]["version"][0]["compositional"], false);
+    assert_eq!(json["codeSystem"][1]["uri"], UCUM);
+    assert_eq!(json["codeSystem"][1]["version"][0]["compositional"], true);
 }

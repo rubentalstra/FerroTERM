@@ -34,9 +34,9 @@ use serde::Deserialize;
 use crate::compose::{Compose, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
-    Capability, CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
-    DesignationUse, Hierarchy, HierarchyMeaning, Identity, Located, Property, PropertyDefinition,
-    PropertyKind, PropertyValue, ProviderError, Status, Subproperty,
+    Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
+    Designation, DesignationUse, Hierarchy, HierarchyMeaning, Identity, Located, Property,
+    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status, Subproperty,
 };
 use crate::registries::interned::Interned;
 
@@ -1130,7 +1130,14 @@ fn declaration(linearization: Linearization, languages: Vec<String>) -> Declarat
         content: ContentMode::NotPresent,
         case_sensitive: true,
         hierarchy_meaning: Some(HierarchyMeaning::ClassifiedWith),
-        compositional: linearization != Linearization::Foundation,
+        // NOTE: a linearization defines postcoordination clusters
+        // (<https://icd.who.int/icdapi>), and this provider validates and
+        // locates one; the foundation defines no such grammar.
+        compositional: if linearization == Linearization::Foundation {
+            Compositional::None
+        } else {
+            Compositional::Supported
+        },
         languages,
         properties,
         filters: Vec::new(),

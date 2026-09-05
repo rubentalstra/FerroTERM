@@ -15,7 +15,7 @@ use super::interned::Interned;
 use crate::compose::Compose;
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
-    CodeSystemProvider, Concept, ConceptSet, ContentMode, Declaration, Designation,
+    CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration, Designation,
     FilterDefinition, Hierarchy, Identity, Located, Property, PropertyDefinition, PropertyKind,
     PropertyValue, ProviderError, Status,
 };
@@ -237,7 +237,10 @@ impl Bcp13Provider {
                 content: ContentMode::NotPresent,
                 case_sensitive: false,
                 hierarchy_meaning: None,
-                compositional: true,
+                // NOTE: RFC 6838 §4.2 defines the `type/subtype` construction
+                // with parameters, and this provider parses it, so the grammar
+                // is both defined and supported.
+                compositional: Compositional::Supported,
                 languages: Vec::new(),
                 properties: vec![
                     PropertyDefinition {

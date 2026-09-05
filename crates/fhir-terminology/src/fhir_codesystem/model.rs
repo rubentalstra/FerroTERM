@@ -179,7 +179,9 @@ impl CodeSystemModel {
             content: declaration.content,
             case_sensitive: declaration.case_sensitive,
             hierarchy_meaning: declaration.hierarchy_meaning,
-            compositional: declaration.compositional,
+            // `CodeSystem.compositional` is whether the code system defines a
+            // grammar, which is `defined`, not whether this server evaluates it.
+            compositional: declaration.compositional.defined(),
             version_needed: identity.version_needed,
             supplements: None,
             properties: declaration.properties.clone(),

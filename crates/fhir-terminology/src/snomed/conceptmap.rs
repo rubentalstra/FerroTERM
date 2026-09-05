@@ -7,12 +7,14 @@
 //! association member points at another SNOMED concept through
 //! `targetComponentId`, so its group names SNOMED as both source and target.
 //!
-//! The same page says a simple map reference set also defines an implicit
-//! concept map, and gives it no template. A map member points at a code of
-//! another system through `mapTarget`, and no RF2 file records which system
-//! that is, so the group names no target. No specification says how the
-//! complex and extended map columns reach `$translate` either; carrying them as
-//! `product` parts is our own design.
+//! The same page says a map reference set also defines an implicit concept
+//! map, then gives the query part only the four association ids and one
+//! template whose group target is SNOMED, so the shape of a map reference
+//! set's concept map is spec-silent and ours. A map member points at a code of
+//! another system through `mapTarget`, and no RF2 row records which system
+//! that is, so the reference set says which scheme it maps to and
+//! [`MAP_SCHEMES`] holds the FHIR URI of each. Carrying the complex and
+//! extended map columns as `product` parts is our own design too.
 
 use concept_graph::ordinal::Ordinal;
 use concept_graph::refsets::{Table, ValueRef};
@@ -37,6 +39,63 @@ const PRODUCT_FIELDS: [&str; 6] = [
     "mapAdvice",
     "correlationId",
     "mapCategoryId",
+];
+
+/// One map reference set: its concept id and the code system its `mapTarget`
+/// codes belong to.
+struct MapScheme {
+    /// The reference set concept id.
+    refset: u64,
+    /// The FHIR URI of the code system the targets are codes of.
+    system: &'static str,
+}
+
+/// The map reference sets this server names a target code system for, each
+/// with the URI FHIR publishes for the scheme it maps to.
+///
+/// `ConceptMap.group.target` is "An absolute URI that identifies the target
+/// system that the concepts will be mapped to", and R4B says it "is not needed
+/// if the target value set is specified and it contains concepts from only a
+/// single system" or if "all of the target element equivalence values are
+/// 'unmatched'"
+/// (<https://hl7.org/fhir/R4B/conceptmap-definitions.html#ConceptMap.group.target>).
+/// An implicit map states no target value set and its targets are real codes,
+/// so neither case applies and the group states the system. RF2 records the
+/// scheme nowhere on a member row, so the reference set says which one it is.
+const MAP_SCHEMES: [MapScheme; 5] = [
+    // `447562003`, the ICD-10 extended map; its target is WHO ICD-10 (SNOMED CT to
+    // ICD-10 Map Specification §2, §7), whose URI is
+    // <https://hl7.org/fhir/R4B/icd.html> §Summary.
+    MapScheme {
+        refset: 447_562_003,
+        system: "http://hl7.org/fhir/sid/icd-10",
+    },
+    // `447563008 |SNOMED CT to ICD-9-CM equivalence complex map reference set|` (RF2
+    // §5.2.3.3); the ICD-9-CM URI of <https://hl7.org/fhir/R4B/icd.html> §Summary.
+    MapScheme {
+        refset: 447_563_008,
+        system: "http://hl7.org/fhir/sid/icd-9-cm",
+    },
+    // `446608001`, the ICD-O map (SNOMED CT Terminology Services Guide §4.12); the
+    // preferred `uri` of the active `icd-o-3` NamingSystem of `hl7.terminology`.
+    MapScheme {
+        refset: 446_608_001,
+        system: "http://terminology.hl7.org/CodeSystem/icd-o-3",
+    },
+    // `900000000000497000`, the map to NHS Clinical Terms Version 3 (SNOMED CT
+    // Terminology Services Guide §4.12); the preferred `uri` of the `read-Codes`
+    // NamingSystem of `hl7.terminology`, defined as Clinical Terms Version 3.
+    MapScheme {
+        refset: 900_000_000_000_497_000,
+        system: "http://terminology.hl7.org/CodeSystem/read-Codes",
+    },
+    // `6011000124106 |ICD-10-CM complex map reference set|` of the US Edition (NLM,
+    // "SNOMED CT to ICD-10-CM Map"); the ICD-10-CM URI of
+    // <https://hl7.org/fhir/R4B/icd.html> §ICD-10 variants.
+    MapScheme {
+        refset: 6_011_000_124_106,
+        system: "http://hl7.org/fhir/sid/icd-10-cm",
+    },
 ];
 
 /// One historical association reference set: its concept id and the
@@ -86,6 +145,15 @@ fn association(refset: u64) -> Option<Relationship> {
         .iter()
         .find(|held| held.refset == refset)
         .map(|held| held.relationship)
+}
+
+/// The code system the `mapTarget` codes of `refset` belong to, when this
+/// server names one for it.
+fn scheme(refset: u64) -> Option<&'static str> {
+    MAP_SCHEMES
+        .iter()
+        .find(|held| held.refset == refset)
+        .map(|held| held.system)
 }
 
 /// The concepts this edition's `SAME AS` and `REPLACED BY` reference sets name
@@ -139,7 +207,9 @@ pub(crate) fn successors(
 /// # Errors
 ///
 /// Returns [`ProviderError::UnknownImplicitConceptMap`] when the edition holds
-/// no such reference set, and the storage error of a concept that does not read.
+/// no such reference set, [`ProviderError::UnnamedConceptMapTarget`] when it is
+/// a map reference set whose scheme [`MAP_SCHEMES`] does not name, and the
+/// storage error of a concept that does not read.
 pub(crate) fn concept_map(
     edition: &SnomedProvider,
     url: &str,
@@ -160,6 +230,23 @@ pub(crate) fn concept_map(
             url: url.to_owned(),
         });
     }
+    // NOTE: a bare `http://snomed.info/sct` base means an unspecified edition, and the
+    // server SHALL answer from the edition it serves, so the map states that version
+    // either way (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
+    let base = edition.identity().version.clone();
+    // A member points at another SNOMED concept through `targetComponentId`, and at a
+    // code of the reference set's own scheme through `mapTarget`.
+    let (target_system, target_version) = if target_component.is_some() {
+        (SYSTEM.to_owned(), Some(base.clone()))
+    } else {
+        let named = scheme(refset).ok_or_else(|| ProviderError::UnnamedConceptMapTarget {
+            url: url.to_owned(),
+            reason: format!("no code system URI is recorded for map reference set `{refset}`"),
+        })?;
+        // NOTE: RF2 records no version of the scheme a `mapTarget` code comes from, so
+        // the group states the system alone (RF2 §Map Reference Sets).
+        (named.to_owned(), None)
+    };
     let mut elements: Vec<Element> = Vec::new();
     for row in 0..table.len() {
         let Some(source) = table.concept(row) else {
@@ -191,15 +278,6 @@ pub(crate) fn concept_map(
             }),
         }
     }
-    // NOTE: a map reference set names its target system nowhere in the RF2 rows, so
-    // only an association map, whose targets are SNOMED concepts, declares one
-    // (<https://hl7.org/fhir/R4B/snomedct.html>).
-    // NOTE: a bare `http://snomed.info/sct` base means an unspecified edition, and the
-    // server SHALL answer from the edition it serves, so the map states that version
-    // either way (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
-    let base = edition.identity().version.clone();
-    let target_system = relationship.map(|_| SYSTEM.to_owned());
-    let target_version = relationship.map(|_| base.clone());
     // NOTE: the page's template names the map after the reference set and scopes it
     // to the edition's own implicit value set
     // (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
@@ -218,7 +296,7 @@ pub(crate) fn concept_map(
         groups: vec![Group {
             source: Some(SYSTEM.to_owned()),
             source_version: Some(base),
-            target: target_system,
+            target: Some(target_system),
             target_version,
             elements,
             unmapped: None,
