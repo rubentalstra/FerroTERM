@@ -80,9 +80,16 @@ pub const ALTERNATIVE: u32 = 15;
 pub const MODULE_DEPENDENCY: u32 = 16;
 /// The edition module, a concept and the member of the Module Dependency set.
 pub const MODULE_CONCEPT: u32 = 17;
+/// The ICD-10 extended map reference set (a published SCTID); the cat maps to
+/// the ICD-10 code `C01`.
+pub const ICD10_MAP: u32 = 18;
 /// The bird, under the animal and a member of the pets reference set; only the
 /// second edition ([`write_second`]) holds it.
-pub const BIRD: u32 = 18;
+pub const BIRD: u32 = 19;
+/// The published SCTID of the ICD-10 extended map reference set.
+pub const ICD10_MAP_SCTID: &str = "447562003";
+/// The code system the ICD-10 extended map reference set maps to.
+pub const ICD10_SYSTEM: &str = "http://hl7.org/fhir/sid/icd-10";
 /// The published SCTID of the Module Dependency reference set.
 pub const MODULE_DEPENDENCY_SCTID: &str = "900000000000534007";
 /// The published SCTID of the historical association reference set root.
@@ -308,7 +315,7 @@ fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
     let (preferred, acceptable) = (0, 1);
     // The association reference set concepts share one shape: a published SCTID,
     // the metadata fully specified name, and the bare name as the synonym.
-    let association = |ordinal: u32, code: &'static str, name: &'static str| Row {
+    let metadata_refset = |ordinal: u32, code: &'static str, name: &'static str| Row {
         ordinal,
         code: Some(code),
         active: true,
@@ -527,22 +534,22 @@ fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
                 ("ZOO", "en", syn, true, vec![(gb, acceptable)]),
             ],
         },
-        association(
+        metadata_refset(
             REPLACED_BY,
             REPLACED_BY_SCTID,
             "REPLACED BY association reference set (foundation metadata concept)",
         ),
-        association(
+        metadata_refset(
             POSSIBLY_EQUIVALENT_TO,
             POSSIBLY_EQUIVALENT_TO_SCTID,
             "POSSIBLY EQUIVALENT TO association reference set (foundation metadata concept)",
         ),
-        association(
+        metadata_refset(
             ALTERNATIVE,
             ALTERNATIVE_SCTID,
             "ALTERNATIVE association reference set (foundation metadata concept)",
         ),
-        association(
+        metadata_refset(
             MODULE_DEPENDENCY,
             MODULE_DEPENDENCY_SCTID,
             "Module dependency reference set (foundation metadata concept)",
@@ -569,6 +576,11 @@ fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
                 ),
             ],
         },
+        metadata_refset(
+            ICD10_MAP,
+            ICD10_MAP_SCTID,
+            "ICD-10 extended map reference set (foundation metadata concept)",
+        ),
     ];
     let mut rows = Vec::from(rows);
     let mut is_a = vec![
@@ -588,6 +600,7 @@ fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
         (MODULE_DEPENDENCY, TOP),
         (MODULE_CONCEPT, TOP),
         (SCHEME, TOP),
+        (ICD10_MAP, TOP),
     ];
     if shape.bird {
         rows.push(Row {
@@ -759,6 +772,8 @@ fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
     memberships.insert(alternative, Ordinal::new(FISH));
     let module_dependency = refset_id(MODULE_DEPENDENCY)?;
     memberships.insert(module_dependency, Ordinal::new(MODULE_CONCEPT));
+    let icd10_map = refset_id(ICD10_MAP)?;
+    memberships.insert(icd10_map, Ordinal::new(CAT));
     let module_id: u64 = module.parse().unwrap_or_default();
     let member = |concept: u32, values: Vec<refsets::FieldValue>| refsets::MemberRow {
         concept: Ordinal::new(concept),
@@ -833,6 +848,32 @@ fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
                     ],
                 ),
             ],
+        )
+        .map_err(|e| graph_error(&e))?;
+    // The ICD-10 extended map carries the same RF2 columns under a published
+    // reference set id, so its targets are codes of a named code system.
+    tables
+        .insert(
+            icd10_map,
+            &[
+                (String::from("mapGroup"), refsets::FieldKind::Integer),
+                (String::from("mapPriority"), refsets::FieldKind::Integer),
+                (String::from("mapRule"), refsets::FieldKind::String),
+                (String::from("mapAdvice"), refsets::FieldKind::String),
+                (String::from("mapTarget"), refsets::FieldKind::String),
+                (String::from("correlationId"), refsets::FieldKind::Component),
+            ],
+            vec![member(
+                CAT,
+                vec![
+                    refsets::FieldValue::Integer(1),
+                    refsets::FieldValue::Integer(1),
+                    refsets::FieldValue::String(String::from("TRUE")),
+                    refsets::FieldValue::String(String::from("ALWAYS C01")),
+                    refsets::FieldValue::String(String::from("C01")),
+                    refsets::FieldValue::Component(447_561_005),
+                ],
+            )],
         )
         .map_err(|e| graph_error(&e))?;
     let target_component = [(

@@ -13,9 +13,9 @@ use fhir_terminology::snomed::{OpenError, SYSTEM, SnomedProvider};
 
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
-    ALTERNATIVE, ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, LEGS, MODULE_CONCEPT,
-    MODULE_DEPENDENCY, PETS, POSSIBLY_EQUIVALENT_TO, REPLACED_BY, SAME_AS, SCHEME, TOP, VERSION,
-    item, sctid,
+    ALTERNATIVE, ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, ICD10_MAP, LEGS,
+    MODULE_CONCEPT, MODULE_DEPENDENCY, PETS, POSSIBLY_EQUIVALENT_TO, REPLACED_BY, SAME_AS, SCHEME,
+    TOP, VERSION, item, sctid,
 };
 
 fn provider() -> (tempfile::TempDir, SnomedProvider) {
@@ -54,7 +54,7 @@ fn identity_and_declaration_follow_the_manifest() {
     assert!(codes.contains(&sctid(item(COVERING)).as_str()));
     assert!(codes.contains(&sctid(item(LEGS)).as_str()));
     assert_eq!(p.language_refsets(), [snomed::GB_REFSET, snomed::NL_REFSET]);
-    assert_eq!(p.all().expect("all").len(), 18);
+    assert_eq!(p.all().expect("all").len(), 19);
 }
 
 #[test]
@@ -237,7 +237,8 @@ fn the_hierarchy_answers_subsumption_and_the_filters_from_the_closure() {
             POSSIBLY_EQUIVALENT_TO,
             ALTERNATIVE,
             MODULE_DEPENDENCY,
-            MODULE_CONCEPT
+            MODULE_CONCEPT,
+            ICD10_MAP
         ]
     );
 }
@@ -353,7 +354,7 @@ fn the_implicit_value_sets_follow_the_snomed_ct_page() {
         .expect("compose");
     assert_eq!(
         refsets.include[0].concepts.len(),
-        7,
+        8,
         "every reference set with concept members"
     );
     assert!(
@@ -483,7 +484,7 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
         op: FilterOperator::Equal,
         value: value.to_owned(),
     };
-    assert_eq!(p.filter(&expressions("false")).expect("all").len(), 18);
+    assert_eq!(p.filter(&expressions("false")).expect("all").len(), 19);
     assert!(matches!(
         p.filter(&expressions("true")),
         Err(ProviderError::UnsupportedFilter { .. })

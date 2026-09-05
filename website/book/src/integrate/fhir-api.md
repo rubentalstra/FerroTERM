@@ -179,11 +179,30 @@ them.
 
 A map reference set maps a SNOMED concept to a code of another system through
 `mapTarget`. No RF2 file records which system that code belongs to, so the
-group names no target system. The complex and extended map columns
-(`mapGroup`, `mapPriority`, `mapRule`, `mapAdvice`, `correlationId`,
-`mapCategoryId`) travel as `product` parts of the match. No specification says
-where those columns belong in a `$translate` result; this placement is
-FerroTERM's own design.
+reference set itself says which scheme it maps to, and the group names that
+system:
+
+| Reference set | SCTID | Target system |
+|---|---|---|
+| ICD-10 extended map | `447562003` | `http://hl7.org/fhir/sid/icd-10` |
+| ICD-9-CM equivalence complex map | `447563008` | `http://hl7.org/fhir/sid/icd-9-cm` |
+| ICD-O simple map | `446608001` | `http://terminology.hl7.org/CodeSystem/icd-o-3` |
+| CTV3 simple map | `900000000000497000` | `http://terminology.hl7.org/CodeSystem/read-Codes` |
+| ICD-10-CM complex map (US Edition) | `6011000124106` | `http://hl7.org/fhir/sid/icd-10-cm` |
+
+R4B needs the group to name a target system whenever the targets are real
+codes: it may be left out only when the target value set names a single system,
+or when every target equivalence is `unmatched`
+(<https://hl7.org/fhir/R4B/conceptmap-definitions.html#ConceptMap.group.target>).
+A map reference set outside the table, such as a national extension's own map,
+is answered with `not-supported` rather than a target `Coding` that carries a
+code and no system. RF2 records no version of the target scheme, so the group
+names the system alone.
+
+The complex and extended map columns (`mapGroup`, `mapPriority`, `mapRule`,
+`mapAdvice`, `correlationId`, `mapCategoryId`) travel as `product` parts of the
+match. No specification says where those columns belong in a `$translate`
+result; this placement is FerroTERM's own design.
 
 A `$translate` that names no `url` and finds no stored map falls back to the
 historical associations of an inactive concept: the `SAME AS` and `REPLACED BY`

@@ -263,6 +263,10 @@ impl From<ProviderError> for OperationError {
             ProviderError::UnservedImplicitVersion { url, version } => {
                 Self::UnknownVersion { url, version }
             }
+            // NOTE: R4B needs `ConceptMap.group.target` whenever the targets are real
+            // codes, so a map the server cannot state one for is `not-supported`
+            // (<https://hl7.org/fhir/R4B/conceptmap-definitions.html#ConceptMap.group.target>).
+            ProviderError::UnnamedConceptMapTarget { .. } => Self::NotSupported(error.to_string()),
             ProviderError::CannotDetermine(_) => Self::CannotDetermine(error.to_string()),
             ProviderError::InvalidCode { code, reason } => Self::InvalidCode { code, reason },
             other @ ProviderError::Storage(_) => Self::Provider(other),
