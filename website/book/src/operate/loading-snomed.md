@@ -248,3 +248,30 @@ language the cache holds.
 FerroTERM's own tests use shaped, synthetic content only. They never contain real
 content extracted from a release, which keeps the licence line clean in the
 repository itself.
+
+## Derivative reference set packages
+
+SNOMED International publishes packages that carry only a module and its
+reference sets, over an edition they depend on. The ICNP Nursing Practice
+package is one: two concepts, a reference set of about two thousand
+International Edition concepts, and a module dependency naming the edition it
+was authored against.
+
+Layer one onto the edition it depends on with `--rf2-refset`, repeatable:
+
+```console
+$ ferroterm-build --rf2 /path/to/SnomedCT_InternationalRF2.zip \
+    --rf2-refset /path/to/SnomedCT_ICNPNursingPractice.zip \
+    --out /path/to/ferroterm-index
+```
+
+The package's concepts, descriptions, and language reference set members join
+the edition's, and its reference sets serve as implicit value sets of the
+edition, so `http://snomed.info/sct?fhir_vs=refset/1157358007` expands to the
+ICNP members. The manifest records what was layered.
+
+Each package's module dependency is checked against the edition before
+anything is read. An edition at or newer than the date a package was authored
+against meets the dependency; an older one does not and the build refuses,
+naming the module and both dates. A package naming a module the edition does
+not contain is refused the same way.

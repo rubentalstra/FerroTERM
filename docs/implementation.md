@@ -95,6 +95,7 @@ sequence, not a scope limit; the server serves every version.
   edition/version base
 - [x] Implicit concept maps: `?fhir_cm=[sctid]`; historical-association and
   map reference sets wired into `$translate`
+- [x] Refset-only packages layered onto the edition they depend on, checked against the Module Dependency Reference Set
 - [ ] Multi-edition support via the Module Dependency Reference Set; default
   edition+version resolution and per-request override
 - [x] Preferred-term / display selection from the language reference set and RF2

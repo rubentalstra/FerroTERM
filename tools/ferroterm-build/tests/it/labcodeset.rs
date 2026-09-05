@@ -12,6 +12,7 @@ use fhir_types::r4b::value_set::ValueSet;
 fn cli(labcodeset: std::path::PathBuf, out: &std::path::Path) -> ferroterm_build::Cli {
     ferroterm_build::Cli {
         rf2: None,
+        rf2_refset: Vec::new(),
         loinc: None,
         loinc_version: None,
         claml: None,
