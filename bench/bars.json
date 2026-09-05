@@ -6,64 +6,67 @@
     "milliseconds #129 set for a page); scripts/checks/bench-bars.sh runs the",
     "benches and fails when a median crosses its bar.",
     "",
+    "Figures are microseconds: every bar is now met with room to spare, and",
+    "milliseconds no longer say anything useful about them.",
+    "",
     "A bar is the CLAIM, not a machine's measurement: it never moves to match",
-    "a slower run. `measured_ms` records what one machine answered, so the",
+    "a slower run. `measured_us` records what one machine answered, so the",
     "headroom a run has is visible, and it is a record, never a gate."
   ],
   "machine": "Apple M2 Pro, macOS 25.5, release profile, 20000 synthetic concepts",
   "bars": [
     {
       "bench": "operations/lookup",
-      "max_ms": 1.0,
-      "measured_ms": 0.009,
+      "max_us": 1000,
+      "measured_us": 9,
       "claim": "a point read answers in under a millisecond"
     },
     {
       "bench": "operations/validate_code",
-      "max_ms": 1.0,
-      "measured_ms": 0.008,
+      "max_us": 1000,
+      "measured_us": 8,
       "claim": "a point read answers in under a millisecond"
     },
     {
       "bench": "operations/subsumes",
-      "max_ms": 1.0,
-      "measured_ms": 0.002,
+      "max_us": 1000,
+      "measured_us": 2,
       "claim": "subsumption answers from the closure in under a millisecond"
     },
     {
       "bench": "expand/isa_root_page_10",
-      "max_ms": 1.0,
-      "measured_ms": 0.092,
+      "max_us": 1000,
+      "measured_us": 92,
       "claim": "a page of an expansion is cut from the bitmaps in under a millisecond"
     },
     {
       "bench": "http/lookup",
-      "max_ms": 1.0,
-      "measured_ms": 0.047,
+      "max_us": 1000,
+      "measured_us": 47,
       "claim": "the served operation, routing and codec included, stays under a millisecond"
     },
     {
       "bench": "http/validate_code",
-      "max_ms": 1.0,
-      "measured_ms": 0.013,
+      "max_us": 1000,
+      "measured_us": 13,
       "claim": "the served operation, routing and codec included, stays under a millisecond"
     },
     {
       "bench": "http/subsumes",
-      "max_ms": 1.0,
-      "measured_ms": 0.008,
+      "max_us": 1000,
+      "measured_us": 8,
       "claim": "the served operation, routing and codec included, stays under a millisecond"
     },
     {
       "bench": "http/expand_page_10",
-      "max_ms": 1.0,
-      "measured_ms": 0.118,
+      "max_us": 1000,
+      "measured_us": 118,
       "claim": "the served page of an expansion stays under a millisecond"
     },
     {
       "bench": "expand/isa_root_first_10",
-      "max_ms": 1.0,
-      "measured_ms": 0.031,
+      "max_us": 1000,
+      "measured_us": 31,
       "claim": "the first page of an expansion costs the page, never the selection"
     }
   ]
