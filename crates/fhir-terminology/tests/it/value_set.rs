@@ -198,7 +198,9 @@ fn expand_follows_value_set_references_and_refuses_a_cycle() {
         ..ExpandInput::default()
     };
     let vs = expand::expand(&world.sources(), &referenced).expect("expands");
-    assert_eq!(codes(&vs), ["kitten", "pet"]);
+    // The referenced expansion states an order and this one keeps it: `pet` is
+    // the root of the referenced hierarchy, `kitten` its child (#276).
+    assert_eq!(codes(&vs), ["pet", "kitten"]);
     let looped = ExpandInput {
         url: Some(VS_LOOP_A.to_owned()),
         ..ExpandInput::default()

@@ -22,6 +22,10 @@ fresh link reference.
 - The LOINC and RxNorm builds name a property key they never registered instead of reporting "too many concepts": a defect in the build no longer surfaces as a capacity error. The RxNorm relationship-type lookup is split the same way, and `TooMany` keeps its own meaning.
 - An expression constraint of deeply nested brackets no longer takes the server down. The ECL parser descends with the grammar, so an unbounded nesting exhausted the stack and aborted the process, which no `OperationOutcome` survives; the parser now refuses past `sct_ecl::NESTING_LIMIT` (64) and the server answers the refusal as an `OperationOutcome`. Found by the `ecl_parse` fuzz target.
 
+### Changed
+
+- A flat `$expand` answers in the order the compose selected: the includes in order, each include's named concepts as it named them, each filter's concepts in the code system's own order, and the first occurrence winning where includes overlap. `count` and `offset` page over that order. No FHIR version fixes the order of an expansion, and `ValueSet.compose.include.concept` says an expansion typically follows the compose; a compose of one filter still pages off the selection bitmap without reading a concept. The ICD-11 postcoordination axis now answers in the WHO's own scale order, which the terminology ecosystem suite's `icd-11/expand-pcs-count` and `icd-11/expand-pcs-offset` cases assert together.
+
 ## [0.0.11] - 2026-09-05
 
 ### Added

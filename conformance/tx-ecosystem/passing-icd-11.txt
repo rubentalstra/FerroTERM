@@ -13,6 +13,7 @@ icd-11/expand-bad-url
 icd-11/expand-inline-vs
 icd-11/expand-pcs
 icd-11/expand-pcs-code-form
+icd-11/expand-pcs-count
 icd-11/expand-pcs-filter
 icd-11/expand-pcs-fr
 icd-11/expand-pcs-offset
