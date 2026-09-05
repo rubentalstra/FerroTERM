@@ -140,23 +140,8 @@ pub fn translate(
     let reverse = input.reverse.unwrap_or(false);
     let target_system = input.target_system.as_deref();
     let subjects = subjects(input)?;
-    let mut matches: Vec<Match> = Vec::new();
     let mut used = Vec::new();
-    for subject in &subjects {
-        for map in &maps {
-            for found in matches_in(sources, map, subject, target_system, reverse, 0, &mut used)? {
-                // NOTE: the same target reached through two maps is one match, the
-                // ecosystem's shape (<https://hl7.org/fhir/uv/tx-ecosystem/>).
-                let seen = found.concept.is_some()
-                    && matches.iter().any(|m| {
-                        m.concept == found.concept && m.relationship == found.relationship
-                    });
-                if !seen {
-                    matches.push(found);
-                }
-            }
-        }
-    }
+    let mut matches = translated(sources, &maps, &subjects, target_system, reverse, &mut used)?;
     if matches.is_empty() && input.url.is_none() {
         matches = successors(sources, &subjects, target_system)?;
     }
@@ -164,13 +149,7 @@ pub fn translate(
     // `result` is true whenever a match exists (the ecosystem's `translate-2b`
     // and `translate-4` cases, <https://hl7.org/fhir/uv/tx-ecosystem/>).
     if input.target_input {
-        // NOTE: a `target*` request reports the source concept as `sourceConcept`
-        // and the target as `concept`, the map's own direction
-        // (<https://hl7.org/fhir/R5/conceptmap-operation-translate.html>).
-        for found in &mut matches {
-            std::mem::swap(&mut found.concept, &mut found.origin.source_concept);
-            found.relationship = found.relationship.inverse();
-        }
+        report_source_to_target(&mut matches);
     }
     let result = !matches.is_empty();
     let message = if result {
@@ -186,6 +165,50 @@ pub fn translate(
         matches,
         used_concept_maps: used,
     })
+}
+
+/// The matches every candidate map holds for every subject, each target
+/// reported once.
+fn translated(
+    sources: &Sources<'_>,
+    maps: &[Arc<ConceptMapModel>],
+    subjects: &[Subject],
+    target_system: Option<&str>,
+    reverse: bool,
+    used: &mut Vec<String>,
+) -> Result<Vec<Match>, OperationError> {
+    let mut matches: Vec<Match> = Vec::new();
+    for subject in subjects {
+        for map in maps {
+            for found in matches_in(sources, map, subject, target_system, reverse, 0, used)? {
+                // NOTE: the same target reached through two maps is one match, the
+                // ecosystem's shape (<https://hl7.org/fhir/uv/tx-ecosystem/>).
+                if !already_matched(&matches, &found) {
+                    matches.push(found);
+                }
+            }
+        }
+    }
+    Ok(matches)
+}
+
+/// Whether `found` names a target `matches` already reports.
+fn already_matched(matches: &[Match], found: &Match) -> bool {
+    found.concept.is_some()
+        && matches
+            .iter()
+            .any(|m| m.concept == found.concept && m.relationship == found.relationship)
+}
+
+/// Reports each match source to target, the map's own direction.
+fn report_source_to_target(matches: &mut [Match]) {
+    // NOTE: a `target*` request reports the source concept as `sourceConcept`
+    // and the target as `concept`
+    // (<https://hl7.org/fhir/R5/conceptmap-operation-translate.html>).
+    for found in matches {
+        std::mem::swap(&mut found.concept, &mut found.origin.source_concept);
+        found.relationship = found.relationship.inverse();
+    }
 }
 
 /// The matches an inactive concept's own historical associations give, when no
@@ -371,73 +394,11 @@ fn matches_in(
 ) -> Result<Vec<Match>, OperationError> {
     let mut out = Vec::new();
     for group in &map.groups {
-        let (from, from_version, to, to_version) = if reverse {
-            (
-                &group.target,
-                &group.target_version,
-                &group.source,
-                &group.source_version,
-            )
-        } else {
-            (
-                &group.source,
-                &group.source_version,
-                &group.target,
-                &group.target_version,
-            )
-        };
-        if from.as_deref() != Some(subject.system.as_str()) {
+        let (from, from_version, to, to_version) = group_direction(group, reverse);
+        if !group_applies(from, from_version, to, subject, target_system) {
             continue;
         }
-        if let (Some(wanted), Some(named)) = (&subject.version, from_version)
-            && wanted != named
-        {
-            continue;
-        }
-        if target_system.is_some_and(|t| to.as_deref() != Some(t)) {
-            continue;
-        }
-        let origin = |element: Option<&Element>| MatchOrigin {
-            origin_map: map.canonical(),
-            source_concept: Some(CodingRef {
-                system: Some(subject.system.clone()),
-                code: Some(subject.code.clone()),
-                ..CodingRef::default()
-            }),
-            source_comment: element.and_then(|e| e.comment.clone()),
-            target_comment: None,
-            no_map: element.is_some_and(|e| e.no_map),
-        };
-        let mut found = false;
-        for (element, targets) in element_targets(group, subject, reverse) {
-            found = true;
-            if targets.is_empty() {
-                out.push(Match {
-                    relationship: Relationship::Unmatched,
-                    concept: None,
-                    products: Vec::new(),
-                    source: Some(map.canonical()),
-                    origin: origin(Some(element)),
-                });
-            }
-            for (code, display, relationship, product, comment) in targets {
-                out.push(Match {
-                    relationship,
-                    concept: Some(CodingRef {
-                        system: to.clone(),
-                        version: to_version.clone(),
-                        code: code.clone(),
-                        display: display.clone(),
-                    }),
-                    products: product.iter().map(product_of).collect(),
-                    source: Some(map.canonical()),
-                    origin: MatchOrigin {
-                        target_comment: comment.clone(),
-                        ..origin(Some(element))
-                    },
-                });
-            }
-        }
+        let found = group_matches(map, group, subject, reverse, to, to_version, &mut out);
         if !found
             && !reverse
             && let Some(unmapped) = &group.unmapped
@@ -455,6 +416,107 @@ fn matches_in(
         }
     }
     Ok(out)
+}
+
+/// The `(from, from_version, to, to_version)` of `group`, read in the
+/// requested direction.
+fn group_direction(
+    group: &Group,
+    reverse: bool,
+) -> (Option<&str>, Option<&str>, Option<&str>, Option<&str>) {
+    if reverse {
+        (
+            group.target.as_deref(),
+            group.target_version.as_deref(),
+            group.source.as_deref(),
+            group.source_version.as_deref(),
+        )
+    } else {
+        (
+            group.source.as_deref(),
+            group.source_version.as_deref(),
+            group.target.as_deref(),
+            group.target_version.as_deref(),
+        )
+    }
+}
+
+/// Whether a group reading `from` at `from_version` to `to` translates
+/// `subject` into `target_system`.
+fn group_applies(
+    from: Option<&str>,
+    from_version: Option<&str>,
+    to: Option<&str>,
+    subject: &Subject,
+    target_system: Option<&str>,
+) -> bool {
+    if from != Some(subject.system.as_str()) {
+        return false;
+    }
+    if let (Some(wanted), Some(named)) = (subject.version.as_deref(), from_version)
+        && wanted != named
+    {
+        return false;
+    }
+    if target_system.is_some_and(|t| to != Some(t)) {
+        return false;
+    }
+    true
+}
+
+/// Appends the matches `group` states for `subject` to `out`; whether any
+/// element of the group matched at all.
+fn group_matches(
+    map: &ConceptMapModel,
+    group: &Group,
+    subject: &Subject,
+    reverse: bool,
+    to: Option<&str>,
+    to_version: Option<&str>,
+    out: &mut Vec<Match>,
+) -> bool {
+    let origin = |element: Option<&Element>| MatchOrigin {
+        origin_map: map.canonical(),
+        source_concept: Some(CodingRef {
+            system: Some(subject.system.clone()),
+            code: Some(subject.code.clone()),
+            ..CodingRef::default()
+        }),
+        source_comment: element.and_then(|e| e.comment.clone()),
+        target_comment: None,
+        no_map: element.is_some_and(|e| e.no_map),
+    };
+    let mut found = false;
+    for (element, targets) in element_targets(group, subject, reverse) {
+        found = true;
+        if targets.is_empty() {
+            out.push(Match {
+                relationship: Relationship::Unmatched,
+                concept: None,
+                products: Vec::new(),
+                source: Some(map.canonical()),
+                origin: origin(Some(element)),
+            });
+        }
+        for (code, display, relationship, product, comment) in targets {
+            out.push(Match {
+                relationship,
+                concept: Some(CodingRef {
+                    system: to.map(str::to_owned),
+                    version: to_version.map(str::to_owned),
+                    code: code.clone(),
+                    display: display.clone(),
+                }),
+                products: product.iter().map(product_of).collect(),
+                source: Some(map.canonical()),
+                origin: MatchOrigin {
+                    target_comment: comment.clone(),
+                    ..origin(Some(element))
+                },
+            });
+        }
+    }
+    found
 }
 
 /// The elements of `group` for `subject`, each with its targets read in the

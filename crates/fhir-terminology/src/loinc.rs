@@ -416,47 +416,87 @@ impl LoincProvider {
         let mut part_names: BTreeMap<u32, String> = BTreeMap::new();
         let mut set = ConceptSet::new();
         for index in 0..self.concepts {
-            let ordinal = Ordinal::new(index);
-            let properties = self.store.properties(ordinal).map_err(storage)?;
-            let Some((_, values)) = properties.iter().find(|(k, _)| *k == key) else {
-                continue;
-            };
-            let mut hit = false;
-            for value in values {
-                hit = match (value, &regex) {
-                    (record::PropertyValue::Concept(part), None) => parts.contains(part.index()),
-                    (record::PropertyValue::Concept(part), Some(regex)) => {
-                        let name = if let Some(name) = part_names.get(&part.index()) {
-                            name.clone()
-                        } else {
-                            let name = self
-                                .choose_display(*part, None)
-                                .map_err(|e| ProviderError::Storage(Box::new(e)))?
-                                .unwrap_or_default();
-                            part_names.insert(part.index(), name.clone());
-                            name
-                        };
-                        let code = self
-                            .store
-                            .concept(*part)
-                            .map_err(storage)?
-                            .map(|c| c.code)
-                            .unwrap_or_default();
-                        regex.is_match(&name) || regex.is_match(&code)
-                    }
-                    (record::PropertyValue::String(text), None) => wanted.iter().any(|w| w == text),
-                    (record::PropertyValue::String(text), Some(regex)) => regex.is_match(text),
-                    _ => false,
-                };
-                if hit {
-                    break;
-                }
-            }
-            if hit {
+            if self.axis_matches(
+                Ordinal::new(index),
+                key,
+                &wanted,
+                &parts,
+                regex.as_ref(),
+                &mut part_names,
+            )? {
                 set.insert(index);
             }
         }
         Ok(set)
+    }
+
+    /// Whether any value the concept at `ordinal` carries on the axis `key`
+    /// satisfies the filter.
+    fn axis_matches(
+        &self,
+        ordinal: Ordinal,
+        key: u32,
+        wanted: &[&str],
+        parts: &ConceptSet,
+        regex: Option<&Regex>,
+        part_names: &mut BTreeMap<u32, String>,
+    ) -> Result<bool, ProviderError> {
+        let properties = self.store.properties(ordinal).map_err(storage)?;
+        let Some((_, values)) = properties.iter().find(|(k, _)| *k == key) else {
+            return Ok(false);
+        };
+        for value in values {
+            if self.axis_value_matches(value, wanted, parts, regex, part_names)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    /// Whether one axis `value` satisfies the filter: a linked part the value
+    /// names, or column text the value or the regex matches.
+    fn axis_value_matches(
+        &self,
+        value: &record::PropertyValue,
+        wanted: &[&str],
+        parts: &ConceptSet,
+        regex: Option<&Regex>,
+        part_names: &mut BTreeMap<u32, String>,
+    ) -> Result<bool, ProviderError> {
+        match (value, regex) {
+            (record::PropertyValue::Concept(part), None) => Ok(parts.contains(part.index())),
+            (record::PropertyValue::Concept(part), Some(regex)) => {
+                let name = self.part_name(*part, part_names)?;
+                let code = self
+                    .store
+                    .concept(*part)
+                    .map_err(storage)?
+                    .map(|c| c.code)
+                    .unwrap_or_default();
+                Ok(regex.is_match(&name) || regex.is_match(&code))
+            }
+            (record::PropertyValue::String(text), None) => Ok(wanted.iter().any(|w| w == text)),
+            (record::PropertyValue::String(text), Some(regex)) => Ok(regex.is_match(text)),
+            _ => Ok(false),
+        }
+    }
+
+    /// The display of the part `part`, remembered in `part_names` so a scan of
+    /// the whole table reads each part once.
+    fn part_name(
+        &self,
+        part: Ordinal,
+        part_names: &mut BTreeMap<u32, String>,
+    ) -> Result<String, ProviderError> {
+        if let Some(name) = part_names.get(&part.index()) {
+            return Ok(name.clone());
+        }
+        let name = self
+            .choose_display(part, None)
+            .map_err(|e| ProviderError::Storage(Box::new(e)))?
+            .unwrap_or_default();
+        part_names.insert(part.index(), name.clone());
+        Ok(name)
     }
 
     fn parts_named(&self, filter: &Filter) -> Result<Vec<Concept>, ProviderError> {
@@ -766,23 +806,8 @@ impl LoincProvider {
     /// No specification defines this filter; it is what tx.fhir.org answers
     /// (#277).
     fn answers_filter(&self, value: &str) -> Result<ConceptSet, ProviderError> {
-        let mut lists: Vec<String> = Vec::new();
-        if self.answers_of(value)?.is_some() {
-            lists.push(value.to_owned());
-        } else if let Some(ordinal) = self.store.ordinal(value).map_err(storage)?
-            && let Some(key) = self.key_of(ANSWER_LIST_KEY)
-        {
-            let properties = self.store.properties(ordinal).map_err(storage)?;
-            if let Some((_, values)) = properties.iter().find(|(k, _)| *k == key) {
-                for linked in values {
-                    if let record::PropertyValue::Code(code) = linked {
-                        lists.push(code.clone());
-                    }
-                }
-            }
-        }
         let mut set = ConceptSet::new();
-        for list in lists {
+        for list in self.answer_lists(value)? {
             for answer in self.answers_of(&list)?.unwrap_or_default() {
                 if let Some(ordinal) = self.store.ordinal(&answer).map_err(storage)? {
                     set.insert(ordinal.index());
@@ -790,6 +815,31 @@ impl LoincProvider {
             }
         }
         Ok(set)
+    }
+
+    /// The answer lists `value` names: itself when it is one, else the lists
+    /// the term is linked to.
+    fn answer_lists(&self, value: &str) -> Result<Vec<String>, ProviderError> {
+        if self.answers_of(value)?.is_some() {
+            return Ok(vec![value.to_owned()]);
+        }
+        let Some(ordinal) = self.store.ordinal(value).map_err(storage)? else {
+            return Ok(Vec::new());
+        };
+        let Some(key) = self.key_of(ANSWER_LIST_KEY) else {
+            return Ok(Vec::new());
+        };
+        let properties = self.store.properties(ordinal).map_err(storage)?;
+        let Some((_, values)) = properties.iter().find(|(k, _)| *k == key) else {
+            return Ok(Vec::new());
+        };
+        Ok(values
+            .iter()
+            .filter_map(|linked| match linked {
+                record::PropertyValue::Code(code) => Some(code.clone()),
+                _ => None,
+            })
+            .collect())
     }
 
     /// The concepts a Document Ontology filter selects: those with any part on

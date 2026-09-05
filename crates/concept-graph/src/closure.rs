@@ -48,35 +48,9 @@ impl Closure {
         let children = is_a.transpose()?;
         let order = topological_order(parents, &children)?;
         let nodes = to_usize(parents.nodes());
-        let mut ancestors: Vec<RoaringBitmap> = vec![RoaringBitmap::new(); nodes];
-        for node in &order {
-            let mut set = RoaringBitmap::new();
-            for parent in parents.neighbours(*node) {
-                set.insert(*parent);
-                if let Some(above) = ancestors.get(to_usize(*parent)) {
-                    set |= above;
-                }
-            }
-            if let Some(slot) = ancestors.get_mut(node.as_usize()) {
-                *slot = set;
-            }
-        }
-        let mut descendants: Vec<RoaringBitmap> = vec![RoaringBitmap::new(); nodes];
-        for node in order.iter().rev() {
-            let mut set = RoaringBitmap::new();
-            for child in children.neighbours(*node) {
-                set.insert(*child);
-                if let Some(below) = descendants.get(to_usize(*child)) {
-                    set |= below;
-                }
-            }
-            if let Some(slot) = descendants.get_mut(node.as_usize()) {
-                *slot = set;
-            }
-        }
         Ok(Self {
-            ancestors,
-            descendants,
+            ancestors: sweep(parents, order.iter(), nodes),
+            descendants: sweep(&children, order.iter().rev(), nodes),
         })
     }
 
@@ -144,6 +118,32 @@ impl Closure {
     pub fn descendant_sets(&self) -> &[RoaringBitmap] {
         &self.descendants
     }
+}
+
+/// The set each node of `edges` reaches, swept in `order`: a node's set is its
+/// neighbours plus the sets they already reached.
+///
+/// `order` visits a node only after every neighbour it reads, so one pass fills
+/// every set.
+fn sweep<'a>(
+    edges: &Csr,
+    order: impl Iterator<Item = &'a Ordinal>,
+    nodes: usize,
+) -> Vec<RoaringBitmap> {
+    let mut sets: Vec<RoaringBitmap> = vec![RoaringBitmap::new(); nodes];
+    for node in order {
+        let mut set = RoaringBitmap::new();
+        for neighbour in edges.neighbours(*node) {
+            set.insert(*neighbour);
+            if let Some(reached) = sets.get(to_usize(*neighbour)) {
+                set |= reached;
+            }
+        }
+        if let Some(slot) = sets.get_mut(node.as_usize()) {
+            *slot = set;
+        }
+    }
+    sets
 }
 
 /// Kahn's algorithm over child-to-parent edges: parents before children.
