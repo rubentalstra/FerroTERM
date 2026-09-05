@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use concept_graph::ordinal::Ordinal;
 use redb::{ReadOnlyDatabase, ReadableDatabase, ReadableTable, TableHandle};
 
-use crate::record::{Concept, Designation, PropertyValue, RecordError};
+use crate::column::{Column, ColumnError};
+use crate::record::{self, Concept, Designation, PropertyValue, RecordError};
 use crate::tables;
 
 /// A failure while opening or reading an artifact.
@@ -46,6 +47,15 @@ pub enum StoreError {
         /// The layout this build reads.
         expected: &'static str,
     },
+    /// A packed column is not the layout this build reads.
+    #[error("the {column} column does not read")]
+    Column {
+        /// The column name.
+        column: String,
+        /// The underlying error.
+        #[source]
+        source: ColumnError,
+    },
     /// A stored record is damaged.
     #[error("damaged record in table {table} at key {key}")]
     Record {
@@ -63,6 +73,9 @@ pub enum StoreError {
 pub struct Store {
     path: PathBuf,
     db: ReadOnlyDatabase,
+    /// The concepts, read once at open. An ordinal is a position, so this
+    /// column answers by slicing where a b-tree would search.
+    concepts: Column,
 }
 
 impl std::fmt::Debug for Store {
@@ -94,9 +107,10 @@ impl Store {
             path: path.to_path_buf(),
             source,
         })?;
-        let store = Self {
+        let mut store = Self {
             path: path.to_path_buf(),
             db,
+            concepts: Column::default(),
         };
         let layout = store.meta(tables::META_LAYOUT)?;
         if layout.as_deref() != Some(tables::LAYOUT_VERSION) {
@@ -105,7 +119,21 @@ impl Store {
                 expected: tables::LAYOUT_VERSION,
             });
         }
+        store.concepts = store.column(tables::COLUMN_CONCEPTS)?;
         Ok(store)
+    }
+
+    /// The packed column named `name`, read and checked once.
+    fn column(&self, name: &str) -> Result<Column, StoreError> {
+        let txn = self.db.begin_read()?;
+        let table = open_table!(txn, tables::COLUMNS)?;
+        let Some(bytes) = table.get(name)? else {
+            return Ok(Column::default());
+        };
+        Column::read(bytes.value()).map_err(|source| StoreError::Column {
+            column: name.to_owned(),
+            source,
+        })
     }
 
     /// The artifact's path.
@@ -142,13 +170,26 @@ impl Store {
     ///
     /// Returns [`StoreError`] when the database cannot be read or the record is damaged.
     pub fn concept(&self, ordinal: Ordinal) -> Result<Option<Concept>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::CONCEPTS)?;
-        table
-            .get(ordinal.index())?
-            .map(|v| {
-                Concept::decode(v.value()).map_err(|source| StoreError::Record {
-                    table: tables::CONCEPTS.name().to_owned(),
+        self.concepts
+            .get(ordinal)
+            .map(|bytes| Self::decode_concept(ordinal, bytes))
+            .transpose()
+    }
+
+    /// The native code at `ordinal`, borrowed from the column.
+    ///
+    /// The code is the first field of the record, so this reads one length
+    /// and one string and copies nothing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when the code is damaged.
+    pub fn code(&self, ordinal: Ordinal) -> Result<Option<&str>, StoreError> {
+        self.concepts
+            .get(ordinal)
+            .map(|bytes| {
+                record::code(bytes).map_err(|source| StoreError::Record {
+                    table: tables::COLUMN_CONCEPTS.to_owned(),
                     key: ordinal.to_string(),
                     source,
                 })
@@ -156,38 +197,29 @@ impl Store {
             .transpose()
     }
 
+    /// Decodes one concept record, naming the ordinal it came from.
+    fn decode_concept(ordinal: Ordinal, bytes: &[u8]) -> Result<Concept, StoreError> {
+        Concept::decode(bytes).map_err(|source| StoreError::Record {
+            table: tables::COLUMN_CONCEPTS.to_owned(),
+            key: ordinal.to_string(),
+            source,
+        })
+    }
+
     /// The concepts at `ordinals`, in the order given, `None` where the store
     /// has no such concept.
     ///
-    /// One read transaction answers the whole batch: a caller that reads many
-    /// concepts (the children of one, the members of a page) pays the
-    /// transaction once rather than per concept.
-    ///
     /// # Errors
     ///
-    /// Returns [`StoreError`] when the database cannot be read or a record is
-    /// damaged.
+    /// Returns [`StoreError`] when a record is damaged.
     pub fn concepts(
         &self,
         ordinals: impl IntoIterator<Item = Ordinal>,
     ) -> Result<Vec<Option<Concept>>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::CONCEPTS)?;
-        let mut out = Vec::new();
-        for ordinal in ordinals {
-            let found = table
-                .get(ordinal.index())?
-                .map(|v| {
-                    Concept::decode(v.value()).map_err(|source| StoreError::Record {
-                        table: tables::CONCEPTS.name().to_owned(),
-                        key: ordinal.to_string(),
-                        source,
-                    })
-                })
-                .transpose()?;
-            out.push(found);
-        }
-        Ok(out)
+        ordinals
+            .into_iter()
+            .map(|ordinal| self.concept(ordinal))
+            .collect()
     }
 
     /// The native codes at `ordinals`, in the order given, `None` where the
@@ -206,23 +238,10 @@ impl Store {
         &self,
         ordinals: impl IntoIterator<Item = Ordinal>,
     ) -> Result<Vec<Option<String>>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::CONCEPTS)?;
-        let mut out = Vec::new();
-        for ordinal in ordinals {
-            let found = table
-                .get(ordinal.index())?
-                .map(|v| {
-                    Concept::decode_code(v.value()).map_err(|source| StoreError::Record {
-                        table: tables::CONCEPTS.name().to_owned(),
-                        key: ordinal.to_string(),
-                        source,
-                    })
-                })
-                .transpose()?;
-            out.push(found);
-        }
-        Ok(out)
+        ordinals
+            .into_iter()
+            .map(|ordinal| Ok(self.code(ordinal)?.map(ToOwned::to_owned)))
+            .collect()
     }
 
     /// Every designation of `ordinal`, in index order.

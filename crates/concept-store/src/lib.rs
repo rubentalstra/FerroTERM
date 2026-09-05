@@ -9,6 +9,7 @@
 #![doc(test(attr(deny(warnings))))]
 
 pub mod builder;
+pub mod column;
 pub mod keys;
 pub mod record;
 pub mod store;

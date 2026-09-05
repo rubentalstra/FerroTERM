@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use concept_graph::ordinal::Ordinal;
 use redb::{Database, TableHandle};
 
+use crate::column::Column;
 use crate::record::{Concept, Designation, PropertyValue};
 use crate::tables;
 
@@ -264,10 +265,23 @@ impl StoreBuilder {
             }
         }
         {
-            let mut concepts = txn.open_table(tables::CONCEPTS)?;
-            for (ordinal, bytes) in &self.concepts {
-                concepts.insert(*ordinal, bytes.as_slice())?;
-            }
+            // An ordinal is a position, so the concepts are one dense column
+            // rather than a b-tree keyed by that position.
+            // The count is the highest ordinal, not the entry count, so a gap
+            // in the ordinals cannot push a record off the end of the column.
+            let count = self
+                .concepts
+                .keys()
+                .next_back()
+                .map_or(0, |highest| highest.saturating_add(1));
+            let packed = Column::pack(
+                count,
+                self.concepts
+                    .iter()
+                    .map(|(ordinal, bytes)| (Ordinal::new(*ordinal), bytes.as_slice())),
+            );
+            let mut columns = txn.open_table(tables::COLUMNS)?;
+            columns.insert(tables::COLUMN_CONCEPTS, packed.as_slice())?;
         }
         {
             let mut designations = txn.open_table(tables::DESIGNATIONS)?;

@@ -52,3 +52,6 @@ der2_*
 # published from the records the owner commits by hand.
 /bench/results/*.json
 !/bench/results/.gitkeep
+# Agent worktrees: a subagent working in isolation gets a checkout here, and it
+# is a working copy of this repository, never content of it.
+/.claude/worktrees/
