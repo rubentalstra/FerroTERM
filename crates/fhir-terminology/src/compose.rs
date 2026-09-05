@@ -298,6 +298,150 @@ impl Selection {
     }
 }
 
+/// What an include's own system says about a code.
+enum Contained {
+    /// The include names no system, so only its referenced value sets decide.
+    NoSystem,
+    /// The code is not in this include.
+    Refused,
+    /// The include contains it, as this item.
+    Item(Item),
+}
+
+/// Whether `include` admits `concept`: every filter matches, or the code is one
+/// of the enumerated ones.
+///
+/// # Errors
+///
+/// Returns the provider's failure when a filter cannot be evaluated.
+fn admits(
+    provider: &Arc<dyn CodeSystemProvider>,
+    include: &Include,
+    concept: Concept,
+    code: &str,
+) -> Result<bool, ProviderError> {
+    if !include.concepts.is_empty() {
+        return Ok(include.concepts.iter().any(|c| c.code == code));
+    }
+    for filter in &include.filters {
+        if !provider.filter_matches(concept, filter)? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// The three checks `ValueSet.compose.include` must pass (`vsd-1`, `vsd-2`,
+/// `vsd-3`, <https://hl7.org/fhir/R4B/valueset.html>).
+///
+/// # Errors
+///
+/// Returns the constraint the include breaks.
+fn well_formed(include: &Include) -> Result<(), ComposeError> {
+    if include.system.is_none() {
+        if include.value_sets.is_empty() {
+            return Err(ComposeError::NoSystemOrValueSet);
+        }
+        if !include.concepts.is_empty() || !include.filters.is_empty() {
+            return Err(ComposeError::CriteriaWithoutSystem);
+        }
+    }
+    if !include.concepts.is_empty() && !include.filters.is_empty() {
+        return Err(ComposeError::ConceptsAndFilters);
+    }
+    Ok(())
+}
+
+/// What the includes and excludes gathered: the selection per system version,
+/// the order the compose first named those versions in, and the versions the
+/// evaluation used.
+#[derive(Default)]
+struct Gathered {
+    selections: BTreeMap<SelectionKey, Selection>,
+    order: Vec<SelectionKey>,
+    versions: Vec<UsedVersion>,
+}
+
+/// One page of an expansion.
+struct Page {
+    items: Vec<Item>,
+    /// Whether the items carry the system's hierarchy in their depths.
+    nested: bool,
+}
+
+/// Removes what the compose and the options refuse: the inactive concepts and
+/// the ones no user interface should offer.
+///
+/// `compose.inactive = false` is a floor `activeOnly` cannot lift, and
+/// `activeOnly` removes inactive codes a compose admits
+/// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, activeOnly).
+fn drop_refused(
+    selections: &mut BTreeMap<SelectionKey, Selection>,
+    compose: &Compose,
+    options: &Options,
+) -> Result<(), ComposeError> {
+    if options.active_only || compose.inactive == Some(false) {
+        for ((url, _), selection) in &mut *selections {
+            drop_inactive(url, selection)?;
+        }
+    }
+    if options.exclude_not_for_ui {
+        for ((url, _), selection) in selections {
+            drop_not_for_ui(url, selection)?;
+        }
+    }
+    Ok(())
+}
+
+/// The page `options` asks for, over the order the compose stated.
+///
+/// A nested expansion pages over its pre-order flattening, so `count` and
+/// `offset` mean the same thing they do in a flat one.
+fn paged(compose: &Compose, options: &Options, gathered: &Gathered) -> Result<Page, ComposeError> {
+    let mut page = Page {
+        items: Vec::new(),
+        nested: false,
+    };
+    let mut skip = options.offset;
+    let mut remaining = options.count.unwrap_or(usize::MAX);
+    for key in &gathered.order {
+        if remaining == 0 {
+            break;
+        }
+        let (url, version) = key;
+        let Some(selection) = gathered.selections.get(key) else {
+            continue;
+        };
+        let len = usize::try_from(selection.set.len()).unwrap_or(usize::MAX);
+        if skip >= len {
+            skip = skip.saturating_sub(len);
+            continue;
+        }
+        let cut: Vec<(u32, usize)> = match nests(compose, options)
+            .then(|| preorder(selection))
+            .flatten()
+        {
+            Some(tree) => {
+                page.nested = true;
+                tree.into_iter().skip(skip).take(remaining).collect()
+            }
+            None => selection
+                .ordered()
+                .map(|index| (index, 0))
+                .skip(skip)
+                .take(remaining)
+                .collect(),
+        };
+        for (index, depth) in cut {
+            page.items
+                .push(materialize(url, version, selection, index, depth, options)?);
+        }
+        remaining = remaining.saturating_sub(len.saturating_sub(skip));
+        skip = 0;
+    }
+    Ok(page)
+}
+
 /// Sets at most this large check activity concept by concept; larger ones
 /// subtract the provider's inactive set, which a system that cannot
 /// enumerate never has to produce.
@@ -336,92 +480,47 @@ impl<'a> Expander<'a> {
     /// Returns [`ComposeError`] for an invalid compose, an unknown system,
     /// version, or code, or a provider failure.
     pub fn expand(&self, compose: &Compose, options: &Options) -> Result<Expansion, ComposeError> {
-        let mut selections: BTreeMap<SelectionKey, Selection> = BTreeMap::new();
-        // NOTE: no specification fixes the order of an expansion
-        // (<https://hl7.org/fhir/R4B/valueset.html>), so the systems answer in the
-        // order the compose first named them: our own design.
-        let mut order: Vec<SelectionKey> = Vec::new();
-        let mut versions: Vec<UsedVersion> = Vec::new();
+        let mut gathered = self.gather(compose, options)?;
+        drop_refused(&mut gathered.selections, compose, options)?;
+        let total = gathered.selections.values().map(|s| s.set.len()).sum();
+        let page = paged(compose, options, &gathered)?;
+        gathered
+            .versions
+            .sort_by(|a, b| (&a.url, &a.version).cmp(&(&b.url, &b.version)));
+        gathered
+            .versions
+            .dedup_by(|a, b| a.url == b.url && a.version == b.version);
+        Ok(Expansion {
+            total,
+            offset: options.offset,
+            items: page.items,
+            versions: gathered.versions,
+            nested: page.nested,
+        })
+    }
+
+    /// The includes united and the excludes subtracted, with the order the
+    /// compose named the system versions in and the versions it used.
+    fn gather(&self, compose: &Compose, options: &Options) -> Result<Gathered, ComposeError> {
+        let mut gathered = Gathered::default();
         for include in &compose.include {
-            for (key, part) in self.evaluate(include, options, &mut versions)? {
-                if let Some(existing) = selections.get_mut(&key) {
+            for (key, part) in self.evaluate(include, options, &mut gathered.versions)? {
+                if let Some(existing) = gathered.selections.get_mut(&key) {
                     existing.absorb(part);
                 } else {
-                    order.push(key.clone());
-                    selections.insert(key, part);
+                    gathered.order.push(key.clone());
+                    gathered.selections.insert(key, part);
                 }
             }
         }
         for exclude in &compose.exclude {
-            for (key, part) in self.evaluate(exclude, options, &mut versions)? {
-                if let Some(existing) = selections.get_mut(&key) {
+            for (key, part) in self.evaluate(exclude, options, &mut gathered.versions)? {
+                if let Some(existing) = gathered.selections.get_mut(&key) {
                     existing.set -= &part.set;
                 }
             }
         }
-        // NOTE: compose.inactive = false is a floor activeOnly cannot lift, and
-        // activeOnly removes inactive codes a compose admits
-        // (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, activeOnly).
-        if options.active_only || compose.inactive == Some(false) {
-            for ((url, _), selection) in &mut selections {
-                drop_inactive(url, selection)?;
-            }
-        }
-        if options.exclude_not_for_ui {
-            for ((url, _), selection) in &mut selections {
-                drop_not_for_ui(url, selection)?;
-            }
-        }
-        let total = selections.values().map(|s| s.set.len()).sum();
-        // NOTE: a nested expansion pages over its pre-order flattening, so `count`
-        // and `offset` mean the same thing they do in a flat one.
-        let mut nested = false;
-        let mut items = Vec::new();
-        let mut skip = options.offset;
-        let mut remaining = options.count.unwrap_or(usize::MAX);
-        for key in &order {
-            if remaining == 0 {
-                break;
-            }
-            let (url, version) = key;
-            let Some(selection) = selections.get(key) else {
-                continue;
-            };
-            let len = usize::try_from(selection.set.len()).unwrap_or(usize::MAX);
-            if skip >= len {
-                skip = skip.saturating_sub(len);
-                continue;
-            }
-            let page: Vec<(u32, usize)> = match nests(compose, options)
-                .then(|| preorder(selection))
-                .flatten()
-            {
-                Some(tree) => {
-                    nested = true;
-                    tree.into_iter().skip(skip).take(remaining).collect()
-                }
-                None => selection
-                    .ordered()
-                    .map(|index| (index, 0))
-                    .skip(skip)
-                    .take(remaining)
-                    .collect(),
-            };
-            for (index, depth) in page {
-                items.push(materialize(url, version, selection, index, depth, options)?);
-            }
-            remaining = remaining.saturating_sub(len.saturating_sub(skip));
-            skip = 0;
-        }
-        versions.sort_by(|a, b| (&a.url, &a.version).cmp(&(&b.url, &b.version)));
-        versions.dedup_by(|a, b| a.url == b.url && a.version == b.version);
-        Ok(Expansion {
-            total,
-            offset: options.offset,
-            items,
-            versions,
-            nested,
-        })
+        Ok(gathered)
     }
 
     /// The selections one include (or exclude) makes, by system version.
@@ -431,17 +530,7 @@ impl<'a> Expander<'a> {
         options: &Options,
         versions: &mut Vec<UsedVersion>,
     ) -> Result<BTreeMap<SelectionKey, Selection>, ComposeError> {
-        if include.system.is_none() {
-            if include.value_sets.is_empty() {
-                return Err(ComposeError::NoSystemOrValueSet);
-            }
-            if !include.concepts.is_empty() || !include.filters.is_empty() {
-                return Err(ComposeError::CriteriaWithoutSystem);
-            }
-        }
-        if !include.concepts.is_empty() && !include.filters.is_empty() {
-            return Err(ComposeError::ConceptsAndFilters);
-        }
+        well_formed(include)?;
         let mut parts: Option<BTreeMap<SelectionKey, Selection>> = None;
         if let Some(system) = &include.system {
             let resolved = self
@@ -871,87 +960,12 @@ impl Expander<'_> {
         code: &str,
         language: Option<&str>,
     ) -> Result<Option<Item>, ComposeError> {
-        if include.system.is_none() {
-            if include.value_sets.is_empty() {
-                return Err(ComposeError::NoSystemOrValueSet);
-            }
-            if !include.concepts.is_empty() || !include.filters.is_empty() {
-                return Err(ComposeError::CriteriaWithoutSystem);
-            }
-        }
-        if !include.concepts.is_empty() && !include.filters.is_empty() {
-            return Err(ComposeError::ConceptsAndFilters);
-        }
-        let mut item = None;
-        if let Some(named) = &include.system {
-            if named.url != system {
-                return Ok(None);
-            }
-            // NOTE: a subject version inside the include's pattern (`1.0.0` in
-            // `1.x.x`) is the version checked; the include's own otherwise.
-            let wanted = match (named.version.as_deref(), version) {
-                (Some(pattern), Some(v)) if crate::versioned::version_matches(pattern, v) => {
-                    Some(v)
-                }
-                (Some(pattern), _) => Some(pattern),
-                (None, v) => v,
-            };
-            let resolved = self.registry.resolve(&named.url, wanted)?;
-            let provider = &resolved.provider;
-            let identity = provider.identity();
-            if version.is_some_and(|v| !crate::versioned::version_matches(v, &identity.version)) {
-                return Ok(None);
-            }
-            let failed = |source| ComposeError::Provider {
-                system: identity.url.clone(),
-                source,
-            };
-            let Some(located) = provider.locate(code).map_err(failed)? else {
-                return Ok(None);
-            };
-            let admitted = if include.concepts.is_empty() {
-                let mut all = true;
-                for filter in &include.filters {
-                    if !provider
-                        .filter_matches(located.concept, filter)
-                        .map_err(failed)?
-                    {
-                        all = false;
-                        break;
-                    }
-                }
-                all
-            } else {
-                include.concepts.iter().any(|c| c.code == located.code)
-            };
-            if !admitted {
-                return Ok(None);
-            }
-            let overridden = include
-                .concepts
-                .iter()
-                .find(|c| c.code == located.code)
-                .and_then(|c| c.display.clone());
-            let display = match overridden {
-                Some(display) => Some(display),
-                None => provider
-                    .display(
-                        located.concept,
-                        language::for_provider(provider.as_ref(), language).as_deref(),
-                    )
-                    .map_err(failed)?,
-            };
-            let status = provider.status(located.concept).map_err(failed)?;
-            item = Some(Item {
-                system: identity.url.clone(),
-                version: identity.version.clone(),
-                code: located.code,
-                display,
-                inactive: !status.active,
-                abstract_concept: status.abstract_concept,
-                depth: 0,
-            });
-        }
+        well_formed(include)?;
+        let mut item = match self.system_contains(include, system, version, code, language)? {
+            Contained::Refused => return Ok(None),
+            Contained::NoSystem => None,
+            Contained::Item(item) => Some(item),
+        };
         for url in &include.value_sets {
             let resolver = self
                 .resolver
@@ -966,5 +980,72 @@ impl Expander<'_> {
             }
         }
         Ok(item)
+    }
+
+    /// What the include's own system says about `code`.
+    ///
+    /// The include's version pattern and the subject's version are matched the
+    /// way `$validate-code` matches them: a subject version inside the
+    /// include's pattern (`1.0.0` in `1.x.x`) is the version checked, the
+    /// include's own otherwise.
+    fn system_contains(
+        &self,
+        include: &Include,
+        system: &str,
+        version: Option<&str>,
+        code: &str,
+        language: Option<&str>,
+    ) -> Result<Contained, ComposeError> {
+        let Some(named) = &include.system else {
+            return Ok(Contained::NoSystem);
+        };
+        if named.url != system {
+            return Ok(Contained::Refused);
+        }
+        let wanted = match (named.version.as_deref(), version) {
+            (Some(pattern), Some(v)) if crate::versioned::version_matches(pattern, v) => Some(v),
+            (Some(pattern), _) => Some(pattern),
+            (None, v) => v,
+        };
+        let resolved = self.registry.resolve(&named.url, wanted)?;
+        let provider = &resolved.provider;
+        let identity = provider.identity();
+        if version.is_some_and(|v| !crate::versioned::version_matches(v, &identity.version)) {
+            return Ok(Contained::Refused);
+        }
+        let failed = |source| ComposeError::Provider {
+            system: identity.url.clone(),
+            source,
+        };
+        let Some(located) = provider.locate(code).map_err(failed)? else {
+            return Ok(Contained::Refused);
+        };
+        if !admits(provider, include, located.concept, &located.code).map_err(failed)? {
+            return Ok(Contained::Refused);
+        }
+        let overridden = include
+            .concepts
+            .iter()
+            .find(|c| c.code == located.code)
+            .and_then(|c| c.display.clone());
+        let display = match overridden {
+            Some(display) => Some(display),
+            None => provider
+                .display(
+                    located.concept,
+                    language::for_provider(provider.as_ref(), language).as_deref(),
+                )
+                .map_err(failed)?,
+        };
+        let status = provider.status(located.concept).map_err(failed)?;
+        Ok(Contained::Item(Item {
+            system: identity.url.clone(),
+            version: identity.version.clone(),
+            code: located.code,
+            display,
+            inactive: !status.active,
+            abstract_concept: status.abstract_concept,
+            depth: 0,
+        }))
     }
 }
