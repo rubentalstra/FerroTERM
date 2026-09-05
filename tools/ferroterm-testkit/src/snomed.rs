@@ -114,6 +114,81 @@ fn ord(index: usize) -> u32 {
     u32::try_from(index).unwrap_or(u32::MAX)
 }
 
+/// The code of `row`: the published one it names, else the invented SCTID.
+fn code_of(row: &Row) -> String {
+    row.code
+        .map_or_else(|| sctid(item(row.ordinal)), str::to_owned)
+}
+
+/// Writes every concept of `rows` with its parents, definition status, module,
+/// and designations, into the store and the text index.
+fn write_concepts(
+    builder: &mut StoreBuilder,
+    text: &mut IndexBuilder,
+    rows: &[Row],
+    is_a: &[(u32, u32)],
+    module: &str,
+) -> Result<(), FixtureError> {
+    for row in rows {
+        let ordinal = Ordinal::new(row.ordinal);
+        builder.concept(
+            ordinal,
+            &Concept {
+                code: code_of(row),
+                active: row.active,
+                effective_time: Some(String::from("20260101")),
+                module: None,
+            },
+        )?;
+        let parents: Vec<PropertyValue> = is_a
+            .iter()
+            .filter(|(child, _)| *child == row.ordinal)
+            .map(|(_, parent)| PropertyValue::Concept(Ordinal::new(*parent)))
+            .collect();
+        if !parents.is_empty() {
+            builder.properties(ordinal, 0, &parents)?;
+        }
+        let status = if row.defined {
+            constants::DEFINED
+        } else {
+            constants::PRIMITIVE
+        };
+        builder.properties(ordinal, 1, &[PropertyValue::Code(status.to_string())])?;
+        builder.properties(ordinal, 2, &[PropertyValue::Code(module.to_owned())])?;
+        for (index, (term, language, use_ordinal, active, memberships)) in
+            row.designations.iter().enumerate()
+        {
+            let index = ord(index);
+            builder.designation(
+                ordinal,
+                index,
+                &Designation {
+                    id: None,
+                    term: (*term).to_owned(),
+                    language: (*language).to_owned(),
+                    use_ordinal: *use_ordinal,
+                    active: *active,
+                },
+            )?;
+            for (refset, acceptability) in memberships {
+                builder.acceptability(ordinal, index, *refset, *acceptability)?;
+            }
+            let refsets: Vec<u32> = memberships.iter().map(|(r, _)| *r).collect();
+            text.add(&Input {
+                concept: ordinal,
+                index,
+                term,
+                language,
+                use_ordinal: *use_ordinal,
+                active: *active,
+                refsets: &refsets,
+            })
+            .map_err(|e| FixtureError::Text(e.to_string()))?;
+        }
+    }
+    Ok(())
+}
+
 /// A failure to write the fixture.
 #[derive(Debug)]
 pub enum FixtureError {
@@ -450,11 +525,6 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         (MODULE_CONCEPT, TOP),
         (SCHEME, TOP),
     ];
-    let code_of = |row: &Row| {
-        row.code
-            .map_or_else(|| sctid(item(row.ordinal)), str::to_owned)
-    };
-
     let mut builder =
         StoreBuilder::create(&dir.join("store.redb"), "http://snomed.info/sct", VERSION)?;
     for (i, key) in ["parent", "definitionStatus", "module"].iter().enumerate() {
@@ -496,63 +566,7 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
     builder.vocabulary(Vocabulary::LanguageRefsets, nl, NL_REFSET)?;
 
     let mut text = IndexBuilder::new();
-    for row in &rows {
-        let ordinal = Ordinal::new(row.ordinal);
-        builder.concept(
-            ordinal,
-            &Concept {
-                code: code_of(row),
-                active: row.active,
-                effective_time: Some(String::from("20260101")),
-                module: None,
-            },
-        )?;
-        let parents: Vec<PropertyValue> = is_a
-            .iter()
-            .filter(|(child, _)| *child == row.ordinal)
-            .map(|(_, parent)| PropertyValue::Concept(Ordinal::new(*parent)))
-            .collect();
-        if !parents.is_empty() {
-            builder.properties(ordinal, 0, &parents)?;
-        }
-        let status = if row.defined {
-            constants::DEFINED
-        } else {
-            constants::PRIMITIVE
-        };
-        builder.properties(ordinal, 1, &[PropertyValue::Code(status.to_string())])?;
-        builder.properties(ordinal, 2, &[PropertyValue::Code(module.clone())])?;
-        for (index, (term, language, use_ordinal, active, memberships)) in
-            row.designations.iter().enumerate()
-        {
-            let index = ord(index);
-            builder.designation(
-                ordinal,
-                index,
-                &Designation {
-                    id: None,
-                    term: (*term).to_owned(),
-                    language: (*language).to_owned(),
-                    use_ordinal: *use_ordinal,
-                    active: *active,
-                },
-            )?;
-            for (refset, acceptability) in memberships {
-                builder.acceptability(ordinal, index, *refset, *acceptability)?;
-            }
-            let refsets: Vec<u32> = memberships.iter().map(|(r, _)| *r).collect();
-            text.add(&Input {
-                concept: ordinal,
-                index,
-                term,
-                language,
-                use_ordinal: *use_ordinal,
-                active: *active,
-                refsets: &refsets,
-            })
-            .map_err(|e| FixtureError::Text(e.to_string()))?;
-        }
-    }
+    write_concepts(&mut builder, &mut text, &rows, &is_a, &module)?;
     // The cat and the dog have covering fur and four legs; the cat states both
     // in one role group, the dog in two.
     for animal in [CAT, DOG] {

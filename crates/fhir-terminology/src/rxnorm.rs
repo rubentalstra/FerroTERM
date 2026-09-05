@@ -521,6 +521,44 @@ impl CodeSystemProvider for RxNormProvider {
     }
 }
 
+/// The property the RXNORM attribute `name` declares; an indexed attribute
+/// other than `STY` carries a code.
+fn attribute_property(name: &str, indexed: bool) -> PropertyDefinition {
+    PropertyDefinition {
+        code: name.to_owned(),
+        uri: None,
+        description: Some(match name {
+            "TTY" => String::from("The RXNORM term types of the concept"),
+            "SAB" => String::from("The sources with an atom for the concept"),
+            "STY" => String::from("The semantic types of the concept"),
+            other => format!("The RXNORM attribute `{other}`"),
+        }),
+        kind: if indexed && name != "STY" {
+            PropertyKind::Code
+        } else {
+            PropertyKind::String
+        },
+    }
+}
+
+/// The filter the indexed RXNORM attribute `name` declares.
+fn attribute_filter(name: &str) -> FilterDefinition {
+    FilterDefinition {
+        code: name.to_owned(),
+        description: Some(match name {
+            "TTY" => String::from("Concepts with an RXNORM atom of the term type"),
+            "SAB" => String::from("Concepts with an atom from the source"),
+            _ => String::from("Concepts of the semantic type"),
+        }),
+        operators: vec![FilterOperator::Equal, FilterOperator::In],
+        value: match name {
+            "TTY" => String::from("a term type (SCD, SBD, IN, ...)"),
+            "SAB" => String::from("a source (RXNORM, MTHSPL, ...)"),
+            _ => String::from("a semantic type name"),
+        },
+    }
+}
+
 /// What the provider declares: the FHIR filters (`STY` when the release has
 /// semantic types, `SAB`, `TTY`, every `REL` and `RELA`), and the properties
 /// the artifact carries, which the FHIR page leaves to the server.
@@ -534,36 +572,9 @@ fn declaration(
     let mut filters = Vec::new();
     for name in keys.values() {
         let indexed = INDEXED.contains(&name.as_str());
-        properties.push(PropertyDefinition {
-            code: name.clone(),
-            uri: None,
-            description: Some(match name.as_str() {
-                "TTY" => String::from("The RXNORM term types of the concept"),
-                "SAB" => String::from("The sources with an atom for the concept"),
-                "STY" => String::from("The semantic types of the concept"),
-                other => format!("The RXNORM attribute `{other}`"),
-            }),
-            kind: if indexed && name != "STY" {
-                PropertyKind::Code
-            } else {
-                PropertyKind::String
-            },
-        });
+        properties.push(attribute_property(name, indexed));
         if indexed && (name != "STY" || semantic_types) {
-            filters.push(FilterDefinition {
-                code: name.clone(),
-                description: Some(match name.as_str() {
-                    "TTY" => String::from("Concepts with an RXNORM atom of the term type"),
-                    "SAB" => String::from("Concepts with an atom from the source"),
-                    _ => String::from("Concepts of the semantic type"),
-                }),
-                operators: vec![FilterOperator::Equal, FilterOperator::In],
-                value: match name.as_str() {
-                    "TTY" => String::from("a term type (SCD, SBD, IN, ...)"),
-                    "SAB" => String::from("a source (RXNORM, MTHSPL, ...)"),
-                    _ => String::from("a semantic type name"),
-                },
-            });
+            filters.push(attribute_filter(name));
         }
     }
     for name in relations.types() {

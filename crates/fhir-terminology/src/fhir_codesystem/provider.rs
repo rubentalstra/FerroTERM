@@ -238,6 +238,38 @@ impl FhirCodeSystem {
             codeless: false,
         }
     }
+
+    /// The `parent` and `child` properties the hierarchy states for `concept`.
+    fn relation_properties(&self, concept: Concept) -> Result<Vec<Property>, ProviderError> {
+        let Some(hierarchy) = &self.hierarchy else {
+            return Ok(Vec::new());
+        };
+        let mut out = Vec::new();
+        for (code, related) in [
+            (PARENT, hierarchy.parents(concept)),
+            (CHILD, hierarchy.children(concept)),
+        ] {
+            for index in related {
+                if let Some(related_code) = self.code(Concept::new(index))? {
+                    out.push(Property {
+                        code: code.to_owned(),
+                        value: PropertyValue::Code(related_code),
+                        ..Property::default()
+                    });
+                }
+            }
+        }
+        Ok(out)
+    }
+}
+
+/// Whether `code` names a property `$lookup` renders from the concept's status
+/// or hierarchy instead of its stated properties.
+fn rendered_elsewhere(code: &str, abstract_concept: bool) -> bool {
+    code == INACTIVE
+        || (code == NOT_SELECTABLE && abstract_concept)
+        || code == PARENT
+        || code == CHILD
 }
 
 impl CodeSystemProvider for FhirCodeSystem {
@@ -356,36 +388,14 @@ impl CodeSystemProvider for FhirCodeSystem {
                 ..Property::default()
             });
         }
-        for property in &entry.properties {
-            if property.code == INACTIVE
-                || (property.code == NOT_SELECTABLE && status.abstract_concept)
-                || property.code == PARENT
-                || property.code == CHILD
-            {
-                continue;
-            }
-            out.push(property.clone());
-        }
-        if let Some(hierarchy) = &self.hierarchy {
-            for parent in hierarchy.parents(concept) {
-                if let Some(code) = self.code(Concept::new(parent))? {
-                    out.push(Property {
-                        code: PARENT.to_owned(),
-                        value: PropertyValue::Code(code),
-                        ..Property::default()
-                    });
-                }
-            }
-            for child in hierarchy.children(concept) {
-                if let Some(code) = self.code(Concept::new(child))? {
-                    out.push(Property {
-                        code: CHILD.to_owned(),
-                        value: PropertyValue::Code(code),
-                        ..Property::default()
-                    });
-                }
-            }
-        }
+        out.extend(
+            entry
+                .properties
+                .iter()
+                .filter(|property| !rendered_elsewhere(&property.code, status.abstract_concept))
+                .cloned(),
+        );
+        out.extend(self.relation_properties(concept)?);
         Ok(out)
     }
 

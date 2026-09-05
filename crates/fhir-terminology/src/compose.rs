@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use crate::filter::{Filter, FilterOperator};
 use crate::language;
-use crate::provider::{CodeSystemProvider, Concept, ConceptSet, ProviderError};
+use crate::provider::{CodeSystemProvider, Concept, ConceptSet, Hierarchy, ProviderError};
 use crate::registry::{Registry, ResolveError};
 
 /// A system and optional version an include names.
@@ -665,40 +665,22 @@ impl<'a> Expander<'a> {
             system: system.clone(),
             source,
         };
-        let mut overrides = BTreeMap::new();
-        let mut spellings = BTreeMap::new();
-        let mut stated: Vec<u32> = Vec::new();
-        let names = !include.concepts.is_empty();
-        let mut set = if include.concepts.is_empty() {
-            provider.filter_all(&include.filters).map_err(&failed)?
-        } else {
-            let mut set = ConceptSet::new();
-            for concept in &include.concepts {
-                let Some(located) = provider.locate(&concept.code).map_err(&failed)? else {
-                    continue;
-                };
-                if options.exclude_post_coordinated && provider.is_postcoordinated(located.concept)
-                {
-                    continue;
-                }
-                if set.insert(located.concept.index()) {
-                    stated.push(located.concept.index());
-                }
-                if let Some(display) = &concept.display {
-                    overrides.insert(located.concept.index(), display.clone());
-                }
-                if located.code != concept.code {
-                    spellings.insert(located.concept.index(), concept.code.clone());
-                }
+        let mut selected = if include.concepts.is_empty() {
+            Selected {
+                set: provider.filter_all(&include.filters).map_err(&failed)?,
+                stated: None,
+                overrides: BTreeMap::new(),
+                spellings: BTreeMap::new(),
             }
-            set
+        } else {
+            Self::enumerated(provider, include, options)?
         };
         if let Some(text) = options
             .text
             .as_deref()
             .filter(|text| !text.trim().is_empty())
         {
-            set &= provider
+            selected.set &= provider
                 .search(
                     text,
                     language::for_provider(provider.as_ref(), options.language.as_deref())
@@ -706,10 +688,48 @@ impl<'a> Expander<'a> {
                 )
                 .map_err(failed)?;
         }
-        stated.retain(|index| set.contains(*index));
+        if let Some(stated) = selected.stated.as_mut() {
+            stated.retain(|index| selected.set.contains(*index));
+        }
+        Ok(selected)
+    }
+
+    /// The concepts `include` names, in the order it names them, with its
+    /// display overrides and the spellings it used.
+    fn enumerated(
+        provider: &Arc<dyn CodeSystemProvider>,
+        include: &Include,
+        options: &Options,
+    ) -> Result<Selected, ComposeError> {
+        let system = provider.identity().url.clone();
+        let failed = |source: ProviderError| ComposeError::Provider {
+            system: system.clone(),
+            source,
+        };
+        let mut overrides = BTreeMap::new();
+        let mut spellings = BTreeMap::new();
+        let mut stated: Vec<u32> = Vec::new();
+        let mut set = ConceptSet::new();
+        for concept in &include.concepts {
+            let Some(located) = provider.locate(&concept.code).map_err(&failed)? else {
+                continue;
+            };
+            if options.exclude_post_coordinated && provider.is_postcoordinated(located.concept) {
+                continue;
+            }
+            if set.insert(located.concept.index()) {
+                stated.push(located.concept.index());
+            }
+            if let Some(display) = &concept.display {
+                overrides.insert(located.concept.index(), display.clone());
+            }
+            if located.code != concept.code {
+                spellings.insert(located.concept.index(), concept.code.clone());
+            }
+        }
         Ok(Selected {
             set,
-            stated: names.then_some(stated),
+            stated: Some(stated),
             overrides,
             spellings,
         })
@@ -849,22 +869,7 @@ fn preorder(selection: &Selection, wanted: usize) -> Option<Vec<(u32, usize)>> {
         if hierarchy.any_parent_in(Concept::new(index), &selection.set) {
             continue;
         }
-        let mut stack: Vec<(u32, usize)> = vec![(index, 0)];
-        while let Some((index, depth)) = stack.pop() {
-            if !seen.insert(index) {
-                continue;
-            }
-            out.push((index, depth));
-            if out.len() >= wanted {
-                return Some(out);
-            }
-            let children: Vec<u32> = hierarchy
-                .children(Concept::new(index))
-                .iter()
-                .filter(|child| selection.set.contains(*child) && !seen.contains(*child))
-                .collect();
-            stack.extend(children.into_iter().rev().map(|child| (child, depth + 1)));
-        }
+        subtree(hierarchy, selection, index, wanted, &mut seen, &mut out);
     }
     // A cycle or a member no root reaches keeps its place at the end, flat.
     for index in &selection.set {
@@ -876,6 +881,34 @@ fn preorder(selection: &Selection, wanted: usize) -> Option<Vec<(u32, usize)>> {
         }
     }
     Some(out)
+}
+
+/// Appends the members of `selection` under `root` to `out` in pre-order with
+/// their depths, stopping once `out` holds `wanted`.
+fn subtree(
+    hierarchy: &dyn Hierarchy,
+    selection: &Selection,
+    root: u32,
+    wanted: usize,
+    seen: &mut ConceptSet,
+    out: &mut Vec<(u32, usize)>,
+) {
+    let mut stack: Vec<(u32, usize)> = vec![(root, 0)];
+    while let Some((index, depth)) = stack.pop() {
+        if !seen.insert(index) {
+            continue;
+        }
+        out.push((index, depth));
+        if out.len() >= wanted {
+            return;
+        }
+        let children: Vec<u32> = hierarchy
+            .children(Concept::new(index))
+            .iter()
+            .filter(|child| selection.set.contains(*child) && !seen.contains(*child))
+            .collect();
+        stack.extend(children.into_iter().rev().map(|child| (child, depth + 1)));
+    }
 }
 
 /// The item for the concept at `index` of `selection`.

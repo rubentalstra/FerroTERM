@@ -261,6 +261,40 @@ fn axis_short(axis: &str) -> &str {
     axis.rsplit('/').next().unwrap_or(axis)
 }
 
+/// The `kind` name table of `store`, by ordinal.
+fn vocabulary_names(store: &Store, kind: Vocabulary) -> Result<BTreeMap<u32, String>, OpenError> {
+    let mut names = BTreeMap::new();
+    let mut ordinal = 0;
+    while let Some(name) = store.vocabulary(kind, ordinal)? {
+        names.insert(ordinal, name);
+        ordinal += 1;
+    }
+    Ok(names)
+}
+
+/// The entity id the `id` property of the concept at `ordinal` states, empty
+/// when the concept states none.
+fn entity_id(
+    store: &Store,
+    linearization: Linearization,
+    ordinal: Ordinal,
+    id_key: Option<u32>,
+) -> Result<String, OpenError> {
+    let Some(key) = id_key else {
+        return Ok(String::new());
+    };
+    let mut id = String::new();
+    for (k, values) in store.properties(ordinal)? {
+        if k == key
+            && let Some(record::PropertyValue::Code(uri)) = values.first()
+            && let Some(entity) = linearization.id_of(uri)
+        {
+            id = entity;
+        }
+    }
+    Ok(id)
+}
+
 impl Icd11Provider {
     /// Opens the artifact directory `dir`.
     ///
@@ -268,10 +302,6 @@ impl Icd11Provider {
     ///
     /// Returns [`OpenError`] when the manifest, the store, or a side file
     /// does not read, or the artifact is not an ICD-11 code system.
-    #[expect(
-        clippy::too_many_lines,
-        reason = "one artifact file after another, read top to bottom"
-    )]
     pub fn open(dir: &Path) -> Result<Self, OpenError> {
         let manifest_path = dir.join(MANIFEST_FILE);
         let text = std::fs::read_to_string(&manifest_path).map_err(|source| OpenError::Io {
@@ -320,18 +350,8 @@ impl Icd11Provider {
             .as_deref()
             .and_then(|c| c.parse().ok())
             .ok_or(OpenError::ConceptCount(concepts))?;
-        let mut key_names = BTreeMap::new();
-        let mut ordinal = 0;
-        while let Some(name) = store.vocabulary(Vocabulary::PropertyKeys, ordinal)? {
-            key_names.insert(ordinal, name);
-            ordinal += 1;
-        }
-        let mut uses = BTreeMap::new();
-        let mut ordinal = 0;
-        while let Some(name) = store.vocabulary(Vocabulary::DesignationUses, ordinal)? {
-            uses.insert(ordinal, name);
-            ordinal += 1;
-        }
+        let key_names = vocabulary_names(&store, Vocabulary::PropertyKeys)?;
+        let uses = vocabulary_names(&store, Vocabulary::DesignationUses)?;
         let id_key = key_names
             .iter()
             .find(|(_, n)| n.as_str() == "id")
@@ -341,20 +361,12 @@ impl Icd11Provider {
         for index in 0..concepts {
             let ordinal = Ordinal::new(index);
             let stored_code = store.concept(ordinal)?.map(|c| c.code).unwrap_or_default();
-            let mut id = String::new();
-            if let Some(key) = id_key {
-                for (k, values) in store.properties(ordinal)? {
-                    if k == key
-                        && let Some(record::PropertyValue::Code(uri)) = values.first()
-                        && let Some(entity) = linearization.id_of(uri)
-                    {
-                        id = entity;
-                    }
-                }
-            }
-            if id.is_empty() {
-                id = linearization.id_of(&stored_code).unwrap_or_default();
-            }
+            let entity = entity_id(&store, linearization, ordinal, id_key)?;
+            let id = if entity.is_empty() {
+                linearization.id_of(&stored_code).unwrap_or_default()
+            } else {
+                entity
+            };
             let code = (linearization.id_of(&stored_code).is_none()).then_some(stored_code);
             ids.push(id);
             codes.push(code);
@@ -490,16 +502,68 @@ impl Icd11Provider {
         pick(true).or_else(|| pick(false))
     }
 
+    /// Binds `stem` onto an unfilled postcoordination axis of `last`, when one
+    /// takes it: the value, recorded on `last` as well.
+    fn join(&self, last: &mut Member, stem: u32, text: &str) -> Option<Bound> {
+        let filled: Vec<String> = last.values.iter().map(|b| b.axis.clone()).collect();
+        let axis = self.bind(last.stem, stem, &filled)?;
+        if filled.contains(&axis) {
+            return None;
+        }
+        let bound = Bound {
+            axis,
+            value: stem,
+            text: text.to_owned(),
+        };
+        last.values.push(bound.clone());
+        Some(bound)
+    }
+
+    /// The values `member` binds onto the axes of `stem`, in the order written;
+    /// `None` when a dotted qualifier names no code.
+    fn bindings(
+        &self,
+        text: &str,
+        expression: &Expression,
+        member: &::icd11::expression::Member,
+        stem: u32,
+    ) -> Result<Option<Vec<Bound>>, ProviderError> {
+        let invalid = |reason: String| ProviderError::InvalidCode {
+            code: text.to_owned(),
+            reason,
+        };
+        let mut values: Vec<Bound> = Vec::new();
+        for token in &member.values {
+            let Some(value) = self.resolve(token)? else {
+                // NOTE: an ICF dotted qualifier that is no code (`d5409.3`) is an unknown
+                // code (the ecosystem's `lookup-icf-pc-old`), not a malformed expression.
+                if expression.dotted {
+                    return Ok(None);
+                }
+                return Err(invalid(format!("`{}` is not a code", token.text)));
+            };
+            let filled: Vec<String> = values.iter().map(|b: &Bound| b.axis.clone()).collect();
+            let Some(axis) = self.bind(stem, value, &filled) else {
+                return Err(invalid(format!(
+                    "`{}` is on no postcoordination axis of `{}`",
+                    token.text, member.stem.text
+                )));
+            };
+            values.push(Bound {
+                axis,
+                value,
+                text: token.text.clone(),
+            });
+        }
+        Ok(Some(values))
+    }
+
     /// Validates the expression `text`, interning it when it holds.
     fn cluster(
         &self,
         text: &str,
         expression: &Expression,
     ) -> Result<Option<Located>, ProviderError> {
-        let invalid = |reason: String| ProviderError::InvalidCode {
-            code: text.to_owned(),
-            reason,
-        };
         let mut members: Vec<Member> = Vec::new();
         let mut joined: Vec<(usize, Bound)> = Vec::new();
         let mut last_stem: Option<usize> = None;
@@ -512,49 +576,19 @@ impl Icd11Provider {
             if position > 0
                 && member.values.is_empty()
                 && let Some(last) = last_stem.and_then(|i| members.get_mut(i))
+                && let Some(bound) = self.join(last, stem, &member.stem.text)
             {
-                let filled: Vec<String> = last.values.iter().map(|b| b.axis.clone()).collect();
-                if let Some(axis) = self.bind(last.stem, stem, &filled)
-                    && !filled.contains(&axis)
-                {
-                    let bound = Bound {
-                        axis,
-                        value: stem,
-                        text: member.stem.text.clone(),
-                    };
-                    last.values.push(bound.clone());
-                    joined.push((position, bound));
-                    members.push(Member {
-                        stem,
-                        values: Vec::new(),
-                    });
-                    continue;
-                }
+                joined.push((position, bound));
+                members.push(Member {
+                    stem,
+                    values: Vec::new(),
+                });
+                continue;
             }
             last_stem = Some(members.len());
-            let mut values = Vec::new();
-            for token in &member.values {
-                let Some(value) = self.resolve(token)? else {
-                    // NOTE: an ICF dotted qualifier that is no code (`d5409.3`) is an unknown
-                    // code (the ecosystem's `lookup-icf-pc-old`), not a malformed expression.
-                    if expression.dotted {
-                        return Ok(None);
-                    }
-                    return Err(invalid(format!("`{}` is not a code", token.text)));
-                };
-                let filled: Vec<String> = values.iter().map(|b: &Bound| b.axis.clone()).collect();
-                let Some(axis) = self.bind(stem, value, &filled) else {
-                    return Err(invalid(format!(
-                        "`{}` is on no postcoordination axis of `{}`",
-                        token.text, member.stem.text
-                    )));
-                };
-                values.push(Bound {
-                    axis,
-                    value,
-                    text: token.text.clone(),
-                });
-            }
+            let Some(values) = self.bindings(text, expression, member, stem)? else {
+                return Ok(None);
+            };
             members.push(Member { stem, values });
         }
         let index = self.expressions.intern(text)?.index();

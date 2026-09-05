@@ -192,7 +192,19 @@ impl Attributes {
         mut edges: Vec<Edge>,
     ) -> Result<Self, AttributesError> {
         let type_count = u32::try_from(types.len()).map_err(AttributesError::TooMany)?;
-        for edge in &edges {
+        Self::check_range(nodes, type_count, &edges)?;
+        edges.sort_unstable();
+        edges.dedup();
+        u32::try_from(edges.len()).map_err(AttributesError::TooMany)?;
+        let mut attributes = Self::pack(nodes, types, &edges)?;
+        attributes.derive();
+        Ok(attributes)
+    }
+
+    /// Refuses an edge whose source, type, or concept value lies outside the
+    /// `nodes` concepts and `type_count` attribute types.
+    fn check_range(nodes: u32, type_count: u32, edges: &[Edge]) -> Result<(), AttributesError> {
+        for edge in edges {
             let target_ok = match edge.value {
                 Value::Concept(target) => target.index() < nodes,
                 Value::Number(_) | Value::String(_) => true,
@@ -206,9 +218,12 @@ impl Attributes {
                 });
             }
         }
-        edges.sort_unstable();
-        edges.dedup();
-        u32::try_from(edges.len()).map_err(AttributesError::TooMany)?;
+        Ok(())
+    }
+
+    /// The row arrays of `nodes` concepts read off the sorted `edges`, with the
+    /// number and string values interned; the inverted index is not derived yet.
+    fn pack(nodes: u32, types: Vec<u64>, edges: &[Edge]) -> Result<Self, AttributesError> {
         let mut interned: BTreeMap<String, u32> = BTreeMap::new();
         let mut strings = Vec::new();
         let mut intern = |text: &str| -> Result<u32, AttributesError> {
@@ -243,7 +258,7 @@ impl Attributes {
             }
         }
         offsets.push(u32::try_from(groups.len()).unwrap_or(u32::MAX));
-        let mut attributes = Self {
+        Ok(Self {
             types,
             offsets,
             groups,
@@ -252,9 +267,7 @@ impl Attributes {
             payloads,
             strings,
             inverted: Vec::new(),
-        };
-        attributes.derive();
-        Ok(attributes)
+        })
     }
 
     /// Builds the inverted index from the rows.
