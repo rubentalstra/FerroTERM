@@ -275,28 +275,27 @@ fn class(code: &str, kind: &str, active: bool, rubrics: Vec<Rubric>) -> Class {
     }
 }
 
-/// Reads the ladder from the `BSTnnnT` files under `root`, recording
-/// `version` (the release, `202609`; the files carry none).
-///
-/// Removed records (mutation code `9`) are skipped; an article with a removal
-/// date (`XPUHDD`) is served inactive. Names come from `BST020T`; the coded
-/// pharmaceutical form, route, and unit are resolved through `BST902T` when
-/// it is present, else served as their item codes.
+/// The records of the ladder, by the `BSTnnn` prefix of their file.
+type Files = BTreeMap<&'static str, Vec<Record>>;
+
+/// One rung of the ladder: its classes and the rung above each of them.
+struct Rung {
+    classes: BTreeMap<String, Class>,
+    parents: BTreeMap<String, String>,
+}
+
+/// Reads the published files of the ladder under `root`.
 ///
 /// # Errors
 ///
-/// Returns [`GStandaardError`] when a file is missing, does not read, or has
-/// a record shorter than its published length.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one published file after another, read top to bottom"
-)]
-pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
-    let mut paths: BTreeMap<&str, Vec<Record>> = BTreeMap::new();
+/// Returns [`GStandaardError`] when a file other than `BST902T` is missing,
+/// does not read, or has a record shorter than its published length.
+fn read_files(root: &Path) -> Result<Files, GStandaardError> {
+    let mut files: Files = BTreeMap::new();
     for (prefix, length) in FILES {
         match find(root, prefix)? {
             Some(path) => {
-                paths.insert(prefix, records(&path, length)?);
+                files.insert(prefix, records(&path, length)?);
             }
             None if prefix == "BST902" => {}
             None => {
@@ -307,9 +306,18 @@ pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
             }
         }
     }
-    let mut take = |prefix: &str| paths.remove(prefix).unwrap_or_default();
+    Ok(files)
+}
+
+/// Takes the records of `prefix`, none when the release lacks the file.
+fn take(files: &mut Files, prefix: &str) -> Vec<Record> {
+    files.remove(prefix).unwrap_or_default()
+}
+
+/// Reads `BST020T`: the full, short, and label names by name number.
+fn read_names(records: Vec<Record>) -> Names {
     let mut names = Names::default();
-    for record in take("BST020") {
+    for record in records {
         if record.removed() {
             continue;
         }
@@ -324,8 +332,14 @@ pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
             );
         }
     }
+    names
+}
+
+/// Reads `BST902T`: the item names of the thesauri the coded fields point
+/// into.
+fn read_thesauri(records: Vec<Record>) -> Thesauri {
     let mut thesauri = Thesauri::default();
-    for record in take("BST902") {
+    for record in records {
         if record.removed() {
             continue;
         }
@@ -335,8 +349,14 @@ pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
                 .insert((thesaurus, item), collapse(&record.field(62, 50)));
         }
     }
+    thesauri
+}
+
+/// Reads `BST711T`: the generic products with their substance, strength,
+/// form, route, and ATC code.
+fn read_gpk(records: Vec<Record>, names: &Names, thesauri: &Thesauri) -> BTreeMap<String, Class> {
     let mut gpk: BTreeMap<String, Class> = BTreeMap::new();
-    for record in take("BST711") {
+    for record in records {
         if record.removed() {
             continue;
         }
@@ -368,9 +388,15 @@ pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
         }
         gpk.insert(code.clone(), class(&code, "gpk", true, rubrics));
     }
-    let mut prk_gpk: BTreeMap<String, String> = BTreeMap::new();
-    let mut prk: BTreeMap<String, Class> = BTreeMap::new();
-    for record in take("BST052") {
+    gpk
+}
+
+/// Reads `BST052T`: the prescription products with their unit and the GPK
+/// each falls under.
+fn read_prk(records: Vec<Record>, names: &Names, thesauri: &Thesauri) -> Rung {
+    let mut parents: BTreeMap<String, String> = BTreeMap::new();
+    let mut classes: BTreeMap<String, Class> = BTreeMap::new();
+    for record in records {
         if record.removed() {
             continue;
         }
@@ -380,16 +406,22 @@ pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
         let mut rubrics = names.designations(record.key(14, 7));
         if let Some(parent) = record.key(21, 8) {
             rubrics.push(property(GPK, parent.clone()));
-            prk_gpk.insert(code.clone(), parent);
+            parents.insert(code.clone(), parent);
         }
         if let Some(unit) = thesauri.resolve(&record, 49, 53, 6) {
             rubrics.push(property("unit", unit));
         }
-        prk.insert(code.clone(), class(&code, "prk", true, rubrics));
+        classes.insert(code.clone(), class(&code, "prk", true, rubrics));
     }
-    let mut hpk_prk: BTreeMap<String, String> = BTreeMap::new();
-    let mut hpk: BTreeMap<String, Class> = BTreeMap::new();
-    for record in take("BST031") {
+    Rung { classes, parents }
+}
+
+/// Reads `BST031T`: the trade products with their brand and firm and the
+/// rungs above them.
+fn read_hpk(records: Vec<Record>, names: &Names, prk_gpk: &BTreeMap<String, String>) -> Rung {
+    let mut parents: BTreeMap<String, String> = BTreeMap::new();
+    let mut classes: BTreeMap<String, Class> = BTreeMap::new();
+    for record in records {
         if record.removed() {
             continue;
         }
@@ -402,7 +434,7 @@ pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
             if let Some(grand) = prk_gpk.get(&parent) {
                 rubrics.push(property(GPK, grand.clone()));
             }
-            hpk_prk.insert(code.clone(), parent);
+            parents.insert(code.clone(), parent);
         }
         for (kind, start) in [("brand", 37), ("firm", 87)] {
             let text = record.field(start, 50);
@@ -410,10 +442,21 @@ pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
                 rubrics.push(property(kind, collapse(&text)));
             }
         }
-        hpk.insert(code.clone(), class(&code, "hpk", true, rubrics));
+        classes.insert(code.clone(), class(&code, "hpk", true, rubrics));
     }
+    Rung { classes, parents }
+}
+
+/// Reads `BST004T`: the articles with the rungs above them, a removal date
+/// serving them inactive.
+fn read_articles(
+    records: Vec<Record>,
+    names: &Names,
+    hpk_prk: &BTreeMap<String, String>,
+    prk_gpk: &BTreeMap<String, String>,
+) -> BTreeMap<String, Class> {
     let mut article: BTreeMap<String, Class> = BTreeMap::new();
-    for record in take("BST004") {
+    for record in records {
         if record.removed() {
             continue;
         }
@@ -439,6 +482,34 @@ pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
             class(&code, "artikel", removed_on.is_none(), rubrics),
         );
     }
+    article
+}
+
+/// Reads the ladder from the `BSTnnnT` files under `root`, recording
+/// `version` (the release, `202609`; the files carry none).
+///
+/// Removed records (mutation code `9`) are skipped; an article with a removal
+/// date (`XPUHDD`) is served inactive. Names come from `BST020T`; the coded
+/// pharmaceutical form, route, and unit are resolved through `BST902T` when
+/// it is present, else served as their item codes.
+///
+/// # Errors
+///
+/// Returns [`GStandaardError`] when a file is missing, does not read, or has
+/// a record shorter than its published length.
+pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
+    let mut files = read_files(root)?;
+    let names = read_names(take(&mut files, "BST020"));
+    let thesauri = read_thesauri(take(&mut files, "BST902"));
+    let gpk = read_gpk(take(&mut files, "BST711"), &names, &thesauri);
+    let prk = read_prk(take(&mut files, "BST052"), &names, &thesauri);
+    let hpk = read_hpk(take(&mut files, "BST031"), &names, &prk.parents);
+    let article = read_articles(
+        take(&mut files, "BST004"),
+        &names,
+        &hpk.parents,
+        &prk.parents,
+    );
     Ok(Ladder {
         gpk: classification(
             "GPK",
@@ -452,9 +523,15 @@ pub fn read(root: &Path, version: &str) -> Result<Ladder, GStandaardError> {
             "G-Standaard voorschrijfproducten",
             "prk",
             version,
-            prk,
+            prk.classes,
         ),
-        hpk: classification("HPK", "G-Standaard handelsproducten", "hpk", version, hpk),
+        hpk: classification(
+            "HPK",
+            "G-Standaard handelsproducten",
+            "hpk",
+            version,
+            hpk.classes,
+        ),
         article: classification("ZI", "G-Standaard artikelen", "artikel", version, article),
     })
 }

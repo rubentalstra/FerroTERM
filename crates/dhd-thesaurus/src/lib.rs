@@ -319,23 +319,23 @@ fn required<'a>(row: &'a Row, column: &'static str, path: &Path) -> Result<&'a s
     })
 }
 
-/// Reads the thesaurus of the delivery under `root`.
-///
-/// Concepts and terms ended before the delivery date are skipped as terms
-/// and served inactive as concepts; the relations and derivations become
-/// properties; the SNOMED CT identifiers of the fully specified names and the
-/// ICD-10 derivations are also returned as pairs for the concept maps.
+/// The concepts of a delivery: the classes by identifier and the concept
+/// kinds in the order the table names them.
+struct Concepts {
+    classes: BTreeMap<String, Class>,
+    kinds: Vec<String>,
+}
+
+/// The ICD-10 derivations of a concept: the codes with their order number.
+type Icd10Derivations = BTreeMap<String, Vec<(u32, String)>>;
+
+/// Reads `ThesaurusConcept`: one class per concept, with the flag columns as
+/// rubrics and the validity as the active flag.
 ///
 /// # Errors
 ///
-/// Returns [`DhdError`] when a table does not read or lacks a column.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one delivery table after another, read top to bottom"
-)]
-pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
-    let delivery = Delivery::open(root)?;
-    let date = delivery.date();
+/// Returns [`DhdError`] when the table does not read or lacks a column.
+fn read_concepts(delivery: &Delivery, date: Option<&str>) -> Result<Concepts, DhdError> {
     let concept_table = delivery.table("ThesaurusConcept")?;
     let mut classes: BTreeMap<String, Class> = BTreeMap::new();
     let mut kinds: Vec<String> = Vec::new();
@@ -374,6 +374,20 @@ pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
             },
         );
     }
+    Ok(Concepts { classes, kinds })
+}
+
+/// Reads `ThesaurusTerm` into the classes and returns the SNOMED CT
+/// identifier of every fully specified name that carries one.
+///
+/// # Errors
+///
+/// Returns [`DhdError`] when the table does not read.
+fn read_terms(
+    delivery: &Delivery,
+    date: Option<&str>,
+    classes: &mut BTreeMap<String, Class>,
+) -> Result<BTreeMap<String, String>, DhdError> {
     let mut snomed: BTreeMap<String, String> = BTreeMap::new();
     for row in delivery.rows("ThesaurusTerm")? {
         if !row.current_at(date) {
@@ -416,6 +430,19 @@ pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
             }
         }
     }
+    Ok(snomed)
+}
+
+/// Reads `ThesaurusConceptRelaties`: the replacements and splits of the ended
+/// concepts, as properties of the concept they leave.
+///
+/// # Errors
+///
+/// Returns [`DhdError`] when the table does not read.
+fn read_relations(
+    delivery: &Delivery,
+    classes: &mut BTreeMap<String, Class>,
+) -> Result<(), DhdError> {
     for row in delivery.rows("ThesaurusConceptRelaties")? {
         let (Some(first), Some(second), Some(kind)) = (
             row.get("ConceptID1"),
@@ -437,6 +464,19 @@ pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
             });
         }
     }
+    Ok(())
+}
+
+/// Reads `Parapluterm`: the umbrella term a concept falls under.
+///
+/// # Errors
+///
+/// Returns [`DhdError`] when the table does not read.
+fn read_umbrella_terms(
+    delivery: &Delivery,
+    date: Option<&str>,
+    classes: &mut BTreeMap<String, Class>,
+) -> Result<(), DhdError> {
     for row in delivery.rows("Parapluterm")? {
         if !row.current_at(date) {
             continue;
@@ -451,6 +491,19 @@ pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
             });
         }
     }
+    Ok(())
+}
+
+/// Reads `ThesaurusConceptRol`: the roles per specialism group.
+///
+/// # Errors
+///
+/// Returns [`DhdError`] when the table does not read.
+fn read_roles(
+    delivery: &Delivery,
+    date: Option<&str>,
+    classes: &mut BTreeMap<String, Class>,
+) -> Result<(), DhdError> {
     for row in delivery.rows("ThesaurusConceptRol")? {
         if !row.current_at(date) {
             continue;
@@ -472,7 +525,21 @@ pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
             });
         }
     }
-    let mut icd10: BTreeMap<String, Vec<(u32, String)>> = BTreeMap::new();
+    Ok(())
+}
+
+/// Reads `AfleidingICD10` into the classes and returns the derivations with
+/// their order numbers.
+///
+/// # Errors
+///
+/// Returns [`DhdError`] when the table does not read.
+fn read_icd10(
+    delivery: &Delivery,
+    date: Option<&str>,
+    classes: &mut BTreeMap<String, Class>,
+) -> Result<Icd10Derivations, DhdError> {
+    let mut icd10: Icd10Derivations = BTreeMap::new();
     for row in delivery.rows("AfleidingICD10")? {
         if !row.current_at(date) {
             continue;
@@ -495,6 +562,20 @@ pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
             });
         }
     }
+    Ok(icd10)
+}
+
+/// Reads `AfleidingDBC` and `AfleidingZA`: the derivations that carry a
+/// specialism code.
+///
+/// # Errors
+///
+/// Returns [`DhdError`] when a table does not read.
+fn read_derivations(
+    delivery: &Delivery,
+    date: Option<&str>,
+    classes: &mut BTreeMap<String, Class>,
+) -> Result<(), DhdError> {
     for (table, kind, code_column) in [
         ("AfleidingDBC", DBC, "DBC_ID"),
         ("AfleidingZA", ZA, "ZA_Code"),
@@ -518,6 +599,19 @@ pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
             }
         }
     }
+    Ok(())
+}
+
+/// Reads `CodeMapping`: the codes of other systems a concept maps to.
+///
+/// # Errors
+///
+/// Returns [`DhdError`] when the table does not read.
+fn read_mappings(
+    delivery: &Delivery,
+    date: Option<&str>,
+    classes: &mut BTreeMap<String, Class>,
+) -> Result<(), DhdError> {
     for row in delivery.rows("CodeMapping")? {
         if !row.current_at(date) {
             continue;
@@ -535,6 +629,30 @@ pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
             });
         }
     }
+    Ok(())
+}
+
+/// Reads the thesaurus of the delivery under `root`.
+///
+/// Concepts and terms ended before the delivery date are skipped as terms
+/// and served inactive as concepts; the relations and derivations become
+/// properties; the SNOMED CT identifiers of the fully specified names and the
+/// ICD-10 derivations are also returned as pairs for the concept maps.
+///
+/// # Errors
+///
+/// Returns [`DhdError`] when a table does not read or lacks a column.
+pub fn read(root: &Path, version: Option<&str>) -> Result<Thesaurus, DhdError> {
+    let delivery = Delivery::open(root)?;
+    let date = delivery.date();
+    let Concepts { mut classes, kinds } = read_concepts(&delivery, date)?;
+    let snomed = read_terms(&delivery, date, &mut classes)?;
+    read_relations(&delivery, &mut classes)?;
+    read_umbrella_terms(&delivery, date, &mut classes)?;
+    read_roles(&delivery, date, &mut classes)?;
+    let icd10 = read_icd10(&delivery, date, &mut classes)?;
+    read_derivations(&delivery, date, &mut classes)?;
+    read_mappings(&delivery, date, &mut classes)?;
     let icd10 = icd10
         .into_iter()
         .map(|(id, mut codes)| {

@@ -172,32 +172,42 @@ struct Placed {
 /// The `RXNORM` attributes of the concepts, by `RXCUI` then attribute name.
 type Attributes = BTreeMap<u64, BTreeMap<String, BTreeSet<String>>>;
 
-/// Builds the artifacts for the release under `root` into `out`.
-///
-/// `sources` names the sources (`SAB`) whose atoms are kept beside the
-/// unrestricted ones ([`UNRESTRICTED_SOURCES`]), so a full release under a
-/// UMLS licence needs an explicit list to serve the restricted sources it
-/// carries.
+/// The semantic types of the concepts, by `RXCUI`.
+type SemanticTypes = BTreeMap<u64, BTreeSet<String>>;
+
+/// The concepts of the release: their atoms, their ordinals, and the concept
+/// each atom belongs to.
+struct Numbered {
+    by_concept: BTreeMap<u64, Vec<Atom>>,
+    ordinals: BTreeMap<u64, Ordinal>,
+    atom_concepts: BTreeMap<u64, u64>,
+}
+
+/// What writing the concepts gathers: the designations to index, the atom
+/// identifiers, and the sources with an atom.
+#[derive(Default)]
+struct Gathered {
+    placed: Vec<Placed>,
+    atom_pairs: Vec<(u64, u32)>,
+    sabs: BTreeSet<String>,
+}
+
+/// The counts the manifest and the report record.
+struct Counts {
+    concepts: usize,
+    designations: usize,
+    relationships: usize,
+    words: usize,
+}
+
+/// Numbers the concepts: the atoms of the kept sources, grouped by `RXCUI`,
+/// keeping only the concepts with an `RXNORM` atom.
 ///
 /// # Errors
 ///
-/// Returns [`Error`] when the release does not read, no date is known, or
-/// an artifact cannot be written.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one pass per release table, read top to bottom"
-)]
-pub fn build(
-    root: &Path,
-    version: Option<&str>,
-    sources: &[String],
-    out: &Path,
-) -> Result<Report, Error> {
-    let release = Release::open(root)?;
-    let version = version
-        .map(str::to_owned)
-        .or_else(|| release.version())
-        .ok_or(Error::NoVersion)?;
+/// Returns [`Error`] when the release does not read or there are more
+/// concepts than an ordinal can number.
+fn number(release: &Release, sources: &[String]) -> Result<Numbered, Error> {
     let kept = |sab: &str| UNRESTRICTED_SOURCES.contains(&sab) || sources.iter().any(|s| s == sab);
     let mut by_concept: BTreeMap<u64, Vec<Atom>> = BTreeMap::new();
     for atom in release.atoms()? {
@@ -219,10 +229,23 @@ pub fn build(
             atom_concepts.insert(atom.rxaui, *rxcui);
         }
     }
+    Ok(Numbered {
+        by_concept,
+        ordinals,
+        atom_concepts,
+    })
+}
+
+/// Reads the `RXNORM` attributes of the numbered concepts.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the release does not read.
+fn read_attributes(release: &Release, numbered: &Numbered) -> Result<Attributes, Error> {
     let mut attributes: Attributes = BTreeMap::new();
     for attribute in release.attributes()? {
         let attribute = attribute?;
-        if attribute.sab != RXNORM || !ordinals.contains_key(&attribute.rxcui) {
+        if attribute.sab != RXNORM || !numbered.ordinals.contains_key(&attribute.rxcui) {
             continue;
         }
         attributes
@@ -232,11 +255,21 @@ pub fn build(
             .or_default()
             .insert(attribute.value);
     }
-    let mut semantic_types: BTreeMap<u64, BTreeSet<String>> = BTreeMap::new();
+    Ok(attributes)
+}
+
+/// Reads the semantic types of the numbered concepts, none when the release
+/// carries no such file.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the release does not read.
+fn read_semantic_types(release: &Release, numbered: &Numbered) -> Result<SemanticTypes, Error> {
+    let mut semantic_types: SemanticTypes = BTreeMap::new();
     if let Some(rows) = release.semantic_types()? {
         for row in rows {
             let row = row?;
-            if ordinals.contains_key(&row.rxcui) {
+            if numbered.ordinals.contains_key(&row.rxcui) {
                 semantic_types
                     .entry(row.rxcui)
                     .or_default()
@@ -244,6 +277,16 @@ pub fn build(
             }
         }
     }
+    Ok(semantic_types)
+}
+
+/// Builds the typed edges from the `RXNORM` relationships.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the release does not read or the edges do not
+/// build.
+fn build_relations(release: &Release, numbered: &Numbered) -> Result<Relations, Error> {
     let mut types: BTreeSet<String> = BTreeSet::new();
     let mut raw_edges: Vec<(Ordinal, String, Ordinal)> = Vec::new();
     for relationship in release.relationships()? {
@@ -252,8 +295,8 @@ pub fn build(
             continue;
         }
         let concept = |cui: Option<u64>, aui: Option<u64>| {
-            cui.or_else(|| aui.and_then(|a| atom_concepts.get(&a).copied()))
-                .and_then(|c| ordinals.get(&c).copied())
+            cui.or_else(|| aui.and_then(|a| numbered.atom_concepts.get(&a).copied()))
+                .and_then(|c| numbered.ordinals.get(&c).copied())
         };
         let (Some(first), Some(second)) = (
             concept(relationship.rxcui1, relationship.rxaui1),
@@ -282,12 +325,22 @@ pub fn build(
     for (source, kind, target) in raw_edges {
         edges.push((source, kind_of(&kind)?, target));
     }
-    let count = ordinal(ordinals.len())?.index();
-    let relations = Relations::build(count, types, edges)?;
-    std::fs::create_dir_all(out).map_err(io_error(out))?;
-    let store_path = out.join(STORE_FILE);
-    let mut builder = StoreBuilder::create(&store_path, SYSTEM, &version)?;
-    let ttys: BTreeSet<&str> = by_concept
+    let count = ordinal(numbered.ordinals.len())?.index();
+    Ok(Relations::build(count, types, edges)?)
+}
+
+/// Writes the designation-use vocabulary: the term types of the kept atoms.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store does not take the vocabulary or there are
+/// more term types than an ordinal can number.
+fn write_uses<'a>(
+    builder: &mut StoreBuilder,
+    numbered: &'a Numbered,
+) -> Result<BTreeMap<&'a str, u32>, Error> {
+    let ttys: BTreeSet<&str> = numbered
+        .by_concept
         .values()
         .flat_map(|atoms| atoms.iter().map(|a| a.tty.as_str()))
         .collect();
@@ -297,27 +350,72 @@ pub fn build(
         builder.vocabulary(Vocabulary::DesignationUses, use_ordinal, tty)?;
         uses.insert(tty, use_ordinal);
     }
-    let mut key_names: Vec<String> = vec![TTY_KEY.to_owned(), SAB_KEY.to_owned()];
-    if !semantic_types.is_empty() {
-        key_names.push(STY_KEY.to_owned());
+    Ok(uses)
+}
+
+/// The property keys of the store, by name.
+struct PropertyKeys {
+    keys: BTreeMap<String, u32>,
+}
+
+impl PropertyKeys {
+    /// Writes the property-key vocabulary and returns the keys by name.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`] when the store does not take the vocabulary or there
+    /// are more keys than an ordinal can number.
+    fn write(
+        builder: &mut StoreBuilder,
+        semantic_types: &SemanticTypes,
+        attributes: &Attributes,
+    ) -> Result<Self, Error> {
+        let mut key_names: Vec<String> = vec![TTY_KEY.to_owned(), SAB_KEY.to_owned()];
+        if !semantic_types.is_empty() {
+            key_names.push(STY_KEY.to_owned());
+        }
+        let attribute_names: BTreeSet<&str> = attributes
+            .values()
+            .flat_map(|by_name| by_name.keys().map(String::as_str))
+            .collect();
+        key_names.extend(attribute_names.into_iter().map(str::to_owned));
+        let mut keys: BTreeMap<String, u32> = BTreeMap::new();
+        for name in &key_names {
+            let key = ordinal(keys.len())?.index();
+            builder.vocabulary(Vocabulary::PropertyKeys, key, name)?;
+            keys.insert(name.clone(), key);
+        }
+        Ok(Self { keys })
     }
-    let attribute_names: BTreeSet<&str> = attributes
-        .values()
-        .flat_map(|by_name| by_name.keys().map(String::as_str))
-        .collect();
-    key_names.extend(attribute_names.into_iter().map(str::to_owned));
-    let mut keys: BTreeMap<String, u32> = BTreeMap::new();
-    for name in &key_names {
-        let key = ordinal(keys.len())?.index();
-        builder.vocabulary(Vocabulary::PropertyKeys, key, name)?;
-        keys.insert(name.clone(), key);
+
+    /// The key of `name`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::TooMany`] when the vocabulary holds no such key.
+    fn key(&self, name: &str) -> Result<u32, Error> {
+        self.keys.get(name).copied().ok_or(Error::TooMany)
     }
-    let key = |name: &str| keys.get(name).copied().ok_or(Error::TooMany);
-    let mut placed: Vec<Placed> = Vec::new();
-    let mut atom_pairs: Vec<(u64, u32)> = Vec::new();
-    let mut sabs: BTreeSet<String> = BTreeSet::new();
-    for (rxcui, atoms) in &by_concept {
-        let Some(&ordinal) = ordinals.get(rxcui) else {
+}
+
+/// Writes the concepts with their properties, gathering the designations, the
+/// atom identifiers, and the sources.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store does not take a concept or a property, or
+/// a key is unknown.
+fn write_concepts(
+    builder: &mut StoreBuilder,
+    numbered: &Numbered,
+    uses: &BTreeMap<&str, u32>,
+    keys: &PropertyKeys,
+    semantic_types: &SemanticTypes,
+    attributes: &Attributes,
+) -> Result<Gathered, Error> {
+    let mut gathered = Gathered::default();
+    for (rxcui, atoms) in &numbered.by_concept {
+        let Some(&ordinal) = numbered.ordinals.get(rxcui) else {
             continue;
         };
         let active = atoms
@@ -336,12 +434,12 @@ pub fn build(
         let mut concept_ttys: BTreeSet<&str> = BTreeSet::new();
         let mut concept_sabs: BTreeSet<&str> = BTreeSet::new();
         for atom in atoms {
-            atom_pairs.push((atom.rxaui, ordinal.index()));
+            gathered.atom_pairs.push((atom.rxaui, ordinal.index()));
             concept_sabs.insert(&atom.sab);
             if atom.sab == RXNORM {
                 concept_ttys.insert(&atom.tty);
             }
-            placed.push(Placed {
+            gathered.placed.push(Placed {
                 ordinal,
                 index,
                 record: Designation {
@@ -354,20 +452,22 @@ pub fn build(
             });
             index = index.saturating_add(1);
         }
-        sabs.extend(concept_sabs.iter().map(|s| (*s).to_owned()));
+        gathered
+            .sabs
+            .extend(concept_sabs.iter().map(|s| (*s).to_owned()));
         let codes = |set: &BTreeSet<&str>| -> Vec<PropertyValue> {
             set.iter()
                 .map(|s| PropertyValue::Code((*s).to_owned()))
                 .collect()
         };
-        builder.properties(ordinal, key(TTY_KEY)?, &codes(&concept_ttys))?;
-        builder.properties(ordinal, key(SAB_KEY)?, &codes(&concept_sabs))?;
+        builder.properties(ordinal, keys.key(TTY_KEY)?, &codes(&concept_ttys))?;
+        builder.properties(ordinal, keys.key(SAB_KEY)?, &codes(&concept_sabs))?;
         if let Some(stys) = semantic_types.get(rxcui) {
             let values: Vec<PropertyValue> = stys
                 .iter()
                 .map(|s| PropertyValue::String(s.clone()))
                 .collect();
-            builder.properties(ordinal, key(STY_KEY)?, &values)?;
+            builder.properties(ordinal, keys.key(STY_KEY)?, &values)?;
         }
         if let Some(by_name) = attributes.get(rxcui) {
             for (name, values) in by_name {
@@ -375,15 +475,34 @@ pub fn build(
                     .iter()
                     .map(|v| PropertyValue::String(v.clone()))
                     .collect();
-                builder.properties(ordinal, key(name)?, &values)?;
+                builder.properties(ordinal, keys.key(name)?, &values)?;
             }
         }
     }
-    for p in &placed {
+    Ok(gathered)
+}
+
+/// Writes the gathered designations to the store.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store does not take a designation.
+fn write_designations(builder: &mut StoreBuilder, placed: &[Placed]) -> Result<(), Error> {
+    for p in placed {
         builder.designation(p.ordinal, p.index, &p.record)?;
     }
+    Ok(())
+}
+
+/// Builds the text index over the designations, writes it beside the store,
+/// and returns the number of words it holds.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the index cannot be built or written.
+fn write_text_index(out: &Path, placed: &[Placed]) -> Result<usize, Error> {
     let mut index = IndexBuilder::new();
-    for p in &placed {
+    for p in placed {
         index.add(&Input {
             concept: p.ordinal,
             index: p.index,
@@ -399,19 +518,48 @@ pub fn build(
     designation_index::persist::write_to(&index, &mut text_bytes)?;
     let text_path = out.join(TEXT_FILE);
     std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
+    Ok(index.words())
+}
+
+/// Writes the typed relationships beside the store.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the file cannot be written.
+fn write_relations(out: &Path, relations: &Relations) -> Result<(), Error> {
     let mut relation_bytes = Vec::new();
     relations.write_to(&mut relation_bytes)?;
     let relations_path = out.join(RELATIONS_FILE);
-    std::fs::write(&relations_path, &relation_bytes).map_err(io_error(&relations_path))?;
+    std::fs::write(&relations_path, &relation_bytes).map_err(io_error(&relations_path))
+}
+
+/// Writes the atom table beside the store and returns the number of atoms it
+/// holds.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the file cannot be written.
+fn write_atoms(out: &Path, atom_pairs: Vec<(u64, u32)>) -> Result<usize, Error> {
     let atoms = KeyTable::new(atom_pairs);
     let mut atom_bytes = Vec::new();
     atoms.write_to(&mut atom_bytes)?;
     let atoms_path = out.join(ATOMS_FILE);
     std::fs::write(&atoms_path, &atom_bytes).map_err(io_error(&atoms_path))?;
-    // NOTE: the display is the first designation of each concept (the RXNORM
-    // atom of the most preferred term type), so the preferred rule names use 0
-    // only as a formality.
-    builder.finish(&PreferredRule { preferred: 0 })?;
+    Ok(atoms.len())
+}
+
+/// Writes the manifest beside the store.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the manifest cannot be rendered or written.
+fn write_manifest(
+    out: &Path,
+    version: &str,
+    sources: &BTreeSet<String>,
+    counts: &Counts,
+    semantic_types: bool,
+) -> Result<(), Error> {
     let manifest = json!({
         "manifest": MANIFEST_VERSION,
         "system": SYSTEM,
@@ -422,12 +570,12 @@ pub fn build(
         "text": TEXT_FILE,
         "relations": RELATIONS_FILE,
         "atoms": ATOMS_FILE,
-        "semanticTypes": !semantic_types.is_empty(),
-        "sources": sabs,
-        "concepts": ordinals.len(),
-        "designations": placed.len(),
-        "relationships": relations.edges(),
-        "words": index.words(),
+        "semanticTypes": semantic_types,
+        "sources": sources,
+        "concepts": counts.concepts,
+        "designations": counts.designations,
+        "relationships": counts.relationships,
+        "words": counts.words,
         "languages": ["en"],
     });
     let manifest_path = out.join(MANIFEST_FILE);
@@ -435,13 +583,74 @@ pub fn build(
         path: manifest_path.clone(),
         source: io::Error::other(source),
     })?;
-    std::fs::write(&manifest_path, format!("{text}\n")).map_err(io_error(&manifest_path))?;
+    std::fs::write(&manifest_path, format!("{text}\n")).map_err(io_error(&manifest_path))
+}
+
+/// Builds the artifacts for the release under `root` into `out`.
+///
+/// `sources` names the sources (`SAB`) whose atoms are kept beside the
+/// unrestricted ones ([`UNRESTRICTED_SOURCES`]), so a full release under a
+/// UMLS licence needs an explicit list to serve the restricted sources it
+/// carries.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the release does not read, no date is known, or
+/// an artifact cannot be written.
+pub fn build(
+    root: &Path,
+    version: Option<&str>,
+    sources: &[String],
+    out: &Path,
+) -> Result<Report, Error> {
+    let release = Release::open(root)?;
+    let version = version
+        .map(str::to_owned)
+        .or_else(|| release.version())
+        .ok_or(Error::NoVersion)?;
+    let numbered = number(&release, sources)?;
+    let attributes = read_attributes(&release, &numbered)?;
+    let semantic_types = read_semantic_types(&release, &numbered)?;
+    let relations = build_relations(&release, &numbered)?;
+    std::fs::create_dir_all(out).map_err(io_error(out))?;
+    let store_path = out.join(STORE_FILE);
+    let mut builder = StoreBuilder::create(&store_path, SYSTEM, &version)?;
+    let uses = write_uses(&mut builder, &numbered)?;
+    let keys = PropertyKeys::write(&mut builder, &semantic_types, &attributes)?;
+    let gathered = write_concepts(
+        &mut builder,
+        &numbered,
+        &uses,
+        &keys,
+        &semantic_types,
+        &attributes,
+    )?;
+    write_designations(&mut builder, &gathered.placed)?;
+    let words = write_text_index(out, &gathered.placed)?;
+    write_relations(out, &relations)?;
+    let Gathered {
+        placed,
+        atom_pairs,
+        sabs,
+    } = gathered;
+    let atoms = write_atoms(out, atom_pairs)?;
+    // NOTE: the display is the first designation of each concept (the RXNORM
+    // atom of the most preferred term type), so the preferred rule names use 0
+    // only as a formality.
+    builder.finish(&PreferredRule { preferred: 0 })?;
+    let counts = Counts {
+        concepts: numbered.ordinals.len(),
+        designations: placed.len(),
+        relationships: relations.edges(),
+        words,
+    };
+    write_manifest(out, &version, &sabs, &counts, !semantic_types.is_empty())?;
     Ok(Report {
         version,
         store: store_path,
-        concepts: u64::try_from(ordinals.len()).unwrap_or(u64::MAX),
-        atoms: u64::try_from(atoms.len()).unwrap_or(u64::MAX),
-        relationships: u64::try_from(relations.edges()).unwrap_or(u64::MAX),
-        words: u64::try_from(index.words()).unwrap_or(u64::MAX),
+        concepts: u64::try_from(counts.concepts).unwrap_or(u64::MAX),
+        atoms: u64::try_from(atoms).unwrap_or(u64::MAX),
+        relationships: u64::try_from(counts.relationships).unwrap_or(u64::MAX),
+        words: u64::try_from(counts.words).unwrap_or(u64::MAX),
     })
 }

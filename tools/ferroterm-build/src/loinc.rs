@@ -142,6 +142,40 @@ struct Placed {
     record: Designation,
 }
 
+/// The designations gathered while the concepts are written, numbered per
+/// concept.
+#[derive(Default)]
+struct Designations {
+    placed: Vec<Placed>,
+    index: u32,
+}
+
+impl Designations {
+    /// Starts the designations of one concept, numbering them from zero.
+    fn start(&mut self) {
+        self.index = 0;
+    }
+
+    /// Records one designation of `ordinal`, skipping an empty term.
+    fn place(&mut self, ordinal: Ordinal, term: &str, language: &str, use_ordinal: u32) {
+        if term.is_empty() {
+            return;
+        }
+        self.placed.push(Placed {
+            ordinal,
+            index: self.index,
+            record: Designation {
+                id: None,
+                term: term.to_owned(),
+                language: language.to_owned(),
+                use_ordinal,
+                active: true,
+            },
+        });
+        self.index += 1;
+    }
+}
+
 /// The numbered concepts of the release.
 struct Numbered {
     ordinals: BTreeMap<String, Ordinal>,
@@ -149,6 +183,26 @@ struct Numbered {
     /// The class parts only the hierarchy names.
     hierarchy_only: BTreeSet<String>,
 }
+
+/// The release tables the build reads.
+struct Tables {
+    terms: term::Terms,
+    parts: Vec<part::Part>,
+    edges: Vec<part::Edge>,
+    lists: BTreeMap<String, answer::AnswerList>,
+    links: Vec<part::Link>,
+    variants: Vec<variant::Variant>,
+}
+
+/// The counts the manifest and the report record.
+struct Counts {
+    concepts: usize,
+    designations: usize,
+    words: usize,
+}
+
+/// Per term code, per axis key, the linked part ordinals.
+type Linked<'a> = BTreeMap<&'a str, BTreeMap<String, Vec<Ordinal>>>;
 
 /// The column of `Loinc.csv` a link axis fills, or the axis name itself.
 fn axis_key(axis: &str) -> &str {
@@ -161,11 +215,8 @@ fn axis_key(axis: &str) -> &str {
 }
 
 /// Per term code, per axis key, the linked part ordinals.
-fn link_parts<'a>(
-    links: &'a [part::Link],
-    numbered: &Numbered,
-) -> BTreeMap<&'a str, BTreeMap<String, Vec<Ordinal>>> {
-    let mut out: BTreeMap<&str, BTreeMap<String, Vec<Ordinal>>> = BTreeMap::new();
+fn link_parts<'a>(links: &'a [part::Link], numbered: &Numbered) -> Linked<'a> {
+    let mut out: Linked<'a> = BTreeMap::new();
     for link in links {
         let Some(&part) = numbered.ordinals.get(&link.part.to_ascii_uppercase()) else {
             continue;
@@ -257,17 +308,12 @@ fn number(
     })
 }
 
-/// Builds the artifacts for the release under `root` into `out`.
+/// Reads the tables of the release under `root`.
 ///
 /// # Errors
 ///
-/// Returns [`Error`] when the release does not read, no version is known, the
-/// hierarchy has a cycle, or an artifact cannot be written.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one pass per release table, read top to bottom"
-)]
-pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, Error> {
+/// Returns [`Error`] when the release does not read.
+fn read_tables(root: &Path) -> Result<Tables, Error> {
     let release = Release::open(root)?;
     let terms = term::read(&release)?;
     let parts = part::read_parts(&release)?;
@@ -275,69 +321,132 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
     let lists = answer::read(&release)?;
     let links = part::read_links(&release)?;
     let variants = variant::read(&release)?;
-    let version = match version {
-        Some(v) => v.to_owned(),
+    Ok(Tables {
+        terms,
+        parts,
+        edges,
+        lists,
+        links,
+        variants,
+    })
+}
+
+/// Resolves the version to record: the one given, else the latest the terms
+/// name.
+///
+/// # Errors
+///
+/// Returns [`Error::NoVersion`] when neither names one.
+fn resolve_version(version: Option<&str>, terms: &term::Terms) -> Result<String, Error> {
+    match version {
+        Some(version) => Ok(version.to_owned()),
         None => terms
             .rows
             .iter()
             .filter_map(|t| t.fields.get("VersionLastChanged"))
             .max()
             .cloned()
-            .ok_or(Error::NoVersion)?,
-    };
-    std::fs::create_dir_all(out).map_err(io_error(out))?;
-    let numbered = number(&terms, &parts, &lists, &edges)?;
-    let store_path = out.join(STORE_FILE);
-    let mut builder = StoreBuilder::create(&store_path, SYSTEM, &version)?;
+            .ok_or(Error::NoVersion),
+    }
+}
+
+/// The property keys of the store, by name.
+struct PropertyKeys {
+    keys: BTreeMap<String, u32>,
+}
+
+impl PropertyKeys {
+    /// Writes the property-key vocabulary and returns the keys by name.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`] when the store does not take the vocabulary or there
+    /// are more keys than an ordinal can number.
+    fn write(
+        builder: &mut StoreBuilder,
+        terms: &term::Terms,
+        linked: &Linked<'_>,
+    ) -> Result<Self, Error> {
+        let mut key_names: Vec<String> = terms.columns.clone();
+        key_names
+            .extend([COPYRIGHT_KEY, ANSWER_LIST_KEY, ANSWERS_KEY, KIND_KEY].map(str::to_owned));
+        // The linked axes: the six of `Loinc.csv` under their column names, every
+        // other link type under its own name.
+        for axis in linked.values().flat_map(|by_axis| by_axis.keys()) {
+            if !key_names.iter().any(|k| k == axis) {
+                key_names.push(axis.clone());
+            }
+        }
+        let mut keys: BTreeMap<String, u32> = BTreeMap::new();
+        for name in &key_names {
+            let key = ordinal(keys.len())?.index();
+            keys.insert(name.clone(), key);
+            builder.vocabulary(Vocabulary::PropertyKeys, key, name)?;
+        }
+        Ok(Self { keys })
+    }
+
+    /// The key of `name`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::TooMany`] when the vocabulary holds no such key.
+    fn key(&self, name: &str) -> Result<u32, Error> {
+        self.keys.get(name).copied().ok_or(Error::TooMany)
+    }
+}
+
+/// Creates the store and writes the designation-use vocabulary.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store cannot be created or written.
+fn open_store(path: &Path, version: &str) -> Result<StoreBuilder, Error> {
+    let mut builder = StoreBuilder::create(path, SYSTEM, version)?;
     for (i, name) in DESIGNATION_USES.iter().enumerate() {
         builder.vocabulary(Vocabulary::DesignationUses, ordinal(i)?.index(), name)?;
     }
-    let mut keys: BTreeMap<String, u32> = BTreeMap::new();
-    let mut key_names: Vec<String> = terms.columns.clone();
-    key_names.extend([COPYRIGHT_KEY, ANSWER_LIST_KEY, ANSWERS_KEY, KIND_KEY].map(str::to_owned));
-    // The linked axes: the six of `Loinc.csv` under their column names, every
-    // other link type under its own name.
-    let linked = link_parts(&links, &numbered);
-    for axis in linked.values().flat_map(|by_axis| by_axis.keys()) {
-        if !key_names.iter().any(|k| k == axis) {
-            key_names.push(axis.clone());
-        }
-    }
-    for name in &key_names {
-        let key = ordinal(keys.len())?.index();
-        keys.insert(name.clone(), key);
-        builder.vocabulary(Vocabulary::PropertyKeys, key, name)?;
-    }
-    let key = |name: &str| keys.get(name).copied().ok_or(Error::TooMany);
-    let mut placed: Vec<Placed> = Vec::new();
-    let mut place =
-        |ordinal: Ordinal, index: &mut u32, term: &str, language: &str, use_ordinal: u32| {
-            if term.is_empty() {
-                return;
-            }
-            placed.push(Placed {
-                ordinal,
-                index: *index,
-                record: Designation {
-                    id: None,
-                    term: term.to_owned(),
-                    language: language.to_owned(),
-                    use_ordinal,
-                    active: true,
-                },
-            });
-            *index += 1;
-        };
+    Ok(builder)
+}
+
+/// Writes every concept with the kind of code it is.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store does not take a concept or its kind.
+fn write_concepts(
+    builder: &mut StoreBuilder,
+    numbered: &Numbered,
+    keys: &PropertyKeys,
+) -> Result<(), Error> {
     for (ordinal, concept, kind) in &numbered.concepts {
         builder.concept(*ordinal, concept)?;
         builder.properties(
             *ordinal,
-            key(KIND_KEY)?,
+            keys.key(KIND_KEY)?,
             &[PropertyValue::Code((*kind).to_owned())],
         )?;
     }
+    Ok(())
+}
+
+/// Writes the terms: their designations and linguistic variants, the
+/// `Loinc.csv` columns, the linked parts, and the answer lists they use.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store does not take a property or a key is
+/// unknown.
+fn write_terms(
+    builder: &mut StoreBuilder,
+    tables: &Tables,
+    numbered: &Numbered,
+    linked: &Linked<'_>,
+    keys: &PropertyKeys,
+    designations: &mut Designations,
+) -> Result<(), Error> {
     let mut answer_lists_of: BTreeMap<&str, Vec<String>> = BTreeMap::new();
-    for list in lists.values() {
+    for list in tables.lists.values() {
         for term_code in &list.terms {
             answer_lists_of
                 .entry(term_code.as_str())
@@ -345,24 +454,24 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
                 .push(list.code.clone());
         }
     }
-    for term in &terms.rows {
+    for term in &tables.terms.rows {
         let Some(&ordinal) = numbered.ordinals.get(&term.code.to_ascii_uppercase()) else {
             continue;
         };
-        let mut index = 0;
-        place(ordinal, &mut index, &term.long_common_name, "en", 0);
-        place(ordinal, &mut index, &term.short_name, "en", 1);
-        place(ordinal, &mut index, &term.consumer_name, "en", 2);
-        for variant in &variants {
+        designations.start();
+        designations.place(ordinal, &term.long_common_name, "en", 0);
+        designations.place(ordinal, &term.short_name, "en", 1);
+        designations.place(ordinal, &term.consumer_name, "en", 2);
+        for variant in &tables.variants {
             if let Some(translation) = variant.terms.get(&term.code) {
                 if let Some(long) = &translation.long_common_name {
-                    place(ordinal, &mut index, long, &variant.language, 0);
+                    designations.place(ordinal, long, &variant.language, 0);
                 }
                 if let Some(short) = &translation.short_name {
-                    place(ordinal, &mut index, short, &variant.language, 1);
+                    designations.place(ordinal, short, &variant.language, 1);
                 }
                 if let Some(display) = &translation.display_name {
-                    place(ordinal, &mut index, display, &variant.language, 4);
+                    designations.place(ordinal, display, &variant.language, 4);
                 }
             }
         }
@@ -374,7 +483,7 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
                 Some(parts) => parts.iter().map(|p| PropertyValue::Concept(*p)).collect(),
                 None => vec![PropertyValue::String(value.clone())],
             };
-            builder.properties(ordinal, key(column)?, &values)?;
+            builder.properties(ordinal, keys.key(column)?, &values)?;
         }
         if let Some(by_axis) = term_links {
             for (axis, parts) in by_axis {
@@ -383,7 +492,7 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
                 }
                 let values: Vec<PropertyValue> =
                     parts.iter().map(|p| PropertyValue::Concept(*p)).collect();
-                builder.properties(ordinal, key(axis)?, &values)?;
+                builder.properties(ordinal, keys.key(axis)?, &values)?;
             }
         }
         let copyright = if term.external_copyright.is_some() {
@@ -393,7 +502,7 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
         };
         builder.properties(
             ordinal,
-            key(COPYRIGHT_KEY)?,
+            keys.key(COPYRIGHT_KEY)?,
             &[PropertyValue::Code(copyright.to_owned())],
         )?;
         if let Some(lists) = answer_lists_of.get(term.code.as_str()) {
@@ -401,62 +510,110 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
                 .iter()
                 .map(|l| PropertyValue::Code(l.clone()))
                 .collect();
-            builder.properties(ordinal, key(ANSWER_LIST_KEY)?, &values)?;
+            builder.properties(ordinal, keys.key(ANSWER_LIST_KEY)?, &values)?;
         }
     }
-    for part in &parts {
+    Ok(())
+}
+
+/// Writes the parts with their names and status.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store does not take a property or a key is
+/// unknown.
+fn write_parts(
+    builder: &mut StoreBuilder,
+    parts: &[part::Part],
+    numbered: &Numbered,
+    keys: &PropertyKeys,
+    designations: &mut Designations,
+) -> Result<(), Error> {
+    for part in parts {
         let Some(&ordinal) = numbered.ordinals.get(&part.code.to_ascii_uppercase()) else {
             continue;
         };
-        let mut index = 0;
+        designations.start();
         // NOTE: the FHIR LOINC page names no display for a part; the reference
         // servers show `PartName`, and `PartDisplayName` follows as a synonym.
-        place(ordinal, &mut index, &part.name, "en", 3);
+        designations.place(ordinal, &part.name, "en", 3);
         if !part.display_name.is_empty() && part.display_name != part.name {
-            place(ordinal, &mut index, &part.display_name, "en", 3);
+            designations.place(ordinal, &part.display_name, "en", 3);
         }
         builder.properties(
             ordinal,
-            key("STATUS")?,
+            keys.key("STATUS")?,
             &[PropertyValue::String(part.status.clone())],
         )?;
         builder.properties(
             ordinal,
-            key(COPYRIGHT_KEY)?,
+            keys.key(COPYRIGHT_KEY)?,
             &[PropertyValue::Code(String::from("LOINC"))],
         )?;
     }
-    // The class parts only the hierarchy names, with its text as their name.
+    Ok(())
+}
+
+/// Writes the class parts only the hierarchy names, with its text as their
+/// name.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store does not take a property or a key is
+/// unknown.
+fn write_class_parts(
+    builder: &mut StoreBuilder,
+    edges: &[part::Edge],
+    numbered: &Numbered,
+    keys: &PropertyKeys,
+    designations: &mut Designations,
+) -> Result<(), Error> {
     let mut named: BTreeSet<&str> = BTreeSet::new();
-    for edge in &edges {
+    for edge in edges {
         if numbered.hierarchy_only.contains(&edge.code)
             && named.insert(edge.code.as_str())
             && let Some(&ordinal) = numbered.ordinals.get(&edge.code.to_ascii_uppercase())
         {
-            let mut index = 0;
-            place(ordinal, &mut index, &edge.text, "en", 3);
+            designations.start();
+            designations.place(ordinal, &edge.text, "en", 3);
             builder.properties(
                 ordinal,
-                key(COPYRIGHT_KEY)?,
+                keys.key(COPYRIGHT_KEY)?,
                 &[PropertyValue::Code(String::from("LOINC"))],
             )?;
         }
     }
+    Ok(())
+}
+
+/// Writes the answer lists with their answers.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store does not take a property or a key is
+/// unknown.
+fn write_answer_lists(
+    builder: &mut StoreBuilder,
+    lists: &BTreeMap<String, answer::AnswerList>,
+    numbered: &Numbered,
+    keys: &PropertyKeys,
+    designations: &mut Designations,
+) -> Result<(), Error> {
     for list in lists.values() {
         let Some(&ordinal) = numbered.ordinals.get(&list.code.to_ascii_uppercase()) else {
             continue;
         };
-        let mut index = 0;
-        place(ordinal, &mut index, &list.name, "en", 3);
+        designations.start();
+        designations.place(ordinal, &list.name, "en", 3);
         let values: Vec<PropertyValue> = list
             .answers
             .iter()
             .map(|a| PropertyValue::Code(a.code.clone()))
             .collect();
-        builder.properties(ordinal, key(ANSWERS_KEY)?, &values)?;
+        builder.properties(ordinal, keys.key(ANSWERS_KEY)?, &values)?;
         builder.properties(
             ordinal,
-            key(COPYRIGHT_KEY)?,
+            keys.key(COPYRIGHT_KEY)?,
             &[PropertyValue::Code(String::from("LOINC"))],
         )?;
         for answer in &list.answers {
@@ -464,16 +621,34 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
             else {
                 continue;
             };
-            let mut index = 0;
-            place(answer_ordinal, &mut index, &answer.display, "en", 3);
+            designations.start();
+            designations.place(answer_ordinal, &answer.display, "en", 3);
         }
     }
-    for p in &placed {
+    Ok(())
+}
+
+/// Writes the gathered designations to the store.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the store does not take a designation.
+fn write_designations(builder: &mut StoreBuilder, placed: &[Placed]) -> Result<(), Error> {
+    for p in placed {
         builder.designation(p.ordinal, p.index, &p.record)?;
     }
+    Ok(())
+}
+
+/// Builds the multiaxial hierarchy and writes it beside the store.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the hierarchy has a cycle or cannot be written.
+fn write_hierarchy(out: &Path, numbered: &Numbered, edges: &[part::Edge]) -> Result<(), Error> {
     let count = ordinal(numbered.concepts.len())?.index();
     let mut is_a = Vec::new();
-    for edge in &edges {
+    for edge in edges {
         if let (Some(child), Some(parent)) = (
             numbered.ordinals.get(&edge.code.to_ascii_uppercase()),
             edge.parent
@@ -489,9 +664,18 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
     let hierarchy_path = out.join(HIERARCHY_FILE);
     let mut graph_bytes = Vec::new();
     hierarchy.write_to(&mut graph_bytes)?;
-    std::fs::write(&hierarchy_path, &graph_bytes).map_err(io_error(&hierarchy_path))?;
+    std::fs::write(&hierarchy_path, &graph_bytes).map_err(io_error(&hierarchy_path))
+}
+
+/// Builds the text index over the designations, writes it beside the store,
+/// and returns the number of words it holds.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the index cannot be built or written.
+fn write_text_index(out: &Path, placed: &[Placed]) -> Result<usize, Error> {
     let mut index = IndexBuilder::new();
-    for p in &placed {
+    for p in placed {
         index.add(&Input {
             concept: p.ordinal,
             index: p.index,
@@ -514,7 +698,20 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
     designation_index::persist::write_to(&index, &mut text_bytes)?;
     let text_path = out.join(TEXT_FILE);
     std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
-    builder.finish(&PreferredRule { preferred: 0 })?;
+    Ok(index.words())
+}
+
+/// Writes the manifest beside the store.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the manifest cannot be rendered or written.
+fn write_manifest(
+    out: &Path,
+    version: &str,
+    variants: &[variant::Variant],
+    counts: &Counts,
+) -> Result<(), Error> {
     let mut languages: Vec<String> = variants.iter().map(|v| v.language.clone()).collect();
     languages.push(String::from("en"));
     languages.sort();
@@ -528,9 +725,9 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
         "storeLayout": tables::LAYOUT_VERSION,
         "hierarchy": HIERARCHY_FILE,
         "text": TEXT_FILE,
-        "concepts": numbered.concepts.len(),
-        "designations": placed.len(),
-        "words": index.words(),
+        "concepts": counts.concepts,
+        "designations": counts.designations,
+        "words": counts.words,
         "languages": languages,
     });
     let manifest_path = out.join(MANIFEST_FILE);
@@ -538,14 +735,72 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
         path: manifest_path.clone(),
         source: io::Error::other(source),
     })?;
-    std::fs::write(&manifest_path, format!("{text}\n")).map_err(io_error(&manifest_path))?;
+    std::fs::write(&manifest_path, format!("{text}\n")).map_err(io_error(&manifest_path))
+}
+
+/// Builds the artifacts for the release under `root` into `out`.
+///
+/// # Errors
+///
+/// Returns [`Error`] when the release does not read, no version is known, the
+/// hierarchy has a cycle, or an artifact cannot be written.
+pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, Error> {
+    let tables = read_tables(root)?;
+    let version = resolve_version(version, &tables.terms)?;
+    std::fs::create_dir_all(out).map_err(io_error(out))?;
+    let numbered = number(&tables.terms, &tables.parts, &tables.lists, &tables.edges)?;
+    let store_path = out.join(STORE_FILE);
+    let mut builder = open_store(&store_path, &version)?;
+    let linked = link_parts(&tables.links, &numbered);
+    let keys = PropertyKeys::write(&mut builder, &tables.terms, &linked)?;
+    let mut designations = Designations::default();
+    write_concepts(&mut builder, &numbered, &keys)?;
+    write_terms(
+        &mut builder,
+        &tables,
+        &numbered,
+        &linked,
+        &keys,
+        &mut designations,
+    )?;
+    write_parts(
+        &mut builder,
+        &tables.parts,
+        &numbered,
+        &keys,
+        &mut designations,
+    )?;
+    write_class_parts(
+        &mut builder,
+        &tables.edges,
+        &numbered,
+        &keys,
+        &mut designations,
+    )?;
+    write_answer_lists(
+        &mut builder,
+        &tables.lists,
+        &numbered,
+        &keys,
+        &mut designations,
+    )?;
+    write_designations(&mut builder, &designations.placed)?;
+    write_hierarchy(out, &numbered, &tables.edges)?;
+    let words = write_text_index(out, &designations.placed)?;
+    builder.finish(&PreferredRule { preferred: 0 })?;
+    let counts = Counts {
+        concepts: numbered.concepts.len(),
+        designations: designations.placed.len(),
+        words,
+    };
+    write_manifest(out, &version, &tables.variants, &counts)?;
     Ok(Report {
         version,
         store: store_path,
-        terms: u64::try_from(terms.rows.len()).unwrap_or(u64::MAX),
-        parts: u64::try_from(parts.len()).unwrap_or(u64::MAX),
-        answer_lists: u64::try_from(lists.len()).unwrap_or(u64::MAX),
-        designations: u64::try_from(placed.len()).unwrap_or(u64::MAX),
-        words: u64::try_from(index.words()).unwrap_or(u64::MAX),
+        terms: u64::try_from(tables.terms.rows.len()).unwrap_or(u64::MAX),
+        parts: u64::try_from(tables.parts.len()).unwrap_or(u64::MAX),
+        answer_lists: u64::try_from(tables.lists.len()).unwrap_or(u64::MAX),
+        designations: u64::try_from(counts.designations).unwrap_or(u64::MAX),
+        words: u64::try_from(counts.words).unwrap_or(u64::MAX),
     })
 }
