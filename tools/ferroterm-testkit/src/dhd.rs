@@ -67,7 +67,10 @@ pub fn terms() -> String {
 pub fn relations() -> String {
     table(
         "\"ConceptID1\",\"ConceptID2\",\"TypeRelatie\",\"Begindatum\",\"Einddatum\"",
-        &["\"9000003\",\"9000001\",\"Vervanging\",\"20200101\",\"20991231\""],
+        &[
+            "\"9000003\",\"9000001\",\"Vervanging\",\"20200101\",\"20991231\"",
+            "\"9000003\",\"9000002\",\"Vervanging\",\"20150101\",\"20180101\"",
+        ],
     )
 }
 
