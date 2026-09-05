@@ -5,7 +5,7 @@
 
 use std::fmt;
 
-use concept_graph::ordinal::{Ordinal, to_usize};
+use concept_graph::ordinal::Ordinal;
 
 /// A damaged record.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -243,56 +243,48 @@ impl Concept {
     }
 }
 
-/// The preferred designations of one concept, as the build chose them.
+/// The display of one concept per language reference set, as the build chose
+/// it: the term of the preferred designation of the display use.
 ///
-/// Each entry names the language reference set and the designation use that
-/// chose it, so a reader looking for a display walks the reference sets it
-/// wants without touching the designation table.
+/// This is not every preferred designation. A display needs one term and the
+/// language to match it against, so an entry is a reference set, a language,
+/// and a term, and nothing else about the designation is carried. Holding the
+/// whole designation for every use doubled a SNOMED artifact (#322).
 #[derive(Debug)]
-pub struct Preferred;
+pub struct Displays;
 
-impl Preferred {
-    /// The bytes of `entries`, each a reference set, a use, and a designation.
+impl Displays {
+    /// The bytes of `entries`, each a reference set, a language, and a term.
     ///
     /// Entries are written in the order given, which is the order a reader
-    /// scans them in.
+    /// scans them in, so the reference set order the build wrote decides which
+    /// entry a reader meets first.
     #[must_use]
-    pub fn encode(entries: &[(u32, u32, &Designation)]) -> Vec<u8> {
+    pub fn encode(entries: &[(u32, &str, &str)]) -> Vec<u8> {
         let mut w = Writer(Vec::new());
         w.u32(u32::try_from(entries.len()).unwrap_or(u32::MAX));
-        for (refset, use_ordinal, designation) in entries {
+        for (refset, language, term) in entries {
             w.u32(*refset);
-            w.u32(*use_ordinal);
-            let bytes = designation.encode();
-            w.u32(u32::try_from(bytes.len()).unwrap_or(u32::MAX));
-            w.0.extend_from_slice(&bytes);
+            w.str(language);
+            w.str(term);
         }
         w.0
     }
 
-    /// The designation `refset` and `use_ordinal` chose, if the concept has one.
-    ///
-    /// Only the matching entry is decoded; the rest are stepped over by their
-    /// length, so a concept with many preferred designations costs one decode.
+    /// The language and term `refset` chose, if the concept has one.
     ///
     /// # Errors
     ///
-    /// Returns [`RecordError`] when the entries are truncated or a matching
-    /// designation is damaged.
-    pub fn find(
-        bytes: &[u8],
-        refset: u32,
-        use_ordinal: u32,
-    ) -> Result<Option<Designation>, RecordError> {
+    /// Returns [`RecordError`] when the entries are truncated or not UTF-8.
+    pub fn find(bytes: &[u8], refset: u32) -> Result<Option<(String, String)>, RecordError> {
         let mut r = Reader { bytes, at: 0 };
         let count = r.u32()?;
         for _ in 0..count {
             let entry_refset = r.u32()?;
-            let entry_use = r.u32()?;
-            let len = to_usize(r.u32()?);
-            let entry = r.take(len)?;
-            if entry_refset == refset && entry_use == use_ordinal {
-                return Designation::decode(entry).map(Some);
+            let language = r.str()?;
+            let term = r.str()?;
+            if entry_refset == refset {
+                return Ok(Some((language, term)));
             }
         }
         Ok(None)

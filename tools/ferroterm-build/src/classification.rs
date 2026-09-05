@@ -330,7 +330,12 @@ pub fn build(
     designation_index::persist::write_to(&index, &mut text_bytes)?;
     let text_path = out.join(TEXT_FILE);
     std::fs::write(&text_path, &text_bytes).map_err(io_error(&text_path))?;
-    builder.finish(&PreferredRule { preferred: 0 })?;
+    builder.finish(&PreferredRule {
+        preferred: 0,
+        // Nothing reads a display column for this system; its provider
+        // chooses a display from the designations it already reads.
+        display_use: None,
+    })?;
     let manifest = json!({
         "manifest": MANIFEST_VERSION,
         "kind": KIND,

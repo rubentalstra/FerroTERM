@@ -766,7 +766,12 @@ pub fn build(root: &Path, version: Option<&str>, out: &Path) -> Result<Report, E
     write_hierarchy(out, &numbered, &tables.edges)?;
     let words =
         common::write_text_index::<Error>(out, &designations.placed, LanguageKey::PrimarySubtag)?;
-    builder.finish(&PreferredRule { preferred: 0 })?;
+    builder.finish(&PreferredRule {
+        preferred: 0,
+        // Nothing reads a display column for this system; its provider
+        // chooses a display from the designations it already reads.
+        display_use: None,
+    })?;
     let counts = Counts {
         concepts: numbered.concepts.len(),
         designations: designations.placed.len(),

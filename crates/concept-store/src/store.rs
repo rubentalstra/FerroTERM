@@ -301,37 +301,41 @@ impl Store {
         language_refset: u32,
         use_ordinal: u32,
     ) -> Result<Option<Designation>, StoreError> {
-        let Some(bytes) = self.displays.get(ordinal) else {
+        let txn = self.db.begin_read()?;
+        let preferred = open_table!(txn, tables::PREFERRED)?;
+        let Some(index) = preferred.get((ordinal.index(), language_refset, use_ordinal))? else {
             return Ok(None);
         };
-        record::Preferred::find(bytes, language_refset, use_ordinal).map_err(|source| {
-            StoreError::Record {
-                table: tables::COLUMN_DISPLAYS.to_owned(),
-                key: ordinal.to_string(),
-                source,
-            }
-        })
+        let designations = open_table!(txn, tables::DESIGNATIONS)?;
+        designations
+            .get((ordinal.index(), index.value()))?
+            .map(|v| {
+                Designation::decode(v.value()).map_err(|source| StoreError::Record {
+                    table: tables::DESIGNATIONS.name().to_owned(),
+                    key: format!("({ordinal}, {})", index.value()),
+                    source,
+                })
+            })
+            .transpose()
     }
 
-    /// The preferred designation of `ordinal` in the first of `language_refsets`
-    /// that names one `accept` admits.
+    /// The display of `ordinal` from the first of `language_refsets` whose
+    /// language `accept` admits.
     ///
-    /// One read transaction answers the whole walk, and the walk stops at the
-    /// first accepted designation. A caller choosing a display asks the
-    /// reference sets in order until one carries the language it wants, so a
-    /// transaction per reference set would make the cost the match position.
+    /// The build chose one display per reference set, so this reads the column
+    /// and stops at the first language the caller wants; no table is touched.
+    /// The reference sets are asked in the order given, which is what decides
+    /// the answer when several carry the same language.
     ///
     /// # Errors
     ///
-    /// Returns [`StoreError`] when the database cannot be read or a record is
-    /// damaged.
-    pub fn preferred_first(
+    /// Returns [`StoreError`] when the column is damaged.
+    pub fn display(
         &self,
         ordinal: Ordinal,
         language_refsets: impl IntoIterator<Item = u32>,
-        use_ordinal: u32,
-        accept: impl Fn(&Designation) -> bool,
-    ) -> Result<Option<Designation>, StoreError> {
+        accept: impl Fn(&str) -> bool,
+    ) -> Result<Option<String>, StoreError> {
         let Some(bytes) = self.displays.get(ordinal) else {
             return Ok(None);
         };
@@ -341,13 +345,12 @@ impl Store {
             source,
         };
         for refset in language_refsets {
-            let Some(designation) =
-                record::Preferred::find(bytes, refset, use_ordinal).map_err(damaged)?
+            let Some((language, term)) = record::Displays::find(bytes, refset).map_err(damaged)?
             else {
                 continue;
             };
-            if accept(&designation) {
-                return Ok(Some(designation));
+            if accept(&language) {
+                return Ok(Some(term));
             }
         }
         Ok(None)

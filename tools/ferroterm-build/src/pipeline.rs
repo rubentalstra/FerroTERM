@@ -397,7 +397,20 @@ fn write_artifacts(
                     builder.acceptability(*ordinal, *index, *refset, *acceptability)?;
                 }
             }
-            builder.finish(&PreferredRule { preferred: 0 })?;
+            // The display of a SNOMED concept is the preferred synonym of a
+            // language reference set (`.claude/rules/snomed-terminology.md`,
+            // [S-RF2-5]), so only that use goes into the display column. The
+            // position comes from the same array the vocabulary was written
+            // from, so the two cannot drift apart.
+            let synonym = DESIGNATION_USES
+                .iter()
+                .position(|use_id| *use_id == constants::SYNONYM)
+                .map(|p| ordinal_of(p, "designation uses"))
+                .transpose()?;
+            builder.finish(&PreferredRule {
+                preferred: 0,
+                display_use: synonym,
+            })?;
             Ok((is_a_edges, designations))
         },
         || {

@@ -1,0 +1,80 @@
+{
+  "taken_at": "2026-09-05T18:09:22.369439Z",
+  "ferroterm_version": "0.0.11",
+  "fhir": "r4b",
+  "machine": {
+    "os": "macos",
+    "arch": "aarch64",
+    "cpu": "Apple M2",
+    "memory_bytes": 17179869184,
+    "container": false
+  },
+  "system": "ICD-11 MMS",
+  "system_uri": "http://id.who.int/icd/release/11/mms",
+  "system_version": "2026-01",
+  "concepts": 37211,
+  "artifact_bytes": 34450168,
+  "ingest": null,
+  "ready_seconds": 0.2048935,
+  "rss_open_bytes": 71090176,
+  "rss_warm_bytes": 73826304,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "cold_ms": 1.923333,
+        "p50_ms": 0.215667,
+        "p95_ms": 0.287709,
+        "p99_ms": 0.34975,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "cold_ms": 0.092875,
+        "p50_ms": 0.06804199999999999,
+        "p95_ms": 0.08366699999999999,
+        "p99_ms": 0.10183400000000001,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-small",
+      {
+        "status": 200,
+        "cold_ms": 0.757291,
+        "p50_ms": 0.072958,
+        "p95_ms": 0.090666,
+        "p99_ms": 0.100291,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-large",
+      {
+        "status": 200,
+        "cold_ms": 0.08416699999999999,
+        "p50_ms": 0.075792,
+        "p95_ms": 0.09208300000000001,
+        "p99_ms": 0.128458,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "search",
+      {
+        "status": 200,
+        "cold_ms": 0.115333,
+        "p50_ms": 0.090208,
+        "p95_ms": 0.108375,
+        "p99_ms": 0.296584,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: `ps -o rss=` of the server process after ready and after the warm requests; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank); comparison: not run"
+}

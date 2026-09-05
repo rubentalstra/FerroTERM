@@ -786,7 +786,12 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
         .write_to(&mut member_bytes)
         .map_err(|e| FixtureError::Graph(e.to_string()))?;
     std::fs::write(dir.join("refsets.bin"), &member_bytes)?;
-    builder.finish(&PreferredRule { preferred })?;
+    builder.finish(&PreferredRule {
+        preferred,
+        // The synonym, the second designation use written above: a SNOMED
+        // display is the preferred synonym of a language reference set.
+        display_use: Some(1),
+    })?;
 
     let manifest = serde_json::json!({
         "manifest": 2,

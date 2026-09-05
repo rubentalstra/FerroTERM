@@ -597,7 +597,12 @@ pub fn build(
     // NOTE: the display is the first designation of each concept (the RXNORM
     // atom of the most preferred term type), so the preferred rule names use 0
     // only as a formality.
-    builder.finish(&PreferredRule { preferred: 0 })?;
+    builder.finish(&PreferredRule {
+        preferred: 0,
+        // Nothing reads a display column for this system; its provider
+        // chooses a display from the designations it already reads.
+        display_use: None,
+    })?;
     let counts = Counts {
         concepts: numbered.ordinals.len(),
         designations: placed.len(),

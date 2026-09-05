@@ -254,7 +254,12 @@ pub fn write(dir: &Path, concepts: u32) -> Result<(), FixtureError> {
         .map_err(|e| graph_error(&e))?;
     std::fs::write(dir.join("identifiers.bin"), &identifier_bytes)?;
 
-    builder.finish(&PreferredRule { preferred })?;
+    builder.finish(&PreferredRule {
+        preferred,
+        // The synonym, the second designation use written above: a SNOMED
+        // display is the preferred synonym of a language reference set.
+        display_use: Some(1),
+    })?;
 
     let manifest = serde_json::json!({
         "manifest": 2,

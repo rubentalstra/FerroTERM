@@ -42,7 +42,7 @@ pub const ACCEPTABILITIES: TableDefinition<u32, &str> = TableDefinition::new("ac
 /// The `META` key of the layout version.
 pub const META_LAYOUT: &str = "layout";
 /// The layout version this build writes and reads.
-pub const LAYOUT_VERSION: &str = "4";
+pub const LAYOUT_VERSION: &str = "5";
 /// The `META` key of the code system URI.
 pub const META_SYSTEM: &str = "system";
 /// The `META` key of the code system version string.
