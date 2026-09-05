@@ -136,13 +136,7 @@ pub fn defaultable(model: &VersionModule) -> BTreeSet<String> {
                 continue;
             }
             if let TypeKind::Struct { fields } = &ty.kind
-                && fields.iter().all(|field| {
-                    field.ty.card != Cardinality::One
-                        || match &field.ty.target {
-                            Target::Inline(_) => true,
-                            Target::Named(name) => set.contains(name),
-                        }
-                })
+                && fields.iter().all(|field| keeps_default(field, &set))
             {
                 set.insert(ty.name.clone());
             }
@@ -150,6 +144,17 @@ pub fn defaultable(model: &VersionModule) -> BTreeSet<String> {
         if set.len() == before {
             return set;
         }
+    }
+}
+
+/// Whether `field` leaves a `Default` derive intact, given the qualifying `set`.
+fn keeps_default(field: &Field, set: &BTreeSet<String>) -> bool {
+    if field.ty.card != Cardinality::One {
+        return true;
+    }
+    match &field.ty.target {
+        Target::Inline(_) => true,
+        Target::Named(name) => set.contains(name),
     }
 }
 
@@ -355,38 +360,53 @@ pub fn escape_doc(text: &str) -> String {
     while index < chars.len() {
         if starts_url(&chars, index) {
             let start = index;
-            while index < chars.len()
-                && !chars.get(index).is_some_and(|c| {
-                    c.is_whitespace()
-                        || matches!(c, ')' | ']' | '`' | '\\' | '<' | '>' | '"' | '\'')
-                })
-            {
-                index += 1;
-            }
-            let mut end = index;
-            while end > start
-                && chars
-                    .get(end - 1)
-                    .is_some_and(|c| matches!(c, '.' | ',' | ';' | ':'))
-            {
-                end -= 1;
-            }
+            let (end, next) = url_span(&chars, start);
+            index = next;
             out.push('<');
             out.extend(chars.get(start..end).into_iter().flatten());
             out.push('>');
             out.extend(chars.get(end..index).into_iter().flatten());
         } else if let Some(ch) = chars.get(index) {
-            match ch {
-                '[' | ']' | '<' | '>' | '*' | '_' | '`' | '\\' | '#' => {
-                    out.push('\\');
-                    out.push(*ch);
-                }
-                _ => out.push(*ch),
-            }
+            escape_char(&mut out, *ch);
             index += 1;
         }
     }
     out
+}
+
+/// The URL that starts at `start`: where its text ends, and where the prose
+/// resumes.
+///
+/// The two positions differ when the URL closes a sentence, because trailing
+/// punctuation stays outside the angle brackets.
+fn url_span(chars: &[char], start: usize) -> (usize, usize) {
+    let mut next = start;
+    while next < chars.len() && !chars.get(next).copied().is_some_and(ends_url) {
+        next += 1;
+    }
+    let mut end = next;
+    while end > start
+        && chars
+            .get(end - 1)
+            .copied()
+            .is_some_and(|c| matches!(c, '.' | ',' | ';' | ':'))
+    {
+        end -= 1;
+    }
+    (end, next)
+}
+
+/// Whether `c` closes a URL in specification prose.
+fn ends_url(c: char) -> bool {
+    c.is_whitespace() || matches!(c, ')' | ']' | '`' | '\\' | '<' | '>' | '"' | '\'')
+}
+
+/// Writes `ch`, backslash-escaped where rustdoc would read it as markup.
+fn escape_char(out: &mut String, ch: char) {
+    if matches!(ch, '[' | ']' | '<' | '>' | '*' | '_' | '`' | '\\' | '#') {
+        out.push('\\');
+    }
+    out.push(ch);
 }
 
 fn starts_url(chars: &[char], index: usize) -> bool {
