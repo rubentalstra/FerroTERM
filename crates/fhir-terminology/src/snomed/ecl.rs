@@ -309,65 +309,18 @@ impl Model for SnomedProvider {
     ) -> Result<RoaringBitmap, EvalError> {
         let mut set = within.clone();
         for predicate in predicates {
-            match predicate {
-                ConceptPredicate::Active(active) => {
-                    let inactive = self.inactive().map_err(|e| provider(&e))?;
-                    if *active {
-                        set -= &inactive;
-                    } else {
-                        set &= &inactive;
-                    }
-                }
+            set = match predicate {
+                ConceptPredicate::Active(active) => self.by_activity(&set, *active)?,
                 ConceptPredicate::DefinitionStatus { defined, primitive } => {
-                    let defined_set = self.defined_set()?;
-                    let mut keep = RoaringBitmap::new();
-                    if *defined {
-                        keep |= &set & defined_set;
-                    }
-                    if *primitive {
-                        keep |= &set - defined_set;
-                    }
-                    set = keep;
+                    self.by_definition_status(&set, *defined, *primitive)?
                 }
                 ConceptPredicate::Module { modules, negated } => {
-                    let mut keep = RoaringBitmap::new();
-                    for concept in &set {
-                        let module = self.module_of(Ordinal::new(concept))?;
-                        if module.is_some_and(|m| modules.contains(&m)) != *negated {
-                            keep.insert(concept);
-                        }
-                    }
-                    set = keep;
+                    self.by_module(&set, modules, *negated)?
                 }
                 ConceptPredicate::EffectiveTime { operator, values } => {
-                    let mut keep = RoaringBitmap::new();
-                    for concept in &set {
-                        let time: u32 = self
-                            .store
-                            .concept(Ordinal::new(concept))
-                            .map_err(|e| storage(&e))?
-                            .and_then(|c| c.effective_time)
-                            .and_then(|t| t.parse().ok())
-                            .unwrap_or_default();
-                        let hit = match operator {
-                            sct_ecl::ast::Comparison::NotEqual => values.iter().all(|v| time != *v),
-                            sct_ecl::ast::Comparison::Equal => values.contains(&time),
-                            sct_ecl::ast::Comparison::Less => values.iter().any(|v| time < *v),
-                            sct_ecl::ast::Comparison::LessOrEqual => {
-                                values.iter().any(|v| time <= *v)
-                            }
-                            sct_ecl::ast::Comparison::Greater => values.iter().any(|v| time > *v),
-                            sct_ecl::ast::Comparison::GreaterOrEqual => {
-                                values.iter().any(|v| time >= *v)
-                            }
-                        };
-                        if hit {
-                            keep.insert(concept);
-                        }
-                    }
-                    set = keep;
+                    self.by_effective_time(&set, *operator, values)?
                 }
-            }
+            };
         }
         Ok(set)
     }
@@ -417,5 +370,87 @@ impl Model for SnomedProvider {
             }
         }
         Ok(out)
+    }
+}
+
+/// The concept filters of `{{ C … }}`, one method each: the predicates a
+/// filter states are applied in turn, and each narrows the set on its own
+/// terms (ECL 2.2 §Concept filter constraints).
+impl SnomedProvider {
+    /// The concepts of `set` that are active, or the inactive ones.
+    fn by_activity(&self, set: &RoaringBitmap, active: bool) -> Result<RoaringBitmap, EvalError> {
+        let inactive = self.inactive().map_err(|e| provider(&e))?;
+        Ok(if active {
+            set - inactive
+        } else {
+            set & inactive
+        })
+    }
+
+    /// The concepts of `set` whose definition status the filter admits; a
+    /// filter that admits both keeps every concept.
+    fn by_definition_status(
+        &self,
+        set: &RoaringBitmap,
+        defined: bool,
+        primitive: bool,
+    ) -> Result<RoaringBitmap, EvalError> {
+        let defined_set = self.defined_set()?;
+        let mut keep = RoaringBitmap::new();
+        if defined {
+            keep |= set & defined_set;
+        }
+        if primitive {
+            keep |= set - defined_set;
+        }
+        Ok(keep)
+    }
+
+    /// The concepts of `set` a module names, or the ones it does not.
+    fn by_module(
+        &self,
+        set: &RoaringBitmap,
+        modules: &[u64],
+        negated: bool,
+    ) -> Result<RoaringBitmap, EvalError> {
+        let mut keep = RoaringBitmap::new();
+        for concept in set {
+            let module = self.module_of(Ordinal::new(concept))?;
+            if module.is_some_and(|m| modules.contains(&m)) != negated {
+                keep.insert(concept);
+            }
+        }
+        Ok(keep)
+    }
+
+    /// The concepts of `set` whose effective time the comparison admits.
+    fn by_effective_time(
+        &self,
+        set: &RoaringBitmap,
+        operator: sct_ecl::ast::Comparison,
+        values: &[u32],
+    ) -> Result<RoaringBitmap, EvalError> {
+        let mut keep = RoaringBitmap::new();
+        for concept in set {
+            let time: u32 = self
+                .store
+                .concept(Ordinal::new(concept))
+                .map_err(|e| storage(&e))?
+                .and_then(|c| c.effective_time)
+                .and_then(|t| t.parse().ok())
+                .unwrap_or_default();
+            let hit = match &operator {
+                sct_ecl::ast::Comparison::NotEqual => values.iter().all(|v| time != *v),
+                sct_ecl::ast::Comparison::Equal => values.contains(&time),
+                sct_ecl::ast::Comparison::Less => values.iter().any(|v| time < *v),
+                sct_ecl::ast::Comparison::LessOrEqual => values.iter().any(|v| time <= *v),
+                sct_ecl::ast::Comparison::Greater => values.iter().any(|v| time > *v),
+                sct_ecl::ast::Comparison::GreaterOrEqual => values.iter().any(|v| time >= *v),
+            };
+            if hit {
+                keep.insert(concept);
+            }
+        }
+        Ok(keep)
     }
 }

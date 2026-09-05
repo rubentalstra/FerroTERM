@@ -404,24 +404,43 @@ fn this_code_not_in_vs(model: &ValueSetModel, coding: &CodingRef, base: &str) ->
 /// is, one `not-in-vs` error, each coding's own errors, and an `information`
 /// per coding, with no code outputs.
 fn combine(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Validation {
-    // NOTE: an import the server does not hold fails the whole concept with that
-    // one issue (`validation/simple-codeableconcept-bad-import`).
-    if let Some((_, import)) = judged.iter().find(|(_, v)| {
+    if let Some(failed) = failed_import(judged) {
+        return failed;
+    }
+    if let Some(failed) = include_version_unserved(model, judged) {
+        return failed;
+    }
+    first_in_value_set(model, judged).unwrap_or_else(|| none_in_value_set(model, judged))
+}
+
+/// The answer when one coding names an import the server does not hold.
+///
+/// That fails the whole concept with that one issue, with no code outputs
+/// (the ecosystem's `validation/simple-codeableconcept-bad-import`).
+fn failed_import(judged: &[(&CodingRef, Validation)]) -> Option<Validation> {
+    let (_, import) = judged.iter().find(|(_, v)| {
         v.issues
             .iter()
             .any(|i| i.kind == "not-found" && i.expression.is_none())
-    }) {
-        let mut validation = import.clone();
-        validation.code = None;
-        validation.system = None;
-        validation.version = None;
-        validation.display = None;
-        return validation;
-    }
-    // NOTE: a value set whose include names a version the server does not serve
-    // fails the whole concept on that coding alone, the code and system dropped
-    // (the ecosystem's `codeableconcept-*-vs1wb` cases).
-    if let Some((_, unresolvable)) = judged.iter().find(|(coding, v)| {
+    })?;
+    let mut validation = import.clone();
+    validation.code = None;
+    validation.system = None;
+    validation.version = None;
+    validation.display = None;
+    Some(validation)
+}
+
+/// The answer when a value set include names a version the server does not
+/// serve.
+///
+/// That fails the whole concept on that coding alone, the code and the system
+/// dropped (the ecosystem's `codeableconcept-*-vs1wb` cases).
+fn include_version_unserved(
+    model: &ValueSetModel,
+    judged: &[(&CodingRef, Validation)],
+) -> Option<Validation> {
+    let (_, unresolvable) = judged.iter().find(|(coding, v)| {
         coding.system.as_deref().is_some_and(|system| {
             include_literal_for(model, system, coding.version.as_deref()).is_some_and(|literal| {
                 v.unknown_systems
@@ -429,39 +448,50 @@ fn combine(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Valida
                     .any(|c| *c == format!("{system}|{literal}"))
             })
         })
-    }) {
-        let mut validation = unresolvable.clone();
-        validation.code = None;
-        validation.system = None;
-        validation.message = message_of(&validation.issues);
-        return validation;
-    }
+    })?;
+    let mut validation = unresolvable.clone();
+    validation.code = None;
+    validation.system = None;
+    validation.message = message_of(&validation.issues);
+    Some(validation)
+}
+
+/// The answer when a coding is in the value set: the first one answers the
+/// code outputs and every other coding's issues join it.
+fn first_in_value_set(
+    model: &ValueSetModel,
+    judged: &[(&CodingRef, Validation)],
+) -> Option<Validation> {
     let base = |index: usize| format!("CodeableConcept.coding[{index}]");
-    if let Some((primary, (_, found))) = judged
+    let (primary, (_, found)) = judged
         .iter()
         .enumerate()
-        .find(|(_, (_, v))| in_value_set(v))
-    {
-        let mut answer = found.clone();
-        for (index, (coding, other)) in judged.iter().enumerate() {
-            if index == primary {
-                continue;
-            }
-            for issue in &other.issues {
-                if issue.kind == "not-in-vs" {
-                    answer
-                        .issues
-                        .push(this_code_not_in_vs(model, coding, &base(index)));
-                } else {
-                    answer.issues.push(issue.clone());
-                }
-            }
-            take_unknown(other, &mut answer);
+        .find(|(_, (_, v))| in_value_set(v))?;
+    let mut answer = found.clone();
+    for (index, (coding, other)) in judged.iter().enumerate() {
+        if index == primary {
+            continue;
         }
-        answer.result = !answer.issues.iter().any(|i| i.severity == "error");
-        answer.message = message_of(&answer.issues);
-        return answer;
+        for issue in &other.issues {
+            if issue.kind == "not-in-vs" {
+                answer
+                    .issues
+                    .push(this_code_not_in_vs(model, coding, &base(index)));
+            } else {
+                answer.issues.push(issue.clone());
+            }
+        }
+        take_unknown(other, &mut answer);
     }
+    answer.result = !answer.issues.iter().any(|i| i.severity == "error");
+    answer.message = message_of(&answer.issues);
+    Some(answer)
+}
+
+/// The answer when no coding is in the value set: one `not-in-vs` error, each
+/// coding's own errors, and an `information` per coding, with no code outputs.
+fn none_in_value_set(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Validation {
+    let base = |index: usize| format!("CodeableConcept.coding[{index}]");
     let mut answer = failed(
         None,
         None,
