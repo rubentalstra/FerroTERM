@@ -47,6 +47,7 @@ pub fn loaded_of(
 }
 
 pub(crate) mod batch;
+pub(crate) mod closure;
 pub(crate) mod map_r4;
 pub(crate) mod map_r5;
 pub(crate) mod metadata;
@@ -57,7 +58,36 @@ pub(crate) mod store;
 pub(crate) mod system;
 
 macro_rules! surface {
+    // A version whose package declares no `ConceptMap/$closure`: the R6 ballot
+    // ships no OperationDefinition for it, so this server offers none.
     ($fhir:ident, $fhir_version:literal, $label:literal, $capabilities:ident) => {
+        crate::version::surface!(@common $fhir, $fhir_version, $label, $capabilities);
+
+        /// This version declares no `$closure`, so its router adds no route for it.
+        fn closure_route(
+            router: axum::Router<std::sync::Arc<crate::state::AppState>>,
+        ) -> axum::Router<std::sync::Arc<crate::state::AppState>> {
+            router
+        }
+
+        /// The canonical of `$closure`, for a version that declares it; none here.
+        pub(crate) const CLOSURE_URL: Option<&str> = None;
+    };
+    ($fhir:ident, $fhir_version:literal, $label:literal, $capabilities:ident, closure) => {
+        crate::version::surface!(@common $fhir, $fhir_version, $label, $capabilities);
+        crate::version::closure::closure!($fhir);
+
+        /// The `$closure` route of a version that declares the operation.
+        fn closure_route(
+            router: axum::Router<std::sync::Arc<crate::state::AppState>>,
+        ) -> axum::Router<std::sync::Arc<crate::state::AppState>> {
+            router.route("/$closure", axum::routing::post(closure::closure))
+        }
+
+        /// The canonical of `$closure`, which this version declares.
+        pub(crate) const CLOSURE_URL: Option<&str> = Some(closure::CLOSURE_URL);
+    };
+    (@common $fhir:ident, $fhir_version:literal, $label:literal, $capabilities:ident) => {
         crate::version::parameters::parameters!($fhir);
         crate::version::resources::resources!($fhir);
         crate::version::metadata::metadata!($fhir, $fhir_version, $label, $capabilities);
@@ -69,7 +99,7 @@ macro_rules! surface {
         /// The routes of this version, nested under its root by the crate router.
         pub fn router() -> axum::Router<std::sync::Arc<crate::state::AppState>> {
             use axum::routing::{get, post};
-            axum::Router::new()
+            closure_route(axum::Router::new())
                 .route("/", post(batch::batch))
                 .route("/metadata", get(metadata::metadata))
                 .route("/$versions", get(system::versions))

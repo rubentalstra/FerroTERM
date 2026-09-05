@@ -27,7 +27,7 @@ sequence, not a scope limit; the server serves every version.
   `displayLanguage`, `activeOnly`, `property`, `excludeNested`
 - [x] `ValueSet/$validate-code`: membership, display, inactive handling
 - [ ] `ConceptMap/$translate`: explicit maps and SNOMED implicit maps
-- [ ] `ConceptMap/$closure`: client-side transitive-closure maintenance
+- [x] `ConceptMap/$closure`: client-side transitive-closure maintenance (R4, R4B, and R5; the R6 ballot removed the operation)
 - [ ] `CodeSystem/$find-matches`
 - [x] `metadata` (CapabilityStatement) and `metadata?mode=terminology`
   (TerminologyCapabilities) enumerating supported systems, versions, and

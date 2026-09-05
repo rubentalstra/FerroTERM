@@ -19,8 +19,9 @@ pub const CODESYSTEMS_ENV: &str = "FERROTERM_CODESYSTEMS";
 /// The environment variable naming the database of persisted client resources.
 ///
 /// The `CodeSystem`, `ValueSet`, and `ConceptMap` resources written through the
-/// REST API live in this file and are served again after a restart. A
-/// deployment that names none refuses every write.
+/// REST API live in this file, with the closure tables `$closure` maintains,
+/// and are served again after a restart. A deployment that names none refuses
+/// every write.
 pub const RESOURCES_ENV: &str = "FERROTERM_RESOURCES";
 /// The environment variable naming the authentication in front of the server.
 ///

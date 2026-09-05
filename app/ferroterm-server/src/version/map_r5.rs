@@ -453,6 +453,60 @@ macro_rules! family_map {
                 }
             }
 
+            /// The `ConceptMap` a `$closure` call answers with: one element per
+            /// relationship the server is telling the client about.
+            ///
+            /// R5 and the R6 ballot state it as `relationship`
+            /// (<https://hl7.org/fhir/R5/conceptmap-operation-closure.html>).
+            #[must_use]
+            pub fn closure_map(
+                id: &str,
+                name: &str,
+                version: u32,
+                edges: &[fhir_terminology::operations::closure::Edge],
+            ) -> fhir_types::$fhir::concept_map::ConceptMap {
+                use fhir_types::$fhir::concept_map::{
+                    ConceptMap, ConceptMapGroup, ConceptMapGroupElement,
+                    ConceptMapGroupElementTarget,
+                };
+                let mut groups: Vec<ConceptMapGroup> = Vec::new();
+                for edge in edges {
+                    let target = ConceptMapGroupElementTarget {
+                        code: Some(edge.target.code.as_str().into()),
+                        relationship: edge.relationship.relationship().into(),
+                        ..Default::default()
+                    };
+                    let element = ConceptMapGroupElement {
+                        code: Some(edge.source.code.as_str().into()),
+                        target: vec![target],
+                        ..Default::default()
+                    };
+                    match groups.iter_mut().find(|held| {
+                        held.source.as_ref().map(|s| s.value.as_deref())
+                            == Some(Some(edge.source.system.as_str()))
+                            && held.target.as_ref().map(|t| t.value.as_deref())
+                                == Some(Some(edge.target.system.as_str()))
+                    }) {
+                        Some(held) => held.element.push(element),
+                        None => groups.push(ConceptMapGroup {
+                            source: Some(edge.source.system.as_str().into()),
+                            target: Some(edge.target.system.as_str().into()),
+                            element: vec![element],
+                            ..Default::default()
+                        }),
+                    }
+                }
+                ConceptMap {
+                    id: Some(id.to_owned()),
+                    name: Some(name.into()),
+                    status: "active".into(),
+                    experimental: Some(true.into()),
+                    version: Some(version.to_string().as_str().into()),
+                    group: groups,
+                    ..Default::default()
+                }
+            }
+
             /// The `$translate` outcome as the `Parameters`.
             ///
             /// `result`, `message`, and each `match` with `relationship`, `concept`,

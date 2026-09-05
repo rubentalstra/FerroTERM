@@ -300,6 +300,21 @@ macro_rules! metadata {
                 ]
             }
 
+            /// The system-level operations this version answers.
+            ///
+            /// `$closure` is here only where the version's package declares it: the
+            /// R6 ballot ships no `ConceptMap-closure` definition.
+            fn system_operations() -> Vec<CapabilityStatementRestResourceOperation> {
+                let mut out = vec![
+                    operation("versions", super::system::VERSIONS_URL),
+                    operation("cache-control", super::system::CACHE_CONTROL_URL),
+                ];
+                if let Some(url) = super::CLOSURE_URL {
+                    out.push(operation("closure", url));
+                }
+                out
+            }
+
             /// The `CapabilityStatement` (`kind = instance`) of this server.
             #[must_use]
             pub fn capability_statement(state: &AppState) -> CapabilityStatement {
@@ -354,10 +369,7 @@ macro_rules! metadata {
                             ..Default::default()
                         }],
                         resource: rest_resources(state),
-                        operation: vec![
-                            operation("versions", super::system::VERSIONS_URL),
-                            operation("cache-control", super::system::CACHE_CONTROL_URL),
-                        ],
+                        operation: system_operations(),
                         ..Default::default()
                     }],
                     ..Default::default()
