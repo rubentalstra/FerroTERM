@@ -113,8 +113,8 @@ pins, nested `contains`, inline and request-scoped value sets),
 `metadata?mode=terminology`. A deployment that names a database in
 `FERROTERM_RESOURCES` also serves `POST`, `PUT`, `GET`, `DELETE`, `_history`
 reads, and `?url=` search of `CodeSystem`, `ValueSet`, and `ConceptMap`, with
-`ETag` and `If-Match`. Every failure is an `OperationOutcome` with a
-`tx-issue-type` coding.
+`ETag` and `If-Match`. Every failure is an `OperationOutcome`, never a bare
+500, and a terminology failure carries a `tx-issue-type` coding.
 
 Conformance is measured. CI runs the HL7 terminology ecosystem
 suite against every pull request and holds a committed pass list per served
@@ -152,8 +152,9 @@ The short form:
 - **The engine is code-system-neutral.** Providers own the semantics
   (`crates/fhir-terminology`); the operations talk to the seam.
 - **Supply chain.** Releases are built in a reusable workflow to SLSA Build
-  Level 3: signed provenance, CycloneDX SBOMs, `cargo auditable` binaries, a
-  distroless image for `linux/amd64` and `linux/arm64`, verifiable with
+  Level 3: signed provenance, an SBOM per artifact (CycloneDX for the
+  binaries, SPDX for the image), `cargo auditable` binaries, a distroless
+  image for `linux/amd64` and `linux/arm64`, verifiable with
   `gh attestation verify`.
 
 ## Licensing
