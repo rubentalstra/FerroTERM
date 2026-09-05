@@ -79,7 +79,7 @@ provider seam, so nothing in an operation is a special case for one system.
 
 ## Speed and footprint
 
-Measured by the benchmark harness in a container on one machine, one record per
+Measured by the benchmark harness on one machine, one record per
 code system, warm p50 per operation; nothing here is typed by hand, and CI fails
 when the table drifts from the records under `bench/records/`.
 
@@ -115,9 +115,9 @@ reads, and `?url=` search of `CodeSystem`, `ValueSet`, and `ConceptMap`, with
 `ETag` and `If-Match`. Every failure is an `OperationOutcome` with a
 `tx-issue-type` coding.
 
-Conformance is measured, not asserted: CI runs the HL7 terminology ecosystem
+Conformance is measured. CI runs the HL7 terminology ecosystem
 suite against every pull request and holds a committed pass list per served
-version (505 of the 670 general cases on R5, 500 on R4, 499 on R4B; the rest are
+version (523 of the 670 general cases on R5, 518 on R4, 517 on R4B; the rest are
 features on the roadmap and fixture artefacts, listed by cluster on the
 tracker). Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept`.
 
