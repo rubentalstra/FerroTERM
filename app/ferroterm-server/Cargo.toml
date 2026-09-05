@@ -36,10 +36,15 @@ tracing-subscriber.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+criterion.workspace = true
 ferroterm-testkit.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["io-util", "sync", "time"] }
 tower = { workspace = true, features = ["util"] }
+
+[[bench]]
+name = "http"
+harness = false
 
 [lints]
 workspace = true

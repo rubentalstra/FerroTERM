@@ -25,6 +25,7 @@ mod operations;
 mod registries;
 mod registry;
 mod rxnorm;
+mod scaled;
 mod snomed;
 mod snomed_concept_map;
 mod supplement;

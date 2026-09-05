@@ -15,4 +15,5 @@ pub mod icd11;
 pub mod labcodeset;
 pub mod loinc;
 pub mod rxnorm;
+pub mod scaled;
 pub mod snomed;

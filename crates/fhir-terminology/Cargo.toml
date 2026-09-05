@@ -2,7 +2,7 @@
 [package]
 name = "fhir-terminology"
 description = "The FHIR terminology operations over the code system provider seam"
-version = "0.1.37"
+version = "0.1.38"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -48,6 +48,10 @@ tempfile.workspace = true
 
 [[bench]]
 name = "nl_reads"
+harness = false
+
+[[bench]]
+name = "operations"
 harness = false
 
 [lints]
