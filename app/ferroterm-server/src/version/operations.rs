@@ -329,6 +329,12 @@ macro_rules! operations {
             ) -> Option<(Which, &'static fhir_types::operation::Operation, Option<String>)> {
                 let (which, operation, id) = match segments {
                     ["CodeSystem", "$lookup"] => (Which::Lookup, &CODE_SYSTEM_LOOKUP, None),
+                    // NOTE: R5 and the R6 ballot declare `$lookup` at the instance level
+                    // and R4 and R4B do not, so the batch surface follows the version's
+                    // own definition (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
+                    ["CodeSystem", id, "$lookup"] if CODE_SYSTEM_LOOKUP.instance => {
+                        (Which::Lookup, &CODE_SYSTEM_LOOKUP, Some((*id).to_owned()))
+                    }
                     ["CodeSystem", "$validate-code"] => {
                         (Which::ValidateCode, &CODE_SYSTEM_VALIDATE_CODE, None)
                     }
@@ -454,6 +460,41 @@ macro_rules! operations {
                 finish(
                     from_body(&state, &CODE_SYSTEM_LOOKUP, &headers, &body)
                         .and_then(|(scope, p)| run_lookup(&scope, &Invocation::Type, &p)), wire)
+            }
+
+            /// `GET /CodeSystem/{id}/$lookup`, where the version declares it.
+            pub async fn lookup_instance_get(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+            ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(instance(&state, &id).and_then(|invocation| {
+                    from_query(&state, &CODE_SYSTEM_LOOKUP, &headers, &query)
+                        .and_then(|(scope, p)| run_lookup(&scope, &invocation, &p))
+                }), wire)
+            }
+
+            /// `POST /CodeSystem/{id}/$lookup`, where the version declares it.
+            pub async fn lookup_instance_post(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+                body: Bytes,
+            ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(instance(&state, &id).and_then(|invocation| {
+                    from_body(&state, &CODE_SYSTEM_LOOKUP, &headers, &body)
+                        .and_then(|(scope, p)| run_lookup(&scope, &invocation, &p))
+                }), wire)
             }
 
             /// `GET /CodeSystem/$validate-code`.

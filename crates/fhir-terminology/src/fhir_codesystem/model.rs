@@ -154,6 +154,42 @@ impl PropertyKind {
 }
 
 impl CodeSystemModel {
+    /// The `CodeSystem` a provider that holds no resource of its own serves:
+    /// its identity, its declaration, and its standing, with no `concept`.
+    ///
+    /// A system the server holds behind an index declares
+    /// `content = not-present`, which is exactly "none of the concepts are
+    /// included in the resource"
+    /// (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>); the concepts
+    /// are reached through the operations.
+    #[must_use]
+    pub fn of_provider(provider: &dyn crate::provider::CodeSystemProvider) -> Self {
+        let identity = provider.identity();
+        let declaration = provider.declaration();
+        let standing = provider.standing();
+        Self {
+            url: identity.url.clone(),
+            version: identity.version.clone(),
+            name: identity.name.clone(),
+            title: identity.title.clone(),
+            language: provider.language().map(str::to_owned),
+            status: standing.status,
+            experimental: Some(standing.experimental),
+            standards_status: standing.standards_status,
+            content: declaration.content,
+            case_sensitive: declaration.case_sensitive,
+            hierarchy_meaning: declaration.hierarchy_meaning,
+            // `CodeSystem.compositional` is whether the code system defines a
+            // grammar, which is `defined`, not whether this server evaluates it.
+            compositional: declaration.compositional.defined(),
+            version_needed: identity.version_needed,
+            supplements: None,
+            properties: declaration.properties.clone(),
+            filters: declaration.filters.clone(),
+            concepts: Vec::new(),
+        }
+    }
+
     /// Checks the model: distinct codes, known parents.
     ///
     /// # Errors
@@ -203,3 +239,15 @@ pub(crate) const PARENT: &str = "parent";
 pub(crate) const CHILD: &str = "child";
 /// HL7 Terminology's v3 systems express the hierarchy as `subsumedBy`.
 pub(crate) const SUBSUMED_BY: &str = "subsumedBy";
+
+/// The `CodeSystem` resource a provider serves: the one it was built from when
+/// it holds one, else the metadata picture of what it declares.
+#[must_use]
+pub fn described(
+    provider: &dyn crate::provider::CodeSystemProvider,
+) -> std::borrow::Cow<'_, CodeSystemModel> {
+    provider.code_system().map_or_else(
+        || std::borrow::Cow::Owned(CodeSystemModel::of_provider(provider)),
+        std::borrow::Cow::Borrowed,
+    )
+}

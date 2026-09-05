@@ -66,6 +66,7 @@ claim, not a test that merely touches the area.
 | `ValueSet/$validate-code` | `app/ferroterm-server/tests/it/value_set.rs::validate_code_carries_the_declared_outputs_and_the_r5_issues` |
 | `ConceptMap/$translate` | `app/ferroterm-server/tests/it/translate.rs::translate_by_get_and_post_answers_matches` |
 | `GET ValueSet/{id}` and `GET ValueSet?url=` | `app/ferroterm-server/tests/it/scope.rs::value_sets_read_and_search_by_url` |
+| `GET CodeSystem/{id}` and `GET CodeSystem?url=` over the loaded systems, with `content = not-present` | `app/ferroterm-server/tests/it/code_system.rs::every_loaded_code_system_reads_at_the_id_the_server_names_it_by`, `::a_search_by_url_and_version_finds_a_loaded_code_system` |
 | `$versions` | `app/ferroterm-server/tests/it/r4.rs::versions_names_r4` |
 | `$cache-control` | `app/ferroterm-server/tests/it/scope.rs::a_cache_front_loads_resources_and_ends` |
 | `metadata` and `metadata?mode=terminology` | `app/ferroterm-server/tests/it/metadata.rs::the_capability_statement_names_the_operations`, `::terminology_capabilities_list_the_loaded_edition` |
@@ -271,6 +272,7 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | Claim | Evidence |
 |---|---|
 | Every operation accepts `GET` with query parameters and `POST` with a `Parameters` resource, at type and instance level | `app/ferroterm-server/tests/it/operations.rs::lookup_by_get_and_post`, `::validate_code_at_type_and_instance_level`, `::subsumes_at_type_and_instance_level` |
+| `CodeSystem/{id}/$lookup` answers under `/r5` and `/r6` and is no route under `/r4` and `/r4b` | `app/ferroterm-server/tests/it/code_system.rs::instance_lookup_answers_exactly_where_the_version_declares_it` |
 | `$expand` returns the expanded `ValueSet`; the others return `Parameters` | `app/ferroterm-server/tests/it/value_set.rs`, `tests/it/operations.rs` |
 | The five ways a value set arrives (loaded, persisted, inline, request-scoped, implicit) | `app/ferroterm-server/tests/it/scope.rs`, `tests/it/persisted.rs`, `tests/it/value_set.rs`, and the implicit value set tests |
 | `$expand` honours `count`, `offset`, `filter`, `activeOnly`, `includeDesignations`, `displayLanguage`, `system-version`, `check-system-version`, `force-system-version`, `exclude-system`, and echoes `used-codesystem` | `crates/fhir-terminology/src/operations/expand.rs`, `crates/fhir-terminology/src/compose.rs`; `app/ferroterm-server/tests/it/value_set.rs` |
@@ -325,7 +327,7 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | The server opens each index read-only, refuses to start on a missing or damaged one, and listens on `127.0.0.1:8080` | `app/ferroterm-server/src/config.rs:101`; `app/ferroterm-server/tests/it/config.rs` |
 | The nine environment variables and their defaults | `app/ferroterm-server/src/config.rs:8-40` and `telemetry.rs:20-22`; `app/ferroterm-server/tests/it/config.rs::the_environment_fills_the_config` |
 | A supplement whose system is not loaded refuses the start | `app/ferroterm-server/tests/it/config.rs::a_supplement_without_its_system_refuses_to_start` |
-| The `CodeSystem` id shapes (`snomed.info-sct-<module>-version-<date>`, and the system-and-version form) | `app/ferroterm-server/src/state.rs`; `app/ferroterm-server/tests/it/metadata.rs` |
+| The `CodeSystem` id shapes (`snomed.info-sct-<module>-version-<date>`, and the system-and-version form), and that the id addresses the instance | `app/ferroterm-server/src/state.rs`; `app/ferroterm-server/tests/it/metadata.rs`; `app/ferroterm-server/tests/it/code_system.rs::every_loaded_code_system_reads_at_the_id_the_server_names_it_by` |
 | `FERROTERM_SECURITY_SERVICE` admits only the `restful-security-service` codes | `app/ferroterm-server/src/config.rs::a_security_service_list_admits_only_the_codes_the_value_set_defines` |
 | `FERROTERM_BASE_URL` becomes `implementation.url` per version | `app/ferroterm-server/src/config.rs::a_base_url_loses_its_trailing_slashes_and_an_empty_one_is_unset`; `app/ferroterm-server/src/version/metadata.rs` |
 | The log fields, and that bodies and free text are never logged | `app/ferroterm-server/src/request_log.rs` |

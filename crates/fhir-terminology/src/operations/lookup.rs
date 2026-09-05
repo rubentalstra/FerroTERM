@@ -115,7 +115,12 @@ impl<'a> Asked<'a> {
     }
 }
 
-/// Runs `$lookup`.
+/// Runs `$lookup`, over the instance's system when invoked on one.
+///
+/// Which versions offer the instance level is the served version's own
+/// `OperationDefinition`, which the router reads; R4 and R4B declare `$lookup`
+/// at the type level only
+/// (<https://hl7.org/fhir/R4B/codesystem-operation-lookup.html>).
 ///
 /// # Errors
 ///
@@ -127,11 +132,6 @@ pub fn lookup(
     input: &LookupInput,
 ) -> Result<LookupOutcome, OperationError> {
     language::check(input.display_language.as_deref())?;
-    if matches!(invocation, Invocation::Instance(_)) {
-        return Err(OperationError::NotSupported(String::from(
-            "`CodeSystem/$lookup` is declared at the type level only",
-        )));
-    }
     let (system, version, code) = match (&input.coding, input.code.as_deref()) {
         (Some(_), Some(_)) => {
             return Err(OperationError::Invalid(String::from(

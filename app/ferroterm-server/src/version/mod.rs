@@ -99,7 +99,7 @@ macro_rules! surface {
         /// The routes of this version, nested under its root by the crate router.
         pub fn router() -> axum::Router<std::sync::Arc<crate::state::AppState>> {
             use axum::routing::{get, post};
-            closure_route(axum::Router::new())
+            lookup_instance_route(closure_route(axum::Router::new())
                 .route("/", post(batch::batch))
                 .route("/metadata", get(metadata::metadata))
                 .route("/$versions", get(system::versions))
@@ -187,7 +187,25 @@ macro_rules! surface {
                 .route(
                     "/CodeSystem/{id}/$subsumes",
                     get(operations::subsumes_instance_get).post(operations::subsumes_instance_post),
+                ))
+        }
+
+        /// The instance-level `$lookup` route, only where the version's
+        /// `OperationDefinition` declares the operation at that level: R5 and
+        /// the R6 ballot do, R4 and R4B do not
+        /// (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
+        fn lookup_instance_route(
+            router: axum::Router<std::sync::Arc<crate::state::AppState>>,
+        ) -> axum::Router<std::sync::Arc<crate::state::AppState>> {
+            if fhir_types::$fhir::operations::code_system_lookup::CODE_SYSTEM_LOOKUP.instance {
+                router.route(
+                    "/CodeSystem/{id}/$lookup",
+                    axum::routing::get(operations::lookup_instance_get)
+                        .post(operations::lookup_instance_post),
                 )
+            } else {
+                router
+            }
         }
     };
 }

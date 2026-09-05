@@ -591,6 +591,16 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// What it declares.
     fn declaration(&self) -> &Declaration;
 
+    /// The `CodeSystem` resource this provider was built from, when it was
+    /// built from one; `None` for a system the server holds behind an index.
+    ///
+    /// A read of the instance renders this when it is `Some`, so a system
+    /// whose `content` says its concepts are in the resource answers with
+    /// them (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>).
+    fn code_system(&self) -> Option<&crate::fhir_codesystem::model::CodeSystemModel> {
+        None
+    }
+
     /// Finds a code; `Ok(None)` when the system has no such code.
     ///
     /// # Errors

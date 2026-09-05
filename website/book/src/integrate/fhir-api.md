@@ -28,7 +28,11 @@ server gave.
 
 Every operation accepts `GET` with query parameters and `POST` with a
 `Parameters` resource, at the type level (`ValueSet/$expand?url=…`) and at
-the instance level (`CodeSystem/{id}/$validate-code`). `$expand` returns the
+the instance level (`CodeSystem/{id}/$validate-code`). The levels a version
+offers are the ones its `OperationDefinition` declares, so
+`CodeSystem/{id}/$lookup` answers under `/r5` and `/r6` and is not a route
+under `/r4` and `/r4b`
+(<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>). `$expand` returns the
 expanded `ValueSet`; the others return `Parameters`. Every failure is an
 `OperationOutcome` whose issue carries `severity`, `code`, and `details.text`,
 never a bare 500. A terminology failure adds a `details.coding` from
@@ -111,6 +115,18 @@ version is one `CodeSystem` instance; without a `version` the server resolves
 its default and echoes the version it used in every response. For SNOMED CT
 the version is the edition and version URI of the SNOMED CT URI standard
 (`http://snomed.info/sct/11000146104/version/20260630`), never a bare date.
+
+Each instance is readable at `GET CodeSystem/{id}` and findable with
+`GET CodeSystem?url=…&version=…`, on every version prefix, alongside the
+resources a client persisted. The id is the one
+[Configuration](../operate/configuration.md) describes and the server prints
+at startup. A system the server holds behind an index answers with its
+definition and `content = not-present`: the codes come from `$lookup`,
+`$validate-code`, and `$expand`, never from the resource
+(<https://hl7.org/fhir/R4B/codesystem-content-mode.html>). A system loaded as a
+`CodeSystem` resource under `FERROTERM_CODESYSTEMS` answers with the `content`
+it declared, so a `complete` one carries its concepts. A supplement is applied
+to the system it supplements and is not served as an instance of its own.
 
 ## Languages
 

@@ -10,8 +10,12 @@
 //! version's own codec. The per-version `store!` macro only binds the routes
 //! to it.
 
+use std::sync::Arc;
+
 use axum::body::Bytes;
 use axum::response::Response;
+use fhir_terminology::fhir_codesystem::model::CodeSystemModel;
+use fhir_terminology::provider::CodeSystemProvider;
 use fhir_terminology::valueset::model::ValueSetModel;
 use fhir_types::codec::{Object, expect_object};
 use fhir_types::xml::Schemas;
@@ -34,6 +38,9 @@ pub(crate) struct Surface {
     pub round_trip: fn(&Object) -> Result<Object, String>,
     /// Renders a loaded value set as a `ValueSet` of this version.
     pub render_value_set: fn(&ValueSetModel) -> Result<Object, String>,
+    /// Renders a loaded code system, under its instance id, as a `CodeSystem`
+    /// of this version.
+    pub render_code_system: fn(&CodeSystemModel, &str) -> Result<Object, String>,
 }
 
 /// One request against the persisted resources of one type.
@@ -104,9 +111,9 @@ pub(crate) fn update(request: &Request<'_>, id: &str, body: &Bytes) -> Result<Re
 
 /// `GET {type}/{id}`: the current version of the resource.
 ///
-/// A `ValueSet` id the deployment loaded from disk reads here too, rendered
-/// from the model the engine holds; it carries no `ETag`, because a loaded
-/// resource has no version this server counts.
+/// A `CodeSystem` or `ValueSet` id the deployment loaded reads here too,
+/// rendered from the model the engine holds; it carries no `ETag`, because a
+/// loaded resource has no version this server counts.
 ///
 /// # Errors
 ///
@@ -115,11 +122,7 @@ pub(crate) fn update(request: &Request<'_>, id: &str, body: &Bytes) -> Result<Re
 pub(crate) fn read(request: &Request<'_>, id: &str) -> Result<Response, Failure> {
     let known = check_id(id)?;
     let Some(record) = request.state.persisted_record(request.resource_type, known) else {
-        if request.resource_type == ResourceType::ValueSet
-            && let Some(model) = request.state.value_set_instance(known)
-        {
-            let object =
-                (request.surface.render_value_set)(&model).map_err(|reason| rendering(&reason))?;
+        if let Some(object) = loaded(request, known)? {
             return Ok(request
                 .wire
                 .response(StatusCode::OK, &object, request.surface.schemas));
@@ -134,6 +137,41 @@ pub(crate) fn read(request: &Request<'_>, id: &str) -> Result<Response, Failure>
         &record,
         None,
     ))
+}
+
+/// The resource `id` names among the ones the deployment loaded, when there
+/// is one.
+///
+/// The FHIR read is defined over any resource the server holds, and a code
+/// system the server serves from an index is one
+/// (<https://hl7.org/fhir/R4B/http.html#read>); what comes back is the
+/// definition, with the concepts only where `content` says the resource
+/// carries them.
+///
+/// # Errors
+///
+/// A resource this version cannot encode is a 500.
+fn loaded(request: &Request<'_>, id: &str) -> Result<Option<Object>, Failure> {
+    match request.resource_type {
+        ResourceType::CodeSystem => {
+            let Some(resolved) = request.state.instance(id) else {
+                return Ok(None);
+            };
+            let model = fhir_terminology::fhir_codesystem::model::described(&*resolved.provider);
+            (request.surface.render_code_system)(&model, id)
+                .map(Some)
+                .map_err(|reason| rendering(&reason))
+        }
+        ResourceType::ValueSet => {
+            let Some(model) = request.state.value_set_instance(id) else {
+                return Ok(None);
+            };
+            (request.surface.render_value_set)(&model)
+                .map(Some)
+                .map_err(|reason| rendering(&reason))
+        }
+        ResourceType::ConceptMap => Ok(None),
+    }
 }
 
 /// `GET {type}/{id}/_history/{version_id}`: one version of the resource.
@@ -422,6 +460,45 @@ pub(crate) fn loaded_value_sets(
         .collect())
 }
 
+/// One loaded code system a search matched: its instance id and the provider
+/// that serves it.
+pub(crate) type Served = (String, Arc<dyn CodeSystemProvider>);
+
+/// The code systems the deployment loaded that `query` matches, each with the
+/// provider that serves it, the persisted ones left out because a search lists
+/// those from their records.
+///
+/// `CodeSystem` search defines `url` and `version`
+/// (<https://hl7.org/fhir/R4B/codesystem.html#search>).
+///
+/// # Errors
+///
+/// A search parameter this server does not answer is a 400.
+pub(crate) fn loaded_code_systems(
+    state: &AppState,
+    query: &[(String, String)],
+) -> Result<Vec<Served>, Failure> {
+    let (url, version) = criteria(query)?;
+    let mut out = Vec::new();
+    for (id, served_url, served_version) in state.instances() {
+        if url.is_some_and(|asked| asked != served_url)
+            || version.is_some_and(|asked| asked != served_version)
+            || state
+                .persisted_record(ResourceType::CodeSystem, id)
+                .is_some()
+        {
+            continue;
+        }
+        // NOTE: an id the served layer no longer resolves is not a resource this
+        // server holds, so the search does not match it
+        // (<https://hl7.org/fhir/R4B/http.html#search>).
+        if let Some(resolved) = state.instance(id) {
+            out.push((id.to_owned(), resolved.provider));
+        }
+    }
+    Ok(out)
+}
+
 /// The `url` and `version` a search names.
 fn criteria(query: &[(String, String)]) -> Result<(Option<&str>, Option<&str>), Failure> {
     let mut url = None;
@@ -650,7 +727,23 @@ macro_rules! store {
                         )
                         .map_err(|error| error.to_string())
                     },
+                    render_code_system: |model, id| {
+                        fhir_types::codec::Json::to_json(&code_system(model, id))
+                            .map_err(|error| error.to_string())
+                    },
                 }
+            }
+
+            /// A loaded code system as this version's `CodeSystem`, under the
+            /// instance id the server addresses it by.
+            fn code_system(
+                model: &fhir_terminology::fhir_codesystem::model::CodeSystemModel,
+                id: &str,
+            ) -> fhir_types::$fhir::code_system::CodeSystem {
+                let mut resource =
+                    fhir_terminology::fhir_codesystem::render::$fhir::code_system(model);
+                resource.id = Some(id.to_owned());
+                resource
             }
 
             /// The response format the request asks for, `None` when the server
@@ -710,6 +803,16 @@ macro_rules! store {
                     wire,
                 };
                 let mut entry = Vec::new();
+                if resource_type == ResourceType::CodeSystem {
+                    for (id, provider) in crate::version::store::loaded_code_systems(state, query)?
+                    {
+                        let model = fhir_terminology::fhir_codesystem::model::described(&*provider);
+                        entry.push(found(
+                            &format!("CodeSystem/{id}"),
+                            Resource::CodeSystem(Box::new(code_system(&model, &id))),
+                        ));
+                    }
+                }
                 if resource_type == ResourceType::ValueSet {
                     for id in crate::version::store::loaded_value_sets(state, query)? {
                         let Some(model) = state.value_set_instance(&id) else {
