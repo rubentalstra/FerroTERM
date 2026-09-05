@@ -371,7 +371,7 @@ fn property_key_names(terms: &term::Terms, linked: &Linked<'_>) -> Vec<String> {
     names.extend([COPYRIGHT_KEY, ANSWER_LIST_KEY, ANSWERS_KEY, KIND_KEY].map(str::to_owned));
     // The linked axes: the six of `Loinc.csv` under their column names, every
     // other link type under its own name.
-    for axis in linked.values().flat_map(|by_axis| by_axis.keys()) {
+    for axis in linked.values().flat_map(BTreeMap::keys) {
         if !names.iter().any(|k| k == axis) {
             names.push(axis.clone());
         }
@@ -428,73 +428,113 @@ fn write_terms(
     keys: &PropertyKeys<Error>,
     designations: &mut Designations,
 ) -> Result<(), Error> {
-    let mut answer_lists_of: BTreeMap<&str, Vec<String>> = BTreeMap::new();
-    for list in tables.lists.values() {
-        for term_code in &list.terms {
-            answer_lists_of
-                .entry(term_code.as_str())
-                .or_default()
-                .push(list.code.clone());
-        }
-    }
+    let answer_lists_of = answer_lists_by_term(tables);
     for term in &tables.terms.rows {
         let Some(&ordinal) = numbered.ordinals.get(&term.code.to_ascii_uppercase()) else {
             continue;
         };
-        designations.start();
-        designations.place(ordinal, &term.long_common_name, "en", 0);
-        designations.place(ordinal, &term.short_name, "en", 1);
-        designations.place(ordinal, &term.consumer_name, "en", 2);
-        for variant in &tables.variants {
-            if let Some(translation) = variant.terms.get(&term.code) {
-                if let Some(long) = &translation.long_common_name {
-                    designations.place(ordinal, long, &variant.language, 0);
-                }
-                if let Some(short) = &translation.short_name {
-                    designations.place(ordinal, short, &variant.language, 1);
-                }
-                if let Some(display) = &translation.display_name {
-                    designations.place(ordinal, display, &variant.language, 4);
-                }
-            }
+        place_term_designations(designations, ordinal, term, &tables.variants);
+        write_term_axes(builder, keys, ordinal, term, linked.get(term.code.as_str()))?;
+        write_term_provenance(builder, keys, ordinal, term, &answer_lists_of)?;
+    }
+    Ok(())
+}
+
+/// The answer lists each term uses, keyed by the term's code.
+fn answer_lists_by_term(tables: &Tables) -> BTreeMap<&str, Vec<String>> {
+    let mut out: BTreeMap<&str, Vec<String>> = BTreeMap::new();
+    for list in tables.lists.values() {
+        for term_code in &list.terms {
+            out.entry(term_code.as_str())
+                .or_default()
+                .push(list.code.clone());
         }
-        let term_links = linked.get(term.code.as_str());
-        for (column, value) in &term.fields {
-            let values = match term_links.and_then(|by_axis| by_axis.get(column.as_str())) {
-                // NOTE: the FHIR LOINC page types the six axes as Coding
-                // (<https://terminology.hl7.org/LOINC.html>): the part is the value.
-                Some(parts) => parts.iter().map(|p| PropertyValue::Concept(*p)).collect(),
-                None => vec![PropertyValue::String(value.clone())],
-            };
-            builder.properties(ordinal, keys.key(column)?, &values)?;
-        }
-        if let Some(by_axis) = term_links {
-            for (axis, parts) in by_axis {
-                if term.fields.contains_key(axis.as_str()) {
-                    continue;
-                }
-                let values: Vec<PropertyValue> =
-                    parts.iter().map(|p| PropertyValue::Concept(*p)).collect();
-                builder.properties(ordinal, keys.key(axis)?, &values)?;
-            }
-        }
-        let copyright = if term.external_copyright.is_some() {
-            "3rdParty"
-        } else {
-            "LOINC"
+    }
+    out
+}
+
+/// The English names of a term and every linguistic variant that carries it.
+fn place_term_designations(
+    designations: &mut Designations,
+    ordinal: Ordinal,
+    term: &term::Term,
+    variants: &[variant::Variant],
+) {
+    designations.start();
+    designations.place(ordinal, &term.long_common_name, "en", 0);
+    designations.place(ordinal, &term.short_name, "en", 1);
+    designations.place(ordinal, &term.consumer_name, "en", 2);
+    for variant in variants {
+        let Some(translation) = variant.terms.get(&term.code) else {
+            continue;
         };
-        builder.properties(
-            ordinal,
-            keys.key(COPYRIGHT_KEY)?,
-            &[PropertyValue::Code(copyright.to_owned())],
-        )?;
-        if let Some(lists) = answer_lists_of.get(term.code.as_str()) {
-            let values: Vec<PropertyValue> = lists
-                .iter()
-                .map(|l| PropertyValue::Code(l.clone()))
-                .collect();
-            builder.properties(ordinal, keys.key(ANSWER_LIST_KEY)?, &values)?;
+        for (text, use_ordinal) in [
+            (&translation.long_common_name, 0),
+            (&translation.short_name, 1),
+            (&translation.display_name, 4),
+        ] {
+            if let Some(text) = text {
+                designations.place(ordinal, text, &variant.language, use_ordinal);
+            }
         }
+    }
+}
+
+/// A term's `Loinc.csv` columns and its linked axes, the linked ones as the
+/// part they name.
+fn write_term_axes(
+    builder: &mut StoreBuilder,
+    keys: &PropertyKeys<Error>,
+    ordinal: Ordinal,
+    term: &term::Term,
+    term_links: Option<&BTreeMap<String, Vec<Ordinal>>>,
+) -> Result<(), Error> {
+    let concepts = |parts: &Vec<Ordinal>| -> Vec<PropertyValue> {
+        parts.iter().map(|p| PropertyValue::Concept(*p)).collect()
+    };
+    for (column, value) in &term.fields {
+        let values = match term_links.and_then(|by_axis| by_axis.get(column.as_str())) {
+            // NOTE: the FHIR LOINC page types the six axes as Coding
+            // (<https://terminology.hl7.org/LOINC.html>): the part is the value.
+            Some(parts) => concepts(parts),
+            None => vec![PropertyValue::String(value.clone())],
+        };
+        builder.properties(ordinal, keys.key(column)?, &values)?;
+    }
+    // Every other link type under its own name; the columns above already
+    // carried the six axes `Loinc.csv` names.
+    for (axis, parts) in term_links.into_iter().flatten() {
+        if !term.fields.contains_key(axis.as_str()) {
+            builder.properties(ordinal, keys.key(axis)?, &concepts(parts))?;
+        }
+    }
+    Ok(())
+}
+
+/// A term's copyright holder and the answer lists it uses.
+fn write_term_provenance(
+    builder: &mut StoreBuilder,
+    keys: &PropertyKeys<Error>,
+    ordinal: Ordinal,
+    term: &term::Term,
+    answer_lists_of: &BTreeMap<&str, Vec<String>>,
+) -> Result<(), Error> {
+    let copyright = if term.external_copyright.is_some() {
+        "3rdParty"
+    } else {
+        "LOINC"
+    };
+    builder.properties(
+        ordinal,
+        keys.key(COPYRIGHT_KEY)?,
+        &[PropertyValue::Code(copyright.to_owned())],
+    )?;
+    if let Some(lists) = answer_lists_of.get(term.code.as_str()) {
+        let values: Vec<PropertyValue> = lists
+            .iter()
+            .map(|l| PropertyValue::Code(l.clone()))
+            .collect();
+        builder.properties(ordinal, keys.key(ANSWER_LIST_KEY)?, &values)?;
     }
     Ok(())
 }
