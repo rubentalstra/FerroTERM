@@ -29,6 +29,15 @@ pub const RESOURCES_ENV: &str = "FERROTERM_RESOURCES";
 /// (`SMART-on-FHIR`, `OAuth`, `Basic`, `Certificates`, `Kerberos`, `NTLM`),
 /// separated by commas.
 pub const SECURITY_SERVICE_ENV: &str = "FERROTERM_SECURITY_SERVICE";
+/// The environment variable naming the base URL clients reach this server at.
+///
+/// A server behind a reverse proxy answers on a URL it cannot see: the proxy
+/// terminates TLS and forwards a plain request, so the address the process
+/// bound is not the address a client used. The capability statements state
+/// this value as `implementation.url`, per version, so a client that reads one
+/// learns where to send the next request
+/// (<https://hl7.org/fhir/R4B/capabilitystatement-definitions.html#CapabilityStatement.implementation.url>).
+pub const BASE_URL_ENV: &str = "FERROTERM_BASE_URL";
 
 /// The codes of the FHIR `restful-security-service` value set
 /// (<http://hl7.org/fhir/ValueSet/restful-security-service>), each with its
@@ -68,6 +77,9 @@ pub struct Config {
     /// `restful-security-service` value set; empty when the deployment
     /// declares none.
     pub security_services: Vec<String>,
+    /// The base URL clients reach this server at, without a version prefix
+    /// and without a trailing slash; `None` when the deployment names none.
+    pub base_url: Option<String>,
 }
 
 /// A configuration value that does not parse.
@@ -94,6 +106,7 @@ impl Default for Config {
             log_format: LogFormat::Auto,
             log_filter: String::from(crate::telemetry::DEFAULT_FILTER),
             security_services: Vec::new(),
+            base_url: None,
         }
     }
 }
@@ -123,6 +136,10 @@ impl Config {
             },
             log_filter: std::env::var(FILTER_ENV).unwrap_or(defaults.log_filter),
             security_services: security_services()?,
+            base_url: std::env::var(BASE_URL_ENV)
+                .ok()
+                .map(|url| url.trim_end_matches('/').to_owned())
+                .filter(|url| !url.is_empty()),
         })
     }
 }

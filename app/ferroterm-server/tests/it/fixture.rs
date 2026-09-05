@@ -22,6 +22,18 @@ impl Server {
         Self::start_with(false, false)
     }
 
+    /// The edition behind a proxy that reaches it at `base`.
+    pub(crate) fn start_with_base_url(base: &str) -> Self {
+        let mut server = Self::start_with(false, false);
+        let config = Config {
+            base_url: Some(base.to_owned()),
+            ..server.config.clone()
+        };
+        server.state = Arc::new(AppState::load(&config).expect("loads"));
+        server.config = config;
+        server
+    }
+
     /// The edition plus the testkit's `CodeSystem` and `ValueSet` resources.
     pub(crate) fn start_with_resources() -> Self {
         Self::start_with(true, false)
