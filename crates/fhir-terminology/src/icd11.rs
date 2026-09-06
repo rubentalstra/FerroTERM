@@ -1133,6 +1133,9 @@ fn declaration(linearization: Linearization, languages: Vec<String>) -> Declarat
         // NOTE: a linearization defines postcoordination clusters
         // (<https://icd.who.int/icdapi>), and this provider validates and
         // locates one; the foundation defines no such grammar.
+        // NOTE: WHO states no subsumption of a cluster under its stem's
+        // ancestors (<https://icd.who.int/icdapi>), so an expansion of this
+        // system lists every member and is not unclosed.
         compositional: if linearization == Linearization::Foundation {
             Compositional::None
         } else {

@@ -134,6 +134,10 @@ pub struct Expansion {
     pub versions: Vec<UsedVersion>,
     /// Whether `items` carry the system's hierarchy in their depths.
     pub nested: bool,
+    /// Whether the compose admits codes this expansion does not list, so the
+    /// value set carries `valueset-unclosed`
+    /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes).
+    pub unclosed: bool,
 }
 
 /// Resolves `include.valueSet` references to their complete expansions.
@@ -223,6 +227,9 @@ struct Selection {
     /// nothing and the first occurrence keeps its place.
     seen: ConceptSet,
     overrides: BTreeMap<u32, String>,
+    /// Whether the criteria that made this selection admit codes it does not
+    /// hold, which the provider decides for its own system.
+    unclosed: bool,
     /// The compose's spelling of an enumerated code the system spells otherwise.
     // NOTE: no FHIR specification governs which spelling `contains.code` carries when a
     // system admits several (the ecosystem's icd-11 `expand-adhoc-enum-uri` keeps the
@@ -289,6 +296,7 @@ impl Selection {
             self.segments.push(fresh);
         }
         self.set |= &part.set;
+        self.unclosed |= part.unclosed;
         for (ordinal, display) in part.overrides {
             self.overrides.entry(ordinal).or_insert(display);
         }
@@ -497,6 +505,7 @@ impl<'a> Expander<'a> {
             items: page.items,
             versions: gathered.versions,
             nested: page.nested,
+            unclosed: gathered.selections.values().any(|s| s.unclosed),
         })
     }
 
@@ -547,6 +556,7 @@ impl<'a> Expander<'a> {
             let Selected {
                 set,
                 stated,
+                unclosed,
                 overrides,
                 spellings,
             } = Self::select(provider, include, options)?;
@@ -565,6 +575,7 @@ impl<'a> Expander<'a> {
                     set,
                     segments: vec![segment],
                     seen,
+                    unclosed,
                     overrides,
                     spellings,
                 },
@@ -586,6 +597,7 @@ impl<'a> Expander<'a> {
                     .filter_map(|(key, mut selection)| {
                         let other = referenced.get(&key)?;
                         selection.set &= &other.set;
+                        selection.unclosed |= other.unclosed;
                         Some((key, selection))
                     })
                     .collect(),
@@ -601,6 +613,9 @@ impl<'a> Expander<'a> {
         expansion: Expansion,
     ) -> Result<BTreeMap<SelectionKey, Selection>, ComposeError> {
         let mut selections: BTreeMap<SelectionKey, Selection> = BTreeMap::new();
+        // A reference to an unclosed value set leaves this expansion missing
+        // the members the referenced one could not list.
+        let unclosed = expansion.unclosed;
         for item in expansion.items {
             let key = (item.system.clone(), item.version.clone());
             if !selections.contains_key(&key) {
@@ -612,6 +627,7 @@ impl<'a> Expander<'a> {
                         set: ConceptSet::new(),
                         segments: vec![Segment::Named(Vec::new())],
                         seen: ConceptSet::new(),
+                        unclosed,
                         overrides: BTreeMap::new(),
                         spellings: BTreeMap::new(),
                     },
@@ -669,6 +685,7 @@ impl<'a> Expander<'a> {
             Selected {
                 set: provider.filter_all(&include.filters).map_err(&failed)?,
                 stated: None,
+                unclosed: provider.unclosed(&include.filters),
                 overrides: BTreeMap::new(),
                 spellings: BTreeMap::new(),
             }
@@ -727,9 +744,12 @@ impl<'a> Expander<'a> {
                 spellings.insert(located.concept.index(), concept.code.clone());
             }
         }
+        // An include that names its concepts is closed: the codes it lists are
+        // the members, whatever else the system admits.
         Ok(Selected {
             set,
             stated: Some(stated),
+            unclosed: false,
             overrides,
             spellings,
         })
@@ -743,6 +763,8 @@ struct Selected {
     /// The enumerated concepts in the order the include named them, or `None`
     /// when the include stated a filter and named no concept.
     stated: Option<Vec<u32>>,
+    /// Whether the criteria admit codes the set does not hold.
+    unclosed: bool,
     overrides: BTreeMap<u32, String>,
     spellings: BTreeMap<u32, String>,
 }

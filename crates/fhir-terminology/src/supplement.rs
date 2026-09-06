@@ -215,4 +215,11 @@ impl CodeSystemProvider for Supplemented {
     fn filter(&self, filter: &crate::filter::Filter) -> Result<ConceptSet, ProviderError> {
         self.inner.filter(filter)
     }
+
+    // NOTE: a supplement adds designations and properties to the codes a system
+    // already has (<https://hl7.org/fhir/R4B/codesystem.html#supplements>), so
+    // whether a selection is complete stays the supplemented system's answer.
+    fn unclosed(&self, filters: &[crate::filter::Filter]) -> bool {
+        self.inner.unclosed(filters)
+    }
 }

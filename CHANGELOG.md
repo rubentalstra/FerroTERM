@@ -13,6 +13,10 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- An expansion that leaves out codes the value set admits says so: `ValueSet.expansion` carries `http://hl7.org/fhir/StructureDefinition/valueset-unclosed` with `valueBoolean` true. `$expand` describes the case as a value set "unbounded due to the inclusion of post-coordinated value sets (e.g. SNOMED CT, UCUM)". Which systems report it is decided one at a time: BCP 13 media types selected by a filter (each registered type carries unboundedly many parameterised forms), SNOMED CT unless the include states `expressions = false`, UCUM and BCP 47 language tags, and a `CodeSystem` resource whose `content` is `fragment`. An include that names its concepts is complete whatever the system admits, and LOINC, RxNorm, the ICD and ICPC classifications, ICD-11, and ISO 3166 expansions list every member and are unchanged.
+
 ### Fixed
 
 - `$translate` over a SNOMED CT map reference set costs its answer rather than the release. The server built the whole `ConceptMap` of the named reference set on every request, one element and one store read per member, and then looked one code up in it, so the ICD-10 extended map of the International edition (137,678 members) answered in 28 seconds and every map answered in proportion to its size. A provider is now told which mappings a request needs, and the SNOMED provider reads only the reference set rows that carry them: the same request answers in 0.21 ms warm, and the three implicit maps of that edition, from 23,551 to 137,678 members, answer alike. Reading the whole map is unchanged and still available.
