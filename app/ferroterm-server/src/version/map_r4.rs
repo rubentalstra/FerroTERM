@@ -11,7 +11,6 @@ macro_rules! family_map {
             //! same parameters, so one macro serves both.
 
             use concept_graph::subsumption::Outcome;
-            use fhir_terminology::operations::CodingRef;
             use fhir_terminology::operations::expand::ExpandInput;
             use fhir_terminology::operations::lookup::{LookupInput, LookupOutcome};
             use fhir_terminology::operations::subsumes::SubsumesInput;
@@ -22,7 +21,9 @@ macro_rules! family_map {
             use fhir_terminology::operations::value_set_validate_code::{
                 TX_ISSUE_TYPE, Validation, ValueSetValidateInput,
             };
-            use fhir_terminology::operations::{Issue, MESSAGE_ID_URL};
+            use fhir_terminology::operations::{
+                CodeableConceptRef, CodingRef, Issue, MESSAGE_ID_URL,
+            };
             use fhir_terminology::provider::{Designation, PropertyValue};
             use fhir_terminology::valueset::convert;
             use fhir_types::$fhir::codeable_concept::CodeableConcept;
@@ -59,6 +60,15 @@ macro_rules! family_map {
                     version: coding.version.as_ref().and_then(|v| v.value.clone()),
                     code: coding.code.as_ref().and_then(|v| v.value.clone()),
                     display: coding.display.as_ref().and_then(|v| v.value.clone()),
+                }
+            }
+
+            /// A generated `CodeableConcept` as the engine names one.
+            #[must_use]
+            pub fn concept_ref(concept: &CodeableConcept) -> CodeableConceptRef {
+                CodeableConceptRef {
+                    coding: concept.coding.iter().map(coding_ref).collect(),
+                    text: concept.text.as_ref().and_then(|v| v.value.clone()),
                 }
             }
 
@@ -196,10 +206,7 @@ macro_rules! family_map {
                     code: request.code.as_ref().and_then(|v| v.value.clone()),
                     display: request.display.as_ref().and_then(|v| v.value.clone()),
                     coding: request.coding.as_ref().map(coding_ref),
-                    codeable_concept: request
-                        .codeable_concept
-                        .as_ref()
-                        .map(|concept| concept.coding.iter().map(coding_ref).collect()),
+                    codeable_concept: request.codeable_concept.as_ref().map(concept_ref),
                     display_language: request
                         .display_language
                         .as_ref()
@@ -240,16 +247,17 @@ macro_rules! family_map {
                         .into_iter()
                         .map(Into::into)
                         .collect(),
-                    codeable_concept: outcome.codeable_concept.as_deref().map(concept_of),
+                    codeable_concept: outcome.codeable_concept.as_ref().map(concept_of),
                     inactive: outcome.inactive.map(Into::into),
                     status: outcome.status.map(Into::into),
                 }
             }
 
             /// A neutral `codeableConcept` echoed as the version's `CodeableConcept`.
-            fn concept_of(codings: &[CodingRef]) -> CodeableConcept {
+            fn concept_of(concept: &CodeableConceptRef) -> CodeableConcept {
                 CodeableConcept {
-                    coding: codings.iter().map(coding_of).collect(),
+                    coding: concept.coding.iter().map(coding_of).collect(),
+                    text: concept.text.as_deref().map(Into::into),
                     ..Default::default()
                 }
             }
@@ -322,10 +330,7 @@ macro_rules! family_map {
                         .and_then(|v| v.value.clone()),
                     display: request.display.as_ref().and_then(|v| v.value.clone()),
                     coding: request.coding.as_ref().map(coding_ref),
-                    codeable_concept: request
-                        .codeable_concept
-                        .as_ref()
-                        .map(|concept| concept.coding.iter().map(coding_ref).collect()),
+                    codeable_concept: request.codeable_concept.as_ref().map(concept_ref),
                     display_language: request
                         .display_language
                         .as_ref()
@@ -376,7 +381,7 @@ macro_rules! family_map {
                         .iter()
                         .map(|s| s.as_str().into())
                         .collect(),
-                    codeable_concept: validation.codeable_concept.as_deref().map(concept_of),
+                    codeable_concept: validation.codeable_concept.as_ref().map(concept_of),
                     inactive: validation.inactive.map(Into::into),
                     status: validation.status.as_deref().map(Into::into),
                 };
@@ -447,7 +452,7 @@ macro_rules! family_map {
                         .as_ref()
                         .or(request.source_codeable_concept.as_ref())
                         .or(request.target_codeable_concept.as_ref())
-                        .map(|concept| concept.coding.iter().map(coding_ref).collect()),
+                        .map(concept_ref),
                     source: uri(&request.source).or_else(|| uri(&request.source_scope)),
                     target: uri(&request.target).or_else(|| uri(&request.target_scope)),
                     target_system: if targeted {

@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use super::{CodingRef, Issue, OperationError, Sources};
+use super::{CodeableConceptRef, CodingRef, Issue, OperationError, Sources};
 use crate::compose::Item;
 use crate::language;
 use crate::provider::{CodeSystemProvider, Located};
@@ -53,7 +53,7 @@ pub struct Validation {
     /// serve (`x-unknown-system`, the ecosystem's output for that input).
     pub x_unknown_systems: Vec<String>,
     /// The `codeableConcept` input, echoed (an R5 output, pre-adopted).
-    pub codeable_concept: Option<Vec<CodingRef>>,
+    pub codeable_concept: Option<CodeableConceptRef>,
     /// `inactive`: whether the concept is inactive (the ecosystem's output).
     pub inactive: Option<bool>,
     /// `status`: the concept's status when its system states one (the
@@ -91,8 +91,8 @@ pub struct ValueSetValidateInput {
     pub display: Option<String>,
     /// The coding, instead of `code`.
     pub coding: Option<CodingRef>,
-    /// The codings of a `codeableConcept`, instead of `code`.
-    pub codeable_concept: Option<Vec<CodingRef>>,
+    /// The `codeableConcept`, instead of `code`.
+    pub codeable_concept: Option<CodeableConceptRef>,
     /// The language of the display (a BCP 47 range list).
     pub display_language: Option<String>,
     /// `abstract`: whether an abstract code may be selected; the default is true.
@@ -161,6 +161,29 @@ fn prepare(
         ..(*model).clone()
     });
     Ok((model, negotiation))
+}
+
+/// Refuses a value set that reaches itself through `include.valueSet` or
+/// `exclude.valueSet`, the way `$expand` refuses it.
+///
+/// The walk runs on its own resolver, so it records no value set reference
+/// the validation did not make.
+///
+/// # Errors
+///
+/// Returns [`OperationError::ValueSetCyclic`] for a circular reference, which
+/// the ecosystem classifies `vs-invalid`
+/// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+fn refuse_cyclic(
+    sources: &Sources<'_>,
+    model: &ValueSetModel,
+    negotiation: &Negotiation,
+) -> Result<(), OperationError> {
+    Resolver::new(sources.registry, sources.value_sets)
+        .with_negotiation(negotiation)
+        .with_contained(&model.contained)
+        .check_acyclic(&model.canonical(), &model.compose)?;
+    Ok(())
 }
 
 /// How one validation judges what it finds.
@@ -280,6 +303,7 @@ pub fn validate_code(
         registry: &registry,
         ..*sources
     };
+    refuse_cyclic(sources, &model, &negotiation)?;
     let resolver = Resolver::new(sources.registry, sources.value_sets)
         .with_negotiation(&negotiation)
         .with_contained(&model.contained);
@@ -322,10 +346,11 @@ pub fn validate_code(
         };
         return check(&subject);
     }
-    let codings = input
+    let concept = input
         .codeable_concept
         .as_ref()
         .ok_or_else(|| OperationError::Invalid(String::from("no code input")))?;
+    let codings = &concept.coding;
     if codings.is_empty() {
         return Err(OperationError::Required(String::from(
             "`codeableConcept` carries no `coding`",
@@ -352,7 +377,7 @@ pub fn validate_code(
         )));
     }
     let mut validation = combine(&model, &judged);
-    validation.codeable_concept = Some(codings.clone());
+    validation.codeable_concept = Some(concept.clone());
     Ok(validation)
 }
 
@@ -599,7 +624,7 @@ fn check(
         let alternatives = std::mem::take(&mut target.alternatives);
         let candidates = std::iter::once(Arc::clone(&target.provider)).chain(alternatives);
         if let Some(found) =
-            containing_version(model, resolver, &system, subject.code, language, candidates)
+            containing_version(model, resolver, &system, subject, language, candidates)
         {
             target.provider = found;
         }
@@ -607,7 +632,7 @@ fn check(
     let provider: &Arc<dyn CodeSystemProvider> = &target.provider;
     let version = provider.identity().version.clone();
     let Some(located) = provider.locate(subject.code)? else {
-        let mut validation = unknown_code(model, provider, &system, version, subject);
+        let mut validation = unknown_code(model, provider, &system, version, subject, policy);
         validation.issues.splice(0..0, target.issues);
         validation.message = message_of(&validation.issues);
         validation.unknown_systems.extend(target.unknown_systems);
@@ -801,14 +826,20 @@ fn value_set_notes(
 }
 
 /// The version of `system` (among `candidates`, the ones the value set
-/// includes) that has `code` in the value set, the greatest first, for a
-/// subject that names no version (the ecosystem's `overload` cases); the
-/// greatest version when none has it.
+/// includes) the subject is validated in, the greatest first, for a subject
+/// that names no version (the ecosystem's `overload` cases).
+///
+/// A version that has the code in the value set AND accepts the asserted
+/// display answers first, then one that has the code, then the greatest: the
+/// `version` output is "the version of the system of the code that was
+/// validated", so the choice among the versions a value set includes belongs
+/// to the validation
+/// (<https://hl7.org/fhir/R5/valueset-operation-validate-code.html>).
 fn containing_version(
     model: &ValueSetModel,
     resolver: &Resolver<'_>,
     system: &str,
-    code: &str,
+    subject: &Subject<'_>,
     language: Option<&str>,
     candidates: impl Iterator<Item = Arc<dyn CodeSystemProvider>>,
 ) -> Option<Arc<dyn CodeSystemProvider>> {
@@ -816,30 +847,78 @@ fn containing_version(
     candidates.sort_by(|a, b| {
         crate::versioned::version_order(&b.identity().version, &a.identity().version)
     });
-    candidates
+    let holding: Vec<&Arc<dyn CodeSystemProvider>> = candidates
         .iter()
-        .find(|candidate| {
-            candidate
-                .locate(code)
+        .filter(|candidate| {
+            holds_in_value_set(model, resolver, system, subject.code, language, candidate)
+        })
+        .collect();
+    holding
+        .iter()
+        .find(|candidate| accepts_display(candidate, subject, language))
+        .or_else(|| holding.first())
+        .map(|found| Arc::clone(found))
+        .or_else(|| candidates.first().cloned())
+}
+
+/// Whether `candidate` has `code` and the value set contains it at that
+/// version.
+fn holds_in_value_set(
+    model: &ValueSetModel,
+    resolver: &Resolver<'_>,
+    system: &str,
+    code: &str,
+    language: Option<&str>,
+    candidate: &Arc<dyn CodeSystemProvider>,
+) -> bool {
+    // NOTE: a candidate whose provider or compose fails to answer is not the
+    // version to validate in, and the chosen version answers for itself.
+    candidate
+        .locate(code)
+        .ok()
+        .flatten()
+        .is_some_and(|located| {
+            resolver
+                .contains_compose(
+                    &model.canonical(),
+                    &model.compose,
+                    system,
+                    Some(&candidate.identity().version),
+                    &located.code,
+                    language,
+                )
                 .ok()
                 .flatten()
-                .is_some_and(|located| {
-                    resolver
-                        .contains_compose(
-                            &model.canonical(),
-                            &model.compose,
-                            system,
-                            Some(&candidate.identity().version),
-                            &located.code,
-                            language,
-                        )
-                        .ok()
-                        .flatten()
-                        .is_some()
-                })
+                .is_some()
         })
-        .or_else(|| candidates.first())
-        .cloned()
+}
+
+/// Whether `candidate` accepts the display the subject asserted; true when
+/// the subject asserted none.
+fn accepts_display(
+    candidate: &Arc<dyn CodeSystemProvider>,
+    subject: &Subject<'_>,
+    language: Option<&str>,
+) -> bool {
+    let Some(given) = subject.display else {
+        return true;
+    };
+    let Ok(Some(located)) = candidate.locate(subject.code) else {
+        return false;
+    };
+    super::display::judge(
+        candidate,
+        located.concept,
+        super::display::Asserted {
+            system: &candidate.identity().url,
+            code: &located.code,
+            given,
+            requested: language,
+            lenient: false,
+        },
+        None,
+    )
+    .is_ok_and(|issue| issue.is_none())
 }
 
 /// The version a subject is validated against and what the choice cost.
@@ -1654,6 +1733,7 @@ fn unknown_code(
     system: &str,
     version: String,
     subject: &Subject<'_>,
+    policy: &Policy<'_>,
 ) -> Validation {
     let (message, text) = super::display::unknown_code(provider.as_ref(), subject.code);
     let unknown = Issue {
@@ -1664,18 +1744,30 @@ fn unknown_code(
         text,
         expression: super::at(subject.expression, "code"),
     };
+    // NOTE: the membership issue names the code the way the request stated it,
+    // the version included, which the ecosystem requires of every answer
+    // (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+    let named = match subject.version {
+        Some(asserted) => format!("{system}|{asserted}"),
+        None => system.to_owned(),
+    };
     let mut validation = failed(
         Some(system.to_owned()),
         Some(version),
         not_in_vs(
             model,
-            system,
+            &named,
             subject.code,
             subject.display,
             subject.expression,
         ),
     );
-    validation.issues.push(unknown);
+    // NOTE: under `valueset-membership-only` the server performs no "validation
+    // tasks beyond validating membership", so the code's standing in its system
+    // stays unreported (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
+    if !policy.membership_only {
+        validation.issues.push(unknown);
+    }
     // NOTE: the submitted code is echoed even when the system does not have it, the
     // shape the ecosystem expects (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/>).
     validation.code = Some(subject.code.to_owned());

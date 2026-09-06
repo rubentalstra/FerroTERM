@@ -6,12 +6,17 @@ use std::sync::Arc;
 use fhir_terminology::operations::lookup::{LookupInput, lookup};
 use fhir_terminology::operations::subsumes::{SubsumesInput, subsumes};
 use fhir_terminology::operations::validate_code::{ValidateCodeInput, validate_code};
-use fhir_terminology::operations::{CodingRef, Invocation, OperationError};
+use fhir_terminology::operations::{CodeableConceptRef, CodingRef, Invocation, OperationError};
 use fhir_terminology::provider::PropertyValue;
 use fhir_terminology::registry::Registry;
 use http::StatusCode;
 
 use crate::fixture::{FLAT_URL, URL, registry};
+
+/// A codeable concept of `coding`, with no text.
+fn codeable(coding: Vec<CodingRef>) -> CodeableConceptRef {
+    CodeableConceptRef { coding, text: None }
+}
 
 /// A coding as the engine names one.
 fn coding_ref(system: Option<&str>, code: &str) -> CodingRef {
@@ -281,7 +286,7 @@ fn validate_code_by_code_coding_and_codeable_concept() {
         &Invocation::Type,
         &ValidateCodeInput {
             url: Some(URL.to_owned()),
-            codeable_concept: Some(concept),
+            codeable_concept: Some(codeable(concept)),
             ..ValidateCodeInput::default()
         },
     )
@@ -293,7 +298,7 @@ fn validate_code_by_code_coding_and_codeable_concept() {
         &Invocation::Type,
         &ValidateCodeInput {
             url: Some(URL.to_owned()),
-            codeable_concept: Some(none),
+            codeable_concept: Some(codeable(none)),
             ..ValidateCodeInput::default()
         },
     )

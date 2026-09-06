@@ -20,9 +20,9 @@ above the suite's own.
 
 | mode | surface | pass list | passed of ran | needs | open failures |
 |---|---|---|---|---|---|
-| `general` | `/r4b` | `passing.txt` | 599 of 670 | nothing | #353 |
-| `general` | `/r4` | `passing-r4.txt` | 603 of 670 | nothing | #353 |
-| `general` | `/r5` | `passing-r5.txt` | 605 of 670 | nothing | #353 |
+| `general` | `/r4b` | `passing.txt` | 607 of 670 | nothing | #353 |
+| `general` | `/r4` | `passing-r4.txt` | 611 of 670 | nothing | #353 |
+| `general` | `/r5` | `passing-r5.txt` | 613 of 670 | nothing | #353 |
 | `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
 | `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 55 of 227 | a LOINC release | #420, #421, #305, #349 |
@@ -261,14 +261,6 @@ collection of languages", so `zh` does not subsume `zh-min-nan`.
   `http://hl7.org/fhir/ValueSet/administrative-gender`
   (<https://hl7.org/fhir/R4B/terminologies-systems.html>). Each answers 404
   where the case expects a 2xx. #435.
-- **Three defects of this server hold the rest of the shape clusters.**
-  `$validate-code` pins one code system version before it checks the display,
-  so five `overload` validation cases fail over a value set including two
-  versions of one system (#437); a circular value set refuses `$expand` and
-  still answers `$validate-code`, so `big/big-circle-validate` gets a 200
-  (#438); and the `codeableConcept` echo drops `CodeableConcept.text`, which
-  is the whole difference in the two
-  `validation/validation-complex-codeableconcept` cases (#436).
 - **A supplied `tx-resource` is read leniently and refuses only the request
   that resolves it.** Cardinality is an aspect of validating a resource, which
   a server performs at its discretion, and an implementation "should be

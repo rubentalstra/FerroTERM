@@ -15,7 +15,7 @@ use fhir_terminology::operations::expand::{
     Contains, ExpandInput, ExpansionOutcome, ParameterValue,
 };
 use fhir_terminology::operations::value_set_validate_code::ValueSetValidateInput;
-use fhir_terminology::operations::{CodingRef, Issue};
+use fhir_terminology::operations::{CodeableConceptRef, CodingRef, Issue};
 use fhir_terminology::operations::{OperationError, Sources, expand, value_set_validate_code};
 use fhir_terminology::provider::PropertyValue;
 use fhir_terminology::registry::Registry;
@@ -39,6 +39,24 @@ impl World {
     pub(crate) fn load() -> Self {
         let dir = tempfile::tempdir().expect("tempdir");
         write_code_systems(dir.path()).expect("writes");
+        Self::from_dir(dir)
+    }
+
+    /// A world holding only `files`, written the way a package directory
+    /// holds them.
+    pub(crate) fn of(files: &[(&str, serde_json::Value)]) -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        for (name, value) in files {
+            std::fs::write(
+                dir.path().join(name),
+                serde_json::to_string_pretty(value).expect("serialises"),
+            )
+            .expect("writes");
+        }
+        Self::from_dir(dir)
+    }
+
+    fn from_dir(dir: tempfile::TempDir) -> Self {
         let mut registry = Registry::new();
         for model in load_dir(dir.path(), FhirVersion::R5).expect("loads") {
             if model.supplements.is_none() {
@@ -85,6 +103,11 @@ impl World {
             concept_maps: &self.concept_maps,
         }
     }
+}
+
+/// A codeable concept of `coding`, with no text.
+fn codeable(coding: Vec<CodingRef>) -> CodeableConceptRef {
+    CodeableConceptRef { coding, text: None }
 }
 
 fn codes(outcome: &ExpansionOutcome) -> Vec<String> {
@@ -337,12 +360,12 @@ fn one_coding_answers_for_the_concept_when_the_include_pins_another_version() {
     };
     let request = ValueSetValidateInput {
         inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
-        codeable_concept: Some(vec![CodingRef {
+        codeable_concept: Some(codeable(vec![CodingRef {
             system: Some(ANIMALS.to_owned()),
             version: Some(String::from("1.0")),
             code: Some(String::from("cat")),
             ..CodingRef::default()
-        }]),
+        }])),
         ..ValueSetValidateInput::default()
     };
     let validation =
@@ -1237,10 +1260,10 @@ fn validate_code_judges_a_codeable_concept_coding_by_coding() {
     };
     let mixed = ValueSetValidateInput {
         url: Some(VS_ENUMERATED.to_owned()),
-        codeable_concept: Some(vec![
+        codeable_concept: Some(codeable(vec![
             coding(COLOURS, "blue", None),
             coding(ANIMALS, "cat", None),
-        ]),
+        ])),
         ..ValueSetValidateInput::default()
     };
     let validation =
@@ -1248,11 +1271,8 @@ fn validate_code_judges_a_codeable_concept_coding_by_coding() {
     assert!(validation.result, "{validation:?}");
     assert_eq!(validation.code.as_deref(), Some("cat"));
     assert_eq!(validation.system.as_deref(), Some(ANIMALS));
-    assert_eq!(
-        validation.codeable_concept.as_ref().map(Vec::len),
-        Some(2),
-        "echoed"
-    );
+    let echoed = validation.codeable_concept.as_ref().map(|c| c.coding.len());
+    assert_eq!(echoed, Some(2), "echoed");
     let kinds: Vec<(&str, &str, Option<&str>)> = validation
         .issues
         .iter()
@@ -1268,7 +1288,7 @@ fn validate_code_judges_a_codeable_concept_coding_by_coding() {
     );
     let wrong_display = ValueSetValidateInput {
         url: Some(VS_ENUMERATED.to_owned()),
-        codeable_concept: Some(vec![coding(ANIMALS, "cat", Some("Hamster"))]),
+        codeable_concept: Some(codeable(vec![coding(ANIMALS, "cat", Some("Hamster"))])),
         ..ValueSetValidateInput::default()
     };
     let validation = value_set_validate_code::validate_code(&world.sources(), &wrong_display)
@@ -1281,10 +1301,10 @@ fn validate_code_judges_a_codeable_concept_coding_by_coding() {
     );
     let none = ValueSetValidateInput {
         url: Some(VS_ENUMERATED.to_owned()),
-        codeable_concept: Some(vec![
+        codeable_concept: Some(codeable(vec![
             coding(ANIMALS, "dodo", None),
             coding("http://example.org/none", "x", None),
-        ]),
+        ])),
         ..ValueSetValidateInput::default()
     };
     let validation =
@@ -2405,11 +2425,11 @@ fn validate_code_fails_a_codeable_concept_on_an_include_version_the_server_lacks
     };
     let input = ValueSetValidateInput {
         inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
-        codeable_concept: Some(vec![CodingRef {
+        codeable_concept: Some(codeable(vec![CodingRef {
             system: Some(ANIMALS.to_owned()),
             code: Some(String::from("cat")),
             ..CodingRef::default()
-        }]),
+        }])),
         ..ValueSetValidateInput::default()
     };
     let validation =
@@ -2739,4 +2759,308 @@ fn a_designation_with_its_own_use_validates_a_display_without_being_offered() {
         ),
         "the suggestion names the display alone"
     );
+}
+/// A synthetic system in two versions whose `code2` display differs, the
+/// shape the ecosystem's `overload` cases use.
+const TWO_VERSION: &str = "http://example.org/fhir/CodeSystem/two-version";
+/// A value set including both versions of [`TWO_VERSION`].
+const VS_BOTH_VERSIONS: &str = "http://example.org/fhir/ValueSet/two-version-all";
+/// A value set including the second version and excluding the first.
+const VS_EXCLUDING_V1: &str = "http://example.org/fhir/ValueSet/two-version-exclude";
+
+fn two_version_world() -> World {
+    let system = |version: &str, second: &str, third: &str, third_display: &str| {
+        serde_json::json!({
+          "resourceType": "CodeSystem", "url": TWO_VERSION, "version": version,
+          "name": "TwoVersion", "status": "active", "content": "complete",
+          "caseSensitive": true,
+          "concept": [
+            {"code": "code1", "display": "Display 1"},
+            {"code": "code2", "display": second},
+            {"code": third, "display": third_display}
+          ]
+        })
+    };
+    let value_set = |url: &str, compose: serde_json::Value| {
+        serde_json::json!({
+          "resourceType": "ValueSet", "url": url, "version": "1.0",
+          "name": "TwoVersionSelection", "status": "active", "compose": compose
+        })
+    };
+    World::of(&[
+        (
+            "CodeSystem-two-version-1.json",
+            system("1.0.0", "Display 2", "code3", "Display 3"),
+        ),
+        (
+            "CodeSystem-two-version-2.json",
+            system("2.0.0", "Display #2", "code4", "Display 4"),
+        ),
+        (
+            "ValueSet-two-version-all.json",
+            value_set(
+                VS_BOTH_VERSIONS,
+                serde_json::json!({"include": [
+                    {"system": TWO_VERSION, "version": "1.0.0"},
+                    {"system": TWO_VERSION, "version": "2.0.0"}
+                ]}),
+            ),
+        ),
+        (
+            "ValueSet-two-version-exclude.json",
+            value_set(
+                VS_EXCLUDING_V1,
+                serde_json::json!({
+                    "include": [{"system": TWO_VERSION, "version": "2.0.0"}],
+                    "exclude": [{"system": TWO_VERSION, "version": "1.0.0"}]
+                }),
+            ),
+        ),
+    ])
+}
+
+// NOTE: `version` is "the version of the system of the code that was validated",
+// so a value set including one system twice picks the version the coding is valid
+// in (<https://hl7.org/fhir/R5/valueset-operation-validate-code.html>).
+#[test]
+fn validate_code_picks_the_included_version_the_display_is_valid_in() {
+    let world = two_version_world();
+    let coding = |display: Option<&str>| CodingRef {
+        system: Some(TWO_VERSION.to_owned()),
+        version: None,
+        code: Some(String::from("code2")),
+        display: display.map(str::to_owned),
+    };
+    let run = |coding: CodingRef| {
+        let input = ValueSetValidateInput {
+            url: Some(VS_BOTH_VERSIONS.to_owned()),
+            coding: Some(coding),
+            ..ValueSetValidateInput::default()
+        };
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates")
+    };
+    let first = run(coding(Some("Display 2")));
+    assert!(first.result, "{first:?}");
+    assert_eq!(first.version.as_deref(), Some("1.0.0"));
+    assert_eq!(first.display.as_deref(), Some("Display 2"));
+    let second = run(coding(Some("Display #2")));
+    assert!(second.result, "{second:?}");
+    assert_eq!(second.version.as_deref(), Some("2.0.0"));
+    assert_eq!(second.display.as_deref(), Some("Display #2"));
+    let none = run(coding(None));
+    assert!(none.result, "{none:?}");
+    assert_eq!(
+        none.version.as_deref(),
+        Some("2.0.0"),
+        "with no display asserted the greatest included version answers"
+    );
+}
+
+// NOTE: an exclude's version says which version its codes are selected from, so
+// it removes the code whatever version an include contributed it at
+// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.compose.exclude>).
+#[test]
+fn an_exclude_at_another_version_removes_the_code_the_include_contributed() {
+    let world = two_version_world();
+    let input = ValueSetValidateInput {
+        url: Some(VS_EXCLUDING_V1.to_owned()),
+        coding: Some(CodingRef {
+            system: Some(TWO_VERSION.to_owned()),
+            code: Some(String::from("code1")),
+            ..CodingRef::default()
+        }),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(!validation.result, "{validation:?}");
+    assert_eq!(validation.version.as_deref(), Some("2.0.0"));
+    assert_eq!(validation.display.as_deref(), Some("Display 1"));
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-in-vs"]);
+    let kept = ValueSetValidateInput {
+        url: Some(VS_EXCLUDING_V1.to_owned()),
+        coding: Some(CodingRef {
+            system: Some(TWO_VERSION.to_owned()),
+            code: Some(String::from("code4")),
+            ..CodingRef::default()
+        }),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &kept).expect("validates");
+    assert!(
+        validation.result,
+        "a code the excluded version does not have stays in: {validation:?}"
+    );
+}
+
+// NOTE: the membership issue names the code the way the request stated it, the
+// version included, which the ecosystem requires of every answer
+// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+#[test]
+fn an_unknown_code_at_an_asserted_version_names_that_version() {
+    let world = two_version_world();
+    let input = ValueSetValidateInput {
+        url: Some(VS_BOTH_VERSIONS.to_owned()),
+        coding: Some(CodingRef {
+            system: Some(TWO_VERSION.to_owned()),
+            version: Some(String::from("1.0.0")),
+            code: Some(String::from("code4")),
+            display: None,
+        }),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(!validation.result);
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-in-vs", "invalid-code"]);
+    assert_eq!(
+        validation.issues[0].text,
+        format!(
+            "The provided code '{TWO_VERSION}|1.0.0#code4' was not found in the value set '{VS_BOTH_VERSIONS}|1.0'"
+        )
+    );
+}
+
+/// The first half of a pair that reaches itself through an exclude.
+const VS_CIRCLE_1: &str = "http://example.org/fhir/ValueSet/circle-1";
+/// The second half, which excludes the first.
+const VS_CIRCLE_2: &str = "http://example.org/fhir/ValueSet/circle-2";
+
+fn circular_world() -> World {
+    let value_set = |url: &str, compose: serde_json::Value| {
+        serde_json::json!({
+          "resourceType": "ValueSet", "url": url, "version": "1.0",
+          "name": "Circle", "status": "active", "compose": compose
+        })
+    };
+    World::of(&[
+        (
+            "CodeSystem-two-version-1.json",
+            serde_json::json!({
+              "resourceType": "CodeSystem", "url": TWO_VERSION, "version": "1.0.0",
+              "name": "TwoVersion", "status": "active", "content": "complete",
+              "caseSensitive": true,
+              "concept": [{"code": "code1", "display": "Display 1"}]
+            }),
+        ),
+        (
+            "ValueSet-circle-1.json",
+            value_set(
+                VS_CIRCLE_1,
+                serde_json::json!({"include": [
+                    {"system": TWO_VERSION},
+                    {"valueSet": [VS_CIRCLE_2]}
+                ]}),
+            ),
+        ),
+        (
+            "ValueSet-circle-2.json",
+            value_set(
+                VS_CIRCLE_2,
+                serde_json::json!({
+                    "include": [{"system": TWO_VERSION}],
+                    "exclude": [{"valueSet": [VS_CIRCLE_1]}]
+                }),
+            ),
+        ),
+    ])
+}
+
+// NOTE: a value set that reaches itself cannot be evaluated, so both operations
+// refuse it with the ecosystem's `vs-invalid`
+// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+#[test]
+fn a_cycle_through_an_exclude_refuses_both_expand_and_validate_code() {
+    let world = circular_world();
+    let error = expand::expand(
+        &world.sources(),
+        &ExpandInput {
+            url: Some(VS_CIRCLE_1.to_owned()),
+            ..ExpandInput::default()
+        },
+    )
+    .expect_err("a cycle");
+    assert!(
+        matches!(error, OperationError::ValueSetCyclic(_)),
+        "{error}"
+    );
+    assert_eq!(error.issue_code(), "processing");
+    assert_eq!(error.tx_issue_type(), "vs-invalid");
+    // The code is of a system the first include misses, so the membership walk
+    // stops before the exclude that closes the cycle.
+    let error = value_set_validate_code::validate_code(
+        &world.sources(),
+        &ValueSetValidateInput {
+            url: Some(VS_CIRCLE_1.to_owned()),
+            coding: Some(CodingRef {
+                system: Some(String::from("http://example.org/fhir/CodeSystem/elsewhere")),
+                code: Some(String::from("code9")),
+                ..CodingRef::default()
+            }),
+            ..ValueSetValidateInput::default()
+        },
+    )
+    .expect_err("a cycle");
+    assert!(
+        matches!(error, OperationError::ValueSetCyclic(_)),
+        "{error}"
+    );
+    assert_eq!(error.issue_code(), "processing");
+    assert_eq!(error.tx_issue_type(), "vs-invalid");
+    assert_eq!(error.status(), http::StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+// NOTE: `codeableConcept` is echoed as "a codeableConcept containing codings for
+// all the validated codes", so the `text` the request sent stays on it
+// (<https://hl7.org/fhir/R5/valueset-operation-validate-code.html>).
+#[test]
+fn the_codeable_concept_echo_keeps_the_text_the_request_sent() {
+    let world = World::load();
+    let input = ValueSetValidateInput {
+        url: Some(VS_ENUMERATED.to_owned()),
+        codeable_concept: Some(CodeableConceptRef {
+            coding: vec![CodingRef {
+                system: Some(ANIMALS.to_owned()),
+                code: Some(String::from("cat")),
+                ..CodingRef::default()
+            }],
+            text: Some(String::from("some plain text")),
+        }),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(validation.result, "{validation:?}");
+    let echoed = validation.codeable_concept.expect("the echo");
+    assert_eq!(echoed.text.as_deref(), Some("some plain text"));
+    assert_eq!(echoed.coding.len(), 1);
+}
+// NOTE: under `valueset-membership-only` the server performs no "validation tasks
+// beyond validating membership", so an unknown code carries the membership issue
+// alone (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
+#[test]
+fn membership_only_reports_membership_without_the_codes_standing_in_its_system() {
+    let world = two_version_world();
+    let input = |membership_only: Option<bool>| ValueSetValidateInput {
+        url: Some(VS_BOTH_VERSIONS.to_owned()),
+        coding: Some(CodingRef {
+            system: Some(TWO_VERSION.to_owned()),
+            code: Some(String::from("nosuch")),
+            ..CodingRef::default()
+        }),
+        membership_only,
+        ..ValueSetValidateInput::default()
+    };
+    let full =
+        value_set_validate_code::validate_code(&world.sources(), &input(None)).expect("validates");
+    let kinds: Vec<&str> = full.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-in-vs", "invalid-code"]);
+    let membership = value_set_validate_code::validate_code(&world.sources(), &input(Some(true)))
+        .expect("validates");
+    assert!(!membership.result);
+    let kinds: Vec<&str> = membership.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-in-vs"]);
 }

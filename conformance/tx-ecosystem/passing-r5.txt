@@ -1,5 +1,6 @@
 batch/batch-validate
 big/big-circle-bang
+big/big-circle-validate
 big/big-echo-fifty-fifty-limit
 big/big-echo-no-limit
 big/big-echo-zero-fifty-limit
@@ -172,11 +173,16 @@ overload/validate-all-good2
 overload/validate-all-good3
 overload/validate-all-good4
 overload/validate-bad-enum-code1
+overload/validate-bad-exclude-code1
 overload/validate-bad-unknown
+overload/validate-bad-v1code4
+overload/validate-bad-v2code3
+overload/validate-good-code2-v1display
 overload/validate-good-enum-code3
 overload/validate-good-exclude-code4
 overload/validate-good-v1code1
 overload/validate-good-v1code2-display
+overload/validate-good2a
 overload/validate-v1code2-wrongdisplay
 parameters/parameters-expand-active-active
 parameters/parameters-expand-active-inactive
@@ -349,6 +355,8 @@ translate2/translate-5b
 translate2/translate-6a
 translate2/translate-reverse-r5+
 translate2/translate-reverse-r5+-a
+validation/validation-complex-codeableconcept-full
+validation/validation-complex-codeableconcept-vsonly
 validation/validation-contained-good
 validation/validation-cs-code-bad-code
 validation/validation-cs-code-good
