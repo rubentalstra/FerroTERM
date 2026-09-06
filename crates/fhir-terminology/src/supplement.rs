@@ -4,9 +4,12 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use concept_graph::subsumption::Outcome;
+
+use crate::compose::Compose;
 use crate::provider::{
     CodeSystemProvider, Concept, ConceptSet, Declaration, Designation, Hierarchy, Identity,
-    Located, Property, ProviderError, Status,
+    ImplicitMetadata, Located, MapSelection, Property, ProviderError, Standing, Status, Successor,
 };
 
 /// What a supplement adds to one concept.
@@ -103,6 +106,9 @@ impl Supplemented {
     }
 }
 
+// NOTE: a supplement "extends an existing code system with additional
+// designations and properties" (<https://hl7.org/fhir/R4B/codesystem.html>), so
+// an answer that is neither stays the supplemented system's own.
 impl CodeSystemProvider for Supplemented {
     fn identity(&self) -> &Identity {
         self.inner.identity()
@@ -110,6 +116,10 @@ impl CodeSystemProvider for Supplemented {
 
     fn declaration(&self) -> &Declaration {
         &self.declaration
+    }
+
+    fn code_system(&self) -> Option<&crate::fhir_codesystem::model::CodeSystemModel> {
+        self.inner.code_system()
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
@@ -159,7 +169,7 @@ impl CodeSystemProvider for Supplemented {
         self.inner.language()
     }
 
-    fn standing(&self) -> crate::provider::Standing {
+    fn standing(&self) -> Standing {
         self.inner.standing()
     }
 
@@ -169,6 +179,18 @@ impl CodeSystemProvider for Supplemented {
 
     fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
         self.inner.status(concept)
+    }
+
+    fn inactive(&self) -> Result<ConceptSet, ProviderError> {
+        self.inner.inactive()
+    }
+
+    fn not_for_ui(&self) -> Result<ConceptSet, ProviderError> {
+        self.inner.not_for_ui()
+    }
+
+    fn is_postcoordinated(&self, concept: Concept) -> bool {
+        self.inner.is_postcoordinated(concept)
     }
 
     fn designations(
@@ -212,14 +234,83 @@ impl CodeSystemProvider for Supplemented {
         self.inner.search(text, language)
     }
 
+    fn implicit_value_set(&self, url: &str) -> Option<Result<Compose, ProviderError>> {
+        self.inner.implicit_value_set(url)
+    }
+
+    fn implicit_metadata(&self, url: &str) -> ImplicitMetadata {
+        self.inner.implicit_metadata(url)
+    }
+
+    fn successors(&self, concept: Concept) -> Result<Vec<Successor>, ProviderError> {
+        self.inner.successors(concept)
+    }
+
+    fn implicit_concept_map(
+        &self,
+        url: &str,
+        selection: MapSelection<'_>,
+    ) -> Option<Result<crate::conceptmap::model::ConceptMapModel, ProviderError>> {
+        self.inner.implicit_concept_map(url, selection)
+    }
+
     fn filter(&self, filter: &crate::filter::Filter) -> Result<ConceptSet, ProviderError> {
         self.inner.filter(filter)
     }
 
-    // NOTE: a supplement adds designations and properties to the codes a system
-    // already has (<https://hl7.org/fhir/R4B/codesystem.html#supplements>), so
-    // whether a selection is complete stays the supplemented system's answer.
+    fn filter_all(&self, filters: &[crate::filter::Filter]) -> Result<ConceptSet, ProviderError> {
+        self.inner.filter_all(filters)
+    }
+
     fn unclosed(&self, filters: &[crate::filter::Filter]) -> bool {
         self.inner.unclosed(filters)
+    }
+
+    fn filter_matches(
+        &self,
+        concept: Concept,
+        filter: &crate::filter::Filter,
+    ) -> Result<bool, ProviderError> {
+        self.inner.filter_matches(concept, filter)
+    }
+
+    fn subsumes(&self, a: Concept, b: Concept) -> Result<Option<Outcome>, ProviderError> {
+        self.inner.subsumes(a, b)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /// The method names a block declares: the lines from the one starting with
+    /// `opens` to the file's next unindented `}`.
+    fn methods(source: &str, opens: &str) -> Vec<String> {
+        source
+            .lines()
+            .skip_while(|line| !line.starts_with(opens))
+            .skip(1)
+            .take_while(|line| !line.starts_with('}'))
+            .filter_map(|line| line.trim_start().strip_prefix("fn "))
+            .map(|rest| rest.split(['(', '<']).next().unwrap_or(rest).to_owned())
+            .collect()
+    }
+
+    #[test]
+    fn the_wrapper_answers_every_method_of_the_seam() {
+        let seam = methods(include_str!("provider.rs"), "pub trait CodeSystemProvider");
+        let wrapper = methods(
+            include_str!("supplement.rs"),
+            "impl CodeSystemProvider for Supplemented",
+        );
+        assert!(
+            !seam.is_empty() && !wrapper.is_empty(),
+            "the scan read no method: `CodeSystemProvider` or its wrapper moved"
+        );
+        let missing: Vec<&String> = seam.iter().filter(|name| !wrapper.contains(name)).collect();
+        assert!(
+            missing.is_empty(),
+            "`Supplemented` leaves {missing:?} to the trait default, so a supplemented system \
+             answers less than the system it supplements; forward each one to `self.inner`, or \
+             write the deliberate override a supplement's designations and properties call for"
+        );
     }
 }
