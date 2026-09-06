@@ -27,6 +27,13 @@ deprecated/not-withdrawn
 deprecated/not-withdrawn-validate
 deprecated/withdrawn
 deprecated/withdrawn-validate
+errors/broken-filter-expand
+errors/broken-filter-validate
+errors/broken-filter2-validate
+errors/combination-bad
+errors/combination-ok
+errors/unknown-system1
+errors/unknown-system2
 exclude/exclude-1
 exclude/exclude-2
 exclude/exclude-all
@@ -149,6 +156,9 @@ notSelectable/notSelectable-unprop-true
 notSelectable/notSelectable-unprop-true-false
 notSelectable/notSelectable-unprop-true-true
 notSelectable/notSelectable-unprop-true-unknown
+other/dual-filter
+other/validation-dual-filter-in
+other/validation-dual-filter-out
 overload/expand-enum-bad
 overload/expand-enum-good
 overload/expand-mixed

@@ -107,7 +107,7 @@ impl super::super::codec::Primitive for Base64Binary {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -255,7 +255,7 @@ impl super::super::codec::Primitive for Boolean {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -409,7 +409,7 @@ impl super::super::codec::Primitive for Canonical {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -565,7 +565,7 @@ impl super::super::codec::Primitive for Code {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -723,7 +723,7 @@ impl super::super::codec::Primitive for Date {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -883,7 +883,7 @@ impl super::super::codec::Primitive for DateTime {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -1052,7 +1052,7 @@ impl super::super::codec::Primitive for Decimal {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -1208,7 +1208,7 @@ impl super::super::codec::Primitive for Id {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -1364,7 +1364,7 @@ impl super::super::codec::Primitive for Instant {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -1512,7 +1512,7 @@ impl super::super::codec::Primitive for Integer {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -1667,7 +1667,7 @@ impl super::super::codec::Primitive for Markdown {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -1821,7 +1821,7 @@ impl super::super::codec::Primitive for Oid {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -1967,7 +1967,7 @@ impl super::super::codec::Primitive for PositiveInt {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -2123,7 +2123,7 @@ impl super::super::codec::Primitive for String {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -2279,7 +2279,7 @@ impl super::super::codec::Primitive for Time {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -2425,7 +2425,7 @@ impl super::super::codec::Primitive for UnsignedInt {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -2581,7 +2581,7 @@ impl super::super::codec::Primitive for Uri {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -2735,7 +2735,7 @@ impl super::super::codec::Primitive for Url {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -2889,7 +2889,7 @@ impl super::super::codec::Primitive for Uuid {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {
@@ -3013,7 +3013,7 @@ impl super::super::codec::Primitive for Xhtml {
         element: Option<&serde_json::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        if value.is_none() && element.is_none() {
+        if value.is_none() && element.is_none() && !path.is_lenient() {
             return Err(path.error(super::super::codec::DecodeErrorKind::MissingProperty));
         }
         let value = match value {

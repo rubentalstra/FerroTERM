@@ -12,6 +12,22 @@ use ferroterm_testkit::fhir::{ANIMALS, VS_PETS};
 
 const INLINE_CS: &str = "http://example.org/fhir/CodeSystem/inline";
 const INLINE_VS: &str = "http://example.org/fhir/ValueSet/inline";
+const BROKEN_VS: &str = "http://example.org/fhir/ValueSet/broken";
+
+/// A `ValueSet` stating no `status`, which is 1..1
+/// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.status>).
+fn value_set_without_status() -> Value {
+    json!({"resourceType": "ValueSet", "url": INLINE_VS,
+        "compose": {"include": [{"system": INLINE_CS, "concept": [{"code": "x"}]}]}})
+}
+
+/// A `ValueSet` whose filter states no `value`, which is 1..1 through R5
+/// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.compose.include.filter.value>).
+fn value_set_with_a_valueless_filter() -> Value {
+    json!({"resourceType": "ValueSet", "url": BROKEN_VS, "status": "active",
+        "compose": {"include": [{"system": INLINE_CS,
+            "filter": [{"property": "concept", "op": "is-a"}]}]}})
+}
 
 fn inline_code_system() -> Value {
     json!({"resourceType": "CodeSystem", "url": INLINE_CS, "version": "1", "status": "active",
@@ -82,6 +98,80 @@ async fn tx_resources_serve_a_request_and_only_that_request() {
         ))
         .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "gone after the request");
+}
+
+/// Cardinality is an aspect of validating a resource, which a server performs
+/// at its discretion (<https://hl7.org/fhir/R4B/validation.html>), so a
+/// supplied value set stating no `status` still serves the request.
+#[tokio::test]
+async fn a_supplied_resource_missing_a_required_element_still_serves_the_request() {
+    let server = Server::start();
+    let (status, body) = server
+        .post(
+            "/r4b/ValueSet/$expand",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": INLINE_VS},
+                {"name": "tx-resource", "resource": inline_code_system()},
+                {"name": "tx-resource", "resource": value_set_without_status()}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["expansion"]["contains"][0]["code"], "x");
+    // NOTE: `status` is 1..1, and `unknown` is the `PublicationStatus` code for
+    // a resource whose status is undetermined
+    // (<https://hl7.org/fhir/R4B/codesystem-publication-status.html>).
+    assert_eq!(body["status"], "unknown");
+}
+
+#[tokio::test]
+async fn a_tx_resource_the_request_never_resolves_does_not_refuse_it() {
+    let server = Server::start();
+    let (status, body) = server
+        .post(
+            "/r4b/ValueSet/$expand",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": INLINE_VS},
+                {"name": "tx-resource", "resource": inline_code_system()},
+                {"name": "tx-resource", "resource": inline_value_set()},
+                {"name": "tx-resource", "resource": value_set_with_a_valueless_filter()}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["expansion"]["contains"][0]["code"], "x");
+}
+
+/// `invalid` is "content invalid against the specification or a profile" in
+/// the `IssueType` code system, where `structure` is for content the server
+/// cannot parse (<https://hl7.org/fhir/R4B/codesystem-issue-type.html>).
+#[tokio::test]
+async fn a_tx_resource_the_request_resolves_refuses_it_by_the_element_at_fault() {
+    let server = Server::start();
+    let (status, body) = server
+        .post(
+            "/r4b/ValueSet/$expand",
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "url", "valueUri": BROKEN_VS},
+                {"name": "tx-resource", "resource": inline_code_system()},
+                {"name": "tx-resource", "resource": value_set_with_a_valueless_filter()}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(body["issue"][0]["code"], "invalid");
+    assert_eq!(
+        body["issue"][0]["details"]["coding"][0]["code"],
+        "vs-invalid"
+    );
+    assert_eq!(
+        body["issue"][0]["expression"][0],
+        "ValueSet.compose.include[0].filter[0]"
+    );
+    assert_eq!(
+        body["issue"][0]["details"]["text"],
+        format!("The system {INLINE_CS} filter with property = concept, op = is-a has no value")
+    );
 }
 
 #[tokio::test]

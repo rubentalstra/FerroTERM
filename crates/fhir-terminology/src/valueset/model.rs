@@ -78,4 +78,19 @@ pub enum ModelError {
         /// `filter.op`.
         op: String,
     },
+    // NOTE: `ValueSet.compose.include.filter.value` is 1..1 through R5
+    // (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.compose.include.filter.value>),
+    // so a filter without one selects nothing the server can name.
+    /// A filter states no value, so nothing says what it selects.
+    #[error("The system {system} filter with property = {property}, op = {op} has no value")]
+    FilterValue {
+        /// `compose.include.system`, the system the filter selects from.
+        system: String,
+        /// `filter.property`.
+        property: String,
+        /// `filter.op`.
+        op: String,
+        /// The path of the filter, for `OperationOutcome.issue.expression`.
+        expression: String,
+    },
 }
