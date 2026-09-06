@@ -323,8 +323,9 @@ impl Registry {
             .unwrap_or_default()
     }
 
-    /// The `ConceptMap` an implicit concept map URI denotes, asking every
-    /// loaded version of every system whose URI prefixes `url`.
+    /// The `ConceptMap` an implicit concept map URI denotes, carrying the
+    /// elements `selection` asks for, from every loaded version of every
+    /// system whose URI prefixes `url`.
     ///
     /// `None` when no system claims the URI; the unknown-version error when a
     /// system claims it but no loaded version of it serves the version the URI
@@ -333,10 +334,11 @@ impl Registry {
     pub fn implicit_concept_map(
         &self,
         url: &str,
+        selection: crate::provider::MapSelection<'_>,
     ) -> Option<Result<crate::conceptmap::model::ConceptMapModel, ProviderError>> {
         let mut unserved = None;
         for provider in self.implicit_candidates(url) {
-            match provider.implicit_concept_map(url) {
+            match provider.implicit_concept_map(url, selection) {
                 None => {}
                 Some(Err(error @ ProviderError::UnservedImplicitVersion { .. })) => {
                     if unserved.is_none() {

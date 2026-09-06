@@ -453,6 +453,28 @@ pub struct Successor {
     pub map: String,
 }
 
+/// Which of an implicit concept map's mappings a caller needs.
+///
+/// Reading the `ConceptMap` resource needs every one; `$translate` needs the
+/// mappings from one code, and a reverse translation the mappings to one
+/// (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>). An
+/// implicit map is built on demand out of a system's own content, so the
+/// selection is what keeps a translation costing the size of its answer
+/// rather than the size of the map. No specification governs it: our own
+/// design.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MapSelection<'a> {
+    /// Every mapping the map states.
+    Whole,
+    /// The mappings from this code, as the elements that carry them.
+    Source(&'a str),
+    /// The mappings to this code, as the elements that carry them.
+    ///
+    /// An element that also targets other codes keeps only the targets that
+    /// carry this one, which is what a reverse translation reads.
+    Target(&'a str),
+}
+
 /// A failure inside a provider.
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {
@@ -779,14 +801,17 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     }
 
     /// The `ConceptMap` an implicit concept map URI of this system denotes,
-    /// when the system defines implicit concept maps and `url` is one of them.
+    /// carrying the elements `selection` asks for.
     ///
     /// `None` when the URI is not an implicit concept map of this system; the
     /// error when it is malformed or names a map the system does not hold.
-    /// The default declares none.
+    /// A narrowed `selection` returns the whole map with the mappings it
+    /// excludes left out and every other field unchanged, so a caller reads
+    /// the same answer either way. The default declares none.
     fn implicit_concept_map(
         &self,
         _url: &str,
+        _selection: MapSelection<'_>,
     ) -> Option<Result<crate::conceptmap::model::ConceptMapModel, ProviderError>> {
         None
     }

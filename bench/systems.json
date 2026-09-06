@@ -18,7 +18,11 @@
       ],
       "expand": "http://snomed.info/sct?fhir_vs=isa/404684003",
       "expand_small": "http://snomed.info/sct?fhir_vs=isa/22298006",
-      "search": "hart"
+      "search": "hart",
+      "translate": [
+        "http://snomed.info/sct?fhir_cm=447562003",
+        "22298006"
+      ]
     },
     {
       "name": "SNOMED CT (International edition)",
@@ -36,7 +40,11 @@
       ],
       "expand": "http://snomed.info/sct?fhir_vs=isa/404684003",
       "expand_small": "http://snomed.info/sct?fhir_vs=isa/22298006",
-      "search": "heart"
+      "search": "heart",
+      "translate": [
+        "http://snomed.info/sct?fhir_cm=447562003",
+        "22298006"
+      ]
     },
     {
       "name": "LOINC",
