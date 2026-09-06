@@ -32,6 +32,8 @@ pub const VERSION: &str = "http://snomed.info/sct/91234567105/version/20260101";
 const SECOND_MODULE: u32 = 90;
 /// The release date of the second synthetic edition, as an RF2 `effectiveTime`.
 pub const SECOND_DATE: &str = "20260201";
+/// The release date of the later release of the first synthetic edition.
+pub const LATER_DATE: &str = "20260301";
 /// The GB English language reference set (a published SCTID, metadata only).
 pub const GB_REFSET: &str = "900000000000508004";
 /// The Dutch language reference set (a published SCTID, metadata only).
@@ -83,9 +85,13 @@ pub const MODULE_CONCEPT: u32 = 17;
 /// The ICD-10 extended map reference set (a published SCTID); the cat maps to
 /// the ICD-10 code `C01`.
 pub const ICD10_MAP: u32 = 18;
+/// The GB English language reference set as a concept of the edition.
+pub const GB_LANGUAGE_REFSET: u32 = 19;
+/// The Dutch language reference set as a concept of the edition.
+pub const NL_LANGUAGE_REFSET: u32 = 20;
 /// The bird, under the animal and a member of the pets reference set; only the
 /// second edition ([`write_second`]) holds it.
-pub const BIRD: u32 = 19;
+pub const BIRD: u32 = 21;
 /// The published SCTID of the ICD-10 extended map reference set.
 pub const ICD10_MAP_SCTID: &str = "447562003";
 /// The code system the ICD-10 extended map reference set maps to.
@@ -276,6 +282,35 @@ pub fn write(dir: &Path) -> Result<(), FixtureError> {
             version: VERSION,
             release_date: DATE,
             bird: false,
+        },
+    )
+}
+
+/// The edition version URI of the later release of the first edition.
+#[must_use]
+pub fn later_version() -> String {
+    format!("{EDITION}/version/{LATER_DATE}")
+}
+
+/// Writes a later release of the FIRST synthetic edition under `dir`, so a
+/// test can load two versions of one edition at once.
+///
+/// It carries the same edition URI at a later release date, and the concept
+/// the first release lacks ([`BIRD`]), so a test can tell which release
+/// answered.
+///
+/// # Errors
+///
+/// Returns [`FixtureError`] when a writer fails; the fixture is fixed content,
+/// so a failure means the writers or the directory are at fault.
+pub fn write_later(dir: &Path) -> Result<(), FixtureError> {
+    write_shape(
+        dir,
+        &Shape {
+            edition: EDITION,
+            version: &later_version(),
+            release_date: LATER_DATE,
+            bird: true,
         },
     )
 }
@@ -581,6 +616,16 @@ fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
             ICD10_MAP_SCTID,
             "ICD-10 extended map reference set (foundation metadata concept)",
         ),
+        metadata_refset(
+            GB_LANGUAGE_REFSET,
+            GB_REFSET,
+            "Great Britain English language reference set (foundation metadata concept)",
+        ),
+        metadata_refset(
+            NL_LANGUAGE_REFSET,
+            NL_REFSET,
+            "Netherlands Dutch language reference set (foundation metadata concept)",
+        ),
     ];
     let mut rows = Vec::from(rows);
     let mut is_a = vec![
@@ -601,6 +646,8 @@ fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
         (MODULE_CONCEPT, TOP),
         (SCHEME, TOP),
         (ICD10_MAP, TOP),
+        (GB_LANGUAGE_REFSET, TOP),
+        (NL_LANGUAGE_REFSET, TOP),
     ];
     if shape.bird {
         rows.push(Row {

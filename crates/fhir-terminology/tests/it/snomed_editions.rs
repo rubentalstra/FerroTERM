@@ -9,10 +9,12 @@
 use std::sync::Arc;
 
 use fhir_terminology::conceptmap::store::ConceptMapStore;
+use fhir_terminology::operations::Invocation;
 use fhir_terminology::operations::expand::{ExpandInput, expand};
+use fhir_terminology::operations::lookup::{LookupInput, lookup};
 use fhir_terminology::operations::translate::{TranslateInput, translate};
 use fhir_terminology::operations::{OperationError, Sources};
-use fhir_terminology::registry::Registry;
+use fhir_terminology::registry::{Registry, ResolveError};
 use fhir_terminology::snomed::{SYSTEM, SnomedProvider};
 use fhir_terminology::valueset::store::ValueSetStore;
 
@@ -253,4 +255,74 @@ fn an_implicit_concept_map_resolves_on_the_non_default_edition() {
         )),
         Err(OperationError::UnknownVersion { .. })
     ));
+}
+
+/// A version URI naming only the edition resolves to the greatest loaded
+/// release of that edition.
+///
+/// The page tells clients to send that form ("At minimum the URI SHOULD
+/// contain the sctid of the SNOMED CT distribution") and lets the service
+/// default ("if the date of release is not provided, the Terminology Service
+/// may default to the most recent version of the named SNOMED CT
+/// distribution", <https://hl7.org/fhir/R4B/snomedct.html>, "Versions"). The
+/// same section keeps the date-only form an error.
+#[test]
+fn an_edition_uri_without_a_date_names_the_greatest_release_of_that_edition() {
+    let first = tempfile::tempdir().expect("tempdir");
+    snomed::write(first.path()).expect("writes the first release");
+    let later = tempfile::tempdir().expect("tempdir");
+    snomed::write_later(later.path()).expect("writes the later release");
+    let second = tempfile::tempdir().expect("tempdir");
+    snomed::write_second(second.path()).expect("writes the second edition");
+    let mut registry = Registry::new();
+    for dir in [first.path(), later.path(), second.path()] {
+        registry
+            .register(Arc::new(SnomedProvider::open(dir, "en").expect("opens")))
+            .expect("registers");
+    }
+    registry
+        .set_default(SYSTEM, VERSION)
+        .expect("the first release is the default");
+    let resolved = |version: &str| {
+        registry
+            .resolve(SYSTEM, Some(version))
+            .map(|r| r.provider.identity().version.clone())
+    };
+    assert_eq!(
+        resolved(EDITION).expect("the edition resolves"),
+        snomed::later_version(),
+        "the greatest loaded release of the edition, not the default one"
+    );
+    assert_eq!(
+        resolved(&snomed::second_edition()).expect("the second edition resolves"),
+        snomed::second_version(),
+        "the edition in the URI picks the edition"
+    );
+    // A release of the named edition still resolves to itself.
+    assert_eq!(resolved(VERSION).expect("the release resolves"), VERSION);
+    // An edition no loaded release belongs to, and the date-only form the same
+    // section says a server SHOULD refuse, both stay unknown versions.
+    for refused in ["http://snomed.info/sct/999", "20260101"] {
+        assert!(
+            matches!(resolved(refused), Err(ResolveError::UnknownVersion { .. })),
+            "`{refused}` names no loaded version"
+        );
+    }
+    // The resolution is the operations' own, so `$lookup` reads the later
+    // release through the edition URI.
+    let outcome = lookup(
+        &registry,
+        &Invocation::Type,
+        &LookupInput {
+            code: Some(code(BIRD)),
+            system: Some(String::from(SYSTEM)),
+            version: Some(String::from(EDITION)),
+            ..LookupInput::default()
+        },
+    )
+    .expect("the later release holds the bird");
+    assert_eq!(
+        outcome.version.as_deref(),
+        Some(snomed::later_version().as_str())
+    );
 }

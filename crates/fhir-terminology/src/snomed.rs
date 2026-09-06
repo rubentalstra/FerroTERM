@@ -69,6 +69,23 @@ pub const MANIFEST_FILE: &str = "manifest.json";
 /// and the designation index as their own files.
 pub const MANIFEST_VERSION: u32 = 2;
 
+/// The copyright notice every implicit value set template of the FHIR SNOMED
+/// CT page carries, verbatim (<https://hl7.org/fhir/R4B/snomedct.html>,
+/// "Implicit Value Sets").
+pub const TEMPLATE_COPYRIGHT: &str = "This value set includes content from SNOMED CT, which is copyright \u{a9} 2002+ International Health Terminology Standards Development Organisation (SNOMED International), and distributed by agreement between SNOMED International and HL7. Implementer use of SNOMED CT is not covered by this agreement";
+
+/// The SNOMED CT properties the FHIR SNOMED CT page defines that this server
+/// does not generate (<https://hl7.org/fhir/R4B/snomedct.html>, "SNOMED CT
+/// Properties").
+///
+/// Both are the Necessary Normal Form expression of a concept. The page
+/// defines the property and not the generation, and the SNOMED CT normal form
+/// is built from the proximal primitive supertypes
+/// (<https://docs.snomed.org/>, the technical implementation guide's normal
+/// form section), which the served index does not materialize. `$lookup`
+/// refuses a `property` naming one rather than dropping it.
+pub const UNSERVED_PROPERTIES: [&str; 2] = ["normalForm", "normalFormTerse"];
+
 /// The FHIR-defined SNOMED properties this provider serves, in output order
 /// (<https://hl7.org/fhir/R4B/snomedct.html>, the properties section).
 pub const FHIR_PROPERTIES: [(&str, PropertyKind); 6] = [
@@ -636,6 +653,21 @@ impl SnomedProvider {
         }
     }
 
+    /// The preferred term of `code` in the server's default language, else
+    /// `code` itself: the templates' "[sctid or preferred description]"
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets").
+    fn term_or_code(&self, code: &str) -> String {
+        self.locate(code)
+            .ok()
+            .flatten()
+            .and_then(|located| {
+                self.choose_display(Self::ordinal(located.concept), None)
+                    .ok()
+                    .flatten()
+            })
+            .unwrap_or_else(|| code.to_owned())
+    }
+
     /// The `version` an implicit URI on `base` resolves to: `None` for the
     /// bare system URI, this edition's version URI for its own edition or
     /// version base.
@@ -679,6 +711,18 @@ impl SnomedProvider {
                     .and_then(|id| self.memberships.members(id.value()))
                     .is_none()
                 {
+                    // NOTE: a language reference set references descriptions, so
+                    // "all concept ids in the specified reference set" selects none
+                    // (<https://hl7.org/fhir/R4B/snomedct.html>).
+                    if self.keys.refsets.iter().any(|(_, id)| *id == refset) {
+                        return Err(ProviderError::InvalidFilterValue {
+                            property: String::from("concept"),
+                            value: refset,
+                            reason: String::from(
+                                "a language reference set references descriptions, not concepts",
+                            ),
+                        });
+                    }
                     return Err(ProviderError::UnknownCode(refset));
                 }
                 Ok(Filter {
@@ -740,7 +784,7 @@ impl SnomedProvider {
             },
             EvalError::NotAReferenceSet(id) => ProviderError::InvalidCode {
                 code: id.to_string(),
-                reason: String::from("not a reference set with members in the edition"),
+                reason: String::from("not a reference set with concept members in the edition"),
             },
             EvalError::Unsupported(what) => ProviderError::UnsupportedFilter {
                 property: String::from("constraint"),
@@ -776,6 +820,17 @@ impl CodeSystemProvider for SnomedProvider {
 
     fn declaration(&self) -> &Declaration {
         &self.declaration
+    }
+
+    // NOTE: the edition URI names a distribution, and the service "may default to
+    // the most recent version of the named SNOMED CT distribution"
+    // (<https://hl7.org/fhir/R4B/snomedct.html>, "Versions").
+    fn answers_version(&self, version: &str) -> bool {
+        version == self.edition
+    }
+
+    fn unserved_properties(&self) -> &[&'static str] {
+        &UNSERVED_PROPERTIES
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
@@ -1105,8 +1160,19 @@ impl CodeSystemProvider for SnomedProvider {
                 ..Include::default()
             },
             "refset" => {
+                // NOTE: the set is "all concept ids that correspond to reference sets
+                // that are explicitly defined in the specified SNOMED CT edition",
+                // with no category excluded (<https://hl7.org/fhir/R4B/snomedct.html>).
+                let mut defined: BTreeSet<u64> = self.memberships.refsets().collect();
+                defined.extend(
+                    self.keys
+                        .refsets
+                        .iter()
+                        .filter_map(|(_, id)| ConceptId::parse(id).ok())
+                        .map(ConceptId::value),
+                );
                 let mut concepts = Vec::new();
-                for refset in self.memberships.refsets() {
+                for refset in defined {
                     if let Ok(Some(located)) = self.locate(&refset.to_string()) {
                         concepts.push(ConceptRef {
                             deprecated: false,
@@ -1117,7 +1183,7 @@ impl CodeSystemProvider for SnomedProvider {
                 }
                 if concepts.is_empty() {
                     return Some(Err(malformed(String::from(
-                        "the edition has no reference sets with concept members",
+                        "the edition defines no reference sets",
                     ))));
                 }
                 Include {
@@ -1142,6 +1208,60 @@ impl CodeSystemProvider for SnomedProvider {
             include: vec![include],
             ..Compose::default()
         }))
+    }
+
+    /// The template fields of an implicit value set of the FHIR SNOMED CT page
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets").
+    ///
+    /// The page prints a template per form and says "the content of the
+    /// resource must conform to the template provided". It prints none for the
+    /// bare `?fhir_vs`, so that form carries only the fields every template
+    /// shares: the edition version and the copyright.
+    fn implicit_metadata(&self, url: &str) -> crate::provider::ImplicitMetadata {
+        let Some((_, form)) = implicit_parts(url, FHIR_VS) else {
+            return crate::provider::ImplicitMetadata::default();
+        };
+        let (name, description) = match form.split_once('/').unwrap_or((form, "")) {
+            ("isa", sctid) => (
+                Some(format!("SNOMED CT Concept {sctid} and descendants")),
+                Some(format!(
+                    "All SNOMED CT concepts for {}",
+                    self.term_or_code(sctid)
+                )),
+            ),
+            ("refset", "") => (
+                Some(String::from("SNOMED CT Reference Sets")),
+                Some(String::from(
+                    "All SNOMED CT concepts associated with a reference set",
+                )),
+            ),
+            ("refset", sctid) => (
+                Some(format!("SNOMED CT Reference Set {sctid}")),
+                Some(format!(
+                    "All SNOMED CT concepts in the reference set {}",
+                    self.term_or_code(sctid)
+                )),
+            ),
+            ("ecl", ecl) => {
+                let ecl = percent_decode(ecl).unwrap_or_else(|| ecl.to_owned());
+                (
+                    Some(format!("SNOMED CT Concepts matching {ecl}")),
+                    Some(format!(
+                        "All SNOMED CT concepts that match the expression constraint {ecl}"
+                    )),
+                )
+            }
+            _ => (None, None),
+        };
+        crate::provider::ImplicitMetadata {
+            version: Some(self.identity.version.clone()),
+            name,
+            title: None,
+            experimental: None,
+            date: None,
+            description,
+            copyright: Some(String::from(TEMPLATE_COPYRIGHT)),
+        }
     }
 
     fn all(&self) -> Result<ConceptSet, ProviderError> {

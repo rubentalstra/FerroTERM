@@ -122,6 +122,14 @@ impl CodeSystemProvider for Supplemented {
         self.inner.code_system()
     }
 
+    fn answers_version(&self, version: &str) -> bool {
+        self.inner.answers_version(version)
+    }
+
+    fn unserved_properties(&self) -> &[&'static str] {
+        self.inner.unserved_properties()
+    }
+
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
         self.inner.locate(code)
     }
