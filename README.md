@@ -18,6 +18,10 @@ RxNorm, UCUM, and any FHIR `CodeSystem`, served from one binary over an index
 built once per release and read at startup. No JVM, no Elasticsearch, no
 database to run.
 
+[Five minutes to a running server](#five-minutes-to-a-running-server) ·
+[What it serves](#what-it-serves) · [The API](#the-api) ·
+[Do I need a commercial licence?](#do-i-need-a-commercial-licence)
+
 ## Five minutes to a running server
 
 The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration,
@@ -156,6 +160,32 @@ The short form:
   binaries, SPDX for the image), `cargo auditable` binaries, a distroless
   image for `linux/amd64` and `linux/arm64`, verifiable with
   `gh attestation verify`.
+
+## Do I need a commercial licence?
+
+Production use is free for Non-Commercial Purposes and needs a commercial
+licence otherwise. `LICENSE` is the authority; this table is the same boundary
+in the order people ask about it.
+
+| You are | What you are doing | What you need |
+|---|---|---|
+| Anyone | Reading, building, modifying, or redistributing the source | Nothing |
+| Anyone | Development, testing, evaluation, prototyping | Nothing |
+| A person | Personal use | Nothing |
+| A university or research group | Academic or scientific research, or teaching | Nothing |
+| A non-profit or public body | Production use that is not in the course of a business, does not deliver a service for payment, and is not for commercial advantage | Nothing |
+| A hospital, clinic, or care provider | Treating patients | A commercial licence |
+| A vendor or integrator | Any production use | A commercial licence |
+| Anyone | Offering FerroTERM, or a work derived from it, to third parties as a hosted, managed, or embedded terminology service | A commercial licence |
+| Anyone | Selling, sublicensing, or otherwise distributing it for a fee, on its own or inside another product | A commercial licence |
+
+Two rows hold whatever else you are: hosting it for third parties and
+distributing it for a fee need a commercial licence in every case, including
+for an organisation the rows above would otherwise leave free.
+
+**Each version becomes Apache License 2.0 four years after that version is
+published.** A commercial licence starts with a short conversation with the
+maintainer named in [MAINTAINERS.md](MAINTAINERS.md).
 
 ## Licensing
 

@@ -11,6 +11,7 @@
 - [Code systems served](evaluate/code-systems.md)
 - [Benchmarks](evaluate/benchmarks.md)
 - [Conformance](evaluate/conformance.md)
+- [Licensing](evaluate/licensing.md)
 
 # Operate
 
