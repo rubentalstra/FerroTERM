@@ -31,6 +31,7 @@ use concept_store::tables;
 use designation_index::index::{Query, TextIndex};
 use serde::Deserialize;
 
+use crate::artifact::Source;
 use crate::compose::{Compose, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
@@ -232,6 +233,8 @@ pub struct Icd11Provider {
     expressions: Interned,
     /// The validated expressions, by interned index.
     clusters: RwLock<Vec<Cluster>>,
+    /// The artifact the version was read from.
+    source: Source,
 }
 
 impl std::fmt::Debug for Icd11Provider {
@@ -372,6 +375,7 @@ impl Icd11Provider {
             codes.push(code);
         }
         let title = manifest.title.clone();
+        let source = Source::new(dir, &manifest.version);
         Ok(Self {
             identity: Identity {
                 url: linearization.system().to_owned(),
@@ -399,6 +403,7 @@ impl Icd11Provider {
             uses,
             expressions: Interned::new(),
             clusters: RwLock::new(Vec::new()),
+            source,
         })
     }
 
@@ -803,6 +808,10 @@ impl CodeSystemProvider for Icd11Provider {
     /// has no display in rather than satisfied by the base-language title.
     fn language(&self) -> Option<&str> {
         self.base_language()
+    }
+
+    fn artifact(&self) -> Option<&Source> {
+        Some(&self.source)
     }
 
     /// A short code, an entity URI in either form, or (in a linearization) a

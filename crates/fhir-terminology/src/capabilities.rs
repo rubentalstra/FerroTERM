@@ -6,6 +6,7 @@
 //! renders it into its generated type, and the R5-only `codeSystem.content`
 //! is a generated difference, not a hand-written conditional.
 
+use crate::artifact::Source;
 use crate::filter::FilterOperator;
 use crate::provider::{Capability, ContentMode};
 use crate::registry::Registry;
@@ -37,6 +38,12 @@ pub struct VersionSummary {
     pub filters: Vec<FilterSupport>,
     /// The `$lookup` properties.
     pub properties: Vec<String>,
+    /// The artifact this version was read from, when the server read one.
+    ///
+    /// An artifact holds one code system version, so the declaration belongs
+    /// here and not on the system: two SNOMED CT editions share one
+    /// `codeSystem` entry and come from two artifacts.
+    pub artifact: Option<Source>,
 }
 
 /// One code system.
@@ -116,6 +123,7 @@ impl Summary {
                         .iter()
                         .map(|property| property.code.clone())
                         .collect(),
+                    artifact: provider.artifact().cloned(),
                 });
             }
             systems.push(SystemSummary {
@@ -128,6 +136,52 @@ impl Summary {
         Self { systems }
     }
 }
+
+// NOTE: an extension carries "additional information that is not part of the
+// basic definition" (<https://hl7.org/fhir/R4B/extensibility.html>), and every
+// version's `codeSystem.version` is a `BackboneElement` that admits one.
+macro_rules! artifact_extension {
+    ($module:ident) => {
+        /// The artifact declaration of one FHIR version.
+        mod $module {
+            use fhir_types::$module::extension::{Extension, ExtensionValue};
+
+            use crate::artifact::{SOURCE_EXTENSION, SOURCE_NAME, SOURCE_RELEASE, Source};
+
+            /// The artifact extension of `source`; nothing when the version was
+            /// read from no artifact.
+            pub(super) fn declaration(source: Option<&Source>) -> Vec<Extension> {
+                source
+                    .map(|source| Extension {
+                        url: SOURCE_EXTENSION.to_owned(),
+                        extension: source
+                            .name
+                            .iter()
+                            .map(|name| sub(SOURCE_NAME, name))
+                            .chain(std::iter::once(sub(SOURCE_RELEASE, &source.release)))
+                            .collect(),
+                        ..Default::default()
+                    })
+                    .into_iter()
+                    .collect()
+            }
+
+            /// One sub-extension with a `string` value.
+            fn sub(url: &str, value: &str) -> Extension {
+                Extension {
+                    url: url.to_owned(),
+                    value: Some(ExtensionValue::String(value.into())),
+                    ..Default::default()
+                }
+            }
+        }
+    };
+}
+
+artifact_extension!(r4);
+artifact_extension!(r4b);
+artifact_extension!(r5);
+artifact_extension!(r6);
 
 // NOTE: <https://hl7.org/fhir/6.0.0-ballot5/terminologycapabilities.html>: R6 differs from
 // R5 only in an optional `codeSystem.content` and `version.value` for `version.code`, so
@@ -149,6 +203,7 @@ macro_rules! r5_family_capabilities {
                 };
                 let version_entry = |version: &VersionSummary| {
                     let mut entry = TerminologyCapabilitiesCodeSystemVersion {
+                        extension: self::$module::declaration(version.artifact.as_ref()),
                         is_default: Some(version.is_default.into()),
                         compositional: Some(version.compositional.into()),
                         language: common_languages(&version.languages)
@@ -261,6 +316,9 @@ macro_rules! terminology_capabilities {
                                 .versions
                                 .iter()
                                 .map(|version| TerminologyCapabilitiesCodeSystemVersion {
+                                    extension: self::$module::declaration(
+                                        version.artifact.as_ref(),
+                                    ),
                                     code: Some(version.code.as_str().into()),
                                     is_default: Some(version.is_default.into()),
                                     compositional: Some(version.compositional.into()),

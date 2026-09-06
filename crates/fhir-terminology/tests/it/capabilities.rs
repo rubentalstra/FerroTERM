@@ -2,14 +2,19 @@
 
 use std::sync::Arc;
 
+use fhir_terminology::artifact::{SOURCE_EXTENSION, SOURCE_NAME, SOURCE_RELEASE};
 use fhir_terminology::capabilities::Summary;
 use fhir_terminology::fhir_codesystem::load::{FhirVersion, load_file};
 use fhir_terminology::fhir_codesystem::provider::FhirCodeSystem;
 use fhir_terminology::provider::{CodeSystemProvider, Compositional};
 use fhir_terminology::registries::ucum::provider::{URL as UCUM, UcumProvider};
 use fhir_terminology::registry::Registry;
+use fhir_terminology::snomed::{SYSTEM as SNOMED, SnomedProvider};
 use fhir_types::codec::Json;
 use serde_json::Value;
+
+use ferroterm_testkit::snomed;
+use ferroterm_testkit::snomed::{CAT, item, sctid};
 
 use crate::fixture::{FLAT_URL, URL, registry};
 
@@ -165,4 +170,98 @@ fn a_declared_grammar_and_a_supported_grammar_are_two_different_statements() {
     assert_eq!(json["codeSystem"][0]["version"][0]["compositional"], false);
     assert_eq!(json["codeSystem"][1]["uri"], UCUM);
     assert_eq!(json["codeSystem"][1]["version"][0]["compositional"], true);
+}
+
+/// The `codeSystem` entry of `uri` in a rendered statement.
+fn code_system<'a>(statement: &'a Value, uri: &str) -> &'a Value {
+    statement["codeSystem"]
+        .as_array()
+        .expect("codeSystem is a list")
+        .iter()
+        .find(|entry| entry["uri"] == uri)
+        .expect("the system is declared")
+}
+
+/// The artifact directory name this file writes the synthetic edition into.
+const ARTIFACT_NAME: &str = "snomed-int";
+
+/// A registry holding the synthetic edition written under `dir` and UCUM.
+fn served(dir: &std::path::Path) -> Registry {
+    let artifact = dir.join(ARTIFACT_NAME);
+    std::fs::create_dir_all(&artifact).expect("creates the artifact directory");
+    snomed::write(&artifact).expect("writes the fixture");
+    let provider = SnomedProvider::open(&artifact, "en").expect("opens");
+    assert_eq!(
+        provider.artifact().map(|source| source.release.as_str()),
+        Some(snomed::DATE),
+        "the provider carries the release the manifest recorded"
+    );
+    let mut registry = Registry::new();
+    registry.register(Arc::new(provider)).expect("registers");
+    registry
+        .register(Arc::new(UcumProvider::new()))
+        .expect("registers");
+    registry
+}
+
+#[test]
+fn every_version_declares_the_artifact_an_index_backed_system_was_read_from() {
+    // No FHIR or SNOMED specification records which index a server read, so
+    // the declaration is an extension, the form FHIR defines for exactly that
+    // (<https://hl7.org/fhir/R4B/extensibility.html>). Every version's
+    // `TerminologyCapabilities.codeSystem.version` is a `BackboneElement` and
+    // admits `extension` 0..*, from R4 4.0.1 through the R6 ballot.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let summary = Summary::of(&served(dir.path()));
+    let date = "2026-09-06T00:00:00Z";
+    let statements = [
+        ("r4", summary.to_r4(date).to_json().expect("encodes")),
+        ("r4b", summary.to_r4b(date).to_json().expect("encodes")),
+        ("r5", summary.to_r5(date).to_json().expect("encodes")),
+        ("r6", summary.to_r6(date).to_json().expect("encodes")),
+    ];
+    for (version, object) in statements {
+        let statement = Value::Object(object);
+        assert_eq!(
+            code_system(&statement, SNOMED)["version"][0]["extension"],
+            serde_json::json!([{
+                "url": SOURCE_EXTENSION,
+                "extension": [
+                    {"url": SOURCE_NAME, "valueString": ARTIFACT_NAME},
+                    {"url": SOURCE_RELEASE, "valueString": snomed::DATE},
+                ],
+            }]),
+            "{version} declares the artifact of the served edition"
+        );
+        assert!(
+            code_system(&statement, UCUM)["version"][0]
+                .get("extension")
+                .is_none(),
+            "{version} declares no artifact for the UCUM registry"
+        );
+    }
+}
+
+#[test]
+fn the_artifact_declaration_names_no_directory_above_it_and_no_content() {
+    // The artifact sits under a temporary parent the declaration must not
+    // carry: an operator's layout is not wire content, and neither is any
+    // concept of a licensed release.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let statement = Value::Object(
+        Summary::of(&served(dir.path()))
+            .to_r4b("2026-09-06T00:00:00Z")
+            .to_json()
+            .expect("encodes"),
+    )
+    .to_string();
+    let parent = dir.path().to_string_lossy().into_owned();
+    assert!(
+        !statement.contains(&parent),
+        "the statement names no directory above the artifact"
+    );
+    assert!(
+        !statement.contains(&sctid(item(CAT))),
+        "the statement carries no concept of the release"
+    );
 }
