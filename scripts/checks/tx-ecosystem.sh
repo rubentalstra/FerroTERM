@@ -3,9 +3,10 @@
 # pass list: a test on the list that fails is a regression, a test that
 # newly passes is reported so it can be added.
 #
-#   scripts/checks/tx-ecosystem.sh [--server URL] [--out DIR] [--mode NAME] [--fhir r4|r4b|r5] [--index DIRS]
+#   scripts/checks/tx-ecosystem.sh [--server URL] [--out DIR] [--mode NAME] [--fhir r4|r4b|r5] [--index DIRS] [--port N]
 #
-# Without --server the script starts target/release/ferroterm on 127.0.0.1:8098
+# Without --server the script starts target/release/ferroterm on the first free
+# port at or above 8098, or the one --port names
 # (build it first: cargo build --release -p ferroterm-server), serving the
 # artifact directories --index names (the FERROTERM_INDEX form). --mode picks
 # the suite mode (general by default; icd-11 needs the three ICD-11 artifacts)
@@ -24,6 +25,7 @@ SUITE_REPO=https://github.com/HL7/fhir-tx-ecosystem-ig
 SUITE_COMMIT=eaec771d82fba4eac596c14963546f39b4ecffe7
 
 server=""
+port=""
 out=target/tx-ecosystem/out
 mode=general
 fhir=r4b
@@ -35,6 +37,7 @@ while [[ $# -gt 0 ]]; do
     --mode) mode=$2; shift 2 ;;
     --index) index=$2; shift 2 ;;
     --fhir) fhir=$2; shift 2 ;;
+    --port) port=$2; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -72,19 +75,61 @@ if [[ ! -d "$suite/tests" ]]; then
   git -C "$suite" checkout -q FETCH_HEAD
 fi
 
+# Whether anything is listening on a local port. The runner talks to whatever
+# answers, so a port another process holds must never be measured (#425).
+port_taken() {
+  (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null || return 1
+  exec 3<&-
+  return 0
+}
+
 started=""
 if [[ -z "$server" ]]; then
-  server=http://127.0.0.1:8098/$fhir
+  if [[ -n "$port" ]]; then
+    if port_taken "$port"; then
+      echo "tx-ecosystem: port $port is already in use, so a run would measure another server" >&2
+      exit 1
+    fi
+  else
+    for candidate in $(seq 8098 8137); do
+      if ! port_taken "$candidate"; then
+        port=$candidate
+        break
+      fi
+    done
+    if [[ -z "$port" ]]; then
+      echo "tx-ecosystem: no free port in 8098..8137" >&2
+      exit 1
+    fi
+  fi
+  server=http://127.0.0.1:$port/$fhir
   if [[ -n "$index" ]]; then
     export FERROTERM_INDEX="$index"
   fi
-  FERROTERM_LISTEN=127.0.0.1:8098 FERROTERM_LOG_FORMAT=json target/release/ferroterm > "$work/server.log" 2>&1 &
+  FERROTERM_LISTEN=127.0.0.1:"$port" FERROTERM_LOG_FORMAT=json target/release/ferroterm > "$work/server.log" 2>&1 &
   started=$!
-  trap 'kill "$started" 2>/dev/null || true' EXIT
+  trap 'kill "$started" 2>/dev/null || true; wait "$started" 2>/dev/null || true' EXIT
+  ready=""
   for _ in $(seq 1 50); do
-    curl -sf "http://127.0.0.1:8098/health" >/dev/null 2>&1 && break
+    # The child owning the port is what makes the answer ours. Without this a
+    # bind failure left the probe talking to the squatter (#425).
+    if ! kill -0 "$started" 2>/dev/null; then
+      echo "tx-ecosystem: the server exited before it was ready on port $port" >&2
+      cat "$work/server.log" >&2
+      exit 1
+    fi
+    if curl -sf "http://127.0.0.1:$port/health" >/dev/null 2>&1; then
+      ready=1
+      break
+    fi
     sleep 0.2
   done
+  if [[ -z "$ready" ]]; then
+    echo "tx-ecosystem: the server did not answer /health on port $port within ten seconds" >&2
+    cat "$work/server.log" >&2
+    exit 1
+  fi
+  echo "tx-ecosystem: serving on 127.0.0.1:$port (pid $started)"
 fi
 
 rm -rf "$out"
