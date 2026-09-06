@@ -8,6 +8,7 @@
 
 use std::sync::{Arc, LazyLock};
 
+use fhir_terminology::provider::MapSelection;
 use fhir_terminology::registry::Registry;
 use fhir_terminology::snomed::SnomedProvider;
 use libfuzzer_sys::fuzz_target;
@@ -29,5 +30,5 @@ fuzz_target!(|data: &[u8]| {
     };
     let (_dir, registry) = &*EDITION;
     let _value_set = registry.implicit_value_set(text);
-    let _concept_map = registry.implicit_concept_map(text);
+    let _concept_map = registry.implicit_concept_map(text, MapSelection::Whole);
 });

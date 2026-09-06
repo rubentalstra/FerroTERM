@@ -1,0 +1,62 @@
+{
+  "taken_at": "2026-09-06T05:37:22.012999Z",
+  "ferroterm_version": "0.1.0",
+  "fhir": "r4b",
+  "machine": {
+    "os": "macos",
+    "arch": "aarch64",
+    "cpu": "Apple M2",
+    "memory_bytes": 17179869184,
+    "container": false
+  },
+  "system": "ICD-10-CM",
+  "system_uri": "http://hl7.org/fhir/sid/icd-10-cm",
+  "system_version": "2026",
+  "concepts": 98827,
+  "artifact_bytes": 40183293,
+  "ingest": {
+    "seconds": 1.54471325,
+    "peak_rss_bytes": 345407488,
+    "release": "--icd10cm data/icd10cm/tables.zip --icd10cm data/icd10cm/tabular-order.zip"
+  },
+  "ready_seconds": 0.103633125,
+  "rss_open_bytes": 61046784,
+  "rss_warm_bytes": 62193664,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "cold_ms": 2.069292,
+        "p50_ms": 0.088834,
+        "p95_ms": 0.131167,
+        "p99_ms": 0.164375,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "cold_ms": 0.08425,
+        "p50_ms": 0.057874999999999996,
+        "p95_ms": 0.070625,
+        "p99_ms": 0.084125,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "subsumes",
+      {
+        "status": 200,
+        "cold_ms": 0.086833,
+        "p50_ms": 0.053709,
+        "p95_ms": 0.075709,
+        "p99_ms": 0.106875,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: `ps -o rss=` of the server process after ready and after the warm requests; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank); comparison: not run"
+}

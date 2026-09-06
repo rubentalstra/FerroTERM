@@ -34,6 +34,12 @@
       "claim": "subsumption answers from the closure in under a millisecond"
     },
     {
+      "bench": "operations/translate",
+      "max_us": 1000,
+      "measured_us": 17,
+      "claim": "a translation over a map reference set costs its answer, never the reference set"
+    },
+    {
       "bench": "expand/isa_root_page_10",
       "max_us": 1000,
       "measured_us": 92,
@@ -62,6 +68,12 @@
       "max_us": 1000,
       "measured_us": 118,
       "claim": "the served page of an expansion stays under a millisecond"
+    },
+    {
+      "bench": "http/translate",
+      "max_us": 1000,
+      "measured_us": 70,
+      "claim": "the served translation stays under a millisecond whatever the reference set holds"
     },
     {
       "bench": "expand/isa_root_first_10",
