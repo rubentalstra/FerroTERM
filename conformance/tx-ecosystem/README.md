@@ -13,21 +13,21 @@ turns the lists and the total into the README's badges at site build time.
 
 ## What is committed, per mode
 
-Recorded on 2026-09-05 with validator 6.10.3 and suite
+Recorded on 2026-09-06 with validator 6.10.4 and suite
 `eaec771d82fba4eac596c14963546f39b4ecffe7` (tests v1.9.3). Every mode run also
 carries the two mode-independent `metadata` cases, so a mode's count is two
 above the suite's own.
 
 | mode | surface | pass list | passed of ran | needs | open failures |
 |---|---|---|---|---|---|
-| `general` | `/r4b` | `passing.txt` | 518 of 670 | nothing | #353 |
-| `general` | `/r4` | `passing-r4.txt` | 519 of 670 | nothing | #353 |
-| `general` | `/r5` | `passing-r5.txt` | 524 of 670 | nothing | #353 |
+| `general` | `/r4b` | `passing.txt` | 542 of 670 | nothing | #353 |
+| `general` | `/r4` | `passing-r4.txt` | 546 of 670 | nothing | #353 |
+| `general` | `/r5` | `passing-r5.txt` | 548 of 670 | nothing | #353 |
 | `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
-| `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 29 of 227 | a LOINC release | #348, #305 |
-| `tx.fhir.org` | `/r5` | `passing-r5-tx.fhir.org.txt` | 30 of 227 | a LOINC release | #348, #305 |
-| `mimetypes` | `/r4b` | `passing-mimetypes.txt` | 23 of 37 | nothing | #346 |
+| `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 43 of 227 | a LOINC release | #348, #305 |
+| `tx.fhir.org` | `/r5` | `passing-r5-tx.fhir.org.txt` | 44 of 227 | a LOINC release | #348, #305 |
+| `mimetypes` | `/r4b` | `passing-mimetypes.txt` | 35 of 37 | nothing | #353 |
 | `omop` | `/r4b` | `passing-omop.txt` | 1 of 28 | an OMOP vocabulary the server does not load | #345 |
 
 `general` is the only mode CI runs, on all three surfaces. The others need
@@ -42,7 +42,9 @@ hand before a release and their lists are refreshed in the same change.
   (`--mode snomed --index <edition>`). It scores 1 of 170 whatever edition you
   point it at, because every case pins the reference server's own edition
   (`http://snomed.info/xsct/31000003106/version/20250909`), which no release
-  centre distributes. #344 holds the evidence. Five of its cases also send a
+  centre distributes. #344 holds the evidence. Its 30 `$subsumes` cases reach
+  the server now; 21 answer 404 on that pinned version and the other 9 differ
+  on the code or the text of the outcome. Five of its cases also send a
   parameter no `OperationDefinition` declares (#349).
 - **`icd-11`** needs the three ICD-11 artifacts built from the WHO ICD-API
   local deployment (`--mode icd-11 --index <mms>:<icf>:<entity>`); the
@@ -70,9 +72,14 @@ hand before a release and their lists are refreshed in the same change.
   project chases; 61 of its cases call a `ValueSet/$compare` operation no
   version's `OperationDefinition` declares, and answer 405. Four more send
   `_limit` on `$expand`, a name no `OperationDefinition` declares and the
-  suite never documents, so they answer 400 and stay unpassed (#305).
+  suite never documents, so they answer 400 and stay unpassed (#305). Twelve
+  of its `langcodes` cases ask `$subsumes` to rank BCP 47 tags by their prefix
+  relationship (`en` over `en-US`); the `urn:ietf:bcp:47` provider declares no
+  subsumption and answers 400, and #348 carries the triage.
 - **`mimetypes`** needs nothing: BCP 13 is served from the vendored IANA media
-  types registry.
+  types registry. Two cases are open: the cross-mode `/r4b` `metadata` case
+  below, and `mimetype-subsumes-invalid-code`, which asks for the `issue.code`
+  the next section settles (#353).
 - **`omop`** needs the OMOP standardized vocabularies, which this server does
   not load and which OHDSI distributes through Athena under per-vocabulary
   licences. The mode runs and scores 1 of 28. Its setup ValueSet is also
@@ -81,9 +88,28 @@ hand before a release and their lists are refreshed in the same change.
 
 ## Known failures that cut across every mode
 
-- **`$subsumes` never reaches the server.** Validator 6.10.3 throws
-  `Unknown Operation subsumes` before it connects, which costs 98 cases across
-  four modes. #346.
+- **`$subsumes` reaches the server from validator 6.10.4 on.** 6.10.3 threw
+  `Unknown Operation subsumes` before it connected, so the suite's 98
+  `$subsumes` cases across four modes were scored against a request nobody
+  sent. 6.10.4 issues the operation, and 50 of the 98 pass: 24 of the 27
+  `general` cases on each surface, 12 of 13 in `mimetypes`, 14 of 28 in
+  `tx.fhir.org`, none of the 30 in `snomed`. Of the 48 that stay open, 30 are
+  the `snomed` edition wall above, 12 are BCP 47 tag subsumption (#348), and 6
+  are the `issue.code` split below. #346.
+- **An unknown code answers `not-found`, and the suite asks two operations for
+  two different codes.** 11 cases fail on `OperationOutcome.issue.code` alone,
+  each already carrying the `tx-issue-type` coding `invalid-code` the case
+  asks for: 3 in `general` on each surface, 1 in `mimetypes`, 2 in
+  `tx.fhir.org`, and 5 counted inside the `snomed` 30 above. The suite
+  expects `code-invalid` from `$subsumes` and `not-found` from `$lookup` for
+  the same fact, a code that is not in the code system: compare
+  `simple/simple-subsumes-unknown-code-response-parameters.json` with
+  `icd-11/lookup-bad-code-response.json`, both at the pinned commit. No FHIR
+  version's `CodeSystem/$subsumes` `OperationDefinition` fixes the value, and
+  R4B's `IssueType` admits both readings ("the code or system could not be
+  understood" against "the reference provided was not found"), so the server
+  keeps one answer for one fact and passes the `$lookup` shape. #353 settles
+  the cluster against the ecosystem's `tx-issue-type` guidance.
 - **Nine cases send a parameter the operation does not declare.** Seven send
   `version` on `ValueSet/$validate-code`, which declares `systemVersion` and
   `valueSetVersion` as its inputs and `version` only as an output; one sends

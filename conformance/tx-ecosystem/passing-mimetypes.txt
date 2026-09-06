@@ -21,3 +21,15 @@ mimetypes/mimetype-filter-unregistered-in
 mimetypes/mimetype-filter-unregistered-out
 mimetypes/mimetype-filter-unregistered-params-in
 mimetypes/mimetype-filter-unregistered-params-out
+mimetypes/mimetype-subsumes-case
+mimetypes/mimetype-subsumes-equivalent
+mimetypes/mimetype-subsumes-parameter
+mimetypes/mimetype-subsumes-parameter-added
+mimetypes/mimetype-subsumes-parameter-disjoint
+mimetypes/mimetype-subsumes-parameter-reverse
+mimetypes/mimetype-subsumes-parameter-siblings
+mimetypes/mimetype-subsumes-suffix
+mimetypes/mimetype-subsumes-unknown-parameter
+mimetypes/mimetype-subsumes-unknown-parameter-shared
+mimetypes/mimetype-subsumes-unknown-parameter-value
+mimetypes/mimetype-subsumes-unrelated
