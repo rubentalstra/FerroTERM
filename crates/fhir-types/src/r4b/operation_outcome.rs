@@ -329,9 +329,46 @@ impl super::super::codec::Json for OperationOutcome {
 
 impl serde::Serialize for OperationOutcome {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::element_entry(&mut map, "_implicitRules", item)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::element_entry(&mut map, "_language", item)?;
+        }
+        if !self.contained.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "contained", &self.contained)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::value_entry(&mut map, "implicitRules", item)?;
+        }
+        if !self.issue.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "issue", &self.issue)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::value_entry(&mut map, "language", item)?;
+        }
+        if let Some(item) = &self.meta {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "meta", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        serde::ser::SerializeMap::serialize_entry(&mut map, "resourceType", "OperationOutcome")?;
+        if let Some(item) = &self.text {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "text", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -636,9 +673,38 @@ impl super::super::codec::Json for OperationOutcomeIssue {
 
 impl serde::Serialize for OperationOutcomeIssue {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_code", &self.code)?;
+        if let Some(item) = &self.diagnostics {
+            super::super::codec::element_entry(&mut map, "_diagnostics", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_expression", &self.expression)?;
+        super::super::codec::element_list_entry(&mut map, "_location", &self.location)?;
+        super::super::codec::element_entry(&mut map, "_severity", &self.severity)?;
+        super::super::codec::value_entry(&mut map, "code", &self.code)?;
+        if let Some(item) = &self.details {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "details", item)?;
+        }
+        if let Some(item) = &self.diagnostics {
+            super::super::codec::value_entry(&mut map, "diagnostics", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "expression", &self.expression)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "location", &self.location)?;
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        super::super::codec::value_entry(&mut map, "severity", &self.severity)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 

@@ -259,9 +259,43 @@ impl super::super::codec::Json for SampledData {
 
 impl serde::Serialize for SampledData {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.data {
+            super::super::codec::element_entry(&mut map, "_data", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_dimensions", &self.dimensions)?;
+        if let Some(item) = &self.factor {
+            super::super::codec::element_entry(&mut map, "_factor", item)?;
+        }
+        if let Some(item) = &self.lower_limit {
+            super::super::codec::element_entry(&mut map, "_lowerLimit", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_period", &self.period)?;
+        if let Some(item) = &self.upper_limit {
+            super::super::codec::element_entry(&mut map, "_upperLimit", item)?;
+        }
+        if let Some(item) = &self.data {
+            super::super::codec::value_entry(&mut map, "data", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "dimensions", &self.dimensions)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(item) = &self.factor {
+            super::super::codec::value_entry(&mut map, "factor", item)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.lower_limit {
+            super::super::codec::value_entry(&mut map, "lowerLimit", item)?;
+        }
+        serde::ser::SerializeMap::serialize_entry(&mut map, "origin", &self.origin)?;
+        super::super::codec::value_entry(&mut map, "period", &self.period)?;
+        if let Some(item) = &self.upper_limit {
+            super::super::codec::value_entry(&mut map, "upperLimit", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

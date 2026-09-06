@@ -165,9 +165,29 @@ impl super::super::codec::Json for UsageContext {
 
 impl serde::Serialize for UsageContext {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        serde::ser::SerializeMap::serialize_entry(&mut map, "code", &self.code)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        match &self.value {
+            UsageContextValue::CodeableConcept(inner) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCodeableConcept", inner)?;
+            }
+            UsageContextValue::Quantity(inner) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueQuantity", inner)?;
+            }
+            UsageContextValue::Range(inner) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRange", inner)?;
+            }
+            UsageContextValue::Reference(inner) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueReference", inner)?;
+            }
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

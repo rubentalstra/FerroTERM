@@ -135,9 +135,26 @@ impl super::super::codec::Json for Money {
 
 impl serde::Serialize for Money {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.currency {
+            super::super::codec::element_entry(&mut map, "_currency", item)?;
+        }
+        if let Some(item) = &self.value {
+            super::super::codec::element_entry(&mut map, "_value", item)?;
+        }
+        if let Some(item) = &self.currency {
+            super::super::codec::value_entry(&mut map, "currency", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.value {
+            super::super::codec::value_entry(&mut map, "value", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

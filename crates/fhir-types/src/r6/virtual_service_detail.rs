@@ -253,9 +253,63 @@ impl super::super::codec::Json for VirtualServiceDetail {
 
 impl serde::Serialize for VirtualServiceDetail {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_list_entry(
+            &mut map,
+            "_additionalInfo",
+            &self.additional_info,
+        )?;
+        match &self.address {
+            Some(VirtualServiceDetailAddress::String(inner)) => {
+                super::super::codec::element_entry(&mut map, "_addressString", inner)?;
+            }
+            Some(VirtualServiceDetailAddress::Url(inner)) => {
+                super::super::codec::element_entry(&mut map, "_addressUrl", inner)?;
+            }
+            _ => {}
+        }
+        if let Some(item) = &self.max_participants {
+            super::super::codec::element_entry(&mut map, "_maxParticipants", item)?;
+        }
+        if let Some(item) = &self.session_key {
+            super::super::codec::element_entry(&mut map, "_sessionKey", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "additionalInfo", &self.additional_info)?;
+        match &self.address {
+            Some(VirtualServiceDetailAddress::ContactPoint(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "addressContactPoint", inner)?;
+            }
+            Some(VirtualServiceDetailAddress::ExtendedContactDetail(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "addressExtendedContactDetail",
+                    inner,
+                )?;
+            }
+            Some(VirtualServiceDetailAddress::String(inner)) => {
+                super::super::codec::value_entry(&mut map, "addressString", inner)?;
+            }
+            Some(VirtualServiceDetailAddress::Url(inner)) => {
+                super::super::codec::value_entry(&mut map, "addressUrl", inner)?;
+            }
+            None => {}
+        }
+        if let Some(item) = &self.channel_type {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "channelType", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.max_participants {
+            super::super::codec::value_entry(&mut map, "maxParticipants", item)?;
+        }
+        if let Some(item) = &self.session_key {
+            super::super::codec::value_entry(&mut map, "sessionKey", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

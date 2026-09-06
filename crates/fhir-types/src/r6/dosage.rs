@@ -476,9 +476,78 @@ impl super::super::codec::Json for Dosage {
 
 impl serde::Serialize for Dosage {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.as_needed {
+            super::super::codec::element_entry(&mut map, "_asNeeded", item)?;
+        }
+        if let Some(item) = &self.patient_instruction {
+            super::super::codec::element_entry(&mut map, "_patientInstruction", item)?;
+        }
+        if let Some(item) = &self.text {
+            super::super::codec::element_entry(&mut map, "_text", item)?;
+        }
+        if !self.additional_instruction.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "additionalInstruction",
+                &self.additional_instruction,
+            )?;
+        }
+        if let Some(item) = &self.as_needed {
+            super::super::codec::value_entry(&mut map, "asNeeded", item)?;
+        }
+        if !self.as_needed_for.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "asNeededFor",
+                &self.as_needed_for,
+            )?;
+        }
+        if !self.condition.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "condition", &self.condition)?;
+        }
+        if !self.dose_and_rate.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "doseAndRate",
+                &self.dose_and_rate,
+            )?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.method {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "method", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.patient_instruction {
+            super::super::codec::value_entry(&mut map, "patientInstruction", item)?;
+        }
+        if let Some(item) = &self.route {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "route", item)?;
+        }
+        if let Some(item) = &self.safety {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "safety", item)?;
+        }
+        if let Some(item) = &self.site {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "site", item)?;
+        }
+        if let Some(item) = &self.text {
+            super::super::codec::value_entry(&mut map, "text", item)?;
+        }
+        if let Some(item) = &self.timing {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "timing", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -703,9 +772,44 @@ impl super::super::codec::Json for DosageDoseAndRate {
 
 impl serde::Serialize for DosageDoseAndRate {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        match &self.dose {
+            Some(DosageDoseAndRateDose::Expression(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "doseExpression", inner)?;
+            }
+            Some(DosageDoseAndRateDose::Quantity(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "doseQuantity", inner)?;
+            }
+            Some(DosageDoseAndRateDose::Range(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "doseRange", inner)?;
+            }
+            None => {}
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        match &self.rate {
+            Some(DosageDoseAndRateRate::Expression(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "rateExpression", inner)?;
+            }
+            Some(DosageDoseAndRateRate::Quantity(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "rateQuantity", inner)?;
+            }
+            Some(DosageDoseAndRateRate::Range(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "rateRange", inner)?;
+            }
+            Some(DosageDoseAndRateRate::Ratio(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "rateRatio", inner)?;
+            }
+            None => {}
+        }
+        if let Some(item) = &self.r#type {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "type", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

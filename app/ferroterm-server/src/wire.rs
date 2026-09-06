@@ -123,12 +123,54 @@ impl Wire {
                 Err(_) => return status.into_response(),
             },
         };
+        self.body(status, body)
+    }
+
+    /// A response carrying `resource`, a typed FHIR resource, in this format;
+    /// `schemas` is the served version's XML schema.
+    ///
+    /// JSON writes the resource straight to bytes through the generated
+    /// `Serialize`, with no intermediate document. XML converts through the
+    /// object model its schema reads (<https://hl7.org/fhir/R4B/xml.html>).
+    ///
+    /// # Errors
+    ///
+    /// Returns a `500` failure when the resource has no form in this wire.
+    pub fn resource<R: fhir_types::codec::Json + serde::Serialize>(
+        self,
+        status: StatusCode,
+        resource: &R,
+        schemas: &Schemas,
+    ) -> Result<Response, Failure> {
+        let body = match self {
+            Self::Json => serde_json::to_vec(resource).map_err(|e| encoding(&e))?,
+            Self::Xml => {
+                let object = resource.to_json().map_err(|e| encoding(&e))?;
+                fhir_types::xml::to_xml(schemas, &object)
+                    .map_err(|e| encoding(&e))?
+                    .into_bytes()
+            }
+        };
+        Ok(self.body(status, body))
+    }
+
+    /// The response of `body` with this format's `Content-Type`.
+    fn body(self, status: StatusCode, body: Vec<u8>) -> Response {
         Response::builder()
             .status(status)
             .header(CONTENT_TYPE, self.content_type())
             .body(Body::from(body))
             .unwrap_or_else(|_| status.into_response())
     }
+}
+
+/// The `500` a resource with no wire form answers with.
+fn encoding(error: &dyn std::fmt::Display) -> Failure {
+    Failure::new(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "exception",
+        format!("cannot encode the response: {error}"),
+    )
 }
 
 /// The query without its `_format`, for the operation's own parameters.

@@ -284,9 +284,47 @@ impl super::super::codec::Json for Signature {
 
 impl serde::Serialize for Signature {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.data {
+            super::super::codec::element_entry(&mut map, "_data", item)?;
+        }
+        if let Some(item) = &self.sig_format {
+            super::super::codec::element_entry(&mut map, "_sigFormat", item)?;
+        }
+        if let Some(item) = &self.target_format {
+            super::super::codec::element_entry(&mut map, "_targetFormat", item)?;
+        }
+        if let Some(item) = &self.when {
+            super::super::codec::element_entry(&mut map, "_when", item)?;
+        }
+        if let Some(item) = &self.data {
+            super::super::codec::value_entry(&mut map, "data", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.on_behalf_of {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "onBehalfOf", item)?;
+        }
+        if let Some(item) = &self.sig_format {
+            super::super::codec::value_entry(&mut map, "sigFormat", item)?;
+        }
+        if let Some(item) = &self.target_format {
+            super::super::codec::value_entry(&mut map, "targetFormat", item)?;
+        }
+        if !self.r#type.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "type", &self.r#type)?;
+        }
+        if let Some(item) = &self.when {
+            super::super::codec::value_entry(&mut map, "when", item)?;
+        }
+        if let Some(item) = &self.who {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "who", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

@@ -341,9 +341,67 @@ impl super::super::codec::Json for Address {
 
 impl serde::Serialize for Address {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.city {
+            super::super::codec::element_entry(&mut map, "_city", item)?;
+        }
+        if let Some(item) = &self.country {
+            super::super::codec::element_entry(&mut map, "_country", item)?;
+        }
+        if let Some(item) = &self.district {
+            super::super::codec::element_entry(&mut map, "_district", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_line", &self.line)?;
+        if let Some(item) = &self.postal_code {
+            super::super::codec::element_entry(&mut map, "_postalCode", item)?;
+        }
+        if let Some(item) = &self.state {
+            super::super::codec::element_entry(&mut map, "_state", item)?;
+        }
+        if let Some(item) = &self.text {
+            super::super::codec::element_entry(&mut map, "_text", item)?;
+        }
+        if let Some(item) = &self.r#type {
+            super::super::codec::element_entry(&mut map, "_type", item)?;
+        }
+        if let Some(item) = &self.r#use {
+            super::super::codec::element_entry(&mut map, "_use", item)?;
+        }
+        if let Some(item) = &self.city {
+            super::super::codec::value_entry(&mut map, "city", item)?;
+        }
+        if let Some(item) = &self.country {
+            super::super::codec::value_entry(&mut map, "country", item)?;
+        }
+        if let Some(item) = &self.district {
+            super::super::codec::value_entry(&mut map, "district", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "line", &self.line)?;
+        if let Some(item) = &self.period {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "period", item)?;
+        }
+        if let Some(item) = &self.postal_code {
+            super::super::codec::value_entry(&mut map, "postalCode", item)?;
+        }
+        if let Some(item) = &self.state {
+            super::super::codec::value_entry(&mut map, "state", item)?;
+        }
+        if let Some(item) = &self.text {
+            super::super::codec::value_entry(&mut map, "text", item)?;
+        }
+        if let Some(item) = &self.r#type {
+            super::super::codec::value_entry(&mut map, "type", item)?;
+        }
+        if let Some(item) = &self.r#use {
+            super::super::codec::value_entry(&mut map, "use", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

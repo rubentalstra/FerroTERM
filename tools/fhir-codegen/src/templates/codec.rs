@@ -190,6 +190,148 @@ pub trait Primitive: Sized {
         element: Option<&Value>,
         path: &mut Path,
     ) -> Result<Self, DecodeError>;
+
+    /// Whether the primitive carries a value.
+    fn has_value(&self) -> bool;
+
+    /// Whether the primitive carries an `id` or an `extension`.
+    fn has_element(&self) -> bool;
+
+    /// Writes the value, `null` when the primitive carries none.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error, which for a decimal includes a lexical
+    /// form that is no JSON number.
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
+
+    /// Writes the `_name` object, `null` when the primitive carries no `id`
+    /// and no `extension`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error.
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
+}
+
+/// A primitive's value, written straight to a serializer.
+///
+/// This wrapper and the three below carry a primitive into `serde`, so a
+/// generated type writes it as a map entry without building a [`Value`] first.
+#[derive(Debug)]
+pub struct PrimitiveValue<'a, P: Primitive>(pub &'a P);
+
+impl<P: Primitive> serde::Serialize for PrimitiveValue<'_, P> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize_value(serializer)
+    }
+}
+
+/// A primitive's `_name` object, written straight to a serializer.
+#[derive(Debug)]
+pub struct PrimitiveElement<'a, P: Primitive>(pub &'a P);
+
+impl<P: Primitive> serde::Serialize for PrimitiveElement<'_, P> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize_element(serializer)
+    }
+}
+
+/// The value array of a repeating primitive, `null` at a position that carries
+/// only an `id` or an `extension`.
+#[derive(Debug)]
+pub struct PrimitiveValues<'a, P: Primitive>(pub &'a [P]);
+
+impl<P: Primitive> serde::Serialize for PrimitiveValues<'_, P> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut seq = serde::Serializer::serialize_seq(serializer, Some(self.0.len()))?;
+        for item in self.0 {
+            serde::ser::SerializeSeq::serialize_element(&mut seq, &PrimitiveValue(item))?;
+        }
+        serde::ser::SerializeSeq::end(seq)
+    }
+}
+
+/// The `_name` array of a repeating primitive, `null` at a position that
+/// carries no `id` and no `extension`.
+#[derive(Debug)]
+pub struct PrimitiveElements<'a, P: Primitive>(pub &'a [P]);
+
+impl<P: Primitive> serde::Serialize for PrimitiveElements<'_, P> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut seq = serde::Serializer::serialize_seq(serializer, Some(self.0.len()))?;
+        for item in self.0 {
+            serde::ser::SerializeSeq::serialize_element(&mut seq, &PrimitiveElement(item))?;
+        }
+        serde::ser::SerializeSeq::end(seq)
+    }
+}
+
+/// Writes `key` with the primitive's value, unless it carries none.
+///
+/// # Errors
+///
+/// Returns the serializer's error.
+pub fn value_entry<M: serde::ser::SerializeMap, P: Primitive>(
+    map: &mut M,
+    key: &str,
+    primitive: &P,
+) -> Result<(), M::Error> {
+    if primitive.has_value() {
+        map.serialize_entry(key, &PrimitiveValue(primitive))?;
+    }
+    Ok(())
+}
+
+/// Writes `key` with the primitive's `_name` object, unless it carries no
+/// `id` and no `extension`.
+///
+/// # Errors
+///
+/// Returns the serializer's error.
+pub fn element_entry<M: serde::ser::SerializeMap, P: Primitive>(
+    map: &mut M,
+    key: &str,
+    primitive: &P,
+) -> Result<(), M::Error> {
+    if primitive.has_element() {
+        map.serialize_entry(key, &PrimitiveElement(primitive))?;
+    }
+    Ok(())
+}
+
+/// Writes `key` with the value array of a repeating primitive, unless the list
+/// is empty.
+///
+/// # Errors
+///
+/// Returns the serializer's error.
+pub fn value_list_entry<M: serde::ser::SerializeMap, P: Primitive>(
+    map: &mut M,
+    key: &str,
+    items: &[P],
+) -> Result<(), M::Error> {
+    if !items.is_empty() {
+        map.serialize_entry(key, &PrimitiveValues(items))?;
+    }
+    Ok(())
+}
+
+/// Writes `key` with the `_name` array of a repeating primitive, when any
+/// position carries an `id` or an `extension`.
+///
+/// # Errors
+///
+/// Returns the serializer's error.
+pub fn element_list_entry<M: serde::ser::SerializeMap, P: Primitive>(
+    map: &mut M,
+    key: &str,
+    items: &[P],
+) -> Result<(), M::Error> {
+    if items.iter().any(Primitive::has_element) {
+        map.serialize_entry(key, &PrimitiveElements(items))?;
+    }
+    Ok(())
 }
 
 /// Reads a non-empty JSON object.

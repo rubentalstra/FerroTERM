@@ -13,6 +13,10 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- A response is written from the typed resource. The generated FHIR types now carry their own `Serialize`, so `$lookup`, `$validate-code`, `$expand`, `$subsumes`, `$translate`, and every `OperationOutcome` write their answer straight into the response body instead of building a `serde_json` document first and writing that. The bytes are unchanged: the two paths are asserted identical over every resource of the four vendored FHIR packages and over generated `Parameters` documents, per version, so the primitive-plus-`_element` rule, the element order, and the absent-versus-null distinction are pinned where they were.
+
 ## [0.1.0] - 2026-09-06
 
 ### Added
