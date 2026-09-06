@@ -187,7 +187,7 @@ creates the crate adds them, and re-checks each one at that moment.
 | `wasm-bindgen` | 0.2.128 | the generated bootstrap |
 | `console_error_panic_hook` | 0.1.7 | real stack traces in the browser console |
 | `serde` / `serde_json` | pinned in the workspace | the FHIR JSON codec |
-| `thirtyfour` (dev) | 0.37.5 | Rust-native WebDriver for the E2E journeys |
+| `thirtyfour` (dev) | 0.37.5 | Rust-native WebDriver for the E2E journeys, in `e2e/` |
 | Trunk (tool) | 0.21.14 | the CSR build tool |
 | Tailwind CSS (tool) | pinned via Trunk `[tools] tailwindcss` | styling, no Node |
 | `leptosfmt` (tool) | 0.1.33 | `view!` macro formatting |
@@ -490,7 +490,12 @@ built except the `ui-e2e` job:
   container built from the same Dockerfile, with the journeys as plain
   `#[tokio::test]`s. Every journey fails on a browser console error. Rust
   only: Playwright is JavaScript and the no-JavaScript-authored mandate covers
-  the test suite.
+  the test suite. The journeys live in `e2e/`, a crate the root manifest
+  excludes: `thirtyfour` depends on `serde_json` with `preserve_order`, and
+  cargo unifies features across one invocation
+  (<https://doc.rust-lang.org/cargo/reference/features.html#feature-unification>),
+  so holding it inside the workspace would make the test run write FHIR JSON
+  in a key order the shipped server does not.
 - **The release lane.** The bundle is architecture-independent, so it is built
   once and embedded into each per-architecture binary before
   `release-build.yml` attests it. No new image, no new attestation subject,

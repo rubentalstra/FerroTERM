@@ -381,6 +381,51 @@ jobs:
       - name: The bundle is inside its recorded bars
         run: bash scripts/checks/bundle-size.sh
 
+  # The viewer is client-side rendered, so a unit test sees none of what a
+  # reader sees: the document is an empty <body> until the WebAssembly bundle
+  # boots. This job is the only place the bundle is proved to render at all. It
+  # builds the bundle, embeds it in the server, builds the image from
+  # docker/Dockerfile the way the release lane stages it, and drives that image
+  # with a pinned headless Chromium. Rust only: Playwright is JavaScript, and
+  # the no-JavaScript mandate covers the test suite as well as the product.
+  #
+  # The journeys live in e2e/, outside the workspace for the reason that
+  # manifest records, so the fmt and clippy passes the workspace lanes give
+  # every other crate are run here by manifest path.
+  ui-e2e:
+    name: ui-e2e
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: clippy, rustfmt
+          cache-key: ui-e2e
+      - name: Add the WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      # The image base is distroless/static, so the binaries the journeys drive
+      # are linked against musl, as release-build.yml links the ones it ships.
+      - name: Install musl tooling
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - uses: taiki-e/install-action@0758d235715de2f3551eacc980d9ae8fce9342c3 # v2.87.3
+        with:
+          tool: trunk@0.21.14, cargo-nextest
+      - name: The journeys hold the same formatting and lint bar
+        run: |
+          set -euo pipefail
+          cargo fmt --manifest-path e2e/Cargo.toml --check
+          cargo clippy --manifest-path e2e/Cargo.toml --locked --all-targets -- -D warnings
+      # The browser is a container pinned by digest inside the script, so the
+      # runner image's own Chrome never decides what the journeys drive.
+      - run: bash scripts/ui-e2e.sh
+
   codegen-drift:
     name: codegen-drift
     needs: detect
@@ -579,6 +624,7 @@ jobs:
       - cargo-deny
       - viewer-boundary
       - viewer
+      - ui-e2e
       - codegen-drift
       - crate-version-guard
       - publish-dry-run

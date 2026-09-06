@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: BUSL-1.1
+[package]
+name = "ferroterm-e2e"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "BUSL-1.1"
+
+# The crate is deliberately OUTSIDE the workspace (the root manifest excludes
+# it). `thirtyfour` depends on serde_json with `preserve_order`, and cargo
+# unifies features across every package built in one invocation
+# (https://doc.rust-lang.org/cargo/reference/features.html#feature-unification),
+# so a dev-dependency on it inside the workspace would turn every FHIR JSON
+# document the suite writes from sorted keys into insertion order. The release
+# build has no such dependency, so the workspace tests would then be checking a
+# serializer the product does not ship.
+
+# Its own workspace root, so the exclusion holds wherever the checkout sits
+# (https://doc.rust-lang.org/cargo/reference/workspaces.html).
+[workspace]
+
+# The only target: one integration-test binary, one module per journey topic.
+[[test]]
+name = "it"
+path = "tests/it/main.rs"
+
+[dev-dependencies]
+thirtyfour = { version = "0.37.5", default-features = false, features = [
+  "reqwest",
+  "rustls",
+] }
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "time"] }
+
+# The workspace lint table cannot be inherited across the exclusion, so the
+# core of the bar is spelled here; the root clippy.toml still applies, because
+# clippy reads it from the repository root.
+[lints.rust]
+unsafe_code = "forbid"
+non_ascii_idents = "forbid"
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+dead_code = "deny"
+let_underscore_drop = "deny"
+unused_must_use = "deny"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+indexing_slicing = "deny"
+string_slice = "deny"
+as_conversions = "deny"
+missing_assert_message = "deny"
+allow_attributes_without_reason = "deny"

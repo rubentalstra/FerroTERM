@@ -81,6 +81,7 @@ Trunk, not by `cargo` alone. Its crate versions live in the root
 | Tailwind CSS standalone CLI | 4.3.3, pinned in `Trunk.toml` `[tools] tailwindcss`; Trunk downloads it, so there is no Node and no npm |
 | `wasm-bindgen` CLI | taken from `Cargo.lock`, which pins the `wasm-bindgen` crate |
 | `leptosfmt` | 0.1.33, the `view!` macro formatter |
+| Headless browser | `selenium/standalone-chromium:4.48.0-20260905`, pinned by index digest in `scripts/ui-e2e.sh`; the image carries Chromium and the chromedriver built against it, so the journeys never depend on a runner image's own browser |
 
 ## GitHub Actions pins
 
