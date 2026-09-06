@@ -276,6 +276,13 @@ impl CodeSystemValidateCodeRequest {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -529,6 +536,13 @@ impl CodeSystemValidateCodeRequest {
                     field_display_language = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -906,6 +920,13 @@ impl CodeSystemValidateCodeResponse {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1107,6 +1128,13 @@ impl CodeSystemValidateCodeResponse {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1131,6 +1159,13 @@ impl CodeSystemValidateCodeResponse {
                         Some(super::super::parameters::ParametersParameterValue::Canonical(
                             value,
                         )) => value.clone(),
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            super::super::primitives::Canonical {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1155,6 +1190,13 @@ impl CodeSystemValidateCodeResponse {
                         Some(super::super::parameters::ParametersParameterValue::Canonical(
                             value,
                         )) => value.clone(),
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            super::super::primitives::Canonical {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1214,6 +1256,13 @@ impl CodeSystemValidateCodeResponse {
                     field_status = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(

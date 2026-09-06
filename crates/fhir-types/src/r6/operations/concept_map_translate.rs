@@ -395,6 +395,13 @@ impl ConceptMapTranslateRequest {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -653,6 +660,13 @@ impl ConceptMapTranslateRequest {
                     field_target_code = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -1505,6 +1519,13 @@ impl ConceptMapTranslateResponseMatch {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1586,6 +1607,13 @@ impl ConceptMapTranslateResponseMatch {
                         Some(super::super::parameters::ParametersParameterValue::Canonical(
                             value,
                         )) => value.clone(),
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            super::super::primitives::Canonical {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {

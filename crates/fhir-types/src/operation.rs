@@ -7,6 +7,13 @@
 //! ecosystem overlay (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>),
 //! each parameter marked with its source, so a server accepts nothing more
 //! and nothing less.
+//!
+//! NOTE: a parameter is read from the primitive its definition declares and
+//! from the primitives that share that one's scalar in either direction, so a
+//! `canonical` parameter reads a `valueUri` too. No clause requires refusing
+//! the wider spelling, and the GET form carries no type marker at all
+//! (<https://hl7.org/fhir/R4B/operations.html>); the decision is recorded on
+//! #352.
 
 /// The direction of an operation parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
