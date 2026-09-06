@@ -25,8 +25,8 @@ above the suite's own.
 | `general` | `/r5` | `passing-r5.txt` | 548 of 670 | nothing | #353 |
 | `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
-| `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 43 of 227 | a LOINC release | #348, #305 |
-| `tx.fhir.org` | `/r5` | `passing-r5-tx.fhir.org.txt` | 44 of 227 | a LOINC release | #348, #305 |
+| `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 55 of 227 | a LOINC release | #420, #421, #305, #349 |
+| `tx.fhir.org` | `/r5` | `passing-r5-tx.fhir.org.txt` | 56 of 227 | a LOINC release | #420, #421, #305, #349 |
 | `mimetypes` | `/r4b` | `passing-mimetypes.txt` | 35 of 37 | nothing | #353 |
 | `omop` | `/r4b` | `passing-omop.txt` | 1 of 28 | an OMOP vocabulary the server does not load | #345 |
 
@@ -69,13 +69,7 @@ hand before a release and their lists are refreshed in the same change.
   `tests/readme.md` says this mode is "for tests that are intended to be and
   written specifically for tx.fhir.org - internal QA. There is no need for
   other servers to pass these tests", so the LOINC subset is the part this
-  project chases; 61 of its cases call a `ValueSet/$compare` operation no
-  version's `OperationDefinition` declares, and answer 405. Four more send
-  `_limit` on `$expand`, a name no `OperationDefinition` declares and the
-  suite never documents, so they answer 400 and stay unpassed (#305). Twelve
-  of its `langcodes` cases ask `$subsumes` to rank BCP 47 tags by their prefix
-  relationship (`en` over `en-US`); the `urn:ietf:bcp:47` provider declares no
-  subsumption and answers 400, and #348 carries the triage.
+  project chases. The section below clusters what stays open.
 - **`mimetypes`** needs nothing: BCP 13 is served from the vendored IANA media
   types registry. Two cases are open: the cross-mode `/r4b` `metadata` case
   below, and `mimetype-subsumes-invalid-code`, which asks for the `issue.code`
@@ -86,16 +80,78 @@ hand before a release and their lists are refreshed in the same change.
   missing the required `ValueSet.status`, so every case is refused before the
   vocabulary would be reached. #345 holds both findings.
 
+## The `tx.fhir.org` mode, clustered by cause
+
+171 cases stay open on `/r5` and 172 on `/r4b`, the extra being the `metadata`
+case at the end of this file. Each cluster below is the whole reason its cases
+fail.
+
+- **61 cases call `ValueSet/$compare`** (the `compare` and `related2` suites)
+  and answer 405. No `OperationDefinition` in the vendored `hl7.fhir.r4.core`,
+  `hl7.fhir.r4b.core`, `hl7.fhir.r5.core`, or `hl7.fhir.r6.core` declares a
+  `compare` operation on any resource. It is a reference-server operation, 405
+  is the right answer for an operation a version does not define, and the
+  cases stay unclaimed while that holds.
+- **20 cases of the `tx.fhir.org` suite ask for content this run does not
+  serve**: 19 SNOMED and one HGVS, against a server holding a LOINC artifact.
+  Point the mode at a SNOMED edition and the 19 meet the edition wall above
+  (#344).
+- **14 `langcodes` cases send `system` on `CodeSystem/$validate-code`.** Every
+  vendored version declares that operation's inputs as `url`, `codeSystem`,
+  `code`, `version`, `display`, `coding`, `codeableConcept`, `date`,
+  `abstract`, and `displayLanguage`; R5 and R6 declare `system` only as an
+  output. So each answers 400 before the behaviour the case is about is
+  reached, the same adjudication as #349.
+- **12 `langcodes` `ValueSet/$validate-code` cases differ on the answer's
+  parameters.** The server states `version`, the IANA registry's `File-Date`,
+  which R5 and R6 declare as an output of `$validate-code`; the expected files
+  carry no `version` and do not mark it `$optional$`, while the same suite's
+  LOINC cases do. Their composed displays also differ (`English (Latin, United
+  States)` here against `English (Script=Latin, Region=United States)`), and
+  no specification prescribes a display for a composed tag. Both spellings are
+  tx.fhir.org's own and stay unadopted.
+- **5 `langcodes` `$expand` cases** want the tag families the registry makes
+  finite enumerated (#420).
+- **2 LOINC cases want a DISCOURAGED concept to be inactive.**
+  `loinc-validate-filter-status-good` and `loinc-validate-discouraged-code`
+  expect `inactive = true` and `status = DISCOURAGED`. The FHIR LOINC page
+  says "Codes with Property STATUS = DEPRECATED are considered inactive for
+  use in ValueSet.compose.inactive"
+  (<https://hl7.org/fhir/R4B/loinc.html>, the same sentence on
+  <https://terminology.hl7.org/en/LOINC.html> where R5 and R6 redirect), and
+  neither page mentions DISCOURAGED at all. DEPRECATED alone is inactive here,
+  so both stay unpassed.
+- **5 cases send an `$expand` limit no `OperationDefinition` declares**: four
+  send `_limit` (#305) and `loinc-expand-all` sends the unprefixed `limit`
+  (#349). Both refusals stand.
+- **24 cases are the `bugs` suite** and 8 are the `UCUM` suite, the reference
+  server's own regression corpora. Twelve reach for SNOMED, CPT, or NDC, which
+  this run does not serve. Six ask ISO 3166 for a table this server does not
+  hold: `country-codes` expects 789 codes against 302 here, and `3166-a`
+  expects the version `2018` against `48`. The rest differ on the designations
+  and the outputs `$lookup` carries, and on message texts. #421 triages them.
+- **The remaining LOINC cases** are the subset this project chases, carried
+  from #13 and #245: the filters `$expand` still refuses, the `$lookup`
+  designation shapes, and the `$validate-code` message texts.
+
+Its 12 `langcodes` `$subsumes` cases pass from #348 on: the
+`urn:ietf:bcp:47` provider reads each tag as the extended language range of
+the same spelling and matches it under RFC 4647 §3.3.2, whose own example has
+"de-\*-DE" and "its synonym `de-DE`" matching `de-Latn-DE` while `de-x-DE`
+fails on the singleton. A grandfathered tag is one opaque subtag, because RFC
+5646 §2.2.8 says such a tag "in its entirety, represents a language or
+collection of languages", so `zh` does not subsume `zh-min-nan`.
+
 ## Known failures that cut across every mode
 
 - **`$subsumes` reaches the server from validator 6.10.4 on.** 6.10.3 threw
   `Unknown Operation subsumes` before it connected, so the suite's 98
   `$subsumes` cases across four modes were scored against a request nobody
-  sent. 6.10.4 issues the operation, and 50 of the 98 pass: 24 of the 27
-  `general` cases on each surface, 12 of 13 in `mimetypes`, 14 of 28 in
-  `tx.fhir.org`, none of the 30 in `snomed`. Of the 48 that stay open, 30 are
-  the `snomed` edition wall above, 12 are BCP 47 tag subsumption (#348), and 6
-  are the `issue.code` split below. #346.
+  sent. 6.10.4 issues the operation, and 62 of the 98 pass: 24 of the 27
+  `general` cases on each surface, 12 of 13 in `mimetypes`, 26 of 28 in
+  `tx.fhir.org`, none of the 30 in `snomed`. Of the 36 that stay open, 30 are
+  the `snomed` edition wall above and 6 are the `issue.code` split below.
+  #346.
 - **An unknown code answers `not-found`, and the suite asks two operations for
   two different codes.** 11 cases fail on `OperationOutcome.issue.code` alone,
   each already carrying the `tx-issue-type` coding `invalid-code` the case

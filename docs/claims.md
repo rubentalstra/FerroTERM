@@ -201,7 +201,7 @@ claim, not a test that merely touches the area.
 | The `general` mode runs once per served version on every pull request and push to `main` | `.github/workflows/ci.yml` job `tx-ecosystem` |
 | CI fails when a listed case stops passing | `scripts/checks/tx-ecosystem.sh` compares against the list |
 | Passing a case is not an HL7 certification | Correct as stated: HL7 issues no such certification |
-| "The suite's other modes (ICD-11, LOINC) ... their lists live beside the general ones" | Partly. `passing-icd-11.txt` holds 44 cases and `passing-tx.fhir.org.txt` 43, but `passing-snomed.txt` and `passing-sct-ecl.txt` are empty files. See [E1](#e1) |
+| "The suite's other modes (ICD-11, LOINC) ... their lists live beside the general ones" | Partly. `passing-icd-11.txt` holds 44 cases and `passing-tx.fhir.org.txt` 55, but `passing-snomed.txt` and `passing-sct-ecl.txt` are empty files. See [E1](#e1) |
 
 ### Code systems served
 
@@ -436,7 +436,7 @@ disagrees with the badges rendered from the same lists by
 live beside the general ones"** (`website/book/src/evaluate/conformance.md`).
 Two of the four mode lists are empty files:
 `conformance/tx-ecosystem/passing-snomed.txt` and `passing-sct-ecl.txt` hold no
-cases. `passing-icd-11.txt` (44) and `passing-tx.fhir.org.txt` (43) do.
+cases. `passing-icd-11.txt` (44) and `passing-tx.fhir.org.txt` (55) do.
 
 ### Licence
 
