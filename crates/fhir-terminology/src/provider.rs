@@ -725,6 +725,15 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
         None
     }
 
+    /// The built index this version was read from, when the server read one.
+    ///
+    /// A system posted as a `CodeSystem` resource and a registry the binary
+    /// carries answer `None`, so the capability statement declares nothing for
+    /// them rather than an invented artifact.
+    fn artifact(&self) -> Option<&crate::artifact::Source> {
+        None
+    }
+
     /// The system's standing as a resource; active and unremarkable unless the
     /// system states otherwise.
     fn standing(&self) -> Standing {

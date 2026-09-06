@@ -25,6 +25,7 @@ use designation_index::index::{Query, TextIndex};
 use roaring::RoaringBitmap;
 use serde::Deserialize;
 
+use crate::artifact::Source;
 use crate::compose::{Compose, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
@@ -135,6 +136,8 @@ pub struct RxNormProvider {
     base_language: String,
     /// The concepts per `(property name, value)` for `TTY`, `SAB`, and `STY`.
     indexed: BTreeMap<(String, String), RoaringBitmap>,
+    /// The artifact the version was read from.
+    source: Source,
 }
 
 impl std::fmt::Debug for RxNormProvider {
@@ -258,6 +261,7 @@ impl RxNormProvider {
             manifest.semantic_types,
             manifest.languages,
         );
+        let source = Source::new(dir, &manifest.version);
         Ok(Self {
             identity: Identity {
                 url: SYSTEM.to_owned(),
@@ -281,6 +285,7 @@ impl RxNormProvider {
                 manifest.language
             },
             indexed,
+            source,
         })
     }
 
@@ -346,6 +351,10 @@ impl CodeSystemProvider for RxNormProvider {
     /// display property").
     fn language(&self) -> Option<&str> {
         Some(&self.base_language)
+    }
+
+    fn artifact(&self) -> Option<&Source> {
+        Some(&self.source)
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
