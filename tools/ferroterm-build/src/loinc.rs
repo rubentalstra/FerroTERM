@@ -32,6 +32,11 @@ use crate::pipeline::{HIERARCHY_FILE, MANIFEST_FILE, MANIFEST_VERSION, STORE_FIL
 /// The system URI.
 pub const SYSTEM: &str = "http://loinc.org";
 
+/// The language of the release's own tables: LOINC publishes `LoincTableCore`
+/// in English and its translations as linguistic variants
+/// (<https://loinc.org/international/>).
+pub const BASE_LANGUAGE: &str = "en";
+
 /// The designation uses, by ordinal: the `DESIGNATION_USES` vocabulary.
 pub const DESIGNATION_USES: [&str; 5] = [
     "LONG_COMMON_NAME",
@@ -461,9 +466,9 @@ fn place_term_designations(
     variants: &[variant::Variant],
 ) {
     designations.start();
-    designations.place(ordinal, &term.long_common_name, "en", 0);
-    designations.place(ordinal, &term.short_name, "en", 1);
-    designations.place(ordinal, &term.consumer_name, "en", 2);
+    designations.place(ordinal, &term.long_common_name, BASE_LANGUAGE, 0);
+    designations.place(ordinal, &term.short_name, BASE_LANGUAGE, 1);
+    designations.place(ordinal, &term.consumer_name, BASE_LANGUAGE, 2);
     for variant in variants {
         let Some(translation) = variant.terms.get(&term.code) else {
             continue;
@@ -559,9 +564,9 @@ fn write_parts(
         designations.start();
         // NOTE: the FHIR LOINC page names no display for a part; the reference
         // servers show `PartName`, and `PartDisplayName` follows as a synonym.
-        designations.place(ordinal, &part.name, "en", 3);
+        designations.place(ordinal, &part.name, BASE_LANGUAGE, 3);
         if !part.display_name.is_empty() && part.display_name != part.name {
-            designations.place(ordinal, &part.display_name, "en", 3);
+            designations.place(ordinal, &part.display_name, BASE_LANGUAGE, 3);
         }
         builder.properties(
             ordinal,
@@ -598,7 +603,7 @@ fn write_class_parts(
             && let Some(&ordinal) = numbered.ordinals.get(&edge.code.to_ascii_uppercase())
         {
             designations.start();
-            designations.place(ordinal, &edge.text, "en", 3);
+            designations.place(ordinal, &edge.text, BASE_LANGUAGE, 3);
             builder.properties(
                 ordinal,
                 keys.key(COPYRIGHT_KEY)?,
@@ -627,7 +632,7 @@ fn write_answer_lists(
             continue;
         };
         designations.start();
-        designations.place(ordinal, &list.name, "en", 3);
+        designations.place(ordinal, &list.name, BASE_LANGUAGE, 3);
         let values: Vec<PropertyValue> = list
             .answers
             .iter()
@@ -645,7 +650,7 @@ fn write_answer_lists(
                 continue;
             };
             designations.start();
-            designations.place(answer_ordinal, &answer.display, "en", 3);
+            designations.place(answer_ordinal, &answer.display, BASE_LANGUAGE, 3);
         }
     }
     Ok(())
@@ -690,7 +695,7 @@ fn write_manifest(
     counts: &Counts,
 ) -> Result<(), Error> {
     let mut languages: Vec<String> = variants.iter().map(|v| v.language.clone()).collect();
-    languages.push(String::from("en"));
+    languages.push(String::from(BASE_LANGUAGE));
     languages.sort();
     languages.dedup();
     let manifest = json!({
@@ -698,6 +703,7 @@ fn write_manifest(
         "system": SYSTEM,
         "edition": SYSTEM,
         "version": version,
+        "language": BASE_LANGUAGE,
         "store": STORE_FILE,
         "storeLayout": tables::LAYOUT_VERSION,
         "hierarchy": HIERARCHY_FILE,

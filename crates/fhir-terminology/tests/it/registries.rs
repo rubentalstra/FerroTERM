@@ -697,3 +697,42 @@ fn handle_unclosed_expansion_refuses_an_unclosed_expansion_only_when_it_is_false
     assert!(!outcome.unclosed);
     assert_eq!(outcome.total, 1);
 }
+/// A media type and a language tag are the same text in every language, so
+/// neither system states one (RFC 6838, RFC 5646 §3.1.5) and its display
+/// answers a request in any.
+#[test]
+fn a_registry_with_no_language_of_its_own_answers_every_display_language() {
+    use fhir_terminology::operations::validate_code::{ValidateCodeInput, validate_code};
+
+    let bcp13 = bcp13::Bcp13Provider::new();
+    let bcp47 = Bcp47Provider::new();
+    assert_eq!(bcp13.language(), None);
+    assert_eq!(bcp47.language(), None);
+    let tag = bcp47.locate("nl").expect("reads").expect("valid");
+    let dutch = bcp47
+        .display(tag.concept, None)
+        .expect("reads")
+        .expect("a display");
+    let registry = registry();
+    let ask = |url: &str, code: &str, display: &str| {
+        validate_code(
+            &registry,
+            &Invocation::Type,
+            &ValidateCodeInput {
+                url: Some(url.to_owned()),
+                code: Some(code.to_owned()),
+                display: Some(display.to_owned()),
+                display_language: Some(String::from("fr")),
+                ..ValidateCodeInput::default()
+            },
+        )
+        .expect("validates")
+    };
+
+    let media = ask(bcp13::URL, "text/plain", "text/plain");
+    assert!(media.result, "{media:?}");
+    assert!(media.issues.is_empty(), "{media:?}");
+    let language = ask(bcp47::URL, "nl", &dutch);
+    assert!(language.result, "{language:?}");
+    assert!(language.issues.is_empty(), "{language:?}");
+}

@@ -364,6 +364,9 @@ impl Bcp47Provider {
                 // tag, and this provider parses it, so the grammar is both
                 // defined and supported.
                 compositional: Compositional::Supported,
+                // NOTE: the registry descriptions this system displays are not
+                // "guaranteed to be in any particular language" (RFC 5646
+                // §3.1.5), so it has no language to state.
                 languages: Vec::new(),
                 properties: vec![
                     code_property("language", "The primary language subtag"),

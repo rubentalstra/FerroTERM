@@ -241,6 +241,9 @@ impl Bcp13Provider {
                 // with parameters, and this provider parses it, so the grammar
                 // is both defined and supported.
                 compositional: Compositional::Supported,
+                // NOTE: a media type is a protocol identifier that RFC 6838
+                // registers under one spelling and never translates, and this
+                // system's display is that spelling, so it states no language.
                 languages: Vec::new(),
                 properties: vec![
                     PropertyDefinition {

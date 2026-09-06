@@ -42,6 +42,10 @@ pub const MANIFEST_VERSION: u32 = 2;
 /// The properties with an inverted index, which are also the FHIR filters
 /// beside the relationships.
 const INDEXED: [&str; 3] = ["TTY", "SAB", "STY"];
+/// The language of an artifact whose manifest states none: the `RXNORM`
+/// atoms a release names its concepts by are English
+/// (<https://www.nlm.nih.gov/research/umls/rxnorm/docs/techdoc.html>).
+const DEFAULT_LANGUAGE: &str = "en";
 
 /// A failure to open an artifact as `RxNorm`.
 #[derive(Debug, thiserror::Error)]
@@ -101,6 +105,10 @@ struct Manifest {
     atoms: String,
     #[serde(default, rename = "semanticTypes")]
     semantic_types: bool,
+    /// The language the release's own atoms are in; an artifact built before
+    /// the build wrote it has none.
+    #[serde(default)]
+    language: String,
     #[serde(default)]
     languages: Vec<String>,
 }
@@ -121,6 +129,8 @@ pub struct RxNormProvider {
     keys: BTreeMap<u32, String>,
     /// Designation use ordinal to name (the term types).
     uses: BTreeMap<u32, String>,
+    /// The language the release's own atoms are in.
+    base_language: String,
     /// The concepts per `(property name, value)` for `TTY`, `SAB`, and `STY`.
     indexed: BTreeMap<(String, String), RoaringBitmap>,
 }
@@ -263,6 +273,11 @@ impl RxNormProvider {
             codes,
             keys,
             uses,
+            base_language: if manifest.language.is_empty() {
+                String::from(DEFAULT_LANGUAGE)
+            } else {
+                manifest.language
+            },
             indexed,
         })
     }
@@ -319,6 +334,16 @@ impl CodeSystemProvider for RxNormProvider {
 
     fn declaration(&self) -> &Declaration {
         &self.declaration
+    }
+
+    /// The language of the displays this provider returns, so a
+    /// `displayLanguage` the release carries no atom for is answered as a
+    /// language the system has no display in
+    /// (`OperationDefinition/CodeSystem-validate-code`: `displayLanguage`
+    /// "Specifies the language to be used for description when validating the
+    /// display property").
+    fn language(&self) -> Option<&str> {
+        Some(&self.base_language)
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {

@@ -273,7 +273,7 @@ pub struct SnomedProvider {
     declaration: Declaration,
     keys: Keys,
     edition: String,
-    default_language: String,
+    base_language: String,
     concepts: u32,
 }
 
@@ -282,7 +282,7 @@ impl std::fmt::Debug for SnomedProvider {
         f.debug_struct("SnomedProvider")
             .field("version", &self.identity.version)
             .field("concepts", &self.concepts)
-            .field("default_language", &self.default_language)
+            .field("base_language", &self.base_language)
             .finish_non_exhaustive()
     }
 }
@@ -302,7 +302,7 @@ fn primary_subtag(language: &str) -> String {
 
 impl SnomedProvider {
     /// Opens the artifact directory `dir`; `default_language` is the BCP 47
-    /// tag used when a request names none.
+    /// tag used when a request names none, when the edition carries it.
     ///
     /// # Errors
     ///
@@ -333,6 +333,7 @@ impl SnomedProvider {
             return Err(OpenError::ConceptCount(concepts.clone()));
         };
         let keys = Self::resolve_keys(&store)?;
+        let base_language = Self::base_language(default_language, &manifest.languages);
         let mut properties: Vec<PropertyDefinition> = FHIR_PROPERTIES
             .iter()
             .map(|(code, kind)| PropertyDefinition {
@@ -394,7 +395,7 @@ impl SnomedProvider {
             },
             keys,
             edition: manifest.edition,
-            default_language: primary_subtag(default_language),
+            base_language,
             concepts,
         })
     }
@@ -592,6 +593,23 @@ impl SnomedProvider {
         }
     }
 
+    /// The language this edition's own displays are in: the configured
+    /// `default_language` when the edition carries descriptions in it, else
+    /// the first language the edition declares.
+    ///
+    /// No FHIR/SNOMED spec governs this: our own design. An edition that
+    /// carries no description in the configured tag would otherwise answer a
+    /// display in a language it never states.
+    fn base_language(default_language: &str, declared: &[String]) -> String {
+        let wanted = primary_subtag(default_language);
+        if declared.is_empty() || declared.iter().any(|l| primary_subtag(l) == wanted) {
+            return wanted;
+        }
+        declared
+            .first()
+            .map_or(wanted, |first| primary_subtag(first))
+    }
+
     /// The preferred synonym of `concept` in `language`, by the first language
     /// reference set (in store order) whose preferred synonym is in that
     /// language.
@@ -606,16 +624,16 @@ impl SnomedProvider {
             .map_err(storage)
     }
 
-    /// The display for `language` (or the default), by the SNOMED rule: the
-    /// preferred term of the language reference set; then, our own fallback
+    /// The display for `language` (or the base language), by the SNOMED rule:
+    /// the preferred term of the language reference set; then, our own fallback
     /// order (no spec governs it): an active synonym in the language, the
-    /// preferred term in the default language, the FSN, any designation.
+    /// preferred term in the base language, the FSN, any designation.
     fn choose_display(
         &self,
         ordinal: Ordinal,
         language: Option<&str>,
     ) -> Result<Option<String>, ProviderError> {
-        let wanted = language.map_or_else(|| self.default_language.clone(), primary_subtag);
+        let wanted = language.map_or_else(|| self.base_language.clone(), primary_subtag);
         if let Some(term) = self.preferred_in(ordinal, &wanted)? {
             return Ok(Some(term));
         }
@@ -625,8 +643,8 @@ impl SnomedProvider {
         }) {
             return Ok(Some(synonym.term.clone()));
         }
-        if wanted != self.default_language
-            && let Some(term) = self.preferred_in(ordinal, &self.default_language)?
+        if wanted != self.base_language
+            && let Some(term) = self.preferred_in(ordinal, &self.base_language)?
         {
             return Ok(Some(term));
         }
@@ -831,6 +849,16 @@ impl CodeSystemProvider for SnomedProvider {
 
     fn unserved_properties(&self) -> &[&'static str] {
         &UNSERVED_PROPERTIES
+    }
+
+    /// The language of the displays this provider returns, so a
+    /// `displayLanguage` the edition carries no description for is answered as
+    /// a language the system has no display in
+    /// (`OperationDefinition/CodeSystem-validate-code`: `displayLanguage`
+    /// "Specifies the language to be used for description when validating the
+    /// display property").
+    fn language(&self) -> Option<&str> {
+        Some(&self.base_language)
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {

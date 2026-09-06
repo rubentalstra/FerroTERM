@@ -390,3 +390,63 @@ fn a_unit_selection_is_unclosed() {
     let provider = UcumProvider::new();
     assert!(provider.unclosed(&[filter("canonical", FilterOperator::Equal, "g")]));
 }
+// NOTE: `displayLanguage` "Specifies the language to be used for description
+// when validating the display property"
+// (<https://hl7.org/fhir/R4B/codesystem-operation-validate-code.html>).
+#[test]
+fn a_unit_name_in_english_does_not_satisfy_a_request_for_another_language() {
+    use fhir_terminology::operations::lookup::{LookupInput, lookup};
+    use fhir_terminology::operations::validate_code::{ValidateCodeInput, validate_code};
+
+    let provider = UcumProvider::new();
+    assert_eq!(provider.language(), Some("en"));
+    let mut registry = Registry::new();
+    registry.register(Arc::new(provider)).expect("registers");
+    let ask = |display: &str| {
+        validate_code(
+            &registry,
+            &Invocation::Type,
+            &ValidateCodeInput {
+                url: Some(URL.to_owned()),
+                code: Some(String::from("mg")),
+                display: Some(display.to_owned()),
+                display_language: Some(String::from("fr")),
+                ..ValidateCodeInput::default()
+            },
+        )
+        .expect("validates")
+    };
+
+    // The English unit name stands and the answer says French has none; it is
+    // no longer refused as the wrong display for a French request.
+    let name = ask("milligram");
+    assert!(name.result, "{name:?}");
+    let issue = name.issues.first().expect("an issue");
+    assert_eq!(issue.severity, "information");
+    assert_eq!(issue.kind, "invalid-display");
+    assert_eq!(
+        issue.message_id(),
+        "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK"
+    );
+
+    // The lookup states the language it answered in, not the one it was asked
+    // for, so the English name is never labelled French.
+    let outcome = lookup(
+        &registry,
+        &Invocation::Type,
+        &LookupInput {
+            system: Some(URL.to_owned()),
+            code: Some(String::from("mg")),
+            display_language: Some(String::from("fr")),
+            ..LookupInput::default()
+        },
+    )
+    .expect("looks up");
+    assert_eq!(outcome.display, "mg");
+    let designation = outcome
+        .designations
+        .iter()
+        .find(|d| d.value == "mg")
+        .expect("the display as a designation");
+    assert_eq!(designation.language.as_deref(), Some("en"));
+}
