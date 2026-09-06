@@ -410,6 +410,10 @@ jobs:
           cache-key: ui-e2e
       - name: Add the WebAssembly target
         run: rustup target add wasm32-unknown-unknown
+      # The image base is distroless/static, so the binaries the journeys drive
+      # are linked against musl, as release-build.yml links the ones it ships.
+      - name: Install musl tooling
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
       - uses: taiki-e/install-action@0758d235715de2f3551eacc980d9ae8fce9342c3 # v2.87.3
         with:
           tool: trunk@0.21.14, cargo-nextest

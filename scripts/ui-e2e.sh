@@ -116,21 +116,36 @@ if [[ -z "$base_url" ]]; then
   # says so at the call site too.
   (cd app/ferroterm-viewer && trunk build --release --locked)
 
+  # The image base is distroless/static, which carries no dynamic loader, so a
+  # glibc-linked binary copies in and then fails `exec` with "no such file or
+  # directory". release-image.yml maps the image architecture to a musl triple
+  # for the same reason; this mirrors it rather than inventing a second answer.
+  case "$arch" in
+    amd64) target=x86_64-unknown-linux-musl ;;
+    arm64) target=aarch64-unknown-linux-musl ;;
+    *) echo "ui-e2e: no musl target for $arch" >&2; exit 1 ;;
+  esac
+  if ! rustup target list --installed | grep -qx "$target"; then
+    echo "== adding the $target target"
+    rustup target add "$target"
+  fi
+
   echo "== the server, with the bundle inside it"
   # Naming the bundle directory is what makes a missing bundle fail the build:
   # the server's build script refuses when the variable names a directory that
   # does not read, and only warns when it falls back to the default. Without it
   # the journeys would drive a viewer-less binary and nothing would say so.
   FERROTERM_UI_BUNDLE="$root/app/ferroterm-viewer/dist" \
-    cargo build --release --locked -p ferroterm-server --features ui
-  cargo build --release --locked -p ferroterm-build
+    cargo build --release --locked --target "$target" -p ferroterm-server --features ui
+  cargo build --release --locked --target "$target" -p ferroterm-build
 
   echo "== the image, staged the way the release lane stages it"
   # .dockerignore admits nothing but dist/, so the repository root is a cheap
   # build context even with a populated target/.
   rm -rf "dist/linux/$arch"
   mkdir -p "dist/linux/$arch"
-  cp target/release/ferroterm target/release/ferroterm-build "dist/linux/$arch/"
+  cp "target/$target/release/ferroterm" "target/$target/release/ferroterm-build" \
+    "dist/linux/$arch/"
   docker build --file docker/Dockerfile --tag "$SERVER_IMAGE" \
     --build-arg "TARGETOS=linux" --build-arg "TARGETARCH=$arch" .
 
