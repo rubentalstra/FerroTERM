@@ -52,7 +52,9 @@ hand before a release and their lists are refreshed in the same change.
   written specifically for tx.fhir.org - internal QA. There is no need for
   other servers to pass these tests", so the LOINC subset is the part this
   project chases; 61 of its cases call a `ValueSet/$compare` operation no
-  version's `OperationDefinition` declares, and answer 405.
+  version's `OperationDefinition` declares, and answer 405. Four more send
+  `_limit` on `$expand`, a name no `OperationDefinition` declares and the
+  suite never documents, so they answer 400 and stay unpassed (#305).
 - **`mimetypes`** needs nothing: BCP 13 is served from the vendored IANA media
   types registry.
 - **`omop`** needs the OMOP standardized vocabularies, which this server does
