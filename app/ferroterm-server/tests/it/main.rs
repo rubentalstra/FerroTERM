@@ -30,5 +30,6 @@ mod scope;
 mod shutdown;
 mod telemetry;
 mod translate;
+mod ui;
 mod value_set;
 mod xml;
