@@ -20,6 +20,7 @@ mod emit;
 mod operations;
 mod package;
 mod roots;
+mod serialize;
 mod snapshot;
 mod xml;
 

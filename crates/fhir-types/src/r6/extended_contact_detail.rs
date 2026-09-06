@@ -265,9 +265,32 @@ impl super::super::codec::Json for ExtendedContactDetail {
 
 impl serde::Serialize for ExtendedContactDetail {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.address {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "address", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.name.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "name", &self.name)?;
+        }
+        if let Some(item) = &self.organization {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "organization", item)?;
+        }
+        if let Some(item) = &self.period {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "period", item)?;
+        }
+        if let Some(item) = &self.purpose {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "purpose", item)?;
+        }
+        if !self.telecom.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "telecom", &self.telecom)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

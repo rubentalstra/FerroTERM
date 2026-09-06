@@ -273,9 +273,41 @@ impl super::super::codec::Json for HumanName {
 
 impl serde::Serialize for HumanName {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.family {
+            super::super::codec::element_entry(&mut map, "_family", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_given", &self.given)?;
+        super::super::codec::element_list_entry(&mut map, "_prefix", &self.prefix)?;
+        super::super::codec::element_list_entry(&mut map, "_suffix", &self.suffix)?;
+        if let Some(item) = &self.text {
+            super::super::codec::element_entry(&mut map, "_text", item)?;
+        }
+        if let Some(item) = &self.r#use {
+            super::super::codec::element_entry(&mut map, "_use", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(item) = &self.family {
+            super::super::codec::value_entry(&mut map, "family", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "given", &self.given)?;
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.period {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "period", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "prefix", &self.prefix)?;
+        super::super::codec::value_list_entry(&mut map, "suffix", &self.suffix)?;
+        if let Some(item) = &self.text {
+            super::super::codec::value_entry(&mut map, "text", item)?;
+        }
+        if let Some(item) = &self.r#use {
+            super::super::codec::value_entry(&mut map, "use", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

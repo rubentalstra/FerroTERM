@@ -193,9 +193,30 @@ impl super::super::codec::Json for DosageSafety {
 
 impl serde::Serialize for DosageSafety {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.if_exceeded {
+            super::super::codec::element_entry(&mut map, "_ifExceeded", item)?;
+        }
+        if !self.dose_limit.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "doseLimit", &self.dose_limit)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.if_exceeded {
+            super::super::codec::value_entry(&mut map, "ifExceeded", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -402,9 +423,39 @@ impl super::super::codec::Json for DosageSafetyDoseLimit {
 
 impl serde::Serialize for DosageSafetyDoseLimit {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_scope", &self.scope)?;
+        if let Some(item) = &self.text {
+            super::super::codec::element_entry(&mut map, "_text", item)?;
+        }
+        if let DosageSafetyDoseLimitValue::Integer(inner) = &self.value {
+            super::super::codec::element_entry(&mut map, "_valueInteger", inner)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.period {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "period", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "scope", &self.scope)?;
+        if let Some(item) = &self.text {
+            super::super::codec::value_entry(&mut map, "text", item)?;
+        }
+        match &self.value {
+            DosageSafetyDoseLimitValue::Expression(inner) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueExpression", inner)?;
+            }
+            DosageSafetyDoseLimitValue::Integer(inner) => {
+                super::super::codec::value_entry(&mut map, "valueInteger", inner)?;
+            }
+            DosageSafetyDoseLimitValue::Quantity(inner) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueQuantity", inner)?;
+            }
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

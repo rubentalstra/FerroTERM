@@ -50,12 +50,44 @@ macro_rules! operations {
             use crate::state::AppState;
             use crate::wire::{Wire, without_format};
 
-            /// What one operation produced: the JSON object of its response resource.
+            /// What one operation produced: this version's `Parameters`, or the
+            /// `ValueSet` an expansion answers with.
             ///
             /// Every terminology operation answers `200` with a resource, so an
             /// invocation over HTTP and one inside a `Bundle` entry differ only in how
-            /// this object is delivered.
-            type Handled = Result<fhir_types::codec::Object, Failure>;
+            /// the resource is delivered: the response writes it, the entry holds it.
+            pub(super) enum Answer {
+                /// The output values of an operation.
+                Parameters(Box<Parameters>),
+                /// The expansion of `$expand`.
+                ValueSet(Box<fhir_types::$fhir::value_set::ValueSet>),
+            }
+
+            impl Answer {
+                /// The `200` response in `wire`, or the failure that stopped it.
+                pub(super) fn respond(&self, wire: Wire) -> Response {
+                    match self {
+                        Self::Parameters(parameters) => {
+                            parameters::respond(parameters.as_ref(), wire)
+                        }
+                        Self::ValueSet(value_set) => {
+                            parameters::respond_resource(value_set.as_ref(), wire)
+                        }
+                    }
+                    .unwrap_or_else(|failure| failure.respond(wire))
+                }
+
+                /// The resource itself, for a `Bundle` entry.
+                pub(super) fn resource(self) -> Resource {
+                    match self {
+                        Self::Parameters(parameters) => Resource::Parameters(parameters),
+                        Self::ValueSet(value_set) => Resource::ValueSet(value_set),
+                    }
+                }
+            }
+
+            /// What one operation produced, or the failure it answered with.
+            type Handled = Result<Answer, Failure>;
 
             fn instance(state: &AppState, id: &str) -> Result<Invocation, Failure> {
                 state.instance(id).map(Invocation::Instance).ok_or_else(|| {
@@ -107,7 +139,9 @@ macro_rules! operations {
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let outcome =
                     lookup::lookup(scope.registry(), invocation, &map::lookup_input(&request))?;
-                parameters::encode(&map::lookup_response(outcome).to_parameters())
+                Ok(Answer::Parameters(Box::new(
+                    map::lookup_response(outcome).to_parameters(),
+                )))
             }
 
             fn run_validate_code(
@@ -122,7 +156,9 @@ macro_rules! operations {
                     invocation,
                     &map::validate_code_input(&request),
                 )?;
-                parameters::encode(&map::validate_code_response(outcome).to_parameters())
+                Ok(Answer::Parameters(Box::new(
+                    map::validate_code_response(outcome).to_parameters(),
+                )))
             }
 
             fn run_subsumes(
@@ -137,18 +173,24 @@ macro_rules! operations {
                     invocation,
                     &map::subsumes_input(&request),
                 )?;
-                parameters::encode(&map::subsumes_response(outcome).to_parameters())
+                Ok(Answer::Parameters(Box::new(
+                    map::subsumes_response(outcome).to_parameters(),
+                )))
             }
 
             fn run_expand(scope: &Scope, parameters: &Parameters) -> Handled {
                 let request = ValueSetExpandRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let outcome = expand::expand(&scope.sources(), &map::expand_input(&request))?;
-                parameters::encode(&render::$fhir::expansion(&outcome))
+                Ok(Answer::ValueSet(Box::new(render::$fhir::expansion(
+                    &outcome,
+                ))))
             }
 
             fn run_value_set_validate_code(scope: &Scope, parameters: &Parameters) -> Handled {
-                parameters::encode(&value_set_validation(scope, parameters)?)
+                Ok(Answer::Parameters(Box::new(value_set_validation(
+                    scope, parameters,
+                )?)))
             }
 
             /// One `ValueSet/$validate-code` as this version's `Parameters`.
@@ -192,10 +234,10 @@ macro_rules! operations {
                     .into_iter()
                     .map(|validation| answer(scope, &shared, validation))
                     .collect();
-                parameters::encode(&Parameters {
+                Ok(Answer::Parameters(Box::new(Parameters {
                     parameter: answered,
                     ..Default::default()
-                })
+                })))
             }
 
             /// One validation of a batch, answered in its own slot.
@@ -302,7 +344,9 @@ macro_rules! operations {
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let translation =
                     translate::translate(&scope.sources(), &map::translate_input(&request))?;
-                parameters::encode(&map::translation_parameters(&translation))
+                Ok(Answer::Parameters(Box::new(map::translation_parameters(
+                    &translation,
+                ))))
             }
 
             /// Which operation a `Bundle` entry's URL names.
@@ -415,9 +459,7 @@ macro_rules! operations {
             /// The response of a handled invocation, a failure rendered in `wire`.
             fn finish(handled: Handled, wire: Wire) -> Response {
                 match handled {
-                    Ok(object) => {
-                        wire.response(StatusCode::OK, &object, &fhir_types::$fhir::schema::SCHEMAS)
-                    }
+                    Ok(answer) => answer.respond(wire),
                     Err(failure) => failure.respond(wire),
                 }
             }

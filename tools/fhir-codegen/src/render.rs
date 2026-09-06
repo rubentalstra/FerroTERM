@@ -283,7 +283,12 @@ fn render_variant(
     writeln!(out, "    {}({inner}),", variant.name)
 }
 
-fn render_target(model: &VersionModule, module: &str, target: &Target, boxed: bool) -> String {
+pub(crate) fn render_target(
+    model: &VersionModule,
+    module: &str,
+    target: &Target,
+    boxed: bool,
+) -> String {
     let path = match target {
         Target::Inline(Scalar::Bool) => String::from("bool"),
         Target::Inline(Scalar::I32) => String::from("i32"),

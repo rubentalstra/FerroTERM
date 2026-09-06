@@ -346,9 +346,61 @@ impl super::super::codec::Json for SampledData {
 
 impl serde::Serialize for SampledData {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.code_map {
+            super::super::codec::element_entry(&mut map, "_codeMap", item)?;
+        }
+        if let Some(item) = &self.data {
+            super::super::codec::element_entry(&mut map, "_data", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_dimensions", &self.dimensions)?;
+        if let Some(item) = &self.factor {
+            super::super::codec::element_entry(&mut map, "_factor", item)?;
+        }
+        if let Some(item) = &self.interval {
+            super::super::codec::element_entry(&mut map, "_interval", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_intervalUnit", &self.interval_unit)?;
+        if let Some(item) = &self.lower_limit {
+            super::super::codec::element_entry(&mut map, "_lowerLimit", item)?;
+        }
+        if let Some(item) = &self.offsets {
+            super::super::codec::element_entry(&mut map, "_offsets", item)?;
+        }
+        if let Some(item) = &self.upper_limit {
+            super::super::codec::element_entry(&mut map, "_upperLimit", item)?;
+        }
+        if let Some(item) = &self.code_map {
+            super::super::codec::value_entry(&mut map, "codeMap", item)?;
+        }
+        if let Some(item) = &self.data {
+            super::super::codec::value_entry(&mut map, "data", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "dimensions", &self.dimensions)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(item) = &self.factor {
+            super::super::codec::value_entry(&mut map, "factor", item)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.interval {
+            super::super::codec::value_entry(&mut map, "interval", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "intervalUnit", &self.interval_unit)?;
+        if let Some(item) = &self.lower_limit {
+            super::super::codec::value_entry(&mut map, "lowerLimit", item)?;
+        }
+        if let Some(item) = &self.offsets {
+            super::super::codec::value_entry(&mut map, "offsets", item)?;
+        }
+        serde::ser::SerializeMap::serialize_entry(&mut map, "origin", &self.origin)?;
+        if let Some(item) = &self.upper_limit {
+            super::super::codec::value_entry(&mut map, "upperLimit", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

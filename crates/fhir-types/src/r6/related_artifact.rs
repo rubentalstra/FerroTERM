@@ -286,9 +286,52 @@ impl super::super::codec::Json for RelatedArtifact {
 
 impl serde::Serialize for RelatedArtifact {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.citation {
+            super::super::codec::element_entry(&mut map, "_citation", item)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::element_entry(&mut map, "_display", item)?;
+        }
+        if let Some(item) = &self.label {
+            super::super::codec::element_entry(&mut map, "_label", item)?;
+        }
+        if let Some(item) = &self.resource {
+            super::super::codec::element_entry(&mut map, "_resource", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_type", &self.r#type)?;
+        if let Some(item) = &self.url {
+            super::super::codec::element_entry(&mut map, "_url", item)?;
+        }
+        if let Some(item) = &self.citation {
+            super::super::codec::value_entry(&mut map, "citation", item)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::value_entry(&mut map, "display", item)?;
+        }
+        if let Some(item) = &self.document {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "document", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.label {
+            super::super::codec::value_entry(&mut map, "label", item)?;
+        }
+        if let Some(item) = &self.resource {
+            super::super::codec::value_entry(&mut map, "resource", item)?;
+        }
+        if let Some(item) = &self.resource_reference {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "resourceReference", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "type", &self.r#type)?;
+        if let Some(item) = &self.url {
+            super::super::codec::value_entry(&mut map, "url", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

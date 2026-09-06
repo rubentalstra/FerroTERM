@@ -378,9 +378,51 @@ impl super::super::codec::Json for DataRequirement {
 
 impl serde::Serialize for DataRequirement {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.limit {
+            super::super::codec::element_entry(&mut map, "_limit", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_mustSupport", &self.must_support)?;
+        super::super::codec::element_list_entry(&mut map, "_profile", &self.profile)?;
+        super::super::codec::element_entry(&mut map, "_type", &self.r#type)?;
+        if !self.code_filter.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "codeFilter", &self.code_filter)?;
+        }
+        if !self.date_filter.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "dateFilter", &self.date_filter)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.limit {
+            super::super::codec::value_entry(&mut map, "limit", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "mustSupport", &self.must_support)?;
+        super::super::codec::value_list_entry(&mut map, "profile", &self.profile)?;
+        if !self.sort.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "sort", &self.sort)?;
+        }
+        match &self.subject {
+            Some(DataRequirementSubject::CodeableConcept(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "subjectCodeableConcept",
+                    inner,
+                )?;
+            }
+            Some(DataRequirementSubject::Reference(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "subjectReference", inner)?;
+            }
+            None => {}
+        }
+        super::super::codec::value_entry(&mut map, "type", &self.r#type)?;
+        if !self.value_filter.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "valueFilter", &self.value_filter)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -608,9 +650,35 @@ impl super::super::codec::Json for DataRequirementCodeFilter {
 
 impl serde::Serialize for DataRequirementCodeFilter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.path {
+            super::super::codec::element_entry(&mut map, "_path", item)?;
+        }
+        if let Some(item) = &self.search_param {
+            super::super::codec::element_entry(&mut map, "_searchParam", item)?;
+        }
+        if let Some(item) = &self.value_set {
+            super::super::codec::element_entry(&mut map, "_valueSet", item)?;
+        }
+        if !self.code.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "code", &self.code)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.path {
+            super::super::codec::value_entry(&mut map, "path", item)?;
+        }
+        if let Some(item) = &self.search_param {
+            super::super::codec::value_entry(&mut map, "searchParam", item)?;
+        }
+        if let Some(item) = &self.value_set {
+            super::super::codec::value_entry(&mut map, "valueSet", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -823,9 +891,41 @@ impl super::super::codec::Json for DataRequirementDateFilter {
 
 impl serde::Serialize for DataRequirementDateFilter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.path {
+            super::super::codec::element_entry(&mut map, "_path", item)?;
+        }
+        if let Some(item) = &self.search_param {
+            super::super::codec::element_entry(&mut map, "_searchParam", item)?;
+        }
+        if let Some(DataRequirementDateFilterValue::DateTime(inner)) = &self.value {
+            super::super::codec::element_entry(&mut map, "_valueDateTime", inner)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.path {
+            super::super::codec::value_entry(&mut map, "path", item)?;
+        }
+        if let Some(item) = &self.search_param {
+            super::super::codec::value_entry(&mut map, "searchParam", item)?;
+        }
+        match &self.value {
+            Some(DataRequirementDateFilterValue::DateTime(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
+            }
+            Some(DataRequirementDateFilterValue::Duration(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDuration", inner)?;
+            }
+            Some(DataRequirementDateFilterValue::Period(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valuePeriod", inner)?;
+            }
+            None => {}
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1089,9 +1189,18 @@ impl super::super::codec::Json for DataRequirementSort {
 
 impl serde::Serialize for DataRequirementSort {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_direction", &self.direction)?;
+        super::super::codec::element_entry(&mut map, "_path", &self.path)?;
+        super::super::codec::value_entry(&mut map, "direction", &self.direction)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        super::super::codec::value_entry(&mut map, "path", &self.path)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1422,9 +1531,47 @@ impl super::super::codec::Json for DataRequirementValueFilter {
 
 impl serde::Serialize for DataRequirementValueFilter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.comparator {
+            super::super::codec::element_entry(&mut map, "_comparator", item)?;
+        }
+        if let Some(item) = &self.path {
+            super::super::codec::element_entry(&mut map, "_path", item)?;
+        }
+        if let Some(item) = &self.search_param {
+            super::super::codec::element_entry(&mut map, "_searchParam", item)?;
+        }
+        if let Some(DataRequirementValueFilterValue::DateTime(inner)) = &self.value {
+            super::super::codec::element_entry(&mut map, "_valueDateTime", inner)?;
+        }
+        if let Some(item) = &self.comparator {
+            super::super::codec::value_entry(&mut map, "comparator", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.path {
+            super::super::codec::value_entry(&mut map, "path", item)?;
+        }
+        if let Some(item) = &self.search_param {
+            super::super::codec::value_entry(&mut map, "searchParam", item)?;
+        }
+        match &self.value {
+            Some(DataRequirementValueFilterValue::DateTime(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
+            }
+            Some(DataRequirementValueFilterValue::Duration(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDuration", inner)?;
+            }
+            Some(DataRequirementValueFilterValue::Period(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valuePeriod", inner)?;
+            }
+            None => {}
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

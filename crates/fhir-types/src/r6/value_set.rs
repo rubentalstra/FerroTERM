@@ -1149,9 +1149,192 @@ impl super::super::codec::Json for ValueSet {
 
 impl serde::Serialize for ValueSet {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.approval_date {
+            super::super::codec::element_entry(&mut map, "_approvalDate", item)?;
+        }
+        if let Some(item) = &self.copyright {
+            super::super::codec::element_entry(&mut map, "_copyright", item)?;
+        }
+        if let Some(item) = &self.copyright_label {
+            super::super::codec::element_entry(&mut map, "_copyrightLabel", item)?;
+        }
+        if let Some(item) = &self.date {
+            super::super::codec::element_entry(&mut map, "_date", item)?;
+        }
+        if let Some(item) = &self.description {
+            super::super::codec::element_entry(&mut map, "_description", item)?;
+        }
+        if let Some(item) = &self.experimental {
+            super::super::codec::element_entry(&mut map, "_experimental", item)?;
+        }
+        if let Some(item) = &self.immutable {
+            super::super::codec::element_entry(&mut map, "_immutable", item)?;
+        }
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::element_entry(&mut map, "_implicitRules", item)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::element_entry(&mut map, "_language", item)?;
+        }
+        if let Some(item) = &self.last_review_date {
+            super::super::codec::element_entry(&mut map, "_lastReviewDate", item)?;
+        }
+        if let Some(item) = &self.name {
+            super::super::codec::element_entry(&mut map, "_name", item)?;
+        }
+        if let Some(item) = &self.publisher {
+            super::super::codec::element_entry(&mut map, "_publisher", item)?;
+        }
+        if let Some(item) = &self.purpose {
+            super::super::codec::element_entry(&mut map, "_purpose", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_status", &self.status)?;
+        if let Some(item) = &self.title {
+            super::super::codec::element_entry(&mut map, "_title", item)?;
+        }
+        if let Some(item) = &self.url {
+            super::super::codec::element_entry(&mut map, "_url", item)?;
+        }
+        if let Some(item) = &self.version {
+            super::super::codec::element_entry(&mut map, "_version", item)?;
+        }
+        if let Some(ValueSetVersionAlgorithm::String(inner)) = &self.version_algorithm {
+            super::super::codec::element_entry(&mut map, "_versionAlgorithmString", inner)?;
+        }
+        if let Some(item) = &self.approval_date {
+            super::super::codec::value_entry(&mut map, "approvalDate", item)?;
+        }
+        if !self.author.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "author", &self.author)?;
+        }
+        if let Some(item) = &self.compose {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "compose", item)?;
+        }
+        if !self.contact.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "contact", &self.contact)?;
+        }
+        if !self.contained.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "contained", &self.contained)?;
+        }
+        if let Some(item) = &self.copyright {
+            super::super::codec::value_entry(&mut map, "copyright", item)?;
+        }
+        if let Some(item) = &self.copyright_label {
+            super::super::codec::value_entry(&mut map, "copyrightLabel", item)?;
+        }
+        if let Some(item) = &self.date {
+            super::super::codec::value_entry(&mut map, "date", item)?;
+        }
+        if let Some(item) = &self.description {
+            super::super::codec::value_entry(&mut map, "description", item)?;
+        }
+        if !self.editor.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "editor", &self.editor)?;
+        }
+        if let Some(item) = &self.effective_period {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "effectivePeriod", item)?;
+        }
+        if !self.endorser.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "endorser", &self.endorser)?;
+        }
+        if let Some(item) = &self.expansion {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "expansion", item)?;
+        }
+        if let Some(item) = &self.experimental {
+            super::super::codec::value_entry(&mut map, "experimental", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.identifier.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "identifier", &self.identifier)?;
+        }
+        if let Some(item) = &self.immutable {
+            super::super::codec::value_entry(&mut map, "immutable", item)?;
+        }
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::value_entry(&mut map, "implicitRules", item)?;
+        }
+        if !self.jurisdiction.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "jurisdiction",
+                &self.jurisdiction,
+            )?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::value_entry(&mut map, "language", item)?;
+        }
+        if let Some(item) = &self.last_review_date {
+            super::super::codec::value_entry(&mut map, "lastReviewDate", item)?;
+        }
+        if let Some(item) = &self.meta {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "meta", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.name {
+            super::super::codec::value_entry(&mut map, "name", item)?;
+        }
+        if let Some(item) = &self.publisher {
+            super::super::codec::value_entry(&mut map, "publisher", item)?;
+        }
+        if let Some(item) = &self.purpose {
+            super::super::codec::value_entry(&mut map, "purpose", item)?;
+        }
+        if !self.related_artifact.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "relatedArtifact",
+                &self.related_artifact,
+            )?;
+        }
+        serde::ser::SerializeMap::serialize_entry(&mut map, "resourceType", "ValueSet")?;
+        if !self.reviewer.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "reviewer", &self.reviewer)?;
+        }
+        super::super::codec::value_entry(&mut map, "status", &self.status)?;
+        if let Some(item) = &self.text {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "text", item)?;
+        }
+        if let Some(item) = &self.title {
+            super::super::codec::value_entry(&mut map, "title", item)?;
+        }
+        if !self.topic.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "topic", &self.topic)?;
+        }
+        if let Some(item) = &self.url {
+            super::super::codec::value_entry(&mut map, "url", item)?;
+        }
+        if !self.use_context.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "useContext", &self.use_context)?;
+        }
+        if let Some(item) = &self.version {
+            super::super::codec::value_entry(&mut map, "version", item)?;
+        }
+        match &self.version_algorithm {
+            Some(ValueSetVersionAlgorithm::Coding(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "versionAlgorithmCoding",
+                    inner,
+                )?;
+            }
+            Some(ValueSetVersionAlgorithm::String(inner)) => {
+                super::super::codec::value_entry(&mut map, "versionAlgorithmString", inner)?;
+            }
+            None => {}
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1455,9 +1638,41 @@ impl super::super::codec::Json for ValueSetCompose {
 
 impl serde::Serialize for ValueSetCompose {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.inactive {
+            super::super::codec::element_entry(&mut map, "_inactive", item)?;
+        }
+        if let Some(item) = &self.locked_date {
+            super::super::codec::element_entry(&mut map, "_lockedDate", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_property", &self.property)?;
+        if !self.exclude.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "exclude", &self.exclude)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.inactive {
+            super::super::codec::value_entry(&mut map, "inactive", item)?;
+        }
+        if !self.include.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "include", &self.include)?;
+        }
+        if let Some(item) = &self.locked_date {
+            super::super::codec::value_entry(&mut map, "lockedDate", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        super::super::codec::value_list_entry(&mut map, "property", &self.property)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1783,9 +1998,47 @@ impl super::super::codec::Json for ValueSetComposeInclude {
 
 impl serde::Serialize for ValueSetComposeInclude {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.copyright {
+            super::super::codec::element_entry(&mut map, "_copyright", item)?;
+        }
+        if let Some(item) = &self.system {
+            super::super::codec::element_entry(&mut map, "_system", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_valueSet", &self.value_set)?;
+        if let Some(item) = &self.version {
+            super::super::codec::element_entry(&mut map, "_version", item)?;
+        }
+        if !self.concept.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "concept", &self.concept)?;
+        }
+        if let Some(item) = &self.copyright {
+            super::super::codec::value_entry(&mut map, "copyright", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if !self.filter.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "filter", &self.filter)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.system {
+            super::super::codec::value_entry(&mut map, "system", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "valueSet", &self.value_set)?;
+        if let Some(item) = &self.version {
+            super::super::codec::value_entry(&mut map, "version", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -2018,9 +2271,32 @@ impl super::super::codec::Json for ValueSetComposeIncludeConcept {
 
 impl serde::Serialize for ValueSetComposeIncludeConcept {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_code", &self.code)?;
+        if let Some(item) = &self.display {
+            super::super::codec::element_entry(&mut map, "_display", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "code", &self.code)?;
+        if !self.designation.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "designation", &self.designation)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::value_entry(&mut map, "display", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -2276,9 +2552,39 @@ impl super::super::codec::Json for ValueSetComposeIncludeConceptDesignation {
 
 impl serde::Serialize for ValueSetComposeIncludeConceptDesignation {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.language {
+            super::super::codec::element_entry(&mut map, "_language", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_value", &self.value)?;
+        if !self.additional_use.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "additionalUse",
+                &self.additional_use,
+            )?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::value_entry(&mut map, "language", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.r#use {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "use", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "value", &self.value)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -2540,9 +2846,34 @@ impl super::super::codec::Json for ValueSetComposeIncludeFilter {
 
 impl serde::Serialize for ValueSetComposeIncludeFilter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_op", &self.op)?;
+        super::super::codec::element_entry(&mut map, "_property", &self.property)?;
+        if let Some(item) = &self.value {
+            super::super::codec::element_entry(&mut map, "_value", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if !self.filter.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "filter", &self.filter)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        super::super::codec::value_entry(&mut map, "op", &self.op)?;
+        super::super::codec::value_entry(&mut map, "property", &self.property)?;
+        if let Some(item) = &self.value {
+            super::super::codec::value_entry(&mut map, "value", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -2927,9 +3258,56 @@ impl super::super::codec::Json for ValueSetExpansion {
 
 impl serde::Serialize for ValueSetExpansion {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.identifier {
+            super::super::codec::element_entry(&mut map, "_identifier", item)?;
+        }
+        if let Some(item) = &self.next {
+            super::super::codec::element_entry(&mut map, "_next", item)?;
+        }
+        if let Some(item) = &self.offset {
+            super::super::codec::element_entry(&mut map, "_offset", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_timestamp", &self.timestamp)?;
+        if let Some(item) = &self.total {
+            super::super::codec::element_entry(&mut map, "_total", item)?;
+        }
+        if !self.contains.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "contains", &self.contains)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.identifier {
+            super::super::codec::value_entry(&mut map, "identifier", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.next {
+            super::super::codec::value_entry(&mut map, "next", item)?;
+        }
+        if let Some(item) = &self.offset {
+            super::super::codec::value_entry(&mut map, "offset", item)?;
+        }
+        if !self.parameter.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "parameter", &self.parameter)?;
+        }
+        if !self.property.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "property", &self.property)?;
+        }
+        super::super::codec::value_entry(&mut map, "timestamp", &self.timestamp)?;
+        if let Some(item) = &self.total {
+            super::super::codec::value_entry(&mut map, "total", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -3336,9 +3714,66 @@ impl super::super::codec::Json for ValueSetExpansionContains {
 
 impl serde::Serialize for ValueSetExpansionContains {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.r#abstract {
+            super::super::codec::element_entry(&mut map, "_abstract", item)?;
+        }
+        if let Some(item) = &self.code {
+            super::super::codec::element_entry(&mut map, "_code", item)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::element_entry(&mut map, "_display", item)?;
+        }
+        if let Some(item) = &self.inactive {
+            super::super::codec::element_entry(&mut map, "_inactive", item)?;
+        }
+        if let Some(item) = &self.system {
+            super::super::codec::element_entry(&mut map, "_system", item)?;
+        }
+        if let Some(item) = &self.version {
+            super::super::codec::element_entry(&mut map, "_version", item)?;
+        }
+        if let Some(item) = &self.r#abstract {
+            super::super::codec::value_entry(&mut map, "abstract", item)?;
+        }
+        if let Some(item) = &self.code {
+            super::super::codec::value_entry(&mut map, "code", item)?;
+        }
+        if !self.contains.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "contains", &self.contains)?;
+        }
+        if !self.designation.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "designation", &self.designation)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::value_entry(&mut map, "display", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.inactive {
+            super::super::codec::value_entry(&mut map, "inactive", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if !self.property.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "property", &self.property)?;
+        }
+        if let Some(item) = &self.system {
+            super::super::codec::value_entry(&mut map, "system", item)?;
+        }
+        if let Some(item) = &self.version {
+            super::super::codec::value_entry(&mut map, "version", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -3610,9 +4045,70 @@ impl super::super::codec::Json for ValueSetExpansionContainsProperty {
 
 impl serde::Serialize for ValueSetExpansionContainsProperty {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_code", &self.code)?;
+        match &self.value {
+            ValueSetExpansionContainsPropertyValue::Boolean(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueBoolean", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::Code(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueCode", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::DateTime(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueDateTime", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::Decimal(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueDecimal", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::Integer(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueInteger", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::String(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueString", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::Coding(_) => {}
+        }
+        super::super::codec::value_entry(&mut map, "code", &self.code)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if !self.sub_property.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "subProperty", &self.sub_property)?;
+        }
+        match &self.value {
+            ValueSetExpansionContainsPropertyValue::Boolean(inner) => {
+                super::super::codec::value_entry(&mut map, "valueBoolean", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::Code(inner) => {
+                super::super::codec::value_entry(&mut map, "valueCode", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::Coding(inner) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::DateTime(inner) => {
+                super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::Decimal(inner) => {
+                super::super::codec::value_entry(&mut map, "valueDecimal", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::Integer(inner) => {
+                super::super::codec::value_entry(&mut map, "valueInteger", inner)?;
+            }
+            ValueSetExpansionContainsPropertyValue::String(inner) => {
+                super::super::codec::value_entry(&mut map, "valueString", inner)?;
+            }
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -3851,9 +4347,67 @@ impl super::super::codec::Json for ValueSetExpansionContainsPropertySubProperty 
 
 impl serde::Serialize for ValueSetExpansionContainsPropertySubProperty {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_code", &self.code)?;
+        match &self.value {
+            ValueSetExpansionContainsPropertySubPropertyValue::Boolean(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueBoolean", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::Code(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueCode", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::DateTime(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueDateTime", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::Decimal(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueDecimal", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::Integer(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueInteger", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::String(inner) => {
+                super::super::codec::element_entry(&mut map, "_valueString", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::Coding(_) => {}
+        }
+        super::super::codec::value_entry(&mut map, "code", &self.code)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        match &self.value {
+            ValueSetExpansionContainsPropertySubPropertyValue::Boolean(inner) => {
+                super::super::codec::value_entry(&mut map, "valueBoolean", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::Code(inner) => {
+                super::super::codec::value_entry(&mut map, "valueCode", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::Coding(inner) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::DateTime(inner) => {
+                super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::Decimal(inner) => {
+                super::super::codec::value_entry(&mut map, "valueDecimal", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::Integer(inner) => {
+                super::super::codec::value_entry(&mut map, "valueInteger", inner)?;
+            }
+            ValueSetExpansionContainsPropertySubPropertyValue::String(inner) => {
+                super::super::codec::value_entry(&mut map, "valueString", inner)?;
+            }
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -4362,9 +4916,71 @@ impl super::super::codec::Json for ValueSetExpansionParameter {
 
 impl serde::Serialize for ValueSetExpansionParameter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_name", &self.name)?;
+        match &self.value {
+            Some(ValueSetExpansionParameterValue::Boolean(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueBoolean", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::Code(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueCode", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::DateTime(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueDateTime", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::Decimal(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueDecimal", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::Integer(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueInteger", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::String(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueString", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::Uri(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueUri", inner)?;
+            }
+            None => {}
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        super::super::codec::value_entry(&mut map, "name", &self.name)?;
+        match &self.value {
+            Some(ValueSetExpansionParameterValue::Boolean(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueBoolean", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::Code(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueCode", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::DateTime(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::Decimal(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDecimal", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::Integer(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueInteger", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::String(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueString", inner)?;
+            }
+            Some(ValueSetExpansionParameterValue::Uri(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueUri", inner)?;
+            }
+            None => {}
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -4678,9 +5294,29 @@ impl super::super::codec::Json for ValueSetExpansionProperty {
 
 impl serde::Serialize for ValueSetExpansionProperty {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_code", &self.code)?;
+        if let Some(item) = &self.uri {
+            super::super::codec::element_entry(&mut map, "_uri", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "code", &self.code)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.uri {
+            super::super::codec::value_entry(&mut map, "uri", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

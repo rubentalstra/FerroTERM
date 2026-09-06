@@ -159,9 +159,28 @@ impl super::super::codec::Json for Availability {
 
 impl serde::Serialize for Availability {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.available_time.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "availableTime",
+                &self.available_time,
+            )?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.not_available_time.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "notAvailableTime",
+                &self.not_available_time,
+            )?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -355,9 +374,34 @@ impl super::super::codec::Json for AvailabilityAvailableTime {
 
 impl serde::Serialize for AvailabilityAvailableTime {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.all_day {
+            super::super::codec::element_entry(&mut map, "_allDay", item)?;
+        }
+        if let Some(item) = &self.available_end_time {
+            super::super::codec::element_entry(&mut map, "_availableEndTime", item)?;
+        }
+        if let Some(item) = &self.available_start_time {
+            super::super::codec::element_entry(&mut map, "_availableStartTime", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_daysOfWeek", &self.days_of_week)?;
+        if let Some(item) = &self.all_day {
+            super::super::codec::value_entry(&mut map, "allDay", item)?;
+        }
+        if let Some(item) = &self.available_end_time {
+            super::super::codec::value_entry(&mut map, "availableEndTime", item)?;
+        }
+        if let Some(item) = &self.available_start_time {
+            super::super::codec::value_entry(&mut map, "availableStartTime", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "daysOfWeek", &self.days_of_week)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -507,9 +551,23 @@ impl super::super::codec::Json for AvailabilityNotAvailableTime {
 
 impl serde::Serialize for AvailabilityNotAvailableTime {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.description {
+            super::super::codec::element_entry(&mut map, "_description", item)?;
+        }
+        if let Some(item) = &self.description {
+            super::super::codec::value_entry(&mut map, "description", item)?;
+        }
+        if let Some(item) = &self.during {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "during", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

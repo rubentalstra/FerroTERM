@@ -210,9 +210,11 @@ macro_rules! parameters {
             /// # Errors
             ///
             /// Returns a `500` failure when the resource cannot be encoded.
-            pub fn respond_resource<R: Json>(resource: &R, wire: Wire) -> Result<Response, Failure> {
-                let object = encode(resource)?;
-                Ok(wire.response(StatusCode::OK, &object, &fhir_types::$fhir::schema::SCHEMAS))
+            pub fn respond_resource<R: Json + serde::Serialize>(
+                resource: &R,
+                wire: Wire,
+            ) -> Result<Response, Failure> {
+                wire.resource(StatusCode::OK, resource, &fhir_types::$fhir::schema::SCHEMAS)
             }
         }
     };

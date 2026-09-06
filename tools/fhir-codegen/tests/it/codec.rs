@@ -7,7 +7,7 @@ use serde_json::Value;
 use crate::vendor_dir;
 
 /// The resource files of a package whose type is in the root set.
-fn root_set_files(package: &str) -> Vec<PathBuf> {
+pub(crate) fn root_set_files(package: &str) -> Vec<PathBuf> {
     let dir = vendor_dir().join(package).join("package");
     let mut files: Vec<PathBuf> = fs::read_dir(&dir)
         .expect("package dir")

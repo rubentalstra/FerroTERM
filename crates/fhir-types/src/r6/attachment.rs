@@ -398,9 +398,92 @@ impl super::super::codec::Json for Attachment {
 
 impl serde::Serialize for Attachment {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.content_type {
+            super::super::codec::element_entry(&mut map, "_contentType", item)?;
+        }
+        if let Some(item) = &self.creation {
+            super::super::codec::element_entry(&mut map, "_creation", item)?;
+        }
+        if let Some(item) = &self.data {
+            super::super::codec::element_entry(&mut map, "_data", item)?;
+        }
+        if let Some(item) = &self.duration {
+            super::super::codec::element_entry(&mut map, "_duration", item)?;
+        }
+        if let Some(item) = &self.frames {
+            super::super::codec::element_entry(&mut map, "_frames", item)?;
+        }
+        if let Some(item) = &self.hash {
+            super::super::codec::element_entry(&mut map, "_hash", item)?;
+        }
+        if let Some(item) = &self.height {
+            super::super::codec::element_entry(&mut map, "_height", item)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::element_entry(&mut map, "_language", item)?;
+        }
+        if let Some(item) = &self.pages {
+            super::super::codec::element_entry(&mut map, "_pages", item)?;
+        }
+        if let Some(item) = &self.size {
+            super::super::codec::element_entry(&mut map, "_size", item)?;
+        }
+        if let Some(item) = &self.title {
+            super::super::codec::element_entry(&mut map, "_title", item)?;
+        }
+        if let Some(item) = &self.url {
+            super::super::codec::element_entry(&mut map, "_url", item)?;
+        }
+        if let Some(item) = &self.width {
+            super::super::codec::element_entry(&mut map, "_width", item)?;
+        }
+        if let Some(item) = &self.content_type {
+            super::super::codec::value_entry(&mut map, "contentType", item)?;
+        }
+        if let Some(item) = &self.creation {
+            super::super::codec::value_entry(&mut map, "creation", item)?;
+        }
+        if let Some(item) = &self.data {
+            super::super::codec::value_entry(&mut map, "data", item)?;
+        }
+        if let Some(item) = &self.duration {
+            super::super::codec::value_entry(&mut map, "duration", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(item) = &self.frames {
+            super::super::codec::value_entry(&mut map, "frames", item)?;
+        }
+        if let Some(item) = &self.hash {
+            super::super::codec::value_entry(&mut map, "hash", item)?;
+        }
+        if let Some(item) = &self.height {
+            super::super::codec::value_entry(&mut map, "height", item)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::value_entry(&mut map, "language", item)?;
+        }
+        if let Some(item) = &self.pages {
+            super::super::codec::value_entry(&mut map, "pages", item)?;
+        }
+        if let Some(item) = &self.size {
+            super::super::codec::value_entry(&mut map, "size", item)?;
+        }
+        if let Some(item) = &self.title {
+            super::super::codec::value_entry(&mut map, "title", item)?;
+        }
+        if let Some(item) = &self.url {
+            super::super::codec::value_entry(&mut map, "url", item)?;
+        }
+        if let Some(item) = &self.width {
+            super::super::codec::value_entry(&mut map, "width", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

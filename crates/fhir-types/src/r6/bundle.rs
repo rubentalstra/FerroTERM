@@ -339,9 +339,53 @@ impl super::super::codec::Json for Bundle {
 
 impl serde::Serialize for Bundle {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::element_entry(&mut map, "_implicitRules", item)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::element_entry(&mut map, "_language", item)?;
+        }
+        if let Some(item) = &self.timestamp {
+            super::super::codec::element_entry(&mut map, "_timestamp", item)?;
+        }
+        if let Some(item) = &self.total {
+            super::super::codec::element_entry(&mut map, "_total", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_type", &self.r#type)?;
+        if !self.entry.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "entry", &self.entry)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.identifier {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "identifier", item)?;
+        }
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::value_entry(&mut map, "implicitRules", item)?;
+        }
+        if let Some(item) = &self.issues {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "issues", item.as_ref())?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::value_entry(&mut map, "language", item)?;
+        }
+        if !self.link.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "link", &self.link)?;
+        }
+        if let Some(item) = &self.meta {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "meta", item)?;
+        }
+        serde::ser::SerializeMap::serialize_entry(&mut map, "resourceType", "Bundle")?;
+        if let Some(item) = &self.timestamp {
+            super::super::codec::value_entry(&mut map, "timestamp", item)?;
+        }
+        if let Some(item) = &self.total {
+            super::super::codec::value_entry(&mut map, "total", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "type", &self.r#type)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -675,9 +719,42 @@ impl super::super::codec::Json for BundleEntry {
 
 impl serde::Serialize for BundleEntry {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.full_url {
+            super::super::codec::element_entry(&mut map, "_fullUrl", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(item) = &self.full_url {
+            super::super::codec::value_entry(&mut map, "fullUrl", item)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.link.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "link", &self.link)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.request {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "request", item)?;
+        }
+        if let Some(item) = &self.resource {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "resource", item)?;
+        }
+        if let Some(item) = &self.response {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "response", item)?;
+        }
+        if let Some(item) = &self.search {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "search", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -971,9 +1048,49 @@ impl super::super::codec::Json for BundleEntryRequest {
 
 impl serde::Serialize for BundleEntryRequest {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.if_match {
+            super::super::codec::element_entry(&mut map, "_ifMatch", item)?;
+        }
+        if let Some(item) = &self.if_modified_since {
+            super::super::codec::element_entry(&mut map, "_ifModifiedSince", item)?;
+        }
+        if let Some(item) = &self.if_none_exist {
+            super::super::codec::element_entry(&mut map, "_ifNoneExist", item)?;
+        }
+        if let Some(item) = &self.if_none_match {
+            super::super::codec::element_entry(&mut map, "_ifNoneMatch", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_method", &self.method)?;
+        super::super::codec::element_entry(&mut map, "_url", &self.url)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.if_match {
+            super::super::codec::value_entry(&mut map, "ifMatch", item)?;
+        }
+        if let Some(item) = &self.if_modified_since {
+            super::super::codec::value_entry(&mut map, "ifModifiedSince", item)?;
+        }
+        if let Some(item) = &self.if_none_exist {
+            super::super::codec::value_entry(&mut map, "ifNoneExist", item)?;
+        }
+        if let Some(item) = &self.if_none_match {
+            super::super::codec::value_entry(&mut map, "ifNoneMatch", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "method", &self.method)?;
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        super::super::codec::value_entry(&mut map, "url", &self.url)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1250,9 +1367,44 @@ impl super::super::codec::Json for BundleEntryResponse {
 
 impl serde::Serialize for BundleEntryResponse {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.etag {
+            super::super::codec::element_entry(&mut map, "_etag", item)?;
+        }
+        if let Some(item) = &self.last_modified {
+            super::super::codec::element_entry(&mut map, "_lastModified", item)?;
+        }
+        if let Some(item) = &self.location {
+            super::super::codec::element_entry(&mut map, "_location", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_status", &self.status)?;
+        if let Some(item) = &self.etag {
+            super::super::codec::value_entry(&mut map, "etag", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.last_modified {
+            super::super::codec::value_entry(&mut map, "lastModified", item)?;
+        }
+        if let Some(item) = &self.location {
+            super::super::codec::value_entry(&mut map, "location", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.outcome {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "outcome", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "status", &self.status)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1456,9 +1608,33 @@ impl super::super::codec::Json for BundleEntrySearch {
 
 impl serde::Serialize for BundleEntrySearch {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.mode {
+            super::super::codec::element_entry(&mut map, "_mode", item)?;
+        }
+        if let Some(item) = &self.score {
+            super::super::codec::element_entry(&mut map, "_score", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.mode {
+            super::super::codec::value_entry(&mut map, "mode", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.score {
+            super::super::codec::value_entry(&mut map, "score", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1655,9 +1831,25 @@ impl super::super::codec::Json for BundleLink {
 
 impl serde::Serialize for BundleLink {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_relation", &self.relation)?;
+        super::super::codec::element_entry(&mut map, "_url", &self.url)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        super::super::codec::value_entry(&mut map, "relation", &self.relation)?;
+        super::super::codec::value_entry(&mut map, "url", &self.url)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 

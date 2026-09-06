@@ -7,8 +7,9 @@
 
 use std::fmt::{self, Write};
 
-use crate::lower::{Cardinality, Field, Scalar, Target, TypeDef, TypeKind, VersionModule};
+use crate::lower::{Cardinality, Field, Scalar, Target, TypeDef, TypeKind, Variant, VersionModule};
 use crate::naming::type_name;
+use crate::render::render_target;
 
 /// The codec module path from a type file (`<version>/<module>.rs`).
 const C: &str = "super::super::codec";
@@ -79,28 +80,21 @@ pub fn render_codec(model: &VersionModule, out: &mut String, ty: &TypeDef) -> fm
         TypeKind::Struct { fields } if ty.is_primitive => render_primitive(out, ty, fields),
         TypeKind::Struct { fields } => {
             render_struct(model, out, ty, fields)?;
-            render_serde_bridge(out, &ty.name)
+            render_serialize(model, out, ty, fields)?;
+            render_deserialize(out, &ty.name)
         }
         TypeKind::Choice { variants, .. } => render_choice(model, out, ty, variants),
         TypeKind::ResourceEnum { resources } => {
             render_resource_enum(out, ty, resources)?;
-            render_serde_bridge(out, &ty.name)
+            render_resource_serialize(out, ty, resources)?;
+            render_deserialize(out, &ty.name)
         }
         TypeKind::UnknownResource => Ok(()),
     }
 }
 
-fn render_serde_bridge(out: &mut String, name: &str) -> fmt::Result {
-    writeln!(out, "\nimpl serde::Serialize for {name} {{")?;
-    writeln!(
-        out,
-        "    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {{"
-    )?;
-    writeln!(out, "        {C}::Json::to_json(self)")?;
-    writeln!(out, "            .map_err(serde::ser::Error::custom)?")?;
-    writeln!(out, "            .serialize(serializer)")?;
-    writeln!(out, "    }}\n}}\n")?;
-    writeln!(out, "impl<'de> serde::Deserialize<'de> for {name} {{")?;
+fn render_deserialize(out: &mut String, name: &str) -> fmt::Result {
+    writeln!(out, "\nimpl<'de> serde::Deserialize<'de> for {name} {{")?;
     writeln!(
         out,
         "    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {{"
@@ -212,8 +206,155 @@ fn render_primitive(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Re
         writeln!(out, "        Ok(Some(serde_json::Value::Object(object)))")?;
     }
     writeln!(out, "    }}\n")?;
+    render_primitive_serialize(out, ty, scalar, value_required, has_id, has_extension)?;
     render_primitive_decode(out, ty, scalar, value_required, has_id, has_extension)?;
     writeln!(out, "}}")
+}
+
+/// The scalar's serializer call over `serializer` and `place`, a reference to
+/// the held value.
+fn scalar_serialize_call(scalar: Scalar, place: &str) -> String {
+    match scalar {
+        Scalar::Bool => format!("serde::Serializer::serialize_bool(serializer, *{place})"),
+        Scalar::I32 => format!("serde::Serializer::serialize_i32(serializer, *{place})"),
+        Scalar::U32 => format!("serde::Serializer::serialize_u32(serializer, *{place})"),
+        Scalar::I64 => {
+            format!("serde::Serializer::serialize_str(serializer, &{place}.to_string())")
+        }
+        Scalar::Str => format!("serde::Serializer::serialize_str(serializer, {place})"),
+    }
+}
+
+/// The primitive's two direct writers: the value and the `_name` object.
+fn render_primitive_serialize(
+    out: &mut String,
+    ty: &TypeDef,
+    scalar: Scalar,
+    value_required: bool,
+    has_id: bool,
+    has_extension: bool,
+) -> fmt::Result {
+    writeln!(out, "    fn has_value(&self) -> bool {{")?;
+    if value_required {
+        writeln!(out, "        true")?;
+    } else {
+        writeln!(out, "        self.value.is_some()")?;
+    }
+    writeln!(out, "    }}\n")?;
+    let held = match (has_id, has_extension) {
+        (true, true) => "self.id.is_some() || !self.extension.is_empty()",
+        (true, false) => "self.id.is_some()",
+        (false, true) => "!self.extension.is_empty()",
+        (false, false) => "false",
+    };
+    writeln!(out, "    fn has_element(&self) -> bool {{")?;
+    writeln!(out, "        {held}")?;
+    writeln!(out, "    }}\n")?;
+    writeln!(
+        out,
+        "    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {{"
+    )?;
+    render_primitive_value_body(out, ty, scalar, value_required)?;
+    writeln!(out, "    }}\n")?;
+    writeln!(
+        out,
+        "    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {{"
+    )?;
+    match (has_id, has_extension) {
+        (true, true) => writeln!(
+            out,
+            "        if self.id.is_none() && self.extension.is_empty() {{"
+        )?,
+        (true, false) => writeln!(out, "        if self.id.is_none() {{")?,
+        (false, true) => writeln!(out, "        if self.extension.is_empty() {{")?,
+        (false, false) => {}
+    }
+    if has_id || has_extension {
+        writeln!(
+            out,
+            "            return serde::Serializer::serialize_none(serializer);"
+        )?;
+        writeln!(out, "        }}")?;
+        writeln!(
+            out,
+            "        let mut map = serde::Serializer::serialize_map(serializer, None)?;"
+        )?;
+        if has_extension {
+            writeln!(out, "        if !self.extension.is_empty() {{")?;
+            writeln!(
+                out,
+                "            serde::ser::SerializeMap::serialize_entry(&mut map, \"extension\", &self.extension)?;"
+            )?;
+            writeln!(out, "        }}")?;
+        }
+        if has_id {
+            writeln!(out, "        if let Some(id) = &self.id {{")?;
+            writeln!(
+                out,
+                "            serde::ser::SerializeMap::serialize_entry(&mut map, \"id\", id)?;"
+            )?;
+            writeln!(out, "        }}")?;
+        }
+        writeln!(out, "        serde::ser::SerializeMap::end(map)")?;
+    } else {
+        writeln!(out, "        serde::Serializer::serialize_none(serializer)")?;
+    }
+    writeln!(out, "    }}\n")
+}
+
+/// The value writer's body: the decimal keeps its lexical form
+/// (<https://hl7.org/fhir/R4B/json.html>), every other primitive writes its
+/// scalar.
+fn render_primitive_value_body(
+    out: &mut String,
+    ty: &TypeDef,
+    scalar: Scalar,
+    value_required: bool,
+) -> fmt::Result {
+    let decimal = matches!(scalar, Scalar::Str) && ty.name == "Decimal";
+    if value_required {
+        if decimal {
+            return render_decimal_value(out, "        ", "&self.value");
+        }
+        return writeln!(
+            out,
+            "        {}",
+            scalar_serialize_call(scalar, "&self.value")
+        );
+    }
+    writeln!(out, "        match self.value.as_ref() {{")?;
+    if decimal {
+        writeln!(out, "            Some(text) => {{")?;
+        render_decimal_value(out, "                ", "text")?;
+        writeln!(out, "            }}")?;
+    } else {
+        writeln!(
+            out,
+            "            Some(v) => {},",
+            scalar_serialize_call(scalar, "v")
+        )?;
+    }
+    writeln!(
+        out,
+        "            None => serde::Serializer::serialize_none(serializer),"
+    )?;
+    writeln!(out, "        }}")
+}
+
+/// The decimal's value writer over `text`, its lexical form.
+fn render_decimal_value(out: &mut String, indent: &str, text: &str) -> fmt::Result {
+    writeln!(out, "{indent}serde::Serialize::serialize(")?;
+    writeln!(
+        out,
+        "{indent}    &{text}.parse::<serde_json::Number>().map_err(|_| {{"
+    )?;
+    writeln!(
+        out,
+        "{indent}        <S::Error as serde::ser::Error>::custom({C}::EncodeError::BadDecimal {{ text: {text}.clone() }})"
+    )?;
+    writeln!(out, "{indent}    }})?,")?;
+    writeln!(out, "{indent}    serializer,")?;
+    writeln!(out, "{indent})")
 }
 
 fn render_primitive_decode(
@@ -331,7 +472,7 @@ fn render_choice(
     model: &VersionModule,
     out: &mut String,
     ty: &TypeDef,
-    variants: &[crate::lower::Variant],
+    variants: &[Variant],
 ) -> fmt::Result {
     writeln!(out, "\nimpl {} {{", ty.name)?;
     render_choice_to_json_parts(model, out, variants)?;
@@ -341,7 +482,7 @@ fn render_choice(
 
 /// Whether the variant holds a FHIR primitive, which travels as value plus
 /// `_name`.
-fn holds_primitive(model: &VersionModule, variant: &crate::lower::Variant) -> bool {
+fn holds_primitive(model: &VersionModule, variant: &Variant) -> bool {
     matches!(&variant.target, Target::Named(name) if model.types.get(name).is_some_and(|ty| ty.is_primitive))
 }
 
@@ -349,7 +490,7 @@ fn holds_primitive(model: &VersionModule, variant: &crate::lower::Variant) -> bo
 fn render_choice_to_json_parts(
     model: &VersionModule,
     out: &mut String,
-    variants: &[crate::lower::Variant],
+    variants: &[Variant],
 ) -> fmt::Result {
     writeln!(
         out,
@@ -395,7 +536,7 @@ fn render_choice_to_json_parts(
 fn render_choice_from_json_parts(
     model: &VersionModule,
     out: &mut String,
-    variants: &[crate::lower::Variant],
+    variants: &[Variant],
 ) -> fmt::Result {
     writeln!(
         out,
@@ -952,4 +1093,364 @@ fn render_choice_builder(out: &mut String, field: &Field, choice: &TypeDef) -> f
             "        let {name} = path.with({stem:?}, |path| {{ let suffix = raw_{slot}.suffix.ok_or_else(|| path.error({C}::DecodeErrorKind::MissingProperty))?; {decode} }})?;"
         ),
     }
+}
+/// Which half of a field one JSON key carries.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Part {
+    /// The value key.
+    Value,
+    /// The `_name` sibling.
+    Element,
+}
+
+/// One JSON key a type can write, and what writes it.
+struct Slot<'a> {
+    /// The property name.
+    key: String,
+    /// The field it comes from and that field's position, absent for
+    /// `resourceType`.
+    field: Option<(usize, &'a Field)>,
+    /// Which half of the field.
+    part: Part,
+    /// The choice form, when the field is a choice element.
+    variant: Option<&'a Variant>,
+}
+
+/// Every key `ty` can write, in the order the JSON object holds them.
+///
+// NOTE: `serde_json::Map` is a `BTreeMap` unless `preserve_order` is on
+// (<https://docs.rs/serde_json/1/serde_json/struct.Map.html>), so writing the
+// keys sorted gives the direct path the bytes the document path produces.
+fn slots<'a>(model: &'a VersionModule, ty: &'a TypeDef, fields: &'a [Field]) -> Vec<Slot<'a>> {
+    let mut slots = Vec::new();
+    if ty.is_resource {
+        slots.push(Slot {
+            key: String::from("resourceType"),
+            field: None,
+            part: Part::Value,
+            variant: None,
+        });
+    }
+    for (index, field) in fields.iter().enumerate() {
+        let key = &field.fhir_name;
+        let mut push = |key: String, part, variant| {
+            slots.push(Slot {
+                key,
+                field: Some((index, field)),
+                part,
+                variant,
+            });
+        };
+        match shape(model, field) {
+            Shape::Scalar(_) | Shape::Complex => push(key.clone(), Part::Value, None),
+            Shape::Primitive => {
+                push(key.clone(), Part::Value, None);
+                push(format!("_{key}"), Part::Element, None);
+            }
+            Shape::Choice(choice) => {
+                let stem = key.trim_end_matches("[x]");
+                if let TypeKind::Choice { variants, .. } = &choice.kind {
+                    for variant in variants {
+                        let suffix = type_name(&variant.code);
+                        push(format!("{stem}{suffix}"), Part::Value, Some(variant));
+                        if holds_primitive(model, variant) {
+                            push(format!("_{stem}{suffix}"), Part::Element, Some(variant));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    slots.sort_by(|a, b| a.key.cmp(&b.key));
+    slots
+}
+
+/// Whether two neighbouring keys are forms of one choice element, which one
+/// `match` writes together.
+fn one_choice(a: &Slot<'_>, b: &Slot<'_>) -> bool {
+    a.variant.is_some()
+        && b.variant.is_some()
+        && a.part == b.part
+        && a.field.map(|(index, _)| index) == b.field.map(|(index, _)| index)
+}
+
+/// One `serialize_entry` call.
+fn entry(out: &mut String, indent: &str, key: &str, value: &str) -> fmt::Result {
+    writeln!(
+        out,
+        "{indent}serde::ser::SerializeMap::serialize_entry(&mut map, {key:?}, {value})?;"
+    )
+}
+
+/// The struct's `Serialize`: the object `to_json` builds, written straight to
+/// the serializer.
+fn render_serialize(
+    model: &VersionModule,
+    out: &mut String,
+    ty: &TypeDef,
+    fields: &[Field],
+) -> fmt::Result {
+    let slots = slots(model, ty, fields);
+    writeln!(out, "\nimpl serde::Serialize for {} {{", ty.name)?;
+    writeln!(
+        out,
+        "    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {{"
+    )?;
+    let binding = if slots.is_empty() { "let" } else { "let mut" };
+    writeln!(
+        out,
+        "        {binding} map = serde::Serializer::serialize_map(serializer, None)?;"
+    )?;
+    for run in slots.chunk_by(one_choice) {
+        render_run(model, out, ty, run)?;
+    }
+    writeln!(out, "        serde::ser::SerializeMap::end(map)")?;
+    writeln!(out, "    }}\n}}")
+}
+
+/// One key, or the forms of one choice element that sort together.
+fn render_run(
+    model: &VersionModule,
+    out: &mut String,
+    ty: &TypeDef,
+    run: &[Slot<'_>],
+) -> fmt::Result {
+    let Some(first) = run.first() else {
+        return Ok(());
+    };
+    let Some((_, field)) = first.field else {
+        return entry(out, "        ", "resourceType", &format!("{:?}", ty.name));
+    };
+    match shape(model, field) {
+        Shape::Scalar(scalar) => render_scalar_entry(out, field, first, scalar),
+        Shape::Primitive => render_primitive_entry(out, field, first),
+        Shape::Complex => render_complex_entry(out, field, first),
+        Shape::Choice(choice) => render_choice_run(model, out, ty, field, choice, run),
+    }
+}
+
+/// The serializable expression for one scalar held at `place`, a reference.
+fn scalar_serializable(scalar: Scalar, place: &str) -> String {
+    match scalar {
+        Scalar::I64 => format!("&{place}.to_string()"),
+        _ => String::from(place),
+    }
+}
+
+/// The serializable expression for a list of scalars at `access`.
+fn scalar_list_serializable(scalar: Scalar, access: &str) -> String {
+    match scalar {
+        Scalar::I64 => format!(
+            "&{access}.iter().map(std::string::ToString::to_string).collect::<Vec<std::string::String>>()"
+        ),
+        _ => format!("&{access}"),
+    }
+}
+
+/// A `FHIRPath` system scalar: a bare JSON value under its own key.
+fn render_scalar_entry(
+    out: &mut String,
+    field: &Field,
+    slot: &Slot<'_>,
+    scalar: Scalar,
+) -> fmt::Result {
+    let key = &slot.key;
+    let access = format!("self.{}", field.name);
+    match field.ty.card {
+        Cardinality::One => entry(
+            out,
+            "        ",
+            key,
+            &scalar_serializable(scalar, &format!("&{access}")),
+        ),
+        Cardinality::Optional => {
+            writeln!(out, "        if let Some(v) = &{access} {{")?;
+            entry(out, "            ", key, &scalar_serializable(scalar, "v"))?;
+            writeln!(out, "        }}")
+        }
+        Cardinality::Many => {
+            writeln!(out, "        if !{access}.is_empty() {{")?;
+            entry(
+                out,
+                "            ",
+                key,
+                &scalar_list_serializable(scalar, &access),
+            )?;
+            writeln!(out, "        }}")
+        }
+    }
+}
+
+/// A FHIR primitive: the value under its key, the `id` and `extension` under
+/// the `_name` sibling (<https://hl7.org/fhir/R4B/json.html#primitive>).
+fn render_primitive_entry(out: &mut String, field: &Field, slot: &Slot<'_>) -> fmt::Result {
+    let key = &slot.key;
+    let access = format!("self.{}", field.name);
+    let writer = match (slot.part, field.ty.card) {
+        (Part::Value, Cardinality::Many) => "value_list_entry",
+        (Part::Element, Cardinality::Many) => "element_list_entry",
+        (Part::Value, _) => "value_entry",
+        (Part::Element, _) => "element_entry",
+    };
+    match field.ty.card {
+        Cardinality::Optional => {
+            writeln!(out, "        if let Some(item) = &{access} {{")?;
+            writeln!(out, "            {C}::{writer}(&mut map, {key:?}, item)?;")?;
+            writeln!(out, "        }}")
+        }
+        _ => writeln!(out, "        {C}::{writer}(&mut map, {key:?}, &{access})?;"),
+    }
+}
+
+/// A complex type, a backbone element, or the resource enum: a JSON object.
+fn render_complex_entry(out: &mut String, field: &Field, slot: &Slot<'_>) -> fmt::Result {
+    let key = &slot.key;
+    let access = format!("self.{}", field.name);
+    match field.ty.card {
+        Cardinality::One => {
+            let inner = if field.ty.boxed {
+                format!("{access}.as_ref()")
+            } else {
+                format!("&{access}")
+            };
+            entry(out, "        ", key, &inner)
+        }
+        Cardinality::Optional => {
+            let inner = if field.ty.boxed {
+                "item.as_ref()"
+            } else {
+                "item"
+            };
+            writeln!(out, "        if let Some(item) = &{access} {{")?;
+            entry(out, "            ", key, inner)?;
+            writeln!(out, "        }}")
+        }
+        Cardinality::Many => {
+            writeln!(out, "        if !{access}.is_empty() {{")?;
+            entry(out, "            ", key, &format!("&{access}"))?;
+            writeln!(out, "        }}")
+        }
+    }
+}
+
+/// The forms of one choice element: the key names the form the value holds
+/// (<https://hl7.org/fhir/R4B/formats.html#choice>).
+fn render_choice_run(
+    model: &VersionModule,
+    out: &mut String,
+    ty: &TypeDef,
+    field: &Field,
+    choice: &TypeDef,
+    run: &[Slot<'_>],
+) -> fmt::Result {
+    let TypeKind::Choice { variants, .. } = &choice.kind else {
+        return Ok(());
+    };
+    let path = render_target(model, &ty.module, &field.ty.target, false);
+    let access = format!("self.{}", field.name);
+    let (scrutinee, optional) = match (field.ty.card, field.ty.boxed) {
+        (Cardinality::Optional, true) => (format!("{access}.as_deref()"), true),
+        (Cardinality::Optional, false) => (format!("&{access}"), true),
+        (_, true) => (format!("{access}.as_ref()"), false),
+        (_, false) => (format!("&{access}"), false),
+    };
+    let written: Vec<&str> = run
+        .iter()
+        .filter_map(|slot| slot.variant.map(|variant| variant.name.as_str()))
+        .collect();
+    let missing: Vec<&Variant> = variants
+        .iter()
+        .filter(|variant| !written.contains(&variant.name.as_str()))
+        .collect();
+    let pattern = |variant: &Variant| {
+        let form = format!("{path}::{}(inner)", variant.name);
+        if optional {
+            format!("Some({form})")
+        } else {
+            form
+        }
+    };
+    if run.len() == 1 && (optional || !missing.is_empty()) {
+        let Some(slot) = run.first() else {
+            return Ok(());
+        };
+        let Some(variant) = slot.variant else {
+            return Ok(());
+        };
+        writeln!(out, "        if let {} = {scrutinee} {{", pattern(variant))?;
+        render_choice_arm(model, out, "            ", slot, variant)?;
+        return writeln!(out, "        }}");
+    }
+    writeln!(out, "        match {scrutinee} {{")?;
+    for slot in run {
+        let Some(variant) = slot.variant else {
+            continue;
+        };
+        writeln!(out, "            {} => {{", pattern(variant))?;
+        render_choice_arm(model, out, "                ", slot, variant)?;
+        writeln!(out, "            }}")?;
+    }
+    match (optional, missing.as_slice()) {
+        (true, []) => writeln!(out, "            None => {{}}")?,
+        (false, []) => {}
+        // NOTE: a wildcard over one variant trips
+        // `clippy::match_wildcard_for_single_variants`, so name it.
+        (false, [one]) => writeln!(out, "            {path}::{}(_) => {{}}", one.name)?,
+        _ => writeln!(out, "            _ => {{}}")?,
+    }
+    writeln!(out, "        }}")
+}
+
+/// What one choice form writes under its key.
+fn render_choice_arm(
+    model: &VersionModule,
+    out: &mut String,
+    indent: &str,
+    slot: &Slot<'_>,
+    variant: &Variant,
+) -> fmt::Result {
+    let key = &slot.key;
+    if holds_primitive(model, variant) {
+        let writer = match slot.part {
+            Part::Value => "value_entry",
+            Part::Element => "element_entry",
+        };
+        return writeln!(out, "{indent}{C}::{writer}(&mut map, {key:?}, inner)?;");
+    }
+    let inner = if variant.boxed {
+        "inner.as_ref()"
+    } else {
+        "inner"
+    };
+    entry(out, indent, key, inner)
+}
+
+/// The resource enum's `Serialize`: the resource it holds writes itself.
+fn render_resource_serialize(out: &mut String, ty: &TypeDef, resources: &[String]) -> fmt::Result {
+    writeln!(out, "\nimpl serde::Serialize for {} {{", ty.name)?;
+    writeln!(
+        out,
+        "    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {{"
+    )?;
+    writeln!(out, "        match self {{")?;
+    for resource in resources {
+        writeln!(
+            out,
+            "            Self::{resource}(inner) => serde::Serialize::serialize(inner.as_ref(), serializer),"
+        )?;
+    }
+    writeln!(
+        out,
+        "            Self::Unknown(inner) => match &inner.body {{"
+    )?;
+    writeln!(
+        out,
+        "                serde_json::Value::Object(object) => serde::Serialize::serialize(object, serializer),"
+    )?;
+    writeln!(
+        out,
+        "                _ => Err(<S::Error as serde::ser::Error>::custom({C}::EncodeError::UnknownResourceBody)),"
+    )?;
+    writeln!(out, "            }},")?;
+    writeln!(out, "        }}\n    }}\n}}")
 }

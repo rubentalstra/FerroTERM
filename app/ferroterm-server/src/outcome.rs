@@ -11,7 +11,6 @@ use axum::body::Body;
 use axum::response::{IntoResponse, Response};
 use fhir_terminology::operations::OperationError;
 use fhir_terminology::operations::value_set_validate_code::TX_ISSUE_TYPE;
-use fhir_types::codec::Json;
 use fhir_types::r4b::codeable_concept::CodeableConcept;
 use fhir_types::r4b::coding::Coding;
 use fhir_types::r4b::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
@@ -99,12 +98,14 @@ impl Failure {
     /// R4B shape, which every served version declares alike).
     #[must_use]
     pub fn respond(&self, wire: crate::wire::Wire) -> Response {
-        match self.outcome().to_json() {
-            Ok(object) => wire.response(self.status, &object, &fhir_types::r4b::schema::SCHEMAS),
-            // NOTE: encoding a hand-built OperationOutcome cannot fail; if the
-            // codec ever refuses, a bare status still tells the client the truth.
-            Err(_) => self.status.into_response(),
-        }
+        // NOTE: encoding a hand-built OperationOutcome cannot fail; if the
+        // codec ever refuses, a bare status still tells the client the truth.
+        wire.resource(
+            self.status,
+            &self.outcome(),
+            &fhir_types::r4b::schema::SCHEMAS,
+        )
+        .unwrap_or_else(|_| self.status.into_response())
     }
 }
 

@@ -253,9 +253,52 @@ impl super::super::codec::Json for TriggerDefinition {
 
 impl serde::Serialize for TriggerDefinition {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.name {
+            super::super::codec::element_entry(&mut map, "_name", item)?;
+        }
+        match &self.timing {
+            Some(TriggerDefinitionTiming::Date(inner)) => {
+                super::super::codec::element_entry(&mut map, "_timingDate", inner)?;
+            }
+            Some(TriggerDefinitionTiming::DateTime(inner)) => {
+                super::super::codec::element_entry(&mut map, "_timingDateTime", inner)?;
+            }
+            _ => {}
+        }
+        super::super::codec::element_entry(&mut map, "_type", &self.r#type)?;
+        if let Some(item) = &self.condition {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "condition", item)?;
+        }
+        if !self.data.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "data", &self.data)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.name {
+            super::super::codec::value_entry(&mut map, "name", item)?;
+        }
+        match &self.timing {
+            Some(TriggerDefinitionTiming::Date(inner)) => {
+                super::super::codec::value_entry(&mut map, "timingDate", inner)?;
+            }
+            Some(TriggerDefinitionTiming::DateTime(inner)) => {
+                super::super::codec::value_entry(&mut map, "timingDateTime", inner)?;
+            }
+            Some(TriggerDefinitionTiming::Reference(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "timingReference", inner)?;
+            }
+            Some(TriggerDefinitionTiming::Timing(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "timingTiming", inner)?;
+            }
+            None => {}
+        }
+        super::super::codec::value_entry(&mut map, "type", &self.r#type)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 

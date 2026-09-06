@@ -254,9 +254,48 @@ impl super::super::codec::Json for ParameterDefinition {
 
 impl serde::Serialize for ParameterDefinition {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.documentation {
+            super::super::codec::element_entry(&mut map, "_documentation", item)?;
+        }
+        if let Some(item) = &self.max {
+            super::super::codec::element_entry(&mut map, "_max", item)?;
+        }
+        if let Some(item) = &self.min {
+            super::super::codec::element_entry(&mut map, "_min", item)?;
+        }
+        if let Some(item) = &self.name {
+            super::super::codec::element_entry(&mut map, "_name", item)?;
+        }
+        if let Some(item) = &self.profile {
+            super::super::codec::element_entry(&mut map, "_profile", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_type", &self.r#type)?;
+        super::super::codec::element_entry(&mut map, "_use", &self.r#use)?;
+        if let Some(item) = &self.documentation {
+            super::super::codec::value_entry(&mut map, "documentation", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.max {
+            super::super::codec::value_entry(&mut map, "max", item)?;
+        }
+        if let Some(item) = &self.min {
+            super::super::codec::value_entry(&mut map, "min", item)?;
+        }
+        if let Some(item) = &self.name {
+            super::super::codec::value_entry(&mut map, "name", item)?;
+        }
+        if let Some(item) = &self.profile {
+            super::super::codec::value_entry(&mut map, "profile", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "type", &self.r#type)?;
+        super::super::codec::value_entry(&mut map, "use", &self.r#use)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 

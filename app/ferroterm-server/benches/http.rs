@@ -147,6 +147,17 @@ fn local(c: &mut Criterion) {
     group.bench_function("rxnorm_serialize", |b| {
         b.iter(|| serde_json::to_vec(&object).expect("serializes"));
     });
+    // The same body from the typed resource, the path a response now takes, and
+    // the document build it no longer pays for, so the served figure splits into
+    // answering, building, and writing (#312).
+    let typed: fhir_types::r4b::parameters::Parameters =
+        serde_json::from_slice(&body).expect("the body decodes");
+    group.bench_function("rxnorm_to_json", |b| {
+        b.iter(|| fhir_types::codec::Json::to_json(&typed).expect("builds the document"));
+    });
+    group.bench_function("rxnorm_serialize_typed", |b| {
+        b.iter(|| serde_json::to_vec(&typed).expect("serializes"));
+    });
     group.finish();
 }
 
