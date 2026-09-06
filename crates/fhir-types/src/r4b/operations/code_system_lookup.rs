@@ -174,6 +174,13 @@ impl CodeSystemLookupRequest {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -373,6 +380,13 @@ impl CodeSystemLookupRequest {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -396,6 +410,13 @@ impl CodeSystemLookupRequest {
                     field_property.push(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(
@@ -421,6 +442,13 @@ impl CodeSystemLookupRequest {
                         Some(super::super::parameters::ParametersParameterValue::Canonical(
                             value,
                         )) => value.clone(),
+                        Some(super::super::parameters::ParametersParameterValue::Uri(value)) => {
+                            super::super::primitives::Canonical {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -759,6 +787,13 @@ impl CodeSystemLookupResponse {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1005,6 +1040,13 @@ impl CodeSystemLookupResponseDesignation {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1193,6 +1235,13 @@ impl CodeSystemLookupResponseProperty {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
                         }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
+                        }
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1376,6 +1425,13 @@ impl CodeSystemLookupResponsePropertySubproperty {
                     field_code = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Code(value)) => {
                             value.clone()
+                        }
+                        Some(super::super::parameters::ParametersParameterValue::String(value)) => {
+                            super::super::primitives::Code {
+                                id: value.id.clone(),
+                                extension: value.extension.clone(),
+                                value: value.value.clone(),
+                            }
                         }
                         Some(_) => {
                             return Err(

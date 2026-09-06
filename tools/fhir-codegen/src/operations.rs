@@ -110,7 +110,9 @@ pub struct ContractField {
     pub source: ParameterSource,
     /// The other primitive variants a value of this field is read from: the
     /// primitives that specialize the declared one and share its scalar
-    /// (`code` for a `string` parameter, `canonical` for a `uri` one).
+    /// (`code` for a `string` parameter, `canonical` for a `uri` one), and the
+    /// ones it specializes on the same terms (`uri` for a `canonical`
+    /// parameter).
     pub accepts: Vec<String>,
 }
 
@@ -294,7 +296,16 @@ fn lower_field(
         FieldKind::Parts => derives_default(&parts),
     };
     let accepts = match &kind {
-        FieldKind::Value(name) => specializations(module, name),
+        FieldKind::Value(name) => {
+            let mut both = specializations(module, name);
+            for wider in generalizations(module, name) {
+                if !both.contains(&wider) {
+                    both.push(wider);
+                }
+            }
+            both.sort();
+            both
+        }
         _ => Vec::new(),
     };
     Ok(ContractField {
@@ -354,6 +365,49 @@ fn specializations(module: &VersionModule, name: &str) -> Vec<String> {
         .filter(|t| crate::lower::scalar_for(&code(&t.name)) == scalar)
         .map(|t| t.name.clone())
         .collect()
+}
+
+/// The primitives `name` specializes (through its own `baseDefinition` chain)
+/// that carry the same scalar, so a value sent as one of them reads as `name`:
+/// a `uri` reads as a `canonical`
+/// (<https://hl7.org/fhir/R5/datatypes.html#primitive>).
+///
+/// `canonical` and `uri` are distinct types that "are never substituted for
+/// each other" (<https://hl7.org/fhir/R4B/datatypes.html#uri>), so this is a
+/// decision rather than a reading of the type system: their value spaces are
+/// identical, no clause requires a server to refuse the wider spelling, and
+/// the GET form of an operation delivers the value with no type marker at all,
+/// so the server already applies the declared type by parsing
+/// (<https://hl7.org/fhir/R4B/operations.html>). Recorded on #352.
+fn generalizations(module: &VersionModule, name: &str) -> Vec<String> {
+    let Some(declared) = module.types.get(name).filter(|t| t.is_primitive) else {
+        return Vec::new();
+    };
+    let code = |rust: &str| {
+        let mut chars = rust.chars();
+        chars
+            .next()
+            .map(|c| c.to_ascii_lowercase().to_string() + chars.as_str())
+            .unwrap_or_default()
+    };
+    let scalar = crate::lower::scalar_for(&code(&declared.name));
+    let mut out = Vec::new();
+    let mut current = declared.base.as_deref();
+    let mut hops = 0;
+    while let Some(step) = current {
+        let Some(base) = module.types.get(step) else {
+            break;
+        };
+        if base.is_primitive && crate::lower::scalar_for(&code(&base.name)) == scalar {
+            out.push(base.name.clone());
+        }
+        hops += 1;
+        if hops > 8 {
+            break;
+        }
+        current = base.base.as_deref();
+    }
+    out
 }
 
 /// Whether a struct of `fields` derives `Default`: every required field's
@@ -419,6 +473,13 @@ pub fn render_descriptor_module(banner: &str) -> String {
 //! ecosystem overlay (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>),
 //! each parameter marked with its source, so a server accepts nothing more
 //! and nothing less.
+//!
+//! NOTE: a parameter is read from the primitive its definition declares and
+//! from the primitives that share that one's scalar in either direction, so a
+//! `canonical` parameter reads a `valueUri` too. No clause requires refusing
+//! the wider spelling, and the GET form carries no type marker at all
+//! (<https://hl7.org/fhir/R4B/operations.html>); the decision is recorded on
+//! #352.
 
 /// The direction of an operation parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
