@@ -19,7 +19,11 @@ that point and again after the warm requests, and the two are close. Size the
 machine for that figure. The build is the expensive step: it holds a whole
 release in memory while it computes the transitive closure, so peak build
 memory is several times the size of the finished index and is the figure to
-size a build machine by. The
+size a build machine by. That peak lands in the write phase, where the rows
+the read pass produced, the rows the store builder holds for its one write
+transaction, and the word dictionary under construction are alive together.
+The build also reads and writes on every core, so size a build machine for
+cores as well as memory. The
 design target for point reads is under 1 ms measured over HTTP on the same
 machine; a millisecond-scale figure in a record is tracked as a performance
 issue, not called done.

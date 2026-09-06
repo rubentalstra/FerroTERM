@@ -13,6 +13,11 @@ the input, and the store, graph, and text crates own their formats.
   keyed structure and is joined in path order, and each artifact is written
   from its own inputs alone. Never let a result depend on which worker
   finished first.
+- Peak resident memory lands in the write phase, where the rows the read pass
+  produced, the rows `StoreBuilder` buffers for its one transaction, and the
+  designation index under construction are alive together. The store buffer
+  stays for the reason recorded on #338; a builder that writes rows through as
+  they arrive is what lowers the peak.
 - The output directory is never committed (`.gitignore` refuses `*.redb`,
   `*.fst`, and `/artifacts/`); neither is any RF2 input
   (`.claude/rules/vendored-inputs.md`).

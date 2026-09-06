@@ -25,13 +25,49 @@ fn two_builds_of_the_same_release_are_byte_identical() {
         (a.concepts, a.designations, a.is_a_edges),
         (b.concepts, b.designations, b.is_a_edges)
     );
-    for file in [STORE_FILE, MANIFEST_FILE] {
+    // Every file, not only the store: the hierarchy, the text index, and the
+    // ECL files are written by the parallel stages, and it is those that a
+    // completion-order dependency would show up in.
+    let written = files_in(first.path());
+    assert_eq!(written, files_in(second.path()));
+    for file in [
+        STORE_FILE,
+        MANIFEST_FILE,
+        pipeline::HIERARCHY_FILE,
+        pipeline::TEXT_FILE,
+        pipeline::REFSETS_FILE,
+        pipeline::ATTRIBUTES_FILE,
+        pipeline::MEMBERS_FILE,
+        pipeline::IDENTIFIERS_FILE,
+    ] {
+        assert!(
+            written.iter().any(|name| name == file),
+            "the build wrote no {file}"
+        );
+    }
+    for file in &written {
         assert_eq!(
             fs::read(first.path().join(file)).expect("first"),
             fs::read(second.path().join(file)).expect("second"),
             "{file} differs between two builds"
         );
     }
+}
+
+/// The names of the files in `dir`, sorted.
+fn files_in(dir: &std::path::Path) -> Vec<String> {
+    let mut names: Vec<String> = fs::read_dir(dir)
+        .expect("read the output directory")
+        .map(|entry| {
+            entry
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .to_string()
+        })
+        .collect();
+    names.sort();
+    names
 }
 
 #[test]
