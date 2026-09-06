@@ -7,7 +7,9 @@
 #
 # A bar is the claim the project makes, never a build's measurement: it does
 # not move to match a fatter bundle. A breach is a dependency or a screen to
-# justify, or a claim to re-adjudicate, never a bar to raise.
+# justify, or a claim to re-adjudicate, never a bar to raise. Each bar records
+# the figure the build last produced (`measured_gzip_bytes`), printed beside the
+# live measurement so the headroom is visible.
 #
 # The bundle is built by `trunk build --release` from app/ferroterm-viewer; a
 # missing dist/ SKIPS LOUDLY rather than failing, because no ordinary cargo
@@ -41,7 +43,7 @@ fi
 breached=0
 measured=0
 
-while IFS=$'\t' read -r asset pattern max claim; do
+while IFS=$'\t' read -r asset pattern max recorded claim; do
   # One file per asset kind; several would mean the build changed shape.
   found="$(find "$dist" -maxdepth 1 -type f -name "$pattern" | wc -l | tr -d '[:space:]')"
   if [[ "$found" -ne 1 ]]; then
@@ -56,9 +58,10 @@ while IFS=$'\t' read -r asset pattern max claim; do
     breached=$((breached + 1))
     printf 'BREACH %-5s %8d > %8d bytes gzipped  (%s)\n' "$asset" "$size" "$max" "$claim" >&2
   else
-    printf 'ok     %-5s %8d <= %8d bytes gzipped\n' "$asset" "$size" "$max"
+    printf 'ok     %-5s %8d <= %8d bytes gzipped  (recorded %d)\n' \
+      "$asset" "$size" "$max" "$recorded"
   fi
-done < <(jq -r '.bars[] | [.asset, .pattern, .max_gzip_bytes, .claim] | @tsv' "$bars")
+done < <(jq -r '.bars[] | [.asset, .pattern, .max_gzip_bytes, .measured_gzip_bytes, .claim] | @tsv' "$bars")
 
 echo "bundle-size: $((measured - breached)) of $measured bars hold"
 if [[ "$breached" -gt 0 ]]; then

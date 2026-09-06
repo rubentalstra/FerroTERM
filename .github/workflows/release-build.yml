@@ -49,6 +49,14 @@ on:
 
 permissions: {}
 
+# The server feature that embeds app/ferroterm-viewer/dist into the binary. It
+# is off by default so an ordinary `cargo build` never needs a bundle, and on
+# here so a release carries the viewer (docs/viewer.md §2). This is CI's only
+# reference to the name: rename the feature in app/ferroterm-server/Cargo.toml
+# and here, and nowhere else.
+env:
+  VIEWER_FEATURE: ui
+
 jobs:
   build:
     runs-on: ${{ inputs.runner }}
@@ -79,6 +87,23 @@ jobs:
         if: ${{ contains(inputs.target, 'musl') }}
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
+      # The viewer bundle is architecture-independent, and it is built HERE
+      # rather than handed to this lane by its caller. A bundle produced in an
+      # ordinary caller job would put bytes this lane did not build inside the
+      # binary it signs, and that isolation is exactly what SLSA Build L3 buys
+      # (https://slsa.dev/spec/v1.2/build-requirements). Building it once per
+      # architecture costs a few minutes and adds no attestation subject: the
+      # bundle rides inside the binary the existing lane already signs.
+      - name: Install Trunk
+        uses: taiki-e/install-action@0758d235715de2f3551eacc980d9ae8fce9342c3 # v2.87.3
+        with:
+          tool: trunk@0.21.14
+      - name: Add the WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Build the viewer bundle
+        working-directory: app/ferroterm-viewer
+        run: trunk build --release --locked
+
       # `cargo auditable` embeds the compressed dependency list in the binary's
       # own `.dep-v0` section (<4 KiB), so the SHIPPED artifact self-describes to
       # syft/trivy/grype/osv-scanner even when the release page's SBOM never
@@ -91,10 +116,17 @@ jobs:
       - name: Build the server and the build tool
         # `ferroterm-server` produces the `ferroterm` binary; `ferroterm-build`
         # produces the offline index builder shipped beside it. Adjust here and
-        # in the Package/SBOM steps if a crate or bin is renamed.
+        # in the Package/SBOM steps if a crate or bin is renamed. Two
+        # invocations, because a plain feature name needs a single selected
+        # package (https://doc.rust-lang.org/cargo/reference/features.html).
         env:
           TARGET: ${{ inputs.target }}
-        run: cargo auditable build --release --locked --target "$TARGET" -p ferroterm-server -p ferroterm-build
+        run: |
+          set -euo pipefail
+          cargo auditable build --release --locked --target "$TARGET" \
+            -p ferroterm-server --features "$VIEWER_FEATURE"
+          cargo auditable build --release --locked --target "$TARGET" \
+            -p ferroterm-build
 
       - name: Package
         shell: bash
@@ -138,6 +170,7 @@ jobs:
           # dropping the flag would silently downgrade every release.
           cargo cyclonedx \
             --manifest-path app/ferroterm-server/Cargo.toml \
+            --features "$VIEWER_FEATURE" \
             --format json --describe binaries --spec-version 1.5
           sbom="ferroterm-${TAG}-${TARGET}.cdx.json"
           # cargo-cyclonedx names the file after the binary; find it rather than

@@ -327,6 +327,60 @@ jobs:
       - uses: ./.github/actions/setup-rust
       - run: bash scripts/checks/viewer-boundary.sh
 
+  # The viewer ships to a browser, so the target it must compile for is
+  # wasm32-unknown-unknown and no ordinary workspace lane covers it. The wasm
+  # clippy pass is the load-bearing gate here: it is the only place a
+  # dependency that cannot compile for the browser shows up. The bundle build
+  # and the size bar follow it, so a fatter download is a decision someone
+  # makes rather than a drift nobody sees.
+  #
+  # Three tool pins, each from its recorded home (docs/VERSIONS.md):
+  # Trunk 0.21.14 below, leptosfmt 0.1.33 below, and the Tailwind standalone
+  # CLI 4.3.3 in app/ferroterm-viewer/Trunk.toml `[tools] tailwindcss`, which
+  # Trunk downloads itself at that version. There is no Node in this build.
+  viewer:
+    name: viewer
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: clippy, rustfmt
+          cache-key: viewer
+      - name: Add the WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - uses: taiki-e/install-action@0758d235715de2f3551eacc980d9ae8fce9342c3 # v2.87.3
+        with:
+          tool: trunk@0.21.14, cargo-nextest
+      # leptosfmt is not in install-action's manifest, so install-action would
+      # fall back to cargo-binstall guessing an asset name. A version-pinned
+      # `cargo install --locked` is the deterministic build of the same tool.
+      - name: Install leptosfmt
+        run: cargo install leptosfmt --locked --version 0.1.33
+      - name: Formatting
+        run: |
+          set -euo pipefail
+          cargo fmt -p ferroterm-viewer --check
+          leptosfmt --check app/ferroterm-viewer/src
+      - name: Clippy on the target the crate ships to
+        run: cargo clippy -p ferroterm-viewer --locked --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
+      - name: Tests
+        run: cargo nextest run -p ferroterm-viewer --locked --no-tests=pass
+      # `locked = true` in Trunk.toml already refuses a stale lock file; the
+      # flag says so at the call site too.
+      - name: Build the release bundle
+        working-directory: app/ferroterm-viewer
+        run: trunk build --release --locked
+      - name: The bundle is inside its recorded bars
+        run: bash scripts/checks/bundle-size.sh
+
   codegen-drift:
     name: codegen-drift
     needs: detect
@@ -524,6 +578,7 @@ jobs:
       - doc
       - cargo-deny
       - viewer-boundary
+      - viewer
       - codegen-drift
       - crate-version-guard
       - publish-dry-run

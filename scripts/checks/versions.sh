@@ -260,6 +260,55 @@ else
   note "no vendored FHIR packages yet — skipped"
 fi
 
+# --- the viewer tool pins (docs/VERSIONS.md <-> Trunk.toml <-> the workflows) ---
+echo "== viewer tool pins (docs/VERSIONS.md <-> Trunk.toml <-> the workflows)"
+if [[ -f app/ferroterm-viewer/Trunk.toml ]] && [[ -f docs/VERSIONS.md ]]; then
+  pin_trunk="$(sed -n 's/^| Trunk | \([0-9][0-9.]*\),.*/\1/p' docs/VERSIONS.md | head -n1)"
+  pin_leptosfmt="$(sed -n 's/^| .leptosfmt. | \([0-9][0-9.]*\),.*/\1/p' docs/VERSIONS.md | head -n1)"
+  pin_tailwind="$(sed -n 's/^| Tailwind CSS standalone CLI | \([0-9][0-9.]*\),.*/\1/p' docs/VERSIONS.md | head -n1)"
+  toml_trunk="$(sed -n 's/^trunk-version[[:space:]]*=[[:space:]]*">=\([0-9][0-9.]*\)"/\1/p' app/ferroterm-viewer/Trunk.toml | head -n1)"
+  toml_tailwind="$(sed -n 's/^tailwindcss[[:space:]]*=[[:space:]]*"\([0-9][0-9.]*\)"/\1/p' app/ferroterm-viewer/Trunk.toml | head -n1)"
+  if [[ -z "$pin_trunk" || -z "$pin_leptosfmt" || -z "$pin_tailwind" ]]; then
+    bad "docs/VERSIONS.md has no Viewer toolchain rows for Trunk, leptosfmt, and the Tailwind CLI"
+  else
+    [[ "$toml_trunk" == "$pin_trunk" ]] \
+      || bad "Trunk.toml trunk-version floor (${toml_trunk:-unset}) != docs/VERSIONS.md pin ($pin_trunk)"
+    [[ "$toml_tailwind" == "$pin_tailwind" ]] \
+      || bad "Trunk.toml [tools] tailwindcss (${toml_tailwind:-unset}) != docs/VERSIONS.md pin ($pin_tailwind)"
+    # Every workflow that installs a viewer tool installs the pinned version.
+    for wf in .github/workflows/ci.yml .github/workflows/release-build.yml; do
+      [[ -f "$wf" ]] || continue
+      while read -r got; do
+        [[ "$got" == "$pin_trunk" ]] || bad "$wf installs trunk@$got, docs/VERSIONS.md pins $pin_trunk"
+      done < <(sed -n 's/.*tool:[^#]*trunk@\([0-9][0-9.]*\).*/\1/p' "$wf")
+      while read -r got; do
+        [[ "$got" == "$pin_leptosfmt" ]] || bad "$wf installs leptosfmt $got, docs/VERSIONS.md pins $pin_leptosfmt"
+      done < <(sed -n 's/.*cargo install leptosfmt .*--version \([0-9][0-9.]*\).*/\1/p' "$wf")
+    done
+    [[ "$fail" -ne 0 ]] || note "OK: Trunk $pin_trunk, Tailwind CLI $pin_tailwind, leptosfmt $pin_leptosfmt"
+  fi
+else
+  note "no viewer crate yet — skipped"
+fi
+
+# --- the release lane's viewer feature exists on the server ---------------------
+echo "== viewer embed feature (release-build.yml <-> app/ferroterm-server/Cargo.toml)"
+if [[ -f .github/workflows/release-build.yml ]] && [[ -f app/ferroterm-server/Cargo.toml ]]; then
+  want_feature="$(sed -n 's/^[[:space:]]*VIEWER_FEATURE:[[:space:]]*\([A-Za-z0-9_-]*\).*/\1/p' .github/workflows/release-build.yml | head -n1)"
+  server_features="$(awk '/^\[features\]/{f=1;next} /^\[/{f=0} f && /^[A-Za-z0-9_-]+[[:space:]]*=/{sub(/[[:space:]]*=.*/,""); print}' app/ferroterm-server/Cargo.toml)"
+  if [[ -z "$want_feature" ]]; then
+    bad "release-build.yml has no VIEWER_FEATURE, so the release lane names no embed feature"
+  elif [[ -z "$server_features" ]]; then
+    note "app/ferroterm-server declares no features yet — skipped (the lane wants '$want_feature')"
+  elif ! printf '%s\n' "$server_features" | grep -qx "$want_feature"; then
+    bad "release-build.yml builds --features $want_feature, which app/ferroterm-server/Cargo.toml does not declare"
+  else
+    note "OK: the release lane builds the server with its '$want_feature' feature"
+  fi
+else
+  note "no release-build.yml or no server crate yet — skipped"
+fi
+
 echo
 if [[ "$fail" -ne 0 ]]; then
   echo "versions: DRIFT detected (see above)." >&2
