@@ -6,21 +6,21 @@
       "asset": "wasm",
       "pattern": "*_bg.wasm",
       "max_gzip_bytes": 240000,
-      "measured_gzip_bytes": 216208,
+      "measured_gzip_bytes": 238619,
       "claim": "the WebAssembly module is under 235 KiB gzipped"
     },
     {
       "asset": "js",
       "pattern": "*.js",
       "max_gzip_bytes": 12000,
-      "measured_gzip_bytes": 8710,
+      "measured_gzip_bytes": 8709,
       "claim": "the wasm-bindgen bootstrap is under 12 KB gzipped"
     },
     {
       "asset": "css",
       "pattern": "*.css",
       "max_gzip_bytes": 8000,
-      "measured_gzip_bytes": 3223,
+      "measured_gzip_bytes": 3857,
       "claim": "the compiled Tailwind sheet is under 8 KB gzipped"
     }
   ]
