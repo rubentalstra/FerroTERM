@@ -38,6 +38,12 @@ pub const SECURITY_SERVICE_ENV: &str = "FERROTERM_SECURITY_SERVICE";
 /// learns where to send the next request
 /// (<https://hl7.org/fhir/R4B/capabilitystatement-definitions.html#CapabilityStatement.implementation.url>).
 pub const BASE_URL_ENV: &str = "FERROTERM_BASE_URL";
+/// The environment variable switching the viewer on or off.
+///
+/// It reads `on` or `off` (`true`/`false`, `1`/`0`, and `yes`/`no` are taken
+/// too, in any case). Off, the server mounts no `/ui` routes at all, so an
+/// API-only deployment presents no viewer rather than a refusal.
+pub const UI_ENV: &str = "FERROTERM_UI";
 
 /// The codes of the FHIR `restful-security-service` value set
 /// (<http://hl7.org/fhir/ValueSet/restful-security-service>), each with its
@@ -80,6 +86,8 @@ pub struct Config {
     /// The base URL clients reach this server at, without a version prefix
     /// and without a trailing slash; `None` when the deployment names none.
     pub base_url: Option<String>,
+    /// Whether the server mounts the viewer under `/ui`.
+    pub viewer: bool,
 }
 
 /// A configuration value that does not parse.
@@ -93,6 +101,9 @@ pub enum ConfigError {
         "{SECURITY_SERVICE_ENV}: `{0}` is not a code of http://hl7.org/fhir/ValueSet/restful-security-service"
     )]
     SecurityService(String),
+    /// `FERROTERM_UI` names neither `on` nor `off`.
+    #[error("{UI_ENV}: `{0}` is neither `on` nor `off`")]
+    Viewer(String),
 }
 
 impl Default for Config {
@@ -107,6 +118,7 @@ impl Default for Config {
             log_filter: String::from(crate::telemetry::DEFAULT_FILTER),
             security_services: Vec::new(),
             base_url: None,
+            viewer: true,
         }
     }
 }
@@ -139,6 +151,7 @@ impl Config {
             base_url: std::env::var(BASE_URL_ENV)
                 .ok()
                 .and_then(|url| base_url_of(&url)),
+            viewer: viewer(defaults.viewer)?,
         })
     }
 }
@@ -178,6 +191,27 @@ fn services_of(value: &str) -> Result<Vec<String>, ConfigError> {
     Ok(out)
 }
 
+/// Whether the viewer is on, `default` when `FERROTERM_UI` is unset.
+///
+/// # Errors
+///
+/// Returns [`ConfigError::Viewer`] when the variable names neither state.
+fn viewer(default: bool) -> Result<bool, ConfigError> {
+    let Ok(value) = std::env::var(UI_ENV) else {
+        return Ok(default);
+    };
+    switch_of(&value).ok_or(ConfigError::Viewer(value))
+}
+
+/// The state `value` names, or `None` when it names neither.
+fn switch_of(value: &str) -> Option<bool> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "on" | "true" | "1" | "yes" => Some(true),
+        "off" | "false" | "0" | "no" => Some(false),
+        _ => None,
+    }
+}
+
 /// The base URL `value` names, without its trailing slashes, or `None` when it
 /// names nothing.
 ///
@@ -190,7 +224,7 @@ fn base_url_of(value: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{ConfigError, base_url_of, services_of};
+    use super::{ConfigError, base_url_of, services_of, switch_of};
 
     #[test]
     fn a_security_service_list_admits_only_the_codes_the_value_set_defines() {
@@ -213,6 +247,19 @@ mod tests {
             services_of("oauth"),
             Err(ConfigError::SecurityService(name)) if name == "oauth"
         ));
+    }
+
+    #[test]
+    fn the_viewer_switch_reads_both_states_and_refuses_anything_else() {
+        for on in ["on", "ON", " true ", "1", "yes"] {
+            assert_eq!(switch_of(on), Some(true), "{on}");
+        }
+        for off in ["off", "OFF", "false", "0", "no"] {
+            assert_eq!(switch_of(off), Some(false), "{off}");
+        }
+        for neither in ["", "onn", "maybe", "2"] {
+            assert_eq!(switch_of(neither), None, "{neither}");
+        }
     }
 
     #[test]

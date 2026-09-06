@@ -28,6 +28,7 @@ pub mod request_log;
 pub mod scope;
 pub mod state;
 pub mod telemetry;
+pub mod ui;
 pub mod version;
 pub mod wire;
 
@@ -47,19 +48,43 @@ use crate::state::AppState;
 /// lives under its version prefix. Any other path is an `OperationOutcome`
 /// `not-found`.
 pub fn router(state: Arc<AppState>) -> Router {
-    Router::new()
+    router_with_bundle(state, ui::BUNDLE)
+}
+
+/// Builds the HTTP application over `state`, serving `bundle` as the viewer.
+///
+/// The viewer is mounted when the deployment asked for it and this binary
+/// carries a bundle; otherwise `/` and `/ui` are the `OperationOutcome`
+/// `not-found` every other unknown path answers. Taking the bundle as an
+/// argument is what lets a test drive the viewer routes without the release
+/// build's `dist/`.
+pub fn router_with_bundle(state: Arc<AppState>, bundle: &'static [ui::Asset]) -> Router {
+    let viewer = state.serves_viewer() && !bundle.is_empty();
+    let mut app = Router::new()
         .route("/health", get(health))
         .nest("/r4", r4::router())
         .nest("/r4b", r4b::router())
         .nest("/r5", r5::router())
         .nest("/r6", r6::router())
-        .route("/metrics", get(metrics_scrape))
+        .route("/metrics", get(metrics_scrape));
+    if viewer {
+        app = app.route("/", get(ui::root));
+    }
+    let app = app
         .fallback(outcome::not_found)
         .layer(axum::middleware::from_fn_with_state(
             Arc::clone(&state),
             request_log::log,
-        ))
-        .with_state(state)
+        ));
+    // NOTE: axum applies a layer only to the routes already added, so merging
+    // the viewer here keeps its assets out of the request log and the metrics
+    // (<https://docs.rs/axum/0.8/axum/struct.Router.html#method.layer>).
+    let app = if viewer {
+        app.merge(ui::router(bundle))
+    } else {
+        app
+    };
+    app.with_state(state)
 }
 
 /// Serves [`router`] on an already-bound listener until the process receives

@@ -12,7 +12,7 @@ use std::io::IsTerminal;
 use std::process::ExitCode;
 use std::sync::Arc;
 
-use ferroterm_server::config::{Config, INDEX_ENV, LISTEN_ENV};
+use ferroterm_server::config::{Config, INDEX_ENV, LISTEN_ENV, UI_ENV};
 use ferroterm_server::state::AppState;
 use ferroterm_server::telemetry::ResolvedFormat;
 use ferroterm_server::{banner, telemetry};
@@ -73,6 +73,15 @@ async fn run(config: Config) -> anyhow::Result<()> {
             path = summary.path.as_ref().map(|p| p.display().to_string()),
             "serving code system"
         );
+    }
+    if config.viewer {
+        if ferroterm_server::ui::BUNDLE.is_empty() {
+            tracing::warn!(
+                "{UI_ENV} is on and this binary carries no viewer bundle, so no /ui route is served"
+            );
+        } else {
+            tracing::info!(base = ferroterm_server::ui::MOUNT, "serving the viewer");
+        }
     }
     let listener = TcpListener::bind(&config.listen)
         .await
