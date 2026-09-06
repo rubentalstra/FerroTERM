@@ -177,6 +177,10 @@ impl CodeSystemProvider for Supplemented {
         self.inner.language()
     }
 
+    fn artifact(&self) -> Option<&crate::artifact::Source> {
+        self.inner.artifact()
+    }
+
     fn standing(&self) -> Standing {
         self.inner.standing()
     }

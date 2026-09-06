@@ -128,6 +128,42 @@ definition and `content = not-present`: the codes come from `$lookup`,
 it declared, so a `complete` one carries its concepts. A supplement is applied
 to the system it supplements and is not served as an instance of its own.
 
+## Which artifact a code system came from
+
+`metadata?mode=terminology` names the artifact behind each served version, so a
+client can tell which built index answered without asking the operator. No FHIR
+specification records that fact, so FerroTERM defines an extension for it, the
+form FHIR provides for information outside a resource's basic definition
+(<https://hl7.org/fhir/R4B/extensibility.html>). It sits on
+`TerminologyCapabilities.codeSystem.version`, which is where the fact belongs:
+one artifact holds one version, and two SNOMED CT editions share one
+`codeSystem` entry. Every served FHIR version carries it, because R4, R4B, R5,
+and the R6 ballot all define that element as a `BackboneElement`.
+
+The canonical is
+`https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact`, with two
+`string` sub-extensions:
+
+- `name`: the artifact directory's own name, without the directories above it.
+- `release`: the release identifier the offline build wrote into the artifact's
+  manifest. For SNOMED CT this is the release date, for the others the release
+  version.
+
+```json
+{
+  "url": "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact",
+  "extension": [
+    { "url": "name", "valueString": "int" },
+    { "url": "release", "valueString": "20260901" }
+  ]
+}
+```
+
+A version that came from no artifact carries no extension: the registries the
+binary holds (UCUM, BCP 13, BCP 47, ISO 3166) and any `CodeSystem` resource a
+deployment loaded or persisted. Nothing about the operator's filesystem and
+nothing from the code system's content reaches the wire here.
+
 ## Languages
 
 `displayLanguage` and the `Accept-Language` header both select the display

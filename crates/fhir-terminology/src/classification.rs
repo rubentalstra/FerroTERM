@@ -22,6 +22,7 @@ use concept_store::tables;
 use designation_index::index::{Query, TextIndex};
 use serde::Deserialize;
 
+use crate::artifact::Source;
 use crate::filter::FilterOperator;
 use crate::provider::{
     Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
@@ -160,6 +161,8 @@ pub struct ClassificationProvider {
     concepts: u32,
     /// The language the display falls back to.
     language: String,
+    /// The artifact the version was read from.
+    source: Source,
     /// Property key ordinal to name.
     keys: BTreeMap<u32, String>,
     /// Designation use ordinal to name.
@@ -239,6 +242,7 @@ impl ClassificationProvider {
             uses.insert(ordinal, name);
             ordinal += 1;
         }
+        let source = Source::new(dir, &manifest.version);
         Ok(Self {
             identity: Identity {
                 url: manifest.system,
@@ -264,6 +268,7 @@ impl ClassificationProvider {
             },
             keys,
             uses,
+            source,
         })
     }
 
@@ -339,6 +344,10 @@ impl CodeSystemProvider for ClassificationProvider {
     /// display property").
     fn language(&self) -> Option<&str> {
         Some(&self.language)
+    }
+
+    fn artifact(&self) -> Option<&Source> {
+        Some(&self.source)
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {

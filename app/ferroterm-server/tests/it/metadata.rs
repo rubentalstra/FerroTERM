@@ -108,3 +108,52 @@ async fn the_capability_statements_state_the_configured_base_url() {
         "the terminology capabilities say the same: {body}"
     );
 }
+
+/// The canonical of the artifact declaration, and its two sub-extensions.
+const ARTIFACT: &str = "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact";
+
+/// The artifact directory names `start_with_every_loader` writes, by system.
+const ARTIFACTS: [(&str, &str); 3] = [
+    ("http://snomed.info/sct", "snomed"),
+    ("http://loinc.org", "loinc"),
+    ("http://www.nlm.nih.gov/research/umls/rxnorm", "rxnorm"),
+];
+
+// NOTE: no FHIR or SNOMED specification records which index a server read, so
+// the declaration is an extension on `codeSystem.version`, a `BackboneElement`
+// that admits one in every version (<https://hl7.org/fhir/R4B/extensibility.html>).
+#[tokio::test]
+async fn every_version_declares_the_artifact_each_index_backed_system_came_from() {
+    let server = Server::start_with_every_loader();
+    for version in ["r4", "r4b", "r5", "r6"] {
+        let (status, body) = server
+            .get(&format!("/{version}/metadata?mode=terminology"))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        let systems = body["codeSystem"].as_array().expect("codeSystem is a list");
+        for entry in systems {
+            let uri = entry["uri"].as_str().unwrap_or_default();
+            let declared = ARTIFACTS.iter().find(|(system, _)| *system == uri);
+            for served in entry["version"].as_array().expect("version is a list") {
+                let extension = &served["extension"][0];
+                match declared {
+                    Some((_, name)) => {
+                        assert_eq!(extension["url"], ARTIFACT, "{version} {uri}: {body}");
+                        assert_eq!(
+                            extension["extension"][0]["valueString"], *name,
+                            "{version} {uri} names its artifact: {body}"
+                        );
+                        assert!(
+                            extension["extension"][1]["valueString"].is_string(),
+                            "{version} {uri} names its release: {body}"
+                        );
+                    }
+                    None => assert!(
+                        served.get("extension").is_none(),
+                        "{version} {uri} came from no artifact and declares none: {body}"
+                    ),
+                }
+            }
+        }
+    }
+}

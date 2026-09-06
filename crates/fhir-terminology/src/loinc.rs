@@ -21,6 +21,7 @@ use designation_index::index::{Query, TextIndex};
 use regex::Regex;
 use serde::Deserialize;
 
+use crate::artifact::Source;
 use crate::compose::{Compose, ConceptRef, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
@@ -210,6 +211,8 @@ pub struct LoincProvider {
     concepts: u32,
     /// The language the release's own tables are in.
     base_language: String,
+    /// The artifact the version was read from.
+    source: Source,
     /// Property key ordinal to name.
     keys: BTreeMap<u32, String>,
     /// Designation use ordinal to name.
@@ -288,6 +291,7 @@ impl LoincProvider {
             uses.insert(ordinal, name);
             ordinal += 1;
         }
+        let source = Source::new(dir, &manifest.version);
         Ok(Self {
             identity: Identity {
                 url: SYSTEM.to_owned(),
@@ -308,6 +312,7 @@ impl LoincProvider {
             },
             keys,
             uses,
+            source,
         })
     }
 
@@ -552,6 +557,10 @@ impl CodeSystemProvider for LoincProvider {
     /// display property").
     fn language(&self) -> Option<&str> {
         Some(&self.base_language)
+    }
+
+    fn artifact(&self) -> Option<&Source> {
+        Some(&self.source)
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {

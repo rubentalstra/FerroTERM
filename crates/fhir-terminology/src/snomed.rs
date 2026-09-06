@@ -37,6 +37,7 @@ use sct_ecl::ast::ExpressionConstraint;
 use sct_ecl::eval::EvalError;
 use serde::Deserialize;
 
+use crate::artifact::Source;
 use crate::compose::{Compose, ConceptRef, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
@@ -171,6 +172,9 @@ struct Manifest {
     system: String,
     edition: String,
     version: String,
+    /// The release date the offline build recorded for the edition.
+    #[serde(default, rename = "releaseDate")]
+    release_date: Option<String>,
     store: String,
     hierarchy: String,
     text: String,
@@ -273,6 +277,7 @@ pub struct SnomedProvider {
     declaration: Declaration,
     keys: Keys,
     edition: String,
+    source: Source,
     base_language: String,
     concepts: u32,
 }
@@ -334,6 +339,15 @@ impl SnomedProvider {
         };
         let keys = Self::resolve_keys(&store)?;
         let base_language = Self::base_language(default_language, &manifest.languages);
+        // NOTE: no FHIR/SNOMED spec governs this: our own design, and the
+        // release date is the edition identifier the build records.
+        let source = Source::new(
+            dir,
+            manifest
+                .release_date
+                .as_deref()
+                .unwrap_or(&manifest.version),
+        );
         let mut properties: Vec<PropertyDefinition> = FHIR_PROPERTIES
             .iter()
             .map(|(code, kind)| PropertyDefinition {
@@ -395,6 +409,7 @@ impl SnomedProvider {
             },
             keys,
             edition: manifest.edition,
+            source,
             base_language,
             concepts,
         })
@@ -859,6 +874,10 @@ impl CodeSystemProvider for SnomedProvider {
     /// display property").
     fn language(&self) -> Option<&str> {
         Some(&self.base_language)
+    }
+
+    fn artifact(&self) -> Option<&Source> {
+        Some(&self.source)
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
