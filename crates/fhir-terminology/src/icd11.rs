@@ -450,13 +450,22 @@ impl Icd11Provider {
             .map(Ordinal::index))
     }
 
-    /// The title of the entity at `ordinal` in `language`, else in English, else any.
+    /// The language this linearization's own titles are in: the first the
+    /// artifact declares, which is the first language bundle it was built from.
+    fn base_language(&self) -> Option<&str> {
+        self.declaration.languages.first().map(String::as_str)
+    }
+
+    /// The title of the entity at `ordinal` in `language`, else in the base
+    /// language, else in English, else any.
     fn title(&self, ordinal: u32, language: Option<&str>) -> Result<Option<String>, ProviderError> {
         let designations = self
             .store
             .designations(Ordinal::new(ordinal))
             .map_err(storage)?;
-        let wanted = language.map(primary_subtag);
+        let wanted = language
+            .or_else(|| self.base_language())
+            .map(primary_subtag);
         let pick = |lang: Option<&str>| {
             designations
                 .iter()
@@ -787,6 +796,13 @@ impl CodeSystemProvider for Icd11Provider {
 
     fn declaration(&self) -> &Declaration {
         &self.declaration
+    }
+
+    /// The language of the titles this provider returns, so a `displayLanguage`
+    /// the artifact carries no bundle for is answered as a language the system
+    /// has no display in rather than satisfied by the base-language title.
+    fn language(&self) -> Option<&str> {
+        self.base_language()
     }
 
     /// A short code, an entity URI in either form, or (in a linearization) a

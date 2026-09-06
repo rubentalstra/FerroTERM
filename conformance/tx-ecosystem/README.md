@@ -49,6 +49,19 @@ hand before a release and their lists are refreshed in the same change.
   artifacts need the WHO container and its licence. Four of its cases send
   `version` on `ValueSet/$validate-code`, which declares no such input, and
   answer 400; they are the whole gap between the committed 44 and 48 (#349).
+  Of the remaining four, `metadata` is the cross-mode `/r4b` case below and
+  `lookup-mms-fr` and `cs-validate-lang` ask for the French display of `1A00`
+  in release `2026-01`. The WHO ICD-API local deployment publishes no French
+  bundle for that release: `include=2026-01_fr` aborts the container with
+  "Couldn't find the version", and `2025-01_fr` is the nearest bundle that
+  carries French. Both cases need a French artifact, so they stay unpassed
+  while the suite pins 2026-01 (#350). `expand-adhoc-enum` is the fourth: its
+  value set fixes `Shigellosis` as the display of `1A02` in
+  `compose.include.concept.display`, which every FHIR version defines as "the
+  text to display to the user for this concept in the context of this
+  valueset", and the case expects the expansion to carry the code system's
+  title instead. The compose display stands and the case stays unpassed
+  (#350).
 - **`tx.fhir.org`** needs a LOINC artifact (`--mode tx.fhir.org --index
   <loinc>`), since the release needs a LOINC account. The suite's own
   `tests/readme.md` says this mode is "for tests that are intended to be and
