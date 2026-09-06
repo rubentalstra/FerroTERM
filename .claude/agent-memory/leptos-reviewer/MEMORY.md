@@ -26,6 +26,11 @@ records is true and the reasoning is reusable.
 - [Tree editor state bleeds on positional keys](directory-tree-editor.md):
   positional `<For>` keys leak collapse and rename state to the sibling that
   shifts into position, and a refetch re-seeds an editor mid-edit
+- [A retained `<For>` key never rebuilds](for-retained-key-never-rebuilds.md):
+  a keyed row whose key is unchanged keeps its old body, so a plain-value child
+  prop goes stale on refetch; a plain `Vec<AnyView>` rebuilds positionally
+- [`use_location().pathname` includes the base](use-location-pathname-includes-base.md):
+  it is the raw `window.location.pathname`, so compare against `/ui` + path
 
 ## Changed under CSR (the hydration half is gone, the rest stands)
 
