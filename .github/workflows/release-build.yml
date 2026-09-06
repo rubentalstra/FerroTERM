@@ -123,7 +123,13 @@ jobs:
           TARGET: ${{ inputs.target }}
         run: |
           set -euo pipefail
-          cargo auditable build --release --locked --target "$TARGET" \
+          # Naming the bundle directory is what makes a missing bundle fail the
+          # build: the server's build script refuses when the variable names a
+          # directory that does not read, and only warns when it falls back to
+          # the default. Without it a release would ship a viewer-less binary
+          # and nothing would say so.
+          FERROTERM_UI_BUNDLE="${GITHUB_WORKSPACE}/app/ferroterm-viewer/dist" \
+            cargo auditable build --release --locked --target "$TARGET" \
             -p ferroterm-server --features "$VIEWER_FEATURE"
           cargo auditable build --release --locked --target "$TARGET" \
             -p ferroterm-build

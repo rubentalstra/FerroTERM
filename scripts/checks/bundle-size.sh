@@ -36,7 +36,11 @@ if [[ ! -f "$bars" ]]; then
 fi
 
 if [[ ! -d "$dist" ]]; then
-  echo "bundle-size: no bundle at $dist — build it with 'cd app/ferroterm-viewer && trunk build --release --locked'. SKIPPED."
+  floor="$(sed -n 's/^trunk-version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' app/ferroterm-viewer/Trunk.toml 2>/dev/null | head -n1)"
+  echo "bundle-size: no bundle at $dist. SKIPPED, which is NOT a pass:"
+  echo "  build it with 'cd app/ferroterm-viewer && trunk build --release --locked'"
+  echo "  Trunk.toml requires trunk ${floor:-a pinned version}, and an older trunk refuses the build"
+  echo "  the ci.yml viewer job runs this over a real bundle and gates the merge"
   exit 0
 fi
 

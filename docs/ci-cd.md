@@ -93,7 +93,11 @@ new asset, no new attestation subject, and no change to the SLSA shape, and
 `docker/Dockerfile` gains no stage: the image copies the same two binaries it
 always did, one of which now carries the web UI. The feature name lives in one
 place, the `VIEWER_FEATURE` variable at the top of `release-build.yml`, and
-`scripts/checks/versions.sh` fails when the server stops declaring it.
+`scripts/checks/versions.sh` fails when the server stops declaring it. The lane
+also sets `FERROTERM_UI_BUNDLE` to the directory Trunk just wrote, because the
+server's build script refuses a named directory that does not read and only
+warns when it falls back to the default. A release that lost its bundle
+therefore fails to build rather than shipping a binary with no viewer in it.
 
 ## The container image
 
