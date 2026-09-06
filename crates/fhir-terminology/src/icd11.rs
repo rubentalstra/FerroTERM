@@ -1054,6 +1054,8 @@ impl CodeSystemProvider for Icd11Provider {
             title: Some(format!("Postcoordination scale {axis} of {entity}")),
             experimental: Some(false),
             date: Some(self.release.clone()),
+            description: None,
+            copyright: None,
         }
     }
 

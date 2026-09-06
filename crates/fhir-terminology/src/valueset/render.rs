@@ -242,7 +242,12 @@ macro_rules! render_value_set {
                     publisher: with_compose
                         .then(|| model.publisher.as_deref().map(Into::into))
                         .flatten(),
-                    description: None,
+                    description: with_compose
+                        .then(|| model.description.as_deref().map(Into::into))
+                        .flatten(),
+                    copyright: with_compose
+                        .then(|| model.copyright.as_deref().map(Into::into))
+                        .flatten(),
                     immutable: model.immutable.map(Into::into),
                     compose: with_compose.then(|| compose(&model.compose)),
                     ..Default::default()

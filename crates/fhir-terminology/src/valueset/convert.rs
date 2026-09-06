@@ -200,6 +200,9 @@ macro_rules! convert_value_set {
                             .as_ref()
                             .and_then(|d| d.value.as_deref()),
                     ),
+                    copyright: text(
+                        resource.copyright.as_ref().and_then(|c| c.value.as_deref()),
+                    ),
                     immutable: flag(&resource.immutable),
                     compose,
                 })

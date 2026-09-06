@@ -487,7 +487,8 @@ impl<'a> Sources<'a> {
                             experimental: metadata.experimental,
                             date: metadata.date,
                             publisher: None,
-                            description: None,
+                            description: metadata.description,
+                            copyright: metadata.copyright,
                             immutable: None,
                             compose,
                         }))

@@ -170,6 +170,48 @@ async fn the_capability_statement_lists_the_value_set_operations() {
     assert_eq!(names, ["expand", "validate-code"]);
 }
 
+/// An implicit SNOMED CT value set carries its template on the wire
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets"): the
+/// definition-side fields travel with `includeDefinition`, and the copyright
+/// is the page's own notice.
+#[tokio::test]
+async fn an_implicit_snomed_value_set_carries_the_page_s_template() {
+    use ferroterm_testkit::snomed::{ANIMAL, VERSION, item, sctid};
+    let server = Server::start();
+    let animal = sctid(item(ANIMAL));
+    let url = format!("{VERSION}?fhir_vs=isa/{animal}")
+        .replace(':', "%3A")
+        .replace('/', "%2F")
+        .replace('?', "%3F")
+        .replace('=', "%3D");
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/ValueSet/$expand?url={url}&includeDefinition=true"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["version"], VERSION, "{body}");
+    assert_eq!(
+        body["name"],
+        format!("SNOMED CT Concept {animal} and descendants"),
+        "{body}"
+    );
+    assert_eq!(body["description"], "All SNOMED CT concepts for Animal");
+    assert_eq!(
+        body["copyright"],
+        fhir_terminology::snomed::TEMPLATE_COPYRIGHT
+    );
+    // Without the definition the expansion keeps the identity and leaves the
+    // definition-side fields out, as it does for a stored value set.
+    let (status, body) = server
+        .get(&format!("/r4b/ValueSet/$expand?url={url}"))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["version"], VERSION, "{body}");
+    assert!(body.get("description").is_none(), "{body}");
+    assert!(body.get("copyright").is_none(), "{body}");
+}
+
 /// `?fhir_vs=ecl/[ecl]` on the wire, the expression URI-encoded inside the
 /// `url` parameter (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value
 /// Sets"), on the system, edition, and version URIs.

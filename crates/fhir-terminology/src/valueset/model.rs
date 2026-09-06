@@ -35,6 +35,8 @@ pub struct ValueSetModel {
     pub publisher: Option<String>,
     /// `description`.
     pub description: Option<String>,
+    /// `copyright`: the licence notice for the content the value set draws in.
+    pub copyright: Option<String>,
     /// `immutable`.
     pub immutable: Option<bool>,
     /// `compose`, empty when the resource has none.

@@ -306,6 +306,11 @@ pub struct ImplicitMetadata {
     pub experimental: Option<bool>,
     /// `ValueSet.date`.
     pub date: Option<String>,
+    /// `ValueSet.description`.
+    pub description: Option<String>,
+    /// `ValueSet.copyright`: the licence notice the code system attaches to
+    /// content drawn from it.
+    pub copyright: Option<String>,
 }
 
 /// The status of a concept, for `inactive` and `abstract` on the wire.
@@ -788,6 +793,26 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// own says so.
     fn implicit_metadata(&self, _url: &str) -> ImplicitMetadata {
         ImplicitMetadata::default()
+    }
+
+    /// Whether this version answers to `version` beside the one
+    /// `identity().version` states: an alias the code system's own version
+    /// scheme defines. The default declares none, so only the stated version
+    /// and the ecosystem's `x` patterns resolve.
+    fn answers_version(&self, _version: &str) -> bool {
+        false
+    }
+
+    /// The property codes this code system's specification defines that this
+    /// server does not compute.
+    ///
+    /// `$lookup` refuses a `property` naming one of these with
+    /// `not-supported`, so a client can tell a property this server will not
+    /// compute from a concept that has nothing to say
+    /// (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>, the
+    /// `property` parameter). The default declares none.
+    fn unserved_properties(&self) -> &[&'static str] {
+        &[]
     }
 
     /// The concepts this system names in place of an inactive one, from its

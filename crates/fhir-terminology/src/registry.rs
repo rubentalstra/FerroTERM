@@ -244,6 +244,7 @@ impl Registry {
         let provider =
             crate::versioned::select_version(system.versions.keys().map(String::as_str), wanted)
                 .and_then(|v| system.versions.get(v))
+                .or_else(|| Self::answering(system, wanted))
                 .ok_or_else(|| ResolveError::UnknownVersion {
                     url: url.to_owned(),
                     version: wanted.to_owned(),
@@ -252,6 +253,25 @@ impl Registry {
             provider: Arc::clone(provider),
             defaulted,
         })
+    }
+
+    /// The greatest loaded version of `system` that answers to `wanted` under
+    /// the code system's own version scheme.
+    ///
+    /// A SNOMED CT edition URI with no release date names a distribution
+    /// rather than one release of it, and the FHIR SNOMED CT page tells
+    /// clients to send that form: "At minimum the URI SHOULD contain the sctid
+    /// of the SNOMED CT distribution", and "if the date of release is not
+    /// provided, the Terminology Service may default to the most recent
+    /// version of the named SNOMED CT distribution"
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Versions").
+    fn answering<'a>(system: &'a System, wanted: &str) -> Option<&'a Arc<dyn CodeSystemProvider>> {
+        system
+            .versions
+            .iter()
+            .filter(|(_, provider)| provider.answers_version(wanted))
+            .max_by(|(a, _), (b, _)| crate::versioned::version_order(a, b))
+            .map(|(_, provider)| provider)
     }
 
     /// The providers to ask about the implicit URI `url`: for every system

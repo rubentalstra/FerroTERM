@@ -13,7 +13,7 @@ releases build into:
 | Run | `FERROTERM_INDEX` | Edition served | Concepts | Reference sets | Languages |
 |---|---|---|---|---|---|
 | NL | `artifacts/nl` | `http://snomed.info/sct/11000146104/version/20260630` | 548,949 | 75 | en, nl |
-| INT | `artifacts/int` | `http://snomed.info/sct/449080006/version/20260901` | 535,502 | 25 | en |
+| INT | `artifacts/int` | `http://snomed.info/sct/900000000000207008/version/20260901` | 535,502 | 25 | en |
 | Both | both directories | both of the above | | | |
 
 Both editions matter, and they answer differently. The NL edition carries
@@ -29,13 +29,15 @@ A verdict is one of three:
   tracks it.
 - **Not offered.** FerroTERM does not do this, and the row says why.
 
-37 expectations were checked: 28 met, 6 partially met, 3 not offered. Some
-appear in two sources, and where they do the detail says so.
+37 expectations were checked: 34 met, 3 not offered. Some appear in two
+sources, and where they do the detail says so.
 
 A row that a later change fixes is re-checked the same way, on a server built
 from that change over the same two artifact directories, and the detail says
 which issue moved it. [C22](#c22-detail) was re-checked on issue #361,
-[C5](#c5-detail) on issue #367.
+[C5](#c5-detail) on issue #367, [B1](#b1-detail) on issue #359, and
+[C10](#c10-detail), [C23](#c23-detail), and [C24](#c24-detail) on issues #360,
+#363, and #362.
 
 ## Where the expectations come from
 
@@ -70,14 +72,14 @@ the observed ECL coverage sits under [A3](#a3) as its evidence.
 | <a id="a1"></a>A1 | "Searching for SNOMED CT content using term matching, the hierarchy, or defining relationships" | **Met** | [A1](#a1-detail) · `crates/fhir-terminology/tests/it/snomed.rs::search_reads_the_designation_index`, `::the_hierarchy_answers_subsumption_and_the_filters_from_the_closure` |
 | <a id="a2"></a>A2 | "Retrieving information about a given concept, including descriptions for a given dialect, supertypes, subtypes and defining relationships" | **Met** | [A2](#a2-detail) · `crates/fhir-terminology/tests/it/snomed.rs::properties_follow_the_snomed_on_fhir_list`, `::designations_carry_the_snomed_use_codings_and_filter_by_language` |
 | <a id="a3"></a>A3 | "Executing Expression Constraint Queries (ECL) on a particular SNOMED CT edition" | **Met** | [A3](#a3-detail) · `crates/fhir-terminology/tests/it/ecl.rs` (13 tests), `crates/fhir-terminology/tests/it/snomed.rs::ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set` |
-| <a id="a4"></a>A4 | "Accessing maps to/from SNOMED CT and other reference set information" | **Partially met** | Maps and reference set membership answer; the reference set list omits the language reference sets. [C23](#c23-detail), issue #363 |
+| <a id="a4"></a>A4 | "Accessing maps to/from SNOMED CT and other reference set information" | **Met** | [C23](#c23-detail), [C26](#c26-detail) · `crates/fhir-terminology/tests/it/snomed.rs::a_language_reference_set_is_listed_and_its_member_forms_are_refused` |
 | <a id="a5"></a>A5 | "Terminology servers can either import data from a SNOMED CT release package, or periodically synchronise its content", and make the content "available … using a convenient API" | **Met** | [A5](#a5-detail) · `crates/rf2/tests/it/local_edition.rs::the_local_edition_loads_and_identifies_itself`, `tools/ferroterm-build/tests/it/pipeline.rs::the_manifest_records_the_edition_and_the_counts` |
 
 ## Source 2: the SNOMED CT URI Standard
 
 | # | Expectation | Verdict | Evidence |
 |---|---|---|---|
-| <a id="b1"></a>B1 | §2 URIs for Editions and Versions: an edition is `http://snomed.info/sct/{sctid}` and a version `http://snomed.info/sct/{sctid}/version/{timestamp}`, with the International Edition at `900000000000207008` (Table 2.1, and the §3 CTS2 table) | **Partially met** | The URI shape is right and the NL edition is right; the International release is served under the mapping module. [B1](#b1-detail), issue #359 |
+| <a id="b1"></a>B1 | §2 URIs for Editions and Versions: an edition is `http://snomed.info/sct/{sctid}` and a version `http://snomed.info/sct/{sctid}/version/{timestamp}`, with the International Edition at `900000000000207008` (Table 2.1, and the §3 CTS2 table) | **Met** | [B1](#b1-detail), re-checked on issue #359 |
 | <a id="b2"></a>B2 | §3 Identifying SNOMED CT Versions in HL7 FHIR: the code system URI is `http://snomed.info/sct` and the version string is `http://snomed.info/sct/{sctid}/version/{timestamp}` | **Met** | [C1](#c1-detail), [C16](#c16-detail) |
 | <a id="b3"></a>B3 | §2 URIs for components (`http://snomed.info/id/{sctid}`), modules (`http://snomed.info/module/{sctid}`), and RF2 fields (`http://snomed.info/field/{table}.{field}`) | **Not offered** | [B3](#b3-detail) |
 
@@ -86,7 +88,7 @@ the observed ECL coverage sits under [A3](#a3) as its evidence.
 | # | Expectation (section) | Verdict | Evidence |
 |---|---|---|---|
 | <a id="c1"></a>C1 | §.1 System: "The URI `http://snomed.info/sct` identifies the SNOMED CT code system" | **Met** | [C1](#c1-detail) · `crates/fhir-terminology/tests/it/snomed.rs::identity_and_declaration_follow_the_manifest` |
-| <a id="c2"></a>C2 | §.1 Version: a URI for a specific Edition published on a particular date | **Partially met** | Same defect as [B1](#b1-detail), issue #359 |
+| <a id="c2"></a>C2 | §.1 Version: a URI for a specific Edition published on a particular date | **Met** | [B1](#b1-detail) |
 | <a id="c3"></a>C3 | §.1 Code: Concept IDs are valid in the `code` element | **Met** | [C3](#c3-detail) · `::locate_accepts_valid_sctids_only` |
 | <a id="c4"></a>C4 | §.1 Code: "SNOMED CT Terms and Description Identifiers are not valid as codes in FHIR" | **Met** | [C3](#c3-detail) · `::locate_accepts_valid_sctids_only` |
 | <a id="c5"></a>C5 | §.1, §.5 Code: SNOMED CT Expressions in Compositional Grammar are valid in the `code` element | **Not offered** | [C5](#c5-detail) · `crates/fhir-terminology/tests/it/snomed.rs::a_post_coordinated_expression_is_refused_for_the_grammar_not_as_an_unknown_concept`; the capability statement says so, issue #367 |
@@ -94,11 +96,11 @@ the observed ECL coverage sits under [A3](#a3) as its evidence.
 | <a id="c7"></a>C7 | §.1 Inactive: "Inactive codes are identified using the 'inactive' property" | **Met** | [C7](#c7-detail) · `::properties_follow_the_snomed_on_fhir_list` |
 | <a id="c8"></a>C8 | §.1 Subsumption: "based on the \|is a\| relationship defined by SNOMED CT" | **Met** | [C8](#c8-detail) · `::the_hierarchy_answers_subsumption_and_the_filters_from_the_closure` |
 | <a id="c9"></a>C9 | §.3: "Servers SHOULD regard provision of the date only for the version (without an sctid) as an error, and refuse to process the interaction or operation" | **Met** | [C9](#c9-detail) |
-| <a id="c10"></a>C10 | §.3: "At minimum the URI SHOULD contain the sctid", and the service "may default to the most recent version of the named SNOMED CT distribution" | **Partially met** | An edition URI without a date is refused. [C10](#c10-detail), issue #360 |
+| <a id="c10"></a>C10 | §.3: "At minimum the URI SHOULD contain the sctid", and the service "may default to the most recent version of the named SNOMED CT distribution" | **Met** | [C10](#c10-detail) · `crates/fhir-terminology/tests/it/snomed_editions.rs::an_edition_uri_without_a_date_names_the_greatest_release_of_that_edition` |
 | <a id="c11"></a>C11 | §.3: with no version URI the service "may default to the most recent version of the SNOMED CT International Edition available on the service" | **Met** | [C11](#c11-detail) |
 | <a id="c12"></a>C12 | §.4: designations in additional languages, the language a BCP 47 code from the RF2 `languageCode`, the description type in `designation.use`, returned under `includeDesignations` | **Met** | [C12](#c12-detail) · `::designations_carry_the_snomed_use_codings_and_filter_by_language` |
 | <a id="c13"></a>C13 | §.7: the `inactive`, `sufficientlyDefined`, and `moduleId` properties | **Met** | [C13](#c13-detail) · `::properties_follow_the_snomed_on_fhir_list` |
-| <a id="c14"></a>C14 | §.7: the `normalForm` and `normalFormTerse` properties | **Not offered** | [C14](#c14-detail), issue #364 |
+| <a id="c14"></a>C14 | §.7: the `normalForm` and `normalFormTerse` properties | **Not offered** | A recorded deviation: asking for one is refused with `not-supported`. [C14](#c14-detail), issue #390 · `::a_property_the_code_system_does_not_define_is_refused_rather_than_dropped` |
 | <a id="c15"></a>C15 | §.7: "SNOMED CT relationships, where the relationship type is subsumed by 410662002 \|Concept model attribute\|, also automatically become properties", named by concept id | **Met** | [C13](#c13-detail) · `::properties_follow_the_snomed_on_fhir_list` |
 | <a id="c16"></a>C16 | §.7: "when a `$lookup` operation is performed on a SNOMED CT concept, servers SHALL return the URI for the edition and version being used … in the `version` property" | **Met** | [C16](#c16-detail) |
 | <a id="c17"></a>C17 | §.8.1 By Subsumption: property `concept`, operator `is-a` | **Met** | [C17](#c17-detail) · `::the_hierarchy_answers_subsumption_and_the_filters_from_the_closure` |
@@ -107,8 +109,8 @@ the observed ECL coverage sits under [A3](#a3) as its evidence.
 | <a id="c20"></a>C20 | §.8.4 By whether post-coordination is allowed: property `expressions`, operator `=`, values true or false | **Met** | [C17](#c17-detail) |
 | <a id="c21"></a>C21 | §.9: the five query forms `?fhir_vs`, `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, `?fhir_vs=refset/[sctid]`, `?fhir_vs=ecl/[ecl]`, the ECL URI-encoded | **Met** | [C21](#c21-detail) · `::the_implicit_value_sets_follow_the_snomed_ct_page`, `::malformed_and_unknown_implicit_value_sets_are_refused` |
 | <a id="c22"></a>C22 | §.9: "The base URL is either `http://snomed.info/sct`, or the URI for the edition version" | **Met** | [C22](#c22-detail) · `crates/fhir-terminology/tests/it/snomed_editions.rs` (7 tests) |
-| <a id="c23"></a>C23 | §.9: "`?fhir_vs=refset` - all concept ids that correspond to reference sets that are explicitly defined in the specified SNOMED CT edition" | **Partially met** | The language reference sets are missing from the list. [C23](#c23-detail), issue #363 |
-| <a id="c24"></a>C24 | §.9: "the content of the resource must conform to the template provided" (`url`, `version`, `name`, `description`, `copyright`, `status`, `compose`) | **Partially met** | `version`, `name`, `description`, and `copyright` are absent. [C24](#c24-detail), issue #362 |
+| <a id="c23"></a>C23 | §.9: "`?fhir_vs=refset` - all concept ids that correspond to reference sets that are explicitly defined in the specified SNOMED CT edition" | **Met** | [C23](#c23-detail) · `::a_language_reference_set_is_listed_and_its_member_forms_are_refused` |
+| <a id="c24"></a>C24 | §.9: "the content of the resource must conform to the template provided" (`url`, `version`, `name`, `description`, `copyright`, `status`, `compose`) | **Met** | [C24](#c24-detail) · `::an_implicit_value_set_carries_the_page_s_template`, `app/ferroterm-server/tests/it/value_set.rs::an_implicit_snomed_value_set_carries_the_page_s_template` |
 | <a id="c25"></a>C25 | §.9: "If no version or edition is specified, the terminology service SHALL use the latest version available for its default edition" | **Met** | [C11](#c11-detail) |
 | <a id="c26"></a>C26 | §.10: implicit concept maps `?fhir_cm=[sctid]` for the POSSIBLY EQUIVALENT TO, REPLACED BY, SAME AS, and ALTERNATIVE association reference sets, with the relationship the table gives each | **Met** | [C26](#c26-detail) · `crates/fhir-terminology/tests/it/snomed_concept_map.rs::each_association_reference_set_translates_with_the_relationship_the_page_gives_it` |
 | <a id="c27"></a>C27 | §.10: "Simple Map Reference Sets (reference sets which are descendants of 900000000000496009 "Simple map") also define an implicit concept map" | **Met** | [C26](#c26-detail) · `::a_map_reference_set_translates_to_its_target_code_with_the_rf2_columns` |
@@ -502,126 +504,128 @@ nothing else, and every fixture in the test suites is synthetic
 owner's own licensed releases and live outside the repository, under
 `artifacts/`, which `.gitignore` excludes.
 
-The one gap is the SNOMED International copyright notice on the implicit
-value sets, which is part of [C24](#c24-detail).
+The SNOMED International copyright notice now travels on the implicit value
+sets themselves, which is [C24](#c24-detail).
 
-### Partially met
-
-<a id="b1-detail"></a>**B1, C2. The International Edition is served under the
-mapping module's URI.** Issue #359.
+<a id="b1-detail"></a>**B1, C2. The edition and version URIs.** Re-checked on
+issue #359.
 
 The URI Standard names the International Edition `900000000000207008`, in
-§2 Table 2.1 and again in the §3 CTS2 table. The 20260901 International
-release is served under `449080006`, and the server's own `$lookup` says
-what that module is:
+§2 Table 2.1 and again in the §3 CTS2 table, and the artifact is served
+under it:
 
 ```
-$lookup system=http://snomed.info/sct code=449080006
--> display "SNOMED CT to ICD-10 rule-based mapping module"
-   version http://snomed.info/sct/449080006/version/20260901
+$lookup code=74400008 version=http://snomed.info/sct/900000000000207008
+-> 200, version http://snomed.info/sct/900000000000207008/version/20260901
 ```
 
-The consequence a client meets:
+The NL edition resolves to `http://snomed.info/sct/11000146104`, the
+published Netherlands edition URI.
 
-```
-$lookup code=74400008 version=http://snomed.info/sct/900000000000207008/version/20260901
--> 404 not-found
-```
-
-`Edition::identify` (`crates/rf2/src/edition.rs`) picks the module that
-depends on others and is depended on by none. In the International release
-the mapping module depends on the core module, so the core module is ruled
-out and the mapping module is left alone as the root. The test
-`crates/rf2/tests/it/release.rs::the_edition_is_the_module_no_other_module_depends_on`
-pins that rule, so the fix changes the rule and the test together.
-
-The NL edition is unaffected: it resolves to
-`http://snomed.info/sct/11000146104`, the published Netherlands edition URI.
-
-<a id="c10-detail"></a>**C10. An edition URI without a date is refused.**
-Issue #360.
-
-```
-$lookup code=74400008 version=http://snomed.info/sct/449080006
--> 404 not-found
-   version `http://snomed.info/sct/449080006` of code system
-   `http://snomed.info/sct` is not served
-```
+<a id="c10-detail"></a>**C10. An edition URI without a date names the
+edition's greatest loaded release.** Re-checked on issue #360.
 
 §.3 tells clients "At minimum the URI SHOULD contain the sctid of the SNOMED
 CT distribution: `http://snomed.info/sct/[sctid]`", and says the service
 "may default to the most recent version of the named SNOMED CT
-distribution". The defaulting is a `may`, so refusing breaks no `SHALL`. It
-refuses a form the page tells clients to send, while exactly one version of
-that edition is loaded and could answer.
-
-<a id="c23-detail"></a>**A4, C23. The reference set list omits the language
-reference sets.** Issue #363.
+distribution". Both editions answer their own edition URI, on the run that
+served both:
 
 ```
-$expand url=http://snomed.info/sct?fhir_vs=refset&count=100
--> 200, total 75      (NL)
--> 200, total 25      (International)
+$lookup code=74400008 version=http://snomed.info/sct/900000000000207008
+-> 200, version http://snomed.info/sct/900000000000207008/version/20260901
+$lookup code=74400008 version=http://snomed.info/sct/11000146104
+-> 200, version http://snomed.info/sct/11000146104/version/20260630
 ```
 
-Neither list holds a language reference set, though the concepts exist and
-the edition uses their members:
+The two refusals the same section asks for stay refusals: the date-only
+form, and an edition no loaded release belongs to.
 
 ```
-$lookup code=31000146106        -> "Netherlands Dutch language reference set"  (NL)
-$lookup code=900000000000509007 -> "US English"                                (both)
+$lookup code=74400008 version=20260901
+-> 404 not-found  version `20260901` … is not served
+$lookup code=74400008 version=http://snomed.info/sct/449080006
+-> 404 not-found  version `http://snomed.info/sct/449080006` … is not served
 ```
 
-Their membership drives every Dutch display, every `nl` designation, and the
-ECL dialect filters, so it is loaded. It reaches the designation index and
-not the reference set tables, so the list misses it, and so do the
-member-facing forms:
+The resolution is the registry's, so every operation that takes a system
+version reads it the same way.
+
+<a id="c23-detail"></a>**A4, C23. The reference set list carries the language
+reference sets.** Re-checked on issue #363.
+
+§.9 says the set is "all concept ids that correspond to reference sets that
+are explicitly defined in the specified SNOMED CT edition", with no category
+excluded, so a language reference set belongs to it like a metadata one.
 
 ```
-?fhir_vs=ecl/^ 900000000000509007  -> 400 not a reference set with members in the edition
-?fhir_vs=refset/900000000000509007 -> 422 unknown code `900000000000509007`
+$expand url=…/11000146104/version/20260630?fhir_vs=refset&count=200
+-> 200, total 80      (NL, was 75; the five language reference sets)
+$expand url=…/900000000000207008/version/20260901?fhir_vs=refset&count=200
+-> 200, total 27      (International, was 25)
 ```
 
-The member-facing refusals may well be right. A language reference set
-references descriptions, not concepts, and §.9 defines
-`?fhir_vs=refset/[sctid]` as "all concept ids in the specified reference
-set", which has no direct reading for one. The list is not ambiguous:
-§.9 says "all concept ids that correspond to reference sets that are
-explicitly defined in the specified SNOMED CT edition", with no category
-excluded, and the existing test
-`::the_implicit_value_sets_follow_the_snomed_ct_page` already reasons that
-way for the module dependency reference set.
+The Dutch and the two English sets are in the NL list:
 
-<a id="c24-detail"></a>**C24. The implicit value set omits four template
-fields.** Issue #362.
+```
+31000146106  900000000000508004  900000000000509007
+```
+
+The member-facing forms stay refused, and say why. A language reference set
+references descriptions, so §.9's "all concept ids in the specified
+reference set" selects none of them:
+
+```
+?fhir_vs=refset/900000000000509007
+-> 400 invalid  filter `concept` value `900000000000509007` is invalid:
+   a language reference set references descriptions, not concepts
+?fhir_vs=ecl/^ 900000000000509007
+-> 400 code-invalid  code `900000000000509007` is invalid: not a reference
+   set with concept members in the edition
+```
+
+The ECL refusal is the same reading: ECL 2.2 §memberOf returns the
+components a reference set references, and descriptions are not concepts, so
+the expression has no concept-set answer here.
+
+<a id="c24-detail"></a>**C24. The implicit value set carries its template.**
+Re-checked on issue #362.
 
 §.9 prints a template per form and says "the content of the resource must
 conform to the template provided". What comes back, with the definition
 asked for:
 
 ```
-$expand url=…/449080006/version/20260901?fhir_vs=isa/74400008&includeDefinition=true
+$expand url=…/900000000000207008/version/20260901?fhir_vs=isa/74400008
+        &includeDefinition=true&count=1
 {
   "resourceType": "ValueSet",
   "status": "active",
-  "url": "http://snomed.info/sct/449080006/version/20260901?fhir_vs=isa/74400008",
+  "url": "http://snomed.info/sct/900000000000207008/version/20260901?fhir_vs=isa/74400008",
+  "version": "http://snomed.info/sct/900000000000207008/version/20260901",
+  "name": "SNOMED CT Concept 74400008 and descendants",
+  "description": "All SNOMED CT concepts for Appendicitis",
+  "copyright": "This value set includes content from SNOMED CT, which is
+     copyright © 2002+ International Health Terminology Standards Development
+     Organisation (SNOMED International), and distributed by agreement between
+     SNOMED International and HL7. Implementer use of SNOMED CT is not covered
+     by this agreement",
   "compose": {"include": [{"system": "http://snomed.info/sct",
-                           "version": "http://snomed.info/sct/449080006/version/20260901",
+                           "version": "http://snomed.info/sct/900000000000207008/version/20260901",
                            "filter": [{"property": "concept", "op": "is-a",
                                        "value": "74400008"}]}]}
 }
 ```
 
-The `compose` matches the template exactly, including the edition base
-pinning `include.version`. `version`, `name`, `description`, and `copyright`
-are absent from every form. The `copyright` is the one that carries weight:
-the template text is the SNOMED International notice telling a consumer the
-expansion holds licensed content, and the page prints it in all four
-templates.
+The `copyright` is the page's own text, character for character, in all four
+templates it prints. `description` interpolates the preferred term where the
+template says "[sctid or preferred description]". `description` and
+`copyright` travel with the definition, as `publisher` does, so an expansion
+without `includeDefinition` carries the identity and leaves them out.
 
-The implicit concept maps already carry their template
-(`::an_association_map_carries_the_page_s_template`), so this is the value
-set half of work already done once.
+The page prints no template for the bare `?fhir_vs`, so that form carries
+only the two fields every template shares, the edition version and the
+copyright, and no invented name.
 
 ### Not offered
 
@@ -681,22 +685,38 @@ GET /r4b/metadata?mode=terminology
      version http://snomed.info/sct/11000146104/version/20260630 compositional false
 ```
 
-<a id="c14-detail"></a>**C14. `normalForm` and `normalFormTerse`.** Issue
-#364.
+<a id="c14-detail"></a>**C14. `normalForm` and `normalFormTerse`.** A
+recorded deviation, tracked by issue #390.
 
 §.7 defines five SNOMED properties. Three are served. The two normal form
-properties are not, and asking for one by name changes nothing:
+properties are not generated, and asking for one says so:
 
 ```
 $lookup code=74400008&property=normalForm
--> 200
-   name, version, display, code, system     (no property part)
+-> 400 not-supported
+   property `normalForm` of code system `http://snomed.info/sct` is not
+   generated by this server
 ```
 
-Generating the necessary normal form is real work, and the attribute graph
-the build writes is what it would be generated from. The silent drop is the
-part that needs settling either way: a client cannot tell a property the
-server will not compute from a concept that has nothing to say.
+The page defines the property and not the generation. The SNOMED CT
+necessary normal form is built from the proximal primitive supertypes of a
+concept plus its defining attributes (<https://docs.snomed.org/>, the
+technical implementation guide's normal form section), and the served index
+materializes the inferred closure and the attribute adjacency, not the
+proximal primitives. Issue #390 settles the generation and the rendering
+before serving a value that would look authoritative.
+
+The silent drop is closed for every code system, not only SNOMED CT. R5 and
+R6 bound the `property` parameter to "any property codes defined by this
+specification or by the CodeSystem"
+(<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>), so a code
+outside that set is a client error:
+
+```
+$lookup code=74400008&property=nonesuch
+-> 400 invalid
+   code system `http://snomed.info/sct` defines no property `nonesuch`
+```
 
 ## What could not be checked
 

@@ -14,9 +14,9 @@ use fhir_terminology::snomed::{OpenError, SYSTEM, SnomedProvider};
 
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
-    ALTERNATIVE, ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, ICD10_MAP, LEGS,
-    MODULE_CONCEPT, MODULE_DEPENDENCY, PETS, POSSIBLY_EQUIVALENT_TO, REPLACED_BY, SAME_AS, SCHEME,
-    TOP, VERSION, item, sctid,
+    ALTERNATIVE, ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, GB_LANGUAGE_REFSET,
+    ICD10_MAP, LEGS, MODULE_CONCEPT, MODULE_DEPENDENCY, NL_LANGUAGE_REFSET, PETS,
+    POSSIBLY_EQUIVALENT_TO, REPLACED_BY, SAME_AS, SCHEME, TOP, VERSION, item, sctid,
 };
 
 fn provider() -> (tempfile::TempDir, SnomedProvider) {
@@ -55,7 +55,7 @@ fn identity_and_declaration_follow_the_manifest() {
     assert!(codes.contains(&sctid(item(COVERING)).as_str()));
     assert!(codes.contains(&sctid(item(LEGS)).as_str()));
     assert_eq!(p.language_refsets(), [snomed::GB_REFSET, snomed::NL_REFSET]);
-    assert_eq!(p.all().expect("all").len(), 19);
+    assert_eq!(p.all().expect("all").len(), 21);
 }
 
 #[test]
@@ -239,7 +239,9 @@ fn the_hierarchy_answers_subsumption_and_the_filters_from_the_closure() {
             ALTERNATIVE,
             MODULE_DEPENDENCY,
             MODULE_CONCEPT,
-            ICD10_MAP
+            ICD10_MAP,
+            GB_LANGUAGE_REFSET,
+            NL_LANGUAGE_REFSET
         ]
     );
 }
@@ -358,8 +360,8 @@ fn the_implicit_value_sets_follow_the_snomed_ct_page() {
         .expect("compose");
     assert_eq!(
         refsets.include[0].concepts.len(),
-        8,
-        "every reference set with concept members"
+        10,
+        "every reference set the edition defines"
     );
     assert!(
         refsets.include[0]
@@ -378,6 +380,17 @@ fn the_implicit_value_sets_follow_the_snomed_ct_page() {
             .any(|c| c.code == snomed::MODULE_DEPENDENCY_SCTID),
         "the Module Dependency reference set is a reference set of the edition"
     );
+    // A language reference set is defined in the edition too, and the same
+    // sentence excludes no category, so it is listed (#363).
+    for language in [snomed::GB_REFSET, snomed::NL_REFSET] {
+        assert!(
+            refsets.include[0]
+                .concepts
+                .iter()
+                .any(|c| c.code == language),
+            "the language reference set {language} is a reference set of the edition"
+        );
+    }
     let members = p
         .implicit_value_set(&format!("{base}?fhir_vs=refset/{}", sctid(item(PETS))))
         .expect("implicit")
@@ -385,6 +398,131 @@ fn the_implicit_value_sets_follow_the_snomed_ct_page() {
     assert_eq!(members.include[0].filters[0].op, FilterOperator::In);
     let selected = p.filter(&members.include[0].filters[0]).expect("filters");
     assert_eq!(selected.iter().collect::<Vec<_>>(), [CAT, DOG]);
+}
+
+/// The FHIR SNOMED CT page prints a template per implicit value set form and
+/// says "the content of the resource must conform to the template provided"
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets"). Each
+/// template carries `version`, `name`, `description`, and `copyright`.
+#[test]
+fn an_implicit_value_set_carries_the_page_s_template() {
+    let (_dir, p) = provider();
+    let animal = sctid(item(ANIMAL));
+    let pets = sctid(item(PETS));
+    let forms = [
+        (
+            format!("{EDITION}?fhir_vs=isa/{animal}"),
+            Some(format!("SNOMED CT Concept {animal} and descendants")),
+            Some(String::from("All SNOMED CT concepts for Animal")),
+        ),
+        (
+            format!("{EDITION}?fhir_vs=refset"),
+            Some(String::from("SNOMED CT Reference Sets")),
+            Some(String::from(
+                "All SNOMED CT concepts associated with a reference set",
+            )),
+        ),
+        (
+            format!("{EDITION}?fhir_vs=refset/{pets}"),
+            Some(format!("SNOMED CT Reference Set {pets}")),
+            Some(String::from(
+                "All SNOMED CT concepts in the reference set Pets reference set",
+            )),
+        ),
+        (
+            format!("{EDITION}?fhir_vs=ecl/%3C%3C%20{animal}"),
+            Some(format!("SNOMED CT Concepts matching << {animal}")),
+            Some(format!(
+                "All SNOMED CT concepts that match the expression constraint << {animal}"
+            )),
+        ),
+    ];
+    for (url, name, description) in forms {
+        let metadata = p.implicit_metadata(&url);
+        assert_eq!(metadata.version.as_deref(), Some(VERSION), "{url}");
+        assert_eq!(metadata.name, name, "{url}");
+        assert_eq!(metadata.description, description, "{url}");
+        assert_eq!(
+            metadata.copyright.as_deref(),
+            Some(fhir_terminology::snomed::TEMPLATE_COPYRIGHT),
+            "{url}"
+        );
+    }
+    // The page prints no template for the bare `?fhir_vs`, so it carries only
+    // the fields every template shares.
+    let all = p.implicit_metadata(&format!("{EDITION}?fhir_vs"));
+    assert_eq!(all.version.as_deref(), Some(VERSION));
+    assert_eq!(all.name, None);
+    assert_eq!(all.description, None);
+    assert_eq!(
+        all.copyright.as_deref(),
+        Some(fhir_terminology::snomed::TEMPLATE_COPYRIGHT)
+    );
+}
+
+/// A language reference set is a reference set the edition defines, so it is
+/// listed by `?fhir_vs=refset`, but its members are descriptions, so
+/// `?fhir_vs=refset/[sctid]` ("all concept ids in the specified reference
+/// set", <https://hl7.org/fhir/R4B/snomedct.html>) and the ECL `^` operator
+/// over it are refused rather than answered as an empty set.
+#[test]
+fn a_language_reference_set_is_listed_and_its_member_forms_are_refused() {
+    let (_dir, p) = provider();
+    let base = "http://snomed.info/sct";
+    assert!(
+        matches!(
+            p.implicit_value_set(&format!("{base}?fhir_vs=refset/{}", snomed::GB_REFSET))
+                .expect("implicit"),
+            Err(ProviderError::InvalidFilterValue { ref value, .. }) if value == snomed::GB_REFSET
+        ),
+        "the members of a language reference set are descriptions"
+    );
+    assert!(matches!(
+        p.filter(&Filter {
+            property: String::from("constraint"),
+            op: FilterOperator::Equal,
+            value: format!("^ {}", snomed::NL_REFSET),
+        }),
+        Err(ProviderError::InvalidCode { .. })
+    ));
+}
+
+/// `$lookup` bounds its `property` values: beside the ones it names itself,
+/// "any property codes defined by this specification or by the `CodeSystem` are
+/// allowed" (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>). A
+/// code outside that set is refused, and the two normal form properties the
+/// FHIR SNOMED CT page defines and this server does not generate are
+/// `not-supported`.
+#[test]
+fn a_property_the_code_system_does_not_define_is_refused_rather_than_dropped() {
+    let (_dir, p) = provider();
+    let mut registry = Registry::new();
+    registry.register(Arc::new(p)).expect("registers");
+    let ask = |property: &str| {
+        lookup::lookup(
+            &registry,
+            &Invocation::Type,
+            &lookup::LookupInput {
+                code: Some(sctid(item(CAT))),
+                system: Some(String::from(SYSTEM)),
+                properties: vec![String::from(property)],
+                ..lookup::LookupInput::default()
+            },
+        )
+    };
+    for property in ["normalForm", "normalFormTerse"] {
+        assert!(
+            matches!(ask(property), Err(OperationError::NotSupported(_))),
+            "`{property}` is defined for SNOMED CT and not generated here"
+        );
+    }
+    assert!(matches!(ask("nonesuch"), Err(OperationError::Invalid(_))));
+    // The page's own properties, the standard ones, and a concept model
+    // attribute by concept id all answer.
+    for property in ["inactive", "moduleId", "parent", "designation"] {
+        assert!(ask(property).is_ok(), "`{property}` is defined");
+    }
+    assert!(ask(&sctid(item(COVERING))).is_ok());
 }
 
 #[test]
@@ -488,7 +626,7 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
         op: FilterOperator::Equal,
         value: value.to_owned(),
     };
-    assert_eq!(p.filter(&expressions("false")).expect("all").len(), 19);
+    assert_eq!(p.filter(&expressions("false")).expect("all").len(), 21);
     assert!(matches!(
         p.filter(&expressions("true")),
         Err(ProviderError::UnsupportedFilter { .. })
