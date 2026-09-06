@@ -154,9 +154,11 @@ fn io_error(path: &Path) -> impl FnOnce(io::Error) -> Error + '_ {
     common::io_error(path)
 }
 
-/// The language the release's own atoms are in: the `RXNORM` atoms a release
-/// names its concepts by are English
-/// (<https://www.nlm.nih.gov/research/umls/rxnorm/docs/techdoc.html>).
+/// The language the release's own atoms are in.
+///
+/// The `RXNORM` atoms a release names its concepts by carry `LAT` `ENG`
+/// (<https://www.nlm.nih.gov/research/umls/rxnorm/docs/techdoc.html>). No
+/// FHIR/SNOMED spec governs this: our own design.
 const BASE_LANGUAGE: &str = "en";
 
 /// The BCP 47 tag of an `RRF` language code.

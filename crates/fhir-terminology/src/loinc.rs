@@ -92,9 +92,11 @@ const KIND_KEY: &str = "kind";
 const LONG_COMMON_NAME: u32 = 0;
 /// The designation use ordinal of a part, list, or answer display.
 const DISPLAY: u32 = 3;
-/// The language of an artifact whose manifest states none: LOINC publishes its
-/// own tables in English and its translations as linguistic variants
-/// (<https://loinc.org/international/>).
+/// The language of an artifact whose manifest states none.
+///
+/// A release carries its names in `LoincTable/Loinc.csv` and its translations
+/// beside them in `AccessoryFiles/LinguisticVariants`, so the table itself is
+/// the English one. No FHIR/SNOMED spec governs this: our own design.
 const DEFAULT_LANGUAGE: &str = "en";
 
 /// A failure to open an artifact as LOINC.
