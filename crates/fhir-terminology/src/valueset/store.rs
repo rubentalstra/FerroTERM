@@ -2,7 +2,7 @@
 //! that answers `include.valueSet` references over them.
 
 use std::cell::RefCell;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::model::ValueSetModel;
 use super::negotiation::Negotiation;
@@ -20,6 +20,7 @@ pub struct Resolver<'a> {
     registry: &'a Registry,
     store: &'a ValueSetStore,
     negotiation: Option<&'a Negotiation>,
+    contained: Option<&'a BTreeMap<String, ValueSetModel>>,
     active: RefCell<Vec<String>>,
     used: RefCell<Vec<String>>,
     open: RefCell<BTreeSet<String>>,
@@ -33,6 +34,7 @@ impl<'a> Resolver<'a> {
             registry,
             store,
             negotiation: None,
+            contained: None,
             active: RefCell::new(Vec::new()),
             used: RefCell::new(Vec::new()),
             open: RefCell::new(BTreeSet::new()),
@@ -44,6 +46,14 @@ impl<'a> Resolver<'a> {
     #[must_use]
     pub fn with_negotiation(mut self, negotiation: &'a Negotiation) -> Self {
         self.negotiation = Some(negotiation);
+        self
+    }
+
+    /// This resolver answering a `#id` reference from `contained`, the value
+    /// sets the resource under expansion carries inline.
+    #[must_use]
+    pub fn with_contained(mut self, contained: &'a BTreeMap<String, ValueSetModel>) -> Self {
+        self.contained = Some(contained);
         self
     }
 
@@ -84,6 +94,20 @@ impl<'a> Resolver<'a> {
     /// [`ComposeError::Negotiation`] when a check disagrees, or the provider's
     /// error for a malformed implicit form.
     pub fn compose(&self, url: &str) -> Result<Compose, ComposeError> {
+        // NOTE: a canonical reference to a contained resource is a `#id`
+        // fragment of the container, which no registry or store holds
+        // (<https://hl7.org/fhir/R4B/references.html#canonical>).
+        if let Some(id) = url.strip_prefix('#') {
+            let model = self
+                .contained
+                .and_then(|contained| contained.get(id))
+                .ok_or_else(|| ComposeError::UnknownValueSet(url.to_owned()))?;
+            self.note_open_systems(&model.compose);
+            return match self.negotiation {
+                Some(negotiation) => Ok(negotiation.pin(&model.compose)?),
+                None => Ok(model.compose.clone()),
+            };
+        }
         let (url, version) = match self.negotiation {
             Some(negotiation) => negotiation.value_set(url, None)?,
             None => match url.split_once('|') {

@@ -125,6 +125,10 @@ pub enum OperationError {
     /// The value set cannot be expanded as defined.
     #[error("{0}")]
     ValueSetInvalid(String),
+    /// The value set reaches itself through `compose.include.valueSet` or
+    /// `compose.exclude.valueSet`.
+    #[error("{0}")]
+    ValueSetCyclic(String),
     /// The expansion is larger than the server returns without paging.
     #[error("{0}")]
     TooCostly(String),
@@ -144,10 +148,15 @@ impl OperationError {
             Self::Required(_) => "required",
             Self::InvalidCode { .. } => "code-invalid",
             Self::Invalid(_) | Self::ValueSetInvalid(_) => "invalid",
-            Self::InvalidLanguage(_) => "processing",
+            // NOTE: a cycle is a processing failure, "no point resubmitting the
+            // same content unchanged" (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
+            Self::ValueSetCyclic(_) | Self::InvalidLanguage(_) => "processing",
             Self::NotSupported(_) | Self::CannotDetermine(_) | Self::UnsupportedGrammar { .. } => {
                 "not-supported"
             }
+            // NOTE: a refused operation says the reference was not found; the
+            // `code-invalid` of a `$validate-code` issue reports one code inside
+            // an answer (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
             | Self::UnknownCode { .. }
@@ -177,7 +186,7 @@ impl OperationError {
             | Self::UnknownSupplement(_)
             | Self::UnknownConceptMap(_) => "not-found",
             Self::UnknownCode { .. } | Self::InvalidCode { .. } => "invalid-code",
-            Self::ValueSetInvalid(_) => "vs-invalid",
+            Self::ValueSetInvalid(_) | Self::ValueSetCyclic(_) => "vs-invalid",
             Self::VersionCheck(_) => "version-error",
             Self::TooCostly(_) => "too-costly",
             Self::CannotDetermine(_) => "cannot-determine",
@@ -200,10 +209,11 @@ impl OperationError {
             Self::TooCostly(_) => "VALUESET_TOO_COSTLY",
             Self::NotSupported(_) => "CODESYSTEM_NOT_ENUMERABLE",
             Self::UnknownCode { .. } | Self::InvalidCode { .. } => "Unknown_Code_in_Version",
-            Self::ValueSetInvalid(_) => "VALUESET_CIRCULAR_REFERENCE",
+            Self::ValueSetCyclic(_) => "VALUESET_CIRCULAR_REFERENCE",
             Self::InvalidLanguage(_) => "INVALID_DISPLAY_NAME",
             Self::Required(_)
             | Self::Invalid(_)
+            | Self::ValueSetInvalid(_)
             | Self::CannotDetermine(_)
             | Self::UnknownConceptMap(_)
             | Self::UnsupportedGrammar { .. }
@@ -236,9 +246,10 @@ impl OperationError {
             // NOTE: 422 is the status for a resource that breaks the server's
             // rules (<https://hl7.org/fhir/R4B/http.html#status-codes>); a compose
             // the layer cannot evaluate is that resource.
-            Self::ValueSetInvalid(_) | Self::TooCostly(_) | Self::CannotDetermine(_) => {
-                StatusCode::UNPROCESSABLE_ENTITY
-            }
+            Self::ValueSetInvalid(_)
+            | Self::ValueSetCyclic(_)
+            | Self::TooCostly(_)
+            | Self::CannotDetermine(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Provider(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -390,8 +401,8 @@ impl From<crate::compose::ComposeError> for OperationError {
             ComposeError::UnknownCode { .. }
             | ComposeError::NoSystemOrValueSet
             | ComposeError::CriteriaWithoutSystem
-            | ComposeError::ConceptsAndFilters
-            | ComposeError::Cycle(_) => Self::ValueSetInvalid(error.to_string()),
+            | ComposeError::ConceptsAndFilters => Self::ValueSetInvalid(error.to_string()),
+            ComposeError::Cycle(_) => Self::ValueSetCyclic(error.to_string()),
             ComposeError::NoResolver(_) => Self::NotSupported(error.to_string()),
             ComposeError::Negotiation(error) => error.into(),
         }
@@ -491,6 +502,7 @@ impl<'a> Sources<'a> {
                             copyright: metadata.copyright,
                             immutable: None,
                             compose,
+                            contained: std::collections::BTreeMap::new(),
                         }))
                     }
                     Some(Err(source)) => Err(source.into()),

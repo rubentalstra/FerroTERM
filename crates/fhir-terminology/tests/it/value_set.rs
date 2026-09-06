@@ -207,10 +207,161 @@ fn expand_follows_value_set_references_and_refuses_a_cycle() {
     };
     let error = expand::expand(&world.sources(), &looped).expect_err("cycle");
     assert!(
-        matches!(error, OperationError::ValueSetInvalid(_)),
+        matches!(error, OperationError::ValueSetCyclic(_)),
         "{error}"
     );
-    assert_eq!(error.issue_code(), "invalid");
+    // A cycle is a processing failure, "there is no point resubmitting the same
+    // content unchanged" (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
+    assert_eq!(error.issue_code(), "processing");
+    assert_eq!(error.tx_issue_type(), "vs-invalid");
+}
+
+#[test]
+fn a_compose_reaches_a_contained_value_set_through_its_fragment() {
+    let world = World::load();
+    let contained = ValueSet {
+        id: Some(String::from("vs1")),
+        url: Some("http://example.org/inline/contained".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                concept: vec![
+                    ValueSetComposeIncludeConcept {
+                        code: "cat".into(),
+                        ..Default::default()
+                    },
+                    ValueSetComposeIncludeConcept {
+                        code: "kitten".into(),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let inline = ValueSet {
+        url: Some("http://example.org/inline/container".into()),
+        status: "active".into(),
+        contained: vec![fhir_types::r4b::resource::Resource::ValueSet(Box::new(
+            contained,
+        ))],
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                value_set: vec!["#vs1".into(), VS_PETS.into()],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let request = ExpandInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        ..ExpandInput::default()
+    };
+    let vs = expand::expand(&world.sources(), &request).expect("expands");
+    // Two value sets in one include intersect, so only `kitten` survives.
+    assert_eq!(codes(&vs), ["kitten"]);
+    assert_eq!(
+        parameter(&vs, "used-valueset"),
+        [ParameterValue::Uri(format!("{VS_PETS}|1.0"))],
+        "a contained value set has no canonical of its own to report"
+    );
+    let validate = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        code: Some(String::from("kitten")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &validate).expect("validates");
+    assert!(
+        validation.result,
+        "the contained value set resolves here too"
+    );
+}
+
+#[test]
+fn an_inactive_concept_the_value_set_refuses_still_carries_its_status() {
+    let world = World::load();
+    let inline = ValueSet {
+        url: Some("http://example.org/inline/active-only".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            inactive: Some(false.into()),
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let request = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        code: Some(String::from("dodo")),
+        system: Some(ANIMALS.to_owned()),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &request).expect("validates");
+    assert!(!validation.result);
+    // "the return value from $validate-code for the concept SHALL include a
+    // warning that the code is invalid, and the parameters 'inactive' and
+    // 'status' SHALL be populated"
+    // (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+    assert_eq!(validation.inactive, Some(true));
+    assert_eq!(validation.code.as_deref(), Some("dodo"));
+    assert_eq!(validation.display.as_deref(), Some("Dodo"));
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["code-rule", "not-in-vs", "code-comment"]);
+}
+
+#[test]
+fn one_coding_answers_for_the_concept_when_the_include_pins_another_version() {
+    let world = World::load();
+    let inline = ValueSet {
+        url: Some("http://example.org/inline/pinned".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(ANIMALS.into()),
+                version: Some("2.0".into()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let request = ValueSetValidateInput {
+        inline_value_set: Some(valueset::convert::r4b::convert(&inline)),
+        codeable_concept: Some(vec![CodingRef {
+            system: Some(ANIMALS.to_owned()),
+            version: Some(String::from("1.0")),
+            code: Some(String::from("cat")),
+            ..CodingRef::default()
+        }]),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &request).expect("validates");
+    assert!(!validation.result);
+    // "the server SHALL return the code system and code against which
+    // validation was based (`system` and `code` parameters)"
+    // (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+    assert_eq!(validation.code.as_deref(), Some("cat"));
+    assert_eq!(validation.system.as_deref(), Some(ANIMALS));
+    assert_eq!(validation.version.as_deref(), Some("2.0"));
+    assert!(
+        validation.issues.iter().any(|i| i.kind == "vs-invalid"),
+        "the version disagreement is the reason"
+    );
+    assert!(
+        !validation.issues.iter().any(|i| i.kind == "not-in-vs"),
+        "one coding needs no summary of the codings that failed"
+    );
 }
 
 #[test]

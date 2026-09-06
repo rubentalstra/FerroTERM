@@ -220,8 +220,9 @@ pub fn expand(
         registry: &registry,
         ..*sources
     };
-    let resolver =
-        Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
+    let resolver = Resolver::new(sources.registry, sources.value_sets)
+        .with_negotiation(&negotiation)
+        .with_contained(&model.contained);
     resolver.note_open_systems(&model.compose);
     let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;
     let used_value_sets = resolver.used_value_sets();

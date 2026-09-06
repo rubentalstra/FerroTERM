@@ -105,6 +105,7 @@ impl Rules {
 pub struct Negotiation {
     systems: Rules,
     value_sets: Rules,
+    include_versions: Vec<(String, Option<String>)>,
 }
 
 impl Negotiation {
@@ -130,7 +131,37 @@ impl Negotiation {
                 checks: canonicals(check_valueset_version),
                 forced: canonicals(force_valueset_version),
             },
+            include_versions: Vec::new(),
         }
+    }
+
+    /// This negotiation remembering, per system, the version `compose` states
+    /// for it before any rule replaces it.
+    #[must_use]
+    pub fn with_include_versions(mut self, compose: &Compose) -> Self {
+        for include in compose.include.iter().chain(&compose.exclude) {
+            if let Some(system) = &include.system
+                && !self
+                    .include_versions
+                    .iter()
+                    .any(|(url, _)| *url == system.url)
+            {
+                self.include_versions
+                    .push((system.url.clone(), system.version.clone()));
+            }
+        }
+        self
+    }
+
+    /// The version the value set's own compose states for system `url`, the
+    /// empty string when it selects the system without one, and `None` when it
+    /// does not select the system at all.
+    #[must_use]
+    pub fn include_version(&self, url: &str) -> Option<&str> {
+        self.include_versions
+            .iter()
+            .find(|(u, _)| u == url)
+            .map(|(_, version)| version.as_deref().unwrap_or_default())
     }
 
     /// Whether no parameter was given.
