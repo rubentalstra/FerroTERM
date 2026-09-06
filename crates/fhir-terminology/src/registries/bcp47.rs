@@ -357,6 +357,17 @@ fn extended_filter(range: &[String], tag: &[String]) -> bool {
     true
 }
 
+/// The subtags one include fixes, of the positions the registry bounds.
+#[derive(Debug)]
+struct Selection {
+    /// The primary language subtag, which an enumerable selection fixes.
+    language: String,
+    /// The script subtag, when the include fixes one.
+    script: Option<String>,
+    /// The region subtag, when the include fixes one.
+    region: Option<String>,
+}
+
 /// The BCP 47 provider.
 #[derive(Debug)]
 pub struct Bcp47Provider {
@@ -452,6 +463,123 @@ impl Bcp47Provider {
         self.registry
             .get(kind, subtag)
             .and_then(|r| r.descriptions.first().cloned())
+    }
+
+    /// What `filters` fix, when they fix the primary language subtag and name
+    /// nothing else this system cannot enumerate.
+    fn selection(filters: &[Filter]) -> Option<Selection> {
+        let mut language = None;
+        let mut script = None;
+        let mut region = None;
+        for filter in filters {
+            if filter.op != FilterOperator::Equal {
+                return None;
+            }
+            let slot = match filter.property.as_str() {
+                "language" => &mut language,
+                "script" => &mut script,
+                "region" => &mut region,
+                _ => return None,
+            };
+            if slot.is_some() {
+                return None;
+            }
+            *slot = Some(filter.value.trim().to_owned());
+        }
+        Some(Selection {
+            language: language?,
+            script,
+            region,
+        })
+    }
+
+    /// The tags `selection` enumerates, in the order they are listed.
+    ///
+    /// Every position holds a registered subtag, so an unregistered one leaves
+    /// the selection empty rather than failing it.
+    fn tags(&self, selection: &Selection) -> Vec<String> {
+        let registered = |kind: Kind, subtag: &Option<String>| match subtag {
+            None => Some(None),
+            Some(value) => self
+                .registry
+                .get(kind, value)
+                .map(|record| Some(record.subtag.clone())),
+        };
+        let (Some(language), Some(script), Some(region)) = (
+            self.registry
+                .get(Kind::Language, &selection.language)
+                .map(|record| record.subtag.clone()),
+            registered(Kind::Script, &selection.script),
+            registered(Kind::Region, &selection.region),
+        ) else {
+            return Vec::new();
+        };
+        let open = |fixed: Option<String>, kind: Kind, varies: bool| -> Vec<Option<String>> {
+            match fixed {
+                Some(value) => vec![Some(value)],
+                None if varies => std::iter::once(None)
+                    .chain(
+                        self.registry
+                            .of_kind(kind)
+                            .into_iter()
+                            .map(|record| Some(record.subtag.clone())),
+                    )
+                    .collect(),
+                None => vec![None],
+            }
+        };
+        let vary_region = region.is_none();
+        let regions = open(region, Kind::Region, vary_region);
+        let scripts = open(script, Kind::Script, !vary_region);
+        let mut tags = Vec::with_capacity(scripts.len().saturating_mul(regions.len()));
+        for script in &scripts {
+            for region in &regions {
+                tags.push(
+                    Tag {
+                        language: Some(language.clone()),
+                        script: script.clone(),
+                        region: region.clone(),
+                        ..Tag::default()
+                    }
+                    .canonical(),
+                );
+            }
+        }
+        tags
+    }
+
+    /// The ordinals of the tags `filters` enumerate, or `None` when this
+    /// system does not enumerate that selection.
+    fn enumerate(&self, filters: &[Filter]) -> Result<Option<Vec<u32>>, ProviderError> {
+        let Some(selection) = Self::selection(filters) else {
+            return Ok(None);
+        };
+        let mut out = Vec::new();
+        for tag in self.tags(&selection) {
+            out.push(self.interned.intern(&tag)?.index());
+        }
+        Ok(Some(out))
+    }
+
+    /// Why `filters` select nothing this system enumerates.
+    fn refusal(&self, filters: &[Filter]) -> ProviderError {
+        if filters.is_empty() {
+            return ProviderError::NotEnumerable;
+        }
+        for filter in filters {
+            if !self
+                .declaration
+                .filters
+                .iter()
+                .any(|declared| declared.code == filter.property)
+            {
+                return ProviderError::UnsupportedFilter {
+                    property: filter.property.clone(),
+                    operator: filter.op.code().to_owned(),
+                };
+            }
+        }
+        ProviderError::FilterNotEnumerable
     }
 
     fn part<'a>(tag: &'a Tag, property: &str) -> Vec<&'a str> {
@@ -617,19 +745,36 @@ impl CodeSystemProvider for Bcp47Provider {
         true
     }
 
+    fn unclosed_reason(&self) -> Option<String> {
+        Some(format!(
+            "The code System '{URL}' has a grammar and so has infinite members"
+        ))
+    }
+
     fn filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
-        if self
-            .declaration
-            .filters
-            .iter()
-            .any(|f| f.code == filter.property)
-        {
-            return Err(ProviderError::NotEnumerable);
+        self.filter_all(std::slice::from_ref(filter))
+    }
+
+    /// A fixed primary language bounds a selection of language tags.
+    ///
+    /// `language = 2*3ALPHA / 4ALPHA / 5*8ALPHA`, `script = 4ALPHA`, and
+    /// `region = 2ALPHA / 3DIGIT` (RFC 5646 §2.1) each hold one registered
+    /// subtag, so fixing the language leaves a finite list: the tag itself and
+    /// one tag per registered subtag at the most specific position the include
+    /// left open, the region before the script, which is the shape RFC 5646
+    /// §4.1 recommends writing.
+    // NOTE: no FHIR or BCP 47 specification says which finite subset of a grammar
+    // system an expansion lists: enumerating one open position is our own design.
+    fn filter_all(&self, filters: &[Filter]) -> Result<ConceptSet, ProviderError> {
+        match self.enumerate(filters)? {
+            Some(order) => Ok(order.into_iter().collect()),
+            None => Err(self.refusal(filters)),
         }
-        Err(ProviderError::UnsupportedFilter {
-            property: filter.property.clone(),
-            operator: filter.op.code().to_owned(),
-        })
+    }
+
+    /// The tags in registry order, which the interned ordinals do not carry.
+    fn filter_ordered(&self, filters: &[Filter]) -> Result<Option<Vec<u32>>, ProviderError> {
+        self.enumerate(filters)
     }
 
     fn filter_matches(&self, concept: Concept, filter: &Filter) -> Result<bool, ProviderError> {

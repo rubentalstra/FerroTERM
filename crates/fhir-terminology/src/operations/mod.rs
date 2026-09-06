@@ -254,11 +254,15 @@ impl From<ResolveError> for OperationError {
 }
 
 impl From<ProviderError> for OperationError {
+    #[expect(
+        clippy::match_same_arms,
+        reason = "the arms group by what the failure is, and each spec citation sits on the variants it explains"
+    )]
     fn from(error: ProviderError) -> Self {
         match error {
-            ProviderError::IncompleteContent { .. } | ProviderError::NotEnumerable => {
-                Self::NotSupported(error.to_string())
-            }
+            ProviderError::IncompleteContent { .. }
+            | ProviderError::NotEnumerable
+            | ProviderError::FilterNotEnumerable => Self::NotSupported(error.to_string()),
             // NOTE: a filter the system cannot evaluate, an unknown filter value, or
             // a bad regular expression is a defect of the value set, a 422
             // (<https://hl7.org/fhir/R4B/http.html#status-codes>), never a 500.
@@ -385,6 +389,13 @@ impl From<crate::compose::ComposeError> for OperationError {
             } => Self::NotSupported(format!(
                 "The code system '{system}' cannot be expanded because its codes cannot be iterated or enumerated in any meaningful sense"
             )),
+            // NOTE: the ecosystem words a filter the system will not expand apart from a
+            // system that enumerates nothing at all (its `langcodes/expand-lang-script`
+            // case), so a validator recognises which of the two it got.
+            ComposeError::Provider {
+                system,
+                source: ProviderError::FilterNotEnumerable,
+            } => Self::NotSupported(format!("This filter on {system} cannot be expanded")),
             ComposeError::Provider { source, .. } => source.into(),
             ComposeError::UnknownValueSet(url) => Self::UnknownImport(url),
             ComposeError::UnknownCode { .. }
