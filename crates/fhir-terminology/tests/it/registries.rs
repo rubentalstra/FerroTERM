@@ -348,6 +348,55 @@ fn bcp13_subsumes_by_parameters_and_cannot_decide_unknown_ones() {
     ));
 }
 
+/// RFC 4647 §3.3.2 extended filtering, read in both directions: the section's
+/// own example has the range "de-*-DE" and "its synonym `de-DE`" matching
+/// `de-Latn-DE` while `de-x-DE` fails on the singleton, and RFC 5646 §2.2.8
+/// keeps a grandfathered tag whole ("each tag, in its entirety, represents a
+/// language or collection of languages").
+#[test]
+fn bcp47_subsumes_language_tags_by_extended_filtering() {
+    let provider = Bcp47Provider::new();
+    let sub = |a: &str, b: &str| {
+        let a = provider.locate(a).expect("reads").expect("valid").concept;
+        let b = provider.locate(b).expect("reads").expect("valid").concept;
+        provider.subsumes(a, b).expect("decides")
+    };
+    assert_eq!(sub("en-US", "en-US"), Some(Outcome::Equivalent));
+    assert_eq!(
+        sub("EN", "en-us"),
+        Some(Outcome::Subsumes),
+        "tags are compared case-insensitively"
+    );
+    assert_eq!(sub("en", "en-US"), Some(Outcome::Subsumes));
+    assert_eq!(sub("en-US", "en"), Some(Outcome::SubsumedBy));
+    assert_eq!(sub("zh", "zh-Hans-CN"), Some(Outcome::Subsumes));
+    assert_eq!(sub("de", "de-1901"), Some(Outcome::Subsumes));
+    assert_eq!(
+        sub("en-US", "en-Latn-US"),
+        Some(Outcome::Subsumes),
+        "an intermediate subtag the range omits is skipped"
+    );
+    assert_eq!(sub("en", "fr"), Some(Outcome::NotSubsumed));
+    assert_eq!(sub("en-US", "en-GB"), Some(Outcome::NotSubsumed));
+    assert_eq!(sub("zh-Hant", "zh-Hans-CN"), Some(Outcome::NotSubsumed));
+    assert_eq!(
+        sub("en-Latn", "en-US"),
+        Some(Outcome::NotSubsumed),
+        "each states something the other does not"
+    );
+    assert_eq!(
+        sub("zh", "zh-min-nan"),
+        Some(Outcome::NotSubsumed),
+        "a grandfathered tag is one opaque subtag"
+    );
+    assert_eq!(sub("en", "en-x-goethe"), Some(Outcome::Subsumes));
+    assert_eq!(
+        sub("en-US", "en-x-US"),
+        Some(Outcome::NotSubsumed),
+        "the singleton `x` stops the walk before `US`"
+    );
+}
+
 #[test]
 fn iso3166_is_a_case_insensitive_table_with_user_assigned_codes() {
     let provider = iso3166::provider().expect("cldr data");

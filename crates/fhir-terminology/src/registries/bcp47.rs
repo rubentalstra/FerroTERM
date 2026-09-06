@@ -312,6 +312,51 @@ fn private_use(parts: &[&str]) -> Result<String, String> {
         .join("-"))
 }
 
+/// The subtags a tag is matched by, lower case (RFC 4647 §3.3.2, step 1).
+///
+/// A grandfathered tag is one opaque subtag: its subtags "either do not
+/// individually appear in the registry or appear but with a different semantic
+/// meaning", and the tag "in its entirety, represents a language or collection
+/// of languages" (RFC 5646 §2.2.8).
+fn match_subtags(tag: &Tag) -> Vec<String> {
+    if let Some(grandfathered) = &tag.grandfathered {
+        return vec![grandfathered.to_ascii_lowercase()];
+    }
+    tag.canonical()
+        .split('-')
+        .map(str::to_ascii_lowercase)
+        .collect()
+}
+
+/// Whether `range` matches `tag` under RFC 4647 §3.3.2 extended filtering.
+///
+/// Both lists come from [`match_subtags`], so neither carries the wildcard
+/// that steps 1 and 3.A admit, and every comparison is already case-folded.
+fn extended_filter(range: &[String], tag: &[String]) -> bool {
+    let (Some(first_range), Some(first_tag)) = (range.first(), tag.first()) else {
+        return false;
+    };
+    if first_range != first_tag {
+        return false;
+    }
+    let mut at_range = 1;
+    let mut at_tag = 1;
+    while let Some(wanted) = range.get(at_range) {
+        let Some(found) = tag.get(at_tag) else {
+            return false;
+        };
+        if wanted == found {
+            at_range += 1;
+            at_tag += 1;
+        } else if found.len() == 1 {
+            return false;
+        } else {
+            at_tag += 1;
+        }
+    }
+    true
+}
+
 /// The BCP 47 provider.
 #[derive(Debug)]
 pub struct Bcp47Provider {
@@ -622,7 +667,26 @@ impl CodeSystemProvider for Bcp47Provider {
         })
     }
 
-    fn subsumes(&self, _a: Concept, _b: Concept) -> Result<Option<Outcome>, ProviderError> {
-        Ok(None)
+    /// A tag subsumes another when it matches it as a language range under
+    /// RFC 4647 §3.3.2 extended filtering, so `en` subsumes `en-US` and
+    /// `en-US` subsumes `en-Latn-US`, the range "de-*-DE" and "its synonym
+    /// `de-DE`" matching `de-Latn-DE` in that section.
+    ///
+    /// No FHIR or BCP 47 specification defines subsumption over language
+    /// tags: reading each tag as the extended language range of the same
+    /// spelling is our own design.
+    fn subsumes(&self, a: Concept, b: Concept) -> Result<Option<Outcome>, ProviderError> {
+        let (Some(a), Some(b)) = (self.tag(a), self.tag(b)) else {
+            return Ok(None);
+        };
+        let (a, b) = (match_subtags(&a), match_subtags(&b));
+        Ok(Some(
+            match (extended_filter(&a, &b), extended_filter(&b, &a)) {
+                (true, true) => Outcome::Equivalent,
+                (true, false) => Outcome::Subsumes,
+                (false, true) => Outcome::SubsumedBy,
+                (false, false) => Outcome::NotSubsumed,
+            },
+        ))
     }
 }
