@@ -1,7 +1,9 @@
 //! Read-only access to a built artifact.
 //!
-//! Every method is a point read: one key, one record, decoded with a typed
-//! error. Scans belong to the offline build, never to a request path.
+//! Every method is a point read: one position or one key, one record, decoded
+//! with a typed error. Ordinal-keyed data is answered from a dense column read
+//! at open; the designation text is point-read from the database, one row per
+//! concept. Scans belong to the offline build, never to a request path.
 
 use std::path::{Path, PathBuf};
 
@@ -79,6 +81,13 @@ pub struct Store {
     /// The preferred designations the build chose, per concept, so choosing a
     /// display reads no table at all.
     displays: Column,
+    /// The properties of every concept. The whole hierarchy is read through
+    /// these on an ECL refinement, so they are answered by position.
+    properties: Column,
+    /// The acceptability of every designation, per language reference set.
+    acceptability: Column,
+    /// The acceptability ordinal that marks a designation preferred.
+    preferred: Option<u32>,
 }
 
 impl std::fmt::Debug for Store {
@@ -115,6 +124,9 @@ impl Store {
             db,
             concepts: Column::default(),
             displays: Column::default(),
+            properties: Column::default(),
+            acceptability: Column::default(),
+            preferred: None,
         };
         let layout = store.meta(tables::META_LAYOUT)?;
         if layout.as_deref() != Some(tables::LAYOUT_VERSION) {
@@ -125,6 +137,11 @@ impl Store {
         }
         store.concepts = store.column(tables::COLUMN_CONCEPTS)?;
         store.displays = store.column(tables::COLUMN_DISPLAYS)?;
+        store.properties = store.column(tables::COLUMN_PROPERTIES)?;
+        store.acceptability = store.column(tables::COLUMN_ACCEPTABILITY)?;
+        store.preferred = store
+            .meta(tables::META_PREFERRED)?
+            .and_then(|value| value.parse().ok());
         Ok(store)
     }
 
@@ -257,66 +274,91 @@ impl Store {
     pub fn designations(&self, ordinal: Ordinal) -> Result<Vec<Designation>, StoreError> {
         let txn = self.db.begin_read()?;
         let table = open_table!(txn, tables::DESIGNATIONS)?;
-        let mut out = Vec::new();
-        for entry in table.range((ordinal.index(), 0)..(ordinal.index(), u32::MAX))? {
-            let (key, value) = entry?;
-            out.push(
-                Designation::decode(value.value()).map_err(|source| StoreError::Record {
-                    table: tables::DESIGNATIONS.name().to_owned(),
-                    key: format!("{:?}", key.value()),
-                    source,
-                })?,
-            );
-        }
-        Ok(out)
+        let Some(packed) = table.get(ordinal.index())? else {
+            return Ok(Vec::new());
+        };
+        record::Designations::decode(packed.value()).map_err(|source| StoreError::Record {
+            table: tables::DESIGNATIONS.name().to_owned(),
+            key: ordinal.to_string(),
+            source,
+        })
     }
 
     /// The acceptability ordinal of a designation in a language reference set.
     ///
     /// # Errors
     ///
-    /// Returns [`StoreError`] when the database cannot be read.
+    /// Returns [`StoreError`] when the column is damaged.
     pub fn acceptability(
         &self,
         ordinal: Ordinal,
         designation: u32,
         language_refset: u32,
     ) -> Result<Option<u32>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::ACCEPTABILITY)?;
-        Ok(table
-            .get((ordinal.index(), designation, language_refset))?
-            .map(|v| v.value()))
+        let Some(bytes) = self.acceptability.get(ordinal) else {
+            return Ok(None);
+        };
+        record::Acceptability::find(bytes, designation, language_refset).map_err(|source| {
+            StoreError::Record {
+                table: tables::COLUMN_ACCEPTABILITY.to_owned(),
+                key: ordinal.to_string(),
+                source,
+            }
+        })
     }
 
     /// The preferred designation of `ordinal` for a language reference set and
-    /// designation use, as the build precomputed it.
+    /// designation use: the lowest-indexed designation of that use the
+    /// reference set marks preferred.
     ///
     /// # Errors
     ///
-    /// Returns [`StoreError`] when the database cannot be read or the record is damaged.
+    /// Returns [`StoreError`] when the database cannot be read or a record is
+    /// damaged.
     pub fn preferred(
         &self,
         ordinal: Ordinal,
         language_refset: u32,
         use_ordinal: u32,
     ) -> Result<Option<Designation>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let preferred = open_table!(txn, tables::PREFERRED)?;
-        let Some(index) = preferred.get((ordinal.index(), language_refset, use_ordinal))? else {
+        let (Some(preferred), Some(bytes)) = (self.preferred, self.acceptability.get(ordinal))
+        else {
             return Ok(None);
         };
-        let designations = open_table!(txn, tables::DESIGNATIONS)?;
-        designations
-            .get((ordinal.index(), index.value()))?
-            .map(|v| {
-                Designation::decode(v.value()).map_err(|source| StoreError::Record {
-                    table: tables::DESIGNATIONS.name().to_owned(),
-                    key: format!("({ordinal}, {})", index.value()),
-                    source,
-                })
-            })
-            .transpose()
+        let entries =
+            record::Acceptability::decode(bytes).map_err(|source| StoreError::Record {
+                table: tables::COLUMN_ACCEPTABILITY.to_owned(),
+                key: ordinal.to_string(),
+                source,
+            })?;
+        let txn = self.db.begin_read()?;
+        let table = open_table!(txn, tables::DESIGNATIONS)?;
+        let Some(packed) = table.get(ordinal.index())? else {
+            return Ok(None);
+        };
+        let damaged = |source| StoreError::Record {
+            table: tables::DESIGNATIONS.name().to_owned(),
+            key: ordinal.to_string(),
+            source,
+        };
+        let mut chosen: Option<(u32, Designation)> = None;
+        for (index, refset, acceptability) in entries {
+            if refset != language_refset || acceptability != preferred {
+                continue;
+            }
+            if chosen.as_ref().is_some_and(|(at, _)| *at <= index) {
+                continue;
+            }
+            let Some(designation) =
+                record::Designations::at(packed.value(), index).map_err(damaged)?
+            else {
+                continue;
+            };
+            if designation.use_ordinal == use_ordinal {
+                chosen = Some((index, designation));
+            }
+        }
+        Ok(chosen.map(|(_, designation)| designation))
     }
 
     /// The display of `ordinal` from the first of `language_refsets` whose
@@ -360,25 +402,19 @@ impl Store {
     ///
     /// # Errors
     ///
-    /// Returns [`StoreError`] when the database cannot be read or a record is damaged.
+    /// Returns [`StoreError`] when the column is damaged.
     pub fn properties(
         &self,
         ordinal: Ordinal,
     ) -> Result<Vec<(u32, Vec<PropertyValue>)>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::PROPERTIES)?;
-        let mut out = Vec::new();
-        for entry in table.range((ordinal.index(), 0)..(ordinal.index(), u32::MAX))? {
-            let (key, value) = entry?;
-            let values =
-                PropertyValue::decode_list(value.value()).map_err(|source| StoreError::Record {
-                    table: tables::PROPERTIES.name().to_owned(),
-                    key: format!("{:?}", key.value()),
-                    source,
-                })?;
-            out.push((key.value().1, values));
-        }
-        Ok(out)
+        let Some(bytes) = self.properties.get(ordinal) else {
+            return Ok(Vec::new());
+        };
+        record::Properties::decode(bytes).map_err(|source| StoreError::Record {
+            table: tables::COLUMN_PROPERTIES.to_owned(),
+            key: ordinal.to_string(),
+            source,
+        })
     }
 
     /// A vocabulary entry: the name of a property key, designation use,

@@ -1,8 +1,9 @@
 //! Writing an artifact, offline, in one transaction.
 //!
 //! The build tool feeds concepts, designations, acceptability, properties, and
-//! nothing else; `finish` computes the preferred designations and
-//! commits. Two builds from the same input produce the same bytes.
+//! nothing else; `finish` packs each ordinal-keyed set into a dense column,
+//! chooses the displays, and commits. Two builds from the same input produce
+//! the same bytes.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -309,6 +310,58 @@ impl StoreBuilder {
         )
     }
 
+    /// Calls `write` once per concept with that concept's rows.
+    ///
+    /// The rows arrive keyed by a concept ordinal followed by the rest of the
+    /// key, so a single pass in key order groups them without sorting again.
+    /// `write` takes the group rather than a finished record so a caller that
+    /// streams to a table holds no second copy of the edition.
+    fn per_concept<'a, K: 'a, V: 'a, R>(
+        rows: &'a BTreeMap<K, V>,
+        concept: impl Fn(&K) -> u32,
+        row: impl Fn(&'a K, &'a V) -> R,
+        mut write: impl FnMut(u32, &[R]) -> Result<(), BuildError>,
+    ) -> Result<(), BuildError> {
+        let mut at = None;
+        let mut group: Vec<R> = Vec::new();
+        for (key, value) in rows {
+            let ordinal = concept(key);
+            if at != Some(ordinal) {
+                if let Some(previous) = at {
+                    write(previous, &group)?;
+                }
+                at = Some(ordinal);
+                group.clear();
+            }
+            group.push(row(key, value));
+        }
+        match at {
+            Some(previous) => write(previous, &group),
+            None => Ok(()),
+        }
+    }
+
+    /// The dense column of one record per concept, packed by `pack`.
+    fn column<'a, K: 'a, V: 'a, R>(
+        count: u32,
+        rows: &'a BTreeMap<K, V>,
+        concept: impl Fn(&K) -> u32,
+        row: impl Fn(&'a K, &'a V) -> R,
+        pack: impl Fn(&[R]) -> Vec<u8>,
+    ) -> Result<Vec<u8>, BuildError> {
+        let mut packed: BTreeMap<u32, Vec<u8>> = BTreeMap::new();
+        Self::per_concept(rows, concept, row, |ordinal, group| {
+            packed.insert(ordinal, pack(group));
+            Ok(())
+        })?;
+        Ok(Column::pack(
+            count,
+            packed
+                .iter()
+                .map(|(ordinal, bytes)| (Ordinal::new(*ordinal), bytes.as_slice())),
+        ))
+    }
+
     /// Writes every buffered row in key order, computes the preferred
     /// designations per language reference set and use, records the concept
     /// count, and commits.
@@ -327,6 +380,7 @@ impl StoreBuilder {
                 tables::META_CONCEPTS,
                 self.concepts.len().to_string().as_str(),
             )?;
+            meta.insert(tables::META_PREFERRED, rule.preferred.to_string().as_str())?;
         }
         {
             let mut codes = txn.open_table(tables::CODES)?;
@@ -342,35 +396,34 @@ impl StoreBuilder {
             .next_back()
             .map_or(0, |highest| highest.saturating_add(1));
         {
-            // An ordinal is a position, so the concepts are one dense column
-            // rather than a b-tree keyed by that position.
-            let packed = Column::pack(
+            let mut columns = txn.open_table(tables::COLUMNS)?;
+            // An ordinal is a position, so these are dense columns rather
+            // than b-trees keyed by that position.
+            let concepts = Column::pack(
                 count,
                 self.concepts
                     .iter()
                     .map(|(ordinal, bytes)| (Ordinal::new(*ordinal), bytes.as_slice())),
             );
-            let mut columns = txn.open_table(tables::COLUMNS)?;
-            columns.insert(tables::COLUMN_CONCEPTS, packed.as_slice())?;
+            columns.insert(tables::COLUMN_CONCEPTS, concepts.as_slice())?;
+            let acceptability = Self::column(
+                count,
+                &self.acceptability,
+                |(concept, _, _)| *concept,
+                |(_, index, refset), acceptability| (*index, *refset, *acceptability),
+                record::Acceptability::encode,
+            )?;
+            columns.insert(tables::COLUMN_ACCEPTABILITY, acceptability.as_slice())?;
+            let properties = Self::column(
+                count,
+                &self.properties,
+                |(concept, _)| *concept,
+                |(_, key), values| (*key, values.as_slice()),
+                record::Properties::encode,
+            )?;
+            columns.insert(tables::COLUMN_PROPERTIES, properties.as_slice())?;
         }
-        {
-            let mut designations = txn.open_table(tables::DESIGNATIONS)?;
-            for (key, bytes) in &self.designations {
-                designations.insert(*key, bytes.as_slice())?;
-            }
-        }
-        {
-            let mut acceptability = txn.open_table(tables::ACCEPTABILITY)?;
-            for (key, value) in &self.acceptability {
-                acceptability.insert(*key, *value)?;
-            }
-        }
-        {
-            let mut properties = txn.open_table(tables::PROPERTIES)?;
-            for (key, bytes) in &self.properties {
-                properties.insert(*key, bytes.as_slice())?;
-            }
-        }
+        self.write_designations(&txn)?;
         for table_def in [
             tables::PROPERTY_KEYS,
             tables::DESIGNATION_USES,
@@ -384,17 +437,11 @@ impl StoreBuilder {
                 }
             }
         }
-        {
+        if let Some(display_use) = rule.display_use {
             let chosen = self.chosen_preferred(rule);
-            let mut preferred = txn.open_table(tables::PREFERRED)?;
-            for (key, index) in &chosen {
-                preferred.insert(*key, *index)?;
-            }
-            if let Some(display_use) = rule.display_use {
-                let column = self.display_column(&chosen, display_use, count);
-                let mut columns = txn.open_table(tables::COLUMNS)?;
-                columns.insert(tables::COLUMN_DISPLAYS, column.as_slice())?;
-            }
+            let displays = self.display_column(&chosen, display_use, count);
+            let mut columns = txn.open_table(tables::COLUMNS)?;
+            columns.insert(tables::COLUMN_DISPLAYS, displays.as_slice())?;
         }
         txn.commit()?;
         // redb grows the file in regions ahead of use; compaction returns the
@@ -404,5 +451,23 @@ impl StoreBuilder {
         while db.compact()? {}
         drop(db);
         Ok(self.path)
+    }
+
+    /// Writes the designations of each concept as one row.
+    ///
+    /// The designation text is the largest thing the artifact holds, so it
+    /// stays in the database; one row per concept keys the tree by what a
+    /// reader asks for and holds no key per designation (#338).
+    fn write_designations(&self, txn: &redb::WriteTransaction) -> Result<(), BuildError> {
+        let mut designations = txn.open_table(tables::DESIGNATIONS)?;
+        Self::per_concept(
+            &self.designations,
+            |(concept, _)| *concept,
+            |(_, index), bytes| (*index, bytes.as_slice()),
+            |ordinal, group| {
+                designations.insert(ordinal, record::Designations::encode(group).as_slice())?;
+                Ok(())
+            },
+        )
     }
 }
