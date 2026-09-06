@@ -264,7 +264,8 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | R4 and R4B declare the same terminology parameters, so one set of macros instantiates both | `app/ferroterm-server/src/version/mod.rs` `surface!` |
 | `$versions` names `4.0`, `4.3`, `5.0`, or `6.0` | `app/ferroterm-server/src/version/system.rs`; `app/ferroterm-server/tests/it/r4.rs::versions_names_r4` |
 | A parameter the version does not declare is refused with an `OperationOutcome` | `app/ferroterm-server/tests/it/r6.rs`, `tests/it/operations.rs` |
-| `/r6` refuses `manifest`, `filterProperty`, and `handle-unclosed-expansion` as `not-supported` | `app/ferroterm-server/tests/it/r6.rs:185` |
+| `/r6` refuses `manifest` and `filterProperty` as `not-supported` | `app/ferroterm-server/tests/it/r6.rs::r6_takes_a_repeated_display_language_and_refuses_what_it_does_not_implement` |
+| `/r6` takes `handle-unclosed-expansion`, and `/r4`, `/r4b`, and `/r5` refuse it as undeclared | `app/ferroterm-server/tests/it/r6.rs::handle_unclosed_expansion_is_taken_under_r6_and_refused_under_the_earlier_versions` |
 | A cache started on one version serves another | `app/ferroterm-server/tests/it/r4.rs::a_cache_started_on_one_version_serves_another` |
 
 ### The FHIR terminology API
@@ -276,7 +277,7 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | `$expand` returns the expanded `ValueSet`; the others return `Parameters` | `app/ferroterm-server/tests/it/value_set.rs`, `tests/it/operations.rs` |
 | The five ways a value set arrives (loaded, persisted, inline, request-scoped, implicit) | `app/ferroterm-server/tests/it/scope.rs`, `tests/it/persisted.rs`, `tests/it/value_set.rs`, and the implicit value set tests |
 | `$expand` honours `count`, `offset`, `filter`, `activeOnly`, `includeDesignations`, `displayLanguage`, `system-version`, `check-system-version`, `force-system-version`, `exclude-system`, and echoes `used-codesystem` | `crates/fhir-terminology/src/operations/expand.rs`, `crates/fhir-terminology/src/compose.rs`; `app/ferroterm-server/tests/it/value_set.rs` |
-| At most 1,000 members without `count`, then `too-costly`; the limit is not configurable | `crates/fhir-terminology/src/operations/expand.rs:24` `EXPANSION_LIMIT`, used once at `:215`, absent from `Config`; `crates/fhir-terminology/tests/it/registries.rs::the_grammar_systems_refuse_expansion_and_validate_by_membership` |
+| At most 1,000 members without `count`, then `too-costly`; the limit is not configurable | `crates/fhir-terminology/src/operations/expand.rs` `EXPANSION_LIMIT`, read once in `expand`, absent from `Config`; `crates/fhir-terminology/tests/it/registries.rs::the_grammar_systems_refuse_expansion_and_validate_by_membership` |
 | `tx-resource` on a `POST`, layered over loaded resources; any other resource type refused with `not-supported` | `app/ferroterm-server/src/version/resources.rs`; `app/ferroterm-server/tests/it/scope.rs::tx_resources_serve_a_request_and_only_that_request`, `::a_tx_resource_of_another_type_is_refused` |
 | `$cache-control?mode=start` returns a `cache-id`, named by `X-Cache-Id`; `mode=end` releases it; an unknown id answers `404` | `app/ferroterm-server/src/scope.rs`; `app/ferroterm-server/tests/it/scope.rs::a_cache_front_loads_resources_and_ends` |
 | A cache unused for 30 minutes expires | `app/ferroterm-server/src/scope.rs:38` `CACHE_IDLE = Duration::from_mins(30)`, pruned on `start` and `get`. No test, since it needs clock control |

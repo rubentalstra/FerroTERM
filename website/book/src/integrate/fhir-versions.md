@@ -46,5 +46,4 @@ The `/r6` endpoint answers in the ballot's shapes. Its capability statement
 says which ballot it serves and that every behaviour grounded only in the
 ballot is re-verified against the published specification when it appears. A
 ballot parameter the server does not implement yet (`manifest`,
-`filterProperty`, `handle-unclosed-expansion`) is refused as
-`not-supported`, never absorbed.
+`filterProperty`) is refused as `not-supported`, never absorbed.

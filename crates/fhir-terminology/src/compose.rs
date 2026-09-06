@@ -16,7 +16,9 @@ use std::sync::Arc;
 
 use crate::filter::{Filter, FilterOperator};
 use crate::language;
-use crate::provider::{CodeSystemProvider, Concept, ConceptSet, Hierarchy, ProviderError};
+use crate::provider::{
+    CodeSystemProvider, Concept, ConceptSet, ContentMode, Hierarchy, ProviderError,
+};
 use crate::registry::{Registry, ResolveError};
 
 /// A system and optional version an include names.
@@ -121,6 +123,17 @@ pub struct UsedVersion {
     pub defaulted: bool,
 }
 
+/// A code system version an expansion drew on whose resource carries only
+/// "a subset of the code system"
+/// (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>, `fragment`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UsedFragment {
+    /// The system.
+    pub url: String,
+    /// The version.
+    pub version: String,
+}
+
 /// An expansion.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Expansion {
@@ -132,6 +145,9 @@ pub struct Expansion {
     pub items: Vec<Item>,
     /// The system versions used.
     pub versions: Vec<UsedVersion>,
+    /// The system versions used whose resource is a `fragment`, in system
+    /// order.
+    pub fragments: Vec<UsedFragment>,
     /// Whether `items` carry the system's hierarchy in their depths.
     pub nested: bool,
     /// Whether the compose admits codes this expansion does not list, so the
@@ -499,11 +515,23 @@ impl<'a> Expander<'a> {
         gathered
             .versions
             .dedup_by(|a, b| a.url == b.url && a.version == b.version);
+        let fragments = gathered
+            .selections
+            .iter()
+            .filter(|(_, selection)| {
+                selection.provider.declaration().content == ContentMode::Fragment
+            })
+            .map(|((url, version), _)| UsedFragment {
+                url: url.clone(),
+                version: version.clone(),
+            })
+            .collect();
         Ok(Expansion {
             total,
             offset: options.offset,
             items: page.items,
             versions: gathered.versions,
+            fragments,
             nested: page.nested,
             unclosed: gathered.selections.values().any(|s| s.unclosed),
         })

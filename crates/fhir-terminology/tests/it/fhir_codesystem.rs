@@ -620,3 +620,93 @@ fn an_expansion_over_a_fragment_is_unclosed_and_one_over_a_complete_system_is_no
     let fragment = FhirCodeSystem::new(model).expect("builds");
     assert!(fragment.unclosed(&[]));
 }
+
+/// The mark is joined by the reason and by the fragment the expansion drew on,
+/// beside the `used-*` family the terminology ecosystem requires: "all versions
+/// of code systems used (in 'used-*')"
+/// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
+// NOTE: no published `StructureDefinition` defines `valueset-unclosed-reason` and no
+// `OperationDefinition` declares `used-fragment`, so the ecosystem suite's
+// `fragment/fragment-expansion` case is the source (<https://github.com/HL7/fhir-tx-ecosystem-ig>).
+#[test]
+fn a_fragment_expansion_states_its_reason_and_names_its_used_fragment() {
+    let (_dir, providers) = load_all();
+    let mut model = find(&providers, COLOURS).model().clone();
+    model.content = ContentMode::Fragment;
+    let mut registry = Registry::new();
+    registry
+        .register(Arc::new(FhirCodeSystem::new(model).expect("builds")))
+        .expect("registers");
+    let value_sets = fhir_terminology::valueset::store::ValueSetStore::new();
+    let concept_maps = fhir_terminology::conceptmap::store::ConceptMapStore::new();
+    let sources = fhir_terminology::operations::Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let inline = fhir_types::r4b::value_set::ValueSet {
+        url: Some("http://example.org/fhir/ValueSet/fragment-all".into()),
+        status: "active".into(),
+        compose: Some(fhir_types::r4b::value_set::ValueSetCompose {
+            include: vec![fhir_types::r4b::value_set::ValueSetComposeInclude {
+                system: Some(COLOURS.into()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let request = fhir_terminology::operations::expand::ExpandInput {
+        inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(&inline)),
+        ..Default::default()
+    };
+    let outcome =
+        fhir_terminology::operations::expand::expand(&sources, &request).expect("expands");
+    assert!(outcome.unclosed);
+    assert_eq!(
+        outcome.unclosed_reasons,
+        [format!(
+            "This extension is based on a fragment of the code system {COLOURS}"
+        )]
+    );
+    let used: Vec<&fhir_terminology::operations::expand::ExpansionParameter> = outcome
+        .parameters
+        .iter()
+        .filter(|p| p.name == "used-codesystem" || p.name == "used-fragment")
+        .collect();
+    let canonical =
+        fhir_terminology::operations::expand::ParameterValue::Uri(format!("{COLOURS}|1"));
+    assert_eq!(
+        used.iter().map(|p| p.name.as_str()).collect::<Vec<_>>(),
+        ["used-codesystem", "used-fragment"],
+        "{:?}",
+        outcome.parameters
+    );
+    assert!(used.iter().all(|p| p.value == canonical), "{used:?}");
+    let rendered = fhir_terminology::valueset::render::r4b::expansion(&outcome);
+    assert_eq!(
+        rendered
+            .expansion
+            .expect("an expansion")
+            .extension
+            .iter()
+            .map(|e| (e.url.as_str(), e.value.clone()))
+            .collect::<Vec<_>>(),
+        [
+            (
+                "http://hl7.org/fhir/StructureDefinition/valueset-unclosed",
+                Some(fhir_types::r4b::extension::ExtensionValue::Boolean(
+                    true.into()
+                ))
+            ),
+            (
+                "http://hl7.org/fhir/StructureDefinition/valueset-unclosed-reason",
+                Some(fhir_types::r4b::extension::ExtensionValue::String(
+                    format!("This extension is based on a fragment of the code system {COLOURS}")
+                        .as_str()
+                        .into()
+                ))
+            ),
+        ]
+    );
+}

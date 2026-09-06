@@ -6,7 +6,7 @@ use std::sync::Arc;
 use concept_graph::subsumption::Outcome;
 use fhir_terminology::conceptmap::store::ConceptMapStore;
 use fhir_terminology::filter::{Filter, FilterOperator};
-use fhir_terminology::operations::expand::ExpandInput;
+use fhir_terminology::operations::expand::{ExpandInput, ParameterValue};
 use fhir_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use fhir_terminology::operations::{
     Invocation, OperationError, Sources, expand, subsumes, value_set_validate_code,
@@ -611,4 +611,89 @@ fn a_filtered_media_type_expansion_is_unclosed_and_an_enumerated_one_is_not() {
 fn a_language_tag_selection_is_unclosed() {
     let provider = Bcp47Provider::new();
     assert!(provider.unclosed(&[filter("language", FilterOperator::Equal, "en")]));
+}
+
+/// R6 alone declares `handle-unclosed-expansion`: "If true this asserts that
+/// you will correctly handle an unclosed expansion and the returned expansion
+/// SHALL include the valueset-unclosed extension if the value set is unclosed.
+/// If handle-unclosed-expansion is set to false the server SHALL return an
+/// error if the value set is unclosed"
+/// (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-expand.html>).
+// NOTE: the ballot fixes no behaviour for the absent parameter, so an expansion that
+// names none keeps the mark the R4B and R5 Notes describe: our own design.
+#[test]
+fn handle_unclosed_expansion_refuses_an_unclosed_expansion_only_when_it_is_false() {
+    let registry = registry();
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let unclosed = || {
+        Some(fhir_terminology::valueset::convert::r4b::convert(&inline(
+            bcp13::URL,
+            vec![("registered", "=", "true"), ("base", "=", "text/plain")],
+        )))
+    };
+    let absent = ExpandInput {
+        inline_value_set: unclosed(),
+        ..ExpandInput::default()
+    };
+    let outcome = expand::expand(&sources, &absent).expect("expands");
+    assert!(outcome.unclosed, "the default keeps the mark");
+    assert!(
+        !outcome
+            .parameters
+            .iter()
+            .any(|p| p.name == "handle-unclosed-expansion"),
+        "a parameter the request did not name is not echoed"
+    );
+    let handled = ExpandInput {
+        inline_value_set: unclosed(),
+        handle_unclosed_expansion: Some(true),
+        ..ExpandInput::default()
+    };
+    let outcome = expand::expand(&sources, &handled).expect("expands");
+    assert!(outcome.unclosed);
+    assert!(
+        outcome
+            .parameters
+            .iter()
+            .any(|p| p.name == "handle-unclosed-expansion"
+                && p.value == ParameterValue::Boolean(true)),
+        "{:?}",
+        outcome.parameters
+    );
+    let rendered = fhir_terminology::valueset::render::r4b::expansion(&outcome);
+    assert_eq!(
+        rendered
+            .expansion
+            .expect("an expansion")
+            .extension
+            .first()
+            .map(|e| e.url.as_str()),
+        Some("http://hl7.org/fhir/StructureDefinition/valueset-unclosed")
+    );
+    let refused = ExpandInput {
+        inline_value_set: unclosed(),
+        handle_unclosed_expansion: Some(false),
+        ..ExpandInput::default()
+    };
+    let error = expand::expand(&sources, &refused).expect_err("refused");
+    assert!(matches!(error, OperationError::NotSupported(_)), "{error}");
+    assert_eq!(error.issue_code(), "not-supported");
+    assert_eq!(error.status(), http::StatusCode::BAD_REQUEST);
+    // A closed expansion answers whatever the client asserted about unclosed ones.
+    let closed = ExpandInput {
+        inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(
+            &enumerating(bcp13::URL, &["text/plain"]),
+        )),
+        handle_unclosed_expansion: Some(false),
+        ..ExpandInput::default()
+    };
+    let outcome = expand::expand(&sources, &closed).expect("expands");
+    assert!(!outcome.unclosed);
+    assert_eq!(outcome.total, 1);
 }

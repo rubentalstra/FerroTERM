@@ -19,6 +19,12 @@ const CONTAINS_PROPERTY_EXTENSION: &str =
 /// admits (`ValueSet.expansion`, a mandatory `boolean`,
 /// <https://hl7.org/fhir/R4B/extension-valueset-unclosed.html>).
 const UNCLOSED_EXTENSION: &str = "http://hl7.org/fhir/StructureDefinition/valueset-unclosed";
+/// The extension stating why an expansion is unclosed, beside the mark.
+// NOTE: no published `StructureDefinition` defines it; the ecosystem suite's
+// `fragment/fragment-expansion` case is the source
+// (<https://github.com/HL7/fhir-tx-ecosystem-ig>, tests/fragment).
+const UNCLOSED_REASON_EXTENSION: &str =
+    "http://hl7.org/fhir/StructureDefinition/valueset-unclosed-reason";
 
 macro_rules! render_value_set {
     // R6 makes `compose.include.filter.value` optional
@@ -424,6 +430,19 @@ macro_rules! render_value_set {
                             )),
                             ..Default::default()
                         });
+                    for reason in &outcome.unclosed_reasons {
+                        expansion
+                            .extension
+                            .push(fhir_types::$module::extension::Extension {
+                                url: String::from(super::UNCLOSED_REASON_EXTENSION),
+                                value: Some(
+                                    fhir_types::$module::extension::ExtensionValue::String(
+                                        reason.as_str().into(),
+                                    ),
+                                ),
+                                ..Default::default()
+                            });
+                    }
                 }
                 value_set.expansion = Some(expansion);
                 value_set
