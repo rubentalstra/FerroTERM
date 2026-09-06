@@ -20,16 +20,18 @@ pub const COLUMN_CONCEPTS: &str = "concepts";
 /// The `COLUMNS` key of the preferred-designation column, the displays the
 /// build chose per concept.
 pub const COLUMN_DISPLAYS: &str = "displays";
-/// `(concept ordinal, designation index)` to an encoded [`crate::record::Designation`].
-pub const DESIGNATIONS: TableDefinition<(u32, u32), &[u8]> = TableDefinition::new("designations");
-/// `(concept ordinal, designation index, language refset ordinal)` to an acceptability ordinal.
-pub const ACCEPTABILITY: TableDefinition<(u32, u32, u32), u32> =
-    TableDefinition::new("acceptability");
-/// `(concept ordinal, language refset ordinal, designation use ordinal)` to the
-/// preferred designation index, precomputed by the build.
-pub const PREFERRED: TableDefinition<(u32, u32, u32), u32> = TableDefinition::new("preferred");
-/// `(concept ordinal, property key ordinal)` to an encoded list of [`crate::record::PropertyValue`].
-pub const PROPERTIES: TableDefinition<(u32, u32), &[u8]> = TableDefinition::new("properties");
+/// The `COLUMNS` key of the property column, one encoded
+/// [`crate::record::Properties`] per concept.
+pub const COLUMN_PROPERTIES: &str = "properties";
+/// The `COLUMNS` key of the acceptability column, one encoded
+/// [`crate::record::Acceptability`] per concept.
+pub const COLUMN_ACCEPTABILITY: &str = "acceptability";
+/// Concept ordinal to its encoded [`crate::record::Designations`].
+///
+/// The designation text is the largest thing an artifact holds, so it stays in
+/// the database and is point-read per concept; the columns the store reads
+/// into memory carry only what a request path walks (#338).
+pub const DESIGNATIONS: TableDefinition<u32, &[u8]> = TableDefinition::new("designations");
 /// Property key ordinal to its name.
 pub const PROPERTY_KEYS: TableDefinition<u32, &str> = TableDefinition::new("property_keys");
 /// Designation use ordinal to its code (for SNOMED, the description type SCTID).
@@ -42,10 +44,13 @@ pub const ACCEPTABILITIES: TableDefinition<u32, &str> = TableDefinition::new("ac
 /// The `META` key of the layout version.
 pub const META_LAYOUT: &str = "layout";
 /// The layout version this build writes and reads.
-pub const LAYOUT_VERSION: &str = "5";
+pub const LAYOUT_VERSION: &str = "6";
 /// The `META` key of the code system URI.
 pub const META_SYSTEM: &str = "system";
 /// The `META` key of the code system version string.
 pub const META_VERSION: &str = "version";
 /// The `META` key of the number of concepts.
 pub const META_CONCEPTS: &str = "concepts";
+/// The `META` key of the acceptability ordinal that marks a designation
+/// preferred in its language reference set.
+pub const META_PREFERRED: &str = "preferred";

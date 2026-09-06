@@ -291,6 +291,173 @@ impl Displays {
     }
 }
 
+/// The designations of one concept, packed in index order.
+///
+/// Each entry carries its designation index, so a gap in the indices the build
+/// wrote cannot shift a later designation into the wrong slot.
+#[derive(Debug)]
+pub struct Designations;
+
+impl Designations {
+    /// The bytes of `entries`, each a designation index and its encoded record.
+    #[must_use]
+    pub fn encode(entries: &[(u32, &[u8])]) -> Vec<u8> {
+        let mut w = Writer(Vec::new());
+        w.u32(u32::try_from(entries.len()).unwrap_or(u32::MAX));
+        for (index, bytes) in entries {
+            w.u32(*index);
+            w.u32(u32::try_from(bytes.len()).unwrap_or(u32::MAX));
+            w.0.extend_from_slice(bytes);
+        }
+        w.0
+    }
+
+    /// Every designation, in the order the build wrote them.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecordError`] when the entries are truncated or a designation
+    /// is damaged.
+    pub fn decode(bytes: &[u8]) -> Result<Vec<Designation>, RecordError> {
+        let mut out = Vec::new();
+        Self::walk(bytes, |_, record| {
+            out.push(Designation::decode(record)?);
+            Ok(true)
+        })?;
+        Ok(out)
+    }
+
+    /// The designation stored under `index`, if the concept has one.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecordError`] when the entries are truncated or the
+    /// designation is damaged.
+    pub fn at(bytes: &[u8], index: u32) -> Result<Option<Designation>, RecordError> {
+        let mut found = None;
+        Self::walk(bytes, |at, record| {
+            if at != index {
+                return Ok(true);
+            }
+            found = Some(Designation::decode(record)?);
+            Ok(false)
+        })?;
+        Ok(found)
+    }
+
+    /// Calls `visit` with each index and record until it answers `false`.
+    fn walk(
+        bytes: &[u8],
+        mut visit: impl FnMut(u32, &[u8]) -> Result<bool, RecordError>,
+    ) -> Result<(), RecordError> {
+        let mut r = Reader { bytes, at: 0 };
+        let count = r.u32()?;
+        for _ in 0..count {
+            let index = r.u32()?;
+            let Ok(len) = usize::try_from(r.u32()?) else {
+                return Err(RecordError::Truncated { at: r.at });
+            };
+            let record = r.take(len)?;
+            if !visit(index, record)? {
+                return Ok(());
+            }
+        }
+        r.finish()
+    }
+}
+
+/// The properties of one concept, in property key order.
+#[derive(Debug)]
+pub struct Properties;
+
+impl Properties {
+    /// The bytes of `entries`, each a property key and its encoded value list.
+    #[must_use]
+    pub fn encode(entries: &[(u32, &[u8])]) -> Vec<u8> {
+        let mut w = Writer(Vec::new());
+        w.u32(u32::try_from(entries.len()).unwrap_or(u32::MAX));
+        for (key, values) in entries {
+            w.u32(*key);
+            w.u32(u32::try_from(values.len()).unwrap_or(u32::MAX));
+            w.0.extend_from_slice(values);
+        }
+        w.0
+    }
+
+    /// Every property key and its values, in the order the build wrote them.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecordError`] when the entries are truncated or a value list
+    /// is damaged.
+    pub fn decode(bytes: &[u8]) -> Result<Vec<(u32, Vec<PropertyValue>)>, RecordError> {
+        let mut r = Reader { bytes, at: 0 };
+        let count = r.u32()?;
+        let mut out = Vec::with_capacity(usize::try_from(count).unwrap_or(0));
+        for _ in 0..count {
+            let key = r.u32()?;
+            let Ok(len) = usize::try_from(r.u32()?) else {
+                return Err(RecordError::Truncated { at: r.at });
+            };
+            let values = PropertyValue::decode_list(r.take(len)?)?;
+            out.push((key, values));
+        }
+        r.finish()?;
+        Ok(out)
+    }
+}
+
+/// The acceptability of one concept's designations, per language reference set.
+#[derive(Debug)]
+pub struct Acceptability;
+
+impl Acceptability {
+    /// The bytes of `entries`, each a designation index, a language reference
+    /// set ordinal, and an acceptability ordinal.
+    #[must_use]
+    pub fn encode(entries: &[(u32, u32, u32)]) -> Vec<u8> {
+        let mut w = Writer(Vec::new());
+        w.u32(u32::try_from(entries.len()).unwrap_or(u32::MAX));
+        for (index, refset, acceptability) in entries {
+            w.u32(*index);
+            w.u32(*refset);
+            w.u32(*acceptability);
+        }
+        w.0
+    }
+
+    /// The acceptability of designation `index` in `refset`, if the reference
+    /// set carries the designation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecordError`] when the entries are truncated.
+    pub fn find(bytes: &[u8], index: u32, refset: u32) -> Result<Option<u32>, RecordError> {
+        for (at, in_refset, acceptability) in Self::decode(bytes)? {
+            if at == index && in_refset == refset {
+                return Ok(Some(acceptability));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Every entry, in the order the build wrote them.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecordError`] when the entries are truncated.
+    pub fn decode(bytes: &[u8]) -> Result<Vec<(u32, u32, u32)>, RecordError> {
+        let mut r = Reader { bytes, at: 0 };
+        let count = r.u32()?;
+        let mut out = Vec::with_capacity(usize::try_from(count).unwrap_or(0));
+        for _ in 0..count {
+            out.push((r.u32()?, r.u32()?, r.u32()?));
+        }
+        r.finish()?;
+        Ok(out)
+    }
+}
+
 /// The native code a concept record starts with, borrowed from `bytes`.
 ///
 /// # Errors
@@ -448,6 +615,71 @@ mod tests {
             PropertyValue::decode_list(&PropertyValue::encode_list(&values)),
             Ok(values)
         );
+    }
+
+    #[test]
+    fn the_per_concept_records_round_trip() {
+        let first = Designation {
+            id: Some("1".to_owned()),
+            term: "Kat".to_owned(),
+            language: "nl".to_owned(),
+            use_ordinal: 1,
+            active: true,
+        };
+        let second = Designation {
+            id: None,
+            term: "Cat".to_owned(),
+            language: "en".to_owned(),
+            use_ordinal: 0,
+            active: false,
+        };
+        let (a, b) = (first.encode(), second.encode());
+        // Index 2 is missing, so a reader that asks by index must not be
+        // handed the record that happens to sit in that position.
+        let packed = super::Designations::encode(&[(0, a.as_slice()), (3, b.as_slice())]);
+        assert_eq!(
+            super::Designations::decode(&packed),
+            Ok(vec![first.clone(), second.clone()])
+        );
+        assert_eq!(super::Designations::at(&packed, 0), Ok(Some(first)));
+        assert_eq!(super::Designations::at(&packed, 3), Ok(Some(second)));
+        assert_eq!(super::Designations::at(&packed, 2), Ok(None));
+
+        let values = PropertyValue::encode_list(&[PropertyValue::Concept(Ordinal::new(4))]);
+        let packed = super::Properties::encode(&[(7, values.as_slice()), (9, &[0, 0, 0, 0])]);
+        assert_eq!(
+            super::Properties::decode(&packed),
+            Ok(vec![
+                (7, vec![PropertyValue::Concept(Ordinal::new(4))]),
+                (9, Vec::new()),
+            ])
+        );
+
+        let packed = super::Acceptability::encode(&[(0, 1, 0), (0, 2, 1)]);
+        assert_eq!(
+            super::Acceptability::decode(&packed),
+            Ok(vec![(0, 1, 0), (0, 2, 1)])
+        );
+        assert_eq!(super::Acceptability::find(&packed, 0, 2), Ok(Some(1)));
+        assert_eq!(super::Acceptability::find(&packed, 1, 2), Ok(None));
+    }
+
+    #[test]
+    fn damaged_per_concept_records_are_refused() {
+        let packed = super::Designations::encode(&[(0, b"x".as_slice())]);
+        assert!(matches!(
+            super::Designations::decode(&packed[..6]),
+            Err(RecordError::Truncated { .. })
+        ));
+        let packed = super::Properties::encode(&[(0, &[1, 0, 0, 0, 9])]);
+        assert!(matches!(
+            super::Properties::decode(&packed),
+            Err(RecordError::Tag { tag: 9 })
+        ));
+        assert!(matches!(
+            super::Acceptability::decode(&[2, 0, 0, 0, 0, 0, 0, 0]),
+            Err(RecordError::Truncated { .. })
+        ));
     }
 
     #[test]

@@ -3,9 +3,16 @@
 The disk-backed concept store. Hand-written; no spec governs the on-disk
 layout (our own design, `docs/architecture.md` decision 3). `redb` owns the
 file I/O and its page cache, and maps nothing: it has had no memory-mapped
-backend since 0.14.0 dropped one that could not be proven sound. The dense
-concept and display columns are read into memory when the store opens; every
-other table is point-read from the file.
+backend since 0.14.0 dropped one that could not be proven sound.
+
+Ordinal-keyed data is a dense column read into memory when the store opens
+(concepts, displays, properties, acceptability): a dense key already says
+where its value is, and a b-tree spends its time deciding that again, on both
+the read and the write. The designation text stays in the database, one row
+per concept, because as a column it measured 239 MB resident per SNOMED
+edition and the read it would speed up already costs three microseconds
+(#338). `redb` keeps what a b-tree is for: the string-keyed code index,
+`META`, and the small vocabulary tables.
 
 - Modules: `tables` (the table set and `META` keys), `record` (the byte
   encodings of concepts, designations, and typed property values, decoded with
@@ -22,6 +29,8 @@ other table is point-read from the file.
   error, not a panic.
 - Point reads only on the request path; the one scan (`vocabulary_ordinal`)
   walks a table of a few dozen rows. Whole-table work is the offline build.
+- A layout change bumps `LAYOUT_VERSION`, so an artifact of the previous
+  layout is refused rather than read as garbage.
 - The store is opened read-only by the server (`ReadOnlyDatabase`); the
   writer is the offline build.
 - Fixtures are synthetic stores in a temporary directory; the ignored
