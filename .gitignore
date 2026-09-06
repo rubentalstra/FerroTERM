@@ -34,6 +34,11 @@ der2_*
 *.redb
 *.fst
 
+# The viewer bundle Trunk writes. It is built by the release lane and rides
+# inside the server binary; a checkout never carries it.
+/app/ferroterm-viewer/dist/
+/app/ferroterm-viewer/.trunk/
+
 # RustRover
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore

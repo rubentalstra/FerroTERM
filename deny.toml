@@ -13,7 +13,17 @@ version = 2
 # naming the event that deletes it (an ignore is a standing liability driven to
 # zero, re-checked at every dependency-bump cycle, never a permanent waiver).
 yanked = "deny"
-ignore = []
+ignore = [
+  # Both arrived with the viewer's leptos tree, both are `unmaintained` rather
+  # than a vulnerability, and both are compile-time only, so neither reaches
+  # the server binary or the WebAssembly bundle. Driven to zero on #432; each
+  # is deleted when the upstream release that drops it is picked up.
+  # paste, reached through leptos/either_of/reactive_graph/tachys. Added 2026-09-06.
+  { id = "RUSTSEC-2024-0436", reason = "deleted when a leptos release stops pulling paste (#432)" },
+  # proc-macro-error2, reached through leptos_macro and the other proc-macro
+  # crates in that tree. Added 2026-09-06.
+  { id = "RUSTSEC-2026-0173", reason = "deleted when leptos_macro moves off proc-macro-error2 (#432)" },
+]
 
 [licenses]
 version = 2
@@ -53,6 +63,7 @@ exceptions = [
   { allow = ["BUSL-1.1"], crate = "rxnorm-rrf" },
   { allow = ["BUSL-1.1"], crate = "fhir-terminology" },
   { allow = ["BUSL-1.1"], crate = "ferroterm-server" },
+  { allow = ["BUSL-1.1"], crate = "ferroterm-viewer" },
   { allow = ["BUSL-1.1"], crate = "ferroterm-build" },
   { allow = ["BUSL-1.1"], crate = "ferroterm-bench" },
   { allow = ["BUSL-1.1"], crate = "ferroterm-testkit" },
@@ -73,4 +84,8 @@ skip-tree = []
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# The viewer's component library. crates.io carries no thaw release built for
+# Leptos 0.8 (0.4.8 is Leptos 0.7 and 0.5.0-beta predates the recursion_limit
+# fix), so the root Cargo.toml pins an exact commit. This entry is deleted when
+# thaw 0.5 ships to crates.io.
+allow-git = ["https://github.com/thaw-ui/thaw"]

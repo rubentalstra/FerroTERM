@@ -68,6 +68,20 @@ The authoritative, fully-pinned third-party crate set lives in the root
 does not duplicate crate versions; on any discrepancy, the manifest wins. Add a
 dependency to a crate with `dep.workspace = true`.
 
+## Viewer toolchain
+
+The viewer (`app/ferroterm-viewer`) compiles to WebAssembly and is built by
+Trunk, not by `cargo` alone. Its crate versions live in the root
+`Cargo.toml` like every other dependency; the pins below are the tools.
+
+| Item | Pin |
+|---|---|
+| Compilation target | `wasm32-unknown-unknown` (`rustup target add wasm32-unknown-unknown`) |
+| Trunk | 0.21.14, required by `app/ferroterm-viewer/Trunk.toml` `trunk-version` |
+| Tailwind CSS standalone CLI | 4.3.3, pinned in `Trunk.toml` `[tools] tailwindcss`; Trunk downloads it, so there is no Node and no npm |
+| `wasm-bindgen` CLI | taken from `Cargo.lock`, which pins the `wasm-bindgen` crate |
+| `leptosfmt` | 0.1.33, the `view!` macro formatter |
+
 ## GitHub Actions pins
 
 Every `uses:` in `.github/workflows/**` is pinned to a full commit SHA with a

@@ -27,4 +27,4 @@ disallowed-types = [
 ]
 
 # Product and family names are words, not code, in documentation.
-doc-valid-idents = ["FerroTERM", "FerroEHR", ".."]
+doc-valid-idents = ["FerroTERM", "FerroEHR", "RESTful", ".."]

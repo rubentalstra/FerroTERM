@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: BUSL-1.1
+[package]
+name = "ferroterm-viewer"
+description = "The FerroTERM viewer: a client-side-rendered FHIR terminology browser served by the FerroTERM server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+# Never published: the viewer ships as a bundle the server serves.
+publish = false
+
+[[bin]]
+name = "ferroterm-viewer"
+path = "src/main.rs"
+
+# The viewer is a FHIR client and depends on NO workspace crate, so that
+# anything it can do a client can do. scripts/checks/viewer-boundary.sh fails
+# when an edge into the engine appears.
+[dependencies]
+console_error_panic_hook.workspace = true
+gloo-net.workspace = true
+http.workspace = true
+leptos.workspace = true
+leptos_meta.workspace = true
+leptos_router.workspace = true
+percent-encoding.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thaw.workspace = true
+thiserror.workspace = true
+web-sys = { workspace = true, features = [
+  "Document",
+  "DomTokenList",
+  "Element",
+  "Location",
+  "MediaQueryList",
+  "Storage",
+  "Window",
+] }
+
+[lints]
+workspace = true

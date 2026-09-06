@@ -31,7 +31,8 @@ split do not apply here, and a rule reintroducing one is wrong.
   `concept-store`, not `sct-ecl`, not `ferroterm-server`, and not `fhir-types`.
   Anything the viewer can do, any client can do. That is the property the whole
   design exists to hold, and a dependency edge into the engine breaks it
-  silently.
+  silently, so `scripts/checks/viewer-boundary.sh` walks the resolved closure
+  and fails on one; CI runs it as the `viewer-boundary` job.
 - **No code system is a special case.** Every page renders from
   `TerminologyCapabilities` and the operations. A page that names a system URI,
   assumes one hierarchy, or assumes one language reference set is a defect
@@ -56,11 +57,18 @@ operation in the browser.
   CLI, pinned with `[tools] tailwindcss`. No Node, no npm, ever.
 - **WebAssembly is 32-bit: never `usize`/`isize` in a serialized type.** Use
   fixed-size integers in anything that crosses the wire or is stored.
-- **Bundle size is gated.** Ship `[profile.release]` with
-  `opt-level = "z"`, `lto = true`, `codegen-units = 1`; avoid `regex` and
-  generics-heavy code on client paths (monomorphization bloat: factor a
-  concrete inner function). A new dependency is justified against the bundle
-  size it adds (`docs/viewer.md` §12).
+- **Bundle size is gated.** The bundle builds under the root `Cargo.toml`
+  `[profile.wasm-release]` (`opt-level = "z"`, `lto = true`,
+  `codegen-units = 1`), which `index.html` selects with
+  `data-cargo-profile-release`
+  (<https://github.com/trunk-rs/trunk/blob/main/guide/src/assets/index.md>).
+  It is a profile of its own because `[profile.release]` is shared with the
+  server, where `opt-level = "z"` would trade away the latency the server is
+  built for. Avoid `regex` and generics-heavy code on client paths
+  (monomorphization bloat: factor a concrete inner function). A new dependency
+  is justified against the bundle size it adds, and
+  `scripts/checks/bundle-size.sh` compares the gzipped bundle to the claims in
+  `app/ferroterm-viewer/bundle-size.json`.
 - **Views are built in `.into_any()`-erased sections.** A monolithic `view!`
   tree over deeply nested `thaw` components blows rustc's layout-recursion
   depth at codegen. Break every screen into section functions bound to erased
