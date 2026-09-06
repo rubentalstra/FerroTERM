@@ -50,12 +50,12 @@ macro_rules! render_value_set {
                     system,
                     code,
                     display,
-                } => ExtensionValue::Coding(Coding {
+                } => ExtensionValue::Coding(Box::new(Coding {
                     system: Some(system.as_str().into()),
                     code: Some(code.as_str().into()),
                     display: display.as_deref().map(Into::into),
                     ..Default::default()
-                }),
+                })),
                 PropertyValue::Integer(i) => match i32::try_from(*i) {
                     Ok(i) => ExtensionValue::Integer(i.into()),
                     Err(_) => ExtensionValue::String(i.to_string().as_str().into()),
@@ -102,12 +102,12 @@ macro_rules! render_value_set {
                     system,
                     code,
                     display,
-                } => <$value>::Coding(Coding {
+                } => <$value>::Coding(Box::new(Coding {
                     system: Some(system.as_str().into()),
                     code: Some(code.as_str().into()),
                     display: display.as_deref().map(Into::into),
                     ..Default::default()
-                }),
+                })),
                 PropertyValue::Integer(i) => match i32::try_from(*i) {
                     Ok(i) => <$value>::Integer(i.into()),
                     Err(_) => <$value>::String(i.to_string().as_str().into()),

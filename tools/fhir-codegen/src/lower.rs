@@ -270,6 +270,7 @@ impl VersionModule {
             base: None,
         }, "the UnknownResource struct")?;
         model.box_cycles();
+        model.box_wide_variants();
         Ok(model)
     }
 
@@ -311,6 +312,35 @@ impl VersionModule {
                     box_cyclic_variants(variants, own, &component_of);
                 }
                 TypeKind::ResourceEnum { .. } | TypeKind::UnknownResource => {}
+            }
+        }
+    }
+
+    /// Boxes every choice variant holding a complex type, so a choice enum is
+    /// only as wide as the widest primitive it admits.
+    ///
+    /// A Rust enum is as large as its largest variant, so one rare wide type
+    /// sets the size every value of the enum pays. `Parameters.value[x]` admits
+    /// `Dosage`, which carries a whole `Timing`, and that made every
+    /// `valueString` of an answer cost the same as a dosage schedule. Primitives
+    /// stay inline: their width is bounded by the base element and they are what
+    /// a terminology answer is nearly all of.
+    fn box_wide_variants(&mut self) {
+        let primitives: BTreeSet<String> = self
+            .types
+            .values()
+            .filter(|ty| ty.is_primitive)
+            .map(|ty| ty.name.clone())
+            .collect();
+        for ty in self.types.values_mut() {
+            if let TypeKind::Choice { variants, .. } = &mut ty.kind {
+                for variant in variants.iter_mut() {
+                    if let Target::Named(target) = &variant.target
+                        && !primitives.contains(target)
+                    {
+                        variant.boxed = true;
+                    }
+                }
             }
         }
     }

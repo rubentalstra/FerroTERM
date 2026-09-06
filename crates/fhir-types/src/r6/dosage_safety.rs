@@ -446,13 +446,21 @@ impl serde::Serialize for DosageSafetyDoseLimit {
         }
         match &self.value {
             DosageSafetyDoseLimitValue::Expression(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueExpression", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueExpression",
+                    inner.as_ref(),
+                )?;
             }
             DosageSafetyDoseLimitValue::Integer(inner) => {
                 super::super::codec::value_entry(&mut map, "valueInteger", inner)?;
             }
             DosageSafetyDoseLimitValue::Quantity(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueQuantity", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueQuantity",
+                    inner.as_ref(),
+                )?;
             }
         }
         serde::ser::SerializeMap::end(map)
@@ -477,9 +485,9 @@ pub enum DosageSafetyDoseLimitValue {
     /// The `integer` form.
     Integer(super::primitives::Integer),
     /// The `Quantity` form.
-    Quantity(super::quantity::Quantity),
+    Quantity(Box<super::quantity::Quantity>),
     /// The `Expression` form.
-    Expression(super::expression::Expression),
+    Expression(Box<super::expression::Expression>),
 }
 
 impl DosageSafetyDoseLimitValue {
@@ -507,14 +515,14 @@ impl DosageSafetyDoseLimitValue {
             Self::Quantity(inner) => Ok((
                 "Quantity",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Expression(inner) => Ok((
                 "Expression",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -552,7 +560,7 @@ impl DosageSafetyDoseLimitValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Quantity(inner))
+                Ok(Self::Quantity(Box::new(inner)))
             }
             "Expression" => {
                 if element.is_some() {
@@ -570,7 +578,7 @@ impl DosageSafetyDoseLimitValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Expression(inner))
+                Ok(Self::Expression(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

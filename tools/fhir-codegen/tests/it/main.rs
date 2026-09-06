@@ -17,6 +17,7 @@ use fhir_codegen::package::Package;
 mod closure;
 mod codec;
 mod emit;
+mod layout;
 mod operations;
 mod package;
 mod roots;

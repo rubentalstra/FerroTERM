@@ -410,11 +410,15 @@ impl serde::Serialize for DataRequirement {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "subjectCodeableConcept",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(DataRequirementSubject::Reference(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "subjectReference", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "subjectReference",
+                    inner.as_ref(),
+                )?;
             }
             None => {}
         }
@@ -918,10 +922,14 @@ impl serde::Serialize for DataRequirementDateFilter {
                 super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
             }
             Some(DataRequirementDateFilterValue::Duration(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDuration", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueDuration",
+                    inner.as_ref(),
+                )?;
             }
             Some(DataRequirementDateFilterValue::Period(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valuePeriod", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valuePeriod", inner.as_ref())?;
             }
             None => {}
         }
@@ -952,9 +960,9 @@ pub enum DataRequirementDateFilterValue {
     /// The `dateTime` form.
     DateTime(super::primitives::DateTime),
     /// The `Period` form.
-    Period(super::period::Period),
+    Period(Box<super::period::Period>),
     /// The `Duration` form.
-    Duration(super::duration::Duration),
+    Duration(Box<super::duration::Duration>),
 }
 
 impl DataRequirementDateFilterValue {
@@ -982,14 +990,14 @@ impl DataRequirementDateFilterValue {
             Self::Period(inner) => Ok((
                 "Period",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Duration(inner) => Ok((
                 "Duration",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -1027,7 +1035,7 @@ impl DataRequirementDateFilterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Period(inner))
+                Ok(Self::Period(Box::new(inner)))
             }
             "Duration" => {
                 if element.is_some() {
@@ -1045,7 +1053,7 @@ impl DataRequirementDateFilterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Duration(inner))
+                Ok(Self::Duration(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }
@@ -1221,9 +1229,9 @@ impl<'de> serde::Deserialize<'de> for DataRequirementSort {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataRequirementSubject {
     /// The `CodeableConcept` form.
-    CodeableConcept(super::codeable_concept::CodeableConcept),
+    CodeableConcept(Box<super::codeable_concept::CodeableConcept>),
     /// The `Reference` form.
-    Reference(super::reference::Reference),
+    Reference(Box<super::reference::Reference>),
 }
 
 impl DataRequirementSubject {
@@ -1246,14 +1254,14 @@ impl DataRequirementSubject {
             Self::CodeableConcept(inner) => Ok((
                 "CodeableConcept",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Reference(inner) => Ok((
                 "Reference",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -1288,7 +1296,7 @@ impl DataRequirementSubject {
                     )?,
                     path,
                 )?;
-                Ok(Self::CodeableConcept(inner))
+                Ok(Self::CodeableConcept(Box::new(inner)))
             }
             "Reference" => {
                 if element.is_some() {
@@ -1306,7 +1314,7 @@ impl DataRequirementSubject {
                     )?,
                     path,
                 )?;
-                Ok(Self::Reference(inner))
+                Ok(Self::Reference(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }
@@ -1602,16 +1610,24 @@ impl serde::Serialize for DataRequirementValueFilter {
                 super::super::codec::value_entry(&mut map, "valueInteger", inner)?;
             }
             Some(DataRequirementValueFilterValue::Quantity(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueQuantity", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueQuantity",
+                    inner.as_ref(),
+                )?;
             }
             Some(DataRequirementValueFilterValue::Range(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRange", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRange", inner.as_ref())?;
             }
             Some(DataRequirementValueFilterValue::Ratio(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRatio", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRatio", inner.as_ref())?;
             }
             Some(DataRequirementValueFilterValue::RatioRange(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRatioRange", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueRatioRange",
+                    inner.as_ref(),
+                )?;
             }
             Some(DataRequirementValueFilterValue::String(inner)) => {
                 super::super::codec::value_entry(&mut map, "valueString", inner)?;
@@ -1645,13 +1661,13 @@ pub enum DataRequirementValueFilterValue {
     /// The `string` form.
     String(super::primitives::String),
     /// The `Quantity` form.
-    Quantity(super::quantity::Quantity),
+    Quantity(Box<super::quantity::Quantity>),
     /// The `Range` form.
-    Range(super::range::Range),
+    Range(Box<super::range::Range>),
     /// The `Ratio` form.
-    Ratio(super::ratio::Ratio),
+    Ratio(Box<super::ratio::Ratio>),
     /// The `RatioRange` form.
-    RatioRange(super::ratio_range::RatioRange),
+    RatioRange(Box<super::ratio_range::RatioRange>),
 }
 
 impl DataRequirementValueFilterValue {
@@ -1689,28 +1705,28 @@ impl DataRequirementValueFilterValue {
             Self::Quantity(inner) => Ok((
                 "Quantity",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Range(inner) => Ok((
                 "Range",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Ratio(inner) => Ok((
                 "Ratio",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::RatioRange(inner) => Ok((
                 "RatioRange",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -1754,7 +1770,7 @@ impl DataRequirementValueFilterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Quantity(inner))
+                Ok(Self::Quantity(Box::new(inner)))
             }
             "Range" => {
                 if element.is_some() {
@@ -1772,7 +1788,7 @@ impl DataRequirementValueFilterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Range(inner))
+                Ok(Self::Range(Box::new(inner)))
             }
             "Ratio" => {
                 if element.is_some() {
@@ -1790,7 +1806,7 @@ impl DataRequirementValueFilterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Ratio(inner))
+                Ok(Self::Ratio(Box::new(inner)))
             }
             "RatioRange" => {
                 if element.is_some() {
@@ -1808,7 +1824,7 @@ impl DataRequirementValueFilterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::RatioRange(inner))
+                Ok(Self::RatioRange(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

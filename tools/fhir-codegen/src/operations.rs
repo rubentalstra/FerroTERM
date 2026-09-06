@@ -114,6 +114,10 @@ pub struct ContractField {
     /// ones it specializes on the same terms (`uri` for a `canonical`
     /// parameter).
     pub accepts: Vec<String>,
+    /// Whether the open-type variant this field travels in holds its value
+    /// behind a `Box`, which every complex type does so the enum stays as
+    /// narrow as its primitives.
+    pub boxed: bool,
 }
 
 /// One operation's contract.
@@ -308,6 +312,10 @@ fn lower_field(
         }
         _ => Vec::new(),
     };
+    let boxed = match &kind {
+        FieldKind::Value(name) => !module.types.get(name).is_some_and(|ty| ty.is_primitive),
+        _ => false,
+    };
     Ok(ContractField {
         name: field_name(&parameter.name),
         fhir_name: parameter.name.clone(),
@@ -324,6 +332,7 @@ fn lower_field(
         defaultable,
         source: ParameterSource::Version,
         accepts,
+        boxed,
     })
 }
 
@@ -758,8 +767,11 @@ pub fn render_operation(banner: &str, contract: &OperationContract) -> Result<St
     Ok(out)
 }
 
-/// `from_parameters`/`to_parameters` on a request or response struct, and
-/// `from_parameter_list`/`to_parameter_list` on it and every part struct.
+/// `from_parameters`/`into_parameters`/`to_parameters` on a request or response
+/// struct, and the parameter-list pair on it and every part struct.
+///
+/// The moving form is the answer path; the borrowing one clones into it, so the
+/// values are copied only where a caller genuinely keeps its own.
 fn render_conversions(
     out: &mut String,
     name: &str,
@@ -791,14 +803,25 @@ fn render_conversions(
         writeln!(out, "    }}")?;
         writeln!(
             out,
-            "    /// Writes the parameters as a `Parameters` resource."
+            "    /// Writes the parameters as a `Parameters` resource, by move."
+        )?;
+        writeln!(out, "    #[must_use]")?;
+        writeln!(
+            out,
+            "    pub fn into_parameters(self) -> {P}::Parameters {{"
+        )?;
+        writeln!(out, "        {P}::Parameters {{")?;
+        writeln!(out, "            parameter: self.into_parameter_list(),")?;
+        writeln!(out, "            ..Default::default()")?;
+        writeln!(out, "        }}")?;
+        writeln!(out, "    }}")?;
+        writeln!(
+            out,
+            "    /// Writes the parameters as a `Parameters` resource, from a reference."
         )?;
         writeln!(out, "    #[must_use]")?;
         writeln!(out, "    pub fn to_parameters(&self) -> {P}::Parameters {{")?;
-        writeln!(out, "        {P}::Parameters {{")?;
-        writeln!(out, "            parameter: self.to_parameter_list(),")?;
-        writeln!(out, "            ..Default::default()")?;
-        writeln!(out, "        }}")?;
+        writeln!(out, "        self.clone().into_parameters()")?;
         writeln!(out, "    }}")?;
     }
     render_from_list(out, operation, fields, prefix)?;
@@ -923,35 +946,53 @@ fn local(field: &ContractField) -> String {
 
 /// `to_parameter_list`: one `ParametersParameter` per present value.
 fn render_to_list(out: &mut String, fields: &[ContractField]) -> fmt::Result {
-    writeln!(out, "    /// Writes the fields as a parameter list.")?;
+    writeln!(
+        out,
+        "    /// Writes the fields as a parameter list, by move."
+    )?;
     writeln!(out, "    #[must_use]")?;
     writeln!(
         out,
-        "    pub fn to_parameter_list(&self) -> Vec<{P}::ParametersParameter> {{"
+        "    pub fn into_parameter_list(self) -> Vec<{P}::ParametersParameter> {{"
     )?;
-    writeln!(out, "        let mut out = Vec::new();")?;
+    writeln!(
+        out,
+        "        let mut out = Vec::with_capacity({});",
+        fields.len()
+    )?;
     for field in fields {
         let build = render_build(field, "value");
         match cardinality(field.min, field.max) {
             Cardinality::One => {
                 writeln!(out, "        {{")?;
-                writeln!(out, "            let value = &self.{};", field.name)?;
+                writeln!(out, "            let value = self.{};", field.name)?;
                 writeln!(out, "            out.push({build});")?;
                 writeln!(out, "        }}")?;
             }
             Cardinality::Optional => {
-                writeln!(out, "        if let Some(value) = &self.{} {{", field.name)?;
+                writeln!(out, "        if let Some(value) = self.{} {{", field.name)?;
                 writeln!(out, "            out.push({build});")?;
                 writeln!(out, "        }}")?;
             }
             Cardinality::Many => {
-                writeln!(out, "        for value in &self.{} {{", field.name)?;
+                writeln!(out, "        for value in self.{} {{", field.name)?;
                 writeln!(out, "            out.push({build});")?;
                 writeln!(out, "        }}")?;
             }
         }
     }
     writeln!(out, "        out")?;
+    writeln!(out, "    }}")?;
+    writeln!(
+        out,
+        "    /// Writes the fields as a parameter list, from a reference."
+    )?;
+    writeln!(out, "    #[must_use]")?;
+    writeln!(
+        out,
+        "    pub fn to_parameter_list(&self) -> Vec<{P}::ParametersParameter> {{"
+    )?;
+    writeln!(out, "        self.clone().into_parameter_list()")?;
     writeln!(out, "    }}")
 }
 
@@ -973,8 +1014,13 @@ fn render_extract(field: &ContractField, path: &str) -> String {
                     )
                 })
                 .collect();
+            let own = if field.boxed {
+                "(**value).clone()"
+            } else {
+                "value.clone()"
+            };
             let arms = format!(
-                "Some({p}::{OPEN_TYPE_ENUM}::{variant}(value)) => value.clone(), {}",
+                "Some({p}::{OPEN_TYPE_ENUM}::{variant}(value)) => {own}, {}",
                 accepted.join("")
             );
             format!(
@@ -994,25 +1040,33 @@ fn render_extract(field: &ContractField, path: &str) -> String {
     }
 }
 
-/// The expression building one `ParametersParameter` from `value`.
+/// The expression building one `ParametersParameter` out of `value`, which it
+/// takes by move: the answer is built once and handed on, never copied.
 fn render_build(field: &ContractField, value: &str) -> String {
     let p = P;
     let name = format!("{:?}.into()", field.fhir_name);
     match &field.kind {
-        FieldKind::Value(variant) => format!(
-            "{p}::ParametersParameter {{ name: {name}, value: Some({p}::{OPEN_TYPE_ENUM}::{variant}({value}.clone())), ..Default::default() }}"
-        ),
+        FieldKind::Value(variant) => {
+            let held = if field.boxed {
+                format!("Box::new({value})")
+            } else {
+                value.to_owned()
+            };
+            format!(
+                "{p}::ParametersParameter {{ name: {name}, value: Some({p}::{OPEN_TYPE_ENUM}::{variant}({held})), ..Default::default() }}"
+            )
+        }
         FieldKind::Resource(resource) => format!(
-            "{p}::ParametersParameter {{ name: {name}, resource: Some(super::super::resource::Resource::{resource}(Box::new({value}.clone()))), ..Default::default() }}"
+            "{p}::ParametersParameter {{ name: {name}, resource: Some(super::super::resource::Resource::{resource}(Box::new({value}))), ..Default::default() }}"
         ),
         FieldKind::OpenType => format!(
-            "{p}::ParametersParameter {{ name: {name}, value: Some({value}.clone()), ..Default::default() }}"
+            "{p}::ParametersParameter {{ name: {name}, value: Some({value}), ..Default::default() }}"
         ),
         FieldKind::AnyResource => format!(
-            "{p}::ParametersParameter {{ name: {name}, resource: Some({value}.clone()), ..Default::default() }}"
+            "{p}::ParametersParameter {{ name: {name}, resource: Some({value}), ..Default::default() }}"
         ),
         FieldKind::Parts => format!(
-            "{p}::ParametersParameter {{ name: {name}, part: {value}.to_parameter_list(), ..Default::default() }}"
+            "{p}::ParametersParameter {{ name: {name}, part: {value}.into_parameter_list(), ..Default::default() }}"
         ),
     }
 }

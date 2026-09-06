@@ -1326,7 +1326,7 @@ impl serde::Serialize for ValueSet {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "versionAlgorithmCoding",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(ValueSetVersionAlgorithm::String(inner)) => {
@@ -4093,7 +4093,7 @@ impl serde::Serialize for ValueSetExpansionContainsProperty {
                 super::super::codec::value_entry(&mut map, "valueCode", inner)?;
             }
             ValueSetExpansionContainsPropertyValue::Coding(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner.as_ref())?;
             }
             ValueSetExpansionContainsPropertyValue::DateTime(inner) => {
                 super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
@@ -4392,7 +4392,7 @@ impl serde::Serialize for ValueSetExpansionContainsPropertySubProperty {
                 super::super::codec::value_entry(&mut map, "valueCode", inner)?;
             }
             ValueSetExpansionContainsPropertySubPropertyValue::Coding(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner.as_ref())?;
             }
             ValueSetExpansionContainsPropertySubPropertyValue::DateTime(inner) => {
                 super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
@@ -4431,7 +4431,7 @@ pub enum ValueSetExpansionContainsPropertySubPropertyValue {
     /// The `code` form.
     Code(super::primitives::Code),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
     /// The `string` form.
     String(super::primitives::String),
     /// The `integer` form.
@@ -4469,7 +4469,7 @@ impl ValueSetExpansionContainsPropertySubPropertyValue {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -4532,7 +4532,7 @@ impl ValueSetExpansionContainsPropertySubPropertyValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             "String" => Ok(Self::String(
                 super::super::codec::Primitive::from_json_parts(value, element, path)?,
@@ -4562,7 +4562,7 @@ pub enum ValueSetExpansionContainsPropertyValue {
     /// The `code` form.
     Code(super::primitives::Code),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
     /// The `string` form.
     String(super::primitives::String),
     /// The `integer` form.
@@ -4600,7 +4600,7 @@ impl ValueSetExpansionContainsPropertyValue {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -4663,7 +4663,7 @@ impl ValueSetExpansionContainsPropertyValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             "String" => Ok(Self::String(
                 super::super::codec::Primitive::from_json_parts(value, element, path)?,
@@ -5339,7 +5339,7 @@ pub enum ValueSetVersionAlgorithm {
     /// The `string` form.
     String(super::primitives::String),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
 }
 
 impl ValueSetVersionAlgorithm {
@@ -5367,7 +5367,7 @@ impl ValueSetVersionAlgorithm {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -5405,7 +5405,7 @@ impl ValueSetVersionAlgorithm {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

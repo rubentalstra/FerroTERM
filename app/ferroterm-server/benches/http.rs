@@ -158,6 +158,24 @@ fn local(c: &mut Criterion) {
     group.bench_function("rxnorm_serialize_typed", |b| {
         b.iter(|| serde_json::to_vec(&typed).expect("serializes"));
     });
+    // The two ways the same answer becomes a `Parameters`, timed in one process so
+    // the ratio holds whatever else the machine is doing: the answer path moves its
+    // values into the wire tree, and a caller that keeps its own copies first (#378).
+    let answer =
+        fhir_types::r4b::operations::code_system_lookup::CodeSystemLookupResponse::from_parameters(
+            &typed,
+        )
+        .expect("the answer reads back");
+    group.bench_function("rxnorm_answer_moved", |b| {
+        b.iter_batched(
+            || answer.clone(),
+            fhir_types::r4b::operations::code_system_lookup::CodeSystemLookupResponse::into_parameters,
+            criterion::BatchSize::SmallInput,
+        );
+    });
+    group.bench_function("rxnorm_answer_copied", |b| {
+        b.iter(|| answer.to_parameters());
+    });
     group.finish();
 }
 

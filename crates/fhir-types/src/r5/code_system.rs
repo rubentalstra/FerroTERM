@@ -1565,7 +1565,7 @@ impl serde::Serialize for CodeSystem {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "versionAlgorithmCoding",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(CodeSystemVersionAlgorithm::String(inner)) => {
@@ -2512,7 +2512,7 @@ impl serde::Serialize for CodeSystemConceptProperty {
                 super::super::codec::value_entry(&mut map, "valueCode", inner)?;
             }
             CodeSystemConceptPropertyValue::Coding(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner.as_ref())?;
             }
             CodeSystemConceptPropertyValue::DateTime(inner) => {
                 super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
@@ -2549,7 +2549,7 @@ pub enum CodeSystemConceptPropertyValue {
     /// The `code` form.
     Code(super::primitives::Code),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
     /// The `string` form.
     String(super::primitives::String),
     /// The `integer` form.
@@ -2587,7 +2587,7 @@ impl CodeSystemConceptPropertyValue {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -2650,7 +2650,7 @@ impl CodeSystemConceptPropertyValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             "String" => Ok(Self::String(
                 super::super::codec::Primitive::from_json_parts(value, element, path)?,
@@ -3224,7 +3224,7 @@ pub enum CodeSystemVersionAlgorithm {
     /// The `string` form.
     String(super::primitives::String),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
 }
 
 impl CodeSystemVersionAlgorithm {
@@ -3252,7 +3252,7 @@ impl CodeSystemVersionAlgorithm {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -3290,7 +3290,7 @@ impl CodeSystemVersionAlgorithm {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

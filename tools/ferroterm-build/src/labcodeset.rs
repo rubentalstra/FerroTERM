@@ -284,12 +284,12 @@ fn supplement(publication: &Publication, release: &str) -> CodeSystem {
 }
 
 fn coding(system: &str, code: &str, display: Option<&str>) -> CodeSystemConceptPropertyValue {
-    CodeSystemConceptPropertyValue::Coding(Coding {
+    CodeSystemConceptPropertyValue::Coding(Box::new(Coding {
         system: Some(system.into()),
         code: Some(code.into()),
         display: display.map(Into::into),
         ..Default::default()
-    })
+    }))
 }
 
 /// The Dutch axis names and class of a concept's LOINC translation.

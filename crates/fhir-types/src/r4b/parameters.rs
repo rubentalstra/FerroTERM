@@ -843,16 +843,28 @@ impl serde::Serialize for ParametersParameter {
         }
         match &self.value {
             Some(ParametersParameterValue::Address(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAddress", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueAddress",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Age(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAge", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAge", inner.as_ref())?;
             }
             Some(ParametersParameterValue::Annotation(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAnnotation", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueAnnotation",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Attachment(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAttachment", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueAttachment",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Base64Binary(inner)) => {
                 super::super::codec::value_entry(&mut map, "valueBase64Binary", inner)?;
@@ -867,25 +879,45 @@ impl serde::Serialize for ParametersParameter {
                 super::super::codec::value_entry(&mut map, "valueCode", inner)?;
             }
             Some(ParametersParameterValue::CodeableConcept(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCodeableConcept", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueCodeableConcept",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Coding(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner.as_ref())?;
             }
             Some(ParametersParameterValue::ContactDetail(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueContactDetail", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueContactDetail",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::ContactPoint(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueContactPoint", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueContactPoint",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Contributor(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueContributor", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueContributor",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Count(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCount", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCount", inner.as_ref())?;
             }
             Some(ParametersParameterValue::DataRequirement(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDataRequirement", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueDataRequirement",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Date(inner)) => {
                 super::super::codec::value_entry(&mut map, "valueDate", inner)?;
@@ -897,25 +929,45 @@ impl serde::Serialize for ParametersParameter {
                 super::super::codec::value_entry(&mut map, "valueDecimal", inner)?;
             }
             Some(ParametersParameterValue::Distance(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDistance", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueDistance",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Dosage(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDosage", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDosage", inner.as_ref())?;
             }
             Some(ParametersParameterValue::Duration(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDuration", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueDuration",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Expression(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueExpression", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueExpression",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::HumanName(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueHumanName", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueHumanName",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Id(inner)) => {
                 super::super::codec::value_entry(&mut map, "valueId", inner)?;
             }
             Some(ParametersParameterValue::Identifier(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueIdentifier", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueIdentifier",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Instant(inner)) => {
                 super::super::codec::value_entry(&mut map, "valueInstant", inner)?;
@@ -927,10 +979,10 @@ impl serde::Serialize for ParametersParameter {
                 super::super::codec::value_entry(&mut map, "valueMarkdown", inner)?;
             }
             Some(ParametersParameterValue::Meta(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueMeta", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueMeta", inner.as_ref())?;
             }
             Some(ParametersParameterValue::Money(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueMoney", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueMoney", inner.as_ref())?;
             }
             Some(ParametersParameterValue::Oid(inner)) => {
                 super::super::codec::value_entry(&mut map, "valueOid", inner)?;
@@ -939,35 +991,55 @@ impl serde::Serialize for ParametersParameter {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "valueParameterDefinition",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(ParametersParameterValue::Period(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valuePeriod", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valuePeriod", inner.as_ref())?;
             }
             Some(ParametersParameterValue::PositiveInt(inner)) => {
                 super::super::codec::value_entry(&mut map, "valuePositiveInt", inner)?;
             }
             Some(ParametersParameterValue::Quantity(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueQuantity", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueQuantity",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Range(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRange", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRange", inner.as_ref())?;
             }
             Some(ParametersParameterValue::Ratio(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRatio", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRatio", inner.as_ref())?;
             }
             Some(ParametersParameterValue::Reference(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueReference", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueReference",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::RelatedArtifact(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRelatedArtifact", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueRelatedArtifact",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::SampledData(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueSampledData", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueSampledData",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Signature(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueSignature", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueSignature",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::String(inner)) => {
                 super::super::codec::value_entry(&mut map, "valueString", inner)?;
@@ -976,13 +1048,13 @@ impl serde::Serialize for ParametersParameter {
                 super::super::codec::value_entry(&mut map, "valueTime", inner)?;
             }
             Some(ParametersParameterValue::Timing(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueTiming", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueTiming", inner.as_ref())?;
             }
             Some(ParametersParameterValue::TriggerDefinition(inner)) => {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "valueTriggerDefinition",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(ParametersParameterValue::UnsignedInt(inner)) => {
@@ -995,7 +1067,11 @@ impl serde::Serialize for ParametersParameter {
                 super::super::codec::value_entry(&mut map, "valueUrl", inner)?;
             }
             Some(ParametersParameterValue::UsageContext(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueUsageContext", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueUsageContext",
+                    inner.as_ref(),
+                )?;
             }
             Some(ParametersParameterValue::Uuid(inner)) => {
                 super::super::codec::value_entry(&mut map, "valueUuid", inner)?;
@@ -1060,67 +1136,67 @@ pub enum ParametersParameterValue {
     /// The `uuid` form.
     Uuid(super::primitives::Uuid),
     /// The `Address` form.
-    Address(super::address::Address),
+    Address(Box<super::address::Address>),
     /// The `Age` form.
-    Age(super::age::Age),
+    Age(Box<super::age::Age>),
     /// The `Annotation` form.
-    Annotation(super::annotation::Annotation),
+    Annotation(Box<super::annotation::Annotation>),
     /// The `Attachment` form.
-    Attachment(super::attachment::Attachment),
+    Attachment(Box<super::attachment::Attachment>),
     /// The `CodeableConcept` form.
-    CodeableConcept(super::codeable_concept::CodeableConcept),
+    CodeableConcept(Box<super::codeable_concept::CodeableConcept>),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
     /// The `ContactPoint` form.
-    ContactPoint(super::contact_point::ContactPoint),
+    ContactPoint(Box<super::contact_point::ContactPoint>),
     /// The `Count` form.
-    Count(super::count::Count),
+    Count(Box<super::count::Count>),
     /// The `Distance` form.
-    Distance(super::distance::Distance),
+    Distance(Box<super::distance::Distance>),
     /// The `Duration` form.
-    Duration(super::duration::Duration),
+    Duration(Box<super::duration::Duration>),
     /// The `HumanName` form.
-    HumanName(super::human_name::HumanName),
+    HumanName(Box<super::human_name::HumanName>),
     /// The `Identifier` form.
-    Identifier(super::identifier::Identifier),
+    Identifier(Box<super::identifier::Identifier>),
     /// The `Money` form.
-    Money(super::money::Money),
+    Money(Box<super::money::Money>),
     /// The `Period` form.
-    Period(super::period::Period),
+    Period(Box<super::period::Period>),
     /// The `Quantity` form.
-    Quantity(super::quantity::Quantity),
+    Quantity(Box<super::quantity::Quantity>),
     /// The `Range` form.
-    Range(super::range::Range),
+    Range(Box<super::range::Range>),
     /// The `Ratio` form.
-    Ratio(super::ratio::Ratio),
+    Ratio(Box<super::ratio::Ratio>),
     /// The `Reference` form.
-    Reference(super::reference::Reference),
+    Reference(Box<super::reference::Reference>),
     /// The `SampledData` form.
-    SampledData(super::sampled_data::SampledData),
+    SampledData(Box<super::sampled_data::SampledData>),
     /// The `Signature` form.
-    Signature(super::signature::Signature),
+    Signature(Box<super::signature::Signature>),
     /// The `Timing` form.
-    Timing(super::timing::Timing),
+    Timing(Box<super::timing::Timing>),
     /// The `ContactDetail` form.
-    ContactDetail(super::contact_detail::ContactDetail),
+    ContactDetail(Box<super::contact_detail::ContactDetail>),
     /// The `Contributor` form.
-    Contributor(super::contributor::Contributor),
+    Contributor(Box<super::contributor::Contributor>),
     /// The `DataRequirement` form.
-    DataRequirement(super::data_requirement::DataRequirement),
+    DataRequirement(Box<super::data_requirement::DataRequirement>),
     /// The `Expression` form.
-    Expression(super::expression::Expression),
+    Expression(Box<super::expression::Expression>),
     /// The `ParameterDefinition` form.
-    ParameterDefinition(super::parameter_definition::ParameterDefinition),
+    ParameterDefinition(Box<super::parameter_definition::ParameterDefinition>),
     /// The `RelatedArtifact` form.
-    RelatedArtifact(super::related_artifact::RelatedArtifact),
+    RelatedArtifact(Box<super::related_artifact::RelatedArtifact>),
     /// The `TriggerDefinition` form.
-    TriggerDefinition(super::trigger_definition::TriggerDefinition),
+    TriggerDefinition(Box<super::trigger_definition::TriggerDefinition>),
     /// The `UsageContext` form.
-    UsageContext(super::usage_context::UsageContext),
+    UsageContext(Box<super::usage_context::UsageContext>),
     /// The `Dosage` form.
-    Dosage(super::dosage::Dosage),
+    Dosage(Box<super::dosage::Dosage>),
     /// The `Meta` form.
-    Meta(super::meta::Meta),
+    Meta(Box<super::meta::Meta>),
 }
 
 impl ParametersParameterValue {
@@ -1238,217 +1314,217 @@ impl ParametersParameterValue {
             Self::Address(inner) => Ok((
                 "Address",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Age(inner) => Ok((
                 "Age",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Annotation(inner) => Ok((
                 "Annotation",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Attachment(inner) => Ok((
                 "Attachment",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::CodeableConcept(inner) => Ok((
                 "CodeableConcept",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::ContactPoint(inner) => Ok((
                 "ContactPoint",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Count(inner) => Ok((
                 "Count",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Distance(inner) => Ok((
                 "Distance",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Duration(inner) => Ok((
                 "Duration",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::HumanName(inner) => Ok((
                 "HumanName",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Identifier(inner) => Ok((
                 "Identifier",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Money(inner) => Ok((
                 "Money",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Period(inner) => Ok((
                 "Period",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Quantity(inner) => Ok((
                 "Quantity",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Range(inner) => Ok((
                 "Range",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Ratio(inner) => Ok((
                 "Ratio",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Reference(inner) => Ok((
                 "Reference",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::SampledData(inner) => Ok((
                 "SampledData",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Signature(inner) => Ok((
                 "Signature",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Timing(inner) => Ok((
                 "Timing",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::ContactDetail(inner) => Ok((
                 "ContactDetail",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Contributor(inner) => Ok((
                 "Contributor",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::DataRequirement(inner) => Ok((
                 "DataRequirement",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Expression(inner) => Ok((
                 "Expression",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::ParameterDefinition(inner) => Ok((
                 "ParameterDefinition",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::RelatedArtifact(inner) => Ok((
                 "RelatedArtifact",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::TriggerDefinition(inner) => Ok((
                 "TriggerDefinition",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::UsageContext(inner) => Ok((
                 "UsageContext",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Dosage(inner) => Ok((
                 "Dosage",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Meta(inner) => Ok((
                 "Meta",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -1540,7 +1616,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Address(inner))
+                Ok(Self::Address(Box::new(inner)))
             }
             "Age" => {
                 if element.is_some() {
@@ -1558,7 +1634,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Age(inner))
+                Ok(Self::Age(Box::new(inner)))
             }
             "Annotation" => {
                 if element.is_some() {
@@ -1576,7 +1652,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Annotation(inner))
+                Ok(Self::Annotation(Box::new(inner)))
             }
             "Attachment" => {
                 if element.is_some() {
@@ -1594,7 +1670,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Attachment(inner))
+                Ok(Self::Attachment(Box::new(inner)))
             }
             "CodeableConcept" => {
                 if element.is_some() {
@@ -1612,7 +1688,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::CodeableConcept(inner))
+                Ok(Self::CodeableConcept(Box::new(inner)))
             }
             "Coding" => {
                 if element.is_some() {
@@ -1630,7 +1706,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             "ContactPoint" => {
                 if element.is_some() {
@@ -1648,7 +1724,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::ContactPoint(inner))
+                Ok(Self::ContactPoint(Box::new(inner)))
             }
             "Count" => {
                 if element.is_some() {
@@ -1666,7 +1742,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Count(inner))
+                Ok(Self::Count(Box::new(inner)))
             }
             "Distance" => {
                 if element.is_some() {
@@ -1684,7 +1760,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Distance(inner))
+                Ok(Self::Distance(Box::new(inner)))
             }
             "Duration" => {
                 if element.is_some() {
@@ -1702,7 +1778,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Duration(inner))
+                Ok(Self::Duration(Box::new(inner)))
             }
             "HumanName" => {
                 if element.is_some() {
@@ -1720,7 +1796,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::HumanName(inner))
+                Ok(Self::HumanName(Box::new(inner)))
             }
             "Identifier" => {
                 if element.is_some() {
@@ -1738,7 +1814,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Identifier(inner))
+                Ok(Self::Identifier(Box::new(inner)))
             }
             "Money" => {
                 if element.is_some() {
@@ -1756,7 +1832,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Money(inner))
+                Ok(Self::Money(Box::new(inner)))
             }
             "Period" => {
                 if element.is_some() {
@@ -1774,7 +1850,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Period(inner))
+                Ok(Self::Period(Box::new(inner)))
             }
             "Quantity" => {
                 if element.is_some() {
@@ -1792,7 +1868,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Quantity(inner))
+                Ok(Self::Quantity(Box::new(inner)))
             }
             "Range" => {
                 if element.is_some() {
@@ -1810,7 +1886,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Range(inner))
+                Ok(Self::Range(Box::new(inner)))
             }
             "Ratio" => {
                 if element.is_some() {
@@ -1828,7 +1904,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Ratio(inner))
+                Ok(Self::Ratio(Box::new(inner)))
             }
             "Reference" => {
                 if element.is_some() {
@@ -1846,7 +1922,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Reference(inner))
+                Ok(Self::Reference(Box::new(inner)))
             }
             "SampledData" => {
                 if element.is_some() {
@@ -1864,7 +1940,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::SampledData(inner))
+                Ok(Self::SampledData(Box::new(inner)))
             }
             "Signature" => {
                 if element.is_some() {
@@ -1882,7 +1958,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Signature(inner))
+                Ok(Self::Signature(Box::new(inner)))
             }
             "Timing" => {
                 if element.is_some() {
@@ -1900,7 +1976,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Timing(inner))
+                Ok(Self::Timing(Box::new(inner)))
             }
             "ContactDetail" => {
                 if element.is_some() {
@@ -1918,7 +1994,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::ContactDetail(inner))
+                Ok(Self::ContactDetail(Box::new(inner)))
             }
             "Contributor" => {
                 if element.is_some() {
@@ -1936,7 +2012,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Contributor(inner))
+                Ok(Self::Contributor(Box::new(inner)))
             }
             "DataRequirement" => {
                 if element.is_some() {
@@ -1954,7 +2030,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::DataRequirement(inner))
+                Ok(Self::DataRequirement(Box::new(inner)))
             }
             "Expression" => {
                 if element.is_some() {
@@ -1972,7 +2048,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Expression(inner))
+                Ok(Self::Expression(Box::new(inner)))
             }
             "ParameterDefinition" => {
                 if element.is_some() {
@@ -1990,7 +2066,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::ParameterDefinition(inner))
+                Ok(Self::ParameterDefinition(Box::new(inner)))
             }
             "RelatedArtifact" => {
                 if element.is_some() {
@@ -2008,7 +2084,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::RelatedArtifact(inner))
+                Ok(Self::RelatedArtifact(Box::new(inner)))
             }
             "TriggerDefinition" => {
                 if element.is_some() {
@@ -2026,7 +2102,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::TriggerDefinition(inner))
+                Ok(Self::TriggerDefinition(Box::new(inner)))
             }
             "UsageContext" => {
                 if element.is_some() {
@@ -2044,7 +2120,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::UsageContext(inner))
+                Ok(Self::UsageContext(Box::new(inner)))
             }
             "Dosage" => {
                 if element.is_some() {
@@ -2062,7 +2138,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Dosage(inner))
+                Ok(Self::Dosage(Box::new(inner)))
             }
             "Meta" => {
                 if element.is_some() {
@@ -2080,7 +2156,7 @@ impl ParametersParameterValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Meta(inner))
+                Ok(Self::Meta(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

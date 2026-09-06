@@ -166,12 +166,12 @@ macro_rules! render_code_system {
                         system,
                         code,
                         display,
-                    } => CodeSystemConceptPropertyValue::Coding(Coding {
+                    } => CodeSystemConceptPropertyValue::Coding(Box::new(Coding {
                         system: Some(system.as_str().into()),
                         code: Some(code.as_str().into()),
                         display: display.as_deref().map(Into::into),
                         ..Default::default()
-                    }),
+                    })),
                     PropertyValue::Integer(number) => match i32::try_from(*number) {
                         Ok(number) => CodeSystemConceptPropertyValue::Integer(number.into()),
                         Err(_too_wide) => CodeSystemConceptPropertyValue::String(

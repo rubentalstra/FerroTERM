@@ -210,13 +210,18 @@ impl ValueSetExpandRequest {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -1231,245 +1236,230 @@ impl ValueSetExpandRequest {
             force_valueset_version: field_force_valueset_version,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
-        if let Some(value) = &self.url {
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(26);
+        if let Some(value) = self.url {
             out.push(super::super::parameters::ParametersParameter {
                 name: "url".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.value_set {
+        if let Some(value) = self.value_set {
             out.push(super::super::parameters::ParametersParameter {
                 name: "valueSet".into(),
-                resource: Some(super::super::resource::Resource::ValueSet(Box::new(
-                    value.clone(),
-                ))),
+                resource: Some(super::super::resource::Resource::ValueSet(Box::new(value))),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.value_set_version {
+        if let Some(value) = self.value_set_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "valueSetVersion".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.context {
+        if let Some(value) = self.context {
             out.push(super::super::parameters::ParametersParameter {
                 name: "context".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.context_direction {
+        if let Some(value) = self.context_direction {
             out.push(super::super::parameters::ParametersParameter {
                 name: "contextDirection".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.filter {
+        if let Some(value) = self.filter {
             out.push(super::super::parameters::ParametersParameter {
                 name: "filter".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.date {
+        if let Some(value) = self.date {
             out.push(super::super::parameters::ParametersParameter {
                 name: "date".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::DateTime(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::DateTime(value)),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.offset {
+        if let Some(value) = self.offset {
             out.push(super::super::parameters::ParametersParameter {
                 name: "offset".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Integer(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.count {
+        if let Some(value) = self.count {
             out.push(super::super::parameters::ParametersParameter {
                 name: "count".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Integer(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.include_designations {
+        if let Some(value) = self.include_designations {
             out.push(super::super::parameters::ParametersParameter {
                 name: "includeDesignations".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.designation {
+        for value in self.designation {
             out.push(super::super::parameters::ParametersParameter {
                 name: "designation".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.include_definition {
+        if let Some(value) = self.include_definition {
             out.push(super::super::parameters::ParametersParameter {
                 name: "includeDefinition".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.active_only {
+        if let Some(value) = self.active_only {
             out.push(super::super::parameters::ParametersParameter {
                 name: "activeOnly".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.use_supplement {
+        for value in self.use_supplement {
             out.push(super::super::parameters::ParametersParameter {
                 name: "useSupplement".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.exclude_nested {
+        if let Some(value) = self.exclude_nested {
             out.push(super::super::parameters::ParametersParameter {
                 name: "excludeNested".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.exclude_not_for_u_i {
+        if let Some(value) = self.exclude_not_for_u_i {
             out.push(super::super::parameters::ParametersParameter {
                 name: "excludeNotForUI".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.exclude_post_coordinated {
+        if let Some(value) = self.exclude_post_coordinated {
             out.push(super::super::parameters::ParametersParameter {
                 name: "excludePostCoordinated".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.display_language {
+        if let Some(value) = self.display_language {
             out.push(super::super::parameters::ParametersParameter {
                 name: "displayLanguage".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.property {
+        for value in self.property {
             out.push(super::super::parameters::ParametersParameter {
                 name: "property".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.exclude_system {
+        for value in self.exclude_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "exclude-system".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.system_version {
+        for value in self.system_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "system-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.check_system_version {
+        for value in self.check_system_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "check-system-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.force_system_version {
+        for value in self.force_system_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "force-system-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.default_valueset_version {
+        for value in self.default_valueset_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "default-valueset-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.check_valueset_version {
+        for value in self.check_valueset_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "check-valueset-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.force_valueset_version {
+        for value in self.force_valueset_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "force-valueset-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -1484,13 +1474,18 @@ impl ValueSetExpandResponse {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -1559,21 +1554,24 @@ impl ValueSetExpandResponse {
             )?,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(1);
         {
-            let value = &self.r#return;
+            let value = self.r#return;
             out.push(super::super::parameters::ParametersParameter {
                 name: "return".into(),
-                resource: Some(super::super::resource::Resource::ValueSet(Box::new(
-                    value.clone(),
-                ))),
+                resource: Some(super::super::resource::Resource::ValueSet(Box::new(value))),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 

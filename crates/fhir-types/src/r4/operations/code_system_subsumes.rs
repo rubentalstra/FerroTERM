@@ -58,13 +58,18 @@ impl CodeSystemSubsumesRequest {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -281,7 +286,7 @@ impl CodeSystemSubsumesRequest {
                     }
                     field_coding_a = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -311,7 +316,7 @@ impl CodeSystemSubsumesRequest {
                     }
                     field_coding_b = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -351,65 +356,70 @@ impl CodeSystemSubsumesRequest {
             coding_b: field_coding_b,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
-        if let Some(value) = &self.code_a {
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(6);
+        if let Some(value) = self.code_a {
             out.push(super::super::parameters::ParametersParameter {
                 name: "codeA".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.code_b {
+        if let Some(value) = self.code_b {
             out.push(super::super::parameters::ParametersParameter {
                 name: "codeB".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.system {
+        if let Some(value) = self.system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "system".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.version {
+        if let Some(value) = self.version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "version".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.coding_a {
+        if let Some(value) = self.coding_a {
             out.push(super::super::parameters::ParametersParameter {
                 name: "codingA".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.coding_b {
+        if let Some(value) = self.coding_b {
             out.push(super::super::parameters::ParametersParameter {
                 name: "codingB".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -424,13 +434,18 @@ impl CodeSystemSubsumesResponse {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -506,21 +521,26 @@ impl CodeSystemSubsumesResponse {
             )?,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(1);
         {
-            let value = &self.outcome;
+            let value = self.outcome;
             out.push(super::super::parameters::ParametersParameter {
                 name: "outcome".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 

@@ -227,13 +227,18 @@ impl ConceptMapTranslateRequest {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -633,7 +638,7 @@ impl ConceptMapTranslateRequest {
                     }
                     field_coding = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -666,7 +671,7 @@ impl ConceptMapTranslateRequest {
                             super::super::parameters::ParametersParameterValue::CodeableConcept(
                                 value,
                             ),
-                        ) => value.clone(),
+                        ) => (**value).clone(),
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1050,7 +1055,7 @@ impl ConceptMapTranslateRequest {
                     }
                     field_source_coding = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -1083,7 +1088,7 @@ impl ConceptMapTranslateRequest {
                             super::super::parameters::ParametersParameterValue::CodeableConcept(
                                 value,
                             ),
-                        ) => value.clone(),
+                        ) => (**value).clone(),
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1149,7 +1154,7 @@ impl ConceptMapTranslateRequest {
                     }
                     field_target_coding = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -1182,7 +1187,7 @@ impl ConceptMapTranslateRequest {
                             super::super::parameters::ParametersParameterValue::CodeableConcept(
                                 value,
                             ),
-                        ) => value.clone(),
+                        ) => (**value).clone(),
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1355,231 +1360,236 @@ impl ConceptMapTranslateRequest {
             target_system: field_target_system,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
-        if let Some(value) = &self.url {
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(24);
+        if let Some(value) = self.url {
             out.push(super::super::parameters::ParametersParameter {
                 name: "url".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.concept_map {
+        if let Some(value) = self.concept_map {
             out.push(super::super::parameters::ParametersParameter {
                 name: "conceptMap".into(),
                 resource: Some(super::super::resource::Resource::ConceptMap(Box::new(
-                    value.clone(),
+                    value,
                 ))),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.concept_map_version {
+        if let Some(value) = self.concept_map_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "conceptMapVersion".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.code {
+        if let Some(value) = self.code {
             out.push(super::super::parameters::ParametersParameter {
                 name: "code".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.system {
+        if let Some(value) = self.system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "system".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.version {
+        if let Some(value) = self.version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "version".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source {
+        if let Some(value) = self.source {
             out.push(super::super::parameters::ParametersParameter {
                 name: "source".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.coding {
+        if let Some(value) = self.coding {
             out.push(super::super::parameters::ParametersParameter {
                 name: "coding".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.codeable_concept {
+        if let Some(value) = self.codeable_concept {
             out.push(super::super::parameters::ParametersParameter {
                 name: "codeableConcept".into(),
                 value: Some(
-                    super::super::parameters::ParametersParameterValue::CodeableConcept(
-                        value.clone(),
-                    ),
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(Box::new(
+                        value,
+                    )),
                 ),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.target {
+        if let Some(value) = self.target {
             out.push(super::super::parameters::ParametersParameter {
                 name: "target".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.targetsystem {
+        if let Some(value) = self.targetsystem {
             out.push(super::super::parameters::ParametersParameter {
                 name: "targetsystem".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.dependency {
+        for value in self.dependency {
             out.push(super::super::parameters::ParametersParameter {
                 name: "dependency".into(),
-                part: value.to_parameter_list(),
+                part: value.into_parameter_list(),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.reverse {
+        if let Some(value) = self.reverse {
             out.push(super::super::parameters::ParametersParameter {
                 name: "reverse".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source_code {
+        if let Some(value) = self.source_code {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceCode".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source_system {
+        if let Some(value) = self.source_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceSystem".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source_version {
+        if let Some(value) = self.source_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceVersion".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source_scope {
+        if let Some(value) = self.source_scope {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceScope".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source_coding {
+        if let Some(value) = self.source_coding {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceCoding".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source_codeable_concept {
+        if let Some(value) = self.source_codeable_concept {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceCodeableConcept".into(),
                 value: Some(
-                    super::super::parameters::ParametersParameterValue::CodeableConcept(
-                        value.clone(),
-                    ),
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(Box::new(
+                        value,
+                    )),
                 ),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.target_code {
+        if let Some(value) = self.target_code {
             out.push(super::super::parameters::ParametersParameter {
                 name: "targetCode".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.target_coding {
+        if let Some(value) = self.target_coding {
             out.push(super::super::parameters::ParametersParameter {
                 name: "targetCoding".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.target_codeable_concept {
+        if let Some(value) = self.target_codeable_concept {
             out.push(super::super::parameters::ParametersParameter {
                 name: "targetCodeableConcept".into(),
                 value: Some(
-                    super::super::parameters::ParametersParameterValue::CodeableConcept(
-                        value.clone(),
-                    ),
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(Box::new(
+                        value,
+                    )),
                 ),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.target_scope {
+        if let Some(value) = self.target_scope {
             out.push(super::super::parameters::ParametersParameter {
                 name: "targetScope".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.target_system {
+        if let Some(value) = self.target_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "targetSystem".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -1673,7 +1683,7 @@ impl ConceptMapTranslateRequestDependency {
                             super::super::parameters::ParametersParameterValue::CodeableConcept(
                                 value,
                             ),
-                        ) => value.clone(),
+                        ) => (**value).clone(),
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1708,31 +1718,36 @@ impl ConceptMapTranslateRequestDependency {
             concept: field_concept,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
-        if let Some(value) = &self.element {
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(2);
+        if let Some(value) = self.element {
             out.push(super::super::parameters::ParametersParameter {
                 name: "element".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.concept {
+        if let Some(value) = self.concept {
             out.push(super::super::parameters::ParametersParameter {
                 name: "concept".into(),
                 value: Some(
-                    super::super::parameters::ParametersParameterValue::CodeableConcept(
-                        value.clone(),
-                    ),
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(Box::new(
+                        value,
+                    )),
                 ),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -1747,13 +1762,18 @@ impl ConceptMapTranslateResponse {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -1990,55 +2010,60 @@ impl ConceptMapTranslateResponse {
             used_system: field_used_system,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(5);
         {
-            let value = &self.result;
+            let value = self.result;
             out.push(super::super::parameters::ParametersParameter {
                 name: "result".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.message {
+        if let Some(value) = self.message {
             out.push(super::super::parameters::ParametersParameter {
                 name: "message".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.r#match {
+        for value in self.r#match {
             out.push(super::super::parameters::ParametersParameter {
                 name: "match".into(),
-                part: value.to_parameter_list(),
+                part: value.into_parameter_list(),
                 ..Default::default()
             });
         }
-        for value in &self.used_conceptmap {
+        for value in self.used_conceptmap {
             out.push(super::super::parameters::ParametersParameter {
                 name: "used-conceptmap".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.used_system {
+        for value in self.used_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "used-system".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -2115,7 +2140,7 @@ impl ConceptMapTranslateResponseMatch {
                     }
                     field_concept = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -2226,7 +2251,7 @@ impl ConceptMapTranslateResponseMatch {
                     }
                     field_source_concept = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -2401,90 +2426,91 @@ impl ConceptMapTranslateResponseMatch {
             no_map: field_no_map,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
-        if let Some(value) = &self.equivalence {
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(9);
+        if let Some(value) = self.equivalence {
             out.push(super::super::parameters::ParametersParameter {
                 name: "equivalence".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.concept {
+        if let Some(value) = self.concept {
             out.push(super::super::parameters::ParametersParameter {
                 name: "concept".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.product {
+        for value in self.product {
             out.push(super::super::parameters::ParametersParameter {
                 name: "product".into(),
-                part: value.to_parameter_list(),
+                part: value.into_parameter_list(),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source {
+        if let Some(value) = self.source {
             out.push(super::super::parameters::ParametersParameter {
                 name: "source".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.origin_map {
+        if let Some(value) = self.origin_map {
             out.push(super::super::parameters::ParametersParameter {
                 name: "originMap".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source_concept {
+        if let Some(value) = self.source_concept {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceConcept".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.source_comment {
+        if let Some(value) = self.source_comment {
             out.push(super::super::parameters::ParametersParameter {
                 name: "sourceComment".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.target_comment {
+        if let Some(value) = self.target_comment {
             out.push(super::super::parameters::ParametersParameter {
                 name: "targetComment".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.no_map {
+        if let Some(value) = self.no_map {
             out.push(super::super::parameters::ParametersParameter {
                 name: "noMap".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -2575,7 +2601,7 @@ impl ConceptMapTranslateResponseMatchProduct {
                     }
                     field_concept = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -2611,29 +2637,34 @@ impl ConceptMapTranslateResponseMatchProduct {
             concept: field_concept,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
-        if let Some(value) = &self.element {
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(2);
+        if let Some(value) = self.element {
             out.push(super::super::parameters::ParametersParameter {
                 name: "element".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.concept {
+        if let Some(value) = self.concept {
             out.push(super::super::parameters::ParametersParameter {
                 name: "concept".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
