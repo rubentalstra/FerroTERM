@@ -14,6 +14,15 @@ edition and the read it would speed up already costs three microseconds
 (#338). `redb` keeps what a b-tree is for: the string-keyed code index,
 `META`, and the small vocabulary tables.
 
+Opening takes one read snapshot and keeps the code index and the designation
+rows open on it for the store's life. A request path then pays one b-tree
+descent instead of a transaction, a table-name lookup, and a descent. Measured
+paired in one process over the NL edition, medians of thirty interleaved
+passes: `ordinal` 1001 ns to 622 ns and `designations` 1516 ns to 1137 ns, so
+about 380 ns a read either way (#314). `META` and the vocabulary tables are
+read when a provider opens, never on a request path, so they keep opening
+their own transaction.
+
 - Modules: `tables` (the table set and `META` keys), `record` (the byte
   encodings of concepts, designations, and typed property values, decoded with
   typed errors), `builder` (one write transaction per artifact, the

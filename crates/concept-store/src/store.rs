@@ -4,11 +4,15 @@
 //! with a typed error. Ordinal-keyed data is answered from a dense column read
 //! at open; the designation text is point-read from the database, one row per
 //! concept. Scans belong to the offline build, never to a request path.
+//!
+//! Opening takes one read snapshot and keeps the two tables a request path
+//! reads open on it, so a lookup costs one descent rather than a transaction,
+//! a table-name lookup, and a descent.
 
 use std::path::{Path, PathBuf};
 
 use concept_graph::ordinal::Ordinal;
-use redb::{ReadOnlyDatabase, ReadableDatabase, ReadableTable, TableHandle};
+use redb::{ReadOnlyDatabase, ReadOnlyTable, ReadableDatabase, ReadableTable, TableHandle};
 
 use crate::column::{Column, ColumnError};
 use crate::record::{self, Concept, Designation, PropertyValue, RecordError};
@@ -86,6 +90,14 @@ pub struct Store {
     properties: Column,
     /// The acceptability of every designation, per language reference set.
     acceptability: Column,
+    /// The native code to ordinal index, held open on the snapshot the store
+    /// was opened on. A string key is what a b-tree is for; paying for a
+    /// transaction and a table-name lookup on top of it is not.
+    code_index: ReadOnlyTable<&'static str, u32>,
+    /// The designations of every concept, one row per concept, held open on
+    /// the same snapshot. The text is the largest thing an artifact holds, so
+    /// it stays on disk rather than becoming a resident column (#338).
+    designation_rows: ReadOnlyTable<u32, &'static [u8]>,
     /// The acceptability ordinal that marks a designation preferred.
     preferred: Option<u32>,
 }
@@ -119,42 +131,46 @@ impl Store {
             path: path.to_path_buf(),
             source,
         })?;
-        let mut store = Self {
-            path: path.to_path_buf(),
-            db,
-            concepts: Column::default(),
-            displays: Column::default(),
-            properties: Column::default(),
-            acceptability: Column::default(),
-            preferred: None,
-        };
-        let layout = store.meta(tables::META_LAYOUT)?;
+        let txn = db.begin_read()?;
+        let meta = open_table!(txn, tables::META)?;
+        let layout = meta
+            .get(tables::META_LAYOUT)?
+            .map(|value| value.value().to_owned());
         if layout.as_deref() != Some(tables::LAYOUT_VERSION) {
             return Err(StoreError::Layout {
                 found: layout,
                 expected: tables::LAYOUT_VERSION,
             });
         }
-        store.concepts = store.column(tables::COLUMN_CONCEPTS)?;
-        store.displays = store.column(tables::COLUMN_DISPLAYS)?;
-        store.properties = store.column(tables::COLUMN_PROPERTIES)?;
-        store.acceptability = store.column(tables::COLUMN_ACCEPTABILITY)?;
-        store.preferred = store
-            .meta(tables::META_PREFERRED)?
-            .and_then(|value| value.parse().ok());
-        Ok(store)
-    }
-
-    /// The packed column named `name`, read and checked once.
-    fn column(&self, name: &str) -> Result<Column, StoreError> {
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::COLUMNS)?;
-        let Some(bytes) = table.get(name)? else {
-            return Ok(Column::default());
+        let columns = open_table!(txn, tables::COLUMNS)?;
+        let column = |name: &str| -> Result<Column, StoreError> {
+            let Some(bytes) = columns.get(name)? else {
+                return Ok(Column::default());
+            };
+            Column::read(bytes.value()).map_err(|source| StoreError::Column {
+                column: name.to_owned(),
+                source,
+            })
         };
-        Column::read(bytes.value()).map_err(|source| StoreError::Column {
-            column: name.to_owned(),
-            source,
+        let concepts = column(tables::COLUMN_CONCEPTS)?;
+        let displays = column(tables::COLUMN_DISPLAYS)?;
+        let properties = column(tables::COLUMN_PROPERTIES)?;
+        let acceptability = column(tables::COLUMN_ACCEPTABILITY)?;
+        let preferred = meta
+            .get(tables::META_PREFERRED)?
+            .and_then(|value| value.value().parse().ok());
+        let code_index = open_table!(txn, tables::CODES)?;
+        let designation_rows = open_table!(txn, tables::DESIGNATIONS)?;
+        Ok(Self {
+            path: path.to_path_buf(),
+            db,
+            concepts,
+            displays,
+            properties,
+            acceptability,
+            code_index,
+            designation_rows,
+            preferred,
         })
     }
 
@@ -181,9 +197,10 @@ impl Store {
     ///
     /// Returns [`StoreError`] when the database cannot be read.
     pub fn ordinal(&self, code: &str) -> Result<Option<Ordinal>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::CODES)?;
-        Ok(table.get(code)?.map(|v| Ordinal::new(v.value())))
+        Ok(self
+            .code_index
+            .get(code)?
+            .map(|value| Ordinal::new(value.value())))
     }
 
     /// The concept at `ordinal`, if any.
@@ -247,15 +264,13 @@ impl Store {
     /// The native codes at `ordinals`, in the order given, `None` where the
     /// store has no such concept.
     ///
-    /// One read transaction answers the whole batch, and each record is
-    /// decoded only as far as its code. A caller that names concepts by code
-    /// (the children of one concept, the members of a page) pays neither the
-    /// transaction per concept nor the rest of the record.
+    /// Each code is sliced out of the concept column and decoded only as far
+    /// as its code, so the batch costs one string per code and nothing else.
+    /// A caller that can borrow calls [`Self::code`] and pays not even that.
     ///
     /// # Errors
     ///
-    /// Returns [`StoreError`] when the database cannot be read or a code is
-    /// damaged.
+    /// Returns [`StoreError`] when a code is damaged.
     pub fn codes(
         &self,
         ordinals: impl IntoIterator<Item = Ordinal>,
@@ -272,9 +287,7 @@ impl Store {
     ///
     /// Returns [`StoreError`] when the database cannot be read or a record is damaged.
     pub fn designations(&self, ordinal: Ordinal) -> Result<Vec<Designation>, StoreError> {
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::DESIGNATIONS)?;
-        let Some(packed) = table.get(ordinal.index())? else {
+        let Some(packed) = self.designation_rows.get(ordinal.index())? else {
             return Ok(Vec::new());
         };
         record::Designations::decode(packed.value()).map_err(|source| StoreError::Record {
@@ -331,9 +344,7 @@ impl Store {
                 key: ordinal.to_string(),
                 source,
             })?;
-        let txn = self.db.begin_read()?;
-        let table = open_table!(txn, tables::DESIGNATIONS)?;
-        let Some(packed) = table.get(ordinal.index())? else {
+        let Some(packed) = self.designation_rows.get(ordinal.index())? else {
             return Ok(None);
         };
         let damaged = |source| StoreError::Record {
