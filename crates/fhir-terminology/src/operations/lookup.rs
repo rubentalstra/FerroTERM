@@ -213,7 +213,7 @@ pub fn lookup(
         if !designations.iter().any(|d| d.value == display) {
             designations.push(display_designation(
                 provider.as_ref(),
-                language.as_deref(),
+                input.display_language.as_deref(),
                 &display,
             ));
         }
@@ -289,19 +289,17 @@ fn check_properties(
     Ok(())
 }
 
-/// The display as a designation: in the language chosen for it, else the
-/// system's own, marked preferred for that language.
+/// The display as a designation: in the language the system answered in,
+/// marked preferred for that language.
 fn display_designation(
     provider: &dyn CodeSystemProvider,
-    language: Option<&str>,
+    requested: Option<&str>,
     display: &str,
 ) -> Designation {
     let (system, code, use_display) = PREFERRED_FOR_LANGUAGE;
     Designation {
         standards_status: None,
-        language: language
-            .map(str::to_owned)
-            .or_else(|| provider.language().map(str::to_owned)),
+        language: language::answered(provider, requested),
         use_: Some(DesignationUse {
             system: String::from(system),
             code: String::from(code),

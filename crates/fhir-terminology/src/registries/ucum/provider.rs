@@ -20,6 +20,11 @@ use crate::registries::interned::Interned;
 /// The system URI (<https://terminology.hl7.org/UCUM.html>).
 pub const URL: &str = "http://unitsofmeasure.org";
 
+/// The language of the unit names this provider renders: `ucum-essence.xml`
+/// gives each prefix and unit one `<name>`, in English, and no translation.
+/// No FHIR/SNOMED spec governs this: our own design.
+const BASE_LANGUAGE: &str = "en";
+
 /// The UCUM provider: every valid expression is a code.
 #[derive(Debug)]
 pub struct UcumProvider {
@@ -57,7 +62,7 @@ impl UcumProvider {
                 // provider parses and canonicalizes it, so the grammar is both
                 // defined and supported.
                 compositional: Compositional::Supported,
-                languages: vec![String::from("en")],
+                languages: vec![String::from(BASE_LANGUAGE)],
                 properties: vec![
                     PropertyDefinition {
                         code: String::from("canonical"),
@@ -236,6 +241,16 @@ impl CodeSystemProvider for UcumProvider {
         &self.declaration
     }
 
+    /// The language of the unit names this provider returns, so a
+    /// `displayLanguage` it has no name in is answered as a language the
+    /// system has no display in
+    /// (`OperationDefinition/CodeSystem-validate-code`: `displayLanguage`
+    /// "Specifies the language to be used for description when validating the
+    /// display property").
+    fn language(&self) -> Option<&str> {
+        Some(BASE_LANGUAGE)
+    }
+
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
         let Some(expression) = self.expression(code) else {
             return Ok(None);
@@ -277,7 +292,7 @@ impl CodeSystemProvider for UcumProvider {
         concept: Concept,
         language: Option<&str>,
     ) -> Result<Vec<Designation>, ProviderError> {
-        if language.is_some_and(|l| !l.eq_ignore_ascii_case("en")) {
+        if language.is_some_and(|l| !l.eq_ignore_ascii_case(BASE_LANGUAGE)) {
             return Ok(Vec::new());
         }
         let Some((_, expression, _)) = self.located(concept) else {
@@ -285,7 +300,7 @@ impl CodeSystemProvider for UcumProvider {
         };
         Ok(vec![Designation {
             standards_status: None,
-            language: Some(String::from("en")),
+            language: Some(String::from(BASE_LANGUAGE)),
             use_: Some(DesignationUse {
                 system: String::from("http://snomed.info/sct"),
                 code: String::from("900000000000013009"),

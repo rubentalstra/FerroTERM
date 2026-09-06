@@ -225,3 +225,63 @@ fn the_one_implicit_value_set_is_all_codes() {
         Err(OpenError::NotRxNorm(_))
     ));
 }
+// NOTE: `displayLanguage` "Specifies the language to be used for description
+// when validating the display property"
+// (<https://hl7.org/fhir/R4B/codesystem-operation-validate-code.html>).
+#[test]
+fn a_display_in_the_releases_language_does_not_satisfy_a_request_for_another_one() {
+    use std::sync::Arc;
+
+    use fhir_terminology::operations::Invocation;
+    use fhir_terminology::operations::validate_code::{ValidateCodeInput, validate_code};
+    use fhir_terminology::registry::Registry;
+
+    let (_dir, p) = provider();
+    assert_eq!(p.language(), Some("en"));
+    let mut registry = Registry::new();
+    registry.register(Arc::new(p)).expect("registers");
+    let ask = |code: &str, display: &str| {
+        validate_code(
+            &registry,
+            &Invocation::Type,
+            &ValidateCodeInput {
+                url: Some(SYSTEM.to_owned()),
+                code: Some(code.to_owned()),
+                display: Some(display.to_owned()),
+                display_language: Some(String::from("nl")),
+                ..ValidateCodeInput::default()
+            },
+        )
+        .expect("validates")
+    };
+
+    // Every atom of the release is English: the English display stands, and
+    // the answer says the requested language has none.
+    let none = ask(ASPIRIN_TABLET, "aspirin 81 MG Oral Tablet");
+    assert!(none.result, "{none:?}");
+    let issue = none.issues.first().expect("an issue");
+    assert_eq!(issue.severity, "information");
+    assert_eq!(issue.kind, "invalid-display");
+    assert_eq!(
+        issue.message_id(),
+        "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK"
+    );
+    assert!(none.message.is_some(), "{none:?}");
+
+    // A display the release does not carry at all stays an error, and the
+    // English display is named as the default.
+    let wrong = ask(ASPIRIN_TABLET, "aspirine 81 MG tablet");
+    assert!(!wrong.result, "{wrong:?}");
+    let issue = wrong.issues.first().expect("an issue");
+    assert_eq!(issue.severity, "error");
+    assert_eq!(issue.kind, "invalid-display");
+    assert_eq!(
+        issue.message_id(),
+        "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_ERR"
+    );
+    assert!(
+        issue.text.contains("aspirin 81 MG Oral Tablet"),
+        "{}",
+        issue.text
+    );
+}

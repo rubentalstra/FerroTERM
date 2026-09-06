@@ -446,3 +446,73 @@ fn the_gstandaard_rungs_serve_flat_with_the_ladder_as_properties() {
         [ferroterm_testkit::gstandaard::GPK]
     );
 }
+// NOTE: `displayLanguage` "Specifies the language to be used for description
+// when validating the display property"
+// (<https://hl7.org/fhir/R4B/codesystem-operation-validate-code.html>).
+#[test]
+fn a_display_in_the_classifications_language_does_not_satisfy_a_request_for_another_one() {
+    use std::sync::Arc;
+
+    use fhir_terminology::operations::Invocation;
+    use fhir_terminology::operations::validate_code::{ValidateCodeInput, validate_code};
+    use fhir_terminology::registry::Registry;
+
+    let (_dir, p) = claml();
+    assert_eq!(p.language(), Some("nl"));
+    let mut registry = Registry::new();
+    registry.register(Arc::new(p)).expect("registers");
+    let ask = |code: &str, display: &str| {
+        validate_code(
+            &registry,
+            &Invocation::Type,
+            &ValidateCodeInput {
+                url: Some(CLAML_SYSTEM.to_owned()),
+                code: Some(code.to_owned()),
+                display: Some(display.to_owned()),
+                display_language: Some(String::from("en")),
+                ..ValidateCodeInput::default()
+            },
+        )
+        .expect("validates")
+    };
+
+    // The category carries an English label beside the Dutch one, so the Dutch
+    // title is not a display in English and the English one is named.
+    let wrong = ask(
+        LIVER,
+        "Maligne nieuwvorming van lever en intrahepatische galwegen",
+    );
+    assert!(!wrong.result, "{wrong:?}");
+    assert_eq!(
+        wrong.display.as_deref(),
+        Some("Malignant neoplasm of liver and intrahepatic bile ducts")
+    );
+    let issue = wrong.issues.first().expect("an issue");
+    assert_eq!(issue.severity, "error");
+    assert_eq!(issue.kind, "invalid-display");
+    assert_eq!(
+        issue.message_id(),
+        "Display_Name_for__should_be_one_of__instead_of"
+    );
+    assert!(
+        issue
+            .text
+            .contains("Malignant neoplasm of liver and intrahepatic bile ducts"),
+        "{}",
+        issue.text
+    );
+    assert_eq!(wrong.message.as_deref(), Some(issue.text.as_str()));
+
+    // The block carries Dutch alone: the Dutch display stands, and the answer
+    // says the requested language has none.
+    let none = ask(BLOCK, "Maligne nieuwvormingen");
+    assert!(none.result, "{none:?}");
+    let issue = none.issues.first().expect("an issue");
+    assert_eq!(issue.severity, "information");
+    assert_eq!(issue.kind, "invalid-display");
+    assert_eq!(
+        issue.message_id(),
+        "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK"
+    );
+    assert!(none.message.is_some(), "{none:?}");
+}

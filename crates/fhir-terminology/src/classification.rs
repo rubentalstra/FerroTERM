@@ -284,7 +284,7 @@ impl ClassificationProvider {
         }
     }
 
-    /// The title in the requested language, else in the classification's
+    /// The title in the requested language, else in the classification's own
     /// language, else any.
     fn choose_display(
         &self,
@@ -292,7 +292,8 @@ impl ClassificationProvider {
         language: Option<&str>,
     ) -> Result<Option<String>, ProviderError> {
         let designations = self.store.designations(ordinal).map_err(storage)?;
-        let wanted = language.map(primary_subtag);
+        let base = primary_subtag(&self.language);
+        let wanted = language.map_or_else(|| base.clone(), primary_subtag);
         let pick = |lang: Option<&str>| {
             designations
                 .iter()
@@ -302,8 +303,8 @@ impl ClassificationProvider {
                 })
                 .map(|d| d.term.clone())
         };
-        Ok(pick(wanted.as_deref())
-            .or_else(|| pick(Some(&primary_subtag(&self.language))))
+        Ok(pick(Some(&wanted))
+            .or_else(|| pick(Some(&base)))
             .or_else(|| pick(None)))
     }
 
@@ -328,6 +329,16 @@ impl CodeSystemProvider for ClassificationProvider {
 
     fn declaration(&self) -> &Declaration {
         &self.declaration
+    }
+
+    /// The language the release states for itself (the `ClaML` `Meta` element
+    /// named `lang`), so a `displayLanguage` it carries no rubric for is
+    /// answered as a language the system has no display in
+    /// (`OperationDefinition/CodeSystem-validate-code`: `displayLanguage`
+    /// "Specifies the language to be used for description when validating the
+    /// display property").
+    fn language(&self) -> Option<&str> {
+        Some(&self.language)
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {

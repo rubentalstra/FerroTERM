@@ -92,6 +92,10 @@ const KIND_KEY: &str = "kind";
 const LONG_COMMON_NAME: u32 = 0;
 /// The designation use ordinal of a part, list, or answer display.
 const DISPLAY: u32 = 3;
+/// The language of an artifact whose manifest states none: LOINC publishes its
+/// own tables in English and its translations as linguistic variants
+/// (<https://loinc.org/international/>).
+const DEFAULT_LANGUAGE: &str = "en";
 
 /// A failure to open an artifact as LOINC.
 #[derive(Debug, thiserror::Error)]
@@ -146,6 +150,10 @@ struct Manifest {
     store: String,
     hierarchy: String,
     text: String,
+    /// The language the release's own tables are in; an artifact built before
+    /// the build wrote it has none.
+    #[serde(default)]
+    language: String,
     #[serde(default)]
     languages: Vec<String>,
 }
@@ -198,6 +206,8 @@ pub struct LoincProvider {
     hierarchy: LoincHierarchy,
     text: TextIndex,
     concepts: u32,
+    /// The language the release's own tables are in.
+    base_language: String,
     /// Property key ordinal to name.
     keys: BTreeMap<u32, String>,
     /// Designation use ordinal to name.
@@ -289,6 +299,11 @@ impl LoincProvider {
             hierarchy: LoincHierarchy { graph, children },
             text,
             concepts,
+            base_language: if manifest.language.is_empty() {
+                String::from(DEFAULT_LANGUAGE)
+            } else {
+                manifest.language
+            },
             keys,
             uses,
         })
@@ -319,14 +334,16 @@ impl LoincProvider {
     }
 
     /// The display: the long common name (or the display of a part, list, or
-    /// answer) in the requested language, else in English, else any.
+    /// answer) in the requested language, else in the release's own language,
+    /// else any.
     fn choose_display(
         &self,
         ordinal: Ordinal,
         language: Option<&str>,
     ) -> Result<Option<String>, ProviderError> {
         let designations = self.store.designations(ordinal).map_err(storage)?;
-        let wanted = language.map(primary_subtag);
+        let base = primary_subtag(&self.base_language);
+        let wanted = language.map_or_else(|| base.clone(), primary_subtag);
         let pick = |lang: Option<&str>| {
             designations
                 .iter()
@@ -336,8 +353,8 @@ impl LoincProvider {
                 })
                 .map(|d| d.term.clone())
         };
-        Ok(pick(wanted.as_deref())
-            .or_else(|| pick(Some("en")))
+        Ok(pick(Some(&wanted))
+            .or_else(|| pick(Some(&base)))
             .or_else(|| pick(None)))
     }
 
@@ -523,6 +540,16 @@ impl CodeSystemProvider for LoincProvider {
 
     fn declaration(&self) -> &Declaration {
         &self.declaration
+    }
+
+    /// The language of the displays this provider returns, so a
+    /// `displayLanguage` the release carries no variant for is answered as a
+    /// language the system has no display in
+    /// (`OperationDefinition/CodeSystem-validate-code`: `displayLanguage`
+    /// "Specifies the language to be used for description when validating the
+    /// display property").
+    fn language(&self) -> Option<&str> {
+        Some(&self.base_language)
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {

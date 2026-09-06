@@ -121,6 +121,22 @@ pub fn for_provider(provider: &dyn CodeSystemProvider, requested: Option<&str>) 
     choose(requested, &provider.declaration().languages)
 }
 
+/// The language `provider` answers a request for `requested` in: the chosen
+/// range when the system carries designations in it, else the system's own
+/// language.
+///
+/// [`choose`] answers an unmatched request with the range as written so the
+/// provider can try it; the answer is then in the system's own language, and
+/// saying otherwise would label a display with a language it is not in.
+#[must_use]
+pub fn answered(provider: &dyn CodeSystemProvider, requested: Option<&str>) -> Option<String> {
+    let available = &provider.declaration().languages;
+    match for_provider(provider, requested) {
+        Some(tag) if available.iter().any(|a| primary(a) == primary(&tag)) => Some(tag),
+        _ => provider.language().map(str::to_owned),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{choose, ranges};
