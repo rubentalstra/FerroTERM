@@ -277,13 +277,17 @@ impl serde::Serialize for VirtualServiceDetail {
         super::super::codec::value_list_entry(&mut map, "additionalInfo", &self.additional_info)?;
         match &self.address {
             Some(VirtualServiceDetailAddress::ContactPoint(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "addressContactPoint", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "addressContactPoint",
+                    inner.as_ref(),
+                )?;
             }
             Some(VirtualServiceDetailAddress::ExtendedContactDetail(inner)) => {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "addressExtendedContactDetail",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(VirtualServiceDetailAddress::String(inner)) => {
@@ -335,9 +339,9 @@ pub enum VirtualServiceDetailAddress {
     /// The `string` form.
     String(super::primitives::String),
     /// The `ContactPoint` form.
-    ContactPoint(super::contact_point::ContactPoint),
+    ContactPoint(Box<super::contact_point::ContactPoint>),
     /// The `ExtendedContactDetail` form.
-    ExtendedContactDetail(super::extended_contact_detail::ExtendedContactDetail),
+    ExtendedContactDetail(Box<super::extended_contact_detail::ExtendedContactDetail>),
 }
 
 impl VirtualServiceDetailAddress {
@@ -370,14 +374,14 @@ impl VirtualServiceDetailAddress {
             Self::ContactPoint(inner) => Ok((
                 "ContactPoint",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::ExtendedContactDetail(inner) => Ok((
                 "ExtendedContactDetail",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -418,7 +422,7 @@ impl VirtualServiceDetailAddress {
                     )?,
                     path,
                 )?;
-                Ok(Self::ContactPoint(inner))
+                Ok(Self::ContactPoint(Box::new(inner)))
             }
             "ExtendedContactDetail" => {
                 if element.is_some() {
@@ -436,7 +440,7 @@ impl VirtualServiceDetailAddress {
                     )?,
                     path,
                 )?;
-                Ok(Self::ExtendedContactDetail(inner))
+                Ok(Self::ExtendedContactDetail(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

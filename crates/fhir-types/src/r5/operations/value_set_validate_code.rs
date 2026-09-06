@@ -245,13 +245,18 @@ impl ValueSetValidateCodeRequest {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -700,7 +705,7 @@ impl ValueSetValidateCodeRequest {
                     }
                     field_coding = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -733,7 +738,7 @@ impl ValueSetValidateCodeRequest {
                             super::super::parameters::ParametersParameterValue::CodeableConcept(
                                 value,
                             ),
-                        ) => value.clone(),
+                        ) => (**value).clone(),
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -1224,229 +1229,216 @@ impl ValueSetValidateCodeRequest {
             active_only: field_active_only,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
-        if let Some(value) = &self.url {
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(24);
+        if let Some(value) = self.url {
             out.push(super::super::parameters::ParametersParameter {
                 name: "url".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.context {
+        if let Some(value) = self.context {
             out.push(super::super::parameters::ParametersParameter {
                 name: "context".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.value_set {
+        if let Some(value) = self.value_set {
             out.push(super::super::parameters::ParametersParameter {
                 name: "valueSet".into(),
-                resource: Some(super::super::resource::Resource::ValueSet(Box::new(
-                    value.clone(),
-                ))),
+                resource: Some(super::super::resource::Resource::ValueSet(Box::new(value))),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.value_set_version {
+        if let Some(value) = self.value_set_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "valueSetVersion".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.code {
+        if let Some(value) = self.code {
             out.push(super::super::parameters::ParametersParameter {
                 name: "code".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.system {
+        if let Some(value) = self.system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "system".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.system_version {
+        if let Some(value) = self.system_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "systemVersion".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.display {
+        if let Some(value) = self.display {
             out.push(super::super::parameters::ParametersParameter {
                 name: "display".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.coding {
+        if let Some(value) = self.coding {
             out.push(super::super::parameters::ParametersParameter {
                 name: "coding".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.codeable_concept {
+        if let Some(value) = self.codeable_concept {
             out.push(super::super::parameters::ParametersParameter {
                 name: "codeableConcept".into(),
                 value: Some(
-                    super::super::parameters::ParametersParameterValue::CodeableConcept(
-                        value.clone(),
-                    ),
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(Box::new(
+                        value,
+                    )),
                 ),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.date {
+        if let Some(value) = self.date {
             out.push(super::super::parameters::ParametersParameter {
                 name: "date".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::DateTime(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::DateTime(value)),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.r#abstract {
+        if let Some(value) = self.r#abstract {
             out.push(super::super::parameters::ParametersParameter {
                 name: "abstract".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.display_language {
+        if let Some(value) = self.display_language {
             out.push(super::super::parameters::ParametersParameter {
                 name: "displayLanguage".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.use_supplement {
+        for value in self.use_supplement {
             out.push(super::super::parameters::ParametersParameter {
                 name: "useSupplement".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.lenient_display_validation {
+        if let Some(value) = self.lenient_display_validation {
             out.push(super::super::parameters::ParametersParameter {
                 name: "lenient-display-validation".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.valueset_membership_only {
+        if let Some(value) = self.valueset_membership_only {
             out.push(super::super::parameters::ParametersParameter {
                 name: "valueset-membership-only".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.infer_system {
+        if let Some(value) = self.infer_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "inferSystem".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.system_version_canonical {
+        for value in self.system_version_canonical {
             out.push(super::super::parameters::ParametersParameter {
                 name: "system-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.check_system_version {
+        for value in self.check_system_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "check-system-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.force_system_version {
+        for value in self.force_system_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "force-system-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.default_valueset_version {
+        for value in self.default_valueset_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "default-valueset-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.check_valueset_version {
+        for value in self.check_valueset_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "check-valueset-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.force_valueset_version {
+        for value in self.force_valueset_version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "force-valueset-version".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.active_only {
+        if let Some(value) = self.active_only {
             out.push(super::super::parameters::ParametersParameter {
                 name: "activeOnly".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -1461,13 +1453,18 @@ impl ValueSetValidateCodeResponse {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -1791,7 +1788,7 @@ impl ValueSetValidateCodeResponse {
                             super::super::parameters::ParametersParameterValue::CodeableConcept(
                                 value,
                             ),
-                        ) => value.clone(),
+                        ) => (**value).clone(),
                         Some(_) => {
                             return Err(
                                 super::super::super::operation::ParametersError::WrongType {
@@ -2038,131 +2035,132 @@ impl ValueSetValidateCodeResponse {
             status: field_status,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(13);
         {
-            let value = &self.result;
+            let value = self.result;
             out.push(super::super::parameters::ParametersParameter {
                 name: "result".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.message {
+        if let Some(value) = self.message {
             out.push(super::super::parameters::ParametersParameter {
                 name: "message".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.display {
+        if let Some(value) = self.display {
             out.push(super::super::parameters::ParametersParameter {
                 name: "display".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.code {
+        if let Some(value) = self.code {
             out.push(super::super::parameters::ParametersParameter {
                 name: "code".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.system {
+        if let Some(value) = self.system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "system".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.version {
+        if let Some(value) = self.version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "version".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.codeable_concept {
+        if let Some(value) = self.codeable_concept {
             out.push(super::super::parameters::ParametersParameter {
                 name: "codeableConcept".into(),
                 value: Some(
-                    super::super::parameters::ParametersParameterValue::CodeableConcept(
-                        value.clone(),
-                    ),
+                    super::super::parameters::ParametersParameterValue::CodeableConcept(Box::new(
+                        value,
+                    )),
                 ),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.issues {
+        if let Some(value) = self.issues {
             out.push(super::super::parameters::ParametersParameter {
                 name: "issues".into(),
                 resource: Some(super::super::resource::Resource::OperationOutcome(
-                    Box::new(value.clone()),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.normalized_code {
+        if let Some(value) = self.normalized_code {
             out.push(super::super::parameters::ParametersParameter {
                 name: "normalized-code".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.x_caused_by_unknown_system {
+        for value in self.x_caused_by_unknown_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "x-caused-by-unknown-system".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        for value in &self.x_unknown_system {
+        for value in self.x_unknown_system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "x-unknown-system".into(),
-                value: Some(
-                    super::super::parameters::ParametersParameterValue::Canonical(value.clone()),
-                ),
+                value: Some(super::super::parameters::ParametersParameterValue::Canonical(value)),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.inactive {
+        if let Some(value) = self.inactive {
             out.push(super::super::parameters::ParametersParameter {
                 name: "inactive".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.status {
+        if let Some(value) = self.status {
             out.push(super::super::parameters::ParametersParameter {
                 name: "status".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 

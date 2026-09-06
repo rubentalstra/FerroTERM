@@ -1320,7 +1320,7 @@ impl serde::Serialize for CapabilityStatement {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "versionAlgorithmCoding",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(CapabilityStatementVersionAlgorithm::String(inner)) => {
@@ -5277,7 +5277,7 @@ pub enum CapabilityStatementVersionAlgorithm {
     /// The `string` form.
     String(super::primitives::String),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
 }
 
 impl CapabilityStatementVersionAlgorithm {
@@ -5305,7 +5305,7 @@ impl CapabilityStatementVersionAlgorithm {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -5343,7 +5343,7 @@ impl CapabilityStatementVersionAlgorithm {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

@@ -175,16 +175,28 @@ impl serde::Serialize for UsageContext {
         }
         match &self.value {
             UsageContextValue::CodeableConcept(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCodeableConcept", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueCodeableConcept",
+                    inner.as_ref(),
+                )?;
             }
             UsageContextValue::Quantity(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueQuantity", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueQuantity",
+                    inner.as_ref(),
+                )?;
             }
             UsageContextValue::Range(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRange", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRange", inner.as_ref())?;
             }
             UsageContextValue::Reference(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueReference", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueReference",
+                    inner.as_ref(),
+                )?;
             }
         }
         serde::ser::SerializeMap::end(map)
@@ -208,13 +220,13 @@ impl<'de> serde::Deserialize<'de> for UsageContext {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UsageContextValue {
     /// The `CodeableConcept` form.
-    CodeableConcept(super::codeable_concept::CodeableConcept),
+    CodeableConcept(Box<super::codeable_concept::CodeableConcept>),
     /// The `Quantity` form.
-    Quantity(super::quantity::Quantity),
+    Quantity(Box<super::quantity::Quantity>),
     /// The `Range` form.
-    Range(super::range::Range),
+    Range(Box<super::range::Range>),
     /// The `Reference` form.
-    Reference(super::reference::Reference),
+    Reference(Box<super::reference::Reference>),
 }
 
 impl UsageContextValue {
@@ -237,28 +249,28 @@ impl UsageContextValue {
             Self::CodeableConcept(inner) => Ok((
                 "CodeableConcept",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Quantity(inner) => Ok((
                 "Quantity",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Range(inner) => Ok((
                 "Range",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Reference(inner) => Ok((
                 "Reference",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -293,7 +305,7 @@ impl UsageContextValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::CodeableConcept(inner))
+                Ok(Self::CodeableConcept(Box::new(inner)))
             }
             "Quantity" => {
                 if element.is_some() {
@@ -311,7 +323,7 @@ impl UsageContextValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Quantity(inner))
+                Ok(Self::Quantity(Box::new(inner)))
             }
             "Range" => {
                 if element.is_some() {
@@ -329,7 +341,7 @@ impl UsageContextValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Range(inner))
+                Ok(Self::Range(Box::new(inner)))
             }
             "Reference" => {
                 if element.is_some() {
@@ -347,7 +359,7 @@ impl UsageContextValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Reference(inner))
+                Ok(Self::Reference(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

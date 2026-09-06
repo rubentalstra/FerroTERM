@@ -142,12 +142,12 @@ macro_rules! family_map {
                         system,
                         code,
                         display,
-                    } => ParametersParameterValue::Coding(Coding {
+                    } => ParametersParameterValue::Coding(Box::new(Coding {
                         system: Some(system.as_str().into()),
                         code: Some(code.as_str().into()),
                         display: display.as_ref().map(|d| d.as_str().into()),
                         ..Default::default()
-                    }),
+                    })),
                     PropertyValue::String(s) => ParametersParameterValue::String(s.as_str().into()),
                     PropertyValue::Integer(i) => match i32::try_from(*i) {
                         Ok(i) => ParametersParameterValue::Integer(i.into()),

@@ -1461,7 +1461,7 @@ impl serde::Serialize for ConceptMap {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "versionAlgorithmCoding",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(ConceptMapVersionAlgorithm::String(inner)) => {
@@ -3099,10 +3099,14 @@ impl serde::Serialize for ConceptMapGroupElementTargetDependsOn {
                 super::super::codec::value_entry(&mut map, "valueCode", inner)?;
             }
             Some(ConceptMapGroupElementTargetDependsOnValue::Coding(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner.as_ref())?;
             }
             Some(ConceptMapGroupElementTargetDependsOnValue::Quantity(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueQuantity", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueQuantity",
+                    inner.as_ref(),
+                )?;
             }
             _ => {}
         }
@@ -3134,13 +3138,13 @@ pub enum ConceptMapGroupElementTargetDependsOnValue {
     /// The `code` form.
     Code(super::primitives::Code),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
     /// The `string` form.
     String(super::primitives::String),
     /// The `boolean` form.
     Boolean(super::primitives::Boolean),
     /// The `Quantity` form.
-    Quantity(super::quantity::Quantity),
+    Quantity(Box<super::quantity::Quantity>),
 }
 
 impl ConceptMapGroupElementTargetDependsOnValue {
@@ -3168,7 +3172,7 @@ impl ConceptMapGroupElementTargetDependsOnValue {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -3185,7 +3189,7 @@ impl ConceptMapGroupElementTargetDependsOnValue {
             Self::Quantity(inner) => Ok((
                 "Quantity",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -3223,7 +3227,7 @@ impl ConceptMapGroupElementTargetDependsOnValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             "String" => Ok(Self::String(
                 super::super::codec::Primitive::from_json_parts(value, element, path)?,
@@ -3247,7 +3251,7 @@ impl ConceptMapGroupElementTargetDependsOnValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Quantity(inner))
+                Ok(Self::Quantity(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }
@@ -3525,7 +3529,7 @@ impl serde::Serialize for ConceptMapGroupElementTargetProperty {
                 super::super::codec::value_entry(&mut map, "valueCode", inner)?;
             }
             ConceptMapGroupElementTargetPropertyValue::Coding(inner) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner.as_ref())?;
             }
             ConceptMapGroupElementTargetPropertyValue::DateTime(inner) => {
                 super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
@@ -3561,7 +3565,7 @@ impl<'de> serde::Deserialize<'de> for ConceptMapGroupElementTargetProperty {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConceptMapGroupElementTargetPropertyValue {
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
     /// The `string` form.
     String(super::primitives::String),
     /// The `integer` form.
@@ -3596,7 +3600,7 @@ impl ConceptMapGroupElementTargetPropertyValue {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -3661,7 +3665,7 @@ impl ConceptMapGroupElementTargetPropertyValue {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             "String" => Ok(Self::String(
                 super::super::codec::Primitive::from_json_parts(value, element, path)?,
@@ -4483,7 +4487,7 @@ pub enum ConceptMapVersionAlgorithm {
     /// The `string` form.
     String(super::primitives::String),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
 }
 
 impl ConceptMapVersionAlgorithm {
@@ -4511,7 +4515,7 @@ impl ConceptMapVersionAlgorithm {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -4549,7 +4553,7 @@ impl ConceptMapVersionAlgorithm {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

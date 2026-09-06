@@ -185,7 +185,11 @@ impl serde::Serialize for Annotation {
         }
         match &self.author {
             Some(AnnotationAuthor::Reference(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "authorReference", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "authorReference",
+                    inner.as_ref(),
+                )?;
             }
             Some(AnnotationAuthor::String(inner)) => {
                 super::super::codec::value_entry(&mut map, "authorString", inner)?;
@@ -222,7 +226,7 @@ impl<'de> serde::Deserialize<'de> for Annotation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AnnotationAuthor {
     /// The `Reference` form.
-    Reference(super::reference::Reference),
+    Reference(Box<super::reference::Reference>),
     /// The `string` form.
     String(super::primitives::String),
 }
@@ -247,7 +251,7 @@ impl AnnotationAuthor {
             Self::Reference(inner) => Ok((
                 "Reference",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -287,7 +291,7 @@ impl AnnotationAuthor {
                     )?,
                     path,
                 )?;
-                Ok(Self::Reference(inner))
+                Ok(Self::Reference(Box::new(inner)))
             }
             "String" => Ok(Self::String(
                 super::super::codec::Primitive::from_json_parts(value, element, path)?,

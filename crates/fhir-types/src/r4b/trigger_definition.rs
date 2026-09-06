@@ -290,10 +290,18 @@ impl serde::Serialize for TriggerDefinition {
                 super::super::codec::value_entry(&mut map, "timingDateTime", inner)?;
             }
             Some(TriggerDefinitionTiming::Reference(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "timingReference", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "timingReference",
+                    inner.as_ref(),
+                )?;
             }
             Some(TriggerDefinitionTiming::Timing(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "timingTiming", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "timingTiming",
+                    inner.as_ref(),
+                )?;
             }
             None => {}
         }
@@ -318,9 +326,9 @@ impl<'de> serde::Deserialize<'de> for TriggerDefinition {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TriggerDefinitionTiming {
     /// The `Timing` form.
-    Timing(super::timing::Timing),
+    Timing(Box<super::timing::Timing>),
     /// The `Reference` form.
-    Reference(super::reference::Reference),
+    Reference(Box<super::reference::Reference>),
     /// The `date` form.
     Date(super::primitives::Date),
     /// The `dateTime` form.
@@ -347,14 +355,14 @@ impl TriggerDefinitionTiming {
             Self::Timing(inner) => Ok((
                 "Timing",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Reference(inner) => Ok((
                 "Reference",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -399,7 +407,7 @@ impl TriggerDefinitionTiming {
                     )?,
                     path,
                 )?;
-                Ok(Self::Timing(inner))
+                Ok(Self::Timing(Box::new(inner)))
             }
             "Reference" => {
                 if element.is_some() {
@@ -417,7 +425,7 @@ impl TriggerDefinitionTiming {
                     )?,
                     path,
                 )?;
-                Ok(Self::Reference(inner))
+                Ok(Self::Reference(Box::new(inner)))
             }
             "Date" => Ok(Self::Date(super::super::codec::Primitive::from_json_parts(
                 value, element, path,

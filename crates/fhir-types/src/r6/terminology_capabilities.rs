@@ -1212,7 +1212,7 @@ impl serde::Serialize for TerminologyCapabilities {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "versionAlgorithmCoding",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(TerminologyCapabilitiesVersionAlgorithm::String(inner)) => {
@@ -1597,7 +1597,7 @@ impl serde::Serialize for TerminologyCapabilitiesCodeSystem {
                 serde::ser::SerializeMap::serialize_entry(
                     &mut map,
                     "versionAlgorithmCoding",
-                    inner,
+                    inner.as_ref(),
                 )?;
             }
             Some(TerminologyCapabilitiesCodeSystemVersionAlgorithm::String(inner)) => {
@@ -2032,7 +2032,7 @@ pub enum TerminologyCapabilitiesCodeSystemVersionAlgorithm {
     /// The `string` form.
     String(super::primitives::String),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
 }
 
 impl TerminologyCapabilitiesCodeSystemVersionAlgorithm {
@@ -2060,7 +2060,7 @@ impl TerminologyCapabilitiesCodeSystemVersionAlgorithm {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -2098,7 +2098,7 @@ impl TerminologyCapabilitiesCodeSystemVersionAlgorithm {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }
@@ -3938,7 +3938,7 @@ pub enum TerminologyCapabilitiesVersionAlgorithm {
     /// The `string` form.
     String(super::primitives::String),
     /// The `Coding` form.
-    Coding(super::coding::Coding),
+    Coding(Box<super::coding::Coding>),
 }
 
 impl TerminologyCapabilitiesVersionAlgorithm {
@@ -3966,7 +3966,7 @@ impl TerminologyCapabilitiesVersionAlgorithm {
             Self::Coding(inner) => Ok((
                 "Coding",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -4004,7 +4004,7 @@ impl TerminologyCapabilitiesVersionAlgorithm {
                     )?,
                     path,
                 )?;
-                Ok(Self::Coding(inner))
+                Ok(Self::Coding(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

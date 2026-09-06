@@ -39,6 +39,7 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/labcodeset/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-bench/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-server/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/tools/fhir-codegen/examples" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/artifacts" />

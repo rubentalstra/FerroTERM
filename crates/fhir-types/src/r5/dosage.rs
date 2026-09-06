@@ -825,10 +825,14 @@ impl serde::Serialize for DosageDoseAndRate {
         let mut map = serde::Serializer::serialize_map(serializer, None)?;
         match &self.dose {
             Some(DosageDoseAndRateDose::Quantity(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "doseQuantity", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "doseQuantity",
+                    inner.as_ref(),
+                )?;
             }
             Some(DosageDoseAndRateDose::Range(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "doseRange", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "doseRange", inner.as_ref())?;
             }
             None => {}
         }
@@ -840,13 +844,17 @@ impl serde::Serialize for DosageDoseAndRate {
         }
         match &self.rate {
             Some(DosageDoseAndRateRate::Quantity(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "rateQuantity", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "rateQuantity",
+                    inner.as_ref(),
+                )?;
             }
             Some(DosageDoseAndRateRate::Range(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "rateRange", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "rateRange", inner.as_ref())?;
             }
             Some(DosageDoseAndRateRate::Ratio(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "rateRatio", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "rateRatio", inner.as_ref())?;
             }
             None => {}
         }
@@ -873,9 +881,9 @@ impl<'de> serde::Deserialize<'de> for DosageDoseAndRate {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DosageDoseAndRateDose {
     /// The `Range` form.
-    Range(super::range::Range),
+    Range(Box<super::range::Range>),
     /// The `Quantity` form.
-    Quantity(super::quantity::Quantity),
+    Quantity(Box<super::quantity::Quantity>),
 }
 
 impl DosageDoseAndRateDose {
@@ -898,14 +906,14 @@ impl DosageDoseAndRateDose {
             Self::Range(inner) => Ok((
                 "Range",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Quantity(inner) => Ok((
                 "Quantity",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -940,7 +948,7 @@ impl DosageDoseAndRateDose {
                     )?,
                     path,
                 )?;
-                Ok(Self::Range(inner))
+                Ok(Self::Range(Box::new(inner)))
             }
             "Quantity" => {
                 if element.is_some() {
@@ -958,7 +966,7 @@ impl DosageDoseAndRateDose {
                     )?,
                     path,
                 )?;
-                Ok(Self::Quantity(inner))
+                Ok(Self::Quantity(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }
@@ -971,11 +979,11 @@ impl DosageDoseAndRateDose {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DosageDoseAndRateRate {
     /// The `Ratio` form.
-    Ratio(super::ratio::Ratio),
+    Ratio(Box<super::ratio::Ratio>),
     /// The `Range` form.
-    Range(super::range::Range),
+    Range(Box<super::range::Range>),
     /// The `Quantity` form.
-    Quantity(super::quantity::Quantity),
+    Quantity(Box<super::quantity::Quantity>),
 }
 
 impl DosageDoseAndRateRate {
@@ -998,21 +1006,21 @@ impl DosageDoseAndRateRate {
             Self::Ratio(inner) => Ok((
                 "Ratio",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Range(inner) => Ok((
                 "Range",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Quantity(inner) => Ok((
                 "Quantity",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -1047,7 +1055,7 @@ impl DosageDoseAndRateRate {
                     )?,
                     path,
                 )?;
-                Ok(Self::Ratio(inner))
+                Ok(Self::Ratio(Box::new(inner)))
             }
             "Range" => {
                 if element.is_some() {
@@ -1065,7 +1073,7 @@ impl DosageDoseAndRateRate {
                     )?,
                     path,
                 )?;
-                Ok(Self::Range(inner))
+                Ok(Self::Range(Box::new(inner)))
             }
             "Quantity" => {
                 if element.is_some() {
@@ -1083,7 +1091,7 @@ impl DosageDoseAndRateRate {
                     )?,
                     path,
                 )?;
-                Ok(Self::Quantity(inner))
+                Ok(Self::Quantity(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

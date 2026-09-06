@@ -796,13 +796,21 @@ impl serde::Serialize for TimingRepeat {
         super::super::codec::element_list_entry(&mut map, "_when", &self.when)?;
         match &self.bounds {
             Some(TimingRepeatBounds::Duration(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "boundsDuration", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "boundsDuration",
+                    inner.as_ref(),
+                )?;
             }
             Some(TimingRepeatBounds::Period(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "boundsPeriod", inner)?;
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "boundsPeriod",
+                    inner.as_ref(),
+                )?;
             }
             Some(TimingRepeatBounds::Range(inner)) => {
-                serde::ser::SerializeMap::serialize_entry(&mut map, "boundsRange", inner)?;
+                serde::ser::SerializeMap::serialize_entry(&mut map, "boundsRange", inner.as_ref())?;
             }
             None => {}
         }
@@ -869,11 +877,11 @@ impl<'de> serde::Deserialize<'de> for TimingRepeat {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TimingRepeatBounds {
     /// The `Duration` form.
-    Duration(super::duration::Duration),
+    Duration(Box<super::duration::Duration>),
     /// The `Range` form.
-    Range(super::range::Range),
+    Range(Box<super::range::Range>),
     /// The `Period` form.
-    Period(super::period::Period),
+    Period(Box<super::period::Period>),
 }
 
 impl TimingRepeatBounds {
@@ -896,21 +904,21 @@ impl TimingRepeatBounds {
             Self::Duration(inner) => Ok((
                 "Duration",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Range(inner) => Ok((
                 "Range",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Period(inner) => Ok((
                 "Period",
                 Some(serde_json::Value::Object(
-                    super::super::codec::Json::to_json(inner)?,
+                    super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
@@ -945,7 +953,7 @@ impl TimingRepeatBounds {
                     )?,
                     path,
                 )?;
-                Ok(Self::Duration(inner))
+                Ok(Self::Duration(Box::new(inner)))
             }
             "Range" => {
                 if element.is_some() {
@@ -963,7 +971,7 @@ impl TimingRepeatBounds {
                     )?,
                     path,
                 )?;
-                Ok(Self::Range(inner))
+                Ok(Self::Range(Box::new(inner)))
             }
             "Period" => {
                 if element.is_some() {
@@ -981,7 +989,7 @@ impl TimingRepeatBounds {
                     )?,
                     path,
                 )?;
-                Ok(Self::Period(inner))
+                Ok(Self::Period(Box::new(inner)))
             }
             _ => Err(path.error(super::super::codec::DecodeErrorKind::UnknownProperty)),
         }

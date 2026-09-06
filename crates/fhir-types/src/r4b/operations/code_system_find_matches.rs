@@ -120,13 +120,18 @@ impl CodeSystemFindMatchesRequest {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -345,55 +350,60 @@ impl CodeSystemFindMatchesRequest {
             compositional: field_compositional,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
-        if let Some(value) = &self.system {
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(5);
+        if let Some(value) = self.system {
             out.push(super::super::parameters::ParametersParameter {
                 name: "system".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Uri(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.version {
+        if let Some(value) = self.version {
             out.push(super::super::parameters::ParametersParameter {
                 name: "version".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.property {
+        for value in self.property {
             out.push(super::super::parameters::ParametersParameter {
                 name: "property".into(),
-                part: value.to_parameter_list(),
+                part: value.into_parameter_list(),
                 ..Default::default()
             });
         }
         {
-            let value = &self.exact;
+            let value = self.exact;
             out.push(super::super::parameters::ParametersParameter {
                 name: "exact".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.compositional {
+        if let Some(value) = self.compositional {
             out.push(super::super::parameters::ParametersParameter {
                 name: "compositional".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Boolean(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -496,35 +506,40 @@ impl CodeSystemFindMatchesRequestProperty {
             subproperty: field_subproperty,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(3);
         {
-            let value = &self.code;
+            let value = self.code;
             out.push(super::super::parameters::ParametersParameter {
                 name: "code".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.value {
+        if let Some(value) = self.value {
             out.push(super::super::parameters::ParametersParameter {
                 name: "value".into(),
-                value: Some(value.clone()),
+                value: Some(value),
                 ..Default::default()
             });
         }
-        for value in &self.subproperty {
+        for value in self.subproperty {
             out.push(super::super::parameters::ParametersParameter {
                 name: "subproperty".into(),
-                part: value.to_parameter_list(),
+                part: value.into_parameter_list(),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -620,29 +635,34 @@ impl CodeSystemFindMatchesRequestPropertySubproperty {
             })?,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(2);
         {
-            let value = &self.code;
+            let value = self.code;
             out.push(super::super::parameters::ParametersParameter {
                 name: "code".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         {
-            let value = &self.value;
+            let value = self.value;
             out.push(super::super::parameters::ParametersParameter {
                 name: "value".into(),
-                value: Some(value.clone()),
+                value: Some(value),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -657,13 +677,18 @@ impl CodeSystemFindMatchesResponse {
     ) -> Result<Self, super::super::super::operation::ParametersError> {
         Self::from_parameter_list(&parameters.parameter)
     }
-    /// Writes the parameters as a `Parameters` resource.
+    /// Writes the parameters as a `Parameters` resource, by move.
     #[must_use]
-    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+    pub fn into_parameters(self) -> super::super::parameters::Parameters {
         super::super::parameters::Parameters {
-            parameter: self.to_parameter_list(),
+            parameter: self.into_parameter_list(),
             ..Default::default()
         }
+    }
+    /// Writes the parameters as a `Parameters` resource, from a reference.
+    #[must_use]
+    pub fn to_parameters(&self) -> super::super::parameters::Parameters {
+        self.clone().into_parameters()
     }
     /// Reads the fields from a parameter list.
     ///
@@ -702,18 +727,23 @@ impl CodeSystemFindMatchesResponse {
             r#match: field_match,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
-        for value in &self.r#match {
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(1);
+        for value in self.r#match {
             out.push(super::super::parameters::ParametersParameter {
                 name: "match".into(),
-                part: value.to_parameter_list(),
+                part: value.into_parameter_list(),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -747,7 +777,7 @@ impl CodeSystemFindMatchesResponseMatch {
                     }
                     field_code = Some(match &parameter.value {
                         Some(super::super::parameters::ParametersParameterValue::Coding(value)) => {
-                            value.clone()
+                            (**value).clone()
                         }
                         Some(_) => {
                             return Err(
@@ -845,37 +875,42 @@ impl CodeSystemFindMatchesResponseMatch {
             comment: field_comment,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(3);
         {
-            let value = &self.code;
+            let value = self.code;
             out.push(super::super::parameters::ParametersParameter {
                 name: "code".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Coding(
-                    value.clone(),
+                    Box::new(value),
                 )),
                 ..Default::default()
             });
         }
-        for value in &self.unmatched {
+        for value in self.unmatched {
             out.push(super::super::parameters::ParametersParameter {
                 name: "unmatched".into(),
-                part: value.to_parameter_list(),
+                part: value.into_parameter_list(),
                 ..Default::default()
             });
         }
-        if let Some(value) = &self.comment {
+        if let Some(value) = self.comment {
             out.push(super::super::parameters::ParametersParameter {
                 name: "comment".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::String(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -981,36 +1016,41 @@ impl CodeSystemFindMatchesResponseMatchUnmatched {
             property: field_property,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(3);
         {
-            let value = &self.code;
+            let value = self.code;
             out.push(super::super::parameters::ParametersParameter {
                 name: "code".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         {
-            let value = &self.value;
+            let value = self.value;
             out.push(super::super::parameters::ParametersParameter {
                 name: "value".into(),
-                value: Some(value.clone()),
+                value: Some(value),
                 ..Default::default()
             });
         }
-        for value in &self.property {
+        for value in self.property {
             out.push(super::super::parameters::ParametersParameter {
                 name: "property".into(),
-                part: value.to_parameter_list(),
+                part: value.into_parameter_list(),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 
@@ -1106,29 +1146,34 @@ impl CodeSystemFindMatchesResponseMatchUnmatchedProperty {
             })?,
         })
     }
-    /// Writes the fields as a parameter list.
+    /// Writes the fields as a parameter list, by move.
     #[must_use]
-    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
-        let mut out = Vec::new();
+    pub fn into_parameter_list(self) -> Vec<super::super::parameters::ParametersParameter> {
+        let mut out = Vec::with_capacity(2);
         {
-            let value = &self.code;
+            let value = self.code;
             out.push(super::super::parameters::ParametersParameter {
                 name: "code".into(),
                 value: Some(super::super::parameters::ParametersParameterValue::Code(
-                    value.clone(),
+                    value,
                 )),
                 ..Default::default()
             });
         }
         {
-            let value = &self.value;
+            let value = self.value;
             out.push(super::super::parameters::ParametersParameter {
                 name: "value".into(),
-                value: Some(value.clone()),
+                value: Some(value),
                 ..Default::default()
             });
         }
         out
+    }
+    /// Writes the fields as a parameter list, from a reference.
+    #[must_use]
+    pub fn to_parameter_list(&self) -> Vec<super::super::parameters::ParametersParameter> {
+        self.clone().into_parameter_list()
     }
 }
 

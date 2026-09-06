@@ -307,7 +307,7 @@ mod conversions {
             system: None,
             r#abstract: None,
         };
-        let parameters = response.to_parameters();
+        let parameters = response.clone().into_parameters();
         let names: Vec<&str> = parameters
             .parameter
             .iter()
