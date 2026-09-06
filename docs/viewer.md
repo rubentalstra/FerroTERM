@@ -104,18 +104,25 @@ two-file image `docker/Dockerfile` already builds.
 
 Embedding puts Trunk ahead of the server in the build order, and a fresh
 clone has no `dist/` yet. `cargo build --workspace` must still succeed there,
-so the embed is behind a server feature that is off by default and on in the
+so the embed is behind the server's `ui` feature, off by default and on in the
 release lane, and the server answers `/ui` only when the bundle is compiled
-in. Slice 2 settles the mechanism; the constraint is that no ordinary
-`cargo build`, `cargo clippy`, or `cargo nextest` run may require a bundle
-that is not present.
+in. No ordinary `cargo build`, `cargo clippy`, or `cargo nextest` run may
+require a bundle that is not present.
 
-The alternative, staging `dist/` beside the binary and serving it with
-`tower-http`'s `ServeDir`, is the named contingency if embedding proves
-awkward: the workspace denies `clippy::large_include_file`, and the generated
-`include_bytes!` of a multi-megabyte WebAssembly file may trip it. The
-resolution is a scoped `#[expect(clippy::large_include_file, reason = "…")]`,
-and the fallback is `ServeDir` over a directory the image stages.
+The mechanism is the server's build script. With the `ui` feature on it walks
+the bundle directory and writes a table of `Asset { path, bytes }` with one
+`include_bytes!` per file, which `src/ui.rs` includes; the table is a static
+in the binary and a request is a lookup in it, so no request path reaches the
+filesystem. `FERROTERM_UI_BUNDLE` names the directory when a build stages it
+elsewhere, and a directory it names that does not read is a `compile_error!`
+telling you to run Trunk. The default directory may be absent, because
+`cargo build --all-features` on a fresh clone must pass: the table is then
+empty, the build warns, and the server mounts no `/ui` route. The workspace
+denies `clippy::large_include_file`, so the build script writes a scoped
+`#[expect(clippy::large_include_file, reason = "…")]` over the table exactly
+when a file is large enough to fire the lint. Staging `dist/` beside the
+binary and serving it with `tower-http`'s `ServeDir` stays the contingency if
+the embed ever becomes the wrong trade.
 
 ### The routes the server gains
 
