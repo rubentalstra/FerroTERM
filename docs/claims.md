@@ -197,11 +197,11 @@ claim, not a test that merely touches the area.
 | Claim | Evidence |
 |---|---|
 | The badges are derived from the committed pass lists and the suite total | `scripts/checks/conformance-badges.sh` |
-| The suite is the HL7 terminology ecosystem IG's test cases, run with the FHIR Validator's `txTests` | `scripts/checks/tx-ecosystem.sh:95`; suite commit `eaec771d82fba4eac596c14963546f39b4ecffe7`, validator 6.10.3, pinned in `docs/VERSIONS.md` |
+| The suite is the HL7 terminology ecosystem IG's test cases, run with the FHIR Validator's `txTests` | `scripts/checks/tx-ecosystem.sh:97`; suite commit `eaec771d82fba4eac596c14963546f39b4ecffe7`, validator 6.10.4, pinned in `docs/VERSIONS.md` |
 | The `general` mode runs once per served version on every pull request and push to `main` | `.github/workflows/ci.yml` job `tx-ecosystem` |
 | CI fails when a listed case stops passing | `scripts/checks/tx-ecosystem.sh` compares against the list |
 | Passing a case is not an HL7 certification | Correct as stated: HL7 issues no such certification |
-| "The suite's other modes (ICD-11, LOINC) ... their lists live beside the general ones" | Partly. `passing-icd-11.txt` holds 44 cases and `passing-tx.fhir.org.txt` 29, but `passing-snomed.txt` and `passing-sct-ecl.txt` are empty files. See [E1](#e1) |
+| "The suite's other modes (ICD-11, LOINC) ... their lists live beside the general ones" | Partly. `passing-icd-11.txt` holds 44 cases and `passing-tx.fhir.org.txt` 43, but `passing-snomed.txt` and `passing-sct-ecl.txt` are empty files. See [E1](#e1) |
 
 ### Code systems served
 
@@ -436,7 +436,7 @@ disagrees with the badges rendered from the same lists by
 live beside the general ones"** (`website/book/src/evaluate/conformance.md`).
 Two of the four mode lists are empty files:
 `conformance/tx-ecosystem/passing-snomed.txt` and `passing-sct-ecl.txt` hold no
-cases. `passing-icd-11.txt` (44) and `passing-tx.fhir.org.txt` (29) do.
+cases. `passing-icd-11.txt` (44) and `passing-tx.fhir.org.txt` (43) do.
 
 ### Licence
 

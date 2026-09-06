@@ -15,9 +15,11 @@
 # jar and the suite are fetched into target/tx-ecosystem/ once and pinned by
 # digest and commit. A JVM runs here only, never in the server.
 set -euo pipefail
+# target/ and conformance/ are named relative to the repository root, so run there.
+cd "$(dirname "$0")/../.."
 
-VALIDATOR_VERSION=6.10.3
-VALIDATOR_SHA256=91e4da9d1bd4c11d9a05c0ec0837c0c830ef800bc37faed6873e26f6702bceba
+VALIDATOR_VERSION=6.10.4
+VALIDATOR_SHA256=1106b9d58f9e363e47bea7c4fc065841e5fc91fe9d062775c3bfdd212bd653cc
 SUITE_REPO=https://github.com/HL7/fhir-tx-ecosystem-ig
 SUITE_COMMIT=eaec771d82fba4eac596c14963546f39b4ecffe7
 
