@@ -2509,7 +2509,7 @@ fn an_enumerated_code_the_system_lacks_leaves_the_expansion() {
 #[test]
 fn an_invalid_display_language_is_refused_on_every_operation() {
     let world = World::load();
-    for language in ["-", "zz", "en-XX", "de,zz"] {
+    for language in ["-", "zz", "en-AB", "de,zz"] {
         let expand_request = ExpandInput {
             url: Some(VS_PETS.to_owned()),
             display_language: Some(String::from(language)),

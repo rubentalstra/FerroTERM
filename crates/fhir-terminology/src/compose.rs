@@ -154,6 +154,9 @@ pub struct Expansion {
     /// value set carries `valueset-unclosed`
     /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes).
     pub unclosed: bool,
+    /// What the systems say about why they left the expansion unclosed, in
+    /// system order, for `valueset-unclosed-reason`.
+    pub unclosed_reasons: Vec<String>,
 }
 
 /// Resolves `include.valueSet` references to their complete expansions.
@@ -246,6 +249,9 @@ struct Selection {
     /// Whether the criteria that made this selection admit codes it does not
     /// hold, which the provider decides for its own system.
     unclosed: bool,
+    /// Why the system says the selection admits codes it does not hold, when
+    /// it says.
+    unclosed_reason: Option<String>,
     /// The compose's spelling of an enumerated code the system spells otherwise.
     // NOTE: no FHIR specification governs which spelling `contains.code` carries when a
     // system admits several (the ecosystem's icd-11 `expand-adhoc-enum-uri` keeps the
@@ -313,6 +319,9 @@ impl Selection {
         }
         self.set |= &part.set;
         self.unclosed |= part.unclosed;
+        if self.unclosed_reason.is_none() {
+            self.unclosed_reason = part.unclosed_reason;
+        }
         for (ordinal, display) in part.overrides {
             self.overrides.entry(ordinal).or_insert(display);
         }
@@ -534,6 +543,16 @@ impl<'a> Expander<'a> {
             fragments,
             nested: page.nested,
             unclosed: gathered.selections.values().any(|s| s.unclosed),
+            unclosed_reasons: {
+                let mut reasons: Vec<String> = gathered
+                    .selections
+                    .values()
+                    .filter(|selection| selection.unclosed)
+                    .filter_map(|selection| selection.unclosed_reason.clone())
+                    .collect();
+                reasons.dedup();
+                reasons
+            },
         })
     }
 
@@ -585,6 +604,7 @@ impl<'a> Expander<'a> {
                 set,
                 stated,
                 unclosed,
+                unclosed_reason,
                 overrides,
                 spellings,
             } = Self::select(provider, include, options)?;
@@ -604,6 +624,7 @@ impl<'a> Expander<'a> {
                     segments: vec![segment],
                     seen,
                     unclosed,
+                    unclosed_reason,
                     overrides,
                     spellings,
                 },
@@ -661,6 +682,7 @@ impl<'a> Expander<'a> {
                         segments: vec![Segment::Named(Vec::new())],
                         seen: ConceptSet::new(),
                         unclosed,
+                        unclosed_reason: None,
                         overrides: BTreeMap::new(),
                         spellings: BTreeMap::new(),
                     },
@@ -715,10 +737,17 @@ impl<'a> Expander<'a> {
             source,
         };
         let mut selected = if include.concepts.is_empty() {
+            let unclosed = provider.unclosed(&include.filters);
+            let stated = provider.filter_ordered(&include.filters).map_err(&failed)?;
+            let set = match &stated {
+                Some(order) => order.iter().copied().collect(),
+                None => provider.filter_all(&include.filters).map_err(&failed)?,
+            };
             Selected {
-                set: provider.filter_all(&include.filters).map_err(&failed)?,
-                stated: None,
-                unclosed: provider.unclosed(&include.filters),
+                set,
+                stated,
+                unclosed,
+                unclosed_reason: unclosed.then(|| provider.unclosed_reason()).flatten(),
                 overrides: BTreeMap::new(),
                 spellings: BTreeMap::new(),
             }
@@ -783,6 +812,7 @@ impl<'a> Expander<'a> {
             set,
             stated: Some(stated),
             unclosed: false,
+            unclosed_reason: None,
             overrides,
             spellings,
         })
@@ -798,6 +828,8 @@ struct Selected {
     stated: Option<Vec<u32>>,
     /// Whether the criteria admit codes the set does not hold.
     unclosed: bool,
+    /// Why the system says so, when it says.
+    unclosed_reason: Option<String>,
     overrides: BTreeMap<u32, String>,
     spellings: BTreeMap<u32, String>,
 }
