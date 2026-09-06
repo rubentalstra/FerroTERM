@@ -332,3 +332,33 @@ fn a_vocabulary_name_keeps_one_ordinal() {
         })
     ));
 }
+
+#[test]
+fn a_store_answers_concurrently_on_the_snapshot_it_opened() {
+    // The code index and the designation rows stay open on the read snapshot
+    // the store took, so a shared reference has to answer from several
+    // threads at once, which is how the server holds it.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let store = build(&dir.path().join("synthetic.redb"));
+    std::thread::scope(|scope| {
+        for _ in 0..4 {
+            scope.spawn(|| {
+                for _ in 0..64 {
+                    assert_eq!(
+                        store.ordinal("1000").expect("ordinal"),
+                        Some(Ordinal::new(0)),
+                        "the code index answers"
+                    );
+                    assert_eq!(
+                        store
+                            .designations(Ordinal::new(0))
+                            .expect("designations")
+                            .len(),
+                        3,
+                        "the designation rows answer"
+                    );
+                }
+            });
+        }
+    });
+}

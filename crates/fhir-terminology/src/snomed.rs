@@ -813,8 +813,8 @@ impl SnomedProvider {
         })
     }
 
-    /// The codes of `set`, read in one transaction: a concept with hundreds of
-    /// children costs one read of the store rather than one per child (#304).
+    /// The codes of `set`, sliced out of the concept column: a concept with
+    /// hundreds of children costs one string per child and no search (#314).
     fn codes(
         &self,
         set: impl IntoIterator<Item = u32>,
