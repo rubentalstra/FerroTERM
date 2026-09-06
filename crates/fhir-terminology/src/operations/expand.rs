@@ -7,11 +7,12 @@
 //! neutral items with their designations; the wire layer of each version
 //! renders the `ValueSet` resource with its `expansion`.
 
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use super::{OperationError, Sources};
 use crate::compose::{Compose, Expansion, Include, Item, Options};
-use crate::provider::{Designation, Property};
+use crate::provider::{Designation, Property, PropertyValue};
 use crate::valueset::model::{ModelError, ValueSetModel};
 use crate::valueset::negotiation::{Negotiation, canonicals};
 use crate::valueset::store::Resolver;
@@ -221,8 +222,10 @@ pub fn expand(
     };
     let resolver =
         Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
+    resolver.note_open_systems(&model.compose);
     let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;
     let used_value_sets = resolver.used_value_sets();
+    let open_systems = resolver.open_systems();
     if expansion.unclosed && input.handle_unclosed_expansion == Some(false) {
         return Err(OperationError::NotSupported(format!(
             "the expansion of `{}` is unclosed, and `handle-unclosed-expansion` is false",
@@ -250,7 +253,11 @@ pub fn expand(
         timestamp: jiff::Timestamp::now().to_string(),
         total: expansion.total,
         offset: (input.offset.is_some() || input.count.is_some()).then_some(offset),
-        parameters: parameters(input, &expansion, &used_value_sets),
+        parameters: {
+            let mut out = parameters(input, &expansion, &used_value_sets, &open_systems);
+            out.extend(warnings(sources, &model, &expansion, &used_value_sets));
+            out
+        },
         contains,
         properties,
         unclosed_reasons: unclosed_reasons(&expansion),
@@ -402,12 +409,20 @@ fn pinned_compose(
     Ok(negotiation.pin(&kept)?)
 }
 
-/// Every parameter the client gave, echoed, then the code system versions
-/// used (`used-codesystem`).
+/// Every parameter that controlled the expansion, echoed, then the code system
+/// versions used (`used-codesystem`).
+///
+/// `open_systems` are the systems the value sets selected from without naming a
+/// version, which is where a `system-version` rule takes effect: it "specifies
+/// a version to use for a system, if the value set does not specify which one
+/// to use" (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>), and
+/// `ValueSet.expansion.parameter` states "a parameter that controlled the
+/// expansion process" (<https://hl7.org/fhir/R4B/valueset.html>).
 fn parameters(
     input: &ExpandInput,
     expansion: &Expansion,
     used_value_sets: &[String],
+    open_systems: &BTreeSet<String>,
 ) -> Vec<ExpansionParameter> {
     let mut out = Vec::new();
     let mut push = |name: &str, value: ParameterValue| {
@@ -446,10 +461,21 @@ fn parameters(
     for supplement in &input.use_supplement {
         push("useSupplement", ParameterValue::Uri(supplement.clone()));
     }
+    // A default and a check supply a version only where the value set names
+    // none; a force overrides whatever it names, so it always controls.
     for (name, list) in [
-        ("exclude-system", &input.exclude_system),
         ("system-version", &input.system_version),
         ("check-system-version", &input.check_system_version),
+    ] {
+        for value in list {
+            let url = value.split_once('|').map_or(value.as_str(), |(url, _)| url);
+            if open_systems.contains(url) {
+                push(name, ParameterValue::Uri(value.clone()));
+            }
+        }
+    }
+    for (name, list) in [
+        ("exclude-system", &input.exclude_system),
         ("force-system-version", &input.force_system_version),
         ("default-valueset-version", &input.default_valueset_version),
         ("check-valueset-version", &input.check_valueset_version),
@@ -503,11 +529,21 @@ fn contains(
         if item.inactive && !asked.iter().any(|p| p == "status" || p == "*") {
             asked.push(String::from("status"));
         }
-        let properties = if asked.is_empty() {
+        let mut properties = if asked.is_empty() {
             Vec::new()
         } else {
             properties_of(sources, item, &asked)?
         };
+        // NOTE: "the status property may also be used to indicate that a concept
+        // is inactive" (<https://hl7.org/fhir/R5/codesystem.html#defined-props>),
+        // so a system stating only `inactive` still answers a status.
+        if item.inactive && !properties.iter().any(|p| p.code == "status") {
+            properties.push(Property {
+                code: String::from("status"),
+                value: PropertyValue::Code(String::from("inactive")),
+                ..Property::default()
+            });
+        }
         out.push((
             item.depth,
             Contains {
@@ -586,6 +622,55 @@ fn designations_of(
         .collect())
 }
 
+/// The `warning-<standing>` parameters for every resource the expansion drew
+/// on whose standing warrants one: the value set expanded, the value sets it
+/// referenced, and the code system versions used.
+///
+/// The ecosystem asks an expansion to state the standing of what it drew on
+/// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>); a resource the
+/// server cannot resolve back to a model contributes nothing.
+fn warnings(
+    sources: &Sources<'_>,
+    model: &ValueSetModel,
+    expansion: &Expansion,
+    used_value_sets: &[String],
+) -> Vec<ExpansionParameter> {
+    let mut out = Vec::new();
+    let mut note = |word: Option<&'static str>, canonical: String| {
+        if let Some(word) = word {
+            out.push(ExpansionParameter {
+                name: format!("warning-{word}"),
+                value: ParameterValue::Uri(canonical),
+            });
+        }
+    };
+    // NOTE: a value set's own `status` states where it sits in its own
+    // lifecycle, so only `structuredefinition-standards-status` warns here
+    // (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
+    let standing_of = |value_set: &ValueSetModel| crate::provider::Standing {
+        standards_status: value_set.standards_status.clone(),
+        ..crate::provider::Standing::default()
+    };
+    note(super::standing_word(&standing_of(model)), model.canonical());
+    for used in used_value_sets {
+        if let Some(referenced) = sources.value_sets.resolve(used, None) {
+            note(
+                super::standing_word(&standing_of(&referenced)),
+                used.clone(),
+            );
+        }
+    }
+    for used in &expansion.versions {
+        if let Ok(resolved) = sources.registry.resolve(&used.url, Some(&used.version)) {
+            note(
+                super::standing_word(&resolved.provider.standing()),
+                canonical(&used.url, &used.version),
+            );
+        }
+    }
+    out
+}
+
 /// `url|version`, the canonical of a code system version; `url` alone for a
 /// versionless system.
 fn canonical(url: &str, version: &str) -> String {
@@ -620,12 +705,27 @@ fn properties_of(
                     .any(|p| p.code == code && p.uri.as_deref() == Some(w.as_str()))
         })
     };
-    Ok(resolved
-        .provider
-        .properties(located.concept)?
-        .into_iter()
-        .filter(|p| asked(&p.code))
-        .collect())
+    let mut out = Vec::new();
+    // NOTE: `definition` is a concept property the specification itself defines
+    // (<https://hl7.org/fhir/6.0.0-ballot5/codesystem.html#defined-props>), which
+    // a system states as its own element rather than through `properties`.
+    if asked("definition")
+        && let Some(definition) = resolved.provider.definition(located.concept)?
+    {
+        out.push(Property {
+            code: String::from("definition"),
+            value: PropertyValue::String(definition),
+            ..Property::default()
+        });
+    }
+    out.extend(
+        resolved
+            .provider
+            .properties(located.concept)?
+            .into_iter()
+            .filter(|p| asked(&p.code)),
+    );
+    Ok(out)
 }
 
 /// The distinct properties the page carries, with the URI the code system
@@ -660,7 +760,8 @@ fn declared(
                 .properties
                 .iter()
                 .find(|p| p.code == property.code)
-                .and_then(|p| p.uri.clone());
+                .and_then(|p| p.uri.clone())
+                .or_else(|| crate::provider::defined_property_uri(&property.code));
             out.push(ExpansionProperty {
                 code: property.code.clone(),
                 uri,

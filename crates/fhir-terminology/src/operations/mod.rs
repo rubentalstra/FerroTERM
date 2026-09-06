@@ -815,6 +815,23 @@ pub fn whole(base: &str) -> Option<String> {
     })
 }
 
+/// The word for a standing that warrants a note, else `None`.
+///
+/// `structuredefinition-standards-status` outranks the resource's own `status`
+/// and `experimental`
+/// (<https://hl7.org/fhir/R5/extension-structuredefinition-standards-status.html>).
+#[must_use]
+pub fn standing_word(standing: &crate::provider::Standing) -> Option<&'static str> {
+    match standing.standards_status.as_deref() {
+        Some("deprecated") => Some("deprecated"),
+        Some("withdrawn") => Some("withdrawn"),
+        Some("draft") => Some("draft"),
+        _ if standing.status == "draft" => Some("draft"),
+        _ if standing.experimental => Some("experimental"),
+        _ => None,
+    }
+}
+
 /// The `status-check` notes the ecosystem asks for when a referenced resource
 /// is draft, experimental, deprecated, or withdrawn (its test cases).
 #[must_use]
@@ -823,13 +840,12 @@ pub fn standing_note(
     canonical: &str,
     standing: &crate::provider::Standing,
 ) -> Option<Issue> {
-    let (word, message) = match standing.standards_status.as_deref() {
-        Some("deprecated") => ("deprecated", MessageId::MsgDeprecated),
-        Some("withdrawn") => ("withdrawn", MessageId::MsgWithdrawn),
-        Some("draft") => ("draft", MessageId::MsgDraft),
-        _ if standing.status == "draft" => ("draft", MessageId::MsgDraft),
-        _ if standing.experimental => ("experimental", MessageId::MsgExperimental),
-        _ => return None,
+    let word = standing_word(standing)?;
+    let message = match word {
+        "deprecated" => MessageId::MsgDeprecated,
+        "withdrawn" => MessageId::MsgWithdrawn,
+        "experimental" => MessageId::MsgExperimental,
+        _ => MessageId::MsgDraft,
     };
     Some(Issue {
         severity: "information",
@@ -854,7 +870,42 @@ pub fn valid_versions(versions: &[String]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Issue, MessageId};
+    use super::{Issue, MessageId, standing_word};
+    use crate::provider::Standing;
+
+    #[test]
+    fn a_standards_status_outranks_the_resources_own_status() {
+        // <https://hl7.org/fhir/R5/extension-structuredefinition-standards-status.html>
+        let deprecated = Standing {
+            status: String::from("draft"),
+            experimental: true,
+            standards_status: Some(String::from("deprecated")),
+        };
+        assert_eq!(
+            standing_word(&deprecated),
+            Some("deprecated"),
+            "the standards status is the resource's standing"
+        );
+    }
+
+    #[test]
+    fn a_settled_resource_warrants_no_standing_note() {
+        assert_eq!(
+            standing_word(&Standing::default()),
+            None,
+            "an active, non-experimental resource has nothing to note"
+        );
+        let experimental = Standing {
+            experimental: true,
+            ..Standing::default()
+        };
+        assert_eq!(standing_word(&experimental), Some("experimental"));
+        let draft = Standing {
+            status: String::from("draft"),
+            ..Standing::default()
+        };
+        assert_eq!(standing_word(&draft), Some("draft"));
+    }
 
     #[test]
     fn the_message_id_is_the_issues_own_and_survives_a_reworded_text() {

@@ -2,6 +2,7 @@
 //! that answers `include.valueSet` references over them.
 
 use std::cell::RefCell;
+use std::collections::BTreeSet;
 
 use super::model::ValueSetModel;
 use super::negotiation::Negotiation;
@@ -21,6 +22,7 @@ pub struct Resolver<'a> {
     negotiation: Option<&'a Negotiation>,
     active: RefCell<Vec<String>>,
     used: RefCell<Vec<String>>,
+    open: RefCell<BTreeSet<String>>,
 }
 
 impl<'a> Resolver<'a> {
@@ -33,6 +35,7 @@ impl<'a> Resolver<'a> {
             negotiation: None,
             active: RefCell::new(Vec::new()),
             used: RefCell::new(Vec::new()),
+            open: RefCell::new(BTreeSet::new()),
         }
     }
 
@@ -49,6 +52,26 @@ impl<'a> Resolver<'a> {
     #[must_use]
     pub fn used_value_sets(&self) -> Vec<String> {
         self.used.borrow().clone()
+    }
+
+    /// The systems the value sets resolved so far select from without naming a
+    /// version, so a `system-version` rule for one of them is what supplied the
+    /// version used.
+    #[must_use]
+    pub fn open_systems(&self) -> BTreeSet<String> {
+        self.open.borrow().clone()
+    }
+
+    /// Records the systems `compose` selects from without naming a version.
+    pub fn note_open_systems(&self, compose: &Compose) {
+        let mut open = self.open.borrow_mut();
+        for include in compose.include.iter().chain(&compose.exclude) {
+            if let Some(system) = &include.system
+                && system.version.is_none()
+            {
+                open.insert(system.url.clone());
+            }
+        }
     }
 
     /// The compose of the value set at `url` (which may carry `|version`):
@@ -74,16 +97,20 @@ impl<'a> Resolver<'a> {
                 None => url.clone(),
             };
             self.used.borrow_mut().push(canonical);
+            self.note_open_systems(&model.compose);
             return Ok(match self.negotiation {
                 Some(negotiation) => negotiation.pin(&model.compose)?,
                 None => model.compose.clone(),
             });
         }
         match self.registry.implicit_value_set(&url) {
-            Some(Ok(compose)) => Ok(match self.negotiation {
-                Some(negotiation) => negotiation.pin(&compose)?,
-                None => compose,
-            }),
+            Some(Ok(compose)) => {
+                self.note_open_systems(&compose);
+                Ok(match self.negotiation {
+                    Some(negotiation) => negotiation.pin(&compose)?,
+                    None => compose,
+                })
+            }
             Some(Err(source)) => Err(ComposeError::Provider {
                 system: url,
                 source,
