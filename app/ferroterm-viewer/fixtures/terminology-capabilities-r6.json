@@ -533,14 +533,6 @@
               ]
             },
             {
-              "code": "concept",
-              "op": [
-                "is-a",
-                "descendent-of",
-                "in"
-              ]
-            },
-            {
               "code": "constraint",
               "op": [
                 "="
@@ -924,7 +916,7 @@
       ]
     }
   ],
-  "date": "2026-09-06T20:35:59.392362Z",
+  "date": "2026-09-06T21:29:49.213733Z",
   "description": "Serves the FHIR R6 ballot (version 6.0.0-ballot5). Every behaviour grounded only in the ballot is re-verified against the published specification when it appears, and may change with it.",
   "expansion": {
     "hierarchical": false,

@@ -8,7 +8,7 @@
 
 use crate::artifact::Source;
 use crate::filter::FilterOperator;
-use crate::provider::{Capability, ContentMode};
+use crate::provider::{Capability, ContentMode, Declaration, FilterDefinition};
 use crate::registry::Registry;
 
 /// One filter a version supports.
@@ -34,7 +34,7 @@ pub struct VersionSummary {
     pub compositional: bool,
     /// The designation languages.
     pub languages: Vec<String>,
-    /// The filters, generic ones first.
+    /// The filters, one entry per code, the generic one first.
     pub filters: Vec<FilterSupport>,
     /// The `$lookup` properties.
     pub properties: Vec<String>,
@@ -85,6 +85,53 @@ const HIERARCHY_OPERATORS: [FilterOperator; 6] = [
     FilterOperator::DescendentLeaf,
 ];
 
+/// The filter code the engine answers for every provider.
+const GENERIC_FILTER: &str = "concept";
+
+/// The filters one version declares: the generic entry first, then the
+/// provider's own, one entry per filter code.
+///
+/// `TerminologyCapabilities.codeSystem.version.filter` is "Filter Properties
+/// supported" with `code` 1..1 and `op` 1..\* "Operations supported for the
+/// property"
+/// (<https://hl7.org/fhir/R5/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.filter.op>,
+/// the same element in R4 4.0.1, R4B 4.3.0, R5 5.0.0, and the R6 ballot), so
+/// one code carries one operator list. No invariant makes the codes distinct,
+/// so merging into the union is our own design: the engine answers the generic
+/// set and the provider's own for the same code, and a client can send either.
+fn declared_filters(declaration: &Declaration) -> Vec<FilterSupport> {
+    let mut operators = GENERIC_OPERATORS.to_vec();
+    if declaration.capabilities.contains(&Capability::Subsumption) {
+        operators.extend(HIERARCHY_OPERATORS);
+    }
+    let mut filters = vec![FilterSupport {
+        code: String::from(GENERIC_FILTER),
+        operators,
+    }];
+    for declared in &declaration.filters {
+        merge(&mut filters, declared);
+    }
+    filters
+}
+
+/// Adds `declared` to `filters`, into the entry its code already has.
+fn merge(filters: &mut Vec<FilterSupport>, declared: &FilterDefinition) {
+    for support in &mut *filters {
+        if support.code == declared.code {
+            for operator in &declared.operators {
+                if !support.operators.contains(operator) {
+                    support.operators.push(*operator);
+                }
+            }
+            return;
+        }
+    }
+    filters.push(FilterSupport {
+        code: declared.code.clone(),
+        operators: declared.operators.clone(),
+    });
+}
+
 impl Summary {
     /// Reads the summary off `registry`.
     #[must_use]
@@ -100,24 +147,12 @@ impl Summary {
                 let declaration = provider.declaration();
                 content = declaration.content;
                 subsumption |= declaration.capabilities.contains(&Capability::Subsumption);
-                let mut operators = GENERIC_OPERATORS.to_vec();
-                if declaration.capabilities.contains(&Capability::Subsumption) {
-                    operators.extend(HIERARCHY_OPERATORS);
-                }
-                let mut filters = vec![FilterSupport {
-                    code: String::from("concept"),
-                    operators,
-                }];
-                filters.extend(declaration.filters.iter().map(|filter| FilterSupport {
-                    code: filter.code.clone(),
-                    operators: filter.operators.clone(),
-                }));
                 versions.push(VersionSummary {
                     code: identity.version.clone(),
                     is_default: default == Some(identity.version.as_str()),
                     compositional: declaration.compositional.supported(),
                     languages: declaration.languages.clone(),
-                    filters,
+                    filters: declared_filters(declaration),
                     properties: declaration
                         .properties
                         .iter()
