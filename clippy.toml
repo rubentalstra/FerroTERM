@@ -26,5 +26,7 @@ disallowed-types = [
   { path = "chrono::NaiveTime", reason = "jiff is the one time library" },
 ]
 
-# Product and family names are words, not code, in documentation.
-doc-valid-idents = ["FerroTERM", "FerroEHR", "RESTful", ".."]
+# Product, family, and specification names are words, not code, in
+# documentation. WebDriver is the W3C protocol the browser journeys speak
+# (https://www.w3.org/TR/webdriver2/).
+doc-valid-idents = ["FerroTERM", "FerroEHR", "RESTful", "WebDriver", ".."]

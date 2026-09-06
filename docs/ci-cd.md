@@ -26,6 +26,7 @@ exist.
 | `ci.yml` (`bench-bars` job) | the four operations timed over a generated edition, each median compared to the claim in `bench/bars.json` (`scripts/checks/bench-bars.sh`) | on workspace |
 | `fuzz.yml` | weekly: every parser a client or a release reaches, fed arbitrary bytes under `cargo-fuzz` on nightly (`fuzz/README.md`) | weekly |
 | `ci.yml` (`tx-ecosystem` job) | the HL7 terminology ecosystem suite (`general` mode) against a release build through the FHIR Validator's `txTests`, gated by the committed pass list `conformance/tx-ecosystem/passing.txt` (`scripts/checks/tx-ecosystem.sh`) | on workspace |
+| `ci.yml` (`ui-e2e` job) | the viewer's browser journeys: the Trunk bundle embedded in the server, the image built from `docker/Dockerfile`, and a digest-pinned headless Chromium driving it over WebDriver (`scripts/ui-e2e.sh`) | on workspace |
 | `differential.yml` | weekly: the request sample of `conformance/differential/` answered by FerroTERM and by Snowstorm over the same licensed edition (`scripts/checks/differential.sh`), an issue filed on divergence | when `SNOMED_RF2_URL` and `SNOWSTORM_URL` are set |
 
 Dependabot (`github-actions` + `cargo`) keeps `uses:` SHAs and crate pins current.

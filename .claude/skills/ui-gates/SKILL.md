@@ -53,9 +53,14 @@ bash scripts/checks/bundle-size.sh
 bash scripts/ui-e2e.sh
 ```
 
-Stage 6 locally: run it when Docker is available (`docker info`); otherwise
-report `SKIPPED(no docker)`, and state explicitly that CI's `ui-e2e` job runs
-it and gates the merge, so a skip here is not a pass.
+Stage 6 locally: the script builds the image `docker/Dockerfile` describes, and
+that image stages linux binaries, so the managed mode needs Docker
+(`docker info`) and a Linux host. Anywhere else, report `SKIPPED(reason)` and
+state explicitly that CI's `ui-e2e` job runs it and gates the merge, so a skip
+here is not a pass. To drive a server you started yourself, pass both
+`--base-url` and `--webdriver`; the address must be one the browser can reach,
+which for a browser in a container is `host.docker.internal`, never
+`127.0.0.1`.
 
 Read the crate's `Cargo.toml` and `Trunk.toml` before running: the feature
 names and the `dist` path are the convention, not a guess.

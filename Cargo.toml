@@ -4,8 +4,11 @@
 resolver = "3"
 members = ["crates/*", "app/*", "tools/*"]
 # The fuzz targets build under nightly with sanitizers; the workspace stays on
-# the pinned stable toolchain (fuzz/README.md).
-exclude = ["fuzz"]
+# the pinned stable toolchain (fuzz/README.md). The browser journeys are
+# excluded for a different reason, recorded in e2e/Cargo.toml: their WebDriver
+# client changes how serde_json writes every object, and cargo unifies features
+# across one invocation.
+exclude = ["fuzz", "e2e"]
 
 [workspace.package]
 version = "0.1.0"
