@@ -7,6 +7,7 @@
 pub(crate) mod capability;
 pub(crate) mod error;
 pub(crate) mod outcome;
+pub(crate) mod terminology;
 pub(crate) mod version;
 
 use gloo_net::http::Request;
@@ -17,6 +18,7 @@ use serde::de::DeserializeOwned;
 use crate::fhir::capability::CapabilityStatement;
 use crate::fhir::error::FhirError;
 use crate::fhir::outcome::OperationOutcome;
+use crate::fhir::terminology::TerminologyCapabilities;
 use crate::fhir::version::FhirVersion;
 use crate::url::RequestUrl;
 
@@ -85,6 +87,30 @@ impl FhirClient {
         }
     }
 
+    /// The address of the `CapabilityStatement` of one served FHIR version.
+    ///
+    /// Every read has a paired builder, so a screen can disclose the exact
+    /// request it issued without rebuilding the URL from parts of its own.
+    pub(crate) fn metadata_url(&self, version: FhirVersion) -> String {
+        RequestUrl::new()
+            .segment(version.segment())
+            .segment("metadata")
+            .render(&self.root)
+    }
+
+    /// The address of the `TerminologyCapabilities` of one served version.
+    ///
+    /// `mode=terminology` selects the terminology capabilities of the same
+    /// `metadata` interaction
+    /// (<https://hl7.org/fhir/R4B/terminologycapabilities.html>).
+    pub(crate) fn terminology_metadata_url(&self, version: FhirVersion) -> String {
+        RequestUrl::new()
+            .segment(version.segment())
+            .segment("metadata")
+            .query("mode", "terminology")
+            .render(&self.root)
+    }
+
     /// Reads the `CapabilityStatement` of one served FHIR version.
     ///
     /// # Errors
@@ -94,11 +120,19 @@ impl FhirClient {
         &self,
         version: FhirVersion,
     ) -> Result<CapabilityStatement, FhirError> {
-        let url = RequestUrl::new()
-            .segment(version.segment())
-            .segment("metadata")
-            .render(&self.root);
-        self.get_json(&url).await
+        self.get_json(&self.metadata_url(version)).await
+    }
+
+    /// Reads the `TerminologyCapabilities` of one served FHIR version.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn terminology_capabilities(
+        &self,
+        version: FhirVersion,
+    ) -> Result<TerminologyCapabilities, FhirError> {
+        self.get_json(&self.terminology_metadata_url(version)).await
     }
 
     /// Sends a FHIR JSON `GET` and decodes the resource it answers.
@@ -173,6 +207,27 @@ fn excerpt(body: &str) -> String {
         .collect()
 }
 
+/// The `curl` line that reproduces a request the viewer made.
+///
+/// Every screen shows this beside the URL it read, which is the cheapest
+/// demonstration that the page did nothing a reader cannot do themselves.
+pub(crate) fn curl_line(url: &str) -> String {
+    format!(
+        "curl -H {accept} {target}",
+        accept = shell_quote(&format!("Accept: {FHIR_JSON}")),
+        target = shell_quote(url),
+    )
+}
+
+/// Quotes one argument for a POSIX shell, so a reader can paste it as it is.
+///
+/// Single quotes take everything literally and the only character they cannot
+/// carry is a single quote itself, which is closed, escaped, and reopened
+/// (<https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html>).
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', r"'\''"))
+}
+
 /// Derives the server root from the address of the page the bundle came from.
 ///
 /// The bundle is served under `/ui`, so everything before that prefix is where
@@ -238,6 +293,39 @@ mod tests {
         assert_eq!(
             client.version_base(FhirVersion::R4B),
             "https://tx.example.org/r4b"
+        );
+    }
+
+    #[test]
+    fn the_metadata_addresses_are_the_ones_a_reader_would_type() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        assert_eq!(
+            client.metadata_url(FhirVersion::R5),
+            "https://tx.example.org/r5/metadata"
+        );
+        assert_eq!(
+            client.terminology_metadata_url(FhirVersion::R6),
+            "https://tx.example.org/r6/metadata?mode=terminology"
+        );
+    }
+
+    #[test]
+    fn the_curl_line_asks_for_the_media_type_the_client_asks_for() {
+        assert_eq!(
+            curl_line("https://tx.example.org/r4b/metadata?mode=terminology"),
+            "curl -H 'Accept: application/fhir+json' 'https://tx.example.org/r4b/metadata?mode=terminology'",
+            "the line reproduces the request the browser made"
+        );
+    }
+
+    #[test]
+    fn a_quote_in_a_url_cannot_break_out_of_the_curl_line() {
+        assert_eq!(
+            shell_quote("a'b"),
+            r"'a'\''b'",
+            "the quote is closed, escaped, and reopened"
         );
     }
 

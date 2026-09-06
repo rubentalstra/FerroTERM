@@ -3,6 +3,7 @@
 use leptos::prelude::*;
 use leptos_router::components::Route;
 use leptos_router::components::Routes;
+use leptos_router::hooks::use_location;
 use leptos_router::hooks::use_query;
 use leptos_router::params::Params;
 use leptos_router::path;
@@ -11,9 +12,10 @@ use crate::components::health::HealthIndicator;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
-use crate::pages::home::HomePage;
 use crate::pages::not_found::NotFoundPage;
+use crate::pages::overview::OverviewPage;
 use crate::pages::settings::SettingsPage;
+use crate::routes::UI_BASE;
 use crate::routes::ui_link;
 use crate::settings::Settings;
 
@@ -66,16 +68,23 @@ pub(crate) fn Shell() -> impl IntoView {
     }
     .into_any();
 
+    let location = use_location();
+    let on = move |path: &str| {
+        let target = format!("{UI_BASE}{path}");
+        location.pathname.get().trim_end_matches('/') == target.trim_end_matches('/')
+    };
     let links = view! {
         <nav aria-label="Sections" class="flex items-center gap-3 text-sm">
             <a
                 href=move || ui_link("", version.get())
+                aria-current=move || if on("") { Some("page") } else { None }
                 class="text-slate-700 hover:underline dark:text-slate-200"
             >
                 "Overview"
             </a>
             <a
                 href=move || ui_link("settings", version.get())
+                aria-current=move || if on("/settings") { Some("page") } else { None }
                 class="text-slate-700 hover:underline dark:text-slate-200"
             >
                 "Settings"
@@ -95,7 +104,7 @@ pub(crate) fn Shell() -> impl IntoView {
 
     let screens = view! {
         <Routes fallback=NotFoundPage>
-            <Route path=path!("/") view=HomePage />
+            <Route path=path!("/") view=OverviewPage />
             <Route path=path!("/settings") view=SettingsPage />
         </Routes>
     }
