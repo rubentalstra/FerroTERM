@@ -169,6 +169,10 @@ pub struct ExpansionOutcome {
     pub contains: Vec<Contains>,
     /// The properties the concepts carry, each once, in order of appearance.
     pub properties: Vec<ExpansionProperty>,
+    /// Whether the value set admits codes the expansion does not list, which
+    /// the resource states with `valueset-unclosed`
+    /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes).
+    pub unclosed: bool,
 }
 
 /// Runs `$expand`.
@@ -236,6 +240,7 @@ pub fn expand(
         parameters: parameters(input, &expansion, &used_value_sets),
         contains,
         properties,
+        unclosed: expansion.unclosed,
         model,
     })
 }

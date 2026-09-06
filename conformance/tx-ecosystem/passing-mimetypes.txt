@@ -2,6 +2,8 @@ metadata/term-caps
 mimetypes/mimetype-expand-all
 mimetypes/mimetype-expand-base
 mimetypes/mimetype-expand-enumerated
+mimetypes/mimetype-expand-registered-narrow
+mimetypes/mimetype-expand-registered-paged
 mimetypes/mimetype-expand-registered-too-costly
 mimetypes/mimetype-expand-unregistered
 mimetypes/mimetype-filter-base-subtype-in

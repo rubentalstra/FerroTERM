@@ -562,6 +562,13 @@ impl CodeSystemProvider for Bcp47Provider {
         Err(ProviderError::NotEnumerable)
     }
 
+    /// A selection of language tags is incomplete: the registry of subtags is
+    /// finite, and the tags built from them with variants, extensions, and
+    /// private use (RFC 5646 §2.2.6 to §2.2.7) are not.
+    fn unclosed(&self, _filters: &[Filter]) -> bool {
+        true
+    }
+
     fn filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
         if self
             .declaration

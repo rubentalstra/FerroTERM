@@ -361,6 +361,14 @@ impl CodeSystemProvider for UcumProvider {
         Err(ProviderError::NotEnumerable)
     }
 
+    /// A UCUM selection is incomplete: the grammar multiplies and exponentiates
+    /// its atoms into unboundedly many units, and `$expand` names UCUM as a
+    /// case `valueset-unclosed` marks
+    /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes).
+    fn unclosed(&self, _filters: &[Filter]) -> bool {
+        true
+    }
+
     fn filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
         if self
             .declaration

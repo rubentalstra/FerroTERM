@@ -17,7 +17,8 @@ use fhir_terminology::registries::{bcp13, bcp47, iso3166};
 use fhir_terminology::registry::Registry;
 use fhir_terminology::valueset::store::ValueSetStore;
 use fhir_types::r4b::value_set::{
-    ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeFilter,
+    ValueSet, ValueSetCompose, ValueSetComposeInclude, ValueSetComposeIncludeConcept,
+    ValueSetComposeIncludeFilter,
 };
 
 fn registry() -> Registry {
@@ -39,6 +40,28 @@ fn filter(property: &str, op: FilterOperator, value: &str) -> Filter {
         property: property.to_owned(),
         op,
         value: value.to_owned(),
+    }
+}
+
+fn enumerating(system: &str, codes: &[&str]) -> ValueSet {
+    ValueSet {
+        url: Some("http://example.org/enumerated".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            include: vec![ValueSetComposeInclude {
+                system: Some(system.into()),
+                concept: codes
+                    .iter()
+                    .map(|code| ValueSetComposeIncludeConcept {
+                        code: (*code).into(),
+                        ..Default::default()
+                    })
+                    .collect(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
     }
 }
 
@@ -518,4 +541,74 @@ fn the_grammar_systems_validate_by_membership_and_decline_undetermined_subsumpti
         .expect_err("undetermined");
     assert!(matches!(error, OperationError::CannotDetermine(_)));
     assert_eq!(error.tx_issue_type(), "cannot-determine");
+}
+
+/// The IANA registry is finite, so `registered = true` walks it, but every
+/// registered type also carries the parameters of RFC 2045 §5.1, which no
+/// enumeration holds: "if the value set itself is unbounded due to the
+/// inclusion of post-coordinated value sets (e.g. SNOMED CT, UCUM), then the
+/// extension valueset-unclosed can be used to indicate that the expansion is
+/// incomplete" (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>,
+/// Notes).
+#[test]
+fn a_filtered_media_type_expansion_is_unclosed_and_an_enumerated_one_is_not() {
+    let registry = registry();
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let narrow = ExpandInput {
+        inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(&inline(
+            bcp13::URL,
+            vec![("registered", "=", "true"), ("base", "=", "text/plain")],
+        ))),
+        ..ExpandInput::default()
+    };
+    let outcome = expand::expand(&sources, &narrow).expect("expands");
+    assert_eq!(outcome.total, 1);
+    assert!(outcome.unclosed, "the parameterised forms are not listed");
+    let rendered = fhir_terminology::valueset::render::r4b::expansion(&outcome);
+    let expansion = rendered.expansion.expect("an expansion");
+    assert_eq!(
+        expansion.extension,
+        vec![fhir_types::r4b::extension::Extension {
+            url: String::from("http://hl7.org/fhir/StructureDefinition/valueset-unclosed"),
+            value: Some(fhir_types::r4b::extension::ExtensionValue::Boolean(
+                true.into()
+            )),
+            ..Default::default()
+        }]
+    );
+    let enumerated = ExpandInput {
+        inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(
+            &enumerating(bcp13::URL, &["text/plain", "text/plain; charset=utf-8"]),
+        )),
+        ..ExpandInput::default()
+    };
+    let outcome = expand::expand(&sources, &enumerated).expect("expands");
+    assert_eq!(outcome.total, 2);
+    assert!(
+        !outcome.unclosed,
+        "the codes an include lists are its members"
+    );
+    let rendered = fhir_terminology::valueset::render::r4b::expansion(&outcome);
+    assert!(
+        rendered
+            .expansion
+            .expect("an expansion")
+            .extension
+            .is_empty()
+    );
+}
+
+/// A tag is valid when every subtag is registered, and the variants,
+/// extensions, and private-use subtags of RFC 5646 §2.2.6 to §2.2.7 build
+/// unboundedly many valid tags over the finite registry.
+#[test]
+fn a_language_tag_selection_is_unclosed() {
+    let provider = Bcp47Provider::new();
+    assert!(provider.unclosed(&[filter("language", FilterOperator::Equal, "en")]));
 }

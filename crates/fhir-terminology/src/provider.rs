@@ -852,6 +852,24 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
         Ok(set)
     }
 
+    /// Whether the codes `filters` admit go beyond the concepts
+    /// [`CodeSystemProvider::filter_all`] returns for them.
+    ///
+    /// A selection over a system that builds unboundedly many codes on a finite
+    /// base enumerates the base and not the forms built on it, so its expansion
+    /// is incomplete and `$expand` marks it: "if the value set itself is
+    /// unbounded due to the inclusion of post-coordinated value sets (e.g.
+    /// SNOMED CT, UCUM), then the extension
+    /// `http://hl7.org/fhir/StructureDefinition/valueset-unclosed` can be used
+    /// to indicate that the expansion is incomplete"
+    /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes). The
+    /// default is a complete selection, and each provider decides for itself;
+    /// an include that names its concepts never asks, because the codes it
+    /// lists are the members.
+    fn unclosed(&self, _filters: &[Filter]) -> bool {
+        false
+    }
+
     /// Whether `concept` satisfies `filter`, without enumerating the set.
     ///
     /// The default evaluates the filter and tests membership; a grammar system
