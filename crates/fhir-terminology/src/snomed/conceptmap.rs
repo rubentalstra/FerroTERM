@@ -16,11 +16,14 @@
 //! [`MAP_SCHEMES`] holds the FHIR URI of each. Carrying the complex and
 //! extended map columns as `product` parts is our own design too.
 
+use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
+
 use concept_graph::ordinal::Ordinal;
 use concept_graph::refsets::{Table, ValueRef};
 
 use crate::conceptmap::model::{ConceptMapModel, DependsOn, Element, Group, Relationship, Target};
-use crate::provider::{CodeSystemProvider, Concept, ProviderError, Successor};
+use crate::provider::{CodeSystemProvider, Concept, MapSelection, ProviderError, Successor};
 use crate::snomed::{FHIR_CM, FHIR_VS, SYSTEM, SnomedProvider};
 
 /// The reference set field an association member points through.
@@ -179,10 +182,7 @@ pub(crate) fn successors(
             continue;
         };
         let relationship = association(refset).unwrap_or(Relationship::RelatedTo);
-        for row in 0..table.len() {
-            if table.concept(row) != Some(ordinal) {
-                continue;
-            }
+        for row in table.rows_of(ordinal) {
             let Some(target) = association_target(edition, table, row, field, Some(relationship))?
             else {
                 continue;
@@ -202,7 +202,13 @@ pub(crate) fn successors(
 }
 
 /// The `ConceptMap` the implicit URI `url` denotes, over the reference set
-/// `refset` of `edition`.
+/// `refset` of `edition`, carrying the elements `selection` asks for.
+///
+/// The map is built from the reference set on every call, so a narrowed
+/// selection reads only the rows its own elements come from: the cost of a
+/// translation is the size of its answer, never the size of the release. The
+/// selection picks the rows and nothing else, so a narrowed map is the whole
+/// map with the other elements left out.
 ///
 /// # Errors
 ///
@@ -214,6 +220,7 @@ pub(crate) fn concept_map(
     edition: &SnomedProvider,
     url: &str,
     refset: u64,
+    selection: MapSelection<'_>,
 ) -> Result<ConceptMapModel, ProviderError> {
     let Some(table) = edition.member_tables().table(refset) else {
         return Err(ProviderError::UnknownImplicitConceptMap {
@@ -247,12 +254,12 @@ pub(crate) fn concept_map(
         // the group states the system alone (RF2 §Map Reference Sets).
         (named.to_owned(), None)
     };
-    let mut elements: Vec<Element> = Vec::new();
-    for row in 0..table.len() {
+    // NOTE: no FHIR version orders `group.element`, so the map states them in the
+    // edition's own concept order, which a selection of them reproduces exactly
+    // (<https://hl7.org/fhir/R4B/conceptmap.html>).
+    let mut elements: BTreeMap<u32, Element> = BTreeMap::new();
+    for row in selected_rows(edition, table, target_component, map_target, selection)? {
         let Some(source) = table.concept(row) else {
-            continue;
-        };
-        let Some(code) = code_of(edition, source)? else {
             continue;
         };
         let target = match (target_component, map_target) {
@@ -263,21 +270,23 @@ pub(crate) fn concept_map(
         let Some(target) = target else {
             continue;
         };
-        let display = edition.display(Concept::new(source.index()), None)?;
-        match elements
-            .iter_mut()
-            .find(|held| held.code.as_deref() == Some(&code))
-        {
-            Some(held) => held.targets.push(target),
-            None => elements.push(Element {
-                code: Some(code),
-                display,
-                no_map: false,
-                comment: None,
-                targets: vec![target],
-            }),
+        match elements.entry(source.index()) {
+            Entry::Occupied(mut held) => held.get_mut().targets.push(target),
+            Entry::Vacant(slot) => {
+                let Some(code) = code_of(edition, source)? else {
+                    continue;
+                };
+                slot.insert(Element {
+                    code: Some(code),
+                    display: edition.display(Concept::new(source.index()), None)?,
+                    no_map: false,
+                    comment: None,
+                    targets: vec![target],
+                });
+            }
         }
     }
+    let elements: Vec<Element> = elements.into_values().collect();
     // NOTE: the page's template names the map after the reference set and scopes it
     // to the edition's own implicit value set
     // (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Concept Maps").
@@ -302,6 +311,76 @@ pub(crate) fn concept_map(
             unmapped: None,
         }],
     })
+}
+
+/// The rows `selection` admits, in the order the reference set holds them.
+///
+/// A row is one mapping, so restricting the rows restricts the mappings and
+/// nothing else: the elements built from them are the elements the whole map
+/// would carry. The row scan compares an integer or an interned string per
+/// row and reads no concept, so it costs the reference set's shape rather than
+/// its content.
+fn selected_rows(
+    edition: &SnomedProvider,
+    table: &Table,
+    target_component: Option<usize>,
+    map_target: Option<usize>,
+    selection: MapSelection<'_>,
+) -> Result<Vec<usize>, ProviderError> {
+    match selection {
+        MapSelection::Whole => Ok((0..table.len()).collect()),
+        MapSelection::Source(code) => {
+            let Some(located) = edition.locate(code)? else {
+                return Ok(Vec::new());
+            };
+            let ordinal = Ordinal::new(located.concept.index());
+            if !table.members().contains(ordinal.index()) {
+                return Ok(Vec::new());
+            }
+            Ok(table.rows_of(ordinal).collect())
+        }
+        MapSelection::Target(code) => {
+            let Some(field) = target_component.or(map_target) else {
+                return Ok(Vec::new());
+            };
+            let wanted = target_values(edition, target_component.is_some(), code)?;
+            Ok((0..table.len())
+                .filter(|&row| {
+                    table
+                        .value(row, field)
+                        .is_some_and(|held| wanted.contains(&held))
+                })
+                .collect())
+        }
+    }
+}
+
+/// The row values a target of `code` reads as, for the column the map targets
+/// through.
+///
+/// An association names another component, which is a concept of this edition
+/// or, when the edition does not hold it, the bare component id
+/// (RF2 §Association Reference Set); a map row names a code of its own scheme
+/// as text.
+fn target_values<'a>(
+    edition: &SnomedProvider,
+    association: bool,
+    code: &'a str,
+) -> Result<Vec<ValueRef<'a>>, ProviderError> {
+    if !association {
+        return Ok(match code {
+            "" => Vec::new(),
+            text => vec![ValueRef::String(text)],
+        });
+    }
+    let mut wanted = Vec::new();
+    if let Some(located) = edition.locate(code)? {
+        wanted.push(ValueRef::Concept(Ordinal::new(located.concept.index())));
+    }
+    if let Ok(id) = code.parse::<u64>() {
+        wanted.push(ValueRef::Component(id));
+    }
+    Ok(wanted)
 }
 
 /// The name of the reference set concept `refset`, for the map's `name`.

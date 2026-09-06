@@ -1040,6 +1040,7 @@ impl CodeSystemProvider for SnomedProvider {
     fn implicit_concept_map(
         &self,
         url: &str,
+        selection: crate::provider::MapSelection<'_>,
     ) -> Option<Result<crate::conceptmap::model::ConceptMapModel, ProviderError>> {
         let (base, form) = implicit_parts(url, FHIR_CM)?;
         let malformed = |reason: String| ProviderError::MalformedImplicitConceptMap {
@@ -1060,7 +1061,12 @@ impl CodeSystemProvider for SnomedProvider {
         let Ok(refset) = ConceptId::parse(decoded.trim()) else {
             return Some(Err(malformed(format!("`{decoded}` is not an SCTID"))));
         };
-        Some(conceptmap::concept_map(self, url, refset.value()))
+        Some(conceptmap::concept_map(
+            self,
+            url,
+            refset.value(),
+            selection,
+        ))
     }
 
     fn implicit_value_set(&self, url: &str) -> Option<Result<Compose, ProviderError>> {

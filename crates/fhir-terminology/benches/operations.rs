@@ -17,9 +17,13 @@ use std::sync::Arc;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use fhir_terminology::compose::{Expander, Options};
-use fhir_terminology::operations::{Invocation, lookup, subsumes, validate_code};
+use fhir_terminology::conceptmap::store::ConceptMapStore;
+use fhir_terminology::operations::{
+    Invocation, Sources, lookup, subsumes, translate, validate_code,
+};
 use fhir_terminology::registry::Registry;
 use fhir_terminology::snomed::SnomedProvider;
+use fhir_terminology::valueset::store::ValueSetStore;
 
 const SCT: &str = "http://snomed.info/sct";
 /// The edition the benches build. Large enough that a point read measures the
@@ -62,6 +66,28 @@ fn operations(c: &mut Criterion) {
             validate_code::validate_code(&registry, &Invocation::Type, &validate_request)
                 .expect("validates")
         });
+    });
+    // The edition's ICD-10 extended map states one mapping per concept, so a
+    // translation that read the map whole would cost the release. It reads the
+    // mappings of the code it was asked about, so it costs the answer (#369).
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let translate_request = translate::TranslateInput {
+        url: Some(format!(
+            "{SCT}?fhir_cm={}",
+            ferroterm_testkit::snomed::ICD10_MAP_SCTID
+        )),
+        system: Some(SCT.to_owned()),
+        code: Some(deep.clone()),
+        ..translate::TranslateInput::default()
+    };
+    group.bench_function("translate", |b| {
+        b.iter(|| translate::translate(&sources, &translate_request).expect("translates"));
     });
     let subsumes_request = subsumes::SubsumesInput {
         system: Some(SCT.to_owned()),

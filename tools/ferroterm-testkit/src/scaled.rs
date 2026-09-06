@@ -24,7 +24,9 @@ use concept_store::tables;
 use designation_index::index::{IndexBuilder, Input};
 use rf2::constants;
 
-use crate::snomed::{EDITION, FixtureError, GB_REFSET, NL_REFSET, VERSION, item, sctid};
+use crate::snomed::{
+    EDITION, FixtureError, GB_REFSET, ICD10_MAP_SCTID, NL_REFSET, VERSION, item, sctid,
+};
 
 /// The children each concept has, so the tree is broad and shallow the way a
 /// SNOMED hierarchy is.
@@ -42,6 +44,15 @@ pub const ROOT: u32 = 0;
 #[must_use]
 pub fn code(ordinal: u32) -> String {
     sctid(item(ordinal.saturating_add(FIRST_ITEM)))
+}
+
+/// The invented map-target code the ICD-10 extended map gives `ordinal`.
+///
+/// The shape is a letter and digits, the way an ICD-10 code reads; the values
+/// are generated and stand for no real classification code.
+#[must_use]
+pub fn map_target(ordinal: u32) -> String {
+    format!("X{ordinal:05}")
 }
 
 /// The parent of `ordinal`, or `None` for the root.
@@ -213,11 +224,17 @@ pub fn write(dir: &Path, concepts: u32) -> Result<(), FixtureError> {
     std::fs::write(dir.join("text.bin"), &text_bytes)?;
 
     let set: u64 = code(refset(concepts)).parse().unwrap_or_default();
+    let map: u64 = ICD10_MAP_SCTID.parse().unwrap_or_default();
     let module_id: u64 = module.parse().unwrap_or_default();
     let members: Vec<u32> = (0..concepts).step_by(MEMBER_EVERY).collect();
     let mut memberships = Memberships::new();
     for member in &members {
         memberships.insert(set, Ordinal::new(*member));
+    }
+    // Every concept maps, so the map reference set grows with the edition and a
+    // translation over it is measured against a map of a realistic size.
+    for ordinal in 0..concepts {
+        memberships.insert(map, Ordinal::new(ordinal));
     }
     let mut member_bytes = Vec::new();
     memberships
@@ -237,6 +254,37 @@ pub fn write(dir: &Path, concepts: u32) -> Result<(), FixtureError> {
                     effective_time: 20_260_101,
                     module: module_id,
                     values: Vec::new(),
+                })
+                .collect(),
+        )
+        .map_err(|e| graph_error(&e))?;
+    // The ICD-10 extended map, in the columns RF2 gives it, under the published
+    // reference set id, so the implicit concept map of the edition names a target
+    // code system (RF2 §Extended Map Reference Set).
+    tables
+        .insert(
+            map,
+            &[
+                (String::from("mapGroup"), refsets::FieldKind::Integer),
+                (String::from("mapPriority"), refsets::FieldKind::Integer),
+                (String::from("mapRule"), refsets::FieldKind::String),
+                (String::from("mapAdvice"), refsets::FieldKind::String),
+                (String::from("mapTarget"), refsets::FieldKind::String),
+                (String::from("correlationId"), refsets::FieldKind::Component),
+            ],
+            (0..concepts)
+                .map(|ordinal| refsets::MemberRow {
+                    concept: Ordinal::new(ordinal),
+                    effective_time: 20_260_101,
+                    module: module_id,
+                    values: vec![
+                        refsets::FieldValue::Integer(1),
+                        refsets::FieldValue::Integer(1),
+                        refsets::FieldValue::String(String::from("TRUE")),
+                        refsets::FieldValue::String(format!("ALWAYS {}", map_target(ordinal))),
+                        refsets::FieldValue::String(map_target(ordinal)),
+                        refsets::FieldValue::Component(447_561_005),
+                    ],
                 })
                 .collect(),
         )

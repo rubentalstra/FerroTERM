@@ -77,6 +77,7 @@ struct System {
     expand: Option<String>,
     expand_small: Option<String>,
     search: String,
+    translate: Option<[String; 2]>,
 }
 
 /// The machine a record was taken on.
@@ -318,6 +319,15 @@ fn requests(base: &str, system: &System) -> Vec<Request> {
             operation: String::from("search"),
             url: format!("{base}/ValueSet/$expand"),
             query: q(&[("url", url), ("filter", &system.search), ("count", "20")]),
+        });
+    }
+    // A translation over a map reference set with tens of thousands of members,
+    // which is the read that has to cost the answer rather than the set (#369).
+    if let Some([map, code]) = &system.translate {
+        out.push(Request {
+            operation: String::from("translate"),
+            url: format!("{base}/ConceptMap/$translate"),
+            query: q(&[("url", map), ("system", &system.uri), ("code", code)]),
         });
     }
     out
