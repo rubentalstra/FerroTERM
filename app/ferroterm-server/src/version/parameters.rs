@@ -148,8 +148,18 @@ macro_rules! parameters {
             /// Returns `415` for another media type and `400` for a body that is not a
             /// `Parameters` resource.
             pub fn parameters_from_body(headers: &HeaderMap, body: &Bytes) -> Result<Parameters, Failure> {
+                parameters_from_object(&object_from_body(headers, body)?)
+            }
+
+            /// The `Parameters` resource of a `POST` invocation as its JSON object.
+            ///
+            /// # Errors
+            ///
+            /// Returns `415` for another media type and `400` for a body that is not a
+            /// FHIR object.
+            pub fn object_from_body(headers: &HeaderMap, body: &Bytes) -> Result<fhir_types::codec::Object, Failure> {
                 let structure = |text: String| Failure::new(StatusCode::BAD_REQUEST, "structure", text);
-                let mut path = Path::root("Parameters");
+                let path = Path::root("Parameters");
                 let object = match Wire::of_body(headers)? {
                     Wire::Json => {
                         let value: serde_json::Value = serde_json::from_slice(body)
@@ -165,7 +175,18 @@ macro_rules! parameters {
                             .map_err(|e| structure(e.to_string()))?
                     }
                 };
-                Parameters::from_json(&object, &mut path).map_err(|e| structure(e.to_string()))
+                Ok(object)
+            }
+
+            /// The `Parameters` resource `object` holds.
+            ///
+            /// # Errors
+            ///
+            /// Returns `400` for an object that is not a `Parameters` resource.
+            pub fn parameters_from_object(object: &fhir_types::codec::Object) -> Result<Parameters, Failure> {
+                let mut path = Path::root("Parameters");
+                Parameters::from_json(object, &mut path)
+                    .map_err(|e| Failure::new(StatusCode::BAD_REQUEST, "structure", e.to_string()))
             }
 
             /// The `400` failure for a `Parameters` that does not fit the operation.

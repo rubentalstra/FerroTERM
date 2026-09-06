@@ -93,6 +93,7 @@ impl std::error::Error for DecodeError {}
 #[derive(Debug, Default, Clone)]
 pub struct Path {
     segments: Vec<String>,
+    lenient: bool,
 }
 
 impl Path {
@@ -101,7 +102,31 @@ impl Path {
     pub fn root(root: &str) -> Self {
         Self {
             segments: vec![root.to_owned()],
+            lenient: false,
         }
+    }
+
+    /// A path starting at `root` that reads a required primitive stating no
+    /// value as the value-less element it would be with only an extension.
+    ///
+    /// Cardinality is an aspect of validating a resource, which a server
+    /// performs at its discretion, and an implementation "should be
+    /// conservative in its sending behavior, and liberal in its receiving
+    /// behavior" (<https://hl7.org/fhir/R4B/validation.html>). A reader that
+    /// is handed a resource to use, rather than to store, takes this path so
+    /// one absent element does not cost the whole request.
+    #[must_use]
+    pub fn lenient(root: &str) -> Self {
+        Self {
+            segments: vec![root.to_owned()],
+            lenient: true,
+        }
+    }
+
+    /// Whether this read tolerates a required primitive that states no value.
+    #[must_use]
+    pub const fn is_lenient(&self) -> bool {
+        self.lenient
     }
 
     /// Runs `f` under `name`.
@@ -446,7 +471,9 @@ pub fn expect_u32(value: &Value, min: u32, path: &Path) -> Result<u32, DecodeErr
 /// Returns [`DecodeError`] when `value` is not a string holding an integer.
 pub fn expect_i64_string(value: &Value, path: &Path) -> Result<i64, DecodeError> {
     match value {
-        Value::String(s) => s.parse().map_err(|_| path.error(DecodeErrorKind::BadNumber)),
+        Value::String(s) => s
+            .parse()
+            .map_err(|_| path.error(DecodeErrorKind::BadNumber)),
         _ => Err(path.error(DecodeErrorKind::WrongType {
             expected: "a string holding an integer",
         })),
@@ -587,7 +614,12 @@ impl<'a> ChoiceSlot<'a> {
     /// # Errors
     ///
     /// Returns [`DecodeError`] when another form was already seen.
-    pub fn value(&mut self, suffix: &'static str, value: &'a Value, path: &Path) -> Result<(), DecodeError> {
+    pub fn value(
+        &mut self,
+        suffix: &'static str,
+        value: &'a Value,
+        path: &Path,
+    ) -> Result<(), DecodeError> {
         self.claim(suffix, path)?;
         self.value = Some(value);
         Ok(())
@@ -598,7 +630,12 @@ impl<'a> ChoiceSlot<'a> {
     /// # Errors
     ///
     /// Returns [`DecodeError`] when another form was already seen.
-    pub fn element(&mut self, suffix: &'static str, element: &'a Value, path: &Path) -> Result<(), DecodeError> {
+    pub fn element(
+        &mut self,
+        suffix: &'static str,
+        element: &'a Value,
+        path: &Path,
+    ) -> Result<(), DecodeError> {
         self.claim(suffix, path)?;
         self.element = Some(element);
         Ok(())

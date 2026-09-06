@@ -95,6 +95,7 @@ impl std::error::Error for DecodeError {}
 #[derive(Debug, Default, Clone)]
 pub struct Path {
     segments: Vec<String>,
+    lenient: bool,
 }
 
 impl Path {
@@ -103,7 +104,31 @@ impl Path {
     pub fn root(root: &str) -> Self {
         Self {
             segments: vec![root.to_owned()],
+            lenient: false,
         }
+    }
+
+    /// A path starting at `root` that reads a required primitive stating no
+    /// value as the value-less element it would be with only an extension.
+    ///
+    /// Cardinality is an aspect of validating a resource, which a server
+    /// performs at its discretion, and an implementation "should be
+    /// conservative in its sending behavior, and liberal in its receiving
+    /// behavior" (<https://hl7.org/fhir/R4B/validation.html>). A reader that
+    /// is handed a resource to use, rather than to store, takes this path so
+    /// one absent element does not cost the whole request.
+    #[must_use]
+    pub fn lenient(root: &str) -> Self {
+        Self {
+            segments: vec![root.to_owned()],
+            lenient: true,
+        }
+    }
+
+    /// Whether this read tolerates a required primitive that states no value.
+    #[must_use]
+    pub const fn is_lenient(&self) -> bool {
+        self.lenient
     }
 
     /// Runs `f` under `name`.

@@ -546,11 +546,11 @@ fn subject_system(
     let inferred = if policy.infer_system {
         infer_by_membership(sources, model, resolver, subject, policy.language)?
     } else {
-        infer_system(model)
+        infer_system(model).into_iter().collect()
     };
-    Ok(match inferred {
-        Some(system) => Ok(system),
-        None => Err(Box::new(cannot_infer(model, subject))),
+    Ok(match inferred.as_slice() {
+        [one] => Ok(one.clone()),
+        several => Err(Box::new(cannot_infer(model, subject, several))),
     })
 }
 
@@ -1218,19 +1218,33 @@ fn unserved_subject(
         super::at(subject.expression, "system"),
         valid,
     );
+    let referenced = model
+        .compose
+        .include
+        .iter()
+        .chain(&model.compose.exclude)
+        .any(|i| i.system.as_ref().is_some_and(|s| s.url == system));
     // NOTE: the ecosystem's shape: the membership issue first, then the missing
     // system; the system is "caused by" the value set only when the value set
     // names it, else it is the input's own unknown system (`x-unknown-system`).
+
+    // NOTE: a value set that selects from the missing system says nothing about
+    // membership, so the server reports only that it cannot check
+    // (<https://hl7.org/fhir/R4B/valueset-operation-validate-code.html>).
     let mut validation = failed(
         Some(system.to_owned()),
         version.map(str::to_owned),
-        not_in_vs(
-            model,
-            system,
-            subject.code,
-            subject.display,
-            subject.expression,
-        ),
+        if referenced {
+            not_found.clone()
+        } else {
+            not_in_vs(
+                model,
+                system,
+                subject.code,
+                subject.display,
+                subject.expression,
+            )
+        },
     );
     if let Some(local) = local_system(system, subject.expression) {
         validation.issues.push(local);
@@ -1251,15 +1265,11 @@ fn unserved_subject(
         validation.code = Some(subject.code.to_owned());
         return validation;
     }
-    validation.issues.push(not_found);
+    if !referenced {
+        validation.issues.push(not_found);
+    }
     validation.message = message_of(&validation.issues);
     validation.code = Some(subject.code.to_owned());
-    let referenced = model
-        .compose
-        .include
-        .iter()
-        .chain(&model.compose.exclude)
-        .any(|i| i.system.as_ref().is_some_and(|s| s.url == system));
     if referenced || version.is_some() {
         validation.unknown_systems.push(canonical);
     } else {
@@ -1432,15 +1442,16 @@ fn infer_system(model: &ValueSetModel) -> Option<String> {
     }
 }
 
-/// The one system of the value set whose code `subject.code` is in the value
-/// set (`inferSystem`); `None` when none or several are.
+/// The systems of the value set whose `subject.code` the value set contains
+/// (`inferSystem`), in system order; one is the inferred system and several
+/// leave it undetermined.
 fn infer_by_membership(
     sources: &Sources<'_>,
     model: &ValueSetModel,
     resolver: &Resolver<'_>,
     subject: &Subject<'_>,
     language: Option<&str>,
-) -> Result<Option<String>, OperationError> {
+) -> Result<Vec<String>, OperationError> {
     let mut systems: Vec<&str> = model
         .compose
         .include
@@ -1471,10 +1482,7 @@ fn infer_by_membership(
             Err(error) => return Err(error.into()),
         }
     }
-    Ok(match matches.as_slice() {
-        [one] => Some(one.clone()),
-        _ => None,
-    })
+    Ok(matches)
 }
 
 /// The failed validation of a bare code whose system cannot be determined:
@@ -1502,12 +1510,28 @@ fn no_system(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
     validation
 }
 
-fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
+fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>, matches: &[String]) -> Validation {
+    // NOTE: `inferSystem` needs one system of the value set to hold the code;
+    // the ecosystem names the competing systems when several do
+    // (<https://hl7.org/fhir/R5/valueset-operation-validate-code.html>).
+    let competing = if matches.len() > 1 {
+        format!(
+            ": value set expansion has multiple matches: [{}]",
+            matches.join(", ")
+        )
+    } else {
+        String::new()
+    };
     let text = format!(
-        "The System URI could not be determined for the code '{}' in the ValueSet '{}'",
+        "The System URI could not be determined for the code '{}' in the ValueSet '{}'{competing}",
         subject.code,
         model.canonical()
     );
+    let message = if matches.len() > 1 {
+        crate::operations::MessageId::UnableToResolveSystemValueSetHasMultipleMatches
+    } else {
+        crate::operations::MessageId::UnableToInferCodeSystem
+    };
     let mut validation = failed(
         None,
         None,
@@ -1517,7 +1541,7 @@ fn cannot_infer(model: &ValueSetModel, subject: &Subject<'_>) -> Validation {
         severity: "error",
         code: "not-found",
         kind: "cannot-infer",
-        message: crate::operations::MessageId::UnableToInferCodeSystem,
+        message,
         text,
         expression: super::at(subject.expression, "code"),
     });

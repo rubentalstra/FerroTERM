@@ -31,6 +31,8 @@ pub struct Failure {
     pub diagnostics: String,
     /// The `tx-issue-type` code in `issue.details.coding`, when one applies.
     pub kind: Option<&'static str>,
+    /// The path of the element at fault, for `issue.expression`.
+    pub expression: Option<String>,
 }
 
 impl Failure {
@@ -42,6 +44,7 @@ impl Failure {
             code,
             diagnostics: diagnostics.into(),
             kind: None,
+            expression: None,
         }
     }
 
@@ -49,6 +52,13 @@ impl Failure {
     #[must_use]
     pub fn kind(mut self, kind: &'static str) -> Self {
         self.kind = Some(kind);
+        self
+    }
+
+    /// This failure pointing at the element at `expression`.
+    #[must_use]
+    pub fn at(mut self, expression: impl Into<String>) -> Self {
+        self.expression = Some(expression.into());
         self
     }
 
@@ -72,6 +82,11 @@ impl Failure {
                     ..Default::default()
                 }),
                 diagnostics: Some(self.diagnostics.as_str().into()),
+                expression: self
+                    .expression
+                    .iter()
+                    .map(|expression| expression.as_str().into())
+                    .collect(),
                 ..Default::default()
             }],
             ..Default::default()

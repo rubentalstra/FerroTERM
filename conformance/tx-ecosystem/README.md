@@ -20,9 +20,9 @@ above the suite's own.
 
 | mode | surface | pass list | passed of ran | needs | open failures |
 |---|---|---|---|---|---|
-| `general` | `/r4b` | `passing.txt` | 564 of 670 | nothing | #353 |
-| `general` | `/r4` | `passing-r4.txt` | 568 of 670 | nothing | #353 |
-| `general` | `/r5` | `passing-r5.txt` | 570 of 670 | nothing | #353 |
+| `general` | `/r4b` | `passing.txt` | 574 of 670 | nothing | #353 |
+| `general` | `/r4` | `passing-r4.txt` | 578 of 670 | nothing | #353 |
+| `general` | `/r5` | `passing-r5.txt` | 580 of 670 | nothing | #353 |
 | `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
 | `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 55 of 227 | a LOINC release | #420, #421, #305, #349 |
@@ -76,9 +76,9 @@ hand before a release and their lists are refreshed in the same change.
   the next section settles (#353).
 - **`omop`** needs the OMOP standardized vocabularies, which this server does
   not load and which OHDSI distributes through Athena under per-vocabulary
-  licences. The mode runs and scores 1 of 28. Its setup ValueSet is also
-  missing the required `ValueSet.status`, so every case is refused before the
-  vocabulary would be reached. #345 holds both findings.
+  licences. The mode runs and scores 1 of 28. Its setup ValueSet states no
+  `ValueSet.status`; the server reads a supplied resource leniently and its
+  cases now reach the missing vocabulary. #345 holds the finding.
 
 ## The `tx.fhir.org` mode, clustered by cause
 
@@ -199,15 +199,17 @@ collection of languages", so `zh` does not subsume `zh-min-nan`.
   `definition` matches no R4-family output name, so it belongs in `property`
   there. All three pass on `/r5`, and the three stay unpassed on `/r4b` and
   `/r4` because the case reads an R5 shape onto an R4-family surface.
-- **A `tx-resource` the request supplies that is not valid FHIR refuses the
-  whole request.** Seven cases fail this way. `errors/unknown-system1`,
-  `unknown-system2`, `combination-ok`, and `combination-bad` are handed
-  `errors/valueset-broken-filter.json`, whose `compose.include.filter` states no
-  `value` (1..1 in every version's `ValueSet` `StructureDefinition`);
-  `other/dual-filter`, `validation-dual-filter-in`, and
-  `validation-dual-filter-out` are handed a value set with no `status` (also
-  1..1). The server answers 400 with a `structure` issue naming the element,
-  and the three `errors/broken-filter*` cases that are actually about the
-  broken filter want `invalid` rather than `structure`. Reading a supplied
-  resource leniently enough to report the defect only where it is used is
-  tracked separately.
+- **A supplied `tx-resource` is read leniently and refuses only the request
+  that resolves it.** Cardinality is an aspect of validating a resource, which
+  a server performs at its discretion, and an implementation "should be
+  conservative in its sending behavior, and liberal in its receiving behavior"
+  (<https://hl7.org/fhir/R4B/validation.html>). A required primitive that
+  states no value reads as the value-less element it would be with only an
+  extension, so `other/dual-filter` and the two `validation-dual-filter` cases
+  pass over a value set with no `status`. A resource the server still cannot
+  use is recorded, so `errors/unknown-system1`, `unknown-system2`,
+  `combination-ok`, and `combination-bad` are no longer refused for a broken
+  filter they never touch. The three `errors/broken-filter*` cases do resolve
+  it and answer `invalid` with the `vs-invalid` classification, the
+  `IssueType` reading of "content invalid against the specification"
+  (`structure` stays for a body the server cannot parse at all).

@@ -26,6 +26,19 @@ const UNCLOSED_EXTENSION: &str = "http://hl7.org/fhir/StructureDefinition/values
 const UNCLOSED_REASON_EXTENSION: &str =
     "http://hl7.org/fhir/StructureDefinition/valueset-unclosed-reason";
 
+/// The `ValueSet.status` to write for `model`.
+///
+/// `status` is 1..1, so a value set read from a resource that stated none
+/// still has to state one; `unknown` is the `PublicationStatus` code for
+/// exactly that ("The resource status is undetermined",
+/// <https://hl7.org/fhir/R4B/codesystem-publication-status.html>).
+fn status(model: &crate::valueset::model::ValueSetModel) -> &str {
+    match model.status.as_str() {
+        "" => "unknown",
+        stated => stated,
+    }
+}
+
 macro_rules! render_value_set {
     // R6 makes `compose.include.filter.value` optional
     // (<https://hl7.org/fhir/6.0.0-ballot5/valueset-definitions.html#ValueSet.compose.include.filter.value>).
@@ -240,7 +253,7 @@ macro_rules! render_value_set {
                     language: model.language.as_deref().map(Into::into),
                     name: model.name.as_deref().map(Into::into),
                     title: model.title.as_deref().map(Into::into),
-                    status: model.status.as_str().into(),
+                    status: super::status(model).into(),
                     experimental: model.experimental.map(Into::into),
                     date: model.date.as_deref().map(Into::into),
                     // NOTE: `publisher` travels with the definition, as `compose` does

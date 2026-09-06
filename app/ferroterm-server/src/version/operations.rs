@@ -43,7 +43,7 @@ macro_rules! operations {
             use fhir_types::codec::Json;
             use http::{HeaderMap, StatusCode};
 
-            use super::resources::split_resources;
+            use super::resources::{split_resources, split_supplied};
             use super::{map, parameters};
             use crate::outcome::Failure;
             use crate::scope::{Scope, scope_of};
@@ -125,7 +125,7 @@ macro_rules! operations {
                 body: &Bytes,
             ) -> Result<(Scope, Parameters), Failure> {
                 let (mut parameters, resources) =
-                    split_resources(parameters::parameters_from_body(headers, body)?)?;
+                    split_supplied(parameters::object_from_body(headers, body)?)?;
                 parameters::apply_accept_language(operation, headers, &mut parameters);
                 Ok((scope_of(state, headers, resources)?, parameters))
             }
@@ -138,7 +138,8 @@ macro_rules! operations {
                 let request = CodeSystemLookupRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let outcome =
-                    lookup::lookup(scope.registry(), invocation, &map::lookup_input(&request))?;
+                    lookup::lookup(scope.registry(), invocation, &map::lookup_input(&request))
+                        .map_err(|e| scope.refused(e))?;
                 Ok(Answer::Parameters(Box::new(
                     map::lookup_response(outcome).to_parameters(),
                 )))
@@ -155,7 +156,8 @@ macro_rules! operations {
                     scope.registry(),
                     invocation,
                     &map::validate_code_input(&request),
-                )?;
+                )
+                .map_err(|e| scope.refused(e))?;
                 Ok(Answer::Parameters(Box::new(
                     map::validate_code_response(outcome).to_parameters(),
                 )))
@@ -172,7 +174,8 @@ macro_rules! operations {
                     scope.registry(),
                     invocation,
                     &map::subsumes_input(&request),
-                )?;
+                )
+                .map_err(|e| scope.refused(e))?;
                 Ok(Answer::Parameters(Box::new(
                     map::subsumes_response(outcome).to_parameters(),
                 )))
@@ -181,7 +184,8 @@ macro_rules! operations {
             fn run_expand(scope: &Scope, parameters: &Parameters) -> Handled {
                 let request = ValueSetExpandRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
-                let outcome = expand::expand(&scope.sources(), &map::expand_input(&request))?;
+                let outcome = expand::expand(&scope.sources(), &map::expand_input(&request))
+                    .map_err(|e| scope.refused(e))?;
                 Ok(Answer::ValueSet(Box::new(render::$fhir::expansion(
                     &outcome,
                 ))))
@@ -203,7 +207,8 @@ macro_rules! operations {
                 let validation = value_set_validate_code::validate_code(
                     &scope.sources(),
                     &map::value_set_validate_input(&request),
-                )?;
+                )
+                .map_err(|e| scope.refused(e))?;
                 Ok(map::value_set_validation_parameters(&validation))
             }
 
@@ -343,7 +348,8 @@ macro_rules! operations {
                 let request = ConceptMapTranslateRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
                 let translation =
-                    translate::translate(&scope.sources(), &map::translate_input(&request))?;
+                    translate::translate(&scope.sources(), &map::translate_input(&request))
+                        .map_err(|e| scope.refused(e))?;
                 Ok(Answer::Parameters(Box::new(map::translation_parameters(
                     &translation,
                 ))))
