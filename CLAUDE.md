@@ -56,8 +56,11 @@ crate-local discipline.
   negotiation, runtime version routing).
 - `app/ferroterm-viewer`: the Leptos web UI, client-side rendered and served by
   the one server binary as static assets. A pure FHIR client over HTTP that
-  depends on no other crate in the workspace. Designed in `docs/viewer.md`,
-  tracked under issue #366, not yet built.
+  depends on no other crate in the workspace, which
+  `scripts/checks/viewer-boundary.sh` enforces. Built by Trunk
+  (`cd app/ferroterm-viewer && trunk build --release --locked`), never by
+  `cargo` alone, and its `dist/` is never committed. Designed in
+  `docs/viewer.md`, tracked under issue #366.
 - `tools/fhir-codegen`: the generator, from vendored FHIR packages to
   `fhir-types`.
 - `tools/ferroterm-build`: the offline build, from an RF2 release to the

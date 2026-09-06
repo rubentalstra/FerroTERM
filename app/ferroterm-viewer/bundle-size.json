@@ -1,0 +1,24 @@
+{
+  "note": "The size of the viewer bundle every reader downloads, gzipped. A bar is the claim the project makes, and it moves only when a change is worth the bytes.",
+  "measured": "2026-09-06",
+  "bars": [
+    {
+      "asset": "wasm",
+      "pattern": "*_bg.wasm",
+      "max_gzip_bytes": 240000,
+      "claim": "the WebAssembly module is under 235 KiB gzipped"
+    },
+    {
+      "asset": "js",
+      "pattern": "*.js",
+      "max_gzip_bytes": 12000,
+      "claim": "the wasm-bindgen bootstrap is under 12 KB gzipped"
+    },
+    {
+      "asset": "css",
+      "pattern": "*.css",
+      "max_gzip_bytes": 8000,
+      "claim": "the compiled Tailwind sheet is under 8 KB gzipped"
+    }
+  ]
+}

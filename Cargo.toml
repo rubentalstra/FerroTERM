@@ -63,6 +63,20 @@ anyhow = "1.0.104"
 jiff = "0.2.35"
 # Expansion identifiers (`ValueSet.expansion.identifier`, a `urn:uuid:`).
 uuid = { version = "1.26.0", features = ["v4"] }
+# The viewer (app/ferroterm-viewer): a Leptos WebAssembly FHIR client, built by
+# Trunk and rendered entirely in the browser. Every version below was checked
+# against crates.io on 2026-09-06.
+leptos = { version = "0.8.20", features = ["csr"] }
+leptos_meta = "0.8.6"
+leptos_router = "0.8.15"
+# crates.io has no thaw 0.5 stable: 0.4.8 predates Leptos 0.8 and 0.5.0-beta
+# predates the recursion_limit fix, so the pinned rev is the tip of `main`
+# (confirmed with `git ls-remote https://github.com/thaw-ui/thaw`, 2026-09-06).
+thaw = { git = "https://github.com/thaw-ui/thaw", rev = "0726a3d6788f07e929996e77399d83655ffaacde", features = ["csr"] }
+gloo-net = { version = "0.7.0", default-features = false, features = ["http", "json"] }
+web-sys = "0.3.105"
+console_error_panic_hook = "0.1.7"
+percent-encoding = "2.3.2"
 # Observability.
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
@@ -223,3 +237,17 @@ let_underscore_lock = "deny"
 panic = "unwind"
 overflow-checks = true
 debug = "line-tables-only"
+
+# The viewer bundle is downloaded by every reader, so it optimizes for size
+# where the server optimizes for speed. `index.html` selects this profile with
+# `data-cargo-profile-release`
+# (https://github.com/trunk-rs/trunk/blob/main/guide/src/assets/index.md).
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+# A WebAssembly stack trace is a browser-console concern, and the debug info
+# is dead weight in a downloaded artifact.
+debug = false
+strip = "debuginfo"

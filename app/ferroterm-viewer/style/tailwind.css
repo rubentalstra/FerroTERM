@@ -1,0 +1,50 @@
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* The viewer's token layer. Tailwind 4 is configured in CSS, so there is no
+   JavaScript config file and no Node in this build.
+   https://tailwindcss.com/docs/upgrade-guide */
+/* `source(none)` turns off automatic detection, which would otherwise walk up
+   out of this crate and scan the whole workspace. The two sources below are
+   the only places a class name is written, and the paths are relative to this
+   file. https://tailwindcss.com/docs/detecting-classes-in-source-files */
+@import "tailwindcss" source(none);
+@source "../src/**/*.rs";
+@source "../index.html";
+
+/* The theme follows an explicit choice, which app.rs puts on the document
+   element, rather than the operating system preference alone. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* The FerroTERM brand palette (assets/brand/tokens.css). */
+@theme {
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-900: #134e4a;
+  --color-accent-400: #22d3ee;
+  --color-ink: #0f172a;
+  --color-mist: #f1f5f9;
+  --color-tile: #0b1220;
+}
+
+/* A visible focus indicator on every control, which WCAG 2.2 requires
+   (https://www.w3.org/TR/WCAG22/#focus-appearance). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

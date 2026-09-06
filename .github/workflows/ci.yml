@@ -309,6 +309,24 @@ jobs:
       # yanked/licenses/bans/sources, so no separate cargo-audit job exists.
       - run: cargo deny check
 
+  # The viewer is a FHIR client and links no crate from this workspace, so
+  # anything it can do a client can do. One dependency edge into the engine
+  # would break that silently, so the resolved closure is walked here.
+  viewer-boundary:
+    name: viewer-boundary
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - run: bash scripts/checks/viewer-boundary.sh
+
   codegen-drift:
     name: codegen-drift
     needs: detect
@@ -505,6 +523,7 @@ jobs:
       - test
       - doc
       - cargo-deny
+      - viewer-boundary
       - codegen-drift
       - crate-version-guard
       - publish-dry-run
