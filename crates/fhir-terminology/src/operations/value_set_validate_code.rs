@@ -155,6 +155,7 @@ fn prepare(
         url.as_deref(),
         version.as_deref(),
     )?;
+    let negotiation = negotiation.with_include_versions(&model.compose);
     let model = Arc::new(ValueSetModel {
         compose: negotiation.pin_lenient(&model.compose),
         ..(*model).clone()
@@ -279,8 +280,9 @@ pub fn validate_code(
         registry: &registry,
         ..*sources
     };
-    let resolver =
-        Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
+    let resolver = Resolver::new(sources.registry, sources.value_sets)
+        .with_negotiation(&negotiation)
+        .with_contained(&model.contained);
     let policy = policy_of(input, &model);
     let check = |subject: &Subject<'_>| -> Result<Validation, OperationError> {
         check(sources, &model, &resolver, &negotiation, subject, &policy)
@@ -410,7 +412,27 @@ fn combine(model: &ValueSetModel, judged: &[(&CodingRef, Validation)]) -> Valida
     if let Some(failed) = include_version_unserved(model, judged) {
         return failed;
     }
+    if let Some(resolved) = version_mismatch(judged) {
+        return resolved;
+    }
     first_in_value_set(model, judged).unwrap_or_else(|| none_in_value_set(model, judged))
+}
+
+/// The answer when the one coding named a code system version the value set
+/// include disagrees with.
+///
+/// The concept is resolved, so the coding answers alone and keeps the `system`
+/// and `code` "against which validation was based", which the ecosystem
+/// requires of every answer
+/// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+fn version_mismatch(judged: &[(&CodingRef, Validation)]) -> Option<Validation> {
+    let [(_, only)] = judged else {
+        return None;
+    };
+    only.issues
+        .iter()
+        .any(|issue| issue.kind == "vs-invalid")
+        .then(|| only.clone())
 }
 
 /// The answer when one coding names an import the server does not hold.
@@ -626,8 +648,9 @@ fn check(
             version,
             &located,
             display.as_deref(),
-            subject.display,
-            subject.expression,
+            subject,
+            &provider.status(located.concept)?,
+            policy,
         );
         validation.issues.splice(0..0, target.issues);
         validation.message = message_of(&validation.issues);
@@ -1144,13 +1167,11 @@ fn negotiation_original(
     system: &str,
     pinned: Option<&str>,
 ) -> Option<String> {
-    // The lenient pin replaced the literal only when a parameter named one; the
-    // parameter itself tells us so.
-    let from_parameter = negotiation.system_literal(system, None);
-    match (from_parameter, pinned) {
-        (Some(param), Some(now)) if param == now => Some(String::new()),
-        _ => None,
-    }
+    let now = pinned?;
+    negotiation
+        .include_version(system)
+        .filter(|stated| *stated != now)
+        .map(str::to_owned)
 }
 
 /// A `vs-invalid` issue about the include's version, at `Coding.version`.
@@ -1664,22 +1685,66 @@ fn unknown_code(
 
 /// The failed validation of a code the system has but the value set does
 /// not: the code and its display are still echoed.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the phases of `check` hand over what they resolved"
+)]
 fn outside_value_set(
     model: &ValueSetModel,
     system: &str,
     version: String,
     located: &Located,
     display: Option<&str>,
-    given: Option<&str>,
-    expression: &str,
+    subject: &Subject<'_>,
+    concept_status: &crate::provider::Status,
+    policy: &Policy<'_>,
 ) -> Validation {
-    let mut validation = failed(
-        Some(system.to_owned()),
-        Some(version),
-        not_in_vs(model, system, &located.code, given, expression),
-    );
-    validation.code = Some(located.code.clone());
-    validation.display = display.map(str::to_owned);
+    let (given, expression) = (subject.display, subject.expression);
+    let mut issues = Vec::new();
+    // NOTE: a concept the value set refuses because it is inactive is valid in
+    // its code system, which the ecosystem reports as its own rule
+    // (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+    if !concept_status.active
+        && (policy.inactive == InactivePolicy::Refused || model.compose.inactive == Some(false))
+    {
+        issues.push(Issue {
+            severity: "error",
+            code: "business-rule",
+            kind: "code-rule",
+            message: crate::operations::MessageId::StatusCodeWarningCode,
+            text: format!("The concept '{}' is valid but is not active", located.code),
+            expression: super::at(expression, "code"),
+        });
+    }
+    issues.push(not_in_vs(model, system, &located.code, given, expression));
+    if !policy.membership_only {
+        if let Some((note, _)) =
+            super::inactive_note(&located.code, concept_status, super::whole(expression))
+        {
+            issues.push(note);
+        } else if let Some((note, _)) =
+            super::deprecated_note(&located.code, concept_status, super::whole(expression))
+        {
+            issues.push(note);
+        }
+    }
+    let (inactive, status) = inactive_outputs(concept_status);
+    let mut validation = Validation {
+        result: false,
+        message: None,
+        display: display.map(str::to_owned),
+        system: Some(system.to_owned()),
+        version: Some(version).filter(|v| !v.is_empty()),
+        code: Some(located.code.clone()),
+        normalized_code: None,
+        issues,
+        unknown_systems: Vec::new(),
+        x_unknown_systems: Vec::new(),
+        codeable_concept: None,
+        inactive,
+        status,
+    };
+    validation.message = message_of(&validation.issues);
     validation
 }
 
