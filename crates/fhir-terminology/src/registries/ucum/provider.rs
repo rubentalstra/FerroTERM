@@ -20,9 +20,10 @@ use crate::registries::interned::Interned;
 /// The system URI (<https://terminology.hl7.org/UCUM.html>).
 pub const URL: &str = "http://unitsofmeasure.org";
 
-/// The language of the unit names this provider renders: `ucum-essence.xml`
-/// gives each prefix and unit one `<name>`, in English, and no translation.
-/// No FHIR/SNOMED spec governs this: our own design.
+/// The language of the unit names this provider renders.
+///
+/// `ucum-essence.xml` gives each prefix and unit one `<name>`, in English, and
+/// no translation. No FHIR/SNOMED spec governs this: our own design.
 const BASE_LANGUAGE: &str = "en";
 
 /// The UCUM provider: every valid expression is a code.

@@ -32,9 +32,11 @@ use crate::pipeline::{HIERARCHY_FILE, MANIFEST_FILE, MANIFEST_VERSION, STORE_FIL
 /// The system URI.
 pub const SYSTEM: &str = "http://loinc.org";
 
-/// The language of the release's own tables: LOINC publishes `LoincTableCore`
-/// in English and its translations as linguistic variants
-/// (<https://loinc.org/international/>).
+/// The language of the release's own tables.
+///
+/// A release carries its names in `LoincTable/Loinc.csv` and its translations
+/// beside them in `AccessoryFiles/LinguisticVariants`, so the table itself is
+/// the English one. No FHIR/SNOMED spec governs this: our own design.
 pub const BASE_LANGUAGE: &str = "en";
 
 /// The designation uses, by ordinal: the `DESIGNATION_USES` vocabulary.

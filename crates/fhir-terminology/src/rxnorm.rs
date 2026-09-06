@@ -42,9 +42,11 @@ pub const MANIFEST_VERSION: u32 = 2;
 /// The properties with an inverted index, which are also the FHIR filters
 /// beside the relationships.
 const INDEXED: [&str; 3] = ["TTY", "SAB", "STY"];
-/// The language of an artifact whose manifest states none: the `RXNORM`
-/// atoms a release names its concepts by are English
-/// (<https://www.nlm.nih.gov/research/umls/rxnorm/docs/techdoc.html>).
+/// The language of an artifact whose manifest states none.
+///
+/// The `RXNORM` atoms a release names its concepts by carry `LAT` `ENG`
+/// (<https://www.nlm.nih.gov/research/umls/rxnorm/docs/techdoc.html>). No
+/// FHIR/SNOMED spec governs this: our own design.
 const DEFAULT_LANGUAGE: &str = "en";
 
 /// A failure to open an artifact as `RxNorm`.
