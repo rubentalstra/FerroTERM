@@ -617,7 +617,12 @@ impl<'a> Expander<'a> {
             let resolver = self
                 .resolver
                 .ok_or_else(|| ComposeError::NoResolver(url.clone()))?;
-            let referenced = self.selections_of(resolver.expand(url)?)?;
+            let expansion = resolver.expand(url)?;
+            // NOTE: a code system a referenced value set drew on is one this
+            // expansion used, so it belongs in `used-codesystem`
+            // (<https://hl7.org/fhir/R4B/valueset.html#compositions>).
+            versions.extend(expansion.versions.iter().cloned());
+            let referenced = self.selections_of(expansion)?;
             parts = Some(match parts {
                 None => referenced,
                 Some(current) => current

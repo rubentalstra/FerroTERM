@@ -20,9 +20,9 @@ above the suite's own.
 
 | mode | surface | pass list | passed of ran | needs | open failures |
 |---|---|---|---|---|---|
-| `general` | `/r4b` | `passing.txt` | 542 of 670 | nothing | #353 |
-| `general` | `/r4` | `passing-r4.txt` | 546 of 670 | nothing | #353 |
-| `general` | `/r5` | `passing-r5.txt` | 548 of 670 | nothing | #353 |
+| `general` | `/r4b` | `passing.txt` | 564 of 670 | nothing | #353 |
+| `general` | `/r4` | `passing-r4.txt` | 568 of 670 | nothing | #353 |
+| `general` | `/r5` | `passing-r5.txt` | 570 of 670 | nothing | #353 |
 | `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
 | `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 55 of 227 | a LOINC release | #420, #421, #305, #349 |
@@ -178,3 +178,36 @@ collection of languages", so `zh` does not subsume `zh-min-nan`.
 - **The `metadata` case fails on `/r4b`.** It asserts
   `CapabilityStatement.fhirVersion` is `4.0.1`; `/r4b` correctly reports
   `4.3.0`. It is on the `/r4` and `/r5` lists and off every `/r4b` one.
+
+## What the `general` mode still holds open
+
+- **Nine of the 670 entries are skips, not failures.** `simple-expand-isa-o2`,
+  `-c2`, and `-o2c2` declare `"mode": "tx.fhir.org"`, so the general run lists
+  them and runs neither; the six `translate`/`translate2` cases declare
+  `"version"`, so the three `-r4` ones run only on `/r4` and the two `r5+` ones
+  only on `/r4b` and `/r5`. Each surface therefore reports its own skip set and
+  no case is silently lost.
+- **`$lookup` answers `definition` in the `property` group on `/r4b` and
+  `/r4`, and the suite asks for a named parameter there.**
+  `simple-lookup-1`, `simple-lookup-2`, and `parameters-lookup-supplement-none`
+  expect a top-level `definition` output parameter on every surface. Only R5
+  and R6 declare one: `hl7.fhir.r4.core` 4.0.1 and `hl7.fhir.r4b.core` 4.3.0
+  declare `name`, `version`, `display`, `designation`, and `property` as the
+  outputs of `CodeSystem/$lookup`, and their `property` input says the defined
+  properties "are returned explicit in named parameters (when the names match),
+  and the rest (except for lang.X) in the property parameter group".
+  `definition` matches no R4-family output name, so it belongs in `property`
+  there. All three pass on `/r5`, and the three stay unpassed on `/r4b` and
+  `/r4` because the case reads an R5 shape onto an R4-family surface.
+- **A `tx-resource` the request supplies that is not valid FHIR refuses the
+  whole request.** Seven cases fail this way. `errors/unknown-system1`,
+  `unknown-system2`, `combination-ok`, and `combination-bad` are handed
+  `errors/valueset-broken-filter.json`, whose `compose.include.filter` states no
+  `value` (1..1 in every version's `ValueSet` `StructureDefinition`);
+  `other/dual-filter`, `validation-dual-filter-in`, and
+  `validation-dual-filter-out` are handed a value set with no `status` (also
+  1..1). The server answers 400 with a `structure` issue naming the element,
+  and the three `errors/broken-filter*` cases that are actually about the
+  broken filter want `invalid` rather than `structure`. Reading a supplied
+  resource leniently enough to report the defect only where it is used is
+  tracked separately.
