@@ -59,6 +59,7 @@ label server       bfd4f2 "The axum HTTP server (app/ferroterm-server)."
 label storage      d4c5f9 "The store, graph, text index, and redb persistence."
 label infra        bfdadc "CI/CD, supply chain, and deployment."
 label website      f9d0c4 "The docs site (website/book) and landing page."
+label viewer       e6c3a5 "The Leptos web UI (app/ferroterm-viewer)."
 
 echo "== workflow / meta labels =="
 label dependencies 0366d6 "Dependency updates (used by Dependabot)."
@@ -67,5 +68,7 @@ label blocked      000000 "Blocked by another open issue (see the dependencies p
 label blocked-upstream 6f42c1 "Waiting on an upstream spec or tool release."
 label on-hold      e4e669 "Parked: waits on an input nobody in the repository can provide (a licence, a file); no milestone."
 label upstream-report  990000 "An outbound report of a defect in the FHIR or SNOMED specs."
+label accessibility    f143ab "A barrier affecting people with disabilities."
+label no-crate-bump    bfdadc "The diff provably alters no packaged crate bytes; skips crate-version-guard."
 
 echo "done."

@@ -52,8 +52,10 @@ Bootstrap the labels once with `scripts/gh/labels.sh`.
   / `P2` (normal) / `P3` (backlog).
 - **Domain/area:** `spec:FHIR` (the FHIR terminology wire), `spec:SNOMED`
   (SNOMED CT / ECL / RF2 semantics), `codegen` (the `fhir-types` generator),
-  `server` (the axum server). Add more as the project grows; keep the set
-  small and meaningful.
+  `server` (the axum server), `viewer` (the Leptos web UI). Add more as the
+  project grows; keep the set small and meaningful, and add them to
+  `scripts/gh/labels.sh` in the same change so a fresh clone converges to the
+  taxonomy the tracker actually uses.
 
 ## Milestones = releases
 
