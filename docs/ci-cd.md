@@ -23,6 +23,8 @@ exist.
 | `release.yml` | `v*` orchestrator: draft → per-arch build → image → verify assets → publish last | on tag |
 | `release-image.yml` | reusable SLSA Build L3 lane: the distroless static image from the attested musl binaries, pushed to GHCR with provenance and SBOM attestations on the index and on each platform manifest | on tag |
 | `ci.yml` (`hadolint` job) | `hadolint` over `docker/Dockerfile` | now |
+| `ci.yml` (`viewer` job) | the viewer's WebAssembly lane: `cargo fmt` and `leptosfmt --check` over `app/ferroterm-viewer`, `cargo clippy --target wasm32-unknown-unknown -D warnings`, `cargo nextest run -p ferroterm-viewer`, `trunk build --release --locked`, and the recorded bundle size (`scripts/checks/bundle-size.sh`) | on workspace |
+| `ci.yml` (`viewer-boundary` job) | the viewer's resolved dependency closure links no workspace crate (`scripts/checks/viewer-boundary.sh`) | on workspace |
 | `ci.yml` (`bench-bars` job) | the four operations timed over a generated edition, each median compared to the claim in `bench/bars.json` (`scripts/checks/bench-bars.sh`) | on workspace |
 | `fuzz.yml` | weekly: every parser a client or a release reaches, fed arbitrary bytes under `cargo-fuzz` on nightly (`fuzz/README.md`) | weekly |
 | `ci.yml` (`tx-ecosystem` job) | the HL7 terminology ecosystem suite (`general` mode) against a release build through the FHIR Validator's `txTests`, gated by the committed pass list `conformance/tx-ecosystem/passing.txt` (`scripts/checks/tx-ecosystem.sh`) | on workspace |
@@ -60,6 +62,42 @@ writes it into the binary's `.dep-v0` section), a CycloneDX SBOM
 "signed SBOM" here is the SBOM wrapped in a Sigstore DSSE bundle bound to the
 artifact digest and signed by the pinnable workflow identity, verifiable with
 `gh attestation verify`.
+
+## The viewer bundle
+
+`app/ferroterm-viewer` compiles to WebAssembly and reaches a user as a bundle
+inside the `ferroterm` binary, so it has no image, no tarball, and no
+attestation subject of its own.
+
+On a pull request the `viewer` job is the whole gate. It formats the crate
+(`cargo fmt` plus `leptosfmt --check`, which reads the `view!` macros rustfmt
+leaves alone), runs clippy against `wasm32-unknown-unknown`, runs the crate's
+tests, builds the release bundle with Trunk, and measures it.
+`scripts/checks/bundle-size.sh` gzips each emitted asset and compares it to the
+claim in `app/ferroterm-viewer/bundle-size.json`, the shape `bench-bars.sh`
+uses for latency: the bar is what the project claims, and a breach is bytes to
+justify or a claim to withdraw. The clippy pass carries the most weight, since
+the browser target is the only place a dependency that cannot compile for
+WebAssembly shows up. Trunk 0.21.14 and `leptosfmt` 0.1.33 are installed at the
+versions `docs/VERSIONS.md` pins, and Trunk downloads the Tailwind standalone
+CLI itself at the version `Trunk.toml` names, so there is no Node in the lane.
+`scripts/checks/versions.sh` fails when any of those three pins drift apart.
+
+On a tag, `release-build.yml` runs `trunk build --release --locked` before
+`cargo auditable build`, and builds the server with the feature that embeds
+`dist/` into the binary. The bundle is architecture-independent, so the build
+is the same work in each per-architecture job; it happens inside the reusable
+lane because a bundle handed in by a caller job would put bytes the L3 builder
+did not produce inside the artifact it signs. The release therefore gains no
+new asset, no new attestation subject, and no change to the SLSA shape, and
+`docker/Dockerfile` gains no stage: the image copies the same two binaries it
+always did, one of which now carries the web UI. The feature name lives in one
+place, the `VIEWER_FEATURE` variable at the top of `release-build.yml`, and
+`scripts/checks/versions.sh` fails when the server stops declaring it. The lane
+also sets `FERROTERM_UI_BUNDLE` to the directory Trunk just wrote, because the
+server's build script refuses a named directory that does not read and only
+warns when it falls back to the default. A release that lost its bundle
+therefore fails to build rather than shipping a binary with no viewer in it.
 
 ## The container image
 

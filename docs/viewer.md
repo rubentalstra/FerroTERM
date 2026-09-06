@@ -473,7 +473,8 @@ harness, which needs a served bundle to drive.
 
 ## 12. What CI and CD gain
 
-The additions, to be recorded in `docs/ci-cd.md` when slice 3 lands:
+The additions, recorded in `docs/ci-cd.md` as they land. Everything below is
+built except the `ui-e2e` job:
 
 - **`ci.yml`, a `viewer` job.** `cargo fmt` and `leptosfmt --check` over the
   crate, `cargo clippy --target wasm32-unknown-unknown --all-features -D

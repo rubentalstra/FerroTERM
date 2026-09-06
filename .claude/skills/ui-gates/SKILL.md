@@ -53,6 +53,13 @@ bash scripts/checks/bundle-size.sh
 bash scripts/ui-e2e.sh
 ```
 
+Stages 4 and 5 locally: `Trunk.toml` sets a `trunk-version` floor, and an
+older `trunk` refuses the build, so check `trunk --version` against that floor
+before running stage 4. When it is too old, or the build is skipped as
+untouched, stage 5 has no `dist/` to measure and exits 0 with a SKIPPED banner.
+Report both as `SKIPPED(reason)` and say that CI's `viewer` job runs them over
+a real bundle and gates the merge; a skip here is not a pass.
+
 Stage 6 locally: run it when Docker is available (`docker info`); otherwise
 report `SKIPPED(no docker)`, and state explicitly that CI's `ui-e2e` job runs
 it and gates the merge, so a skip here is not a pass.
