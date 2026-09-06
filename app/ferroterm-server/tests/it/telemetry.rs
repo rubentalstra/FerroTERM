@@ -48,16 +48,41 @@ impl Capture {
     }
 }
 
+/// Keeps the process-global maximum level permissive for the whole test binary.
+///
+/// `tracing::subscriber::set_default` installs a subscriber for one thread, but
+/// the maximum level a macro checks before it consults that subscriber is
+/// process-global. `cargo test` runs a binary's cases as threads in one
+/// process, so the sibling cases driving the router recompute that maximum
+/// while a telemetry case holds its capture, and the event the case is about to
+/// assert on is filtered before it reaches the capture. Registering one global
+/// subscriber that admits everything pins the maximum open; the thread-local
+/// capture still decides what is recorded (#293).
+fn admit_every_level() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let permissive = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::TRACE)
+            .with_writer(std::io::sink)
+            .finish();
+        // Another case may have set one first; either way the level is open.
+        let already_set: Result<(), _> = tracing::subscriber::set_global_default(permissive);
+        drop(already_set);
+    });
+}
+
+// The two formats are one case, so only one capture guard exists at a time.
 #[tokio::test]
-async fn json_lines_carry_the_startup_and_request_fields() {
+async fn the_json_and_pretty_formats_carry_what_each_promises() {
+    admit_every_level();
     let capture = Capture::default();
-    let subscriber = subscriber(
+    let json = subscriber(
         ResolvedFormat::Json,
         "info,hyper=warn",
         false,
         capture.clone(),
     );
-    let _guard = tracing::subscriber::set_default(subscriber);
+    let guard = tracing::subscriber::set_default(json);
 
     tracing::info!(
         listen = "127.0.0.1:8080",
@@ -98,17 +123,18 @@ async fn json_lines_carry_the_startup_and_request_fields() {
         request_line.get("display").is_none(),
         "free-text parameters are not logged"
     );
-}
+    drop(guard);
 
-#[tokio::test]
-async fn pretty_lines_stay_on_one_line() {
+    // The pretty format keeps one event on one line, so a line-oriented
+    // collector reads it as one record.
     let capture = Capture::default();
-    let subscriber = subscriber(ResolvedFormat::Pretty, "info", false, capture.clone());
-    let _guard = tracing::subscriber::set_default(subscriber);
+    let pretty = subscriber(ResolvedFormat::Pretty, "info", false, capture.clone());
+    let guard = tracing::subscriber::set_default(pretty);
     tracing::info!(value = "two\nlines", "one event");
     let bytes = capture.0.lock().expect("lock").clone();
     let text = String::from_utf8(bytes).expect("utf-8");
     assert_eq!(text.lines().count(), 1, "the interior line feed is escaped");
     assert!(text.contains("two\\nlines"));
     assert!(!text.contains("\u{1b}["), "no colour when ansi is off");
+    drop(guard);
 }
