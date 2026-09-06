@@ -167,17 +167,17 @@ Production use is free for Non-Commercial Purposes and needs a commercial
 licence otherwise. `LICENSE` is the authority; this table is the same boundary
 in the order people ask about it.
 
-| You are | What you are doing | What you need |
+| You are | What you are doing | Licence |
 |---|---|---|
-| Anyone | Reading, building, modifying, or redistributing the source | Nothing |
-| Anyone | Development, testing, evaluation, prototyping | Nothing |
-| A person | Personal use | Nothing |
-| A university or research group | Academic or scientific research, or teaching | Nothing |
-| A non-profit or public body | Production use that is not in the course of a business, does not deliver a service for payment, and is not for commercial advantage | Nothing |
-| A hospital, clinic, or care provider | Treating patients | A commercial licence |
-| A vendor or integrator | Any production use | A commercial licence |
-| Anyone | Offering FerroTERM, or a work derived from it, to third parties as a hosted, managed, or embedded terminology service | A commercial licence |
-| Anyone | Selling, sublicensing, or otherwise distributing it for a fee, on its own or inside another product | A commercial licence |
+| Anyone | Reading, building, modifying, or redistributing the source | Free |
+| Anyone | Development, testing, evaluation, prototyping | Free |
+| A person | Personal use | Free |
+| A university or research group | Academic or scientific research, or teaching | Free |
+| A non-profit or public body | Production use that is not in the course of a business, does not deliver a service for payment, and is not for commercial advantage | Free |
+| A hospital, clinic, or care provider | Treating patients | Commercial licence |
+| A vendor or integrator | Any production use | Commercial licence |
+| Anyone | Offering FerroTERM, or a work derived from it, to third parties as a hosted, managed, or embedded terminology service | Commercial licence |
+| Anyone | Selling, sublicensing, or otherwise distributing it for a fee, on its own or inside another product | Commercial licence |
 
 Two rows hold whatever else you are: hosting it for third parties and
 distributing it for a fee need a commercial licence in every case, including
