@@ -452,6 +452,14 @@ impl CodeSystemProvider for Bcp13Provider {
         Ok(set)
     }
 
+    /// Every filtered selection of this system is incomplete: the registry is
+    /// finite, but each registered type also has the unboundedly many
+    /// parameterised forms the grammar builds on it (RFC 2045 §5.1), which no
+    /// enumeration carries.
+    fn unclosed(&self, _filters: &[Filter]) -> bool {
+        true
+    }
+
     fn filter_matches(&self, concept: Concept, filter: &Filter) -> Result<bool, ProviderError> {
         let Some(media) = self.media_type(concept) else {
             return Ok(false);

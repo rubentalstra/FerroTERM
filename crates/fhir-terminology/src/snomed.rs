@@ -1021,6 +1021,22 @@ impl CodeSystemProvider for SnomedProvider {
         Ok(set)
     }
 
+    /// A SNOMED CT selection admits the post-coordinated expressions its
+    /// grammar builds, and no expansion lists them, which is the case `$expand`
+    /// names for `valueset-unclosed`: "unbounded due to the inclusion of
+    /// post-coordinated value sets (e.g. SNOMED CT, UCUM)"
+    /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes). The
+    /// `expressions = false` filter is what keeps them out
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties"), so a
+    /// selection stating it is complete.
+    fn unclosed(&self, filters: &[Filter]) -> bool {
+        !filters.iter().any(|filter| {
+            filter.property == "expressions"
+                && filter.op == FilterOperator::Equal
+                && filter.value.trim() == "false"
+        })
+    }
+
     /// The implicit value sets of the FHIR SNOMED CT page
     /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets"):
     /// `?fhir_vs`, `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, and

@@ -602,3 +602,21 @@ fn not_selectable_is_known_by_its_standard_uri_and_a_declared_false_stays_a_prop
         assert_eq!(codes(&provider, &selectable), ["codeS"], "{property_code}");
     }
 }
+
+/// A `fragment` resource carries "a subset of the code system", so codes the
+/// system defines outside it are valid and unlisted, which is what
+/// `valueset-unclosed` marks
+/// (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>,
+/// <https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes); a
+/// `complete` resource carries every code the system defines.
+#[test]
+fn an_expansion_over_a_fragment_is_unclosed_and_one_over_a_complete_system_is_not() {
+    let (_dir, providers) = load_all();
+    let complete = find(&providers, COLOURS);
+    assert_eq!(complete.declaration().content, ContentMode::Complete);
+    assert!(!complete.unclosed(&[]));
+    let mut model = complete.model().clone();
+    model.content = ContentMode::Fragment;
+    let fragment = FhirCodeSystem::new(model).expect("builds");
+    assert!(fragment.unclosed(&[]));
+}
