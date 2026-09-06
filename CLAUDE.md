@@ -54,6 +54,10 @@ crate-local discipline.
   FHIR version.
 - `app/ferroterm-server`: the `axum` HTTP server (FHIR endpoints, content
   negotiation, runtime version routing).
+- `app/ferroterm-viewer`: the Leptos web UI, client-side rendered and served by
+  the one server binary as static assets. A pure FHIR client over HTTP that
+  depends on no other crate in the workspace. Designed in `docs/viewer.md`,
+  tracked under issue #366, not yet built.
 - `tools/fhir-codegen`: the generator, from vendored FHIR packages to
   `fhir-types`.
 - `tools/ferroterm-build`: the offline build, from an RF2 release to the
@@ -220,13 +224,17 @@ apply always. Read the relevant one before working in that area.
   policy.
 - `.claude/rules/crates-publishing.md`: the published `crates/*` line (plain
   names on crates.io, the lockstep bump rule, Trusted Publishing lanes).
+- `.claude/rules/leptos-ui.md`: the viewer discipline (client-side rendering,
+  the FHIR-client boundary, code-system neutrality, reactivity, accessibility),
+  scoped to `app/ferroterm-viewer`. The design is `docs/viewer.md`.
 - `.claude/rules/issue-workflow.md`, `issue-relationships.md`, `project-board.md`:
   the tracker work-style.
 - Skills: `/spec-lookup` (find the authoritative spec answer in oracle order),
   `/regen-codegen` (regenerate `fhir-types` and drift-check), `/next-task`,
-  `/phase-done`, `/phase-status` (the issue loop).
-- Agents: `spec-researcher`, `fhir-conformance-reviewer`, `implementer` (all on
-  Opus 5).
+  `/phase-done`, `/phase-status` (the issue loop), `/leptos-lookup` and
+  `/ui-gates` (the viewer).
+- Agents: `spec-researcher`, `fhir-conformance-reviewer`, `implementer`,
+  `leptos-reviewer`, `ui-implementer` (all on Opus 5).
 
 **Spec-oracle precedence:** (1) the FHIR normative spec for the served wire
 version, (2) the SNOMED CT URI and ECL specifications, (3) the SNOMED-on-FHIR IG,
@@ -240,6 +248,8 @@ tx.fhir.org) are behavioural oracles for spec-silent edge cases only.
   scope; this list is what the server must do, and release contents are decided
   during development. See `.claude/rules/writing-style.md` §Scope framing.
 - @docs/ci-cd.md: the CI/CD and supply-chain design.
+- `docs/viewer.md`: the viewer design (the packaging decision, the stack, the
+  screen inventory, the build checklist).
 - `docs/release.md`: the release checklist (the cut, in order).
 - @docs/VERSIONS.md: the pinned version matrix.
 - `website/book`: the mdBook documentation site (`website/book/src`).
