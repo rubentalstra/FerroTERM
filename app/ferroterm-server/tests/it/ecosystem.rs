@@ -713,3 +713,69 @@ async fn expand_flags_inactive_concepts_with_their_status_on_every_version() {
         }
     }
 }
+
+// NOTE: `ValueSet/$validate-code` declares `version` only as an output
+// (<https://hl7.org/fhir/R5/valueset-operation-validate-code.html>), and no
+// OperationDefinition declares `limit` or `allowMaximumSizeExpansion` (#349).
+#[tokio::test]
+async fn the_undeclared_suite_parameters_are_refused_on_every_version() {
+    let server = Server::start_with_resources();
+    for version in VERSIONS {
+        for (operation, query, name) in [
+            (
+                "ValueSet/$validate-code",
+                format!("url={VS_PETS}&system={ANIMALS}&code=kitten&version=1.0"),
+                "version",
+            ),
+            (
+                "ValueSet/$expand",
+                format!("url={VS_PETS}&limit=1000"),
+                "limit",
+            ),
+            (
+                "ValueSet/$expand",
+                format!("url={VS_PETS}&count=3000&allowMaximumSizeExpansion=true"),
+                "allowMaximumSizeExpansion",
+            ),
+        ] {
+            let (status, body) = server.get(&format!("/{version}/{operation}?{query}")).await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{version} {name}: {body}");
+            assert_eq!(
+                body["issue"][0]["code"], "invalid",
+                "{version} {name}: {body}"
+            );
+            let diagnostics = body["issue"][0]["diagnostics"].as_str().unwrap();
+            assert!(
+                diagnostics.contains(&format!("does not declare a parameter `{name}`")),
+                "{version} {name}: {diagnostics}"
+            );
+        }
+
+        // The spellings the operations do declare carry the same intent.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$validate-code?url={VS_PETS}&system={ANIMALS}&code=kitten&systemVersion=2.0"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{version}: {body}"
+        );
+
+        // `version` is an input of the CodeSystem operation, which is where the suite's
+        // shape comes from, so the same name is accepted one resource over.
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/CodeSystem/$validate-code?url={ANIMALS}&version=2.0&code=kitten"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            true,
+            "{version}: {body}"
+        );
+    }
+}

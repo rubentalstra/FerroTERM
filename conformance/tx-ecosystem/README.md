@@ -42,10 +42,13 @@ hand before a release and their lists are refreshed in the same change.
   (`--mode snomed --index <edition>`). It scores 1 of 170 whatever edition you
   point it at, because every case pins the reference server's own edition
   (`http://snomed.info/xsct/31000003106/version/20250909`), which no release
-  centre distributes. #344 holds the evidence.
+  centre distributes. #344 holds the evidence. Five of its cases also send a
+  parameter no `OperationDefinition` declares (#349).
 - **`icd-11`** needs the three ICD-11 artifacts built from the WHO ICD-API
   local deployment (`--mode icd-11 --index <mms>:<icf>:<entity>`); the
-  artifacts need the WHO container and its licence.
+  artifacts need the WHO container and its licence. Four of its cases send
+  `version` on `ValueSet/$validate-code`, which declares no such input, and
+  answer 400; they are the whole gap between the committed 44 and 48 (#349).
 - **`tx.fhir.org`** needs a LOINC artifact (`--mode tx.fhir.org --index
   <loinc>`), since the release needs a LOINC account. The suite's own
   `tests/readme.md` says this mode is "for tests that are intended to be and
@@ -68,6 +71,15 @@ hand before a release and their lists are refreshed in the same change.
 - **`$subsumes` never reaches the server.** Validator 6.10.3 throws
   `Unknown Operation subsumes` before it connects, which costs 98 cases across
   four modes. #346.
+- **Nine cases send a parameter the operation does not declare.** Seven send
+  `version` on `ValueSet/$validate-code`, which declares `systemVersion` and
+  `valueSetVersion` as its inputs and `version` only as an output; one sends
+  `limit` on `$expand`, declared in the specification only on
+  `Observation/$stats`; one sends `allowMaximumSizeExpansion`, declared
+  nowhere. The IG's own requirements page asks for none of the three and
+  requires `count` for `$expand` instead. So each answers 400 before the
+  behaviour the case is about is reached, the same as `_limit` (#305) and
+  `mode`/`valueSetMode` (#289). #349 holds the adjudication.
 - **The `metadata` case fails on `/r4b`.** It asserts
   `CapabilityStatement.fhirVersion` is `4.0.1`; `/r4b` correctly reports
   `4.3.0`. It is on the `/r4` and `/r5` lists and off every `/r4b` one.
