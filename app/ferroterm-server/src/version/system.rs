@@ -25,7 +25,7 @@ macro_rules! system {
             use crate::outcome::Failure;
             use super::metadata::FHIR_VERSION;
             use super::parameters;
-            use super::resources::split_resources;
+            use super::resources::split_supplied;
             use crate::scope::{CACHE_ID_HEADER, cache_id};
             use crate::state::AppState;
             use crate::wire::Wire;
@@ -116,7 +116,7 @@ macro_rules! system {
                 let (parameters, resources) = if body.is_empty() {
                     (Parameters::default(), Vec::new())
                 } else {
-                    split_resources(parameters::parameters_from_body(headers, body)?)?
+                    split_supplied(parameters::object_from_body(headers, body)?)?
                 };
                 match mode {
                     "start" => {

@@ -11,8 +11,10 @@ fn text<T: AsRef<str>>(value: Option<T>) -> Option<String> {
     value.map(|v| v.as_ref().to_owned())
 }
 
-/// One `compose.include.filter`.
+/// One `compose.include.filter`, located at `expression` in `system`.
 fn filter(
+    system: Option<&str>,
+    expression: &str,
     property: Option<&str>,
     op: Option<&str>,
     value: Option<&str>,
@@ -23,10 +25,16 @@ fn filter(
         property: property.clone(),
         op: op_code.to_owned(),
     })?;
+    let value = value.ok_or_else(|| ModelError::FilterValue {
+        system: system.unwrap_or_default().to_owned(),
+        property: property.clone(),
+        op: op_code.to_owned(),
+        expression: expression.to_owned(),
+    })?;
     Ok(Filter {
         property,
         op,
-        value: value.unwrap_or_default().to_owned(),
+        value: value.to_owned(),
     })
 }
 
@@ -51,9 +59,10 @@ macro_rules! convert_value_set {
             use super::text;
             use crate::compose::{Compose, ConceptRef, Include, SystemRef};
 
-            fn include(source: &ValueSetComposeInclude) -> Result<Include, ModelError> {
+            fn include(source: &ValueSetComposeInclude, at: &str) -> Result<Include, ModelError> {
+                let system = source.system.as_ref().and_then(|s| s.value.as_deref());
                 let mut filters = Vec::with_capacity(source.filter.len());
-                for f in &source.filter {
+                for (index, f) in source.filter.iter().enumerate() {
                     // NOTE: an R4 resource converted from R5 carries `child-of` and
                     // `descendent-leaf` in the cross-version extension on `op`
                     // (<https://hl7.org/fhir/versions.html#extensions>).
@@ -62,13 +71,15 @@ macro_rules! convert_value_set {
                         _ => None,
                     });
                     filters.push(super::filter(
+                        system,
+                        &format!("{at}.filter[{index}]"),
                         f.property.value.as_deref(),
                         f.op.value.as_deref().or(extended),
                         convert_value_set!(@value $value, f),
                     )?);
                 }
                 Ok(Include {
-                    system: text(source.system.as_ref().and_then(|s| s.value.as_deref())).map(
+                    system: text(system).map(
                         |url| SystemRef {
                             url,
                             version: text(source.version.as_ref().and_then(|v| v.value.as_deref())),
@@ -111,7 +122,8 @@ macro_rules! convert_value_set {
             ///
             /// # Errors
             ///
-            /// Returns [`ModelError`] for a filter with an unknown operator.
+            /// Returns [`ModelError`] for a filter with an unknown operator or
+            /// with no value.
             pub fn convert(resource: &ValueSet) -> Result<ValueSetModel, ModelError> {
                 // NOTE: `ValueSet.url` is 0..1 (<https://hl7.org/fhir/R4B/valueset.html>);
                 // an inline value set may have none, a stored one must (the loader checks).
@@ -120,11 +132,15 @@ macro_rules! convert_value_set {
                 let mut compose = Compose::default();
                 if let Some(source) = &resource.compose {
                     compose.inactive = source.inactive.as_ref().and_then(|b| b.value);
-                    for i in &source.include {
-                        compose.include.push(include(i)?);
+                    for (index, i) in source.include.iter().enumerate() {
+                        compose
+                            .include
+                            .push(include(i, &format!("ValueSet.compose.include[{index}]"))?);
                     }
-                    for e in &source.exclude {
-                        compose.exclude.push(include(e)?);
+                    for (index, e) in source.exclude.iter().enumerate() {
+                        compose
+                            .exclude
+                            .push(include(e, &format!("ValueSet.compose.exclude[{index}]"))?);
                     }
                 }
                 let string = |value: &Option<fhir_types::$module::primitives::String>| {

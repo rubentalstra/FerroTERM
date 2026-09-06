@@ -357,20 +357,26 @@ fn render_decimal_value(out: &mut String, indent: &str, text: &str) -> fmt::Resu
     writeln!(out, "{indent})")
 }
 
-fn render_primitive_decode(
+/// The head of `from_json_parts`: the signature and the decoded `value`.
+///
+/// A lenient path reads an absent required primitive as the value-less element
+/// an extension-only `_name` sibling would produce
+/// (<https://hl7.org/fhir/R4B/validation.html>).
+fn render_primitive_decode_value(
     out: &mut String,
     ty: &TypeDef,
     scalar: Scalar,
     value_required: bool,
-    has_id: bool,
-    has_extension: bool,
 ) -> fmt::Result {
     writeln!(out, "    fn from_json_parts(")?;
     writeln!(out, "        value: Option<&serde_json::Value>,")?;
     writeln!(out, "        element: Option<&serde_json::Value>,")?;
     writeln!(out, "        path: &mut {C}::Path,")?;
     writeln!(out, "    ) -> Result<Self, {C}::DecodeError> {{")?;
-    writeln!(out, "        if value.is_none() && element.is_none() {{")?;
+    writeln!(
+        out,
+        "        if value.is_none() && element.is_none() && !path.is_lenient() {{"
+    )?;
     writeln!(
         out,
         "            return Err(path.error({C}::DecodeErrorKind::MissingProperty));"
@@ -396,6 +402,18 @@ fn render_primitive_decode(
             "        let value = value.ok_or_else(|| path.error({C}::DecodeErrorKind::MissingProperty))?;"
         )?;
     }
+    Ok(())
+}
+
+fn render_primitive_decode(
+    out: &mut String,
+    ty: &TypeDef,
+    scalar: Scalar,
+    value_required: bool,
+    has_id: bool,
+    has_extension: bool,
+) -> fmt::Result {
+    render_primitive_decode_value(out, ty, scalar, value_required)?;
     if has_id {
         writeln!(out, "        let mut id = None;")?;
     }

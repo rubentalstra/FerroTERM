@@ -277,6 +277,9 @@ impl Layer {
             }
             crate::scope::Loaded::ValueSet(model) => self.value_sets.replace(model.clone()),
             crate::scope::Loaded::ConceptMap(model) => self.concept_maps.replace(model.clone()),
+            // NOTE: a resource the server cannot use answers the request that
+            // resolves it (`crate::scope::Unusable`); a layer holds nothing for it.
+            crate::scope::Loaded::Unusable(_) => {}
         }
         Ok(())
     }

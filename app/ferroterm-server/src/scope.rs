@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 use fhir_terminology::conceptmap::model::ConceptMapModel;
 use fhir_terminology::fhir_codesystem::model::CodeSystemModel;
 use fhir_terminology::fhir_codesystem::provider::FhirCodeSystem;
-use fhir_terminology::operations::Sources;
+use fhir_terminology::operations::{OperationError, Sources};
 use fhir_terminology::provider::ContentMode;
 use fhir_terminology::registry::Registry;
 use fhir_terminology::valueset::model::ValueSetModel;
@@ -46,6 +46,23 @@ pub enum Loaded {
     ValueSet(ValueSetModel),
     /// A `ConceptMap`.
     ConceptMap(ConceptMapModel),
+    /// One the server cannot use, held until a request reaches it.
+    Unusable(Unusable),
+}
+
+/// A supplied resource the server cannot use, and the failure it answers with
+/// once a request reaches it.
+///
+/// A request is refused for what it asks for, so a resource it was handed but
+/// never resolves costs it nothing; validating a resource is a separate act a
+/// server performs at its discretion
+/// (<https://hl7.org/fhir/R4B/validation.html>).
+#[derive(Debug, Clone)]
+pub struct Unusable {
+    /// The `url` the resource states, when it states one.
+    pub url: Option<String>,
+    /// What to answer when a request resolves that `url`.
+    pub failure: Failure,
 }
 
 /// The registry, value set store, and concept map store one request sees.
@@ -57,6 +74,8 @@ pub struct Scope {
     /// The same layer with the request's own resources over it, when it sent
     /// any.
     layered: Option<Layer>,
+    /// The supplied resources the server cannot use.
+    unusable: Vec<Unusable>,
 }
 
 impl Scope {
@@ -66,6 +85,7 @@ impl Scope {
         Self {
             served: state.layer(),
             layered: None,
+            unusable: Vec::new(),
         }
     }
 
@@ -87,8 +107,10 @@ impl Scope {
         let mut value_sets = served.value_sets().clone();
         let mut concept_maps = served.concept_maps().clone();
         let mut supplements = Vec::new();
+        let mut unusable = Vec::new();
         for resource in resources {
             match resource {
+                Loaded::Unusable(held) => unusable.push(held.clone()),
                 Loaded::CodeSystem(model) => {
                     if model.content == ContentMode::Supplement {
                         supplements.push(model);
@@ -137,7 +159,27 @@ impl Scope {
         Ok(Self {
             served,
             layered: Some(Layer::of(registry, value_sets, concept_maps)),
+            unusable,
         })
+    }
+
+    /// The failure `error` really names: the recorded one when it is the
+    /// not-found for a supplied resource the server could not use, and the
+    /// operation's own otherwise.
+    #[must_use]
+    pub fn refused(&self, error: OperationError) -> Failure {
+        let named = match &error {
+            OperationError::UnknownValueSet(url)
+            | OperationError::UnknownImport(url)
+            | OperationError::UnknownSystem(url)
+            | OperationError::UnknownConceptMap(url) => url.as_str(),
+            _ => return Failure::from(error),
+        };
+        let named = named.split('|').next().unwrap_or(named);
+        self.unusable
+            .iter()
+            .find(|held| held.url.as_deref() == Some(named))
+            .map_or_else(|| Failure::from(error), |held| held.failure.clone())
     }
 
     /// The layer this request resolves in.

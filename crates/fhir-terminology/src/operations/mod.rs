@@ -580,6 +580,9 @@ pub enum MessageId {
     MsgExperimental,
     /// The code system cannot be inferred from the code.
     UnableToInferCodeSystem,
+    /// More than one system of the value set holds the code, so no one system
+    /// can be inferred from it.
+    UnableToResolveSystemValueSetHasMultipleMatches,
     /// A supplement was named as the code system.
     CodeSystemCsNoSupplement,
     /// The coding names a value set as its system.
@@ -637,6 +640,9 @@ impl MessageId {
             Self::MsgWithdrawn => "MSG_WITHDRAWN",
             Self::MsgExperimental => "MSG_EXPERIMENTAL",
             Self::UnableToInferCodeSystem => "UNABLE_TO_INFER_CODESYSTEM",
+            Self::UnableToResolveSystemValueSetHasMultipleMatches => {
+                "Unable_to_resolve_system__value_set_has_multiple_matches"
+            }
             Self::CodeSystemCsNoSupplement => "CODESYSTEM_CS_NO_SUPPLEMENT",
             Self::TerminologyTxSystemValueSet2 => "Terminology_TX_System_ValueSet2",
             Self::TerminologyTxSystemRelative => "Terminology_TX_System_Relative",
