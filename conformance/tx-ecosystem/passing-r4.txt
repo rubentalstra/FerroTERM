@@ -33,6 +33,7 @@ extensions/validate-coding-bad-supplement
 extensions/validate-coding-bad-supplement-url
 extensions/validate-coding-good-supplement
 extensions/validate-coding-good2-supplement
+fragment/fragment-expansion
 fragment/validation-fragment-code-good
 fragment/validation-fragment-codeableconcept-good
 fragment/validation-fragment-coding-good

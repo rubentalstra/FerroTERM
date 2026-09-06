@@ -185,3 +185,54 @@ async fn r6_takes_a_repeated_display_language_and_refuses_what_it_does_not_imple
         assert_eq!(body["issue"][0]["code"], "not-supported", "{body}");
     }
 }
+
+/// `handle-unclosed-expansion` is declared by the R6 `OperationDefinition`
+/// alone (`in 0..1 boolean`); R4, R4B, and R5 declare no such input, so they
+/// refuse the name as undeclared
+/// (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-expand.html>,
+/// <https://hl7.org/fhir/R5/valueset-operation-expand.html>).
+#[tokio::test]
+async fn handle_unclosed_expansion_is_taken_under_r6_and_refused_under_the_earlier_versions() {
+    let server = Server::start_with_resources();
+    let (status, body) = server
+        .get(&format!(
+            "/r6/ValueSet/$expand?url={VS_PETS}&handle-unclosed-expansion=true"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let echoed = body["expansion"]["parameter"]
+        .as_array()
+        .expect("the echo")
+        .iter()
+        .find(|p| p["name"] == "handle-unclosed-expansion")
+        .expect("the parameter is echoed");
+    assert_eq!(echoed["valueBoolean"], true, "{body}");
+    // The pets value set draws on a `complete` system, so it is closed and
+    // `false` is answered with the expansion.
+    let (status, body) = server
+        .get(&format!(
+            "/r6/ValueSet/$expand?url={VS_PETS}&handle-unclosed-expansion=false"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(
+        body["expansion"].get("extension").is_none(),
+        "a closed expansion carries no mark: {body}"
+    );
+    for version in ["r4", "r4b", "r5"] {
+        let (status, body) = server
+            .get(&format!(
+                "/{version}/ValueSet/$expand?url={VS_PETS}&handle-unclosed-expansion=true"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "/{version}: {body}");
+        assert_eq!(body["issue"][0]["code"], "invalid", "/{version}: {body}");
+        let diagnostics = body["issue"][0]["diagnostics"]
+            .as_str()
+            .expect("diagnostics");
+        assert!(
+            diagnostics.contains("does not declare a parameter `handle-unclosed-expansion`"),
+            "/{version}: {diagnostics}"
+        );
+    }
+}

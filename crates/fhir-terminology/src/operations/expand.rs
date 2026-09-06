@@ -83,6 +83,10 @@ pub struct ExpandInput {
     pub property: Vec<String>,
     /// `useSupplement` (R5): the supplements to apply.
     pub use_supplement: Vec<String>,
+    /// `handle-unclosed-expansion` (R6): whether the client handles an
+    /// unclosed expansion. `false` refuses one
+    /// (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-expand.html>).
+    pub handle_unclosed_expansion: Option<bool>,
 }
 
 /// One echoed `expansion.parameter`.
@@ -173,6 +177,9 @@ pub struct ExpansionOutcome {
     /// the resource states with `valueset-unclosed`
     /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes).
     pub unclosed: bool,
+    /// Why the expansion is unclosed, one reason per cause, for
+    /// `valueset-unclosed-reason`.
+    pub unclosed_reasons: Vec<String>,
 }
 
 /// Runs `$expand`.
@@ -216,6 +223,12 @@ pub fn expand(
         Resolver::new(sources.registry, sources.value_sets).with_negotiation(&negotiation);
     let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;
     let used_value_sets = resolver.used_value_sets();
+    if expansion.unclosed && input.handle_unclosed_expansion == Some(false) {
+        return Err(OperationError::NotSupported(format!(
+            "the expansion of `{}` is unclosed, and `handle-unclosed-expansion` is false",
+            model.canonical()
+        )));
+    }
     if options.count.is_none() && expansion.total > EXPANSION_LIMIT {
         return Err(OperationError::TooCostly(format!(
             "the expansion of `{}` has {} concepts; page it with `count` (and `offset`) to fetch it",
@@ -240,9 +253,35 @@ pub fn expand(
         parameters: parameters(input, &expansion, &used_value_sets),
         contains,
         properties,
+        unclosed_reasons: unclosed_reasons(&expansion),
         unclosed: expansion.unclosed,
         model,
     })
+}
+
+/// Why the expansion is unclosed, one reason per fragment it drew on.
+///
+/// The R6 Notes name the fragment among the reasons a server returns an
+/// unclosed expansion ("e.g. fragment, post-coordinated concepts, code systems
+/// with a grammar, size",
+/// <https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-expand.html>).
+// NOTE: no published `StructureDefinition` defines `valueset-unclosed-reason`, so the
+// wording is the ecosystem suite's `fragment/fragment-expansion` case verbatim
+// (<https://github.com/HL7/fhir-tx-ecosystem-ig>, tests/fragment).
+fn unclosed_reasons(expansion: &Expansion) -> Vec<String> {
+    if !expansion.unclosed {
+        return Vec::new();
+    }
+    expansion
+        .fragments
+        .iter()
+        .map(|fragment| {
+            format!(
+                "This extension is based on a fragment of the code system {}",
+                fragment.url
+            )
+        })
+        .collect()
 }
 
 /// The request with the value set's default expansion parameters filled in
@@ -387,6 +426,7 @@ fn parameters(
         ("includeDefinition", input.include_definition),
         ("excludeNotForUI", input.exclude_not_for_ui),
         ("excludePostCoordinated", input.exclude_post_coordinated),
+        ("handle-unclosed-expansion", input.handle_unclosed_expansion),
     ] {
         if let Some(flag) = flag {
             push(name, ParameterValue::Boolean(flag));
@@ -422,6 +462,15 @@ fn parameters(
     for used in &expansion.versions {
         push(
             "used-codesystem",
+            ParameterValue::Uri(canonical(&used.url, &used.version)),
+        );
+    }
+    // NOTE: the fragments an expansion drew on, beside the `used-*` family the
+    // ecosystem requires (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>,
+    // "all versions of code systems used (in 'used-*')").
+    for used in &expansion.fragments {
+        push(
+            "used-fragment",
             ParameterValue::Uri(canonical(&used.url, &used.version)),
         );
     }

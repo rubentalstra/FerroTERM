@@ -601,10 +601,21 @@ macro_rules! family_map {
                         .filter_map(|p| p.value.clone())
                         .collect(),
                     use_supplement: canonicals(&request.use_supplement),
+                    handle_unclosed_expansion: $crate::version::map_r5::family_map!(
+                        @handle_unclosed $flavour, request, flag
+                    ),
                 }
             }
 
         }
+    };
+    // Only R6 declares `handle-unclosed-expansion`; R5 refuses the name as
+    // undeclared (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-expand.html>).
+    (@handle_unclosed r5, $request:expr, $flag:ident) => {
+        None
+    };
+    (@handle_unclosed r6, $request:expr, $flag:ident) => {
+        $flag(&$request.handle_unclosed_expansion)
     };
     // R5 declares one `displayLanguage`; R6 declares a list, joined as a BCP 47
     // range list (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
@@ -652,9 +663,6 @@ macro_rules! family_map {
         let mut names: Vec<String> = Vec::new();
         if !$request.filter_property.is_empty() {
             names.push(String::from("filterProperty"));
-        }
-        if $request.handle_unclosed_expansion.is_some() {
-            names.push(String::from("handle-unclosed-expansion"));
         }
         if $request.manifest.is_some() {
             names.push(String::from("manifest"));

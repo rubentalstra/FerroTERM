@@ -622,6 +622,9 @@ macro_rules! family_map {
                         .filter_map(|p| p.value.clone())
                         .collect(),
                     use_supplement: canonicals(&request.use_supplement),
+                    // Only R6 declares `handle-unclosed-expansion`
+                    // (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-expand.html>).
+                    handle_unclosed_expansion: None,
                 }
             }
         }
