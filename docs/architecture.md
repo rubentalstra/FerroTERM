@@ -294,7 +294,7 @@ first shape.
 | Supplements applied to designations | yes | |
 | Generic filters on `concept` and `code` (`=`, `in`, `not-in`, `regex`), membership tests, a closed-or-open answer | yes | |
 | Text search over designations | yes | |
-| Enumeration with a total count, for expansion | yes | grammar-defined systems (UCUM, BCP 47) validate by parsing and refuse enumeration |
+| Enumeration with a total count, for expansion | yes | grammar-defined systems validate by parsing; UCUM refuses enumeration and BCP 47 enumerates only a selection its registry bounds |
 | Hierarchy and subsumption (`is-a`, `descendent-of`, `generalizes`, `child exists`) | | SNOMED, ICD-10, FHIR CodeSystems with `hierarchyMeaning = is-a`; LOINC and UCUM have none |
 | System-specific filters and a filter language | | SNOMED `constraint` (ECL) and refset membership; LOINC's named axes, `parent`, `ancestor`, `copyright`; UCUM `canonical` |
 | Implicit value sets and concept maps parsed from the system URI | | SNOMED `?fhir_vs=…` and `?fhir_cm=…`; LOINC `/vs/…`; UCUM `/vs/…` |

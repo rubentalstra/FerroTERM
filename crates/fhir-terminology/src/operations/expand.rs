@@ -266,15 +266,16 @@ pub fn expand(
     })
 }
 
-/// Why the expansion is unclosed, one reason per fragment it drew on.
+/// Why the expansion is unclosed: one reason per fragment it drew on, then
+/// what each system said for itself.
 ///
-/// The R6 Notes name the fragment among the reasons a server returns an
-/// unclosed expansion ("e.g. fragment, post-coordinated concepts, code systems
-/// with a grammar, size",
+/// The R6 Notes name both among the reasons a server returns an unclosed
+/// expansion ("e.g. fragment, post-coordinated concepts, code systems with a
+/// grammar, size",
 /// <https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-expand.html>).
 // NOTE: no published `StructureDefinition` defines `valueset-unclosed-reason`, so the
-// wording is the ecosystem suite's `fragment/fragment-expansion` case verbatim
-// (<https://github.com/HL7/fhir-tx-ecosystem-ig>, tests/fragment).
+// wording is the ecosystem suite's, its `fragment` case for a fragment and its
+// `langcodes` case for a grammar (<https://github.com/HL7/fhir-tx-ecosystem-ig>).
 fn unclosed_reasons(expansion: &Expansion) -> Vec<String> {
     if !expansion.unclosed {
         return Vec::new();
@@ -288,6 +289,7 @@ fn unclosed_reasons(expansion: &Expansion) -> Vec<String> {
                 fragment.url
             )
         })
+        .chain(expansion.unclosed_reasons.iter().cloned())
         .collect()
 }
 

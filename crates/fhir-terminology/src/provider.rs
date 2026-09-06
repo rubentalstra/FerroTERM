@@ -530,6 +530,10 @@ pub enum ProviderError {
     /// The system cannot enumerate its concepts (a grammar-defined system).
     #[error("the code system cannot enumerate its concepts")]
     NotEnumerable,
+    /// The system enumerates some selections of its codes, and these filters
+    /// bound none of them.
+    #[error("this filter cannot be expanded")]
+    FilterNotEnumerable,
     /// The provider does not answer this filter.
     #[error("filter `{property}` with operator `{operator}` is not supported")]
     UnsupportedFilter {
@@ -934,6 +938,29 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
     /// lists are the members.
     fn unclosed(&self, _filters: &[Filter]) -> bool {
         false
+    }
+
+    /// Why a selection this system leaves unclosed is unclosed, for
+    /// `valueset-unclosed-reason` beside the mark.
+    ///
+    /// The default states no reason, and `$expand` then carries the mark
+    /// alone.
+    fn unclosed_reason(&self) -> Option<String> {
+        None
+    }
+
+    /// The order this system states for what `filters` select.
+    ///
+    /// `None` leaves the selection in concept order, which is what a system
+    /// whose ordinals already sort by code wants. A system that interns a code
+    /// as it meets it has no such order, so it states one here and the
+    /// expansion pages it that way.
+    ///
+    /// # Errors
+    ///
+    /// Returns the errors of [`CodeSystemProvider::filter_all`].
+    fn filter_ordered(&self, _filters: &[Filter]) -> Result<Option<Vec<u32>>, ProviderError> {
+        Ok(None)
     }
 
     /// Whether `concept` satisfies `filter`, without enumerating the set.

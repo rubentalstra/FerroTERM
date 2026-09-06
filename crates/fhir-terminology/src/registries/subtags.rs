@@ -83,6 +83,91 @@ impl Registry {
     pub fn records(&self) -> impl Iterator<Item = &Record> {
         self.records.values()
     }
+
+    /// The records of `kind`, letter subtags before digit ones, each ascending.
+    ///
+    /// The two spellings of a region are `2ALPHA` for the ISO 3166-1 code and
+    /// `3DIGIT` for the UN M.49 code, in that order (RFC 5646 §2.1); the other
+    /// kinds hold letters only, so the split leaves them alone.
+    #[must_use]
+    pub fn of_kind(&self, kind: Kind) -> Vec<&Record> {
+        let mut out: Vec<&Record> = self
+            .records
+            .iter()
+            .filter(|((k, _), _)| *k == kind)
+            .map(|(_, record)| record)
+            .collect();
+        out.sort_by_key(|record| {
+            record
+                .subtag
+                .as_bytes()
+                .first()
+                .is_some_and(u8::is_ascii_digit)
+        });
+        out
+    }
+}
+
+/// The subtags one `Subtag` field names.
+///
+/// "The sequence '..' (U+002E U+002E) in a field-body denotes a range of
+/// values. Such a range represents all subtags of the same length that are in
+/// alphabetic or numeric order within that range, including the values
+/// explicitly mentioned" (RFC 5646 §3.1.1).
+fn subtags_of(field: &str) -> Vec<String> {
+    let Some((start, end)) = field.split_once("..") else {
+        return vec![field.to_owned()];
+    };
+    let registered_case = start.as_bytes().to_vec();
+    let (lower, upper) = (start.to_ascii_lowercase(), end.to_ascii_lowercase());
+    let alphabet = if lower.bytes().all(|b| b.is_ascii_lowercase()) {
+        (b'a', b'z')
+    } else if lower.bytes().all(|b| b.is_ascii_digit()) {
+        (b'0', b'9')
+    } else {
+        return Vec::new();
+    };
+    if lower.len() != upper.len() || lower.is_empty() || lower > upper {
+        return Vec::new();
+    }
+    let mut current = lower.into_bytes();
+    let end = upper.into_bytes();
+    let mut out = Vec::new();
+    loop {
+        let cased: Vec<u8> = current
+            .iter()
+            .zip(&registered_case)
+            .map(|(byte, pattern)| {
+                if pattern.is_ascii_uppercase() {
+                    byte.to_ascii_uppercase()
+                } else {
+                    *byte
+                }
+            })
+            .collect();
+        match String::from_utf8(cased) {
+            Ok(subtag) => out.push(subtag),
+            Err(_) => return out,
+        }
+        if current == end {
+            return out;
+        }
+        let mut at = current.len();
+        loop {
+            let Some(position) = at.checked_sub(1) else {
+                return out;
+            };
+            at = position;
+            let Some(byte) = current.get_mut(position) else {
+                return out;
+            };
+            if *byte < alphabet.1 {
+                *byte += 1;
+                break;
+            }
+            *byte = alphabet.0;
+        }
+    }
 }
 
 /// The vendored registry, parsed once.
@@ -125,17 +210,19 @@ pub fn parse(text: &str) -> Registry {
                 .map(|(_, v)| v.clone())
                 .collect()
         };
-        let record = Record {
-            kind,
-            subtag: subtag.clone(),
-            descriptions: all("Description"),
-            deprecated: first("Deprecated"),
-            preferred: first("Preferred-Value"),
-            prefixes: all("Prefix"),
-            suppress_script: first("Suppress-Script"),
-            scope: first("Scope"),
-        };
-        records.insert((kind, subtag.to_ascii_lowercase()), record);
+        for subtag in subtags_of(&subtag) {
+            let record = Record {
+                kind,
+                subtag: subtag.clone(),
+                descriptions: all("Description"),
+                deprecated: first("Deprecated"),
+                preferred: first("Preferred-Value"),
+                prefixes: all("Prefix"),
+                suppress_script: first("Suppress-Script"),
+                scope: first("Scope"),
+            };
+            records.insert((kind, subtag.to_ascii_lowercase()), record);
+        }
     }
     Registry { file_date, records }
 }
@@ -183,6 +270,56 @@ mod tests {
         assert!(registry.get(Kind::Variant, "1606nict").is_some());
         assert!(registry.get(Kind::Grandfathered, "i-klingon").is_some());
         assert!(registry.get(Kind::Language, "zz").is_none());
+    }
+
+    /// "The sequence '..' … denotes a range of values. Such a range represents
+    /// all subtags of the same length that are in alphabetic or numeric order
+    /// within that range, including the values explicitly mentioned"
+    /// (RFC 5646 §3.1.1).
+    #[test]
+    fn a_range_field_registers_every_subtag_in_it() {
+        let registry = &*REGISTRY_DATA;
+        for subtag in ["qaa", "qbb", "qtz"] {
+            let record = registry.get(Kind::Language, subtag).expect("in qaa..qtz");
+            assert_eq!(record.descriptions, ["Private use"]);
+            assert_eq!(record.subtag, subtag);
+        }
+        assert!(registry.get(Kind::Language, "qua").is_some());
+        for subtag in ["QM", "QZ", "XA", "XZ"] {
+            assert_eq!(
+                registry
+                    .get(Kind::Region, subtag)
+                    .map(|r| r.descriptions.clone()),
+                Some(vec![String::from("Private use")]),
+                "{subtag}"
+            );
+        }
+        assert!(registry.get(Kind::Region, "QL").is_none());
+        let script = registry.get(Kind::Script, "Qabx").expect("in Qaaa..Qabx");
+        assert_eq!(script.subtag, "Qabx", "a range keeps the registered case");
+        assert!(registry.records().all(|r| !r.subtag.contains("..")));
+    }
+
+    /// A region is `2ALPHA` for the ISO 3166-1 code or `3DIGIT` for the UN
+    /// M.49 code, in that order (RFC 5646 §2.1).
+    #[test]
+    fn regions_read_letters_before_digits() {
+        let regions = REGISTRY_DATA.of_kind(Kind::Region);
+        let digits = regions
+            .iter()
+            .position(|r| r.subtag.starts_with(|c: char| c.is_ascii_digit()))
+            .expect("the UN M.49 codes");
+        assert_eq!(
+            regions.first().map(|r| r.subtag.as_str()),
+            Some("AA"),
+            "the letter codes come first"
+        );
+        assert!(
+            regions.get(digits..).is_some_and(|rest| rest
+                .iter()
+                .all(|r| r.subtag.starts_with(|c: char| c.is_ascii_digit()))),
+            "the digit codes are one run at the end"
+        );
     }
 
     #[test]

@@ -13,7 +13,7 @@ use fhir_terminology::operations::{
 };
 use fhir_terminology::provider::{CodeSystemProvider, ContentMode, ProviderError};
 use fhir_terminology::registries::bcp47::{Analysis, Bcp47Provider};
-use fhir_terminology::registries::{bcp13, bcp47, iso3166};
+use fhir_terminology::registries::{bcp13, bcp47, iso3166, subtags};
 use fhir_terminology::registry::Registry;
 use fhir_terminology::valueset::store::ValueSetStore;
 use fhir_types::r4b::value_set::{
@@ -108,8 +108,10 @@ fn bcp47_distinguishes_malformed_well_formed_and_valid_tags() {
         Analysis::Valid(_)
     ));
     assert!(matches!(provider.analyze("i-klingon"), Analysis::Valid(_)));
-    match provider.analyze("en-QQ") {
-        Analysis::WellFormed { unknown, .. } => assert_eq!(unknown, ["QQ"]),
+    // The `QM..QZ` region range registers every subtag in it (RFC 5646 §3.1.1).
+    assert!(matches!(provider.analyze("en-QQ"), Analysis::Valid(_)));
+    match provider.analyze("en-AB") {
+        Analysis::WellFormed { unknown, .. } => assert_eq!(unknown, ["AB"]),
         other => panic!("well-formed with an unknown region, got {other:?}"),
     }
     match provider.analyze("abcd") {
@@ -162,7 +164,7 @@ fn bcp47_locates_in_canonical_case_with_a_composed_display_and_parts() {
         .collect();
     assert_eq!(codes, ["language=en", "script=Latn", "region=GB"]);
     assert!(
-        provider.locate("en-QQ").expect("reads").is_none(),
+        provider.locate("en-AB").expect("reads").is_none(),
         "well-formed is not valid"
     );
     assert!(provider.locate("not a tag").expect("reads").is_none());
@@ -192,8 +194,8 @@ fn bcp47_locates_in_canonical_case_with_a_composed_display_and_parts() {
     );
     assert!(matches!(provider.all(), Err(ProviderError::NotEnumerable)));
     assert!(matches!(
-        provider.filter(&filter("language", FilterOperator::Equal, "en")),
-        Err(ProviderError::NotEnumerable)
+        provider.filter(&filter("variant", FilterOperator::Equal, "1996")),
+        Err(ProviderError::FilterNotEnumerable)
     ));
     assert_eq!(provider.declaration().content, ContentMode::NotPresent);
     let deprecated = provider
@@ -511,7 +513,7 @@ fn the_grammar_systems_refuse_expansion_and_validate_by_membership() {
     let languages = ExpandInput {
         inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(&inline(
             bcp47::URL,
-            vec![("language", "=", "en")],
+            vec![("variant", "=", "1996")],
         ))),
         ..ExpandInput::default()
     };
@@ -660,6 +662,224 @@ fn a_filtered_media_type_expansion_is_unclosed_and_an_enumerated_one_is_not() {
 fn a_language_tag_selection_is_unclosed() {
     let provider = Bcp47Provider::new();
     assert!(provider.unclosed(&[filter("language", FilterOperator::Equal, "en")]));
+}
+
+/// `region = 2ALPHA / 3DIGIT` holds one registered subtag (RFC 5646 §2.1), so
+/// a fixed primary language leaves a finite list of `language ["-" region]`
+/// tags, the shape RFC 5646 §4.1 recommends writing when no script is needed.
+#[test]
+fn a_fixed_language_expands_to_the_registered_regions() {
+    let registry = registry();
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let english = |count: Option<i64>| ExpandInput {
+        inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(&inline(
+            bcp47::URL,
+            vec![("language", "=", "en")],
+        ))),
+        count,
+        ..ExpandInput::default()
+    };
+    let regions = subtags::REGISTRY_DATA.of_kind(subtags::Kind::Region).len();
+    assert!(regions > 300, "the vendored registry has {regions} regions");
+    let outcome = expand::expand(&sources, &english(Some(5))).expect("expands");
+    assert_eq!(
+        outcome.total,
+        u64::try_from(regions).expect("a registry count") + 1,
+        "the bare tag and one per registered region"
+    );
+    let codes: Vec<&str> = outcome
+        .contains
+        .iter()
+        .map(|item| item.code.as_str())
+        .collect();
+    assert_eq!(codes, ["en", "en-AA", "en-AC", "en-AD", "en-AE"]);
+    assert_eq!(
+        outcome
+            .contains
+            .first()
+            .and_then(|item| item.display.as_deref()),
+        Some("English")
+    );
+    assert!(outcome.unclosed, "an extension can always be added");
+    let paged = expand::expand(&sources, &english(Some(5))).expect("expands");
+    assert_eq!(
+        paged.contains, outcome.contains,
+        "the order does not move between calls"
+    );
+}
+
+/// `script = 4ALPHA` holds one registered subtag (RFC 5646 §2.1), so a fixed
+/// language and region leave a finite list of `language ["-" script] "-" region`
+/// tags.
+#[test]
+fn a_fixed_language_and_region_expand_to_the_registered_scripts() {
+    let registry = registry();
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let input = ExpandInput {
+        inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(&inline(
+            bcp47::URL,
+            vec![("language", "=", "en"), ("region", "=", "US")],
+        ))),
+        count: Some(3),
+        ..ExpandInput::default()
+    };
+    let scripts = subtags::REGISTRY_DATA.of_kind(subtags::Kind::Script).len();
+    let outcome = expand::expand(&sources, &input).expect("expands");
+    assert_eq!(
+        outcome.total,
+        u64::try_from(scripts).expect("a registry count") + 1,
+        "the tag itself and one per registered script"
+    );
+    let codes: Vec<&str> = outcome
+        .contains
+        .iter()
+        .map(|item| item.code.as_str())
+        .collect();
+    assert_eq!(codes, ["en-US", "en-Adlm-US", "en-Afak-US"]);
+}
+
+/// `langtag = language ["-" script] ["-" region] …` (RFC 5646 §2.1): the
+/// primary language is the one subtag every tag carries, so a selection that
+/// leaves it open names no finite list this server enumerates.
+#[test]
+fn a_script_or_a_region_alone_leaves_the_language_open() {
+    let registry = registry();
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    for filters in [vec![("script", "=", "Latn")], vec![("region", "=", "US")]] {
+        let input = ExpandInput {
+            inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(&inline(
+                bcp47::URL,
+                filters.clone(),
+            ))),
+            ..ExpandInput::default()
+        };
+        let error = expand::expand(&sources, &input).expect_err("no fixed language");
+        assert_eq!(
+            error.to_string(),
+            format!("This filter on {} cannot be expanded", bcp47::URL),
+            "{filters:?}: the system expands other selections"
+        );
+        assert!(
+            matches!(error, OperationError::NotSupported(_)),
+            "{filters:?}: {error}"
+        );
+        assert_eq!(error.issue_code(), "not-supported");
+        assert_eq!(error.message_id(), "CODESYSTEM_NOT_ENUMERABLE");
+    }
+}
+
+/// An unpaged expansion past [`expand::EXPANSION_LIMIT`] answers `too-costly`,
+/// whatever system it came from.
+#[test]
+fn an_oversized_language_enumeration_is_too_costly() {
+    let registry = registry();
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let value_set = ValueSet {
+        url: Some("http://example.org/many-languages".into()),
+        status: "active".into(),
+        compose: Some(ValueSetCompose {
+            include: ["en", "fr", "de", "nl"]
+                .into_iter()
+                .map(|language| ValueSetComposeInclude {
+                    system: Some(bcp47::URL.into()),
+                    filter: vec![ValueSetComposeIncludeFilter {
+                        property: "language".into(),
+                        op: "=".into(),
+                        value: language.into(),
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let input = ExpandInput {
+        inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(
+            &value_set,
+        )),
+        ..ExpandInput::default()
+    };
+    let error = expand::expand(&sources, &input).expect_err("past the limit");
+    assert!(matches!(error, OperationError::TooCostly(_)), "{error}");
+    assert_eq!(error.issue_code(), "too-costly");
+    let paged = ExpandInput {
+        count: Some(2),
+        ..input
+    };
+    let outcome = expand::expand(&sources, &paged).expect("pages");
+    assert!(outcome.total > expand::EXPANSION_LIMIT, "{}", outcome.total);
+}
+
+/// An unclosed expansion states why beside the mark: `extension.valueString`
+/// on `ValueSet.expansion` (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>,
+/// Notes).
+#[test]
+fn a_language_tag_expansion_states_why_it_is_unclosed() {
+    let registry = registry();
+    let value_sets = ValueSetStore::new();
+    let concept_maps = ConceptMapStore::new();
+    let sources = Sources {
+        registry: &registry,
+        value_sets: &value_sets,
+        concept_maps: &concept_maps,
+    };
+    let input = ExpandInput {
+        inline_value_set: Some(fhir_terminology::valueset::convert::r4b::convert(&inline(
+            bcp47::URL,
+            vec![("language", "=", "nl")],
+        ))),
+        count: Some(1),
+        ..ExpandInput::default()
+    };
+    let outcome = expand::expand(&sources, &input).expect("expands");
+    assert_eq!(
+        outcome.unclosed_reasons,
+        vec![String::from(
+            "The code System 'urn:ietf:bcp:47' has a grammar and so has infinite members"
+        )]
+    );
+    let rendered = fhir_terminology::valueset::render::r4b::expansion(&outcome);
+    let urls: Vec<&str> = rendered
+        .expansion
+        .as_ref()
+        .expect("an expansion")
+        .extension
+        .iter()
+        .map(|extension| extension.url.as_str())
+        .collect();
+    assert_eq!(
+        urls,
+        [
+            "http://hl7.org/fhir/StructureDefinition/valueset-unclosed",
+            "http://hl7.org/fhir/StructureDefinition/valueset-unclosed-reason",
+        ]
+    );
 }
 
 /// R6 alone declares `handle-unclosed-expansion`: "If true this asserts that

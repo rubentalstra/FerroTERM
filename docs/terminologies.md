@@ -38,7 +38,7 @@ engine. Each row is a tracker issue under the program issue.
 | 3 | LOINC | Second most exercised system in the suite (2,152 references); the Dutch lab code set builds on it; the nl-NL linguistic variant exists. | CSV loader; parts hierarchy; the LOINC filters and `/vs/` implicit sets |
 | 4 | UCUM | 2,267 references in the suite; grammar-defined, so it proves the non-enumerable provider shape. | Expression parser over `ucum-essence.xml`; no store |
 | 5 | ICD-10 (WHO), ICD-10-NL, ICD-10-CM | The Dutch diagnosis classification; `classified-with` hierarchy proves the mono-hierarchy shape. | ClaML loader (WHO, NL), tab-delimited loader (CM) |
-| 6 | BCP 47, BCP 13, ISO 3166 | Registry and grammar systems the suite exercises (500, 62, and 790 references). | Grammar or table providers; no enumeration for BCP 47 and BCP 13 |
+| 6 | BCP 47, BCP 13, ISO 3166 | Registry and grammar systems the suite exercises (500, 62, and 790 references). | Grammar or table providers; BCP 47 and BCP 13 enumerate only a bounded selection |
 | 7 | RxNorm | Typed drug relationships as filters; US context, open subset. | RRF loader (prescribable subset) |
 | 8 | ATC, ICPC, ICD-11 | Classification systems with one parent per code; ICD-11 needs the WHO API or local deployment. | Table and ClaML loaders; API export for ICD-11 |
 | 9 | The Dutch national code systems (DHD thesauri, G-Standaard, Labcodeset) | Licence-gated deployment demand; each rides on the SNOMED, LOINC, and UCUM providers or a table loader. | Per section |
@@ -391,9 +391,11 @@ engine. Each row is a tracker issue under the program issue.
   media types) are grammar and registry systems; the FHIR value sets
   `all-languages` and `mimetypes` "cannot be expanded because ... an infinite
   number of members" (<https://hl7.org/fhir/R4B/valueset-all-languages.html>).
-  The providers validate by grammar (and the IANA registries) and refuse
-  enumeration. R5 no longer lists either on the systems page; THO lists BCP 47
-  only.
+  The providers validate by grammar (and the IANA registries). Neither system
+  enumerates as a whole; each enumerates the bounded selections its registry
+  gives it, BCP 13 under `registered = true` and BCP 47 under a fixed primary
+  language subtag, and marks the result unclosed. R5 no longer lists either on
+  the systems page; THO lists BCP 47 only.
 - **Served.** All four ship with the server and need no configuration (UCUM
   is below):
   BCP 47 validates a tag by the RFC 5646 grammar and the IANA Language Subtag

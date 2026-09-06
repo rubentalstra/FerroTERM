@@ -270,8 +270,19 @@ impl CodeSystemProvider for Supplemented {
         self.inner.filter_all(filters)
     }
 
+    fn filter_ordered(
+        &self,
+        filters: &[crate::filter::Filter],
+    ) -> Result<Option<Vec<u32>>, ProviderError> {
+        self.inner.filter_ordered(filters)
+    }
+
     fn unclosed(&self, filters: &[crate::filter::Filter]) -> bool {
         self.inner.unclosed(filters)
+    }
+
+    fn unclosed_reason(&self) -> Option<String> {
+        self.inner.unclosed_reason()
     }
 
     fn filter_matches(
