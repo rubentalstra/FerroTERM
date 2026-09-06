@@ -242,6 +242,86 @@ fn every_version_declares_the_artifact_an_index_backed_system_was_read_from() {
     }
 }
 
+/// The four rendered statements of `summary`, one per served FHIR version.
+fn rendered(summary: &Summary) -> Vec<(&'static str, Value)> {
+    let date = "2026-09-06T00:00:00Z";
+    vec![
+        (
+            "r4",
+            Value::Object(summary.to_r4(date).to_json().expect("encodes")),
+        ),
+        (
+            "r4b",
+            Value::Object(summary.to_r4b(date).to_json().expect("encodes")),
+        ),
+        (
+            "r5",
+            Value::Object(summary.to_r5(date).to_json().expect("encodes")),
+        ),
+        (
+            "r6",
+            Value::Object(summary.to_r6(date).to_json().expect("encodes")),
+        ),
+    ]
+}
+
+#[test]
+fn a_filter_code_is_declared_once_with_the_operators_of_both_declarations() {
+    // `TerminologyCapabilities.codeSystem.version.filter` carries `code` 1..1
+    // and `op` 1..* "Operations supported for the property"
+    // (<https://hl7.org/fhir/R5/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.filter.op>),
+    // so one code states one operator list. SNOMED CT declares its own
+    // `concept` filter over the set the engine answers generically.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let summary = Summary::of(&served(dir.path()));
+    for (version, statement) in rendered(&summary) {
+        for system in statement["codeSystem"].as_array().expect("codeSystem") {
+            for entry in system["version"].as_array().expect("version") {
+                let codes: Vec<&str> = entry["filter"]
+                    .as_array()
+                    .map(|filters| {
+                        filters
+                            .iter()
+                            .filter_map(|filter| filter["code"].as_str())
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let mut distinct = codes.clone();
+                distinct.sort_unstable();
+                distinct.dedup();
+                assert_eq!(
+                    codes.len(),
+                    distinct.len(),
+                    "{version} repeats a filter code for {}: {codes:?}",
+                    system["uri"]
+                );
+            }
+        }
+        let concept = &code_system(&statement, SNOMED)["version"][0]["filter"][0];
+        assert_eq!(concept["code"], "concept", "{version}");
+        let operators: Vec<&str> = concept["op"]
+            .as_array()
+            .expect("op")
+            .iter()
+            .filter_map(Value::as_str)
+            .collect();
+        for expected in [
+            "=",
+            "in",
+            "not-in",
+            "regex",
+            "exists",
+            "is-a",
+            "descendent-of",
+        ] {
+            assert!(
+                operators.contains(&expected),
+                "{version} drops `{expected}` from the SNOMED CT `concept` filter: {operators:?}"
+            );
+        }
+    }
+}
+
 #[test]
 fn the_artifact_declaration_names_no_directory_above_it_and_no_content() {
     // The artifact sits under a temporary parent the declaration must not

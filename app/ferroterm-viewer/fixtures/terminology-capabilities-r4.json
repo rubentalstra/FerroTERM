@@ -529,14 +529,6 @@
               ]
             },
             {
-              "code": "concept",
-              "op": [
-                "is-a",
-                "descendent-of",
-                "in"
-              ]
-            },
-            {
               "code": "constraint",
               "op": [
                 "="
@@ -914,7 +906,7 @@
       ]
     }
   ],
-  "date": "2026-09-06T20:35:59.380759Z",
+  "date": "2026-09-06T21:29:49.202398Z",
   "expansion": {
     "hierarchical": false,
     "incomplete": false,
