@@ -814,9 +814,160 @@ impl super::super::codec::Json for ConceptMap {
 
 impl serde::Serialize for ConceptMap {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.copyright {
+            super::super::codec::element_entry(&mut map, "_copyright", item)?;
+        }
+        if let Some(item) = &self.date {
+            super::super::codec::element_entry(&mut map, "_date", item)?;
+        }
+        if let Some(item) = &self.description {
+            super::super::codec::element_entry(&mut map, "_description", item)?;
+        }
+        if let Some(item) = &self.experimental {
+            super::super::codec::element_entry(&mut map, "_experimental", item)?;
+        }
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::element_entry(&mut map, "_implicitRules", item)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::element_entry(&mut map, "_language", item)?;
+        }
+        if let Some(item) = &self.name {
+            super::super::codec::element_entry(&mut map, "_name", item)?;
+        }
+        if let Some(item) = &self.publisher {
+            super::super::codec::element_entry(&mut map, "_publisher", item)?;
+        }
+        if let Some(item) = &self.purpose {
+            super::super::codec::element_entry(&mut map, "_purpose", item)?;
+        }
+        match &self.source {
+            Some(ConceptMapSource::Canonical(inner)) => {
+                super::super::codec::element_entry(&mut map, "_sourceCanonical", inner)?;
+            }
+            Some(ConceptMapSource::Uri(inner)) => {
+                super::super::codec::element_entry(&mut map, "_sourceUri", inner)?;
+            }
+            None => {}
+        }
+        super::super::codec::element_entry(&mut map, "_status", &self.status)?;
+        match &self.target {
+            Some(ConceptMapTarget::Canonical(inner)) => {
+                super::super::codec::element_entry(&mut map, "_targetCanonical", inner)?;
+            }
+            Some(ConceptMapTarget::Uri(inner)) => {
+                super::super::codec::element_entry(&mut map, "_targetUri", inner)?;
+            }
+            None => {}
+        }
+        if let Some(item) = &self.title {
+            super::super::codec::element_entry(&mut map, "_title", item)?;
+        }
+        if let Some(item) = &self.url {
+            super::super::codec::element_entry(&mut map, "_url", item)?;
+        }
+        if let Some(item) = &self.version {
+            super::super::codec::element_entry(&mut map, "_version", item)?;
+        }
+        if !self.contact.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "contact", &self.contact)?;
+        }
+        if !self.contained.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "contained", &self.contained)?;
+        }
+        if let Some(item) = &self.copyright {
+            super::super::codec::value_entry(&mut map, "copyright", item)?;
+        }
+        if let Some(item) = &self.date {
+            super::super::codec::value_entry(&mut map, "date", item)?;
+        }
+        if let Some(item) = &self.description {
+            super::super::codec::value_entry(&mut map, "description", item)?;
+        }
+        if let Some(item) = &self.experimental {
+            super::super::codec::value_entry(&mut map, "experimental", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if !self.group.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "group", &self.group)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.identifier {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "identifier", item)?;
+        }
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::value_entry(&mut map, "implicitRules", item)?;
+        }
+        if !self.jurisdiction.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "jurisdiction",
+                &self.jurisdiction,
+            )?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::value_entry(&mut map, "language", item)?;
+        }
+        if let Some(item) = &self.meta {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "meta", item)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.name {
+            super::super::codec::value_entry(&mut map, "name", item)?;
+        }
+        if let Some(item) = &self.publisher {
+            super::super::codec::value_entry(&mut map, "publisher", item)?;
+        }
+        if let Some(item) = &self.purpose {
+            super::super::codec::value_entry(&mut map, "purpose", item)?;
+        }
+        serde::ser::SerializeMap::serialize_entry(&mut map, "resourceType", "ConceptMap")?;
+        match &self.source {
+            Some(ConceptMapSource::Canonical(inner)) => {
+                super::super::codec::value_entry(&mut map, "sourceCanonical", inner)?;
+            }
+            Some(ConceptMapSource::Uri(inner)) => {
+                super::super::codec::value_entry(&mut map, "sourceUri", inner)?;
+            }
+            None => {}
+        }
+        super::super::codec::value_entry(&mut map, "status", &self.status)?;
+        match &self.target {
+            Some(ConceptMapTarget::Canonical(inner)) => {
+                super::super::codec::value_entry(&mut map, "targetCanonical", inner)?;
+            }
+            Some(ConceptMapTarget::Uri(inner)) => {
+                super::super::codec::value_entry(&mut map, "targetUri", inner)?;
+            }
+            None => {}
+        }
+        if let Some(item) = &self.text {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "text", item)?;
+        }
+        if let Some(item) = &self.title {
+            super::super::codec::value_entry(&mut map, "title", item)?;
+        }
+        if let Some(item) = &self.url {
+            super::super::codec::value_entry(&mut map, "url", item)?;
+        }
+        if !self.use_context.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "useContext", &self.use_context)?;
+        }
+        if let Some(item) = &self.version {
+            super::super::codec::value_entry(&mut map, "version", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1129,9 +1280,51 @@ impl super::super::codec::Json for ConceptMapGroup {
 
 impl serde::Serialize for ConceptMapGroup {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.source {
+            super::super::codec::element_entry(&mut map, "_source", item)?;
+        }
+        if let Some(item) = &self.source_version {
+            super::super::codec::element_entry(&mut map, "_sourceVersion", item)?;
+        }
+        if let Some(item) = &self.target {
+            super::super::codec::element_entry(&mut map, "_target", item)?;
+        }
+        if let Some(item) = &self.target_version {
+            super::super::codec::element_entry(&mut map, "_targetVersion", item)?;
+        }
+        if !self.element.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "element", &self.element)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.source {
+            super::super::codec::value_entry(&mut map, "source", item)?;
+        }
+        if let Some(item) = &self.source_version {
+            super::super::codec::value_entry(&mut map, "sourceVersion", item)?;
+        }
+        if let Some(item) = &self.target {
+            super::super::codec::value_entry(&mut map, "target", item)?;
+        }
+        if let Some(item) = &self.target_version {
+            super::super::codec::value_entry(&mut map, "targetVersion", item)?;
+        }
+        if let Some(item) = &self.unmapped {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "unmapped", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1367,9 +1560,36 @@ impl super::super::codec::Json for ConceptMapGroupElement {
 
 impl serde::Serialize for ConceptMapGroupElement {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.code {
+            super::super::codec::element_entry(&mut map, "_code", item)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::element_entry(&mut map, "_display", item)?;
+        }
+        if let Some(item) = &self.code {
+            super::super::codec::value_entry(&mut map, "code", item)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::value_entry(&mut map, "display", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if !self.target.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "target", &self.target)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1692,9 +1912,47 @@ impl super::super::codec::Json for ConceptMapGroupElementTarget {
 
 impl serde::Serialize for ConceptMapGroupElementTarget {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.code {
+            super::super::codec::element_entry(&mut map, "_code", item)?;
+        }
+        if let Some(item) = &self.comment {
+            super::super::codec::element_entry(&mut map, "_comment", item)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::element_entry(&mut map, "_display", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_equivalence", &self.equivalence)?;
+        if let Some(item) = &self.code {
+            super::super::codec::value_entry(&mut map, "code", item)?;
+        }
+        if let Some(item) = &self.comment {
+            super::super::codec::value_entry(&mut map, "comment", item)?;
+        }
+        if !self.depends_on.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "dependsOn", &self.depends_on)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::value_entry(&mut map, "display", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "equivalence", &self.equivalence)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if !self.product.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "product", &self.product)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -1942,9 +2200,37 @@ impl super::super::codec::Json for ConceptMapGroupElementTargetDependsOn {
 
 impl serde::Serialize for ConceptMapGroupElementTargetDependsOn {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.display {
+            super::super::codec::element_entry(&mut map, "_display", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_property", &self.property)?;
+        if let Some(item) = &self.system {
+            super::super::codec::element_entry(&mut map, "_system", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_value", &self.value)?;
+        if let Some(item) = &self.display {
+            super::super::codec::value_entry(&mut map, "display", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        super::super::codec::value_entry(&mut map, "property", &self.property)?;
+        if let Some(item) = &self.system {
+            super::super::codec::value_entry(&mut map, "system", item)?;
+        }
+        super::super::codec::value_entry(&mut map, "value", &self.value)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -2198,9 +2484,41 @@ impl super::super::codec::Json for ConceptMapGroupUnmapped {
 
 impl serde::Serialize for ConceptMapGroupUnmapped {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.code {
+            super::super::codec::element_entry(&mut map, "_code", item)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::element_entry(&mut map, "_display", item)?;
+        }
+        super::super::codec::element_entry(&mut map, "_mode", &self.mode)?;
+        if let Some(item) = &self.url {
+            super::super::codec::element_entry(&mut map, "_url", item)?;
+        }
+        if let Some(item) = &self.code {
+            super::super::codec::value_entry(&mut map, "code", item)?;
+        }
+        if let Some(item) = &self.display {
+            super::super::codec::value_entry(&mut map, "display", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        super::super::codec::value_entry(&mut map, "mode", &self.mode)?;
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.url {
+            super::super::codec::value_entry(&mut map, "url", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

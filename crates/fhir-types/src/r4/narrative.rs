@@ -135,9 +135,18 @@ impl super::super::codec::Json for Narrative {
 
 impl serde::Serialize for Narrative {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_div", &self.div)?;
+        super::super::codec::element_entry(&mut map, "_status", &self.status)?;
+        super::super::codec::value_entry(&mut map, "div", &self.div)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        super::super::codec::value_entry(&mut map, "status", &self.status)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 

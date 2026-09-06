@@ -175,9 +175,34 @@ impl super::super::codec::Json for Annotation {
 
 impl serde::Serialize for Annotation {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(AnnotationAuthor::String(inner)) = &self.author {
+            super::super::codec::element_entry(&mut map, "_authorString", inner)?;
+        }
+        super::super::codec::element_entry(&mut map, "_text", &self.text)?;
+        if let Some(item) = &self.time {
+            super::super::codec::element_entry(&mut map, "_time", item)?;
+        }
+        match &self.author {
+            Some(AnnotationAuthor::Reference(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "authorReference", inner)?;
+            }
+            Some(AnnotationAuthor::String(inner)) => {
+                super::super::codec::value_entry(&mut map, "authorString", inner)?;
+            }
+            None => {}
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        super::super::codec::value_entry(&mut map, "text", &self.text)?;
+        if let Some(item) = &self.time {
+            super::super::codec::value_entry(&mut map, "time", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

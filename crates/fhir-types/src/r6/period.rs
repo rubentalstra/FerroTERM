@@ -144,9 +144,26 @@ impl super::super::codec::Json for Period {
 
 impl serde::Serialize for Period {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.end {
+            super::super::codec::element_entry(&mut map, "_end", item)?;
+        }
+        if let Some(item) = &self.start {
+            super::super::codec::element_entry(&mut map, "_start", item)?;
+        }
+        if let Some(item) = &self.end {
+            super::super::codec::value_entry(&mut map, "end", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.start {
+            super::super::codec::value_entry(&mut map, "start", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

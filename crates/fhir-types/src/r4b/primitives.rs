@@ -73,6 +73,35 @@ impl super::super::codec::Primitive for Base64Binary {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -190,6 +219,35 @@ impl super::super::codec::Primitive for Boolean {
             );
         }
         Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_bool(serializer, *v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 
     fn from_json_parts(
@@ -317,6 +375,35 @@ impl super::super::codec::Primitive for Canonical {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -442,6 +529,35 @@ impl super::super::codec::Primitive for Code {
             );
         }
         Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 
     fn from_json_parts(
@@ -573,6 +689,35 @@ impl super::super::codec::Primitive for Date {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -702,6 +847,35 @@ impl super::super::codec::Primitive for DateTime {
             );
         }
         Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 
     fn from_json_parts(
@@ -837,6 +1011,42 @@ impl super::super::codec::Primitive for Decimal {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(text) => serde::Serialize::serialize(
+                &text.parse::<serde_json::Number>().map_err(|_| {
+                    <S::Error as serde::ser::Error>::custom(
+                        super::super::codec::EncodeError::BadDecimal { text: text.clone() },
+                    )
+                })?,
+                serializer,
+            ),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -962,6 +1172,35 @@ impl super::super::codec::Primitive for Id {
             );
         }
         Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 
     fn from_json_parts(
@@ -1091,6 +1330,35 @@ impl super::super::codec::Primitive for Instant {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -1208,6 +1476,35 @@ impl super::super::codec::Primitive for Integer {
             );
         }
         Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_i32(serializer, *v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 
     fn from_json_parts(
@@ -1336,6 +1633,35 @@ impl super::super::codec::Primitive for Markdown {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -1461,6 +1787,35 @@ impl super::super::codec::Primitive for Oid {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -1576,6 +1931,35 @@ impl super::super::codec::Primitive for PositiveInt {
             );
         }
         Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_u32(serializer, *v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 
     fn from_json_parts(
@@ -1705,6 +2089,35 @@ impl super::super::codec::Primitive for String {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -1832,6 +2245,35 @@ impl super::super::codec::Primitive for Time {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -1947,6 +2389,35 @@ impl super::super::codec::Primitive for UnsignedInt {
             );
         }
         Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_u32(serializer, *v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 
     fn from_json_parts(
@@ -2076,6 +2547,35 @@ impl super::super::codec::Primitive for Uri {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -2199,6 +2699,35 @@ impl super::super::codec::Primitive for Url {
             );
         }
         Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 
     fn from_json_parts(
@@ -2326,6 +2855,35 @@ impl super::super::codec::Primitive for Uuid {
         Ok(Some(serde_json::Value::Object(object)))
     }
 
+    fn has_value(&self) -> bool {
+        self.value.is_some()
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some() || !self.extension.is_empty()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.value.as_ref() {
+            Some(v) => serde::Serializer::serialize_str(serializer, v),
+            None => serde::Serializer::serialize_none(serializer),
+        }
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() && self.extension.is_empty() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
+    }
+
     fn from_json_parts(
         value: Option<&serde_json::Value>,
         element: Option<&serde_json::Value>,
@@ -2425,6 +2983,29 @@ impl super::super::codec::Primitive for Xhtml {
             );
         }
         Ok(Some(serde_json::Value::Object(object)))
+    }
+
+    fn has_value(&self) -> bool {
+        true
+    }
+
+    fn has_element(&self) -> bool {
+        self.id.is_some()
+    }
+
+    fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serde::Serializer::serialize_str(serializer, &self.value)
+    }
+
+    fn serialize_element<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.id.is_none() {
+            return serde::Serializer::serialize_none(serializer);
+        }
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(id) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", id)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 
     fn from_json_parts(

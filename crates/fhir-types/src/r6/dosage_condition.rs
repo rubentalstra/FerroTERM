@@ -593,9 +593,288 @@ impl super::super::codec::Json for DosageCondition {
 
 impl serde::Serialize for DosageCondition {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.operation {
+            super::super::codec::element_entry(&mut map, "_operation", item)?;
+        }
+        if let Some(item) = &self.text {
+            super::super::codec::element_entry(&mut map, "_text", item)?;
+        }
+        match &self.value {
+            Some(DosageConditionValue::Base64Binary(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueBase64Binary", inner)?;
+            }
+            Some(DosageConditionValue::Boolean(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueBoolean", inner)?;
+            }
+            Some(DosageConditionValue::Canonical(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueCanonical", inner)?;
+            }
+            Some(DosageConditionValue::Code(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueCode", inner)?;
+            }
+            Some(DosageConditionValue::Date(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueDate", inner)?;
+            }
+            Some(DosageConditionValue::DateTime(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueDateTime", inner)?;
+            }
+            Some(DosageConditionValue::Decimal(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueDecimal", inner)?;
+            }
+            Some(DosageConditionValue::Id(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueId", inner)?;
+            }
+            Some(DosageConditionValue::Instant(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueInstant", inner)?;
+            }
+            Some(DosageConditionValue::Integer(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueInteger", inner)?;
+            }
+            Some(DosageConditionValue::Integer64(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueInteger64", inner)?;
+            }
+            Some(DosageConditionValue::Markdown(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueMarkdown", inner)?;
+            }
+            Some(DosageConditionValue::Oid(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueOid", inner)?;
+            }
+            Some(DosageConditionValue::PositiveInt(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valuePositiveInt", inner)?;
+            }
+            Some(DosageConditionValue::String(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueString", inner)?;
+            }
+            Some(DosageConditionValue::Time(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueTime", inner)?;
+            }
+            Some(DosageConditionValue::UnsignedInt(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueUnsignedInt", inner)?;
+            }
+            Some(DosageConditionValue::Uri(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueUri", inner)?;
+            }
+            Some(DosageConditionValue::Url(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueUrl", inner)?;
+            }
+            Some(DosageConditionValue::Uuid(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueUuid", inner)?;
+            }
+            _ => {}
+        }
+        serde::ser::SerializeMap::serialize_entry(&mut map, "code", &self.code)?;
+        if let Some(item) = &self.details {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "details", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.operation {
+            super::super::codec::value_entry(&mut map, "operation", item)?;
+        }
+        if let Some(item) = &self.text {
+            super::super::codec::value_entry(&mut map, "text", item)?;
+        }
+        match &self.value {
+            Some(DosageConditionValue::Address(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAddress", inner)?;
+            }
+            Some(DosageConditionValue::Age(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAge", inner)?;
+            }
+            Some(DosageConditionValue::Annotation(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAnnotation", inner)?;
+            }
+            Some(DosageConditionValue::Attachment(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAttachment", inner)?;
+            }
+            Some(DosageConditionValue::Availability(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAvailability", inner)?;
+            }
+            Some(DosageConditionValue::Base64Binary(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueBase64Binary", inner)?;
+            }
+            Some(DosageConditionValue::Boolean(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueBoolean", inner)?;
+            }
+            Some(DosageConditionValue::Canonical(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueCanonical", inner)?;
+            }
+            Some(DosageConditionValue::Code(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueCode", inner)?;
+            }
+            Some(DosageConditionValue::CodeableConcept(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCodeableConcept", inner)?;
+            }
+            Some(DosageConditionValue::CodeableReference(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueCodeableReference",
+                    inner,
+                )?;
+            }
+            Some(DosageConditionValue::Coding(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+            }
+            Some(DosageConditionValue::ContactDetail(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueContactDetail", inner)?;
+            }
+            Some(DosageConditionValue::ContactPoint(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueContactPoint", inner)?;
+            }
+            Some(DosageConditionValue::Count(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCount", inner)?;
+            }
+            Some(DosageConditionValue::DataRequirement(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDataRequirement", inner)?;
+            }
+            Some(DosageConditionValue::Date(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDate", inner)?;
+            }
+            Some(DosageConditionValue::DateTime(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
+            }
+            Some(DosageConditionValue::Decimal(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDecimal", inner)?;
+            }
+            Some(DosageConditionValue::Distance(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDistance", inner)?;
+            }
+            Some(DosageConditionValue::Dosage(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDosage", inner)?;
+            }
+            Some(DosageConditionValue::Duration(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDuration", inner)?;
+            }
+            Some(DosageConditionValue::Expression(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueExpression", inner)?;
+            }
+            Some(DosageConditionValue::ExtendedContactDetail(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueExtendedContactDetail",
+                    inner,
+                )?;
+            }
+            Some(DosageConditionValue::HumanName(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueHumanName", inner)?;
+            }
+            Some(DosageConditionValue::Id(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueId", inner)?;
+            }
+            Some(DosageConditionValue::Identifier(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueIdentifier", inner)?;
+            }
+            Some(DosageConditionValue::Instant(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueInstant", inner)?;
+            }
+            Some(DosageConditionValue::Integer(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueInteger", inner)?;
+            }
+            Some(DosageConditionValue::Integer64(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueInteger64", inner)?;
+            }
+            Some(DosageConditionValue::Markdown(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueMarkdown", inner)?;
+            }
+            Some(DosageConditionValue::Meta(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueMeta", inner)?;
+            }
+            Some(DosageConditionValue::Money(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueMoney", inner)?;
+            }
+            Some(DosageConditionValue::Oid(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueOid", inner)?;
+            }
+            Some(DosageConditionValue::ParameterDefinition(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueParameterDefinition",
+                    inner,
+                )?;
+            }
+            Some(DosageConditionValue::Period(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valuePeriod", inner)?;
+            }
+            Some(DosageConditionValue::PositiveInt(inner)) => {
+                super::super::codec::value_entry(&mut map, "valuePositiveInt", inner)?;
+            }
+            Some(DosageConditionValue::Quantity(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueQuantity", inner)?;
+            }
+            Some(DosageConditionValue::Range(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRange", inner)?;
+            }
+            Some(DosageConditionValue::Ratio(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRatio", inner)?;
+            }
+            Some(DosageConditionValue::RatioRange(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRatioRange", inner)?;
+            }
+            Some(DosageConditionValue::Reference(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueReference", inner)?;
+            }
+            Some(DosageConditionValue::RelatedArtifact(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRelatedArtifact", inner)?;
+            }
+            Some(DosageConditionValue::SampledData(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueSampledData", inner)?;
+            }
+            Some(DosageConditionValue::Signature(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueSignature", inner)?;
+            }
+            Some(DosageConditionValue::String(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueString", inner)?;
+            }
+            Some(DosageConditionValue::Time(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueTime", inner)?;
+            }
+            Some(DosageConditionValue::Timing(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueTiming", inner)?;
+            }
+            Some(DosageConditionValue::TriggerDefinition(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueTriggerDefinition",
+                    inner,
+                )?;
+            }
+            Some(DosageConditionValue::UnsignedInt(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueUnsignedInt", inner)?;
+            }
+            Some(DosageConditionValue::Uri(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueUri", inner)?;
+            }
+            Some(DosageConditionValue::Url(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueUrl", inner)?;
+            }
+            Some(DosageConditionValue::UsageContext(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueUsageContext", inner)?;
+            }
+            Some(DosageConditionValue::Uuid(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueUuid", inner)?;
+            }
+            Some(DosageConditionValue::VirtualServiceDetail(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueVirtualServiceDetail",
+                    inner,
+                )?;
+            }
+            None => {}
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

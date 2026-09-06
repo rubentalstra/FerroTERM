@@ -191,30 +191,14 @@ macro_rules! batch {
             fn answered(state: &AppState, headers: &HeaderMap, sent: BundleEntry) -> BundleEntry {
                 let full_url = sent.full_url.clone();
                 match entry(state, headers, sent) {
-                    Ok(object) => match Resource::from_json(
-                        &object,
-                        &mut fhir_types::codec::Path::root("Resource"),
-                    ) {
-                        Ok(resource) => BundleEntry {
-                            full_url,
-                            resource: Some(resource),
-                            response: Some(BundleEntryResponse {
-                                status: status_text(StatusCode::OK).as_str().into(),
-                                ..Default::default()
-                            }),
+                    Ok(answer) => BundleEntry {
+                        full_url,
+                        resource: Some(answer.resource()),
+                        response: Some(BundleEntryResponse {
+                            status: status_text(StatusCode::OK).as_str().into(),
                             ..Default::default()
-                        },
-                        // NOTE: the object was just built by an operation of this version, so
-                        // it reads back; if it ever does not, the entry says so rather than
-                        // failing the whole batch.
-                        Err(error) => refused(
-                            full_url,
-                            &Failure::new(
-                                StatusCode::INTERNAL_SERVER_ERROR,
-                                "exception",
-                                error.to_string(),
-                            ),
-                        ),
+                        }),
+                        ..Default::default()
                     },
                     Err(failure) => refused(full_url, &failure),
                 }
@@ -254,7 +238,7 @@ macro_rules! batch {
                 state: &AppState,
                 headers: &HeaderMap,
                 sent: BundleEntry,
-            ) -> Result<fhir_types::codec::Object, Failure> {
+            ) -> Result<operations::Answer, Failure> {
                 let request = sent.request.ok_or_else(|| {
                     Failure::new(
                         StatusCode::BAD_REQUEST,

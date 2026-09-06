@@ -231,9 +231,29 @@ impl super::super::codec::Json for Timing {
 
 impl serde::Serialize for Timing {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_list_entry(&mut map, "_event", &self.event)?;
+        if let Some(item) = &self.code {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "code", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "event", &self.event)?;
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        if let Some(item) = &self.repeat {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "repeat", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -737,9 +757,98 @@ impl super::super::codec::Json for TimingRepeat {
 
 impl serde::Serialize for TimingRepeat {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.count {
+            super::super::codec::element_entry(&mut map, "_count", item)?;
+        }
+        if let Some(item) = &self.count_max {
+            super::super::codec::element_entry(&mut map, "_countMax", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_dayOfWeek", &self.day_of_week)?;
+        if let Some(item) = &self.duration {
+            super::super::codec::element_entry(&mut map, "_duration", item)?;
+        }
+        if let Some(item) = &self.duration_max {
+            super::super::codec::element_entry(&mut map, "_durationMax", item)?;
+        }
+        if let Some(item) = &self.duration_unit {
+            super::super::codec::element_entry(&mut map, "_durationUnit", item)?;
+        }
+        if let Some(item) = &self.frequency {
+            super::super::codec::element_entry(&mut map, "_frequency", item)?;
+        }
+        if let Some(item) = &self.frequency_max {
+            super::super::codec::element_entry(&mut map, "_frequencyMax", item)?;
+        }
+        if let Some(item) = &self.offset {
+            super::super::codec::element_entry(&mut map, "_offset", item)?;
+        }
+        if let Some(item) = &self.period {
+            super::super::codec::element_entry(&mut map, "_period", item)?;
+        }
+        if let Some(item) = &self.period_max {
+            super::super::codec::element_entry(&mut map, "_periodMax", item)?;
+        }
+        if let Some(item) = &self.period_unit {
+            super::super::codec::element_entry(&mut map, "_periodUnit", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_timeOfDay", &self.time_of_day)?;
+        super::super::codec::element_list_entry(&mut map, "_when", &self.when)?;
+        match &self.bounds {
+            Some(TimingRepeatBounds::Duration(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "boundsDuration", inner)?;
+            }
+            Some(TimingRepeatBounds::Period(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "boundsPeriod", inner)?;
+            }
+            Some(TimingRepeatBounds::Range(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "boundsRange", inner)?;
+            }
+            None => {}
+        }
+        if let Some(item) = &self.count {
+            super::super::codec::value_entry(&mut map, "count", item)?;
+        }
+        if let Some(item) = &self.count_max {
+            super::super::codec::value_entry(&mut map, "countMax", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "dayOfWeek", &self.day_of_week)?;
+        if let Some(item) = &self.duration {
+            super::super::codec::value_entry(&mut map, "duration", item)?;
+        }
+        if let Some(item) = &self.duration_max {
+            super::super::codec::value_entry(&mut map, "durationMax", item)?;
+        }
+        if let Some(item) = &self.duration_unit {
+            super::super::codec::value_entry(&mut map, "durationUnit", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(item) = &self.frequency {
+            super::super::codec::value_entry(&mut map, "frequency", item)?;
+        }
+        if let Some(item) = &self.frequency_max {
+            super::super::codec::value_entry(&mut map, "frequencyMax", item)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.offset {
+            super::super::codec::value_entry(&mut map, "offset", item)?;
+        }
+        if let Some(item) = &self.period {
+            super::super::codec::value_entry(&mut map, "period", item)?;
+        }
+        if let Some(item) = &self.period_max {
+            super::super::codec::value_entry(&mut map, "periodMax", item)?;
+        }
+        if let Some(item) = &self.period_unit {
+            super::super::codec::value_entry(&mut map, "periodUnit", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "timeOfDay", &self.time_of_day)?;
+        super::super::codec::value_list_entry(&mut map, "when", &self.when)?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 

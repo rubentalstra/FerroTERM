@@ -90,9 +90,30 @@ impl super::super::codec::Json for Resource {
 
 impl serde::Serialize for Resource {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        match self {
+            Self::Bundle(inner) => serde::Serialize::serialize(inner.as_ref(), serializer),
+            Self::CapabilityStatement(inner) => {
+                serde::Serialize::serialize(inner.as_ref(), serializer)
+            }
+            Self::CodeSystem(inner) => serde::Serialize::serialize(inner.as_ref(), serializer),
+            Self::ConceptMap(inner) => serde::Serialize::serialize(inner.as_ref(), serializer),
+            Self::OperationOutcome(inner) => {
+                serde::Serialize::serialize(inner.as_ref(), serializer)
+            }
+            Self::Parameters(inner) => serde::Serialize::serialize(inner.as_ref(), serializer),
+            Self::TerminologyCapabilities(inner) => {
+                serde::Serialize::serialize(inner.as_ref(), serializer)
+            }
+            Self::ValueSet(inner) => serde::Serialize::serialize(inner.as_ref(), serializer),
+            Self::Unknown(inner) => match &inner.body {
+                serde_json::Value::Object(object) => {
+                    serde::Serialize::serialize(object, serializer)
+                }
+                _ => Err(<S::Error as serde::ser::Error>::custom(
+                    super::super::codec::EncodeError::UnknownResourceBody,
+                )),
+            },
+        }
     }
 }
 

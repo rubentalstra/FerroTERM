@@ -270,9 +270,40 @@ impl super::super::codec::Json for Meta {
 
 impl serde::Serialize for Meta {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.last_updated {
+            super::super::codec::element_entry(&mut map, "_lastUpdated", item)?;
+        }
+        super::super::codec::element_list_entry(&mut map, "_profile", &self.profile)?;
+        if let Some(item) = &self.source {
+            super::super::codec::element_entry(&mut map, "_source", item)?;
+        }
+        if let Some(item) = &self.version_id {
+            super::super::codec::element_entry(&mut map, "_versionId", item)?;
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.last_updated {
+            super::super::codec::value_entry(&mut map, "lastUpdated", item)?;
+        }
+        super::super::codec::value_list_entry(&mut map, "profile", &self.profile)?;
+        if !self.security.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "security", &self.security)?;
+        }
+        if let Some(item) = &self.source {
+            super::super::codec::value_entry(&mut map, "source", item)?;
+        }
+        if !self.tag.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "tag", &self.tag)?;
+        }
+        if let Some(item) = &self.version_id {
+            super::super::codec::value_entry(&mut map, "versionId", item)?;
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 

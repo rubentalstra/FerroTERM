@@ -178,9 +178,30 @@ impl super::super::codec::Json for Parameters {
 
 impl serde::Serialize for Parameters {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::element_entry(&mut map, "_implicitRules", item)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::element_entry(&mut map, "_language", item)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if let Some(item) = &self.implicit_rules {
+            super::super::codec::value_entry(&mut map, "implicitRules", item)?;
+        }
+        if let Some(item) = &self.language {
+            super::super::codec::value_entry(&mut map, "language", item)?;
+        }
+        if let Some(item) = &self.meta {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "meta", item)?;
+        }
+        if !self.parameter.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "parameter", &self.parameter)?;
+        }
+        serde::ser::SerializeMap::serialize_entry(&mut map, "resourceType", "Parameters")?;
+        serde::ser::SerializeMap::end(map)
     }
 }
 
@@ -738,9 +759,250 @@ impl super::super::codec::Json for ParametersParameter {
 
 impl serde::Serialize for ParametersParameter {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        super::super::codec::Json::to_json(self)
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        let mut map = serde::Serializer::serialize_map(serializer, None)?;
+        super::super::codec::element_entry(&mut map, "_name", &self.name)?;
+        match &self.value {
+            Some(ParametersParameterValue::Base64Binary(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueBase64Binary", inner)?;
+            }
+            Some(ParametersParameterValue::Boolean(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueBoolean", inner)?;
+            }
+            Some(ParametersParameterValue::Canonical(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueCanonical", inner)?;
+            }
+            Some(ParametersParameterValue::Code(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueCode", inner)?;
+            }
+            Some(ParametersParameterValue::Date(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueDate", inner)?;
+            }
+            Some(ParametersParameterValue::DateTime(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueDateTime", inner)?;
+            }
+            Some(ParametersParameterValue::Decimal(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueDecimal", inner)?;
+            }
+            Some(ParametersParameterValue::Id(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueId", inner)?;
+            }
+            Some(ParametersParameterValue::Instant(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueInstant", inner)?;
+            }
+            Some(ParametersParameterValue::Integer(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueInteger", inner)?;
+            }
+            Some(ParametersParameterValue::Markdown(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueMarkdown", inner)?;
+            }
+            Some(ParametersParameterValue::Oid(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueOid", inner)?;
+            }
+            Some(ParametersParameterValue::PositiveInt(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valuePositiveInt", inner)?;
+            }
+            Some(ParametersParameterValue::String(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueString", inner)?;
+            }
+            Some(ParametersParameterValue::Time(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueTime", inner)?;
+            }
+            Some(ParametersParameterValue::UnsignedInt(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueUnsignedInt", inner)?;
+            }
+            Some(ParametersParameterValue::Uri(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueUri", inner)?;
+            }
+            Some(ParametersParameterValue::Url(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueUrl", inner)?;
+            }
+            Some(ParametersParameterValue::Uuid(inner)) => {
+                super::super::codec::element_entry(&mut map, "_valueUuid", inner)?;
+            }
+            _ => {}
+        }
+        if !self.extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "extension", &self.extension)?;
+        }
+        if let Some(v) = &self.id {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "id", v)?;
+        }
+        if !self.modifier_extension.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(
+                &mut map,
+                "modifierExtension",
+                &self.modifier_extension,
+            )?;
+        }
+        super::super::codec::value_entry(&mut map, "name", &self.name)?;
+        if !self.part.is_empty() {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "part", &self.part)?;
+        }
+        if let Some(item) = &self.resource {
+            serde::ser::SerializeMap::serialize_entry(&mut map, "resource", item)?;
+        }
+        match &self.value {
+            Some(ParametersParameterValue::Address(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAddress", inner)?;
+            }
+            Some(ParametersParameterValue::Age(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAge", inner)?;
+            }
+            Some(ParametersParameterValue::Annotation(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAnnotation", inner)?;
+            }
+            Some(ParametersParameterValue::Attachment(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueAttachment", inner)?;
+            }
+            Some(ParametersParameterValue::Base64Binary(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueBase64Binary", inner)?;
+            }
+            Some(ParametersParameterValue::Boolean(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueBoolean", inner)?;
+            }
+            Some(ParametersParameterValue::Canonical(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueCanonical", inner)?;
+            }
+            Some(ParametersParameterValue::Code(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueCode", inner)?;
+            }
+            Some(ParametersParameterValue::CodeableConcept(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCodeableConcept", inner)?;
+            }
+            Some(ParametersParameterValue::Coding(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCoding", inner)?;
+            }
+            Some(ParametersParameterValue::ContactDetail(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueContactDetail", inner)?;
+            }
+            Some(ParametersParameterValue::ContactPoint(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueContactPoint", inner)?;
+            }
+            Some(ParametersParameterValue::Contributor(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueContributor", inner)?;
+            }
+            Some(ParametersParameterValue::Count(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueCount", inner)?;
+            }
+            Some(ParametersParameterValue::DataRequirement(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDataRequirement", inner)?;
+            }
+            Some(ParametersParameterValue::Date(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDate", inner)?;
+            }
+            Some(ParametersParameterValue::DateTime(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDateTime", inner)?;
+            }
+            Some(ParametersParameterValue::Decimal(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueDecimal", inner)?;
+            }
+            Some(ParametersParameterValue::Distance(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDistance", inner)?;
+            }
+            Some(ParametersParameterValue::Dosage(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDosage", inner)?;
+            }
+            Some(ParametersParameterValue::Duration(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueDuration", inner)?;
+            }
+            Some(ParametersParameterValue::Expression(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueExpression", inner)?;
+            }
+            Some(ParametersParameterValue::HumanName(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueHumanName", inner)?;
+            }
+            Some(ParametersParameterValue::Id(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueId", inner)?;
+            }
+            Some(ParametersParameterValue::Identifier(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueIdentifier", inner)?;
+            }
+            Some(ParametersParameterValue::Instant(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueInstant", inner)?;
+            }
+            Some(ParametersParameterValue::Integer(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueInteger", inner)?;
+            }
+            Some(ParametersParameterValue::Markdown(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueMarkdown", inner)?;
+            }
+            Some(ParametersParameterValue::Meta(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueMeta", inner)?;
+            }
+            Some(ParametersParameterValue::Money(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueMoney", inner)?;
+            }
+            Some(ParametersParameterValue::Oid(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueOid", inner)?;
+            }
+            Some(ParametersParameterValue::ParameterDefinition(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueParameterDefinition",
+                    inner,
+                )?;
+            }
+            Some(ParametersParameterValue::Period(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valuePeriod", inner)?;
+            }
+            Some(ParametersParameterValue::PositiveInt(inner)) => {
+                super::super::codec::value_entry(&mut map, "valuePositiveInt", inner)?;
+            }
+            Some(ParametersParameterValue::Quantity(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueQuantity", inner)?;
+            }
+            Some(ParametersParameterValue::Range(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRange", inner)?;
+            }
+            Some(ParametersParameterValue::Ratio(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRatio", inner)?;
+            }
+            Some(ParametersParameterValue::Reference(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueReference", inner)?;
+            }
+            Some(ParametersParameterValue::RelatedArtifact(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueRelatedArtifact", inner)?;
+            }
+            Some(ParametersParameterValue::SampledData(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueSampledData", inner)?;
+            }
+            Some(ParametersParameterValue::Signature(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueSignature", inner)?;
+            }
+            Some(ParametersParameterValue::String(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueString", inner)?;
+            }
+            Some(ParametersParameterValue::Time(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueTime", inner)?;
+            }
+            Some(ParametersParameterValue::Timing(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueTiming", inner)?;
+            }
+            Some(ParametersParameterValue::TriggerDefinition(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(
+                    &mut map,
+                    "valueTriggerDefinition",
+                    inner,
+                )?;
+            }
+            Some(ParametersParameterValue::UnsignedInt(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueUnsignedInt", inner)?;
+            }
+            Some(ParametersParameterValue::Uri(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueUri", inner)?;
+            }
+            Some(ParametersParameterValue::Url(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueUrl", inner)?;
+            }
+            Some(ParametersParameterValue::UsageContext(inner)) => {
+                serde::ser::SerializeMap::serialize_entry(&mut map, "valueUsageContext", inner)?;
+            }
+            Some(ParametersParameterValue::Uuid(inner)) => {
+                super::super::codec::value_entry(&mut map, "valueUuid", inner)?;
+            }
+            None => {}
+        }
+        serde::ser::SerializeMap::end(map)
     }
 }
 
