@@ -468,7 +468,7 @@ async fn a_codeable_concept_is_echoed_and_its_unknown_systems_named_on_every_ver
             {"name": "codeableConcept", "valueCodeableConcept": {"coding": [
                 {"system": COLOURS, "code": "blue"},
                 {"system": ANIMALS, "code": "cat"}
-            ]}}
+            ], "text": "some plain text"}}
         ]});
         let (status, body) = server
             .post(&format!("/{version}/ValueSet/$validate-code"), &request)
@@ -486,6 +486,10 @@ async fn a_codeable_concept_is_echoed_and_its_unknown_systems_named_on_every_ver
         );
         let echoed = &parameter(&body, "codeableConcept").expect("echo")["valueCodeableConcept"];
         assert_eq!(echoed["coding"][1]["code"], "cat", "{version}: {body}");
+        // The echo is "a codeableConcept containing codings for all the validated
+        // codes", so the text the request sent stays on it
+        // (<https://hl7.org/fhir/R5/valueset-operation-validate-code.html>).
+        assert_eq!(echoed["text"], "some plain text", "{version}: {body}");
         let issue = &parameter(&body, "issues").unwrap()["resource"]["issue"][0];
         assert_eq!(issue["severity"], "information", "{version}");
         assert_eq!(

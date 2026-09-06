@@ -7,7 +7,7 @@ use ferroterm_testkit::fhir::{
 use fhir_terminology::conceptmap::convert;
 use fhir_terminology::conceptmap::model::Relationship;
 use fhir_terminology::operations::translate::{Match, TranslateInput, Translation, translate};
-use fhir_terminology::operations::{CodingRef, OperationError};
+use fhir_terminology::operations::{CodeableConceptRef, CodingRef, OperationError};
 use fhir_types::r4b::concept_map::{
     ConceptMap, ConceptMapGroup, ConceptMapGroupElement, ConceptMapGroupElementTarget,
 };
@@ -20,6 +20,11 @@ fn equivalence(m: &Match) -> &'static str {
 
 fn target_code(m: &Match) -> Option<&str> {
     m.concept.as_ref().and_then(|c| c.code.as_deref())
+}
+
+/// A codeable concept of `coding`, with no text.
+fn codeable(coding: Vec<CodingRef>) -> CodeableConceptRef {
+    CodeableConceptRef { coding, text: None }
 }
 
 fn coding_ref(system: &str, code: &str) -> CodingRef {
@@ -129,7 +134,10 @@ fn translate_by_url_code_coding_and_codeable_concept() {
     );
     let by_concept = TranslateInput {
         url: Some(CM_ANIMALS_COLOURS.to_owned()),
-        codeable_concept: Some(vec![coding_ref(ANIMALS, "cat"), coding_ref(ANIMALS, "dog")]),
+        codeable_concept: Some(codeable(vec![
+            coding_ref(ANIMALS, "cat"),
+            coding_ref(ANIMALS, "dog"),
+        ])),
         ..TranslateInput::default()
     };
     let translation = run(&world, &by_concept);

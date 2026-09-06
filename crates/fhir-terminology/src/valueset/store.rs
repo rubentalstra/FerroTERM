@@ -180,6 +180,65 @@ impl<'a> Resolver<'a> {
 }
 
 impl Resolver<'_> {
+    /// Refuses `compose`, named `url`, when it reaches itself through
+    /// `include.valueSet` or `exclude.valueSet`.
+    ///
+    /// Only the value set references are walked, so the answer costs no
+    /// expansion. A reference the server does not hold ends that branch: an
+    /// unknown import is the operation's own answer, and a cycle is a value
+    /// set no operation can evaluate.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ComposeError::Cycle`] naming the value set that re-enters.
+    pub fn check_acyclic(&self, url: &str, compose: &Compose) -> Result<(), ComposeError> {
+        let mut walked = BTreeSet::new();
+        self.walk_references(url, compose, &mut walked)
+    }
+
+    /// `check_acyclic` with `url` on the reference chain.
+    fn walk_references(
+        &self,
+        url: &str,
+        compose: &Compose,
+        walked: &mut BTreeSet<String>,
+    ) -> Result<(), ComposeError> {
+        self.active.borrow_mut().push(url.to_owned());
+        let result = self.references(compose, walked);
+        self.active.borrow_mut().pop();
+        result
+    }
+
+    /// Every value set `compose` references, each walked once.
+    fn references(
+        &self,
+        compose: &Compose,
+        walked: &mut BTreeSet<String>,
+    ) -> Result<(), ComposeError> {
+        for criterion in compose.include.iter().chain(&compose.exclude) {
+            for referenced in &criterion.value_sets {
+                if self
+                    .active
+                    .borrow()
+                    .iter()
+                    .any(|active| active == referenced)
+                {
+                    return Err(ComposeError::Cycle(referenced.clone()));
+                }
+                if !walked.insert(referenced.clone()) {
+                    continue;
+                }
+                // NOTE: a reference the server does not hold is legitimately absent
+                // here; the operation reports it, and only a cycle is this walk's answer.
+                let Ok(compose) = self.compose(referenced) else {
+                    continue;
+                };
+                self.walk_references(referenced, &compose, walked)?;
+            }
+        }
+        Ok(())
+    }
+
     /// Whether `compose`, named `url` for cycle detection, contains `code` of
     /// `system`.
     ///

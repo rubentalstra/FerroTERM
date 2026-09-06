@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use super::{CodingRef, OperationError, Sources};
+use super::{CodeableConceptRef, CodingRef, OperationError, Sources};
 use crate::conceptmap::model::{
     ConceptMapModel, DependsOn, Element, Group, ModelError, Relationship, Target, UnmappedMode,
 };
@@ -96,8 +96,8 @@ pub struct TranslateInput {
     pub version: Option<String>,
     /// The coding, instead of `code`.
     pub coding: Option<CodingRef>,
-    /// The codings of a `codeableConcept`, instead of `code`.
-    pub codeable_concept: Option<Vec<CodingRef>>,
+    /// The `codeableConcept`, instead of `code`.
+    pub codeable_concept: Option<CodeableConceptRef>,
     /// The source value set (`source`, R4B) or scope (`sourceScope`, R5).
     pub source: Option<String>,
     /// The target value set (`target`, R4B) or scope (`targetScope`, R5).
@@ -321,7 +321,7 @@ fn subjects(input: &TranslateInput) -> Result<Vec<Subject>, OperationError> {
     }
     let codings: Vec<&CodingRef> = match (&input.coding, &input.codeable_concept) {
         (Some(coding), _) => vec![coding],
-        (None, Some(concept)) => concept.iter().collect(),
+        (None, Some(concept)) => concept.coding.iter().collect(),
         (None, None) => Vec::new(),
     };
     let mut subjects = Vec::new();

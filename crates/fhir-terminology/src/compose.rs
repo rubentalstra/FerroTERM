@@ -331,6 +331,15 @@ impl Selection {
     }
 }
 
+/// Which side of a compose a criterion sits on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Role {
+    /// `compose.include`: the criterion selects codes into the value set.
+    Include,
+    /// `compose.exclude`: the criterion removes codes from it.
+    Exclude,
+}
+
 /// What an include's own system says about a code.
 enum Contained {
     /// The include names no system, so only its referenced value sets decide.
@@ -1063,7 +1072,9 @@ impl Expander<'_> {
     ) -> Result<Option<Item>, ComposeError> {
         let mut found = None;
         for include in &compose.include {
-            if let Some(item) = self.include_contains(include, system, version, code, language)? {
+            if let Some(item) =
+                self.include_contains(include, Role::Include, system, version, code, language)?
+            {
                 found = Some(item);
                 break;
             }
@@ -1073,7 +1084,7 @@ impl Expander<'_> {
         };
         for exclude in &compose.exclude {
             if self
-                .include_contains(exclude, system, version, code, language)?
+                .include_contains(exclude, Role::Exclude, system, version, code, language)?
                 .is_some()
             {
                 return Ok(None);
@@ -1089,13 +1100,14 @@ impl Expander<'_> {
     fn include_contains(
         &self,
         include: &Include,
+        role: Role,
         system: &str,
         version: Option<&str>,
         code: &str,
         language: Option<&str>,
     ) -> Result<Option<Item>, ComposeError> {
         well_formed(include)?;
-        let mut item = match self.system_contains(include, system, version, code, language)? {
+        let mut item = match self.system_contains(include, role, system, version, code, language)? {
             Contained::Refused => return Ok(None),
             Contained::NoSystem => None,
             Contained::Item(item) => Some(item),
@@ -1125,6 +1137,7 @@ impl Expander<'_> {
     fn system_contains(
         &self,
         include: &Include,
+        role: Role,
         system: &str,
         version: Option<&str>,
         code: &str,
@@ -1144,7 +1157,12 @@ impl Expander<'_> {
         let resolved = self.registry.resolve(&named.url, wanted)?;
         let provider = &resolved.provider;
         let identity = provider.identity();
-        if version.is_some_and(|v| !crate::versioned::version_matches(v, &identity.version)) {
+        // NOTE: an exclude's version says which version its codes are selected
+        // from, so it removes the code whatever version an include contributed it at
+        // (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.compose.exclude>).
+        if role == Role::Include
+            && version.is_some_and(|v| !crate::versioned::version_matches(v, &identity.version))
+        {
             return Ok(Contained::Refused);
         }
         let failed = |source| ComposeError::Provider {

@@ -6,7 +6,7 @@
 //! (<https://hl7.org/fhir/R4B/codesystem-operation-validate-code.html>,
 //! <https://hl7.org/fhir/R5/codesystem-operation-validate-code.html>).
 
-use super::{CodingRef, Invocation, Issue, OperationError, resolve};
+use super::{CodeableConceptRef, CodingRef, Invocation, Issue, OperationError, resolve};
 use crate::language;
 use crate::provider::CodeSystemProvider;
 use crate::registry::Registry;
@@ -26,8 +26,8 @@ pub struct ValidateCodeInput {
     pub display: Option<String>,
     /// The coding, instead of `code`.
     pub coding: Option<CodingRef>,
-    /// The codings of a `codeableConcept`, instead of `code`.
-    pub codeable_concept: Option<Vec<CodingRef>>,
+    /// The `codeableConcept`, instead of `code`.
+    pub codeable_concept: Option<CodeableConceptRef>,
     /// The language of the display (a BCP 47 range list).
     pub display_language: Option<String>,
     /// `lenient-display-validation`: a wrong display is a warning and the
@@ -63,7 +63,7 @@ pub struct ValidationOutcome {
     /// serve (`x-unknown-system`, the ecosystem's output for that input).
     pub x_unknown_systems: Vec<String>,
     /// The `codeableConcept` input, echoed (an R5 output, pre-adopted).
-    pub codeable_concept: Option<Vec<CodingRef>>,
+    pub codeable_concept: Option<CodeableConceptRef>,
     /// `inactive`: whether the concept is inactive (the ecosystem's output).
     pub inactive: Option<bool>,
     /// `status`: the concept's status when its system states one (the
@@ -253,7 +253,7 @@ pub fn validate_code(
             "coding",
         );
     }
-    let Some(codings) = &input.codeable_concept else {
+    let Some(concept) = &input.codeable_concept else {
         return Err(OperationError::Required(String::from(
             "provide one of `code`, `coding`, or `codeableConcept`",
         )));
@@ -262,8 +262,8 @@ pub fn validate_code(
         Ok(resolved) => resolved,
         Err(unserved) => return Ok(unserved),
     };
-    let mut outcome = check_codeable_concept(&resolved.provider, codings, language)?;
-    outcome.codeable_concept = Some(codings.clone());
+    let mut outcome = check_codeable_concept(&resolved.provider, &concept.coding, language)?;
+    outcome.codeable_concept = Some(concept.clone());
     Ok(outcome)
 }
 

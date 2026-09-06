@@ -21,7 +21,7 @@ macro_rules! family_map {
             use fhir_terminology::operations::value_set_validate_code::{
                 TX_ISSUE_TYPE, Validation, ValueSetValidateInput,
             };
-            use fhir_terminology::operations::{CodingRef, Issue, MESSAGE_ID_URL};
+            use fhir_terminology::operations::{CodeableConceptRef, CodingRef, Issue, MESSAGE_ID_URL};
             use fhir_terminology::provider::{Designation, PropertyValue};
             use fhir_terminology::{conceptmap, valueset};
             use fhir_types::$fhir::codeable_concept::CodeableConcept;
@@ -57,6 +57,15 @@ macro_rules! family_map {
                     version: coding.version.as_ref().and_then(|v| v.value.clone()),
                     code: coding.code.as_ref().and_then(|v| v.value.clone()),
                     display: coding.display.as_ref().and_then(|v| v.value.clone()),
+                }
+            }
+
+            /// A generated `CodeableConcept` as the engine's codeable concept.
+            #[must_use]
+            pub fn concept_ref(concept: &CodeableConcept) -> CodeableConceptRef {
+                CodeableConceptRef {
+                    coding: concept.coding.iter().map(coding_ref).collect(),
+                    text: concept.text.as_ref().and_then(|v| v.value.clone()),
                 }
             }
 
@@ -203,7 +212,7 @@ macro_rules! family_map {
                     codeable_concept: request
                         .codeable_concept
                         .as_ref()
-                        .map(|concept| concept.coding.iter().map(coding_ref).collect()),
+                        .map(concept_ref),
                     display_language: request
                         .display_language
                         .as_ref()
@@ -230,7 +239,7 @@ macro_rules! family_map {
                     normalized_code: outcome.normalized_code.map(Into::into),
                     system: outcome.system.map(Into::into),
                     version: outcome.version.map(Into::into),
-                    codeable_concept: outcome.codeable_concept.as_deref().map(concept_of),
+                    codeable_concept: outcome.codeable_concept.as_ref().map(concept_of),
                     issues: issues(&outcome.issues),
                     x_caused_by_unknown_system: outcome
                         .unknown_systems
@@ -248,9 +257,10 @@ macro_rules! family_map {
             }
 
             /// A neutral `codeableConcept` echoed as the `CodeableConcept` of the version.
-            fn concept_of(codings: &[CodingRef]) -> CodeableConcept {
+            fn concept_of(concept: &CodeableConceptRef) -> CodeableConcept {
                 CodeableConcept {
-                    coding: codings.iter().map(coding_of).collect(),
+                    coding: concept.coding.iter().map(coding_of).collect(),
+                    text: concept.text.as_deref().map(Into::into),
                     ..Default::default()
                 }
             }
@@ -328,7 +338,7 @@ macro_rules! family_map {
                     codeable_concept: request
                         .codeable_concept
                         .as_ref()
-                        .map(|concept| concept.coding.iter().map(coding_ref).collect()),
+                        .map(concept_ref),
                     display_language: $crate::version::map_r5::family_map!(@vs_language $flavour, request),
                     abstract_ok: request.r#abstract.as_ref().and_then(|b| b.value),
                     default_system_version: canonicals(&request.system_version_canonical),
@@ -363,7 +373,7 @@ macro_rules! family_map {
                     normalized_code: validation.normalized_code.as_deref().map(Into::into),
                     system: validation.system.as_deref().map(Into::into),
                     version: validation.version.as_deref().map(Into::into),
-                    codeable_concept: validation.codeable_concept.as_deref().map(concept_of),
+                    codeable_concept: validation.codeable_concept.as_ref().map(concept_of),
                     issues: issues(&validation.issues),
                     x_caused_by_unknown_system: validation
                         .unknown_systems
@@ -439,7 +449,7 @@ macro_rules! family_map {
                         .source_codeable_concept
                         .as_ref()
                         .or(request.target_codeable_concept.as_ref())
-                        .map(|concept| concept.coding.iter().map(coding_ref).collect()),
+                        .map(concept_ref),
                     source: uri(&request.source_scope),
                     target: uri(&request.target_scope),
                     target_system: if targeted {

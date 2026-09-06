@@ -36,6 +36,17 @@ pub struct CodingRef {
     pub display: Option<String>,
 }
 
+/// A `CodeableConcept` as an operation input names it, in no FHIR version's
+/// types: the codings and the `text` a `CodeableConcept` carries
+/// (<https://hl7.org/fhir/R4B/datatypes.html#CodeableConcept>).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CodeableConceptRef {
+    /// The codings, in the order the client sent them.
+    pub coding: Vec<CodingRef>,
+    /// The plain text the client sent beside the codings.
+    pub text: Option<String>,
+}
+
 /// Where an operation was invoked: on the type, or on one code system
 /// instance the server already resolved from the URL.
 #[derive(Debug, Clone)]
