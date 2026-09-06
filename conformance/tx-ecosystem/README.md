@@ -27,7 +27,7 @@ above the suite's own.
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
 | `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 29 of 227 | a LOINC release | #348, #305 |
 | `tx.fhir.org` | `/r5` | `passing-r5-tx.fhir.org.txt` | 30 of 227 | a LOINC release | #348, #305 |
-| `mimetypes` | `/r4b` | `passing-mimetypes.txt` | 21 of 37 | nothing | #351 |
+| `mimetypes` | `/r4b` | `passing-mimetypes.txt` | 23 of 37 | nothing | #346 |
 | `omop` | `/r4b` | `passing-omop.txt` | 1 of 28 | an OMOP vocabulary the server does not load | #345 |
 
 `general` is the only mode CI runs, on all three surfaces. The others need

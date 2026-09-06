@@ -689,3 +689,25 @@ fn a_post_coordinated_expression_is_refused_for_the_grammar_not_as_an_unknown_co
         "{error:?}"
     );
 }
+
+/// `$expand` names SNOMED CT as a system whose value sets are "unbounded due to
+/// the inclusion of post-coordinated value sets", the case `valueset-unclosed`
+/// marks (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes);
+/// the `expressions` filter is what keeps the expressions out
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties").
+#[test]
+fn a_selection_is_unclosed_unless_it_states_that_expressions_are_excluded() {
+    let (_dir, p) = provider();
+    let descendants = Filter {
+        property: String::from("concept"),
+        op: FilterOperator::DescendentOf,
+        value: sctid(item(ANIMAL)),
+    };
+    let no_expressions = Filter {
+        property: String::from("expressions"),
+        op: FilterOperator::Equal,
+        value: String::from("false"),
+    };
+    assert!(p.unclosed(std::slice::from_ref(&descendants)));
+    assert!(!p.unclosed(&[descendants, no_expressions]));
+}

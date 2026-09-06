@@ -380,3 +380,13 @@ fn ucum_validates_by_canonical_membership_and_refuses_expansion() {
         "commensurable units are unbounded too"
     );
 }
+
+/// `$expand` names UCUM as a system whose value sets are "unbounded due to the
+/// inclusion of post-coordinated value sets", the case the `valueset-unclosed`
+/// extension marks
+/// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, Notes).
+#[test]
+fn a_unit_selection_is_unclosed() {
+    let provider = UcumProvider::new();
+    assert!(provider.unclosed(&[filter("canonical", FilterOperator::Equal, "g")]));
+}

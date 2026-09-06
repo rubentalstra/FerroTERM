@@ -15,6 +15,10 @@ const EXPANSION_PROPERTY_EXTENSION: &str =
 /// The cross-version extension carrying R5's `ValueSet.expansion.contains.property`.
 const CONTAINS_PROPERTY_EXTENSION: &str =
     "http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property";
+/// The extension marking an expansion that leaves out codes the value set
+/// admits (`ValueSet.expansion`, a mandatory `boolean`,
+/// <https://hl7.org/fhir/R4B/extension-valueset-unclosed.html>).
+const UNCLOSED_EXTENSION: &str = "http://hl7.org/fhir/StructureDefinition/valueset-unclosed";
 
 macro_rules! render_value_set {
     // R6 makes `compose.include.filter.value` optional
@@ -402,9 +406,21 @@ macro_rules! render_value_set {
                     contains,
                     ..Default::default()
                 };
-                value_set.expansion = Some(render_value_set!(
+                let mut expansion = render_value_set!(
                     @expansion_properties $properties, $module, expansion, outcome
-                ));
+                );
+                if outcome.unclosed {
+                    expansion
+                        .extension
+                        .push(fhir_types::$module::extension::Extension {
+                            url: String::from(super::UNCLOSED_EXTENSION),
+                            value: Some(fhir_types::$module::extension::ExtensionValue::Boolean(
+                                true.into(),
+                            )),
+                            ..Default::default()
+                        });
+                }
+                value_set.expansion = Some(expansion);
                 value_set
             }
         }

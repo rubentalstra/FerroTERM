@@ -10,6 +10,7 @@ use roaring::RoaringBitmap;
 use super::model::{
     CHILD, CodeSystemModel, ConceptEntry, DEPRECATED, INACTIVE, NOT_SELECTABLE, PARENT, STATUS,
 };
+use crate::filter::Filter;
 use crate::provider::{
     Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
     Designation, Hierarchy, HierarchyMeaning, Identity, Located, Property, PropertyDefinition,
@@ -415,6 +416,14 @@ impl CodeSystemProvider for FhirCodeSystem {
             Some(hierarchy) => Some(hierarchy),
             None => None,
         }
+    }
+
+    /// A `fragment` resource holds "a subset of the code system", so a
+    /// selection over it leaves out the codes the system defines outside the
+    /// resource (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>); a
+    /// `complete` one holds every code the system defines.
+    fn unclosed(&self, _filters: &[Filter]) -> bool {
+        matches!(self.model.content, ContentMode::Fragment)
     }
 
     fn all(&self) -> Result<ConceptSet, ProviderError> {
