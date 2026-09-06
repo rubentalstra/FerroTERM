@@ -1,4 +1,5 @@
 batch/batch-validate
+big/big-circle-bang
 big/big-echo-fifty-fifty-limit
 big/big-echo-no-limit
 big/big-echo-zero-fifty-limit
@@ -56,8 +57,10 @@ inactive/inactive-1-validate
 inactive/inactive-1a-validate
 inactive/inactive-1b-validate
 inactive/inactive-2-validate
+inactive/inactive-2a-validate
 inactive/inactive-2b-validate
 inactive/inactive-3-validate
+inactive/inactive-3a-validate
 inactive/inactive-3b-validate
 inactive/inactive-active-expand
 inactive/inactive-expand
@@ -276,6 +279,7 @@ simple-cases/simple-expand-active
 simple-cases/simple-expand-all
 simple-cases/simple-expand-all-count
 simple-cases/simple-expand-child-of
+simple-cases/simple-expand-contained
 simple-cases/simple-expand-enum
 simple-cases/simple-expand-enum-bad
 simple-cases/simple-expand-inactive
@@ -322,6 +326,7 @@ tho/validate-descendent-of-deep
 tho/validate-descendent-of-self
 tho/validate-isa-child
 tho/validate-isa-deep
+tho/validate-isa-other-branch
 tho/validate-isa-parent
 tho/validate-isa-second-parent
 tho/validate-isa-second-parent-out
@@ -344,6 +349,7 @@ translate2/translate-5b
 translate2/translate-6a
 translate2/translate-reverse-r5+
 translate2/translate-reverse-r5+-a
+validation/validation-contained-good
 validation/validation-cs-code-bad-code
 validation/validation-cs-code-good
 validation/validation-simple-child-of-child
@@ -423,6 +429,8 @@ version/code-v10-vsnn-default
 version/code-v10-vsnn-force
 version/code-vbb-vs10
 version/code-vbb-vs10-check
+version/code-vbb-vs10-default
+version/code-vbb-vs10-force
 version/code-vbb-vsnn
 version/code-vbb-vsnn-check
 version/code-vbb-vsnn-default
@@ -460,13 +468,27 @@ version/codeableconcept-v10-vs1wb
 version/codeableconcept-v10-vs1wb-check
 version/codeableconcept-v10-vs1wb-default
 version/codeableconcept-v10-vs1wb-force
+version/codeableconcept-v10-vs20
+version/codeableconcept-v10-vs20-check
+version/codeableconcept-v10-vs20-default
 version/codeableconcept-v10-vs20-force
 version/codeableconcept-v10-vsbb
 version/codeableconcept-v10-vsbb
 version/codeableconcept-v10-vsbb-check
 version/codeableconcept-v10-vsbb-default
 version/codeableconcept-v10-vsbb-force
+version/codeableconcept-v10-vsnn
+version/codeableconcept-v10-vsnn-check
+version/codeableconcept-v10-vsnn-default
 version/codeableconcept-v10-vsnn-force
+version/codeableconcept-vbb-vs10
+version/codeableconcept-vbb-vs10-check
+version/codeableconcept-vbb-vs10-default
+version/codeableconcept-vbb-vs10-force
+version/codeableconcept-vbb-vsnn
+version/codeableconcept-vbb-vsnn-check
+version/codeableconcept-vbb-vsnn-default
+version/codeableconcept-vbb-vsnn-force
 version/codeableconcept-vnn-vs10
 version/codeableconcept-vnn-vs10-check
 version/codeableconcept-vnn-vs10-default
@@ -514,6 +536,8 @@ version/coding-v10-vsnn-default
 version/coding-v10-vsnn-force
 version/coding-vbb-vs10
 version/coding-vbb-vs10-check
+version/coding-vbb-vs10-default
+version/coding-vbb-vs10-force
 version/coding-vbb-vsnn
 version/coding-vbb-vsnn-check
 version/coding-vbb-vsnn-default
@@ -541,6 +565,7 @@ version/coding-vnn-vsnn-force
 version/validation-version-profile-coding
 version/version-simple-code-bad-version1
 version/version-simple-code-good-version
+version/version-simple-codeableconcept-bad-version1
 version/version-simple-codeableconcept-good-version
 version/version-simple-coding-bad-version1
 version/version-simple-coding-good-version

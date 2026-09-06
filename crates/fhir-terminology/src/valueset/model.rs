@@ -41,6 +41,10 @@ pub struct ValueSetModel {
     pub immutable: Option<bool>,
     /// `compose`, empty when the resource has none.
     pub compose: Compose,
+    /// The `ValueSet` resources the resource carries in `contained`, by the
+    /// `id` a `#id` canonical reference names them with
+    /// (<https://hl7.org/fhir/R4B/references.html#canonical>).
+    pub contained: std::collections::BTreeMap<String, ValueSetModel>,
 }
 
 /// One default expansion parameter of a value set: the `name` and `value`

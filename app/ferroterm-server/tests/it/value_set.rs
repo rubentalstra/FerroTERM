@@ -77,7 +77,9 @@ async fn expand_of_an_unknown_value_set_is_not_found() {
         )
         .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
-    assert_eq!(body["issue"][0]["code"], "invalid");
+    // A cycle is a processing failure, "there is no point resubmitting the same
+    // content unchanged" (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
+    assert_eq!(body["issue"][0]["code"], "processing");
 }
 
 #[tokio::test]

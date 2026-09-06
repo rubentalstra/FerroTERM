@@ -20,9 +20,9 @@ above the suite's own.
 
 | mode | surface | pass list | passed of ran | needs | open failures |
 |---|---|---|---|---|---|
-| `general` | `/r4b` | `passing.txt` | 574 of 670 | nothing | #353 |
-| `general` | `/r4` | `passing-r4.txt` | 578 of 670 | nothing | #353 |
-| `general` | `/r5` | `passing-r5.txt` | 580 of 670 | nothing | #353 |
+| `general` | `/r4b` | `passing.txt` | 599 of 670 | nothing | #353 |
+| `general` | `/r4` | `passing-r4.txt` | 603 of 670 | nothing | #353 |
+| `general` | `/r5` | `passing-r5.txt` | 605 of 670 | nothing | #353 |
 | `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
 | `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 55 of 227 | a LOINC release | #420, #421, #305, #349 |
@@ -36,8 +36,11 @@ hand before a release and their lists are refreshed in the same change.
 
 ## What each mode needs to run
 
-- **`general`** needs nothing: the runner supplies every code system and value
-  set the cases use as `tx-resource` parameters.
+- **`general`** needs nothing to run: the runner supplies every code system and
+  value set the cases declare in their own setup. Four of them reach past that
+  setup for terminology the FHIR specification defines
+  (<https://hl7.org/fhir/R4B/terminologies-systems.html>), which the server does
+  not hold yet (#435).
 - **`snomed`** needs a SNOMED CT artifact
   (`--mode snomed --index <edition>`). It scores 1 of 170 whatever edition you
   point it at, because every case pins the reference server's own edition
@@ -164,8 +167,32 @@ collection of languages", so `zh` does not subsume `zh-min-nan`.
   version's `CodeSystem/$subsumes` `OperationDefinition` fixes the value, and
   R4B's `IssueType` admits both readings ("the code or system could not be
   understood" against "the reference provided was not found"), so the server
-  keeps one answer for one fact and passes the `$lookup` shape. #353 settles
-  the cluster against the ecosystem's `tx-issue-type` guidance.
+  keeps one answer for one fact and passes the `$lookup` shape.
+
+  The ecosystem's own guidance closes it. Of the two fields an issue carries,
+  the IG binds only one: "any issue entries in the OperationOutcome SHALL have
+  a severity, type, expression, details.coding, and details.text. The coding
+  SHALL be taken from the `http://hl7.org/fhir/tools/CodeSystem/tx-issue-type`
+  system", and then, of the other, "the correct value for issue.type and
+  issue.details.coding may be found in the text cases. At least with regard to
+  issue.type, the correct code is sometimes unclear, and more than one type is
+  accepted"
+  (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>,
+  `$validate-code` return parameters). These 11 answers carry the
+  `tx-issue-type` coding `invalid-code` the cases ask for, with the message id
+  and the text, so they meet the requirement the IG states; only the field it
+  says more than one value is accepted for differs. The refusal to answer one
+  fact with two issue codes stands, and the 11 stay unpassed. Upstream report
+  for the owner to post: the runner compares `issue.code` exactly, which is
+  stricter than the IG's own rule, and the two families disagree on the same
+  fact.
+
+  The server does spell the same fact two ways, and the suite asks for both:
+  a refused operation answers `not-found`, and one code itemised inside a
+  `$validate-code` answer is `code-invalid`. Compare
+  `icd-11/lookup-bad-code-response.json` with
+  `validation/simple-codeableconcept-bad-code-response-parameters.json`, both
+  passing. The two surfaces are separate on purpose.
 - **Nine cases send a parameter the operation does not declare.** Seven send
   `version` on `ValueSet/$validate-code`, which declares `systemVersion` and
   `valueSetVersion` as its inputs and `version` only as an output; one sends
@@ -197,8 +224,51 @@ collection of languages", so `zh` does not subsume `zh-min-nan`.
   properties "are returned explicit in named parameters (when the names match),
   and the rest (except for lang.X) in the property parameter group".
   `definition` matches no R4-family output name, so it belongs in `property`
-  there. All three pass on `/r5`, and the three stay unpassed on `/r4b` and
+  there, and so does `abstract`, which those two versions do not declare
+  either. All three pass on `/r5`, and the three stay unpassed on `/r4b` and
   `/r4` because the case reads an R5 shape onto an R4-family surface.
+- **`reverse` on `$translate` is an R4-family input, and the suite refuses it
+  on `/r4b`.** `translate2/translate-reverse-r5+` and
+  `translate-reverse-r5+-a` run wherever the server is not R4, and the second
+  wants a 4xx "reverse is not allowed in R5". `hl7.fhir.r4b.core` 4.3.0
+  declares `reverse` among the inputs of `ConceptMap/$translate`, and
+  `hl7.fhir.r5.core` 5.0.0 does not, so `/r4b` honours it and `/r5` refuses
+  it. Both cases pass on `/r5` and stay unpassed on `/r4b`, where the case
+  reads an R5 restriction onto an R4-family surface. Upstream report for the
+  owner to post: gate the pair to `"version": "5.0"`, or give it an R4-family
+  response that translates in reverse.
+- **`versionsMatch` is a parameter no publication defines.** Eight `overload`
+  expansion cases turn on whether two codes from two versions of one code
+  system are one member: `expand-all-merged`, `expand-exclude`, and
+  `expand-exclude-merged` want them merged, `expand-exclude-versioned` wants
+  them kept apart, and `expand-all`, `expand-all-sysver`,
+  `expand-all-versioned`, and `expand-exclude-enum` differ only on which of two
+  entries with the same code comes first. The behaviour is carried by a
+  `valueset-expansion-parameter` extension naming `versionsMatch`, which
+  appears nowhere in the vendored `hl7.fhir.r4.core` 4.0.1,
+  `hl7.fhir.r4b.core` 4.3.0, `hl7.fhir.r5.core` 5.0.0, or `hl7.fhir.r6.core`
+  6.0.0-ballot5, and nowhere in the ecosystem IG outside these fixtures. No
+  FHIR version prescribes the order of two `expansion.contains` entries
+  either. The server keeps one entry per include, in include order, and the
+  eight stay unpassed. Upstream report for the owner to post: define
+  `versionsMatch` and its default in the IG's requirements page, or drop the
+  cases.
+- **Four cases reach for terminology the FHIR specification defines**, which
+  the server does not hold and the runner does not supply:
+  `exclude/exclude-gender`, `exclude-gender2`, `exclude-combo`, and
+  `include-combo` name `http://hl7.org/fhir/administrative-gender`,
+  `http://hl7.org/fhir/publication-status`, and
+  `http://hl7.org/fhir/ValueSet/administrative-gender`
+  (<https://hl7.org/fhir/R4B/terminologies-systems.html>). Each answers 404
+  where the case expects a 2xx. #435.
+- **Three defects of this server hold the rest of the shape clusters.**
+  `$validate-code` pins one code system version before it checks the display,
+  so five `overload` validation cases fail over a value set including two
+  versions of one system (#437); a circular value set refuses `$expand` and
+  still answers `$validate-code`, so `big/big-circle-validate` gets a 200
+  (#438); and the `codeableConcept` echo drops `CodeableConcept.text`, which
+  is the whole difference in the two
+  `validation/validation-complex-codeableconcept` cases (#436).
 - **A supplied `tx-resource` is read leniently and refuses only the request
   that resolves it.** Cardinality is an aspect of validating a resource, which
   a server performs at its discretion, and an implementation "should be

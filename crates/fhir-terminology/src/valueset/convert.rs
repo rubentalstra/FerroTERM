@@ -189,6 +189,17 @@ macro_rules! convert_value_set {
                         })
                     })
                     .collect();
+                // NOTE: a canonical reference to a contained resource is the
+                // `#id` fragment of the container
+                // (<https://hl7.org/fhir/R4B/references.html#canonical>).
+                let mut contained = std::collections::BTreeMap::new();
+                for entry in &resource.contained {
+                    if let fhir_types::$module::resource::Resource::ValueSet(inner) = entry
+                        && let Some(id) = inner.id.as_deref()
+                    {
+                        contained.insert(id.to_owned(), convert(inner)?);
+                    }
+                }
                 let standards_status = resource
                     .extension
                     .iter()
@@ -221,6 +232,7 @@ macro_rules! convert_value_set {
                     ),
                     immutable: flag(&resource.immutable),
                     compose,
+                    contained,
                 })
             }
         }

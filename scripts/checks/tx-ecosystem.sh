@@ -23,6 +23,10 @@ VALIDATOR_VERSION=6.10.4
 VALIDATOR_SHA256=1106b9d58f9e363e47bea7c4fc065841e5fc91fe9d062775c3bfdd212bd653cc
 SUITE_REPO=https://github.com/HL7/fhir-tx-ecosystem-ig
 SUITE_COMMIT=eaec771d82fba4eac596c14963546f39b4ecffe7
+# Seconds to wait for the started server to answer /health. Generous because it
+# covers reading an artifact, and safe because the wait ends the moment the
+# server exits.
+READY_TIMEOUT=${FERROTERM_READY_TIMEOUT:-300}
 
 server=""
 port=""
@@ -110,7 +114,11 @@ if [[ -z "$server" ]]; then
   started=$!
   trap 'kill "$started" 2>/dev/null || true; wait "$started" 2>/dev/null || true' EXIT
   ready=""
-  for _ in $(seq 1 50); do
+  # Reading an artifact takes as long as it takes: a LOINC release needs about
+  # twenty seconds here, and a SNOMED edition more. The liveness check below is
+  # what makes waiting this long safe, since a server that dies is noticed at
+  # once rather than at the deadline.
+  for _ in $(seq 1 "$((READY_TIMEOUT * 5))"); do
     # The child owning the port is what makes the answer ours. Without this a
     # bind failure left the probe talking to the squatter (#425).
     if ! kill -0 "$started" 2>/dev/null; then
@@ -125,7 +133,7 @@ if [[ -z "$server" ]]; then
     sleep 0.2
   done
   if [[ -z "$ready" ]]; then
-    echo "tx-ecosystem: the server did not answer /health on port $port within ten seconds" >&2
+    echo "tx-ecosystem: the server did not answer /health on port $port within ${READY_TIMEOUT}s" >&2
     cat "$work/server.log" >&2
     exit 1
   fi
