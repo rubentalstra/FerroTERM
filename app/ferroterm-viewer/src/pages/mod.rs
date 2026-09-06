@@ -7,6 +7,94 @@
     reason = "leptos::component derives a TypedBuilder whose `builder` shadows a trait method"
 )]
 
-pub(crate) mod home;
 pub(crate) mod not_found;
+pub(crate) mod overview;
 pub(crate) mod settings;
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::Path;
+    use std::path::PathBuf;
+
+    /// Text that would mean a screen knows one code system from another.
+    ///
+    /// Every screen renders what `TerminologyCapabilities` declares, so a
+    /// canonical written into a screen is a defect: a system the server has
+    /// never served before has to draw with no change to any of these files.
+    const CANONICAL_FRAGMENTS: [&str; 8] = [
+        "snomed.info",
+        "loinc.org",
+        "nlm.nih.gov",
+        "unitsofmeasure.org",
+        "who.int",
+        "hl7.org/fhir/sid",
+        "urn:ietf:bcp",
+        "urn:iso:std:iso",
+    ];
+
+    /// The directories holding the screens and the chrome they render inside.
+    ///
+    /// The reading layer under `src/fhir` is out of scope, because its tests
+    /// quote real canonicals to prove the reader handles them. The mandate
+    /// still covers it, and a reviewer checks it there.
+    const SCREEN_DIRECTORIES: [&str; 2] = ["src/pages", "src/components"];
+
+    /// Every `.rs` file under `directory`, in a stable order.
+    fn sources(directory: &Path) -> Vec<PathBuf> {
+        let mut found = Vec::new();
+        let entries = fs::read_dir(directory).expect("the screen directory is in the crate");
+        for entry in entries {
+            let path = entry.expect("the directory entry reads").path();
+            if path.is_dir() {
+                found.extend(sources(&path));
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                found.push(path);
+            }
+        }
+        found.sort();
+        found
+    }
+
+    #[test]
+    fn no_screen_names_a_code_system() {
+        let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let guard = crate_root.join("src").join("pages").join("mod.rs");
+        assert!(
+            guard.is_file(),
+            "the guard writes the fragments out in order to forbid them, so it exempts itself"
+        );
+        let mut exempted = 0_u32;
+        let mut offences: Vec<String> = Vec::new();
+        for directory in SCREEN_DIRECTORIES {
+            for path in sources(&crate_root.join(directory)) {
+                if path == guard {
+                    exempted += 1;
+                    continue;
+                }
+                let text = fs::read_to_string(&path).expect("the source file reads");
+                for fragment in CANONICAL_FRAGMENTS {
+                    if text.contains(fragment) {
+                        offences.push(format!("{} names {fragment}", path.display()));
+                    }
+                }
+            }
+        }
+        assert_eq!(exempted, 1, "nothing but the guard itself is exempt");
+        assert!(
+            offences.is_empty(),
+            "a screen renders the capability statement and names no system: {offences:?}"
+        );
+    }
+
+    #[test]
+    fn the_guard_reads_the_screens_it_claims_to_read() {
+        let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        for directory in SCREEN_DIRECTORIES {
+            assert!(
+                !sources(&crate_root.join(directory)).is_empty(),
+                "{directory} holds screens, so a passing guard means something"
+            );
+        }
+    }
+}

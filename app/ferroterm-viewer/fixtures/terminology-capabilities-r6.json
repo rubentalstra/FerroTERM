@@ -1,0 +1,1004 @@
+{
+  "codeSystem": [
+    {
+      "content": "complete",
+      "subsumption": true,
+      "uri": "http://example.org/fhir/CodeSystem/animals",
+      "version": [
+        {
+          "compositional": false,
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists",
+                "is-a",
+                "descendent-of",
+                "is-not-a",
+                "generalizes",
+                "child-of",
+                "descendent-leaf"
+              ]
+            },
+            {
+              "code": "legs",
+              "op": [
+                "=",
+                "in"
+              ]
+            }
+          ],
+          "isDefault": true,
+          "language": [
+            "de",
+            "en"
+          ],
+          "property": [
+            "legs",
+            "status",
+            "notSelectable",
+            "inactive",
+            "subsumedBy",
+            "parent",
+            "child"
+          ],
+          "value": "2.0"
+        }
+      ]
+    },
+    {
+      "content": "complete",
+      "subsumption": false,
+      "uri": "http://example.org/fhir/CodeSystem/colours",
+      "version": [
+        {
+          "compositional": false,
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists"
+              ]
+            }
+          ],
+          "isDefault": true,
+          "language": [
+            "nl"
+          ],
+          "property": [
+            "inactive",
+            "notSelectable",
+            "parent",
+            "child"
+          ],
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "content": "example",
+      "subsumption": false,
+      "uri": "http://example.org/fhir/CodeSystem/sketch",
+      "version": [
+        {
+          "compositional": false,
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists"
+              ]
+            }
+          ],
+          "isDefault": true,
+          "property": [
+            "inactive",
+            "notSelectable",
+            "parent",
+            "child"
+          ],
+          "value": "0.1"
+        }
+      ]
+    },
+    {
+      "content": "not-present",
+      "subsumption": true,
+      "uri": "http://loinc.org",
+      "version": [
+        {
+          "compositional": false,
+          "extension": [
+            {
+              "extension": [
+                {
+                  "url": "name",
+                  "valueString": "loinc"
+                },
+                {
+                  "url": "release",
+                  "valueString": "2.99"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact"
+            }
+          ],
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists",
+                "is-a",
+                "descendent-of",
+                "is-not-a",
+                "generalizes",
+                "child-of",
+                "descendent-leaf"
+              ]
+            },
+            {
+              "code": "LOINC_NUM",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "COMPONENT",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "PROPERTY",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "TIME_ASPCT",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "SYSTEM",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "SCALE_TYP",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "METHOD_TYP",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "CLASS",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "VersionLastChanged",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "CHNG_TYPE",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "DefinitionDescription",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "STATUS",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "CONSUMER_NAME",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "CLASSTYPE",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "FORMULA",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "EXMPL_ANSWERS",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "SURVEY_QUEST_TEXT",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "SURVEY_QUEST_SRC",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "UNITSREQUIRED",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "RELATEDNAMES2",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "SHORTNAME",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "ORDER_OBS",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "HL7_FIELD_SUBFIELD_ID",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "EXTERNAL_COPYRIGHT_NOTICE",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "EXAMPLE_UNITS",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "LONG_COMMON_NAME",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "EXAMPLE_UCUM_UNITS",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "STATUS_REASON",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "STATUS_TEXT",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "CHANGE_REASON_PUBLIC",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "COMMON_TEST_RANK",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "COMMON_ORDER_RANK",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "HL7_ATTACHMENT_STRUCTURE",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "EXTERNAL_COPYRIGHT_LINK",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "PanelType",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "AskAtOrderEntry",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "AssociatedObservations",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "VersionFirstReleased",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "ValidHL7AttachmentRequest",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "DisplayName",
+              "op": [
+                "=",
+                "regex"
+              ]
+            },
+            {
+              "code": "copyright",
+              "op": [
+                "="
+              ]
+            },
+            {
+              "code": "parent",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "ancestor",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "LIST",
+              "op": [
+                "="
+              ]
+            },
+            {
+              "code": "answers-for",
+              "op": [
+                "="
+              ]
+            }
+          ],
+          "isDefault": true,
+          "language": [
+            "en",
+            "nl-NL"
+          ],
+          "property": [
+            "STATUS",
+            "COMPONENT",
+            "PROPERTY",
+            "TIME_ASPCT",
+            "SYSTEM",
+            "SCALE_TYP",
+            "METHOD_TYP",
+            "CLASS",
+            "CONSUMER_NAME",
+            "CLASSTYPE",
+            "ORDER_OBS",
+            "parent",
+            "child",
+            "copyright",
+            "answer-list",
+            "answers",
+            "kind"
+          ],
+          "value": "2.99"
+        }
+      ]
+    },
+    {
+      "content": "not-present",
+      "subsumption": true,
+      "uri": "http://snomed.info/sct",
+      "version": [
+        {
+          "compositional": false,
+          "extension": [
+            {
+              "extension": [
+                {
+                  "url": "name",
+                  "valueString": "snomed"
+                },
+                {
+                  "url": "release",
+                  "valueString": "20260101"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact"
+            }
+          ],
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists",
+                "is-a",
+                "descendent-of",
+                "is-not-a",
+                "generalizes",
+                "child-of",
+                "descendent-leaf"
+              ]
+            },
+            {
+              "code": "concept",
+              "op": [
+                "is-a",
+                "descendent-of",
+                "in"
+              ]
+            },
+            {
+              "code": "constraint",
+              "op": [
+                "="
+              ]
+            },
+            {
+              "code": "expressions",
+              "op": [
+                "="
+              ]
+            }
+          ],
+          "isDefault": true,
+          "language": [
+            "en",
+            "nl"
+          ],
+          "property": [
+            "inactive",
+            "sufficientlyDefined",
+            "moduleId",
+            "effectiveTime",
+            "parent",
+            "child",
+            "71234567106",
+            "81234567108"
+          ],
+          "value": "http://snomed.info/sct/91234567105/version/20260101"
+        }
+      ]
+    },
+    {
+      "content": "not-present",
+      "subsumption": false,
+      "uri": "http://unitsofmeasure.org",
+      "version": [
+        {
+          "compositional": true,
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists"
+              ]
+            },
+            {
+              "code": "canonical",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "property",
+              "op": [
+                "="
+              ]
+            }
+          ],
+          "isDefault": true,
+          "language": [
+            "en"
+          ],
+          "property": [
+            "canonical",
+            "property"
+          ],
+          "value": "2.2"
+        }
+      ]
+    },
+    {
+      "content": "not-present",
+      "subsumption": false,
+      "uri": "http://www.nlm.nih.gov/research/umls/rxnorm",
+      "version": [
+        {
+          "compositional": false,
+          "extension": [
+            {
+              "extension": [
+                {
+                  "url": "name",
+                  "valueString": "rxnorm"
+                },
+                {
+                  "url": "release",
+                  "valueString": "01012099"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact"
+            }
+          ],
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists"
+              ]
+            },
+            {
+              "code": "TTY",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "SAB",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "STY",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "RB",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "RN",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "RO",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "SY",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "dose_form_of",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "has_dose_form",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "has_ingredient",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "has_tradename",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "ingredient_of",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "tradename_of",
+              "op": [
+                "=",
+                "in"
+              ]
+            }
+          ],
+          "isDefault": true,
+          "language": [
+            "en"
+          ],
+          "property": [
+            "TTY",
+            "SAB",
+            "STY",
+            "NDC",
+            "RXN_AVAILABLE_STRENGTH",
+            "RXN_HUMAN_DRUG",
+            "RB",
+            "RN",
+            "RO",
+            "SY",
+            "dose_form_of",
+            "has_dose_form",
+            "has_ingredient",
+            "has_tradename",
+            "ingredient_of",
+            "tradename_of"
+          ],
+          "value": "01012099"
+        }
+      ]
+    },
+    {
+      "content": "not-present",
+      "subsumption": false,
+      "uri": "urn:ietf:bcp:13",
+      "version": [
+        {
+          "compositional": true,
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists"
+              ]
+            },
+            {
+              "code": "base",
+              "op": [
+                "=",
+                "in"
+              ]
+            },
+            {
+              "code": "registered",
+              "op": [
+                "="
+              ]
+            }
+          ],
+          "isDefault": true,
+          "property": [
+            "base",
+            "registered"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "content": "not-present",
+      "subsumption": false,
+      "uri": "urn:ietf:bcp:47",
+      "version": [
+        {
+          "compositional": true,
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists"
+              ]
+            },
+            {
+              "code": "language",
+              "op": [
+                "=",
+                "in",
+                "exists"
+              ]
+            },
+            {
+              "code": "extlang",
+              "op": [
+                "=",
+                "in",
+                "exists"
+              ]
+            },
+            {
+              "code": "script",
+              "op": [
+                "=",
+                "in",
+                "exists"
+              ]
+            },
+            {
+              "code": "region",
+              "op": [
+                "=",
+                "in",
+                "exists"
+              ]
+            },
+            {
+              "code": "variant",
+              "op": [
+                "=",
+                "in",
+                "exists"
+              ]
+            }
+          ],
+          "isDefault": true,
+          "property": [
+            "language",
+            "extlang",
+            "script",
+            "region",
+            "variant"
+          ],
+          "value": "2026-08-08"
+        }
+      ]
+    },
+    {
+      "content": "complete",
+      "subsumption": false,
+      "uri": "urn:iso:std:iso:3166",
+      "version": [
+        {
+          "compositional": false,
+          "filter": [
+            {
+              "code": "concept",
+              "op": [
+                "=",
+                "in",
+                "not-in",
+                "regex",
+                "exists"
+              ]
+            },
+            {
+              "code": "code",
+              "op": [
+                "regex",
+                "=",
+                "in"
+              ]
+            }
+          ],
+          "isDefault": true,
+          "language": [
+            "en"
+          ],
+          "property": [
+            "alpha3",
+            "numeric",
+            "userAssigned",
+            "inactive",
+            "notSelectable",
+            "parent",
+            "child"
+          ],
+          "value": "48"
+        }
+      ]
+    }
+  ],
+  "date": "2026-09-06T20:35:59.392362Z",
+  "description": "Serves the FHIR R6 ballot (version 6.0.0-ballot5). Every behaviour grounded only in the ballot is re-verified against the published specification when it appears, and may change with it.",
+  "expansion": {
+    "hierarchical": false,
+    "incomplete": false,
+    "paging": true,
+    "parameter": [
+      {
+        "name": "activeOnly"
+      },
+      {
+        "name": "check-system-version"
+      },
+      {
+        "name": "count"
+      },
+      {
+        "name": "designation"
+      },
+      {
+        "name": "displayLanguage"
+      },
+      {
+        "name": "exclude-system"
+      },
+      {
+        "name": "excludeNested"
+      },
+      {
+        "name": "excludeNotForUI"
+      },
+      {
+        "name": "excludePostCoordinated"
+      },
+      {
+        "name": "filter"
+      },
+      {
+        "name": "force-system-version"
+      },
+      {
+        "name": "includeDefinition"
+      },
+      {
+        "name": "includeDesignations"
+      },
+      {
+        "name": "offset"
+      },
+      {
+        "name": "property"
+      },
+      {
+        "name": "system-version"
+      },
+      {
+        "name": "tx-resource"
+      },
+      {
+        "name": "tx-resource"
+      }
+    ],
+    "textFilter": "Each word of the filter is a prefix that must match the start of a word in one designation of the concept, in any order. Matching ignores case and diacritics. No wild cards."
+  },
+  "implementation": {
+    "description": "FerroTERM terminology server"
+  },
+  "kind": "instance",
+  "name": "FerroTERM",
+  "resourceType": "TerminologyCapabilities",
+  "software": {
+    "name": "FerroTERM",
+    "version": "0.1.0"
+  },
+  "status": "active",
+  "title": "FerroTERM terminology capabilities (R6 ballot)",
+  "version": "0.1.0"
+}

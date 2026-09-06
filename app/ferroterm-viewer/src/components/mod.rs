@@ -7,8 +7,10 @@
     reason = "leptos::component derives a TypedBuilder whose `builder` shadows a trait method"
 )]
 
+pub(crate) mod code_system_card;
 pub(crate) mod failure;
 pub(crate) mod health;
+pub(crate) mod request_disclosure;
 pub(crate) mod shell;
 pub(crate) mod theme_toggle;
 pub(crate) mod version_switcher;
