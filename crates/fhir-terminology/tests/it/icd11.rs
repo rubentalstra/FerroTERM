@@ -657,3 +657,67 @@ fn a_linearizations_grammar_is_defined_and_supported_and_the_foundation_has_none
     assert!(!foundation.declaration().compositional.defined());
     assert!(!foundation.declaration().compositional.supported());
 }
+
+// NOTE: `displayLanguage` "Specifies the language to be used for description
+// when validating the display property"
+// (<https://hl7.org/fhir/R4B/codesystem-operation-validate-code.html>).
+#[test]
+fn a_display_in_the_base_language_does_not_satisfy_a_request_for_another_one() {
+    use std::sync::Arc;
+
+    use fhir_terminology::operations::Invocation;
+    use fhir_terminology::operations::validate_code::{ValidateCodeInput, validate_code};
+    use fhir_terminology::registry::Registry;
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    write_artifacts(dir.path()).expect("builds");
+    let mut registry = Registry::new();
+    registry
+        .register(Arc::new(
+            Icd11Provider::open(&dir.path().join("mms")).expect("opens mms"),
+        ))
+        .expect("registers");
+    let ask = |code: &str, display: &str| {
+        validate_code(
+            &registry,
+            &Invocation::Type,
+            &ValidateCodeInput {
+                url: Some(MMS.to_owned()),
+                code: Some(code.to_owned()),
+                display: Some(display.to_owned()),
+                display_language: Some(String::from("fr")),
+                ..ValidateCodeInput::default()
+            },
+        )
+        .expect("validates")
+    };
+
+    // The fixture carries a French title for 1A00 alone, so the English title
+    // is the wrong display for a French request and the French one is named.
+    let wrong = ask("1A00", "Cholera");
+    assert!(!wrong.result, "{wrong:?}");
+    assert_eq!(wrong.display.as_deref(), Some("Choléra"));
+    let issue = wrong.issues.first().expect("an issue");
+    assert_eq!(issue.severity, "error");
+    assert_eq!(issue.kind, "invalid-display");
+    assert_eq!(
+        issue.message_id(),
+        "Display_Name_for__should_be_one_of__instead_of"
+    );
+    assert!(issue.text.contains("Choléra"), "{}", issue.text);
+    assert_eq!(wrong.message.as_deref(), Some(issue.text.as_str()));
+
+    // 1A01 has no French title at all, which is the shape of a linearization
+    // built from the English bundle alone: the English display stands, and the
+    // answer says the requested language has none.
+    let none = ask("1A01", "Intestinal infection due to other Vibrio");
+    assert!(none.result, "{none:?}");
+    let issue = none.issues.first().expect("an issue");
+    assert_eq!(issue.severity, "information");
+    assert_eq!(issue.kind, "invalid-display");
+    assert_eq!(
+        issue.message_id(),
+        "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK"
+    );
+    assert!(none.message.is_some(), "{none:?}");
+}
