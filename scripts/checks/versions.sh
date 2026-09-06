@@ -175,6 +175,18 @@ if [[ -f scripts/checks/tx-ecosystem.sh ]]; then
   else
     note "OK: the suite commit is $table_commit"
   fi
+  script_validator="$(grep -m1 '^VALIDATOR_VERSION=' scripts/checks/tx-ecosystem.sh | sed 's/^VALIDATOR_VERSION=//' | tr -d '[:space:]')"
+  script_sha="$(grep -m1 '^VALIDATOR_SHA256=' scripts/checks/tx-ecosystem.sh | sed 's/^VALIDATOR_SHA256=//' | tr -d '[:space:]')"
+  table_validator="$(grep -oE 'FHIR Validator .[^|]*\| [0-9]+\.[0-9]+\.[0-9]+' docs/VERSIONS.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' || true)"
+  if [[ -z "$table_validator" ]]; then
+    bad "docs/VERSIONS.md names no FHIR Validator version"
+  elif [[ "$script_validator" != "$table_validator" ]]; then
+    bad "tx-ecosystem.sh pins validator $script_validator, docs/VERSIONS.md says $table_validator"
+  elif ! grep -qF "$script_sha" docs/VERSIONS.md; then
+    bad "tx-ecosystem.sh pins validator sha256 $script_sha, docs/VERSIONS.md names another"
+  else
+    note "OK: the validator is $table_validator"
+  fi
   [[ -f conformance/tx-ecosystem/total.txt ]] || bad "conformance/tx-ecosystem/total.txt is missing (the badges need the suite total)"
   grep -qE 'test cases [0-9]+\.[0-9]+\.[0-9]+' docs/VERSIONS.md || bad "docs/VERSIONS.md names no suite test-case version (the badge label needs it)"
 else
