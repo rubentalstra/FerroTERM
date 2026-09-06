@@ -17,6 +17,7 @@ use super::{CodingRef, OperationError, Sources};
 use crate::conceptmap::model::{
     ConceptMapModel, DependsOn, Element, Group, ModelError, Relationship, Target, UnmappedMode,
 };
+use crate::provider::MapSelection;
 use crate::versioned::Versioned;
 
 /// How deep `unmapped.mode = other-map` may chain (our own guard).
@@ -136,12 +137,20 @@ pub fn translate(
             "`dependency` is not supported",
         )));
     }
-    let maps = candidate_maps(sources, input)?;
+    let candidates = candidate_maps(sources, input)?;
     let reverse = input.reverse.unwrap_or(false);
     let target_system = input.target_system.as_deref();
     let subjects = subjects(input)?;
     let mut used = Vec::new();
-    let mut matches = translated(sources, &maps, &subjects, target_system, reverse, &mut used)?;
+    let (mut matches, mapped) = translated(
+        sources,
+        &candidates,
+        input,
+        &subjects,
+        target_system,
+        reverse,
+        &mut used,
+    )?;
     if matches.is_empty() && input.url.is_none() {
         matches = successors(sources, &subjects, target_system)?;
     }
@@ -154,10 +163,10 @@ pub fn translate(
     let result = !matches.is_empty();
     let message = if result {
         None
-    } else if maps.is_empty() {
-        Some(no_map_message(subjects.first(), target_system, reverse))
-    } else {
+    } else if mapped {
         Some(String::from("No translations found"))
+    } else {
+        Some(no_map_message(subjects.first(), target_system, reverse))
     };
     Ok(Translation {
         result,
@@ -168,18 +177,22 @@ pub fn translate(
 }
 
 /// The matches every candidate map holds for every subject, each target
-/// reported once.
+/// reported once, and whether any map was consulted at all.
 fn translated(
     sources: &Sources<'_>,
-    maps: &[Arc<ConceptMapModel>],
+    candidates: &Candidates,
+    input: &TranslateInput,
     subjects: &[Subject],
     target_system: Option<&str>,
     reverse: bool,
     used: &mut Vec<String>,
-) -> Result<Vec<Match>, OperationError> {
+) -> Result<(Vec<Match>, bool), OperationError> {
     let mut matches: Vec<Match> = Vec::new();
+    let mut mapped = false;
     for subject in subjects {
-        for map in maps {
+        let maps = maps_for(sources, candidates, input, subject, reverse)?;
+        mapped |= !maps.is_empty();
+        for map in &maps {
             for found in matches_in(sources, map, subject, target_system, reverse, 0, used)? {
                 // NOTE: the same target reached through two maps is one match, the
                 // ecosystem's shape (<https://hl7.org/fhir/uv/tx-ecosystem/>).
@@ -189,7 +202,7 @@ fn translated(
             }
         }
     }
-    Ok(matches)
+    Ok((matches, mapped))
 }
 
 /// Whether `found` names a target `matches` already reports.
@@ -332,52 +345,91 @@ fn subjects(input: &TranslateInput) -> Result<Vec<Subject>, OperationError> {
     Ok(subjects)
 }
 
+/// Where the maps of a translation come from.
+enum Candidates {
+    /// Maps that stand whole whatever code is translated: the inline one, the
+    /// stored one `url` names, or the stored maps the scopes fit.
+    Stored(Vec<Arc<ConceptMapModel>>),
+    /// The implicit map `url` names, built per code out of the system that
+    /// defines it.
+    Implicit(String),
+}
+
 /// The maps to consult: the inline one, the one `url` names, or every stored
 /// map whose scopes fit `source` and `target`.
 fn candidate_maps(
     sources: &Sources<'_>,
     input: &TranslateInput,
-) -> Result<Vec<Arc<ConceptMapModel>>, OperationError> {
+) -> Result<Candidates, OperationError> {
     let url = input.url.as_deref();
     match (&input.inline_concept_map, url) {
         (Some(_), Some(_)) => Err(OperationError::Invalid(String::from(
             "provide either `url` or an inline `conceptMap`, not both",
         ))),
-        (Some(inline), None) => Ok(vec![Arc::new(
+        (Some(inline), None) => Ok(Candidates::Stored(vec![Arc::new(
             inline
                 .clone()
                 .map_err(|e| OperationError::Invalid(e.to_string()))?,
-        )]),
+        )])),
         (None, Some(url)) => {
             let version = input.concept_map_version.as_deref();
-            if let Some(map) = sources.concept_maps.resolve(url, version) {
-                return Ok(vec![map]);
-            }
-            // NOTE: a system may define concept maps by URI, the way SNOMED CT's
-            // `?fhir_cm=[sctid]` names a map reference set
-            // (<https://hl7.org/fhir/R4B/snomedct.html>).
-            match sources.registry.implicit_concept_map(url) {
-                Some(Ok(map)) => Ok(vec![Arc::new(map)]),
-                Some(Err(source)) => Err(source.into()),
-                None => Err(OperationError::UnknownConceptMap(match version {
-                    Some(version) => format!("{url}|{version}"),
-                    None => url.to_owned(),
-                })),
+            match sources.concept_maps.resolve(url, version) {
+                Some(map) => Ok(Candidates::Stored(vec![map])),
+                // NOTE: a system may define concept maps by URI, the way SNOMED CT's
+                // `?fhir_cm=[sctid]` names a map reference set
+                // (<https://hl7.org/fhir/R4B/snomedct.html>).
+                None => Ok(Candidates::Implicit(url.to_owned())),
             }
         }
         (None, None) => {
             let source = input.source.as_deref();
             let target = input.target.as_deref();
-            Ok(sources
-                .concept_maps
-                .iter()
-                .filter(|map| {
-                    source.is_none_or(|s| map.source_scope.as_deref() == Some(s))
-                        && target.is_none_or(|t| map.target_scope.as_deref() == Some(t))
-                })
-                .cloned()
-                .collect())
+            Ok(Candidates::Stored(
+                sources
+                    .concept_maps
+                    .iter()
+                    .filter(|map| {
+                        source.is_none_or(|s| map.source_scope.as_deref() == Some(s))
+                            && target.is_none_or(|t| map.target_scope.as_deref() == Some(t))
+                    })
+                    .cloned()
+                    .collect(),
+            ))
         }
+    }
+}
+
+/// The maps to read for `subject`.
+///
+/// An implicit map is built for the code under translation, so it carries the
+/// mappings that answer this request and no others; a stored map is already
+/// whole. Both give the same answer, and the implicit one costs the size of
+/// that answer rather than the size of the reference set behind it.
+fn maps_for(
+    sources: &Sources<'_>,
+    candidates: &Candidates,
+    input: &TranslateInput,
+    subject: &Subject,
+    reverse: bool,
+) -> Result<Vec<Arc<ConceptMapModel>>, OperationError> {
+    let url = match candidates {
+        Candidates::Stored(maps) => return Ok(maps.clone()),
+        Candidates::Implicit(url) => url,
+    };
+    let selection = if reverse {
+        MapSelection::Target(&subject.code)
+    } else {
+        MapSelection::Source(&subject.code)
+    };
+    match sources.registry.implicit_concept_map(url, selection) {
+        Some(Ok(map)) => Ok(vec![Arc::new(map)]),
+        Some(Err(source)) => Err(source.into()),
+        None => Err(OperationError::UnknownConceptMap(
+            match input.concept_map_version.as_deref() {
+                Some(version) => format!("{url}|{version}"),
+                None => url.clone(),
+            },
+        )),
     }
 }
 

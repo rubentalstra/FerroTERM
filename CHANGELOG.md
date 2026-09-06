@@ -13,6 +13,14 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Fixed
+
+- `$translate` over a SNOMED CT map reference set costs its answer rather than the release. The server built the whole `ConceptMap` of the named reference set on every request, one element and one store read per member, and then looked one code up in it, so the ICD-10 extended map of the International edition (137,678 members) answered in 28 seconds and every map answered in proportion to its size. A provider is now told which mappings a request needs, and the SNOMED provider reads only the reference set rows that carry them: the same request answers in 0.21 ms warm, and the three implicit maps of that edition, from 23,551 to 137,678 members, answer alike. Reading the whole map is unchanged and still available.
+
+### Changed
+
+- A SNOMED CT implicit `ConceptMap` states `group.element` in the edition's own concept order, the order `$expand` already uses, instead of the order the reference set file holds its rows in. No FHIR version orders `group.element`, and a selection of the elements has to read back in the same order as the whole map for a translation to answer identically either way. The matches a reverse `$translate` reports move with it; the set of matches does not change.
+
 ## [0.1.0] - 2026-09-06
 
 ### Added

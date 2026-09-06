@@ -209,6 +209,15 @@ impl Table {
             .filter(move |&row| self.value(row, field) == Some(ValueRef::Concept(target)))
     }
 
+    /// The rows whose referenced concept is `concept`.
+    pub fn rows_of(&self, concept: Ordinal) -> impl Iterator<Item = usize> + '_ {
+        self.concepts
+            .iter()
+            .enumerate()
+            .filter(move |&(_, &held)| held == concept.index())
+            .map(|(row, _)| row)
+    }
+
     fn check(&self) -> Result<(), RefsetsError> {
         let rows = self.concepts.len();
         let cells = rows.saturating_mul(self.fields.len());
@@ -582,6 +591,12 @@ mod tests {
         assert_eq!(table.effective_time(1), Some(20_230_731));
         assert_eq!(table.members().iter().collect::<Vec<_>>(), [2, 3]);
         assert_eq!(table.rows_with(2, Ordinal::new(7)).collect::<Vec<_>>(), [0]);
+        assert_eq!(table.rows_of(Ordinal::new(3)).collect::<Vec<_>>(), [1]);
+        assert_eq!(
+            table.rows_of(Ordinal::new(9)).collect::<Vec<_>>(),
+            Vec::<usize>::new(),
+            "a concept the reference set does not name owns no row"
+        );
         assert_eq!(members.total(), 2);
         let mut bytes = Vec::new();
         members.write_to(&mut bytes).expect("writes");

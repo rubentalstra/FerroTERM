@@ -63,12 +63,19 @@ fn requests(c: &mut Criterion) {
     let expand = format!(
         "/r4b/ValueSet/$expand?url=http%3A%2F%2Fsnomed.info%2Fsct%3Ffhir_vs%3Disa%2F{root}&count=10&offset=1000"
     );
+    // The implicit concept map of the edition's ICD-10 extended map reference
+    // set, which states one mapping per concept (#369).
+    let translate = format!(
+        "/r4b/ConceptMap/$translate?url=http%3A%2F%2Fsnomed.info%2Fsct%3Ffhir_cm%3D{}&system={system}&code={deep}",
+        ferroterm_testkit::snomed::ICD10_MAP_SCTID
+    );
 
     let mut group = c.benchmark_group("http");
     group.bench_function("lookup", |b| b.iter(|| answer(&lookup)));
     group.bench_function("validate_code", |b| b.iter(|| answer(&validate)));
     group.bench_function("subsumes", |b| b.iter(|| answer(&subsumes)));
     group.bench_function("expand_page_10", |b| b.iter(|| answer(&expand)));
+    group.bench_function("translate", |b| b.iter(|| answer(&translate)));
     group.finish();
 }
 

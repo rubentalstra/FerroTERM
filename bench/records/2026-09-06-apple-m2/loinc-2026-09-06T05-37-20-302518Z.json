@@ -1,0 +1,84 @@
+{
+  "taken_at": "2026-09-06T05:37:20.302518Z",
+  "ferroterm_version": "0.1.0",
+  "fhir": "r4b",
+  "machine": {
+    "os": "macos",
+    "arch": "aarch64",
+    "cpu": "Apple M2",
+    "memory_bytes": 17179869184,
+    "container": false
+  },
+  "system": "LOINC",
+  "system_uri": "http://loinc.org",
+  "system_version": "2.83",
+  "concepts": 257266,
+  "artifact_bytes": 262295930,
+  "ingest": {
+    "seconds": 10.147776375,
+    "peak_rss_bytes": 2140651520,
+    "release": "data/loinc/Loinc_2.83.zip"
+  },
+  "ready_seconds": 0.103715708,
+  "rss_open_bytes": 164478976,
+  "rss_warm_bytes": 170180608,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "cold_ms": 1.912958,
+        "p50_ms": 0.18637499999999999,
+        "p95_ms": 0.22412500000000002,
+        "p99_ms": 0.2985,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "cold_ms": 0.078458,
+        "p50_ms": 0.058542000000000004,
+        "p95_ms": 0.075208,
+        "p99_ms": 0.09095800000000001,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-small",
+      {
+        "status": 200,
+        "cold_ms": 2.368208,
+        "p50_ms": 0.060375,
+        "p95_ms": 0.078584,
+        "p99_ms": 0.08762500000000001,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-large",
+      {
+        "status": 200,
+        "cold_ms": 10.8315,
+        "p50_ms": 8.277,
+        "p95_ms": 8.526542,
+        "p99_ms": 8.707792000000001,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "search",
+      {
+        "status": 200,
+        "cold_ms": 3.277834,
+        "p50_ms": 0.241,
+        "p95_ms": 0.25758299999999995,
+        "p99_ms": 0.290042,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: `ps -o rss=` of the server process after ready and after the warm requests; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank); comparison: not run"
+}

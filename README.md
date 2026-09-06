@@ -87,15 +87,15 @@ when the table drifts from the records under `bench/records/`.
 <!-- bench-table:begin -->
 | Code system | Release | Concepts | Build | Peak build memory | Index on disk | Resident | `$lookup` | `$validate-code` | `$subsumes` | `$expand` (small) | `$expand` (large) | Search | Snowstorm |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| [ICD-10-CM](bench/records/2026-09-05-apple-m2/icd-10-cm-2026-09-05T22-33-18-666831Z.json) | 2026 | 98,827 | 1.58 s | 346 MB | 40 MB | 62 MB | 117 µs | 49 µs | 53 µs | n/a | n/a | n/a | not run |
-| [ICD-10-NL](bench/records/2026-09-05-apple-m2/icd-10-nl-2026-09-05T22-33-19-90564Z.json) | 2021 | 42,769 | 1.07 s | 235 MB | 20 MB | 36 MB | 92 µs | 60 µs | 55 µs | n/a | n/a | n/a | not run |
-| [ICD-11 MMS](bench/records/2026-09-05-apple-m2/icd-11-mms-2026-09-05T22-33-25-155842Z.json) | 2026-01 | 37,211 | n/a | n/a | 34 MB | 74 MB | 219 µs | 53 µs | n/a | 67 µs | 73 µs | 78 µs | not run |
-| [LOINC](bench/records/2026-09-05-apple-m2/loinc-2026-09-05T22-33-16-915837Z.json) | 2.83 | 257,266 | 10.66 s | 2.1 GB | 262 MB | 170 MB | 175 µs | 62 µs | n/a | 59 µs | 8.02 ms | 244 µs | not run |
-| [RxNorm (prescribable subset)](bench/records/2026-09-05-apple-m2/rxnorm-prescribable-subset-2026-09-05T22-33-24-820155Z.json) | 09082026 | 81,468 | 4.45 s | 637 MB | 72 MB | 119 MB | 987 µs | 114 µs | n/a | n/a | n/a | n/a | not run |
-| [SNOMED CT (International edition)](bench/records/2026-09-05-apple-m2/snomed-ct-international-edition-2026-09-05T22-33-04-380763Z.json) | 20260901 | 535,502 | 18.52 s | 2.52 GB | 626 MB | 703 MB | 527 µs | 89 µs | 66 µs | 175 µs | 1.85 ms | 304 µs | not run |
-| [SNOMED CT (Netherlands edition)](bench/records/2026-09-05-apple-m2/snomed-ct-netherlands-edition-2026-09-05T22-32-44-742097Z.json) | 20260630 | 548,949 | 30.19 s | 3.43 GB | 864 MB | 888 MB | 534 µs | 87 µs | 87 µs | 235 µs | 2.44 ms | 751 µs | not run |
+| [ICD-10-CM](bench/records/2026-09-06-apple-m2/icd-10-cm-2026-09-06T05-37-22-012999Z.json) | 2026 | 98,827 | 1.54 s | 345 MB | 40 MB | 62 MB | 89 µs | 58 µs | 54 µs | n/a | n/a | n/a | not run |
+| [ICD-10-NL](bench/records/2026-09-06-apple-m2/icd-10-nl-2026-09-06T05-37-23-26765Z.json) | 2021 | 42,769 | 1.02 s | 231 MB | 20 MB | 36 MB | 160 µs | 88 µs | 45 µs | n/a | n/a | n/a | not run |
+| [ICD-11 MMS](bench/records/2026-09-06-apple-m2/icd-11-mms-2026-09-06T05-37-28-643697Z.json) | 2026-01 | 37,211 | n/a | n/a | 34 MB | 74 MB | 198 µs | 60 µs | n/a | 71 µs | 68 µs | 81 µs | not run |
+| [LOINC](bench/records/2026-09-06-apple-m2/loinc-2026-09-06T05-37-20-302518Z.json) | 2.83 | 257,266 | 10.15 s | 2.14 GB | 262 MB | 170 MB | 186 µs | 59 µs | n/a | 60 µs | 8.28 ms | 241 µs | not run |
+| [RxNorm (prescribable subset)](bench/records/2026-09-06-apple-m2/rxnorm-prescribable-subset-2026-09-06T05-37-28-318855Z.json) | 09082026 | 81,468 | 4.6 s | 640 MB | 72 MB | 119 MB | 987 µs | 117 µs | n/a | n/a | n/a | n/a | not run |
+| [SNOMED CT (International edition)](bench/records/2026-09-06-apple-m2/snomed-ct-international-edition-2026-09-06T05-37-08-240287Z.json) | 20260901 | 535,502 | 22.05 s | 2.85 GB | 626 MB | 702 MB | 517 µs | 94 µs | 64 µs | 178 µs | 1.99 ms | 307 µs | not run |
+| [SNOMED CT (Netherlands edition)](bench/records/2026-09-06-apple-m2/snomed-ct-netherlands-edition-2026-09-06T05-36-45-006081Z.json) | 20260630 | 548,949 | 34.83 s | 3.62 GB | 864 MB | 889 MB | 543 µs | 80 µs | 78 µs | 254 µs | 2.78 ms | 801 µs | not run |
 
-Warm p50 over 200 HTTP round trips on one machine (Apple M2, 17.18 GB, macos/aarch64), FerroTERM 0.1.0 serving FHIR R4B, taken 2026-09-05. The records are under `bench/records/`; the [benchmarks page](https://ferroterm.eu/benchmarks.html) has the method, the cold and tail latencies, and how to reproduce a record.
+Warm p50 over 200 HTTP round trips on one machine (Apple M2, 17.18 GB, macos/aarch64), FerroTERM 0.1.0 serving FHIR R4B, taken 2026-09-06. The records are under `bench/records/`; the [benchmarks page](https://ferroterm.eu/benchmarks.html) has the method, the cold and tail latencies, and how to reproduce a record.
 <!-- bench-table:end -->
 
 ## The API

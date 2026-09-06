@@ -4,15 +4,16 @@
 
 use std::sync::Arc;
 
-use fhir_terminology::conceptmap::model::Relationship;
+use fhir_terminology::conceptmap::model::{ConceptMapModel, Relationship};
 use fhir_terminology::conceptmap::store::ConceptMapStore;
-use fhir_terminology::operations::translate::{Match, TranslateInput, translate};
+use fhir_terminology::operations::translate::{Match, TranslateInput, Translation, translate};
 use fhir_terminology::operations::{OperationError, Sources};
-use fhir_terminology::provider::{Capability, ProviderError};
+use fhir_terminology::provider::{Capability, MapSelection, ProviderError};
 use fhir_terminology::registry::Registry;
 use fhir_terminology::snomed::{SYSTEM, SnomedProvider};
 use fhir_terminology::valueset::store::ValueSetStore;
 
+use ferroterm_testkit::scaled;
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
     ALTERNATIVE_SCTID, CAT, CODES_MAP, DOG, FISH, ICD10_MAP_SCTID, ICD10_SYSTEM,
@@ -131,7 +132,7 @@ fn an_association_map_carries_the_page_s_template() {
     let url = map_url(SAME_AS_SCTID);
     let map = resolved
         .provider
-        .implicit_concept_map(&url)
+        .implicit_concept_map(&url, MapSelection::Whole)
         .expect("an implicit map")
         .expect("it builds");
     assert_eq!(map.url, url);
@@ -208,7 +209,7 @@ fn a_map_reference_set_names_the_code_system_its_targets_belong_to() {
     let resolved = world.registry.resolve(SYSTEM, None).expect("snomed");
     let map = resolved
         .provider
-        .implicit_concept_map(&map_url(ICD10_MAP_SCTID))
+        .implicit_concept_map(&map_url(ICD10_MAP_SCTID), MapSelection::Whole)
         .expect("an implicit map")
         .expect("it builds");
     let group = map.groups.first().expect("one group");
@@ -240,7 +241,9 @@ fn a_map_reference_set_of_an_unnamed_scheme_is_refused() {
     // (<https://hl7.org/fhir/R4B/conceptmap-definitions.html#ConceptMap.group.target>).
     assert!(
         matches!(
-            resolved.provider.implicit_concept_map(&url),
+            resolved
+                .provider
+                .implicit_concept_map(&url, MapSelection::Whole),
             Some(Err(ProviderError::UnnamedConceptMapTarget { .. }))
         ),
         "an unrecognised map reference set names no target system"
@@ -341,7 +344,9 @@ fn a_reference_set_that_maps_nothing_is_not_a_concept_map() {
     let pets = code(snomed::PETS);
     assert!(
         matches!(
-            resolved.provider.implicit_concept_map(&map_url(&pets)),
+            resolved
+                .provider
+                .implicit_concept_map(&map_url(&pets), MapSelection::Whole),
             Some(Err(ProviderError::UnknownImplicitConceptMap { .. }))
         ),
         "a plain reference set has neither a target component nor a map target"
@@ -355,7 +360,7 @@ fn a_value_set_uri_is_not_a_concept_map_uri() {
     assert!(
         resolved
             .provider
-            .implicit_concept_map(&format!("{SYSTEM}?fhir_vs"))
+            .implicit_concept_map(&format!("{SYSTEM}?fhir_vs"), MapSelection::Whole)
             .is_none()
     );
     assert!(
@@ -363,5 +368,224 @@ fn a_value_set_uri_is_not_a_concept_map_uri() {
             .provider
             .implicit_value_set(&map_url(SAME_AS_SCTID))
             .is_none()
+    );
+}
+/// A generated edition and the implicit concept map of its ICD-10 extended map
+/// reference set, for the narrowing a translation asks for.
+///
+/// The map has one row per concept, so it grows with the edition the way a
+/// release's own map reference set does, and a translation that reads it whole
+/// costs the edition rather than the answer.
+struct MappedWorld {
+    _dir: tempfile::TempDir,
+    registry: Registry,
+    value_sets: ValueSetStore,
+    concept_maps: ConceptMapStore,
+    url: String,
+}
+
+impl MappedWorld {
+    fn new(concepts: u32) -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        scaled::write(dir.path(), concepts).expect("writes the edition");
+        let provider = SnomedProvider::open(dir.path(), "en").expect("opens");
+        let mut registry = Registry::new();
+        registry.register(Arc::new(provider)).expect("registers");
+        Self {
+            _dir: dir,
+            registry,
+            value_sets: ValueSetStore::new(),
+            concept_maps: ConceptMapStore::new(),
+            url: map_url(ICD10_MAP_SCTID),
+        }
+    }
+
+    fn sources(&self) -> Sources<'_> {
+        Sources {
+            registry: &self.registry,
+            value_sets: &self.value_sets,
+            concept_maps: &self.concept_maps,
+        }
+    }
+
+    /// The map the provider builds for `selection`.
+    fn map(&self, selection: MapSelection<'_>) -> ConceptMapModel {
+        self.registry
+            .resolve(SYSTEM, None)
+            .expect("snomed")
+            .provider
+            .implicit_concept_map(&self.url, selection)
+            .expect("an implicit map")
+            .expect("it builds")
+    }
+
+    /// The number of elements the map `selection` asks for carries.
+    fn elements(&self, selection: MapSelection<'_>) -> usize {
+        self.map(selection)
+            .groups
+            .first()
+            .expect("one group")
+            .elements
+            .len()
+    }
+
+    /// Stores the whole map, so `$translate` reads it as a stored resource and
+    /// never narrows it.
+    fn store_the_whole_map(mut self) -> Self {
+        self.concept_maps.replace(self.map(MapSelection::Whole));
+        self
+    }
+
+    /// `$translate` of `code` of `system` through the map `url` names.
+    fn translate(&self, system: &str, code: &str, reverse: bool) -> Translation {
+        let input = TranslateInput {
+            url: Some(self.url.clone()),
+            code: Some(code.to_owned()),
+            system: Some(system.to_owned()),
+            reverse: reverse.then_some(true),
+            ..TranslateInput::default()
+        };
+        translate(&self.sources(), &input).expect("translates")
+    }
+}
+
+/// The map `whole` states with only the elements whose own code is `code`.
+fn from_code(whole: &ConceptMapModel, code: &str) -> ConceptMapModel {
+    let mut restricted = whole.clone();
+    for group in &mut restricted.groups {
+        group
+            .elements
+            .retain(|element| element.code.as_deref() == Some(code));
+    }
+    restricted
+}
+
+/// The map `whole` states with only the mappings that target `code`.
+fn to_code(whole: &ConceptMapModel, code: &str) -> ConceptMapModel {
+    let mut restricted = whole.clone();
+    for group in &mut restricted.groups {
+        for element in &mut group.elements {
+            element
+                .targets
+                .retain(|target| target.code.as_deref() == Some(code));
+        }
+        group.elements.retain(|element| !element.targets.is_empty());
+    }
+    restricted
+}
+
+#[test]
+fn the_map_narrowed_to_a_source_code_is_the_whole_map_restricted_to_it() {
+    let world = MappedWorld::new(300);
+    let whole = world.map(MapSelection::Whole);
+    assert_eq!(
+        world.elements(MapSelection::Whole),
+        300,
+        "the whole map states one element per mapped concept"
+    );
+    // The narrowed map differs from the whole one in the elements it carries and
+    // in nothing else, so a translation reads the same map either way.
+    for ordinal in [0_u32, 1, 7, 42, 299] {
+        let code = scaled::code(ordinal);
+        assert_eq!(
+            world.map(MapSelection::Source(&code)),
+            from_code(&whole, &code),
+            "the map narrowed to {code} is the whole map restricted to it"
+        );
+    }
+    let unmapped = scaled::code(4_000);
+    assert_eq!(
+        world.map(MapSelection::Source(&unmapped)),
+        from_code(&whole, &unmapped),
+        "a code the edition does not hold narrows to a map with no element"
+    );
+}
+
+#[test]
+fn the_map_narrowed_to_a_target_code_is_the_whole_map_restricted_to_it() {
+    let world = MappedWorld::new(300);
+    let whole = world.map(MapSelection::Whole);
+    for ordinal in [0_u32, 1, 7, 42, 299] {
+        let target = scaled::map_target(ordinal);
+        assert_eq!(
+            world.map(MapSelection::Target(&target)),
+            to_code(&whole, &target),
+            "the map narrowed to the target {target} is the whole map restricted to it"
+        );
+    }
+    let absent = String::from("X99999");
+    assert_eq!(
+        world.map(MapSelection::Target(&absent)),
+        to_code(&whole, &absent),
+        "a target no row carries narrows to a map with no element"
+    );
+}
+
+#[test]
+fn translating_reads_the_narrowed_map_and_answers_what_the_whole_map_answers() {
+    let narrowed = MappedWorld::new(300);
+    let stored = MappedWorld::new(300).store_the_whole_map();
+    // A code the map states a target for, one it states nothing for, and one the
+    // edition does not hold: the narrowed map answers each the way the whole one
+    // does, absence included.
+    let codes = [0_u32, 1, 7, 42, 299]
+        .map(scaled::code)
+        .into_iter()
+        .chain([scaled::code(4_000), String::from("not-an-sctid")]);
+    for code in codes {
+        assert_eq!(
+            narrowed.translate(SYSTEM, &code, false),
+            stored.translate(SYSTEM, &code, false),
+            "translating {code} answers the same over the narrowed and the whole map"
+        );
+    }
+}
+
+#[test]
+fn a_reverse_translation_reads_the_narrowed_map_and_answers_the_same() {
+    let narrowed = MappedWorld::new(300);
+    let stored = MappedWorld::new(300).store_the_whole_map();
+    for ordinal in [0_u32, 1, 7, 42, 299] {
+        let target = scaled::map_target(ordinal);
+        assert_eq!(
+            narrowed.translate(ICD10_SYSTEM, &target, true),
+            stored.translate(ICD10_SYSTEM, &target, true),
+            "translating {target} back answers the same over the narrowed and the whole map"
+        );
+    }
+    assert_eq!(
+        narrowed.translate(ICD10_SYSTEM, "X99999", true),
+        stored.translate(ICD10_SYSTEM, "X99999", true),
+        "a target no row carries answers the same either way"
+    );
+}
+
+#[test]
+fn a_translation_reads_the_same_map_however_large_the_reference_set_is() {
+    // The elements a translation reads are the answer's, so the map it builds is
+    // the same size over an edition seven times as large: the cost follows the
+    // answer rather than the release.
+    let small = MappedWorld::new(300);
+    let large = MappedWorld::new(2_100);
+    let code = scaled::code(42);
+    assert_eq!(
+        small.elements(MapSelection::Source(&code)),
+        1,
+        "one code translates through one element"
+    );
+    assert_eq!(
+        large.elements(MapSelection::Source(&code)),
+        small.elements(MapSelection::Source(&code)),
+        "the narrowed map holds the answer, never the reference set"
+    );
+    assert_eq!(
+        large.elements(MapSelection::Whole),
+        2_100,
+        "the whole map still states every mapping the reference set holds"
+    );
+    assert_eq!(
+        small.translate(SYSTEM, &code, false).matches,
+        large.translate(SYSTEM, &code, false).matches,
+        "and both editions translate the code the same way"
     );
 }
