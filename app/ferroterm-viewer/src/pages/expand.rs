@@ -13,9 +13,9 @@ use crate::components::failure::Failure;
 use crate::components::icon;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
+use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
-use crate::components::spinner::Spinner;
 use crate::fhir::FhirClient;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ACTIVE_ONLY_PARAMETER;
@@ -63,7 +63,8 @@ const PAGE_END: &str = "inline-flex items-center gap-1 rounded border border-sla
 ///
 /// Every parameter is read from the address rather than from a private signal,
 /// so a page is shareable and the back button walks the run. The read is under
-/// `<Transition>`, because it refetches on every parameter and every page
+/// a transition boundary, because it refetches on every parameter and every
+/// page
 /// (<https://github.com/leptos-rs/book/blob/main/src/async/12_transition.md>).
 #[component]
 #[expect(
@@ -141,6 +142,29 @@ struct Pager {
     rows: u32,
 }
 
+/// The value every control on the form is seeded with, one field at a time.
+///
+/// Each seed is a `Memo` over its own parameter, so it notifies only when that
+/// parameter's own value changed.
+// NOTE: `prop:value` writes the property on every notification with no
+// equality check (`tachys` 0.2.18 `html/property.rs`), so a seed read from the
+// whole parameter set discards an edit the reader has not submitted.
+#[derive(Clone, Copy)]
+struct Seeds {
+    /// The value set canonical.
+    url: Memo<String>,
+    /// The text filter.
+    filter: Memo<String>,
+    /// The BCP 47 tag displays are asked for in.
+    display_language: Memo<String>,
+    /// The page size, as the control holds it.
+    count: Memo<String>,
+    /// Whether inactive concepts are left out.
+    active_only: Memo<bool>,
+    /// Whether every concept carries its designations.
+    include_designations: Memo<bool>,
+}
+
 /// The chrome of one labelled control on the form.
 #[derive(Clone, Copy, Debug)]
 struct Field {
@@ -210,9 +234,9 @@ impl RunnerParams {
     ///
     /// `answered_offset` is `expansion.offset`, the offset the server says it
     /// applied (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>). It
-    /// wins over the address, because `<Transition>` keeps the previous rows
-    /// while the next page loads and a summary that follows the address would
-    /// describe rows that are not on screen yet.
+    /// wins over the address, because the transition boundary keeps the
+    /// previous rows while the next page loads and a summary that follows the
+    /// address would describe rows that are not on screen yet.
     fn page(&self, answered_offset: Option<u32>) -> Option<Page> {
         let count = self.count?;
         Some(Page::at(answered_offset.unwrap_or(self.offset), count))
@@ -268,6 +292,31 @@ impl RunnerParams {
             url = url.query(INCLUDE_DESIGNATIONS_PARAMETER, "true");
         }
         url.render("")
+    }
+}
+
+impl Seeds {
+    /// The seeds these parameters give, one memo per control.
+    fn of(params: Signal<RunnerParams>) -> Self {
+        Self {
+            url: Memo::new(move |_| params.with(|params| params.url.clone())),
+            filter: Memo::new(move |_| params.with(|params| params.filter.clone())),
+            display_language: Memo::new(move |_| {
+                params.with(|params| params.display_language.clone())
+            }),
+            count: Memo::new(move |_| {
+                params.with(|params| {
+                    params
+                        .count
+                        .map(|count| count.to_string())
+                        .unwrap_or_default()
+                })
+            }),
+            active_only: Memo::new(move |_| params.with(|params| params.active_only)),
+            include_designations: Memo::new(move |_| {
+                params.with(|params| params.include_designations)
+            }),
+        }
     }
 }
 
@@ -337,10 +386,12 @@ impl Pager {
 /// The parameters, as a form that navigates rather than reloading the page.
 ///
 /// The router installs no `submit` listener, so the submit is handled here and
-/// turned into a navigation. Each control is seeded from the address through
-/// `prop:value`, which updates on a back navigation and leaves what the reader
-/// is typing alone, and read back from the document when they submit.
+/// turned into a navigation. Each control is seeded from a memo over its own
+/// parameter, so a back navigation refills it while a navigation that moves
+/// another parameter leaves it as the reader left it, and it is read back from
+/// the document when they submit.
 fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> AnyView {
+    let seeds = Seeds::of(params);
     let canonical: NodeRef<Input> = NodeRef::new();
     let filter: NodeRef<Input> = NodeRef::new();
     let language: NodeRef<Input> = NodeRef::new();
@@ -387,7 +438,7 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
                     hint: "The url parameter of $expand. An implicit canonical carrying its own query string works: the runner encodes the whole value.",
                 },
                 canonical,
-                Signal::derive(move || params.with(|params| params.url.clone())),
+                seeds.url,
             )}
             <div class="grid gap-4 sm:grid-cols-2">
                 {text_field(
@@ -398,7 +449,7 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
                         hint: "Text the server matches against the designations it holds.",
                     },
                     filter,
-                    Signal::derive(move || params.with(|params| params.filter.clone())),
+                    seeds.filter,
                 )}
                 {text_field(
                     Field {
@@ -408,10 +459,10 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
                         hint: "A BCP 47 tag. Left empty, the server picks its own display.",
                     },
                     language,
-                    Signal::derive(move || params.with(|params| params.display_language.clone())),
+                    seeds.display_language,
                 )}
             </div>
-            {count_field(count, params)}
+            {count_field(count, params, seeds.count)}
             {check_field(
                 Field {
                     id: "expand-active-only",
@@ -420,7 +471,7 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
                     hint: "Sends activeOnly=true, which asks the server to leave inactive concepts out of the selection.",
                 },
                 active_only,
-                Signal::derive(move || params.with(|params| params.active_only)),
+                seeds.active_only,
             )}
             {check_field(
                 Field {
@@ -430,7 +481,7 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
                     hint: "Sends includeDesignations=true, which asks for every designation the server holds for a listed concept.",
                 },
                 designations,
-                Signal::derive(move || params.with(|params| params.include_designations)),
+                seeds.include_designations,
             )}
             <div>
                 <button
@@ -441,7 +492,7 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
                     "Run the expansion"
                 </button>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    "Running puts these parameters in the address. The page controls below walk the run that is showing, so an edit you have not run yet is left behind."
+                    "Running puts these parameters in the address. The page controls below walk the run that is showing, so an edit you have not run yet stays in the form and is left out of the walk."
                 </p>
             </div>
         </form>
@@ -449,8 +500,8 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
     .into_any()
 }
 
-/// One labelled text control, seeded from the address.
-fn text_field(field: Field, node: NodeRef<Input>, value: Signal<String>) -> AnyView {
+/// One labelled text control, seeded from its own parameter.
+fn text_field(field: Field, node: NodeRef<Input>, value: Memo<String>) -> AnyView {
     let described_by = format!("{}-note", field.id);
     view! {
         <div class="grid gap-1">
@@ -475,15 +526,7 @@ fn text_field(field: Field, node: NodeRef<Input>, value: Signal<String>) -> AnyV
 }
 
 /// The page size, which is what makes the answer walkable.
-fn count_field(node: NodeRef<Input>, params: Signal<RunnerParams>) -> AnyView {
-    let value = move || {
-        params.with(|params| {
-            params
-                .count
-                .map(|count| count.to_string())
-                .unwrap_or_default()
-        })
-    };
+fn count_field(node: NodeRef<Input>, params: Signal<RunnerParams>, value: Memo<String>) -> AnyView {
     view! {
         <div class="grid gap-1 sm:max-w-xs">
             <label for="expand-count" class="text-sm font-medium">
@@ -498,7 +541,7 @@ fn count_field(node: NodeRef<Input>, params: Signal<RunnerParams>) -> AnyView {
                 class=CONTROL
                 aria-describedby="expand-count-note"
                 node_ref=node
-                prop:value=value
+                prop:value=move || value.get()
             />
             <p id="expand-count-note" class="text-xs text-slate-500 dark:text-slate-400">
                 {move || {
@@ -522,8 +565,8 @@ fn count_field(node: NodeRef<Input>, params: Signal<RunnerParams>) -> AnyView {
     .into_any()
 }
 
-/// One labelled checkbox, seeded from the address.
-fn check_field(field: Field, node: NodeRef<Input>, checked: Signal<bool>) -> AnyView {
+/// One labelled checkbox, seeded from its own parameter.
+fn check_field(field: Field, node: NodeRef<Input>, checked: Memo<bool>) -> AnyView {
     let described_by = format!("{}-note", field.id);
     view! {
         <div class="grid gap-1">
@@ -588,7 +631,7 @@ fn result_section(
                 .and_then(Option::as_ref)
                 .and_then(|result| result.as_ref().ok())
                 .and_then(ExpandedValueSet::expansion)
-                .map(|expansion| count_sentence(&expansion, params.page(expansion.offset)))
+                .map(|expansion| count_sentence(&expansion, &params))
                 .unwrap_or_default()
         })
     });
@@ -605,9 +648,7 @@ fn result_section(
                 {invitation()}
             </Show>
             <Show when=move || request.with(Option::is_some) fallback=|| ()>
-                <Transition fallback=|| {
-                    view! { <Spinner label="Running the expansion" /> }
-                }>
+                <Reading label="Running the expansion">
                     {move || {
                         let params = params.get();
                         let version = version.get();
@@ -622,7 +663,7 @@ fn result_section(
                                     })
                             })
                     }}
-                </Transition>
+                </Reading>
             </Show>
             <Show when=move || url.with(Option::is_some) fallback=|| ()>
                 <RequestDisclosure url=Signal::derive(move || { url.get().unwrap_or_default() }) />
@@ -661,7 +702,7 @@ fn expansion_view(
         .as_ref()
         .map_or_else(|| ().into_any(), unclosed_view);
     let table = concepts_table(&expansion.concepts);
-    let pager = params.page(expansion.offset).map_or_else(
+    let pager = page_of(&expansion, params).map_or_else(
         || ().into_any(),
         |page| {
             pager_view(
@@ -924,25 +965,46 @@ fn refusal_view(error: &FhirError) -> AnyView {
     .into_any()
 }
 
-/// How much of the selection this answer holds, as a sentence.
-fn count_sentence(expansion: &Expansion, page: Option<Page>) -> String {
-    let rows = expansion.listed();
-    match page {
-        Some(page) => {
-            let pager = Pager {
-                page,
-                total: expansion.total,
-                rows,
-            };
-            format!("{} {}.", pager.summary(), pager.position())
-        }
-        None => match expansion.total {
-            Some(total) if total != rows => {
-                format!("{rows} concepts, of {total} in the selection.")
-            }
-            Some(_) | None => format!("{rows} concepts."),
-        },
+/// The page this answer is a page of, or `None` when it is not one.
+///
+/// A nested answer carries no page window, so nothing on the screen claims
+/// one: no summary counts towards it and no control walks it.
+// NOTE: paging "only applies to flat expansions"
+// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, the `count`
+// parameter), so the offset the address asked for describes no answer here.
+fn page_of(expansion: &Expansion, params: &RunnerParams) -> Option<Page> {
+    if expansion.hierarchical() {
+        return None;
     }
+    params.page(expansion.offset)
+}
+
+/// How much of the selection this answer holds, as a sentence.
+///
+/// Every number counts the rows the table renders, so the sentence, the table,
+/// and the live region describe one set.
+fn count_sentence(expansion: &Expansion, params: &RunnerParams) -> String {
+    let rows = expansion.listed();
+    if let Some(page) = page_of(expansion, params) {
+        let pager = Pager {
+            page,
+            total: expansion.total,
+            rows,
+        };
+        return format!("{} {}.", pager.summary(), pager.position());
+    }
+    let counted = match expansion.total {
+        Some(total) if total != rows => {
+            format!("{rows} concepts, of {total} in the selection.")
+        }
+        Some(_) | None => format!("{rows} concepts."),
+    };
+    if expansion.hierarchical() && params.count.is_some() {
+        return format!(
+            "{counted} The answer nests, and $expand pages flat expansions only, so this run was not paged."
+        );
+    }
+    counted
 }
 
 /// The page size a control holds now, and the text it holds instead.
@@ -977,6 +1039,10 @@ fn typed_flag(node: NodeRef<Input>) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicU32;
+    use std::sync::atomic::Ordering;
+
     use super::*;
 
     /// The stored page size a reader who has changed nothing carries.
@@ -1254,6 +1320,52 @@ mod tests {
     }
 
     #[test]
+    fn a_navigation_that_moves_one_parameter_leaves_the_other_controls_alone() {
+        let owner = Owner::new();
+        owner.set();
+        let address = RwSignal::new(RunnerParams {
+            url: "https://terminology.example/vs".to_owned(),
+            count: Some(20),
+            ..RunnerParams::default()
+        });
+        let seeds = Seeds::of(address.into());
+        // Counts how often the seed notifies whatever writes it into the
+        // control, which is once per changed value and never on a notification
+        // carrying the same one.
+        let writes = Arc::new(AtomicU32::new(0));
+        let written = {
+            let writes = Arc::clone(&writes);
+            Memo::new(move |_| {
+                writes.fetch_add(1, Ordering::Relaxed);
+                seeds.url.get()
+            })
+        };
+
+        written.get();
+        assert_eq!(
+            writes.load(Ordering::Relaxed),
+            1,
+            "the control is seeded from the address it opened on"
+        );
+
+        address.update(|params| params.offset = 20);
+        written.get();
+        assert_eq!(
+            writes.load(Ordering::Relaxed),
+            1,
+            "walking to the next page moves the offset alone, so an unsubmitted edit in the canonical control survives it"
+        );
+
+        address.update(|params| params.url = "https://terminology.example/other".to_owned());
+        written.get();
+        assert_eq!(
+            writes.load(Ordering::Relaxed),
+            2,
+            "a back navigation onto another canonical does refill the control"
+        );
+    }
+
+    #[test]
     fn the_walk_stops_at_both_ends_of_a_counted_result() {
         let first = pager(0, 20, Some(45), 20);
         assert_eq!(first.first(), None, "this page is the first one");
@@ -1322,14 +1434,66 @@ mod tests {
             concepts: vec![ConceptRow::default(); 20],
             ..Expansion::default()
         };
+        let paged = RunnerParams {
+            count: Some(20),
+            offset: 20,
+            ..RunnerParams::default()
+        };
         assert_eq!(
-            count_sentence(&expansion, Some(Page::at(20, 20))),
+            count_sentence(&expansion, &paged),
             "Concepts 21 to 40 of 45. Page 2 of 3."
         );
         assert_eq!(
-            count_sentence(&expansion, None),
+            count_sentence(&expansion, &RunnerParams::default()),
             "20 concepts, of 45 in the selection.",
             "an unpaged answer that is short of the total says both numbers"
+        );
+    }
+
+    #[test]
+    fn a_nested_answer_counts_the_rows_the_table_renders_and_claims_no_page() {
+        let nested = |depth: u32| ConceptRow {
+            depth,
+            ..ConceptRow::default()
+        };
+        let expansion = Expansion {
+            total: Some(5),
+            concepts: vec![nested(0), nested(1), nested(2), nested(2), nested(1)],
+            ..Expansion::default()
+        };
+        let params = RunnerParams {
+            count: Some(50),
+            ..RunnerParams::default()
+        };
+        assert_eq!(
+            page_of(&expansion, &params),
+            None,
+            "the server ignores paging for a hierarchy, so no control walks one"
+        );
+        assert_eq!(
+            count_sentence(&expansion, &params),
+            "5 concepts. The answer nests, and $expand pages flat expansions only, so this run was not paged.",
+            "the sentence counts the five rows the table draws, and says why the page size did nothing"
+        );
+    }
+
+    #[test]
+    fn a_flat_answer_is_still_described_as_the_page_it_is() {
+        let expansion = Expansion {
+            total: Some(45),
+            offset: Some(20),
+            concepts: vec![ConceptRow::default(); 20],
+            ..Expansion::default()
+        };
+        let params = RunnerParams {
+            count: Some(20),
+            offset: 20,
+            ..RunnerParams::default()
+        };
+        assert_eq!(page_of(&expansion, &params), Some(Page::at(20, 20)));
+        assert_eq!(
+            count_sentence(&expansion, &params),
+            "Concepts 21 to 40 of 45. Page 2 of 3."
         );
     }
 

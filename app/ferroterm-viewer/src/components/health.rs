@@ -6,7 +6,7 @@ use leptos::prelude::*;
 
 use crate::components::icon;
 use crate::components::icon::Icon;
-use crate::components::spinner::Spinner;
+use crate::components::reading::Reading;
 use crate::fhir::FhirClient;
 
 /// How often the indicator asks the server whether it is still up.
@@ -14,8 +14,8 @@ const POLL: Duration = Duration::from_secs(15);
 
 /// Shows whether the server that served this bundle is answering.
 ///
-/// The resource refetches on every tick, so it is read under `<Transition>`:
-/// a `<Suspense>` would flash its fallback on each poll
+/// The resource refetches on every tick, so it is read under a transition
+/// boundary: a `<Suspense>` would flash its fallback on each poll
 /// (<https://github.com/leptos-rs/book/blob/main/src/async/12_transition.md>).
 #[component]
 #[expect(
@@ -52,9 +52,7 @@ pub(crate) fn HealthIndicator() -> impl IntoView {
     };
 
     view! {
-        <Transition fallback=|| {
-            view! { <Spinner inline=true label="Checking the server" /> }
-        }>
+        <Reading inline=true label="Checking the server">
             {move || {
                 state()
                     .map(|(glyph, word, detail, tint)| {
@@ -71,6 +69,6 @@ pub(crate) fn HealthIndicator() -> impl IntoView {
                         }
                     })
             }}
-        </Transition>
+        </Reading>
     }
 }

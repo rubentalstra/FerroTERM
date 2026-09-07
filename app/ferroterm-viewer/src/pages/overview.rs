@@ -5,9 +5,9 @@ use leptos_meta::Title;
 
 use crate::components::code_system_card::CodeSystemCard;
 use crate::components::failure::Failure;
+use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
-use crate::components::spinner::Spinner;
 use crate::fhir::FhirClient;
 use crate::fhir::terminology::SystemCard;
 use crate::fhir::version::FhirVersion;
@@ -15,7 +15,7 @@ use crate::fhir::version::FhirVersion;
 /// Shows the FHIR base in use and the code systems the root has loaded.
 ///
 /// Both reads refetch when the version switcher moves, so both are read under
-/// `<Transition>` rather than `<Suspense>`
+/// a transition boundary rather than a `<Suspense>`
 /// (<https://github.com/leptos-rs/book/blob/main/src/async/12_transition.md>).
 /// Each section discloses the request it made and renders its own failure, so
 /// one refused read never blanks the screen.
@@ -70,9 +70,7 @@ fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView 
                 <dt class="font-medium">"FHIR base"</dt>
                 <dd class="font-mono break-all">{base}</dd>
             </dl>
-            <Transition fallback=|| {
-                view! { <Spinner label="Reading the capability statement" /> }
-            }>
+            <Reading label="Reading the capability statement">
                 {move || {
                     statement
                         .with(|answered| {
@@ -100,7 +98,7 @@ fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView 
                                 })
                         })
                 }}
-            </Transition>
+            </Reading>
             <RequestDisclosure url />
         </section>
     }
@@ -142,9 +140,7 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
             <p aria-live="polite" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {announcement}
             </p>
-            <Transition fallback=|| {
-                view! { <Spinner label="Reading the terminology capabilities" /> }
-            }>
+            <Reading label="Reading the terminology capabilities">
                 {move || {
                     capabilities
                         .with(|answered| {
@@ -164,7 +160,7 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
                                 })
                         })
                 }}
-            </Transition>
+            </Reading>
             <RequestDisclosure url />
         </section>
     }
