@@ -7,6 +7,12 @@
     reason = "leptos::component derives a TypedBuilder whose `builder` shadows a trait method"
 )]
 
+/// The wording every screen uses for a fact the server did not declare.
+///
+/// Absence is stated rather than left blank: a reader cannot tell a fact the
+/// server omitted from a cell the page failed to fill.
+pub(crate) const NOT_DECLARED: &str = "not declared";
+
 pub(crate) mod button;
 pub(crate) mod code_system_card;
 pub(crate) mod failure;

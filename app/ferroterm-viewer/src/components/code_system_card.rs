@@ -2,12 +2,12 @@
 
 use leptos::prelude::*;
 
+use crate::components::NOT_DECLARED;
+use crate::components::shell::SelectedVersion;
 use crate::fhir::terminology::Artifact;
 use crate::fhir::terminology::SystemCard;
 use crate::fhir::terminology::VersionRow;
-
-/// The wording for a fact the server did not declare.
-const NOT_DECLARED: &str = "not declared";
+use crate::routes::system_link;
 
 /// Draws one code system: its canonical, its versions, and what it supports.
 ///
@@ -31,9 +31,17 @@ pub(crate) fn CodeSystemCard(
         }
         .into_any()
     } else {
+        // The canonical is the card's own address, so the heading is the link
+        // onto the system's screen. The version comes from the shell, which
+        // provides it above every screen this card is drawn on.
+        let SelectedVersion(version) = expect_context::<SelectedVersion>();
+        let target = card.url.clone();
+        let href = move || system_link(&target, version.get());
         view! {
             <h3 class="font-mono text-sm font-semibold break-all text-slate-900 dark:text-slate-50">
-                {card.url}
+                <a href=href class="underline decoration-dotted underline-offset-4">
+                    {card.url}
+                </a>
             </h3>
         }
         .into_any()

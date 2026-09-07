@@ -27,7 +27,15 @@ pub(crate) fn VersionSwitcher(
             <span class="mr-1 text-xs text-slate-500 dark:text-slate-400">"FHIR"</span>
             <For each=move || FhirVersion::ALL key=|version| *version let:version>
                 {
-                    let href = move || version_link(&location.pathname.get(), version);
+                    let href = move || {
+                        location
+                            .pathname
+                            .with(|pathname| {
+                                location
+                                    .search
+                                    .with(|search| version_link(pathname, search, version))
+                            })
+                    };
                     let active = move || selected.get() == version;
                     view! {
                         <a
