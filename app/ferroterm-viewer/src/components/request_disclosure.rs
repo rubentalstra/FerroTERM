@@ -3,6 +3,7 @@
 use leptos::prelude::*;
 
 use crate::fhir::curl_line;
+use crate::fhir::curl_post_line;
 
 /// Discloses the request one section issued, as a URL and as a `curl` line.
 ///
@@ -21,8 +22,44 @@ pub(crate) fn RequestDisclosure(
     /// The address the section read.
     #[prop(into)]
     url: Signal<String>,
+    /// The `Parameters` body, for a section that invoked an operation with a
+    /// `POST` because its input does not fit in a query.
+    #[prop(optional, into)]
+    body: Option<Signal<String>>,
 ) -> impl IntoView {
-    let curl = move || url.with(|url| curl_line(url));
+    let curl = move || match body {
+        Some(body) => url.with(|url| body.with(|body| curl_post_line(url, body))),
+        None => url.with(|url| curl_line(url)),
+    };
+    let sent = move || body.map(|body| body.get());
+    // Both branches are decided once, by a prop fixed at setup, so they are
+    // erased views rather than `<Show>`, which is generic over its children
+    // and would instantiate this subtree twice.
+    let sent_line = body.is_some().then(|| {
+        view! {
+            <dt class="mt-1 font-medium">"Body"</dt>
+            <dd>
+                <code class="block rounded bg-slate-100 p-2 break-all dark:bg-slate-800">
+                    {sent}
+                </code>
+            </dd>
+        }
+        .into_any()
+    });
+    let open_line = body.is_none().then(|| {
+        view! {
+            <p class="mt-2">
+                <a
+                    href=move || url.get()
+                    rel="external"
+                    class="text-brand-700 underline dark:text-brand-300"
+                >
+                    "Open the answer in this browser"
+                </a>
+            </p>
+        }
+        .into_any()
+    });
     view! {
         <details class="mt-4 rounded border border-slate-200 text-xs dark:border-slate-800">
             <summary class="cursor-pointer px-3 py-2 font-medium text-slate-700 dark:text-slate-200">
@@ -30,7 +67,7 @@ pub(crate) fn RequestDisclosure(
             </summary>
             <div class="border-t border-slate-200 px-3 py-2 dark:border-slate-800">
                 <p class="text-slate-600 dark:text-slate-300">
-                    "Select either line to copy it. Both reach the same public API this page uses."
+                    "Select a line to copy it. Each one reaches the same public API this page uses."
                 </p>
                 <dl class="mt-2 grid gap-1">
                     <dt class="font-medium">"URL"</dt>
@@ -39,6 +76,7 @@ pub(crate) fn RequestDisclosure(
                             {url}
                         </code>
                     </dd>
+                    {sent_line}
                     <dt class="mt-1 font-medium">"curl"</dt>
                     <dd>
                         <code class="block rounded bg-slate-100 p-2 break-all dark:bg-slate-800">
@@ -46,15 +84,7 @@ pub(crate) fn RequestDisclosure(
                         </code>
                     </dd>
                 </dl>
-                <p class="mt-2">
-                    <a
-                        href=move || url.get()
-                        rel="external"
-                        class="text-brand-700 underline dark:text-brand-300"
-                    >
-                        "Open the answer in this browser"
-                    </a>
-                </p>
+                {open_line}
             </div>
         </details>
     }

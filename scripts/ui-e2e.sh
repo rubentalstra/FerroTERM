@@ -16,7 +16,9 @@
 # you already have. Both are required together, because a browser that cannot
 # reach the address is a red lane with no defect behind it: a browser in a
 # container reaches a server on the host as host.docker.internal, not as
-# 127.0.0.1.
+# 127.0.0.1. A server started that way serves the journeys' own fixture only if
+# it was pointed at e2e/fixtures/codesystems with FERROTERM_CODESYSTEMS, which
+# the tree journey needs.
 #
 # The image stages linux binaries, so the managed mode needs a Linux host.
 # Anywhere else it says so and stops rather than reporting a lane it did not
@@ -160,8 +162,15 @@ if [[ -z "$base_url" ]]; then
   # anyone debugging a failure reach it from the host, while the browser
   # resolves the container by name on the private network.
   server_port="$(free_port 8140)"
+  # The registry systems the server ships with are flat, so a deployment
+  # carrying only them declares no child-of filter operator and the viewer's
+  # taxonomy tree has nothing to draw. e2e/fixtures/codesystems holds one
+  # shaped, synthetic CodeSystem resource so the tree journey drives a real
+  # hierarchy; it is mounted read-only and never baked into the image.
   docker run --detach --name "$server" --network "$network" \
     --env FERROTERM_UI=on --env FERROTERM_LOG_FORMAT=json \
+    --env FERROTERM_CODESYSTEMS=/fixtures/codesystems \
+    --volume "$root/e2e/fixtures/codesystems:/fixtures/codesystems:ro" \
     --publish "127.0.0.1:$server_port:8080" "$SERVER_IMAGE" >/dev/null
   echo "== waiting for the server on 127.0.0.1:$server_port"
   ready=""

@@ -2,6 +2,7 @@
 //! The browser session every journey drives, and the waits it is built from.
 
 use std::time::Duration;
+use std::time::Instant;
 
 use thirtyfour::LoggingPrefsLogLevel;
 use thirtyfour::prelude::*;
@@ -145,6 +146,18 @@ impl Journey {
         }
     }
 
+    /// How many elements match `selector` right now.
+    ///
+    /// The count is a reading of the page as it stands, so a journey takes it
+    /// only after a wait has proven the section it describes has settled.
+    pub async fn count(&self, selector: By) -> usize {
+        self.driver
+            .find_all(selector)
+            .await
+            .map(|found| found.len())
+            .unwrap_or_default()
+    }
+
     /// The address the browser is on.
     pub async fn address(&self) -> String {
         self.driver
@@ -152,6 +165,35 @@ impl Journey {
             .await
             .expect("the browser reports the address it is on")
             .to_string()
+    }
+
+    /// The address, once it carries `needle`.
+    ///
+    /// A key press that navigates does so a paint after the press, so an
+    /// address read straight afterwards is the one before it. The wait polls
+    /// the same way the element waits do, and reports what the browser logged
+    /// when the address never arrives.
+    pub async fn address_carrying(&self, needle: &str, what: &str) -> String {
+        let deadline = Instant::now() + WAIT;
+        loop {
+            let address = self.address().await;
+            if address.contains(needle) {
+                return address;
+            }
+            if Instant::now() >= deadline {
+                let console = self.console_errors().await;
+                let logged = if console.is_empty() {
+                    "the browser logged nothing severe".to_owned()
+                } else {
+                    format!("the browser logged:\n  {}", console.join("\n  "))
+                };
+                panic!(
+                    "waiting for {what} failed: the address is still `{address}`, \
+                     which carries no `{needle}`\n{logged}"
+                );
+            }
+            tokio::time::sleep(POLL).await;
+        }
     }
 
     /// Everything the browser logged as severe since the last read.

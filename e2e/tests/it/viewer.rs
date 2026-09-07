@@ -29,6 +29,40 @@ const PUBLISHED_PANE: &str = "section[aria-labelledby='system-published-heading'
 /// The links a declared code system offers into the other screens.
 const SYSTEM_TOOLS: &str = "nav[aria-label^='Screens for']";
 
+/// A code system card whose version declares the direct-child operator.
+///
+/// The tree is drawn only for such a version, so the card is chosen by what
+/// the capability statement declares rather than by which system it names. The
+/// operator list folds into a `<details>`, and matching on the whole card's
+/// text reads what a collapsed element still holds.
+const WALKABLE_CARD: &str = "//article[contains(., 'child-of')]//h3//a";
+
+/// The link from a code system's screen into the concept browser.
+const BROWSE_LINK: &str = "nav[aria-label^='Screens for'] a[href*='/ui/browse']";
+
+/// A concept the search answered, as the link that reads it.
+const SEARCH_RESULT: &str = "section[aria-labelledby='browse-search-heading'] ul li a";
+
+/// The tree once its first level has been answered: a row, or the sentence
+/// saying the server answered no child.
+///
+/// The sentence is drawn from the answer rather than from the address, so its
+/// arrival is what separates a concept with no children from a level that has
+/// not been read yet.
+const TREE_SETTLED: &str = "li[role='treeitem'], #browse-tree-empty";
+
+/// One row of the tree.
+const TREE_ROW: &str = "li[role='treeitem']";
+
+/// The row that holds the tree's one tab stop.
+const TAB_STOP: &str = "li[role='treeitem'][tabindex='0']";
+
+/// The row the tree announces as selected.
+const SELECTED_ROW: &str = "li[role='treeitem'][aria-selected='true']";
+
+/// A parent of the concept being read, as the link that moves onto it.
+const PARENT_LINK: &str = "nav[aria-label='Parents of this concept'] a";
+
 /// A switcher link, by the version name a reader reads on it.
 fn version_link(label: &str) -> String {
     format!("//nav[@aria-label='FHIR version']//a[normalize-space()='{label}']")
@@ -237,6 +271,144 @@ async fn the_address_a_card_links_to_opens_the_same_screen_when_it_is_loaded_fre
             journey
                 .element(By::Css(SYSTEM_TOOLS), "the links into the other screens")
                 .await;
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
+}
+
+/// Walks from the overview to a browse screen whose tree has a level drawn.
+///
+/// The card is chosen by the operator its version declares, so the walk knows
+/// no code system. Where the concept the search answers first turns out to be
+/// a leaf, the walk moves onto one of its parents, because a tree with no row
+/// has no tab stop to press a key on.
+async fn tree_with_a_level(journey: &Journey) -> WebDriverResult<()> {
+    journey
+        .element(
+            By::XPath(WALKABLE_CARD),
+            "a code system whose version declares the direct-child operator",
+        )
+        .await
+        .click()
+        .await?;
+    journey
+        .element(By::Css(BROWSE_LINK), "the link into the concept browser")
+        .await
+        .click()
+        .await?;
+
+    // An empty filter lists the first concepts the server answers, so the
+    // search gives the tree an anchor with nothing typed into it.
+    journey
+        .element(By::Css(SEARCH_RESULT), "a concept the search answered")
+        .await
+        .click()
+        .await?;
+    journey
+        .address_carrying("code=", "the address to carry the concept that was read")
+        .await;
+
+    // Waiting on the answered tree rather than on the busy indicator: the
+    // indicator is gone the moment the empty walk before this concept
+    // resolved, so a count taken then would read a level still in flight.
+    journey
+        .element(By::Css(TREE_SETTLED), "the first level of the tree")
+        .await;
+    if journey.count(By::Css(TREE_ROW)).await == 0 {
+        journey
+            .element(By::Css(PARENT_LINK), "a parent of this leaf concept")
+            .await
+            .click()
+            .await?;
+        journey
+            .element(By::Css(TREE_ROW), "a tree row below the parent")
+            .await;
+    }
+    Ok(())
+}
+
+/// The taxonomy tree opens a node and selects a concept from the keyboard
+/// alone, and the address carries both moves.
+///
+/// This is the journey that proves the ARIA tree view pattern is implemented
+/// rather than described: the tree keeps one tab stop, the right arrow opens
+/// the node under it, `Enter` selects the concept, and both moves are
+/// navigations, so a walk a reader made is a link they can share. Nothing here
+/// names a code system. The card is picked by the operator its version
+/// declares, which is the same fact the screen draws the tree from.
+#[tokio::test]
+async fn the_taxonomy_tree_is_walked_by_keyboard_alone() {
+    let Some(base) = server() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &base, "/ui").await;
+            tree_with_a_level(&journey).await?;
+
+            let stop = journey
+                .element(By::Css(TAB_STOP), "the tree's one tab stop")
+                .await;
+            let row_id = stop
+                .attr("id")
+                .await?
+                .expect("every tree row carries the id its focus is moved by");
+            let row_code = stop.find(By::Css("span")).await?.text().await?;
+            assert!(
+                !row_code.is_empty(),
+                "the row names the code it draws, and the journey selects by it"
+            );
+
+            stop.send_keys(Key::Right).await?;
+            let opened = journey
+                .address_carrying(
+                    "open=",
+                    "the right arrow to open the node under the tab stop",
+                )
+                .await;
+            assert!(
+                opened.contains("code="),
+                "opening a node leaves the concept being read alone: `{opened}`"
+            );
+
+            // The navigation redrew the tree, so the tab stop is read again
+            // rather than carried across the render.
+            journey
+                .element(By::Css(TAB_STOP), "the tab stop after the node opened")
+                .await
+                .send_keys(Key::Enter)
+                .await?;
+            let selected = journey
+                .address_carrying(
+                    &format!("code={row_code}"),
+                    "Enter to select the concept the tab stop was on",
+                )
+                .await;
+            assert!(
+                selected.contains("open="),
+                "selecting a concept leaves the opened node open: `{selected}`"
+            );
+
+            let announced = journey
+                .element(
+                    By::Css(SELECTED_ROW),
+                    "the row the tree announces as selected",
+                )
+                .await;
+            assert_eq!(
+                announced.attr("id").await?.as_deref(),
+                Some(row_id.as_str()),
+                "the row Enter selected is the row that held the tab stop"
+            );
+            assert_eq!(
+                journey.count(By::Css(SELECTED_ROW)).await,
+                1,
+                "a tree announces one selected row, so a reader is never told of two"
+            );
 
             journey.no_console_errors().await;
             Ok::<(), WebDriverError>(())

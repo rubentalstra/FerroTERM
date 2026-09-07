@@ -12,6 +12,7 @@ use crate::components::health::HealthIndicator;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
+use crate::pages::browse::BrowsePage;
 use crate::pages::code_system::CodeSystemPage;
 use crate::pages::concept_maps::ConceptMapsPage;
 use crate::pages::expand::ExpandPage;
@@ -27,11 +28,63 @@ use crate::settings::Settings;
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct SelectedVersion(pub(crate) Signal<FhirVersion>);
 
+/// The screens the header links to, each as its path segment and its label.
+///
+/// The overview sits at the base itself, so its segment is empty.
+const SECTIONS: [(&str, &str); 6] = [
+    ("", "Overview"),
+    ("browse", "Browse"),
+    ("expand", "Expand"),
+    ("valuesets", "Value sets"),
+    ("conceptmaps", "Concept maps"),
+    ("settings", "Settings"),
+];
+
 /// The shell's own query parameters.
 #[derive(Clone, Debug, Params, PartialEq)]
 struct ShellQuery {
     /// The FHIR version, as its path segment.
     fhir: Option<String>,
+}
+
+/// The header's navigation, with the reader's own screen marked.
+///
+/// One link is written once and drawn per section, so the six entries cost one
+/// view rather than six near-identical ones. Only the path is compared: the
+/// FHIR version travels in the query and every link carries it.
+fn section_links(version: Signal<FhirVersion>) -> AnyView {
+    let location = use_location();
+    let link = move |segment: &'static str, label: &'static str| {
+        let target = if segment.is_empty() {
+            UI_BASE.to_owned()
+        } else {
+            format!("{UI_BASE}/{segment}")
+        };
+        let here = location.clone();
+        view! {
+            <a
+                href=move || ui_link(segment, version.get())
+                aria-current=move || {
+                    (here.pathname.get().trim_end_matches('/') == target.trim_end_matches('/'))
+                        .then_some("page")
+                }
+                class="text-slate-700 hover:underline dark:text-slate-200"
+            >
+                {label}
+            </a>
+        }
+        .into_any()
+    };
+    let items: Vec<AnyView> = SECTIONS
+        .into_iter()
+        .map(|(segment, label)| link(segment, label))
+        .collect();
+    view! {
+        <nav aria-label="Sections" class="flex items-center gap-3 text-sm">
+            {items}
+        </nav>
+    }
+    .into_any()
 }
 
 /// The header, the routed screen, and the footer.
@@ -72,51 +125,7 @@ pub(crate) fn Shell() -> impl IntoView {
     }
     .into_any();
 
-    let location = use_location();
-    let on = move |path: &str| {
-        let target = format!("{UI_BASE}{path}");
-        location.pathname.get().trim_end_matches('/') == target.trim_end_matches('/')
-    };
-    let links = view! {
-        <nav aria-label="Sections" class="flex items-center gap-3 text-sm">
-            <a
-                href=move || ui_link("", version.get())
-                aria-current=move || if on("") { Some("page") } else { None }
-                class="text-slate-700 hover:underline dark:text-slate-200"
-            >
-                "Overview"
-            </a>
-            <a
-                href=move || ui_link("expand", version.get())
-                aria-current=move || if on("/expand") { Some("page") } else { None }
-                class="text-slate-700 hover:underline dark:text-slate-200"
-            >
-                "Expand"
-            </a>
-            <a
-                href=move || ui_link("valuesets", version.get())
-                aria-current=move || if on("/valuesets") { Some("page") } else { None }
-                class="text-slate-700 hover:underline dark:text-slate-200"
-            >
-                "Value sets"
-            </a>
-            <a
-                href=move || ui_link("conceptmaps", version.get())
-                aria-current=move || if on("/conceptmaps") { Some("page") } else { None }
-                class="text-slate-700 hover:underline dark:text-slate-200"
-            >
-                "Concept maps"
-            </a>
-            <a
-                href=move || ui_link("settings", version.get())
-                aria-current=move || if on("/settings") { Some("page") } else { None }
-                class="text-slate-700 hover:underline dark:text-slate-200"
-            >
-                "Settings"
-            </a>
-        </nav>
-    }
-    .into_any();
+    let links = section_links(version);
 
     let status = view! {
         <div class="flex items-center gap-3">
@@ -130,6 +139,7 @@ pub(crate) fn Shell() -> impl IntoView {
     let screens = view! {
         <Routes fallback=NotFoundPage>
             <Route path=path!("/") view=OverviewPage />
+            <Route path=path!("/browse") view=BrowsePage />
             <Route path=path!("/expand") view=ExpandPage />
             <Route path=path!("/settings") view=SettingsPage />
             <Route path=path!("/systems/:url") view=CodeSystemPage />
