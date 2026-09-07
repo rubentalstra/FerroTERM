@@ -21,6 +21,9 @@ pub(crate) const BROWSE_PATH: &str = "browse";
 /// The expansion runner's path below the base.
 pub(crate) const EXPAND_PATH: &str = "expand";
 
+/// The `$validate-code` and `$subsumes` runners' path below the base.
+pub(crate) const VALIDATE_PATH: &str = "validate";
+
 /// The value set screen's path below the base.
 pub(crate) const VALUE_SETS_PATH: &str = "valuesets";
 
@@ -124,6 +127,7 @@ pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
         None | Some(SYSTEMS_PATH) => Some(OVERVIEW_PATH),
         Some(BROWSE_PATH) => Some(BROWSE_PATH),
         Some(EXPAND_PATH) => Some(EXPAND_PATH),
+        Some(VALIDATE_PATH) => Some(VALIDATE_PATH),
         Some(VALUE_SETS_PATH) => Some(VALUE_SETS_PATH),
         Some(CONCEPT_MAPS_PATH) => Some(CONCEPT_MAPS_PATH),
         Some(VERSIONS_PATH) => Some(VERSIONS_PATH),
@@ -268,6 +272,7 @@ mod tests {
     fn a_screen_marks_its_own_entry() {
         assert_eq!(nav_section("/ui/browse"), Some(BROWSE_PATH));
         assert_eq!(nav_section("/ui/expand"), Some(EXPAND_PATH));
+        assert_eq!(nav_section("/ui/validate"), Some(VALIDATE_PATH));
         assert_eq!(nav_section("/ui/valuesets"), Some(VALUE_SETS_PATH));
         assert_eq!(nav_section("/ui/conceptmaps"), Some(CONCEPT_MAPS_PATH));
         assert_eq!(nav_section("/ui/versions"), Some(VERSIONS_PATH));

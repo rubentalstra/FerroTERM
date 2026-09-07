@@ -25,6 +25,7 @@ use crate::pages::expand::ExpandPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
 use crate::pages::settings::SettingsPage;
+use crate::pages::validate::ValidatePage;
 use crate::pages::value_sets::ValueSetsPage;
 use crate::pages::versions::VersionsPage;
 use crate::routes::BROWSE_PATH;
@@ -32,6 +33,7 @@ use crate::routes::CONCEPT_MAPS_PATH;
 use crate::routes::EXPAND_PATH;
 use crate::routes::OVERVIEW_PATH;
 use crate::routes::SETTINGS_PATH;
+use crate::routes::VALIDATE_PATH;
 use crate::routes::VALUE_SETS_PATH;
 use crate::routes::VERSIONS_PATH;
 use crate::routes::nav_section;
@@ -61,10 +63,11 @@ enum NavSlot {
 /// the rendered sidebar cannot drift from it. The divider belongs to the
 /// second group, whose entries are the ones a new screen is least likely to
 /// land between.
-const NAV_SLOTS: [NavSlot; 8] = [
+const NAV_SLOTS: [NavSlot; 9] = [
     NavSlot::Item(OVERVIEW_PATH, "Overview", crate::components::icon::OVERVIEW),
     NavSlot::Item(BROWSE_PATH, "Browse", crate::components::icon::BROWSE),
     NavSlot::Item(EXPAND_PATH, "Expand", crate::components::icon::EXPAND),
+    NavSlot::Item(VALIDATE_PATH, "Validate", crate::components::icon::VALIDATE),
     NavSlot::Item(
         VALUE_SETS_PATH,
         "Value sets",
@@ -248,6 +251,7 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/") view=OverviewPage />
             <Route path=path!("/browse") view=BrowsePage />
             <Route path=path!("/expand") view=ExpandPage />
+            <Route path=path!("/validate") view=ValidatePage />
             <Route path=path!("/settings") view=SettingsPage />
             <Route path=path!("/systems/:url") view=CodeSystemPage />
             <Route path=path!("/conceptmaps") view=ConceptMapsPage />

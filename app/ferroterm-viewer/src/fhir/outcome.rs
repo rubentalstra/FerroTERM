@@ -30,6 +30,9 @@ pub(crate) struct Issue {
     pub(crate) details: Option<CodeableConcept>,
     /// `issue.diagnostics`, the server's own diagnostic sentence.
     pub(crate) diagnostics: Option<String>,
+    /// `issue.expression`, the `FHIRPath` of the input the issue is about.
+    #[serde(default)]
+    pub(crate) expression: Vec<String>,
 }
 
 /// The parts of a `CodeableConcept` the viewer renders.
