@@ -29,12 +29,18 @@ cd "$root"
 bars=app/ferroterm-viewer/bundle-size.json
 dist=app/ferroterm-viewer/dist
 base=""
+verify=""
+# What a rebuild of the same tree may legitimately differ by. The recorded
+# figure comes from the CI runner, and a growth budget of tens of kilobytes
+# does not need this to be tight.
+DRIFT_TOLERANCE=${BUNDLE_DRIFT_TOLERANCE:-2000}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --bars) bars=$2; shift 2 ;;
     --dist) dist=$2; shift 2 ;;
     --base) base=$2; shift 2 ;;
+    --verify-recorded) verify=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -110,6 +116,29 @@ while IFS=$'\t' read -r asset pattern max growth recorded claim; do
   fi
 done < <(jq -r '.bars[] | [.asset, .pattern, .max_gzip_bytes, .max_growth_gzip_bytes, .measured_gzip_bytes, .claim] | @tsv' "$bars")
 
+# On the branch every pull request is measured against, the recorded figure IS
+# the baseline, so a stale one silently charges the next change for this one's
+# growth. Checking it here catches that within one merge instead of at the next
+# screen (#464).
+if [[ -n "$verify" ]]; then
+  while IFS=$'\t' read -r asset pattern recorded; do
+    file="$(find "$dist" -maxdepth 1 -type f -name "$pattern")"
+    if [[ -z "$file" ]]; then
+      continue
+    fi
+    size="$(gzip -9 -c "$file" | wc -c | tr -d '[:space:]')"
+    drift=$((size - recorded))
+    checks=$((checks + 1))
+    if [[ "${drift#-}" -gt "$DRIFT_TOLERANCE" ]]; then
+      breached=$((breached + 1))
+      printf 'BREACH %-5s the recorded baseline is %+d bytes out (%d built, %d recorded)\n' \
+        "$asset" "$drift" "$size" "$recorded" >&2
+    else
+      printf 'ok     %-5s baseline accurate within %d bytes\n' "$asset" "$DRIFT_TOLERANCE"
+    fi
+  done < <(jq -r '.bars[] | [.asset, .pattern, .measured_gzip_bytes] | @tsv' "$bars")
+fi
+
 echo "bundle-size: $((checks - breached)) of $checks checks hold"
 if [[ "$grown" -eq 0 ]]; then
   echo "bundle-size: no --base given, so only the ceilings were checked"
@@ -120,6 +149,8 @@ if [[ "$breached" -gt 0 ]]; then
     echo "  the ordered path is in docs/viewer.md section 12: measure the composition first"
     echo "  a growth breach whose bytes are justified records this build's figure as"
     echo "  measured_gzip_bytes, which moves the baseline for the next change by one change"
+    echo "  a baseline breach means a change grew the bundle and did not record it, so the"
+    echo "  next change is charged for it: record this build's figure as measured_gzip_bytes"
   } >&2
   exit 1
 fi
