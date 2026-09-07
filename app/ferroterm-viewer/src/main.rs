@@ -6,6 +6,7 @@
 //! do.
 
 mod app;
+mod comparison;
 mod components;
 mod fhir;
 mod listing;

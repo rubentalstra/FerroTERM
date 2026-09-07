@@ -94,6 +94,16 @@ macro_rules! metadata {
             const FEATURE: &str = "http://hl7.org/fhir/uv/application-feature/StructureDefinition/feature";
             /// The terminology ecosystem requirements the overlay rests on.
             const ECOSYSTEM_REQUIREMENTS: &str = "https://hl7.org/fhir/uv/tx-ecosystem/requirements.html";
+            /// The canonical this server declares an operation's levels under.
+            ///
+            /// A `CapabilityStatement` records that a server answers an operation and
+            /// never at which level; `OperationDefinition.system`, `.type`, and
+            /// `.instance` carry that
+            /// (<https://hl7.org/fhir/R4B/operationdefinition-definitions.html#OperationDefinition.instance>).
+            /// The levels the version's own definition declares are stated here as an
+            /// extension, so a client reads from the document what the router gates on.
+            const OPERATION_LEVEL: &str =
+                "https://ferroterm.eu/fhir/StructureDefinition/operation-level";
             /// The release date of this version from the changelog (`build.rs`), `None`
             /// for an unreleased version.
             const RELEASE_DATE: Option<&str> = option_env!("FERROTERM_RELEASE_DATE");
@@ -225,9 +235,27 @@ macro_rules! metadata {
                 }
             }
 
-            /// One declared operation, with what the ecosystem overlay adds to it.
+            /// The levels this version's `OperationDefinition` declares, one extension each.
+            fn levels(descriptor: &Operation) -> Vec<Extension> {
+                [
+                    (descriptor.system, "system"),
+                    (descriptor.type_level, "type"),
+                    (descriptor.instance, "instance"),
+                ]
+                .into_iter()
+                .filter(|(declared, _)| *declared)
+                .map(|(_, level)| Extension {
+                    url: OPERATION_LEVEL.to_owned(),
+                    value: Some(ExtensionValue::Code(level.into())),
+                    ..Default::default()
+                })
+                .collect()
+            }
+
+            /// One declared operation, with its levels and what the overlay adds to it.
             fn declared(descriptor: &Operation) -> CapabilityStatementRestResourceOperation {
                 CapabilityStatementRestResourceOperation {
+                    extension: levels(descriptor),
                     documentation: overlay_documentation(descriptor).map(Into::into),
                     ..operation(descriptor.code, descriptor.url)
                 }

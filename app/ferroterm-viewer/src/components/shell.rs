@@ -23,6 +23,7 @@ use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
 use crate::pages::settings::SettingsPage;
 use crate::pages::value_sets::ValueSetsPage;
+use crate::pages::versions::VersionsPage;
 use crate::routes::UI_BASE;
 use crate::routes::ui_link;
 use crate::settings::Settings;
@@ -35,12 +36,13 @@ pub(crate) struct SelectedVersion(pub(crate) Signal<FhirVersion>);
 /// the glyph a reader recognises it by.
 ///
 /// The overview sits at the base itself, so its segment is empty.
-const SECTIONS: [(&str, &str, Glyph); 6] = [
+const SECTIONS: [(&str, &str, Glyph); 7] = [
     ("", "Overview", icon::OVERVIEW),
     ("browse", "Browse", icon::BROWSE),
     ("expand", "Expand", icon::EXPAND),
     ("valuesets", "Value sets", icon::VALUE_SETS),
     ("conceptmaps", "Concept maps", icon::CONCEPT_MAPS),
+    ("versions", "FHIR versions", icon::VERSION),
     ("settings", "Settings", icon::SETTINGS),
 ];
 
@@ -150,6 +152,7 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/systems/:url") view=CodeSystemPage />
             <Route path=path!("/conceptmaps") view=ConceptMapsPage />
             <Route path=path!("/valuesets") view=ValueSetsPage />
+            <Route path=path!("/versions") view=VersionsPage />
         </Routes>
     }
     .into_any();

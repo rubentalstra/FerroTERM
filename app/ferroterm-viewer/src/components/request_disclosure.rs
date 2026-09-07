@@ -28,7 +28,15 @@ pub(crate) fn RequestDisclosure(
     /// `POST` because its input does not fit in a query.
     #[prop(optional, into)]
     body: Option<Signal<String>>,
+    /// Which of a section's requests this one is, for a section that made
+    /// several. It is fixed at setup, and the summary carries it.
+    #[prop(optional)]
+    label: Option<&'static str>,
 ) -> impl IntoView {
+    let summary = label.map_or_else(
+        || "The request this section made".to_owned(),
+        |label| format!("The {label} request this section made"),
+    );
     let curl = move || match body {
         Some(body) => url.with(|url| body.with(|body| curl_post_line(url, body))),
         None => url.with(|url| curl_line(url)),
@@ -66,7 +74,7 @@ pub(crate) fn RequestDisclosure(
     view! {
         <details class="mt-4 rounded border border-slate-200 text-xs dark:border-slate-800">
             <summary class="cursor-pointer px-3 py-2 font-medium text-slate-700 dark:text-slate-200">
-                "The request this section made"
+                {summary}
             </summary>
             <div class="border-t border-slate-200 px-3 py-2 dark:border-slate-800">
                 <p class="text-slate-600 dark:text-slate-300">
