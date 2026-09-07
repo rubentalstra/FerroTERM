@@ -511,14 +511,50 @@ built except the `ui-e2e` job:
 **What it measures.** The whole `.wasm` a reader downloads, gzipped: the
 viewer's own code and every dependency in it, together. There is no separate
 bar for project code. A reader downloads one file and waits for one file, so
-one number is what the claim is about, and a dependency the viewer chose is the
-viewer's weight. `app/ferroterm-viewer/bundle-size.json` holds the three bars
-(wasm, JS bootstrap, CSS) and `scripts/checks/bundle-size.sh` compares each to
-the build in `dist/`, in the `viewer` CI job.
+one artifact is what the claim is about, and a dependency the viewer chose is
+the viewer's weight. `app/ferroterm-viewer/bundle-size.json` holds the bars for
+the three assets (wasm, JS bootstrap, CSS) and `scripts/checks/bundle-size.sh`
+checks the build in `dist/`, in the `viewer` CI job.
 
-**Why 240,000 bytes.** It is the standing claim, and after the measurement
-below the bundle sits well under it with room for the screens still to come.
-The number has never been raised and is not raised here.
+**Two numbers, because one cannot do both jobs.** A single absolute total on an
+artifact that legitimately grows has to be raised every time it grows, and a
+number edited every fortnight has stopped being a claim. One screen costs about
+27,000 gzipped bytes (the code system detail screen, measured 2026-09-07) and
+nine more screens are to come, so any total tight enough to catch a regression
+today is breached by honest work next week. The two jobs are split:
+
+- **`max_gzip_bytes` is the ceiling**, the claim about what the finished viewer
+  costs a reader. It is set from arithmetic over the screens still to land
+  rather than from today's build, so it does not move screen by screen.
+  **470,000 bytes** (459 KiB): 201,725 today plus nine screens at the measured
+  27,043 is 445,112, and the rest covers the accessibility pass and the shell
+  growth that comes with them. The viewer is an operator tool served from the
+  host it browses, its assets are content-hashed and cached immutably, and a
+  reader downloads it once.
+- **`max_growth_gzip_bytes` is the per-change budget**, and it is the gate that
+  catches a regression. **32,000 bytes** for the wasm, which is the number with
+  the most room on both sides of the two landmarks that have been measured: the
+  largest legitimate single increment is a whole screen at 27,043, and the
+  smallest illegitimate one is the `thaw` dependency at 36,894. So a screen
+  18% richer than the one measured still passes, and a dependency of the size
+  the viewer just shed still fails. The guard prints the delta on every run,
+  passing or not, so growth is visible before it is a breach.
+
+**A change cannot make its own build green by editing a number.** The guard
+reads `measured_gzip_bytes` **out of git at the merge base**, not out of the
+branch under test, so the figure a change is judged against is not a figure the
+change can write. Editing `measured_gzip_bytes` in a branch does nothing at
+all. The one knob left in the tree is `max_growth_gzip_bytes`, and it is a
+rate: raising it raises it for every future change at once, in a one-line diff
+a reviewer sees, rather than nudging a level by exactly one branch's overage.
+
+That leaves a bookkeeping duty. A change that grows the bundle records its own
+CI figure as `measured_gzip_bytes`, which moves the baseline forward by one
+change. Skipping it does not help the change that skipped it; it charges the
+next change for both, and the guard says so when it fails. The figure is CI's,
+on x86_64 Linux, because another host emits slightly different bytes (an
+aarch64-apple-darwin build runs about 550 over), and the budget is three orders
+of magnitude wider than that spread.
 
 **What a slice does when it breaches**, in order, and never by starting at the
 end:
@@ -537,9 +573,10 @@ end:
    concrete inner function out of a generic one. Removing `thaw` took 35,722
    bytes of `reactive_graph` instantiations with it, more than `thaw`'s own
    code.
-4. **Only then re-adjudicate the number**, with the measurement in the commit
+4. **Only then re-adjudicate a number**, with the measurement in the commit
    message and the alternatives ruled out recorded here. A slice never raises
-   the bar to make its own build green.
+   a bar to make its own build green. A screen that genuinely costs a screen
+   records its figure and moves on; that is the budget working, not a breach.
 
 **The measurement, 2026-09-07** (`twiggy` 0.8.0 over the pre-`wasm-opt` module,
 plus an A/B rebuild; the gzipped figures are the CI `viewer` job's, on x86_64
@@ -558,12 +595,20 @@ for three widgets out of a hundred. Removing `thaw` took the wasm from 238,619
 to 201,725 gzipped bytes, 15.5% of the bundle, against the 1,381 bytes of
 headroom the overview screen had left. Nine screens now have 38,275.
 
-Two alternatives were ruled out by that result. **Patching or vendoring `thaw`
-to drop `chrono` and `icondata_ai`** would have bought nothing, because neither
-was in the bundle. **Splitting the bar so a pull request is gated on project
-code alone** was not needed and would have been worse: it gates the half a
-reader does not care about and stops counting the half that was 15.5% of the
-download.
+Three alternatives were ruled out.
+
+- **Patching or vendoring `thaw` to drop `chrono` and `icondata_ai`** would
+  have bought nothing, because neither was in the bundle.
+- **Gating a pull request on the project's own code, with dependency weight
+  tracked separately.** It gates the wrong half in both directions: the
+  project's own code is the half that grows by a screen at a time, so that bar
+  needs raising nine more times, while the dependency half that was 15.5% of
+  the download stops being counted at all. The per-change budget catches a
+  dependency and a screen with one number, because it measures what a reader
+  actually waits for.
+- **Keeping a single tight total and raising it as screens land.** That is nine
+  more re-adjudications, each one a change making its own build green, which is
+  the failure this section exists to prevent.
 
 ## 13. Sources
 

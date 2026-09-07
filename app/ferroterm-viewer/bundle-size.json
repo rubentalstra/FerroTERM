@@ -1,18 +1,20 @@
 {
-  "note": "The size of the viewer bundle every reader downloads, gzipped: the viewer's own code and every dependency in it, together. A bar is the claim the project makes, and it moves only when a change is worth the bytes; docs/viewer.md section 12 records the basis and what a slice does when it breaches. measured_gzip_bytes is what the ci.yml viewer job produced on x86_64 Linux on the date below, recorded beside the claim so a reader sees the headroom; another host emits slightly different bytes. The wasm headroom is deliberate: nine screens are still to land.",
+  "note": "The size of the viewer bundle every reader downloads, gzipped: the viewer's own code and every dependency in it, together. Two numbers, because one cannot do both jobs (docs/viewer.md section 12). max_gzip_bytes is the CEILING, the claim about what the finished twelve-screen viewer costs a reader, set from arithmetic rather than from today's build so it does not move screen by screen. max_growth_gzip_bytes is the PER-CHANGE BUDGET: scripts/checks/bundle-size.sh --base compares the live build to the measured_gzip_bytes recorded on the merge base, so the figure a change is judged against is never in the branch being judged. measured_gzip_bytes is what the ci.yml viewer job produced on x86_64 Linux on the date below; another host emits slightly different bytes, well inside the budget. A change that grows the bundle records its own CI figure here, which moves the baseline by exactly one change.",
   "measured": "2026-09-07",
   "bars": [
     {
       "asset": "wasm",
       "pattern": "*_bg.wasm",
-      "max_gzip_bytes": 240000,
+      "max_gzip_bytes": 470000,
+      "max_growth_gzip_bytes": 32000,
       "measured_gzip_bytes": 201725,
-      "claim": "the WebAssembly module is under 235 KiB gzipped"
+      "claim": "the finished viewer's WebAssembly module is under 460 KiB gzipped, and no one change adds more than a whole screen's worth"
     },
     {
       "asset": "js",
       "pattern": "*.js",
       "max_gzip_bytes": 12000,
+      "max_growth_gzip_bytes": 2000,
       "measured_gzip_bytes": 8530,
       "claim": "the wasm-bindgen bootstrap is under 12 KB gzipped"
     },
@@ -20,6 +22,7 @@
       "asset": "css",
       "pattern": "*.css",
       "max_gzip_bytes": 8000,
+      "max_growth_gzip_bytes": 2000,
       "measured_gzip_bytes": 4032,
       "claim": "the compiled Tailwind sheet is under 8 KB gzipped"
     }

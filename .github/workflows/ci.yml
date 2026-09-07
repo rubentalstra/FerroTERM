@@ -347,9 +347,12 @@ jobs:
     permissions:
       contents: read
     steps:
+      # Full history: the bundle's per-change budget is measured against the
+      # figure the MERGE BASE recorded, which the guard reads out of git.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: ./.github/actions/setup-rust
         with:
           components: clippy, rustfmt
@@ -378,8 +381,18 @@ jobs:
       - name: Build the release bundle
         working-directory: app/ferroterm-viewer
         run: trunk build --release --locked
-      - name: The bundle is inside its recorded bars
-        run: bash scripts/checks/bundle-size.sh
+      # BASE is empty outside a pull request, and the guard then checks only
+      # the ceilings and says so. Only a pull request reaches `main`.
+      - name: The bundle is inside its ceiling and its per-change budget
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${BASE:-}" ]]; then
+            bash scripts/checks/bundle-size.sh --base "$BASE"
+          else
+            bash scripts/checks/bundle-size.sh
+          fi
 
   # The viewer is client-side rendered, so a unit test sees none of what a
   # reader sees: the document is an empty <body> until the WebAssembly bundle
