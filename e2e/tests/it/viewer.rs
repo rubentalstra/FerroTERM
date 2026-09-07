@@ -44,7 +44,16 @@ const SYSTEM_TOOLS: &str = "nav[aria-label^='Screens for']";
 /// (<https://hl7.org/fhir/R4B/codesystem-filter-operator.html>). The operator
 /// list folds into a `<details>`, and matching on the whole card's text reads
 /// what a collapsed element still holds.
-const WALKABLE_CARD: &str = "//article[contains(., 'is-a')]//h3//a";
+const WALKABLE_CARD: &str = "//article[contains(., 'child-of')]//h3//a";
+
+/// The surface the tree journey drives.
+///
+/// `filter-operator` defines `child-of` from R5 onward, so an R4-family
+/// surface states a hierarchy without it
+/// (<https://hl7.org/fhir/R4B/codesystem-filter-operator.html>) and the
+/// browser draws no tree to walk. The journey opens the version that can
+/// express the filter it exercises.
+const TREE_SURFACE: &str = "/ui?fhir=r5";
 
 /// The link from a code system's screen into the concept browser.
 const BROWSE_LINK: &str = "nav[aria-label^='Screens for'] a[href*='/ui/browse']";
@@ -435,7 +444,7 @@ async fn the_taxonomy_tree_is_walked_by_keyboard_alone() {
     let outcome = session()
         .await
         .run_and_quit(|driver| async move {
-            let journey = Journey::open(driver, &base, "/ui").await;
+            let journey = Journey::open(driver, &base, TREE_SURFACE).await;
             tree_with_a_level(&journey).await?;
 
             let stop = journey
