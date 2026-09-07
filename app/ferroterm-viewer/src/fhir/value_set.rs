@@ -57,10 +57,10 @@ pub(crate) struct PublishedValueSet {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
 struct Compose {
     /// `compose.include`, the selections drawn in.
-    #[serde(default = "Vec::new")]
+    #[serde(default)]
     include: Vec<ComposeSet>,
     /// `compose.exclude`, the selections taken back out.
-    #[serde(default = "Vec::new")]
+    #[serde(default)]
     exclude: Vec<ComposeSet>,
     /// `compose.inactive`, whether inactive codes are in the selection.
     inactive: Option<bool>,
@@ -77,13 +77,13 @@ struct ComposeSet {
     /// `version`, the code system version the selection is pinned to.
     version: Option<String>,
     /// `valueSet`, the value sets this clause draws in whole.
-    #[serde(rename = "valueSet", default = "Vec::new")]
+    #[serde(default, rename = "valueSet")]
     value_set: Vec<String>,
     /// `concept`, the codes the clause names one by one.
-    #[serde(default = "Vec::new")]
+    #[serde(default)]
     concept: Vec<ComposeConcept>,
     /// `filter`, the filters the clause selects with.
-    #[serde(default = "Vec::new")]
+    #[serde(default)]
     filter: Vec<ComposeFilter>,
 }
 
