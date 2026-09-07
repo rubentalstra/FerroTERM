@@ -6,17 +6,6 @@
 //! them. The counters are `u32` rather than `usize` because WebAssembly is
 //! 32-bit and these numbers travel in URLs.
 
-// The expansion runner is the first screen that pages. The arithmetic ships
-// with the client so every paged screen shares one implementation and its
-// tests, and the expectation reports itself once every method has a caller.
-#![cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the paged screens land on top of this; see the module docs"
-    )
-)]
-
 /// The largest `count` the viewer asks a server for in one request.
 ///
 /// No specification caps `count`: this is our own design, a bound on how much
@@ -36,8 +25,18 @@ impl Page {
     /// `count` is clamped into `1..=MAX_COUNT`, so a stored or typed value can
     /// never ask for a zero-row page that would never advance.
     pub(crate) fn first(count: u32) -> Self {
+        Self::at(0, count)
+    }
+
+    /// The page starting at `offset`, rendered `count` rows at a time.
+    ///
+    /// Both numbers arrive from an address a reader can type, so `count` is
+    /// clamped the same way here as anywhere else. `offset` is taken as it
+    /// was given: an offset past the end of a result is a page the server
+    /// answers empty, and correcting it under the reader would hide that.
+    pub(crate) fn at(offset: u32, count: u32) -> Self {
         Self {
-            offset: 0,
+            offset,
             count: count.clamp(1, MAX_COUNT),
         }
     }
@@ -85,6 +84,21 @@ impl Page {
             offset,
             count: self.count,
         })
+    }
+
+    /// The page holding the last row of `total`, at this page's size.
+    ///
+    /// An empty result has one page and it is this one, so the walk to the end
+    /// always lands somewhere the server answers.
+    #[expect(
+        clippy::integer_division,
+        reason = "the last page starts at the whole number of pages before it; the count is at least 1"
+    )]
+    pub(crate) fn last(self, total: u32) -> Self {
+        Self {
+            offset: total.saturating_sub(1) / self.count * self.count,
+            count: self.count,
+        }
     }
 }
 
@@ -159,6 +173,37 @@ mod tests {
             Page::first(20).total_pages(41),
             3,
             "41 rows of 20 fill two full pages and one row"
+        );
+    }
+
+    #[test]
+    fn a_typed_offset_is_kept_and_a_typed_page_size_is_clamped() {
+        let page = Page::at(35, 0);
+        assert_eq!(
+            (page.offset(), page.count()),
+            (35, 1),
+            "the address is read as it was typed, and only the size is bounded"
+        );
+        assert_eq!(Page::at(35, 50_000).count(), MAX_COUNT);
+    }
+
+    #[test]
+    fn the_last_page_holds_the_last_row() {
+        let page = Page::first(20);
+        assert_eq!(page.last(41).offset(), 40, "row 41 sits on the third page");
+        assert_eq!(
+            page.last(40).offset(),
+            20,
+            "a total that exactly fills two pages ends on the second"
+        );
+    }
+
+    #[test]
+    fn the_last_page_of_an_empty_result_is_the_first_page() {
+        assert_eq!(
+            Page::first(20).last(0),
+            Page::first(20),
+            "the walk to the end lands where the server answers"
         );
     }
 

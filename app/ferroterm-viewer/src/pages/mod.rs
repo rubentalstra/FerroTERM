@@ -8,6 +8,7 @@
 )]
 
 pub(crate) mod code_system;
+pub(crate) mod expand;
 pub(crate) mod not_found;
 pub(crate) mod overview;
 pub(crate) mod settings;
