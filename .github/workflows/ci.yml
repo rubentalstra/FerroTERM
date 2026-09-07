@@ -391,7 +391,9 @@ jobs:
           if [[ -n "${BASE:-}" ]]; then
             bash scripts/checks/bundle-size.sh --base "$BASE"
           else
-            bash scripts/checks/bundle-size.sh
+            # On main the recorded figure is the baseline every pull request is
+            # measured against, so it is verified rather than merely read.
+            bash scripts/checks/bundle-size.sh --verify-recorded
           fi
 
   # The viewer is client-side rendered, so a unit test sees none of what a
