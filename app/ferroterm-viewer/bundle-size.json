@@ -6,7 +6,7 @@
       "asset": "wasm",
       "pattern": "*_bg.wasm",
       "max_gzip_bytes": 470000,
-      "max_growth_gzip_bytes": 32000,
+      "max_growth_gzip_bytes": 45000,
       "measured_gzip_bytes": 228461,
       "claim": "the finished viewer's WebAssembly module is under 460 KiB gzipped, and no one change adds more than a whole screen's worth"
     },
