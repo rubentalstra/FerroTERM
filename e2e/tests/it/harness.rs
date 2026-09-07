@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 //! The browser session every journey drives, and the waits it is built from.
 
+use std::path::Path;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -240,5 +241,52 @@ impl Journey {
             console.len(),
             console.join("\n  ")
         );
+    }
+
+    /// Sets the window, and with it the viewport a shot is taken of.
+    ///
+    /// The session starts at the size [`CHROME_ARGS`] fixes; a capture asks for
+    /// a taller one so a whole screen lands in one image
+    /// (<https://www.w3.org/TR/webdriver2/#set-window-rect>).
+    pub async fn resize(&self, width: u32, height: u32) {
+        self.driver
+            .set_window_rect(0, 0, width, height)
+            .await
+            .unwrap_or_else(|error| panic!("resizing to {width}x{height}: {error}"));
+    }
+
+    /// How tall the rendered document is, in CSS pixels.
+    ///
+    /// The body's own box is the measure, read over WebDriver
+    /// (<https://www.w3.org/TR/webdriver2/#get-element-rect>), so nothing here
+    /// runs a script in the page.
+    #[expect(
+        clippy::as_conversions,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "a WebDriver rect is f64 and `as` is the only defined float-to-integer conversion; it saturates at both ends, the value is rounded and floored at zero here, and the caller clamps it into the shot bounds"
+    )]
+    pub async fn page_height(&self) -> WebDriverResult<u32> {
+        let body = self.driver.find(By::Css("body")).await?;
+        Ok(body.rect().await?.height.round().max(0.0) as u32)
+    }
+
+    /// Writes a PNG of what the browser is showing to `path`.
+    ///
+    /// The image is the viewport, whose size the session fixes on the command
+    /// line, so a capture taken twice is the same size twice. WebDriver hands
+    /// the picture back as base64 over the wire
+    /// (<https://www.w3.org/TR/webdriver2/#take-screenshot>), so the file is
+    /// written where the journeys run rather than inside the browser.
+    pub async fn shot(&self, path: &Path) {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .unwrap_or_else(|error| panic!("creating {}: {error}", parent.display()));
+        }
+        self.driver
+            .screenshot(path)
+            .await
+            .unwrap_or_else(|error| panic!("writing {}: {error}", path.display()));
+        println!("captured {}", path.display());
     }
 }

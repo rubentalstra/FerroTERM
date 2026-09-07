@@ -1,0 +1,19 @@
+{
+  "resourceType": "ValueSet",
+  "id": "e2e-taxonomy-all",
+  "url": "https://ferroterm.eu/fhir/ValueSet/e2e-taxonomy-all",
+  "version": "1",
+  "name": "FerroTermE2ETaxonomyAll",
+  "title": "Every concept of the shaped taxonomy",
+  "status": "active",
+  "experimental": true,
+  "publisher": "FerroTERM",
+  "description": "Synthetic content. One published ValueSet over the shaped taxonomy, so the value set screen lists a resource and the expansion runner has a canonical to expand. It carries no clinical meaning and no licensed content.",
+  "compose": {
+    "include": [
+      {
+        "system": "https://ferroterm.eu/fhir/CodeSystem/e2e-taxonomy"
+      }
+    ]
+  }
+}
