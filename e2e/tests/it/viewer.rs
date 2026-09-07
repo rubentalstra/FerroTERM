@@ -14,6 +14,12 @@ const SWITCHER: &str = "nav[aria-label='FHIR version']";
 /// The switcher link marked as the page the reader is on.
 const SELECTED_VERSION: &str = "nav[aria-label='FHIR version'] a[aria-current='page']";
 
+/// The sidebar the screens are reached from, by the landmark it announces.
+const SIDEBAR: &str = "nav[aria-label='Screens']";
+
+/// The sidebar entry marked as the screen the reader is on.
+const CURRENT_SCREEN: &str = "nav[aria-label='Screens'] a[aria-current='page']";
+
 /// The overview screen's rendered FHIR base, found by the term beside it.
 const RENDERED_BASE: &str = "//dt[normalize-space()='FHIR base']/following-sibling::dd[1]";
 
@@ -63,8 +69,8 @@ const SELECTED_ROW: &str = "li[role='treeitem'][aria-selected='true']";
 /// A parent of the concept being read, as the link that moves onto it.
 const PARENT_LINK: &str = "nav[aria-label='Parents of this concept'] a";
 
-/// The header link onto the version comparison.
-const VERSIONS_LINK: &str = "nav[aria-label='Sections'] a[href^='/ui/versions']";
+/// The sidebar entry onto the version comparison.
+const VERSIONS_LINK: &str = "nav[aria-label='Screens'] a[href^='/ui/versions']";
 
 /// The version comparison, by the heading it is labelled by.
 const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
@@ -80,6 +86,71 @@ fn version_link(label: &str) -> String {
 /// the third is R5's.
 fn lookup_cell(column: u8) -> String {
     format!("//th[normalize-space()='CodeSystem/$lookup']/following-sibling::td[{column}]")
+}
+
+/// A sidebar entry, by the label a reader reads on it.
+fn screen_link(label: &str) -> String {
+    format!("//nav[@aria-label='Screens']//a[normalize-space()='{label}']")
+}
+
+/// The sidebar reaches another screen and marks the one it reached.
+///
+/// The mark is the `aria-current="page"` a screen reader announces, and it is
+/// computed from the address rather than from the click, so a reader who typed
+/// the address gets the same mark. The click also proves the entry carries the
+/// FHIR version the reader was already on.
+#[tokio::test]
+async fn the_sidebar_reaches_another_screen_and_marks_the_one_it_reached() {
+    let Some(base) = server() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &base, "/ui").await;
+
+            journey
+                .element(By::Css(SIDEBAR), "the sidebar the screens are reached from")
+                .await;
+            journey
+                .text_becoming(
+                    By::Css(CURRENT_SCREEN),
+                    "Overview",
+                    "the sidebar to mark the overview the reader opened",
+                )
+                .await;
+
+            journey
+                .element(By::XPath(screen_link("Value sets")), "the value sets entry")
+                .await
+                .click()
+                .await?;
+
+            journey
+                .text_becoming(
+                    By::Css(CURRENT_SCREEN),
+                    "Value sets",
+                    "the sidebar to mark value sets after the click",
+                )
+                .await;
+            let address = journey
+                .address_carrying("/ui/valuesets", "the value sets screen's own address")
+                .await;
+            assert!(
+                address.contains("fhir=r4b"),
+                "a sidebar entry keeps the version the reader was on: `{address}`"
+            );
+            assert_eq!(
+                journey.count(By::Css(CURRENT_SCREEN)).await,
+                1,
+                "one entry is the screen the reader is on"
+            );
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
 }
 
 /// The shell renders under `/ui`, and the switcher moves the whole page onto

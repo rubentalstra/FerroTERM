@@ -13,6 +13,10 @@ use crate::routes::version_link;
 /// The links are plain anchors, which `leptos_router` intercepts through its
 /// window click handler, so switching version is a client-side navigation that
 /// matches the same route and only updates the query.
+///
+/// It is drawn as one segmented control in the top bar, because it changes
+/// which root every screen reads from rather than moving the reader to a
+/// screen of its own.
 #[component]
 #[expect(
     unreachable_pub,
@@ -25,7 +29,10 @@ pub(crate) fn VersionSwitcher(
 ) -> impl IntoView {
     let location = use_location();
     view! {
-        <nav aria-label="FHIR version" class="flex items-center gap-1">
+        <nav
+            aria-label="FHIR version"
+            class="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800"
+        >
             <span class="mr-1 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                 <Icon glyph=icon::VERSION class="h-3.5 w-3.5" />
                 "FHIR"
@@ -48,9 +55,9 @@ pub(crate) fn VersionSwitcher(
                             aria-current=move || if active() { Some("page") } else { None }
                             class=move || {
                                 if active() {
-                                    "rounded px-2 py-1 text-xs font-semibold bg-teal-600 text-white"
+                                    "rounded-md bg-teal-600 px-2 py-1 text-xs font-semibold text-white"
                                 } else {
-                                    "rounded px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:text-slate-200 dark:hover:bg-slate-700"
+                                    "rounded-md px-2 py-1 text-xs font-medium text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-700"
                                 }
                             }
                         >
