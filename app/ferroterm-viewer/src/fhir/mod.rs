@@ -6,6 +6,7 @@
 
 pub(crate) mod capability;
 pub(crate) mod error;
+pub(crate) mod expansion;
 pub(crate) mod outcome;
 pub(crate) mod terminology;
 pub(crate) mod version;
@@ -17,6 +18,8 @@ use serde::de::DeserializeOwned;
 
 use crate::fhir::capability::CapabilityStatement;
 use crate::fhir::error::FhirError;
+use crate::fhir::expansion::ExpandRequest;
+use crate::fhir::expansion::ExpandedValueSet;
 use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::terminology::TerminologyCapabilities;
 use crate::fhir::version::FhirVersion;
@@ -133,6 +136,39 @@ impl FhirClient {
         version: FhirVersion,
     ) -> Result<TerminologyCapabilities, FhirError> {
         self.get_json(&self.terminology_metadata_url(version)).await
+    }
+
+    /// The address one `ValueSet/$expand` run reads.
+    ///
+    /// `$expand` takes its parameters in the query of a `GET`
+    /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>), and every
+    /// one of them is percent-encoded, so an implicit canonical carrying its
+    /// own query string stays inside the parameter it belongs to.
+    pub(crate) fn expand_url(&self, version: FhirVersion, request: &ExpandRequest) -> String {
+        request
+            .append(
+                RequestUrl::new()
+                    .segment(version.segment())
+                    .segment("ValueSet")
+                    .segment("$expand"),
+            )
+            .render(&self.root)
+    }
+
+    /// Runs `ValueSet/$expand` and reads the expansion it answers.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. A
+    /// selection the server refuses to expand, `too-costly` among them,
+    /// arrives as [`FhirError::Refused`] carrying the server's own
+    /// `OperationOutcome`.
+    pub(crate) async fn expand(
+        &self,
+        version: FhirVersion,
+        request: &ExpandRequest,
+    ) -> Result<ExpandedValueSet, FhirError> {
+        self.get_json(&self.expand_url(version, request)).await
     }
 
     /// Sends a FHIR JSON `GET` and decodes the resource it answers.
@@ -308,6 +344,27 @@ mod tests {
         assert_eq!(
             client.terminology_metadata_url(FhirVersion::R6),
             "https://tx.example.org/r6/metadata?mode=terminology"
+        );
+    }
+
+    #[test]
+    fn an_expansion_address_carries_an_implicit_canonical_whole() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        let request = ExpandRequest {
+            // An implicit value set canonical carries its own query string,
+            // and an unencoded one would truncate the request around it.
+            url: "http://snomed.info/sct?fhir_vs=isa/404684003".to_owned(),
+            count: Some(20),
+            offset: Some(40),
+            ..ExpandRequest::default()
+        };
+        assert_eq!(
+            client.expand_url(FhirVersion::R4B, &request),
+            "https://tx.example.org/r4b/ValueSet/$expand\
+             ?url=http%3A%2F%2Fsnomed.info%2Fsct%3Ffhir_vs%3Disa%2F404684003&count=20&offset=40",
+            "the operation name survives the path and the canonical survives the query"
         );
     }
 

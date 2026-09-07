@@ -24,6 +24,15 @@ because what it records is true and the method is reusable.
 - [Polled resource needs Transition](polled-resource-needs-transition.md): an
   interval-refetched or filter-refetched resource read under `<Suspense>`
   flashes its fallback; use `<Transition>`
+- [A resource `.with()` read does suspend](resource-read-registers-suspense.md):
+  the read registers with the `SuspenseContext` from context; a `Signal::derive`
+  resource source has no equality gate, so an unrelated notify refetches
+- [Transition mixes new params with the old answer](transition-mixes-new-params-old-answer.md):
+  a pager, summary, or live region computed from the URL describes a page the
+  table is not showing yet; derive it from `expansion.offset` instead
+- [`resolve: false` under a router base](navigate-resolve-false-under-base.md):
+  `use_navigate` with the default options prepends `/ui` a second time, so an
+  absolute in-app address must opt out of resolution
 - [Plain `<a>` IS client-side nav](internal-nav-uses-plain-anchor.md):
   leptos_router intercepts every same-origin anchor through a window click
   handler; `rel="external"` is the only opt-out
