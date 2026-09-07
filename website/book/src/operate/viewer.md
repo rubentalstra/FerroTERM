@@ -56,8 +56,11 @@ answer for anything that needs those, and it is the whole product.
 Every screen keeps its state in the address. A filter you typed, the page you
 are on, and the FHIR version you selected are all query parameters, so a link
 you copy reproduces what you were looking at, and the back button walks your
-reading. The version switcher in the header moves the page you are on to
-another root: `/r4`, `/r4b`, `/r5`, or `/r6`.
+reading. You reach the screens from the sidebar on the left. The version
+switcher in the top bar moves the page you are on to another root: `/r4`,
+`/r4b`, `/r5`, or `/r6`, so it changes what every screen reads rather than
+taking you to a screen of its own. On a narrow window the sidebar is folded
+away behind the "Screens" button in the top bar.
 
 The screenshots below come from a server loaded with one small synthetic code
 system, so every code and display in them is invented. Your own deployment

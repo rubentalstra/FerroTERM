@@ -27,6 +27,15 @@ pub(crate) const VALUE_SETS_PATH: &str = "valuesets";
 /// The concept map screen's path below the base.
 pub(crate) const CONCEPT_MAPS_PATH: &str = "conceptmaps";
 
+/// The version comparison screen's path below the base.
+pub(crate) const VERSIONS_PATH: &str = "versions";
+
+/// The settings screen's path below the base.
+pub(crate) const SETTINGS_PATH: &str = "settings";
+
+/// The overview's path below the base, which is the base itself.
+pub(crate) const OVERVIEW_PATH: &str = "";
+
 /// The query parameter that carries a code system canonical into a screen.
 pub(crate) const SYSTEM_PARAM: &str = "system";
 
@@ -96,6 +105,31 @@ pub(crate) fn expansion_link(canonical: &str, version: FhirVersion) -> String {
         .query(VERSION_PARAM, version.segment())
         .query("url", canonical)
         .render("")
+}
+
+/// The sidebar entry a browser address belongs under, as its path segment.
+///
+/// `pathname` is the raw address the browser is on, base included, because
+/// `use_location().pathname` never strips the router base. An address with no
+/// sidebar entry answers `None`, so a screen a reader reached some other way
+/// leaves every entry unmarked.
+pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
+    let mut segments = pathname.split('/').filter(|segment| !segment.is_empty());
+    if segments.next() != Some(UI_BASE.trim_start_matches('/')) {
+        return None;
+    }
+    match segments.next() {
+        // A code system's own screen is reached from the overview that lists
+        // the systems, so the overview stays marked while a reader reads one.
+        None | Some(SYSTEMS_PATH) => Some(OVERVIEW_PATH),
+        Some(BROWSE_PATH) => Some(BROWSE_PATH),
+        Some(EXPAND_PATH) => Some(EXPAND_PATH),
+        Some(VALUE_SETS_PATH) => Some(VALUE_SETS_PATH),
+        Some(CONCEPT_MAPS_PATH) => Some(CONCEPT_MAPS_PATH),
+        Some(VERSIONS_PATH) => Some(VERSIONS_PATH),
+        Some(SETTINGS_PATH) => Some(SETTINGS_PATH),
+        Some(_unlisted) => None,
+    }
 }
 
 /// Rewrites the address a reader is on to select another FHIR version.
@@ -217,6 +251,45 @@ mod tests {
             ),
             "/ui/expand?fhir=r4b&url=http%3A%2F%2Fterminology.example%2Fx%3Ffhir_vs%3Disa%2F1",
             "an implicit canonical carrying its own query string stays in one parameter"
+        );
+    }
+
+    #[test]
+    fn the_base_itself_is_the_overview() {
+        assert_eq!(nav_section("/ui"), Some(OVERVIEW_PATH));
+        assert_eq!(
+            nav_section("/ui/"),
+            Some(OVERVIEW_PATH),
+            "the index is reachable with and without its trailing separator"
+        );
+    }
+
+    #[test]
+    fn a_screen_marks_its_own_entry() {
+        assert_eq!(nav_section("/ui/browse"), Some(BROWSE_PATH));
+        assert_eq!(nav_section("/ui/expand"), Some(EXPAND_PATH));
+        assert_eq!(nav_section("/ui/valuesets"), Some(VALUE_SETS_PATH));
+        assert_eq!(nav_section("/ui/conceptmaps"), Some(CONCEPT_MAPS_PATH));
+        assert_eq!(nav_section("/ui/versions"), Some(VERSIONS_PATH));
+        assert_eq!(nav_section("/ui/settings"), Some(SETTINGS_PATH));
+    }
+
+    #[test]
+    fn a_code_system_screen_marks_the_overview_that_lists_it() {
+        assert_eq!(
+            nav_section("/ui/systems/https:%2F%2Fterminology.example%2Fanimals"),
+            Some(OVERVIEW_PATH),
+            "a reader reading one system is still under the screen that listed it"
+        );
+    }
+
+    #[test]
+    fn an_address_with_no_entry_marks_nothing() {
+        assert_eq!(nav_section("/ui/nowhere"), None);
+        assert_eq!(
+            nav_section("/health"),
+            None,
+            "an address outside the base is not one of the viewer's screens"
         );
     }
 

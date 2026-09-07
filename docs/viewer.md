@@ -355,6 +355,15 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | 9 | Evidence | `/ui/evidence` | the static conformance and benchmark JSON emitted at build time |
 | 10 | Settings | `/ui/settings` | the FHIR base in use, the display language, page size, theme. `localStorage` only, per viewer |
 
+**The screens are reached from a left sidebar.** The sidebar is a `const` table
+of slots read in render order, so the order is data and one function draws every
+entry, and it is a `<nav>` with its own name whose active entry carries
+`aria-current="page"`. Below the `md` breakpoint it is hidden until the top
+bar's toggle opens it. The top bar keeps what is true of every screen at once:
+the FHIR version switcher, the health chip, and the theme toggle. The switcher
+changes which root every screen reads from, so it is a lens over the whole
+viewer rather than a place to go, and that is why it stays out of the sidebar.
+
 **The request disclosure is shell-level, not a screen.** Every data section can
 reveal the exact FHIR request it issued, as a copyable URL and a `curl` line.
 That is the cheapest possible demonstration of the boundary this design
