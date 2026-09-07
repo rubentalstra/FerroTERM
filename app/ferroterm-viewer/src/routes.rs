@@ -21,6 +21,9 @@ pub(crate) const BROWSE_PATH: &str = "browse";
 /// The expansion runner's path below the base.
 pub(crate) const EXPAND_PATH: &str = "expand";
 
+/// The value set screen's path below the base.
+pub(crate) const VALUE_SETS_PATH: &str = "valuesets";
+
 /// The query parameter that carries a code system canonical into a screen.
 pub(crate) const SYSTEM_PARAM: &str = "system";
 
@@ -76,6 +79,20 @@ pub(crate) fn system_tool_link(
         url = url.query(SYSTEM_VERSION_PARAM, code);
     }
     url.render("")
+}
+
+/// Builds the link that opens one value set canonical in the expansion runner.
+///
+/// The runner takes the canonical as its `url` parameter, so the link names
+/// that and nothing else: every other parameter is the runner's own default
+/// or the reader's stored page size.
+pub(crate) fn expansion_link(canonical: &str, version: FhirVersion) -> String {
+    RequestUrl::new()
+        .segment(UI_BASE.trim_start_matches('/'))
+        .segment(EXPAND_PATH)
+        .query(VERSION_PARAM, version.segment())
+        .query("url", canonical)
+        .render("")
 }
 
 /// Rewrites the address a reader is on to select another FHIR version.
@@ -185,6 +202,18 @@ mod tests {
             ),
             "/ui/browse?fhir=r4&system=https%3A%2F%2Fterminology.example%2Fx",
             "an absent version is left out rather than sent as an empty one"
+        );
+    }
+
+    #[test]
+    fn an_expansion_link_carries_the_canonical_the_runner_reads() {
+        assert_eq!(
+            expansion_link(
+                "http://terminology.example/x?fhir_vs=isa/1",
+                FhirVersion::R4B
+            ),
+            "/ui/expand?fhir=r4b&url=http%3A%2F%2Fterminology.example%2Fx%3Ffhir_vs%3Disa%2F1",
+            "an implicit canonical carrying its own query string stays in one parameter"
         );
     }
 

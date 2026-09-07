@@ -8,8 +8,11 @@ pub(crate) mod capability;
 pub(crate) mod code_system;
 pub(crate) mod error;
 pub(crate) mod expansion;
+pub(crate) mod facts;
 pub(crate) mod outcome;
+pub(crate) mod searchset;
 pub(crate) mod terminology;
+pub(crate) mod value_set;
 pub(crate) mod version;
 
 use gloo_net::http::Request;
@@ -23,7 +26,10 @@ use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ExpandRequest;
 use crate::fhir::expansion::ExpandedValueSet;
 use crate::fhir::outcome::OperationOutcome;
+use crate::fhir::searchset::SearchFilter;
+use crate::fhir::searchset::SearchSet;
 use crate::fhir::terminology::TerminologyCapabilities;
+use crate::fhir::value_set::PublishedValueSet;
 use crate::fhir::version::FhirVersion;
 use crate::url::RequestUrl;
 
@@ -38,6 +44,9 @@ const BODY_EXCERPT_BYTES: usize = 2_000;
 
 /// The path the bundle is served under, which the server root sits above.
 const UI_PREFIX: &str = "/ui";
+
+/// The `ValueSet` resource type, as it appears in a request path.
+pub(crate) const VALUE_SET: &str = "ValueSet";
 
 /// A client for the FerroTERM server that served this bundle.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -201,6 +210,79 @@ impl FhirClient {
         request: &ExpandRequest,
     ) -> Result<ExpandedValueSet, FhirError> {
         self.get_json(&self.expand_url(version, request)).await
+    }
+
+    /// The address of a RESTful search over one resource type.
+    ///
+    /// `url` and `version` are the two search parameters every definitional
+    /// resource carries (<https://hl7.org/fhir/R4B/valueset.html#search>), and
+    /// each is sent only when the reader named it, so an unfiltered search
+    /// asks for everything the root holds. Both are percent-encoded, because a
+    /// canonical can carry its own query string.
+    pub(crate) fn search_url(
+        &self,
+        version: FhirVersion,
+        resource_type: &str,
+        filter: &SearchFilter,
+    ) -> String {
+        let mut url = RequestUrl::new()
+            .segment(version.segment())
+            .segment(resource_type);
+        if !filter.url.is_empty() {
+            url = url.query("url", &filter.url);
+        }
+        if !filter.version.is_empty() {
+            url = url.query("version", &filter.version);
+        }
+        url.render(&self.root)
+    }
+
+    /// The address of one stored resource, as the read interaction takes it.
+    ///
+    /// The id is one percent-encoded path segment
+    /// (<https://hl7.org/fhir/R4B/http.html#read>), so an address a reader
+    /// typed cannot reach a route the viewer did not mean to ask for.
+    pub(crate) fn resource_url(
+        &self,
+        version: FhirVersion,
+        resource_type: &str,
+        id: &str,
+    ) -> String {
+        RequestUrl::new()
+            .segment(version.segment())
+            .segment(resource_type)
+            .segment(id)
+            .render(&self.root)
+    }
+
+    /// Searches the `ValueSet` resources this root holds.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn value_set_search(
+        &self,
+        version: FhirVersion,
+        filter: &SearchFilter,
+    ) -> Result<SearchSet<PublishedValueSet>, FhirError> {
+        self.get_json(&self.search_url(version, VALUE_SET, filter))
+            .await
+    }
+
+    /// Reads one `ValueSet` by its id.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. An id
+    /// this root does not hold arrives as [`FhirError::Refused`] carrying the
+    /// server's own `OperationOutcome`.
+    pub(crate) async fn value_set_read(
+        &self,
+        version: FhirVersion,
+        id: &str,
+    ) -> Result<PublishedValueSet, FhirError> {
+        self.get_json(&self.resource_url(version, VALUE_SET, id))
+            .await
     }
 
     /// Sends a FHIR JSON `GET` and decodes the resource it answers.
@@ -412,6 +494,43 @@ mod tests {
             "https://tx.example.org/r4b/ValueSet/$expand\
              ?url=http%3A%2F%2Fsnomed.info%2Fsct%3Ffhir_vs%3Disa%2F404684003&count=20&offset=40",
             "the operation name survives the path and the canonical survives the query"
+        );
+    }
+
+    #[test]
+    fn a_search_sends_only_the_parameters_the_reader_named() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        assert_eq!(
+            client.search_url(FhirVersion::R4B, VALUE_SET, &SearchFilter::default()),
+            "https://tx.example.org/r4b/ValueSet",
+            "an unfiltered search asks for everything the root holds"
+        );
+        assert_eq!(
+            client.search_url(
+                FhirVersion::R5,
+                VALUE_SET,
+                &SearchFilter {
+                    url: "https://terminology.example/cm?a=b".to_owned(),
+                    version: "2031".to_owned(),
+                }
+            ),
+            "https://tx.example.org/r5/ValueSet\
+             ?url=https%3A%2F%2Fterminology.example%2Fcm%3Fa%3Db&version=2031",
+            "a canonical carrying its own query string cannot truncate the search"
+        );
+    }
+
+    #[test]
+    fn a_resource_read_escapes_the_id_into_its_own_segment() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        assert_eq!(
+            client.resource_url(FhirVersion::R6, VALUE_SET, "a/b"),
+            "https://tx.example.org/r6/ValueSet/a%2Fb",
+            "an id a reader typed cannot reach a route the viewer did not mean to ask for"
         );
     }
 

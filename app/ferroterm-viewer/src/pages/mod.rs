@@ -12,6 +12,7 @@ pub(crate) mod expand;
 pub(crate) mod not_found;
 pub(crate) mod overview;
 pub(crate) mod settings;
+pub(crate) mod value_sets;
 
 #[cfg(test)]
 mod tests {
