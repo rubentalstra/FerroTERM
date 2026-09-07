@@ -3,6 +3,8 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 
+use crate::components::icon;
+use crate::components::icon::Icon;
 use crate::fhir::version::FhirVersion;
 use crate::routes::version_link;
 
@@ -31,7 +33,10 @@ pub(crate) fn VersionSwitcher(
             aria-label="FHIR version"
             class="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800"
         >
-            <span class="mr-1 text-xs text-slate-500 dark:text-slate-400">"FHIR"</span>
+            <span class="mr-1 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                <Icon glyph=icon::VERSION class="h-3.5 w-3.5" />
+                "FHIR"
+            </span>
             <For each=move || FhirVersion::ALL key=|version| *version let:version>
                 {
                     let href = move || {

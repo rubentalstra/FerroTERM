@@ -13,6 +13,8 @@ use leptos_router::params::Params;
 use leptos_router::path;
 
 use crate::components::health::HealthIndicator;
+use crate::components::icon::Glyph;
+use crate::components::icon::Icon;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
@@ -45,8 +47,9 @@ const NAV_ID: &str = "screen-nav";
 
 /// One slot of the sidebar, in the order it is drawn.
 enum NavSlot {
-    /// A screen: its path segment below the base, and its label.
-    Item(&'static str, &'static str),
+    /// A screen: its path segment below the base, its label, and the glyph a
+    /// reader recognises it by.
+    Item(&'static str, &'static str, Glyph),
     /// The hairline between the two groups.
     Divider,
 }
@@ -59,14 +62,26 @@ enum NavSlot {
 /// second group, whose entries are the ones a new screen is least likely to
 /// land between.
 const NAV_SLOTS: [NavSlot; 8] = [
-    NavSlot::Item(OVERVIEW_PATH, "Overview"),
-    NavSlot::Item(BROWSE_PATH, "Browse"),
-    NavSlot::Item(EXPAND_PATH, "Expand"),
-    NavSlot::Item(VALUE_SETS_PATH, "Value sets"),
-    NavSlot::Item(CONCEPT_MAPS_PATH, "Concept maps"),
+    NavSlot::Item(OVERVIEW_PATH, "Overview", crate::components::icon::OVERVIEW),
+    NavSlot::Item(BROWSE_PATH, "Browse", crate::components::icon::BROWSE),
+    NavSlot::Item(EXPAND_PATH, "Expand", crate::components::icon::EXPAND),
+    NavSlot::Item(
+        VALUE_SETS_PATH,
+        "Value sets",
+        crate::components::icon::VALUE_SETS,
+    ),
+    NavSlot::Item(
+        CONCEPT_MAPS_PATH,
+        "Concept maps",
+        crate::components::icon::CONCEPT_MAPS,
+    ),
     NavSlot::Divider,
-    NavSlot::Item(VERSIONS_PATH, "FHIR versions"),
-    NavSlot::Item(SETTINGS_PATH, "Settings"),
+    NavSlot::Item(
+        VERSIONS_PATH,
+        "FHIR versions",
+        crate::components::icon::VERSION,
+    ),
+    NavSlot::Item(SETTINGS_PATH, "Settings", crate::components::icon::SETTINGS),
 ];
 
 /// The classes every sidebar link carries, whichever screen it leads to.
@@ -98,6 +113,7 @@ fn nav_entry(
     version: Signal<FhirVersion>,
     segment: &'static str,
     label: &'static str,
+    glyph: Glyph,
 ) -> AnyView {
     let active = move || section.get() == Some(segment);
     view! {
@@ -110,6 +126,7 @@ fn nav_entry(
                     format!("{ENTRY_BASE} {state}")
                 }
             >
+                <Icon glyph=glyph />
                 {label}
             </a>
         </li>
@@ -137,7 +154,9 @@ fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     let slots: Vec<AnyView> = NAV_SLOTS
         .into_iter()
         .map(|slot| match slot {
-            NavSlot::Item(segment, label) => nav_entry(section, version, segment, label),
+            NavSlot::Item(segment, label, glyph) => {
+                nav_entry(section, version, segment, label, glyph)
+            }
             NavSlot::Divider => nav_divider(),
         })
         .collect();
@@ -262,7 +281,7 @@ mod tests {
         NAV_SLOTS
             .iter()
             .filter_map(|slot| match slot {
-                NavSlot::Item(segment, _) => Some(*segment),
+                NavSlot::Item(segment, _, _) => Some(*segment),
                 NavSlot::Divider => None,
             })
             .collect()

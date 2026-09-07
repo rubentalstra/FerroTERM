@@ -442,7 +442,9 @@ async fn the_taxonomy_tree_is_walked_by_keyboard_alone() {
                 .attr("id")
                 .await?
                 .expect("every tree row carries the id its focus is moved by");
-            let row_code = stop.find(By::Css("span")).await?.text().await?;
+            // The row's first span is the twist's `sr-only` word, not the code, so
+            // the code is selected by the class that renders it.
+            let row_code = stop.find(By::Css("span.font-mono")).await?.text().await?;
             assert!(
                 !row_code.is_empty(),
                 "the row names the code it draws, and the journey selects by it"

@@ -15,6 +15,8 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::icon;
+use crate::components::icon::Icon;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
@@ -351,7 +353,11 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
             let href = expansion_link(&canonical, version);
             view! {
                 <p class="mt-3">
-                    <a href=href class="text-brand-700 underline dark:text-brand-300">
+                    <a
+                        href=href
+                        class="inline-flex items-center gap-1 text-brand-700 underline dark:text-brand-300"
+                    >
+                        <Icon glyph=icon::EXPAND />
                         "Run this value set in the expansion runner"
                     </a>
                 </p>
