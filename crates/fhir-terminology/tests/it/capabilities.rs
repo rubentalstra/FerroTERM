@@ -50,24 +50,23 @@ fn the_summary_reads_every_declaration_and_marks_the_default() {
 #[test]
 fn r4_r4b_and_r5_render_their_own_shapes() {
     let summary = Summary::of(&registry());
-    let r4 = Value::Object(
-        summary
+    let r4 = document(
+        &summary
             .to_r4("2026-09-02T00:00:00Z")
             .to_json()
             .expect("encodes"),
     );
-    let r4b = Value::Object(
-        summary
+    let r4b = document(
+        &summary
             .to_r4b("2026-09-02T00:00:00Z")
             .to_json()
             .expect("encodes"),
     );
-    let r5 = Value::Object(
-        summary
-            .to_r5("2026-09-02T00:00:00Z")
-            .to_json()
-            .expect("encodes"),
-    );
+    let r5_object = summary
+        .to_r5("2026-09-02T00:00:00Z")
+        .to_json()
+        .expect("encodes");
+    let r5 = document(&r5_object);
     for (version, json) in [("r4", &r4), ("r4b", &r4b), ("r5", &r5)] {
         assert_eq!(json["resourceType"], "TerminologyCapabilities", "{version}");
         assert_eq!(json["status"], "active", "{version}");
@@ -98,9 +97,8 @@ fn r4_r4b_and_r5_render_their_own_shapes() {
     assert_eq!(r4, r4b, "R4 and R4B fill the same elements");
     // The rendered resources decode again through the generated codec.
     let mut path = fhir_types::codec::Path::root("TerminologyCapabilities");
-    let object = fhir_types::codec::expect_object(&r5, &path).expect("object");
     let decoded = fhir_types::r5::terminology_capabilities::TerminologyCapabilities::from_json(
-        object, &mut path,
+        &r5_object, &mut path,
     )
     .expect("decodes");
     assert_eq!(decoded, summary.to_r5("2026-09-02T00:00:00Z"));
@@ -160,8 +158,8 @@ fn a_declared_grammar_and_a_supported_grammar_are_two_different_statements() {
         .map(|system| (system.url.as_str(), system.versions[0].compositional))
         .collect();
     assert_eq!(flags, [(GRAMMAR_SYSTEM, false), (UCUM, true)]);
-    let json = Value::Object(
-        summary
+    let json = document(
+        &summary
             .to_r4b("2026-09-05T00:00:00Z")
             .to_json()
             .expect("encodes"),
@@ -221,7 +219,7 @@ fn every_version_declares_the_artifact_an_index_backed_system_was_read_from() {
         ("r6", summary.to_r6(date).to_json().expect("encodes")),
     ];
     for (version, object) in statements {
-        let statement = Value::Object(object);
+        let statement = document(&object);
         assert_eq!(
             code_system(&statement, SNOMED)["version"][0]["extension"],
             serde_json::json!([{
@@ -248,19 +246,19 @@ fn rendered(summary: &Summary) -> Vec<(&'static str, Value)> {
     vec![
         (
             "r4",
-            Value::Object(summary.to_r4(date).to_json().expect("encodes")),
+            document(&summary.to_r4(date).to_json().expect("encodes")),
         ),
         (
             "r4b",
-            Value::Object(summary.to_r4b(date).to_json().expect("encodes")),
+            document(&summary.to_r4b(date).to_json().expect("encodes")),
         ),
         (
             "r5",
-            Value::Object(summary.to_r5(date).to_json().expect("encodes")),
+            document(&summary.to_r5(date).to_json().expect("encodes")),
         ),
         (
             "r6",
-            Value::Object(summary.to_r6(date).to_json().expect("encodes")),
+            document(&summary.to_r6(date).to_json().expect("encodes")),
         ),
     ]
 }
@@ -328,8 +326,8 @@ fn the_artifact_declaration_names_no_directory_above_it_and_no_content() {
     // carry: an operator's layout is not wire content, and neither is any
     // concept of a licensed release.
     let dir = tempfile::tempdir().expect("tempdir");
-    let statement = Value::Object(
-        Summary::of(&served(dir.path()))
+    let statement = document(
+        &Summary::of(&served(dir.path()))
             .to_r4b("2026-09-06T00:00:00Z")
             .to_json()
             .expect("encodes"),
@@ -344,4 +342,10 @@ fn the_artifact_declaration_names_no_directory_above_it_and_no_content() {
         !statement.contains(&sctid(item(CAT))),
         "the statement carries no concept of the release"
     );
+}
+
+/// A rendered resource as a `serde_json` document, so a test can index into it.
+fn document(object: &fhir_types::codec::Object) -> Value {
+    let text = serde_json::to_string(object).expect("the document writes");
+    serde_json::from_str(&text).expect("the document parses")
 }

@@ -81,7 +81,7 @@ pub struct Record {
     /// `meta.lastModified`, an instant in the FHIR `instant` form.
     pub last_modified: String,
     /// The resource as the client sent it, with `id` and `meta` set.
-    pub resource: serde_json::Map<String, serde_json::Value>,
+    pub resource: fhir_types::codec::Object,
 }
 
 impl Record {
@@ -382,8 +382,14 @@ mod tests {
             version_id,
             last_modified: String::from("2026-09-04T00:00:00Z"),
             resource: [
-                (String::from("resourceType"), serde_json::json!("ValueSet")),
-                (String::from("id"), serde_json::json!(id)),
+                (
+                    String::from("resourceType"),
+                    fhir_types::codec::Value::String(String::from("ValueSet")),
+                ),
+                (
+                    String::from("id"),
+                    fhir_types::codec::Value::String(String::from(id)),
+                ),
             ]
             .into_iter()
             .collect(),

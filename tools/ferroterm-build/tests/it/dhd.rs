@@ -42,7 +42,7 @@ fn cli(
 
 fn read_map(path: &std::path::Path) -> ConceptMap {
     let text = std::fs::read_to_string(path).expect("reads");
-    let value: serde_json::Value = serde_json::from_str(&text).expect("json");
+    let value: fhir_types::codec::Value = serde_json::from_str(&text).expect("json");
     let object = value.as_object().expect("object");
     ConceptMap::from_json(object, &mut Path::root("ConceptMap")).expect("decodes")
 }

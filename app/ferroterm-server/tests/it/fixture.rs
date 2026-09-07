@@ -306,3 +306,14 @@ pub(crate) fn header(response: &Response<Body>, name: http::HeaderName) -> Optio
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned)
 }
+
+/// A response body in the codec document model, ready to decode.
+pub(crate) fn document(body: &Value) -> fhir_types::codec::Value {
+    serde_json::from_str(&body.to_string()).expect("the body parses")
+}
+
+/// A resource the codec wrote, as a `serde_json` document.
+pub(crate) fn written(object: &fhir_types::codec::Object) -> Value {
+    let text = serde_json::to_string(object).expect("the document writes");
+    serde_json::from_str(&text).expect("the document parses")
+}

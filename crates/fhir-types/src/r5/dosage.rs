@@ -93,31 +93,31 @@ impl super::super::codec::Json for Dosage {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.sequence {
@@ -139,13 +139,13 @@ impl super::super::codec::Json for Dosage {
         if !self.additional_instruction.is_empty() {
             let mut items = Vec::with_capacity(self.additional_instruction.len());
             for item in &self.additional_instruction {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("additionalInstruction"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.patient_instruction {
@@ -159,7 +159,7 @@ impl super::super::codec::Json for Dosage {
         if let Some(item) = &self.timing {
             object.insert(
                 std::string::String::from("timing"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.as_needed {
@@ -173,67 +173,67 @@ impl super::super::codec::Json for Dosage {
         if !self.as_needed_for.is_empty() {
             let mut items = Vec::with_capacity(self.as_needed_for.len());
             for item in &self.as_needed_for {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("asNeededFor"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.site {
             object.insert(
                 std::string::String::from("site"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.route {
             object.insert(
                 std::string::String::from("route"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.method {
             object.insert(
                 std::string::String::from("method"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if !self.dose_and_rate.is_empty() {
             let mut items = Vec::with_capacity(self.dose_and_rate.len());
             for item in &self.dose_and_rate {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("doseAndRate"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.max_dose_per_period.is_empty() {
             let mut items = Vec::with_capacity(self.max_dose_per_period.len());
             for item in &self.max_dose_per_period {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("maxDosePerPeriod"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.max_dose_per_administration {
             object.insert(
                 std::string::String::from("maxDosePerAdministration"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.max_dose_per_lifetime {
             object.insert(
                 std::string::String::from("maxDosePerLifetime"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         Ok(object)
@@ -243,27 +243,27 @@ impl super::super::codec::Json for Dosage {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_sequence: Option<&serde_json::Value> = None;
-        let mut raw_sequence_element: Option<&serde_json::Value> = None;
-        let mut raw_text: Option<&serde_json::Value> = None;
-        let mut raw_text_element: Option<&serde_json::Value> = None;
-        let mut raw_additional_instruction: Option<&serde_json::Value> = None;
-        let mut raw_patient_instruction: Option<&serde_json::Value> = None;
-        let mut raw_patient_instruction_element: Option<&serde_json::Value> = None;
-        let mut raw_timing: Option<&serde_json::Value> = None;
-        let mut raw_as_needed: Option<&serde_json::Value> = None;
-        let mut raw_as_needed_element: Option<&serde_json::Value> = None;
-        let mut raw_as_needed_for: Option<&serde_json::Value> = None;
-        let mut raw_site: Option<&serde_json::Value> = None;
-        let mut raw_route: Option<&serde_json::Value> = None;
-        let mut raw_method: Option<&serde_json::Value> = None;
-        let mut raw_dose_and_rate: Option<&serde_json::Value> = None;
-        let mut raw_max_dose_per_period: Option<&serde_json::Value> = None;
-        let mut raw_max_dose_per_administration: Option<&serde_json::Value> = None;
-        let mut raw_max_dose_per_lifetime: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_sequence: Option<&super::super::codec::Value> = None;
+        let mut raw_sequence_element: Option<&super::super::codec::Value> = None;
+        let mut raw_text: Option<&super::super::codec::Value> = None;
+        let mut raw_text_element: Option<&super::super::codec::Value> = None;
+        let mut raw_additional_instruction: Option<&super::super::codec::Value> = None;
+        let mut raw_patient_instruction: Option<&super::super::codec::Value> = None;
+        let mut raw_patient_instruction_element: Option<&super::super::codec::Value> = None;
+        let mut raw_timing: Option<&super::super::codec::Value> = None;
+        let mut raw_as_needed: Option<&super::super::codec::Value> = None;
+        let mut raw_as_needed_element: Option<&super::super::codec::Value> = None;
+        let mut raw_as_needed_for: Option<&super::super::codec::Value> = None;
+        let mut raw_site: Option<&super::super::codec::Value> = None;
+        let mut raw_route: Option<&super::super::codec::Value> = None;
+        let mut raw_method: Option<&super::super::codec::Value> = None;
+        let mut raw_dose_and_rate: Option<&super::super::codec::Value> = None;
+        let mut raw_max_dose_per_period: Option<&super::super::codec::Value> = None;
+        let mut raw_max_dose_per_administration: Option<&super::super::codec::Value> = None;
+        let mut raw_max_dose_per_lifetime: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -615,7 +615,7 @@ impl serde::Serialize for Dosage {
 
 impl<'de> serde::Deserialize<'de> for Dosage {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("Dosage");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -660,25 +660,25 @@ impl super::super::codec::Json for DosageDoseAndRate {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.r#type {
             object.insert(
                 std::string::String::from("type"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.dose {
@@ -706,9 +706,9 @@ impl super::super::codec::Json for DosageDoseAndRate {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_type: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_type: Option<&super::super::codec::Value> = None;
         let mut raw_dose = super::super::codec::ChoiceSlot::default();
         let mut raw_rate = super::super::codec::ChoiceSlot::default();
         for (key, value) in object {
@@ -867,7 +867,7 @@ impl serde::Serialize for DosageDoseAndRate {
 
 impl<'de> serde::Deserialize<'de> for DosageDoseAndRate {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("DosageDoseAndRate");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -897,22 +897,22 @@ impl DosageDoseAndRateDose {
     ) -> Result<
         (
             &'static str,
-            Option<serde_json::Value>,
-            Option<serde_json::Value>,
+            Option<super::super::codec::Value>,
+            Option<super::super::codec::Value>,
         ),
         super::super::codec::EncodeError,
     > {
         match self {
             Self::Range(inner) => Ok((
                 "Range",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Quantity(inner) => Ok((
                 "Quantity",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
@@ -927,8 +927,8 @@ impl DosageDoseAndRateDose {
     /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
     pub fn from_json_parts(
         suffix: &str,
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         match suffix {
@@ -997,29 +997,29 @@ impl DosageDoseAndRateRate {
     ) -> Result<
         (
             &'static str,
-            Option<serde_json::Value>,
-            Option<serde_json::Value>,
+            Option<super::super::codec::Value>,
+            Option<super::super::codec::Value>,
         ),
         super::super::codec::EncodeError,
     > {
         match self {
             Self::Ratio(inner) => Ok((
                 "Ratio",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Range(inner) => Ok((
                 "Range",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Quantity(inner) => Ok((
                 "Quantity",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
@@ -1034,8 +1034,8 @@ impl DosageDoseAndRateRate {
     /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
     pub fn from_json_parts(
         suffix: &str,
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         match suffix {

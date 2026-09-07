@@ -812,7 +812,7 @@ impl AppState {
         resource_type: ResourceType,
         id: &str,
         fhir_version: &str,
-        mut resource: serde_json::Map<String, serde_json::Value>,
+        mut resource: fhir_types::codec::Object,
     ) -> Result<Record, PersistError> {
         let store = self.store.as_ref().ok_or(PersistError::NotConfigured)?;
         let mut persisted = self
@@ -897,28 +897,24 @@ fn layered(
 /// Writes `meta.versionId` and `meta.lastUpdated` into `resource`, keeping
 /// whatever else its `meta` carries
 /// (<https://hl7.org/fhir/R4B/resource.html#Meta>).
-fn stamp(
-    resource: &mut serde_json::Map<String, serde_json::Value>,
-    version_id: u32,
-    last_modified: &str,
-) {
+fn stamp(resource: &mut fhir_types::codec::Object, version_id: u32, last_modified: &str) {
     let mut meta = match resource.remove("meta") {
-        Some(serde_json::Value::Object(held)) => held,
-        _ => serde_json::Map::new(),
+        Some(fhir_types::codec::Value::Object(held)) => held,
+        _ => fhir_types::codec::Object::new(),
     };
     meta.insert(
         String::from("versionId"),
-        serde_json::Value::String(version_id.to_string()),
+        fhir_types::codec::Value::String(version_id.to_string()),
     );
     meta.insert(
         String::from("lastUpdated"),
-        serde_json::Value::String(last_modified.to_owned()),
+        fhir_types::codec::Value::String(last_modified.to_owned()),
     );
-    resource.insert(String::from("meta"), serde_json::Value::Object(meta));
+    resource.insert(String::from("meta"), fhir_types::codec::Value::Object(meta));
 }
 
 /// The string value of `field`, when the object carries one.
-fn text_of(object: &serde_json::Map<String, serde_json::Value>, field: &str) -> Option<String> {
+fn text_of(object: &fhir_types::codec::Object, field: &str) -> Option<String> {
     object.get(field)?.as_str().map(str::to_owned)
 }
 

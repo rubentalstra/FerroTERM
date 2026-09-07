@@ -168,7 +168,7 @@ macro_rules! batch {
                     |text: String| Failure::new(StatusCode::BAD_REQUEST, "structure", text);
                 let object = match Wire::of_body(headers)? {
                     Wire::Json => {
-                        let value: serde_json::Value = serde_json::from_slice(body)
+                        let value: fhir_types::codec::Value = serde_json::from_slice(body)
                             .map_err(|error| structure(format!("the body is not JSON: {error}")))?;
                         let path = fhir_types::codec::Path::root("Bundle");
                         fhir_types::codec::expect_object(&value, &path)

@@ -211,7 +211,7 @@ fn render_type(
             out.push_str("    /// The `resourceType` of the carried resource.\n");
             out.push_str("    pub resource_type: std::string::String,\n");
             out.push_str("    /// The complete JSON object, `resourceType` included.\n");
-            out.push_str("    pub body: serde_json::Value,\n");
+            out.push_str("    pub body: super::super::codec::Value,\n");
             out.push_str("}\n");
         }
     }

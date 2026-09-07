@@ -85,19 +85,19 @@ impl super::super::codec::Json for Attachment {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.content_type {
@@ -211,34 +211,34 @@ impl super::super::codec::Json for Attachment {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_content_type: Option<&serde_json::Value> = None;
-        let mut raw_content_type_element: Option<&serde_json::Value> = None;
-        let mut raw_language: Option<&serde_json::Value> = None;
-        let mut raw_language_element: Option<&serde_json::Value> = None;
-        let mut raw_data: Option<&serde_json::Value> = None;
-        let mut raw_data_element: Option<&serde_json::Value> = None;
-        let mut raw_url: Option<&serde_json::Value> = None;
-        let mut raw_url_element: Option<&serde_json::Value> = None;
-        let mut raw_size: Option<&serde_json::Value> = None;
-        let mut raw_size_element: Option<&serde_json::Value> = None;
-        let mut raw_hash: Option<&serde_json::Value> = None;
-        let mut raw_hash_element: Option<&serde_json::Value> = None;
-        let mut raw_title: Option<&serde_json::Value> = None;
-        let mut raw_title_element: Option<&serde_json::Value> = None;
-        let mut raw_creation: Option<&serde_json::Value> = None;
-        let mut raw_creation_element: Option<&serde_json::Value> = None;
-        let mut raw_height: Option<&serde_json::Value> = None;
-        let mut raw_height_element: Option<&serde_json::Value> = None;
-        let mut raw_width: Option<&serde_json::Value> = None;
-        let mut raw_width_element: Option<&serde_json::Value> = None;
-        let mut raw_frames: Option<&serde_json::Value> = None;
-        let mut raw_frames_element: Option<&serde_json::Value> = None;
-        let mut raw_duration: Option<&serde_json::Value> = None;
-        let mut raw_duration_element: Option<&serde_json::Value> = None;
-        let mut raw_pages: Option<&serde_json::Value> = None;
-        let mut raw_pages_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_content_type: Option<&super::super::codec::Value> = None;
+        let mut raw_content_type_element: Option<&super::super::codec::Value> = None;
+        let mut raw_language: Option<&super::super::codec::Value> = None;
+        let mut raw_language_element: Option<&super::super::codec::Value> = None;
+        let mut raw_data: Option<&super::super::codec::Value> = None;
+        let mut raw_data_element: Option<&super::super::codec::Value> = None;
+        let mut raw_url: Option<&super::super::codec::Value> = None;
+        let mut raw_url_element: Option<&super::super::codec::Value> = None;
+        let mut raw_size: Option<&super::super::codec::Value> = None;
+        let mut raw_size_element: Option<&super::super::codec::Value> = None;
+        let mut raw_hash: Option<&super::super::codec::Value> = None;
+        let mut raw_hash_element: Option<&super::super::codec::Value> = None;
+        let mut raw_title: Option<&super::super::codec::Value> = None;
+        let mut raw_title_element: Option<&super::super::codec::Value> = None;
+        let mut raw_creation: Option<&super::super::codec::Value> = None;
+        let mut raw_creation_element: Option<&super::super::codec::Value> = None;
+        let mut raw_height: Option<&super::super::codec::Value> = None;
+        let mut raw_height_element: Option<&super::super::codec::Value> = None;
+        let mut raw_width: Option<&super::super::codec::Value> = None;
+        let mut raw_width_element: Option<&super::super::codec::Value> = None;
+        let mut raw_frames: Option<&super::super::codec::Value> = None;
+        let mut raw_frames_element: Option<&super::super::codec::Value> = None;
+        let mut raw_duration: Option<&super::super::codec::Value> = None;
+        let mut raw_duration_element: Option<&super::super::codec::Value> = None;
+        let mut raw_pages: Option<&super::super::codec::Value> = None;
+        let mut raw_pages_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -489,7 +489,7 @@ impl serde::Serialize for Attachment {
 
 impl<'de> serde::Deserialize<'de> for Attachment {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("Attachment");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;

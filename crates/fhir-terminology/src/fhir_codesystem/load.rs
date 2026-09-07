@@ -110,7 +110,7 @@ pub fn load_file(path: &Path, version: FhirVersion) -> Result<CodeSystemModel, L
         path: path.to_path_buf(),
         source,
     })?;
-    let value: serde_json::Value =
+    let value: fhir_types::codec::Value =
         serde_json::from_str(&text).map_err(|source| LoadError::Json {
             path: path.to_path_buf(),
             source,
@@ -142,7 +142,7 @@ impl Decoded {
 }
 
 fn model_from_value(
-    value: &serde_json::Value,
+    value: &fhir_types::codec::Value,
     version: FhirVersion,
 ) -> Result<CodeSystemModel, Decoded> {
     let mut path = ElementPath::root("CodeSystem");
@@ -193,7 +193,7 @@ pub fn load_dir(dir: &Path, version: FhirVersion) -> Result<Vec<CodeSystemModel>
 pub(crate) fn scan_json(
     dir: &Path,
     resource_type: &str,
-) -> Result<Vec<(PathBuf, serde_json::Value)>, LoadError> {
+) -> Result<Vec<(PathBuf, fhir_types::codec::Value)>, LoadError> {
     let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
         .map_err(|source| LoadError::Io {
             path: dir.to_path_buf(),
@@ -213,7 +213,7 @@ pub(crate) fn scan_json(
             path: path.clone(),
             source,
         })?;
-        let value: serde_json::Value = match serde_json::from_str(&text) {
+        let value: fhir_types::codec::Value = match serde_json::from_str(&text) {
             Ok(value) => value,
             // NOTE: a package directory holds non-resource JSON (package.json,
             // .index.json); a file that is not a resource is not a CodeSystem.

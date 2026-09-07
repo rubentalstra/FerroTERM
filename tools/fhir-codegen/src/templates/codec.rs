@@ -7,12 +7,242 @@
 //! objects and arrays are never empty; unknown properties are refused
 //! (<https://hl7.org/fhir/R4B/json.html>).
 
+use std::collections::BTreeMap;
 use std::fmt;
 
-use serde_json::{Map, Number, Value};
+use serde_json::value::RawValue;
 
-/// A JSON object, as `serde_json` spells it.
-pub type Object = Map<String, Value>;
+/// A JSON object, its keys in sorted order.
+pub type Object = BTreeMap<String, Value>;
+
+/// A JSON number, in the lexical form the document carried.
+///
+/// FHIR forbids reading a decimal through a binary float: "Do not use an IEEE
+/// type floating point type, instead use something that works like a true
+/// decimal" (<https://hl7.org/fhir/R4B/datatypes.html#decimal>), so the number
+/// keeps its text and the codec never rounds it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Number(String);
+
+impl Number {
+    /// The number as it was written.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// The number as an `i64`, `None` when it is no whole number in range.
+    #[must_use]
+    pub fn as_i64(&self) -> Option<i64> {
+        self.as_str().parse().ok()
+    }
+
+    /// The number as a `u64`, `None` when it is no whole number in range.
+    #[must_use]
+    pub fn as_u64(&self) -> Option<u64> {
+        self.as_str().parse().ok()
+    }
+}
+
+impl fmt::Display for Number {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// Text that is no JSON number.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NotANumber;
+
+impl fmt::Display for NotANumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("not a JSON number")
+    }
+}
+
+impl std::error::Error for NotANumber {}
+
+impl std::str::FromStr for Number {
+    type Err = NotANumber;
+
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        let numeric = matches!(text.as_bytes().first(), Some(b'-' | b'0'..=b'9'))
+            && matches!(text.as_bytes().last(), Some(b'0'..=b'9'));
+        if !numeric {
+            return Err(NotANumber);
+        }
+        serde_json::from_str::<&RawValue>(text).map_err(|_| NotANumber)?;
+        Ok(Self(String::from(text)))
+    }
+}
+
+impl From<i64> for Number {
+    fn from(value: i64) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl From<i32> for Number {
+    fn from(value: i32) -> Self {
+        Self::from(i64::from(value))
+    }
+}
+
+impl From<u32> for Number {
+    fn from(value: u32) -> Self {
+        Self::from(i64::from(value))
+    }
+}
+
+impl serde::Serialize for Number {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        // NOTE: JSON forbids a leading plus or zero (RFC 8259 §6), so an `i64`
+        // that parses writes back the same text apart from `-0`; every other
+        // number goes out raw, keeping the precision FHIR gives it.
+        match self.as_i64() {
+            Some(whole) if self.as_str() != "-0" => serializer.serialize_i64(whole),
+            _ => {
+                let raw = serde_json::from_str::<&RawValue>(self.as_str())
+                    .map_err(serde::ser::Error::custom)?;
+                serde::Serialize::serialize(raw, serializer)
+            }
+        }
+    }
+}
+
+/// A JSON document, with every number kept in its lexical form.
+///
+/// Reading one goes through `serde_json`'s raw value, so a number arrives with
+/// the precision the document wrote and the crate imposes no
+/// `arbitrary_precision` feature on anything that depends on it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum Value {
+    /// `null`.
+    #[default]
+    Null,
+    /// `true` or `false`.
+    Bool(bool),
+    /// A number.
+    Number(Number),
+    /// A string.
+    String(String),
+    /// An array.
+    Array(Vec<Value>),
+    /// An object.
+    Object(Object),
+}
+
+impl Value {
+    /// The member named `key`, `None` unless this is an object holding it.
+    #[must_use]
+    pub fn get(&self, key: &str) -> Option<&Self> {
+        match self {
+            Self::Object(object) => object.get(key),
+            _ => None,
+        }
+    }
+
+    /// The object this holds, `None` for every other kind.
+    #[must_use]
+    pub const fn as_object(&self) -> Option<&Object> {
+        match self {
+            Self::Object(object) => Some(object),
+            _ => None,
+        }
+    }
+
+    /// The array this holds, `None` for every other kind.
+    #[must_use]
+    pub fn as_array(&self) -> Option<&[Self]> {
+        match self {
+            Self::Array(items) => Some(items),
+            _ => None,
+        }
+    }
+
+    /// The string this holds, `None` for every other kind.
+    #[must_use]
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Self::String(text) => Some(text),
+            _ => None,
+        }
+    }
+
+    /// Whether this is `null`.
+    #[must_use]
+    pub const fn is_null(&self) -> bool {
+        matches!(self, Self::Null)
+    }
+}
+
+impl From<i32> for Value {
+    fn from(value: i32) -> Self {
+        Self::Number(Number::from(value))
+    }
+}
+
+impl From<u32> for Value {
+    fn from(value: u32) -> Self {
+        Self::Number(Number::from(value))
+    }
+}
+
+impl serde::Serialize for Value {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Null => serializer.serialize_unit(),
+            Self::Bool(flag) => serializer.serialize_bool(*flag),
+            Self::Number(number) => serde::Serialize::serialize(number, serializer),
+            Self::String(text) => serializer.serialize_str(text),
+            Self::Array(items) => serde::Serialize::serialize(items, serializer),
+            Self::Object(object) => serde::Serialize::serialize(object, serializer),
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Value {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let raw = <Box<RawValue> as serde::Deserialize>::deserialize(deserializer)?;
+        read_raw(raw.get(), 0).map_err(serde::de::Error::custom)
+    }
+}
+
+/// How deeply a document may nest, the limit `serde_json` itself enforces
+/// (<https://docs.rs/serde_json/1/serde_json/de/struct.Deserializer.html>).
+const NESTING_LIMIT: usize = 128;
+
+// NOTE: `RawValue` hands back the text of a value serde_json already validated
+// (<https://docs.rs/serde_json/1/serde_json/value/struct.RawValue.html>), so the
+// first byte names the kind and a number arrives with its precision intact.
+fn read_raw(raw: &str, depth: usize) -> Result<Value, serde_json::Error> {
+    let text = raw.trim();
+    if depth > NESTING_LIMIT {
+        return Err(serde::de::Error::custom("recursion limit exceeded"));
+    }
+    match text.as_bytes().first() {
+        Some(b'{') => {
+            let members: BTreeMap<String, Box<RawValue>> = serde_json::from_str(text)?;
+            let mut object = Object::new();
+            for (key, member) in members {
+                object.insert(key, read_raw(member.get(), depth + 1)?);
+            }
+            Ok(Value::Object(object))
+        }
+        Some(b'[') => {
+            let members: Vec<Box<RawValue>> = serde_json::from_str(text)?;
+            let mut items = Vec::with_capacity(members.len());
+            for member in members {
+                items.push(read_raw(member.get(), depth + 1)?);
+            }
+            Ok(Value::Array(items))
+        }
+        Some(b'"') => Ok(Value::String(serde_json::from_str(text)?)),
+        Some(b't' | b'f') => Ok(Value::Bool(serde_json::from_str(text)?)),
+        Some(b'n') => Ok(Value::Null),
+        _ => Ok(Value::Number(Number(String::from(text)))),
+    }
+}
 
 /// Why a JSON document was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -487,7 +717,7 @@ pub fn expect_i64_string(value: &Value, path: &Path) -> Result<i64, DecodeError>
 /// Returns [`DecodeError`] when `value` is not a number.
 pub fn expect_decimal(value: &Value, path: &Path) -> Result<String, DecodeError> {
     match value {
-        Value::Number(n) => Ok(n.to_string()),
+        Value::Number(n) => Ok(String::from(n.as_str())),
         _ => Err(path.error(DecodeErrorKind::WrongType {
             expected: "a number",
         })),

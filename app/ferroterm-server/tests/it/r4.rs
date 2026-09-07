@@ -6,7 +6,7 @@ use ferroterm_testkit::fhir::{ANIMALS, CM_ANIMALS_COLOURS, VS_PETS};
 use ferroterm_testkit::snomed::{ANIMAL, CAT, VERSION, item, sctid};
 use fhir_types::codec::{Json, Path, expect_object};
 use http::{Request, StatusCode};
-use serde_json::{Value, json};
+use serde_json::json;
 use tower::ServiceExt;
 
 use crate::fixture::{Server, json as read_json, parameter};
@@ -47,12 +47,16 @@ async fn the_capability_statement_is_an_r4_resource() {
     );
     // The resource decodes through the generated 4.0.1 codec.
     let mut path = Path::root("CapabilityStatement");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     let decoded =
         fhir_types::r4::capability_statement::CapabilityStatement::from_json(object, &mut path)
             .expect("an R4 CapabilityStatement");
     assert_eq!(decoded.fhir_version.value.as_deref(), Some("4.0.1"));
-    assert_eq!(Value::Object(decoded.to_json().expect("encodes")), body);
+    assert_eq!(
+        crate::fixture::written(&decoded.to_json().expect("encodes")),
+        body
+    );
 }
 
 #[tokio::test]
@@ -65,12 +69,16 @@ async fn the_terminology_capabilities_are_an_r4_resource() {
     assert_eq!(body["codeSystem"][0]["uri"], SCT);
     assert_eq!(body["codeSystem"][0]["version"][0]["code"], VERSION);
     let mut path = Path::root("TerminologyCapabilities");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     let decoded = fhir_types::r4::terminology_capabilities::TerminologyCapabilities::from_json(
         object, &mut path,
     )
     .expect("an R4 TerminologyCapabilities");
-    assert_eq!(Value::Object(decoded.to_json().expect("encodes")), body);
+    assert_eq!(
+        crate::fixture::written(&decoded.to_json().expect("encodes")),
+        body
+    );
     // The same registry, rendered for each version, differs only in the
     // version-specific texts.
     let (_, r4b) = server.get("/r4b/metadata?mode=terminology").await;
@@ -148,7 +156,8 @@ async fn the_value_set_and_concept_map_operations_answer_under_r4() {
     assert_eq!(codes, ["pet"]);
     assert!(crate::ecosystem::contained(&body["expansion"]["contains"], "kitten").is_some());
     let mut path = Path::root("ValueSet");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     fhir_types::r4::value_set::ValueSet::from_json(object, &mut path).expect("an R4 ValueSet");
 
     let (status, body) = server
@@ -175,7 +184,8 @@ async fn the_value_set_and_concept_map_operations_answer_under_r4() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["resourceType"], "Bundle");
     let mut path = Path::root("Bundle");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     fhir_types::r4::bundle::Bundle::from_json(object, &mut path).expect("an R4 Bundle");
 }
 
@@ -268,7 +278,8 @@ async fn expand_returns_properties_as_cross_version_extensions_under_r4() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let mut path = Path::root("ValueSet");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     fhir_types::r4::value_set::ValueSet::from_json(object, &mut path).expect("an R4 ValueSet");
     let property = &body["expansion"]["extension"][0];
     assert_eq!(

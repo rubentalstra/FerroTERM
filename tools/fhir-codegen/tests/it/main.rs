@@ -20,6 +20,7 @@ mod emit;
 mod layout;
 mod operations;
 mod package;
+mod precision;
 mod roots;
 mod serialize;
 mod snapshot;
