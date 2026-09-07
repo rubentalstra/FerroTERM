@@ -3224,6 +3224,36 @@ the code system is labeled as a fragment, so the code may be valid in some other
 }
 
 #[test]
+fn a_codeable_concept_over_a_fragment_holds_on_a_code_the_resource_lacks() {
+    // A `CodeableConcept` is judged coding by coding, and a coding the fragment
+    // leaves open is not one the value set can be said to refuse, so the
+    // warning travels with a `result` of true.
+    let world = fragment_world();
+    let input = ValueSetValidateInput {
+        url: Some(VS_FRAGMENT.to_owned()),
+        codeable_concept: Some(codeable(vec![CodingRef {
+            system: Some(FRAGMENT.to_owned()),
+            code: Some(String::from("code1x")),
+            ..CodingRef::default()
+        }])),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(validation.result, "{validation:?}");
+    assert_eq!(validation.issues.len(), 1, "{:?}", validation.issues);
+    assert_eq!(validation.issues[0].severity, "warning");
+    assert_eq!(
+        validation.issues[0].expression.as_deref(),
+        Some("CodeableConcept.coding[0].code")
+    );
+    assert!(
+        validation.codeable_concept.is_some(),
+        "the concept is echoed"
+    );
+}
+
+#[test]
 fn an_include_that_enumerates_a_fragments_codes_still_decides_membership() {
     // The include lists the codes it selects, so one it does not list is
     // outside the value set whatever else the system defines.

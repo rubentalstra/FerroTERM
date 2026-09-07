@@ -392,13 +392,15 @@ pub fn validate_code(
     Ok(validation)
 }
 
-/// Whether a judged coding is in the value set (its display may still be wrong).
+/// Whether a judged coding is in the value set (its display may still be
+/// wrong, and a warning is a note about the code, never a verdict against it).
 fn in_value_set(validation: &Validation) -> bool {
     !validation.issues.iter().any(|issue| {
-        matches!(
-            issue.kind,
-            "not-in-vs" | "invalid-code" | "not-found" | "cannot-infer" | "vs-invalid"
-        )
+        issue.severity == "error"
+            && matches!(
+                issue.kind,
+                "not-in-vs" | "invalid-code" | "not-found" | "cannot-infer" | "vs-invalid"
+            )
     })
 }
 
