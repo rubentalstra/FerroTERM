@@ -562,9 +562,11 @@ fn validate_section(
                             answered
                                 .as_ref()
                                 .map(|answer| match answer {
-                                    None => invitation(
-                                        "Name a code and the resource to check it against, then run it.",
-                                    ),
+                                    None => {
+                                        invitation(
+                                            "Name a code and the resource to check it against, then run it.",
+                                        )
+                                    }
                                     Some(Ok(value)) => validation_view(&value.validation()),
                                     Some(Err(error)) => failure_view(error),
                                 })
@@ -903,7 +905,9 @@ fn subsumes_section(
                             answered
                                 .as_ref()
                                 .map(|answer| match answer {
-                                    None => invitation("Name two codes of this system and run them."),
+                                    None => {
+                                        invitation("Name two codes of this system and run them.")
+                                    }
                                     Some(Ok(value)) => outcome_view(value, &code_a, &code_b),
                                     Some(Err(error)) => failure_view(error),
                                 })
@@ -1092,12 +1096,7 @@ fn concept_view(read: &Validation) -> AnyView {
                 .clone()
                 .map(|version| format!(" (version {version})"))
                 .unwrap_or_default();
-            view! {
-                <li class="font-mono break-all">
-                    {Coding::rendered(coding)}
-                    {version}
-                </li>
-            }
+            view! { <li class="font-mono break-all">{Coding::rendered(coding)} {version}</li> }
             .into_any()
         })
         .collect();
@@ -1192,13 +1191,11 @@ fn issue_view(issue: &ValidationIssue) -> AnyView {
     let text = issue.text.clone();
     view! {
         <li class="text-sm">
-            {stated}
-            <p class="mt-1">{text}</p>
+            {stated} <p class="mt-1">{text}</p>
             <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">
                 "severity " <span class="font-mono">{severity}</span> ", issue.code "
                 <span class="font-mono">{issue_code}</span>
-            </p>
-            {expressions}
+            </p> {expressions}
         </li>
     }
     .into_any()
