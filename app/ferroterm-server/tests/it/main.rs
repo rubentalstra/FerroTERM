@@ -15,6 +15,7 @@ mod batch;
 mod batch_validate;
 mod closure;
 mod code_system;
+mod concept_map;
 mod config;
 mod ecosystem;
 mod fixture;

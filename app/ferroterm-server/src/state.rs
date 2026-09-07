@@ -13,6 +13,7 @@ use std::sync::{Arc, RwLock};
 use fhir_terminology::artifact::{self, ArtifactError};
 use fhir_terminology::classification::{self, ClassificationProvider};
 use fhir_terminology::conceptmap;
+use fhir_terminology::conceptmap::model::ConceptMapModel;
 use fhir_terminology::conceptmap::store::ConceptMapStore;
 use fhir_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
 use fhir_terminology::fhir_codesystem::model::CodeSystemModel;
@@ -324,6 +325,8 @@ pub struct AppState {
     store: Option<ResourceStore>,
     /// `ValueSet` instance id to (url, version).
     value_set_instances: BTreeMap<String, (String, Option<String>)>,
+    /// `ConceptMap` instance id to (url, version).
+    concept_map_instances: BTreeMap<String, (String, Option<String>)>,
     caches: Caches,
     /// `CodeSystem` instance id to (system, version).
     instances: BTreeMap<String, (String, String)>,
@@ -468,6 +471,15 @@ impl AppState {
                 .value_set_instances
                 .insert(id, (model.url.clone(), model.version.clone()));
         }
+        for model in concept_maps.iter() {
+            let id = unique_id_of(
+                &state.concept_map_instances,
+                instance_id(&model.url, model.version.as_deref().unwrap_or_default()),
+            );
+            state
+                .concept_map_instances
+                .insert(id, (model.url.clone(), model.version.clone()));
+        }
         state.base.value_sets = value_sets;
         state.base.concept_maps = concept_maps;
         if let Some(path) = &config.resources {
@@ -527,6 +539,7 @@ impl AppState {
             base,
             store: None,
             value_set_instances: BTreeMap::new(),
+            concept_map_instances: BTreeMap::new(),
             caches: Caches::default(),
             instances,
             paths: BTreeMap::new(),
@@ -657,6 +670,58 @@ impl AppState {
         }
         let (url, version) = self.value_set_instances.get(id)?;
         persisted.layer.value_sets.resolve(url, version.as_deref())
+    }
+
+    /// The `ConceptMap` instance ids and what they serve, sorted by id, the
+    /// persisted concept maps after the loaded ones.
+    #[must_use]
+    pub fn concept_map_instances(&self) -> Vec<(String, String, Option<String>)> {
+        let mut out: Vec<(String, String, Option<String>)> = self
+            .concept_map_instances
+            .iter()
+            .map(|(id, (url, version))| (id.clone(), url.clone(), version.clone()))
+            .collect();
+        let persisted = self
+            .persisted
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        for ((resource_type, id), record) in &persisted.records {
+            if *resource_type != ResourceType::ConceptMap {
+                continue;
+            }
+            let Some(url) = record.url.clone() else {
+                continue;
+            };
+            out.push((id.clone(), url, record.version.clone()));
+        }
+        out
+    }
+
+    /// Resolves a `ConceptMap` instance id, a persisted one first.
+    #[must_use]
+    pub fn concept_map_instance(&self, id: &str) -> Option<Arc<ConceptMapModel>> {
+        // NOTE: one read guard for the record and the layer it belongs to; a second
+        // nested read of a `std::sync::RwLock` can deadlock behind a waiting writer
+        // (<https://doc.rust-lang.org/std/sync/struct.RwLock.html>).
+        let persisted = self
+            .persisted
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if let Some(record) = persisted
+            .records
+            .get(&(ResourceType::ConceptMap, id.to_owned()))
+            && let Some(url) = &record.url
+        {
+            return persisted
+                .layer
+                .concept_maps
+                .resolve(url, record.version.as_deref());
+        }
+        let (url, version) = self.concept_map_instances.get(id)?;
+        persisted
+            .layer
+            .concept_maps
+            .resolve(url, version.as_deref())
     }
 
     /// The `CodeSystem` instance ids and what they serve, sorted by id.
