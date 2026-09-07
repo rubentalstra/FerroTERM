@@ -57,6 +57,13 @@ operation at `[base]/r4b/CodeSystem/<id>/$validate-code`. The id is stable for
 a given version and is listed at startup and in
 `GET /r4b/metadata?mode=terminology`.
 
+A `ValueSet` or `ConceptMap` in a `FERROTERM_CODESYSTEMS` directory becomes an
+instance the same way, keyed by its `url` and `version`. It reads at
+`[base]/r4b/ValueSet/<id>` or `[base]/r4b/ConceptMap/<id>`, is found by
+`[base]/r4b/ValueSet?url=…&version=…` or the matching `ConceptMap` search, and
+carries that id as its `Resource.id` in both answers, so a client can read what
+a search returned. Every served version answers both.
+
 ## What you do not configure
 
 You do not configure a database connection, a search cluster, or a JVM heap.
