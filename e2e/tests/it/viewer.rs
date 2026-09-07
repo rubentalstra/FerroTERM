@@ -63,9 +63,23 @@ const SELECTED_ROW: &str = "li[role='treeitem'][aria-selected='true']";
 /// A parent of the concept being read, as the link that moves onto it.
 const PARENT_LINK: &str = "nav[aria-label='Parents of this concept'] a";
 
+/// The header link onto the version comparison.
+const VERSIONS_LINK: &str = "nav[aria-label='Sections'] a[href^='/ui/versions']";
+
+/// The version comparison, by the heading it is labelled by.
+const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
+
 /// A switcher link, by the version name a reader reads on it.
 fn version_link(label: &str) -> String {
     format!("//nav[@aria-label='FHIR version']//a[normalize-space()='{label}']")
+}
+
+/// One root's cell on the `CodeSystem/$lookup` row, counting from the left.
+///
+/// The columns are the roots in release order, so the first cell is R4's and
+/// the third is R5's.
+fn lookup_cell(column: u8) -> String {
+    format!("//th[normalize-space()='CodeSystem/$lookup']/following-sibling::td[{column}]")
 }
 
 /// The shell renders under `/ui`, and the switcher moves the whole page onto
@@ -408,6 +422,66 @@ async fn the_taxonomy_tree_is_walked_by_keyboard_alone() {
                 journey.count(By::Css(SELECTED_ROW)).await,
                 1,
                 "a tree announces one selected row, so a reader is never told of two"
+            );
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
+}
+/// The version comparison reads all four roots and shows where they differ.
+///
+/// The row this asserts on is the one the screen exists for: R4 and R4B
+/// declare `$lookup` at the type level and R5 added the instance level
+/// (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>). Every cell is
+/// read from the capability statement the browser fetched from that root, so a
+/// screen that rendered a remembered answer, or that blanked while one root
+/// was still answering, fails here.
+#[tokio::test]
+async fn the_four_roots_are_compared_and_their_lookup_levels_differ() {
+    let Some(base) = server() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &base, "/ui").await;
+
+            journey
+                .element(
+                    By::Css(VERSIONS_LINK),
+                    "the header link onto the versions screen",
+                )
+                .await
+                .click()
+                .await?;
+
+            journey
+                .element(By::Css(COMPARISON), "the comparison the four reads fill")
+                .await;
+            let r4 = journey
+                .text_becoming(
+                    By::XPath(lookup_cell(1)),
+                    "type",
+                    "R4 to state the levels it answers $lookup at",
+                )
+                .await;
+            let r5 = journey
+                .text_becoming(
+                    By::XPath(lookup_cell(3)),
+                    StringMatch::new("instance").partial(),
+                    "R5 to state the instance level R4 does not declare",
+                )
+                .await;
+            assert_ne!(
+                r4, r5,
+                "the screen exists to show that two roots answer one operation differently"
+            );
+            assert_eq!(
+                journey.count(By::Css("table")).await,
+                2,
+                "both comparison tables drew, so nothing blanked while the four reads settled"
             );
 
             journey.no_console_errors().await;
