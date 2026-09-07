@@ -3,9 +3,8 @@
 use std::time::Duration;
 
 use leptos::prelude::*;
-use thaw::Spinner;
-use thaw::SpinnerSize;
 
+use crate::components::spinner::Spinner;
 use crate::fhir::FhirClient;
 
 /// How often the indicator asks the server whether it is still up.
@@ -50,7 +49,7 @@ pub(crate) fn HealthIndicator() -> impl IntoView {
 
     view! {
         <Transition fallback=|| {
-            view! { <Spinner size=SpinnerSize::ExtraTiny label="Checking the server" /> }
+            view! { <Spinner inline=true label="Checking the server" /> }
         }>
             {move || {
                 state()

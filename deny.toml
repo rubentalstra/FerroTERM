@@ -84,8 +84,6 @@ skip-tree = []
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# The viewer's component library. crates.io carries no thaw release built for
-# Leptos 0.8 (0.4.8 is Leptos 0.7 and 0.5.0-beta predates the recursion_limit
-# fix), so the root Cargo.toml pins an exact commit. This entry is deleted when
-# thaw 0.5 ships to crates.io.
-allow-git = ["https://github.com/thaw-ui/thaw"]
+# Every dependency resolves from crates.io. A git source needs a version that
+# is not published and a reason recorded here.
+allow-git = []

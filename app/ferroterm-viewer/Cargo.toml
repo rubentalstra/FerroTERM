@@ -28,7 +28,6 @@ leptos_router.workspace = true
 percent-encoding.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-thaw.workspace = true
 thiserror.workspace = true
 web-sys = { workspace = true, features = [
   "Document",

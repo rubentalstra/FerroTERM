@@ -179,7 +179,6 @@ creates the crate adds them, and re-checks each one at that moment.
 | `leptos` (feature `csr`) | 0.8.20 | the framework, client-side rendering only |
 | `leptos_meta` | 0.8.6 | `<Title>` and document head from component bodies |
 | `leptos_router` | 0.8.15 | client-side routing, URL as state |
-| `thaw` (feature `csr`) | git rev `0726a3d6788f07e929996e77399d83655ffaacde` | the component library |
 | `leptos-use` | 0.19.2 | isomorphic helpers (`use_interval_fn`, storage) |
 | `leptos_icons` + `icondata_lu` + `icondata_core` | 0.7.1 + 0.1 + 0.1 | Lucide alone; the `icondata` umbrella pulls every pack |
 | `leptos-chartistry` | 0.2.3 | pure-Rust SVG charts, no JavaScript |
@@ -194,12 +193,13 @@ creates the crate adds them, and re-checks each one at that moment.
 
 Notes on three of these, each verified rather than assumed:
 
-- **`thaw` stays on the pinned git rev.** crates.io has no 0.5 stable: the
-  newest release is 0.4.8 (2025-08-03) and the only Leptos-0.8 release is
-  `0.5.0-beta` (2025-05-03), which predates the `recursion_limit` fix. The
-  pinned rev `0726a3d` (2026-05-07) is still the tip of `main`, confirmed with
-  `git ls-remote https://github.com/thaw-ui/thaw` on 2026-09-06. It declares a
-  first-class `csr` feature. Re-pin to crates.io when 0.5 stable ships.
+- **There is no component library.** The viewer used `thaw` for three widgets,
+  a button, a spinner, and the config provider that themed them, and paid
+  36,894 gzipped bytes for the whole library (§12, the bundle bar). Those three
+  are now `components/button.rs`, `components/spinner.rs`, and a Tailwind
+  `dark:` variant driven by a class on the document element. A component
+  library is reconsidered only against a measured bundle cost and a use that is
+  more than a handful of widgets.
 - **Trunk 0.21.14 is the stable line.** 0.22.0-beta.2 (2026-07-24) is a
   prerelease and is not pinned.
 - **`gloo-net`, not `reqwest`.** `reqwest` does compile for
@@ -395,7 +395,7 @@ sharp, and it favours porting the discipline rather than the code.
 | `.claude/skills/ui-gates/SKILL.md` | the same path | the battery rewritten for one target and `trunk build` |
 | `docker/viewer/Dockerfile` | `.github/workflows/release-build.yml` | **the reasoning ports; the commands and the location do not.** `docker/Dockerfile` compiles nothing, it copies binaries `release-build.yml` already built and attested, so the Trunk build belongs in that workflow, ahead of the `cargo auditable build` that embeds the bundle. What transfers is the record of why `cargo-chef` was removed (workspace members cannot survive the COPY boundary, so every source change recompiled the whole graph anyway) and how BuildKit cache mounts with `sharing=locked` bound peak memory. Its `cargo-leptos` invocation does not |
 | the CI lane shapes in `build-image.yml`, `release-build.yml`, `ui-e2e-published.yml` | `ci.yml`, `release-build.yml`, `release-image.yml` | the shapes transfer: a wasm clippy pass, a formatter pass, a bundle build, an E2E job against a published artifact. The commands are Trunk's |
-| `style/tailwind.css` token layer, `theme.rs` | the same shape | the token layer and the custom thaw brand ramp are a starting point, recoloured for FerroTERM |
+| `style/tailwind.css` token layer, `theme.rs` | the same shape | the token layer is a starting point, recoloured for FerroTERM. The component-library brand ramp does not port: there is no component library (§3) |
 | `components/`: `notice`, `page_header`, `data_table`, `empty_state`, `stat_card`, `tab_bar`, `surface`, `facts`, `format_view` | the same shape | domain-free presentation kits. They are re-derived rather than copied wholesale, because each carries CDR-specific copy and a `ViewerError` that does not exist here |
 
 ### Does not port at all
@@ -430,13 +430,13 @@ deleted.
 | `builder-signal-struct-ver` | still applies | the focus-preserving deep-tree editing pattern is what the taxonomy tree needs |
 | `leptos-router-form-interception` | still applies | the router never intercepts a native submit, and `<Form method="GET">` to the same path short-circuits `rebuild`. The expansion runner is a GET form to its own path, so this is load-bearing |
 | `directory-tree-editor` | still applies | positional `<For>` keys bleed collapse state to the sibling that shifts into position, and a refetch re-seeds an editor mid-edit. The taxonomy tree is the same shape |
-| `thaw-hydration-hazards` | changed | the hydration mismatch is gone; the method survives. Read a thaw widget's source before trusting what it renders for `id` and `for` |
+| `thaw-hydration-hazards` | moot | the hydration mismatch went with SSR and the widgets went with `thaw` (§3). The method survives and generalizes: read a widget's source before trusting what it renders for `id` and `for` |
 | `w2-confirmed-good-patterns` | changed | the auth-guard half is moot. The `.into_any()` section erasure still applies, because the rustc layout-recursion limit is a codegen fact; so do the fixed-size-integer and theme-effect findings |
 | `tabbed-screen-pattern` | changed | always-mounted bodies were a hydration-stability device and are no longer required. Gating each tab's resource on the active tab still applies and is now the whole point |
 | `redirect-path-must-be-percent-encoded` | changed | the `leptos_axum::redirect` panic is gone with the server. The rule survives and grows teeth: system URIs, ECL, and concept ids all land in FHIR request URLs, and every one is percent-encoded |
 | `no-js-journeys-must-click` | changed | there is no no-JavaScript journey. The residue is the review rule: an assertion on page source proves nothing, so a journey drives the real widget |
-| `thaw-field-random-id` | moot | `thaw::Field` mints a `Uuid::new_v4()` id at setup. With no server pass there is no mismatch. Kept: an explicit stable id is still wanted for label association and for E2E selectors |
-| `thaw-input-name-forwarding-ok` | moot | it recorded that `thaw::Input` forwards `name` so an `<ActionForm>` submits without WebAssembly. There is no `<ActionForm>` and no no-JavaScript path |
+| `thaw-field-random-id` | moot | `thaw::Field` mints a `Uuid::new_v4()` id at setup, and the viewer no longer depends on `thaw`. Kept: an explicit stable id is still wanted for label association and for E2E selectors |
+| `thaw-input-name-forwarding-ok` | moot | it recorded that `thaw::Input` forwards `name` so an `<ActionForm>` submits without WebAssembly. There is no `<ActionForm>`, no no-JavaScript path, and no `thaw` |
 | `chartistry-chart-hydration` | moot | the chart self-gates on a client measurement, which was the hydration answer. The residue is an E2E fact: the chart renders a placeholder until its container is measured, so a journey waits on the drawn chart |
 | `redirect-needs-ssrmode-async` | moot | `SsrMode` does not exist under CSR |
 | `seed-once-form-idiom` | changed | the hydration half is moot. The refetch-versus-edit-in-progress half stands: a form seeded from a resource must not overwrite what the reader is typing |
@@ -485,7 +485,7 @@ built except the `ui-e2e` job:
 - **A recorded bundle size.** The compressed `.wasm` size is written to a
   committed file and compared on every build, the same shape
   `scripts/checks/bench-bars.sh` already uses for latency: a claim that never
-  moves to match a slower build.
+  moves to match a slower build. The basis is below.
 - **`ui-e2e`, a merge gate.** `thirtyfour` driving headless Chromium against a
   container built from the same Dockerfile, with the journeys as plain
   `#[tokio::test]`s. Every journey fails on a browser console error. Rust
@@ -505,6 +505,65 @@ built except the `ui-e2e` job:
   the two binaries `release-build.yml` built and attested. The bundle rides
   inside the server binary, so the image gains no stage, no file, and no new
   `hadolint` surface.
+
+### The bundle bar
+
+**What it measures.** The whole `.wasm` a reader downloads, gzipped: the
+viewer's own code and every dependency in it, together. There is no separate
+bar for project code. A reader downloads one file and waits for one file, so
+one number is what the claim is about, and a dependency the viewer chose is the
+viewer's weight. `app/ferroterm-viewer/bundle-size.json` holds the three bars
+(wasm, JS bootstrap, CSS) and `scripts/checks/bundle-size.sh` compares each to
+the build in `dist/`, in the `viewer` CI job.
+
+**Why 240,000 bytes.** It is the standing claim, and after the measurement
+below the bundle sits well under it with room for the screens still to come.
+The number has never been raised and is not raised here.
+
+**What a slice does when it breaches**, in order, and never by starting at the
+end:
+
+1. **Measure the composition first.** `twiggy top -f csv` over
+   `target/wasm32-unknown-unknown/wasm-release/ferroterm-viewer.wasm`, the
+   module before `wasm-opt` strips the name section, aggregated by the crate
+   that owns each item. Then rebuild without the suspect and compare the
+   gzipped `dist/` figure. An unmeasured claim about what is heavy is worth
+   nothing: the claim this viewer carried for a release, that `chrono` and
+   `icondata_ai` were most of its weight, was false by 100%.
+2. **Remove weight the viewer does not use.** A dependency whose surface is far
+   larger than the use is the first place to look, and the largest single lever
+   found so far.
+3. **Cut monomorphization.** Erase sections with `.into_any()` and factor a
+   concrete inner function out of a generic one. Removing `thaw` took 35,722
+   bytes of `reactive_graph` instantiations with it, more than `thaw`'s own
+   code.
+4. **Only then re-adjudicate the number**, with the measurement in the commit
+   message and the alternatives ruled out recorded here. A slice never raises
+   the bar to make its own build green.
+
+**The measurement, 2026-09-07** (`twiggy` 0.8.0 over the pre-`wasm-opt` module,
+plus an A/B rebuild; the gzipped figures are the CI `viewer` job's, on x86_64
+Linux):
+
+| Suspect | In the 238,619-byte bundle |
+|---|---|
+| `chrono` | 0 bytes. No item in the module is owned by it |
+| `icondata_ai` | 0 bytes. 2,265 bytes of `reactive_graph` glue were monomorphized over `Option<&icondata_core::IconData>`, `thaw::Button`'s icon prop type |
+| `palette`, `pure-rust-locales`, `num-traits` | 0 bytes each |
+| `thaw` itself | 34,997 bytes of its own code, and 36,894 gzipped bytes of the shipped bundle once its induced instantiations and its 20,399 bytes of colour-token data are counted |
+
+Link-time optimization with `--gc-sections` already removes a dependency the
+viewer never calls; what it cannot remove is a library the viewer does call,
+for three widgets out of a hundred. Removing `thaw` took the wasm from 238,619
+to 201,725 gzipped bytes, 15.5% of the bundle, against the 1,381 bytes of
+headroom the overview screen had left. Nine screens now have 38,275.
+
+Two alternatives were ruled out by that result. **Patching or vendoring `thaw`
+to drop `chrono` and `icondata_ai`** would have bought nothing, because neither
+was in the bundle. **Splitting the bar so a pull request is gated on project
+code alone** was not needed and would have been worse: it gates the half a
+reader does not care about and stops counting the half that was 15.5% of the
+download.
 
 ## 13. Sources
 

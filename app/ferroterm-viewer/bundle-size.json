@@ -1,26 +1,26 @@
 {
-  "note": "The size of the viewer bundle every reader downloads, gzipped. A bar is the claim the project makes, and it moves only when a change is worth the bytes. measured_gzip_bytes is what the ci.yml viewer job produced on x86_64 Linux on the date below, recorded beside the claim so a reader sees the headroom; another host emits slightly different bytes.",
-  "measured": "2026-09-06",
+  "note": "The size of the viewer bundle every reader downloads, gzipped: the viewer's own code and every dependency in it, together. A bar is the claim the project makes, and it moves only when a change is worth the bytes; docs/viewer.md section 12 records the basis and what a slice does when it breaches. measured_gzip_bytes is what the ci.yml viewer job produced on x86_64 Linux on the date below, recorded beside the claim so a reader sees the headroom; another host emits slightly different bytes. The wasm headroom is deliberate: nine screens are still to land.",
+  "measured": "2026-09-07",
   "bars": [
     {
       "asset": "wasm",
       "pattern": "*_bg.wasm",
       "max_gzip_bytes": 240000,
-      "measured_gzip_bytes": 238619,
+      "measured_gzip_bytes": 201725,
       "claim": "the WebAssembly module is under 235 KiB gzipped"
     },
     {
       "asset": "js",
       "pattern": "*.js",
       "max_gzip_bytes": 12000,
-      "measured_gzip_bytes": 8709,
+      "measured_gzip_bytes": 8530,
       "claim": "the wasm-bindgen bootstrap is under 12 KB gzipped"
     },
     {
       "asset": "css",
       "pattern": "*.css",
       "max_gzip_bytes": 8000,
-      "measured_gzip_bytes": 3857,
+      "measured_gzip_bytes": 4032,
       "claim": "the compiled Tailwind sheet is under 8 KB gzipped"
     }
   ]

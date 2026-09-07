@@ -2,12 +2,12 @@
 
 use leptos::prelude::*;
 use leptos_meta::Title;
-use thaw::Spinner;
 
 use crate::components::code_system_card::CodeSystemCard;
 use crate::components::failure::Failure;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
+use crate::components::spinner::Spinner;
 use crate::fhir::FhirClient;
 use crate::fhir::terminology::SystemCard;
 use crate::fhir::version::FhirVersion;

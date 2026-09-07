@@ -72,10 +72,6 @@ uuid = { version = "1.26.0", features = ["v4"] }
 leptos = { version = "0.8.20", features = ["csr"] }
 leptos_meta = "0.8.6"
 leptos_router = "0.8.15"
-# crates.io has no thaw 0.5 stable: 0.4.8 predates Leptos 0.8 and 0.5.0-beta
-# predates the recursion_limit fix, so the pinned rev is the tip of `main`
-# (confirmed with `git ls-remote https://github.com/thaw-ui/thaw`, 2026-09-06).
-thaw = { git = "https://github.com/thaw-ui/thaw", rev = "0726a3d6788f07e929996e77399d83655ffaacde", features = ["csr"] }
 gloo-net = { version = "0.7.0", default-features = false, features = ["http", "json"] }
 web-sys = "0.3.105"
 console_error_panic_hook = "0.1.7"

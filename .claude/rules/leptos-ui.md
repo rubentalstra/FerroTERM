@@ -70,9 +70,10 @@ operation in the browser.
   `scripts/checks/bundle-size.sh` compares the gzipped bundle to the claims in
   `app/ferroterm-viewer/bundle-size.json`.
 - **Views are built in `.into_any()`-erased sections.** A monolithic `view!`
-  tree over deeply nested `thaw` components blows rustc's layout-recursion
-  depth at codegen. Break every screen into section functions bound to erased
-  locals.
+  tree over deeply nested components blows rustc's layout-recursion depth at
+  codegen. Break every screen into section functions bound to erased locals.
+  Erasure is also the second-largest bundle lever, after removing a dependency
+  the viewer barely uses (`docs/viewer.md` §12, the bundle bar).
 - No `unsafe` (the workspace forbids it), no `unwrap`/`expect` outside tests,
   `thiserror` for the viewer's own error enum, every public item documented,
   suppressions as `#[expect(lint, reason = "…")]` scoped to the smallest item.
