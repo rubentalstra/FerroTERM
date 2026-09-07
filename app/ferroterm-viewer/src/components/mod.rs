@@ -17,6 +17,7 @@ pub(crate) mod button;
 pub(crate) mod code_system_card;
 pub(crate) mod failure;
 pub(crate) mod health;
+pub(crate) mod reading;
 pub(crate) mod request_disclosure;
 pub(crate) mod shell;
 pub(crate) mod spinner;

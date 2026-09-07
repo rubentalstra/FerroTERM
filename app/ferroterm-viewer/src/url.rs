@@ -49,6 +49,18 @@ pub(crate) fn encode_query_component(value: &str) -> String {
     utf8_percent_encode(value, UNRESERVED).collect()
 }
 
+/// Reads back one value [`encode_query_component`] wrote.
+///
+/// A value the encoder wrote is valid UTF-8 once decoded; one a reader typed
+/// may not be, and a byte sequence that is not UTF-8 is replaced rather than
+/// refused, because the address is what the reader sees and an error page
+/// would hide it.
+pub(crate) fn decode_query_component(value: &str) -> String {
+    percent_encoding::percent_decode_str(value)
+        .decode_utf8_lossy()
+        .into_owned()
+}
+
 /// A path and query built from encoded parts, rendered relative to a root.
 ///
 /// The same type builds a FHIR request and an in-application link, because
@@ -149,6 +161,31 @@ mod tests {
             encode_path_segment("a/b?c"),
             "a%2Fb%3Fc",
             "a separator is escaped back into the segment it belongs to"
+        );
+    }
+
+    #[test]
+    fn a_query_value_survives_the_encoder_and_the_decoder() {
+        for value in [
+            "fever",
+            "a,b",
+            "koorts é",
+            "<< 404684003 |Clinical finding|",
+        ] {
+            assert_eq!(
+                decode_query_component(&encode_query_component(value)),
+                value,
+                "a value the viewer wrote reads back as it was written"
+            );
+        }
+    }
+
+    #[test]
+    fn a_decoded_value_that_is_not_utf8_is_replaced_rather_than_refused() {
+        assert_eq!(
+            decode_query_component("%FF"),
+            "\u{fffd}",
+            "the address is what the reader sees, so it renders rather than failing"
         );
     }
 

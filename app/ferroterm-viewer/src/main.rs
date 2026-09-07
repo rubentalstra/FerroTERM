@@ -15,6 +15,7 @@ mod routes;
 mod settings;
 mod storage;
 mod theme;
+mod tree;
 mod url;
 
 /// Installs the panic hook and mounts the application.

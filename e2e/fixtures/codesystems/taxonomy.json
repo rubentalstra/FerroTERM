@@ -1,0 +1,32 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "e2e-taxonomy",
+  "url": "https://ferroterm.eu/fhir/CodeSystem/e2e-taxonomy",
+  "version": "1",
+  "name": "FerroTermE2ETaxonomy",
+  "title": "A shaped taxonomy the browser journeys walk",
+  "status": "active",
+  "experimental": true,
+  "publisher": "FerroTERM",
+  "description": "Synthetic content, shaped as a hierarchy so the deployment the browser journeys drive declares the child-of filter operator and the viewer's taxonomy tree has a level to walk. It carries no clinical meaning and no licensed content.",
+  "caseSensitive": true,
+  "hierarchyMeaning": "is-a",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "aa-root",
+      "display": "Root of the shaped taxonomy",
+      "concept": [
+        {
+          "code": "ba-branch",
+          "display": "First branch",
+          "concept": [
+            { "code": "ca-leaf", "display": "First leaf" },
+            { "code": "cb-leaf", "display": "Second leaf" }
+          ]
+        },
+        { "code": "bb-branch", "display": "Second branch" }
+      ]
+    }
+  ]
+}

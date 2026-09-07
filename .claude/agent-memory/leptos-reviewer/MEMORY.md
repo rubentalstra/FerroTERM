@@ -30,6 +30,14 @@ because what it records is true and the method is reusable.
 - [An `sr-only` "unavailable" is colour-only](sr-only-unavailable-is-colour-only.md):
   a disabled pager step whose only visible cue is hue fails WCAG 2.2 SC 1.4.1;
   fixed in `listing.rs`, still open in `pages/expand.rs`
+- [`prop:value` rewrites on every notification](prop-value-rebuild-has-no-equality-gate.md):
+  tachys 0.2.18 sets the property with no equality check, so a field seeded
+  from a whole-params memo is wiped by an unrelated navigation
+  (`leptos-ui.md` §5)
+- [Tree roving tabindex and selection keys](tree-roving-tabindex-and-selection-keys.md):
+  the flat `aria-level`/`posinset`/`setsize` shape is sanctioned; the tab stop
+  desyncs from real DOM focus without a focus listener, and selection keyed by
+  code marks two rows in a poly-hierarchy (`leptos-ui.md` §9)
 
 ## Still applies, unchanged
 

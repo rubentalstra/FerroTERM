@@ -29,10 +29,12 @@ percent-encoding.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = [
   "Document",
   "DomTokenList",
   "Element",
+  "HtmlElement",
   "HtmlInputElement",
   "Location",
   "MediaQueryList",

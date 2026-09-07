@@ -6,6 +6,7 @@
 
 pub(crate) mod capability;
 pub(crate) mod code_system;
+pub(crate) mod concept;
 pub(crate) mod concept_map;
 pub(crate) mod error;
 pub(crate) mod expansion;
@@ -24,6 +25,9 @@ use serde::de::DeserializeOwned;
 
 use crate::fhir::capability::CapabilityStatement;
 use crate::fhir::code_system::CodeSystemSearch;
+use crate::fhir::concept::ConceptQuery;
+use crate::fhir::concept::LookupAnswer;
+use crate::fhir::concept::LookupRequest;
 use crate::fhir::concept_map::PublishedConceptMap;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ExpandRequest;
@@ -263,6 +267,65 @@ impl FhirClient {
             .render(&self.root)
     }
 
+    /// The address one `CodeSystem/$lookup` reads.
+    ///
+    /// `$lookup` takes its parameters in the query of a `GET`
+    /// (<https://hl7.org/fhir/R4B/codesystem-operation-lookup.html>), and each
+    /// one is percent-encoded, so a code carrying a separator stays inside the
+    /// parameter it belongs to.
+    pub(crate) fn lookup_url(&self, version: FhirVersion, request: &LookupRequest) -> String {
+        request
+            .append(
+                RequestUrl::new()
+                    .segment(version.segment())
+                    .segment("CodeSystem")
+                    .segment("$lookup"),
+            )
+            .render(&self.root)
+    }
+
+    /// Reads one concept with `CodeSystem/$lookup`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. A code
+    /// the system does not hold arrives as [`FhirError::Refused`] carrying the
+    /// server's own `OperationOutcome`.
+    pub(crate) async fn lookup(
+        &self,
+        version: FhirVersion,
+        request: &LookupRequest,
+    ) -> Result<LookupAnswer, FhirError> {
+        self.get_json(&self.lookup_url(version, request)).await
+    }
+
+    /// The address a `ValueSet/$expand` sent as a `POST` is addressed to.
+    ///
+    /// An operation invoked by `POST` carries every parameter in its
+    /// `Parameters` body (<https://hl7.org/fhir/R4B/operations.html#request>),
+    /// so the address is the operation itself and nothing else.
+    pub(crate) fn expand_post_url(&self, version: FhirVersion) -> String {
+        RequestUrl::new()
+            .segment(version.segment())
+            .segment("ValueSet")
+            .segment("$expand")
+            .render(&self.root)
+    }
+
+    /// Expands a value set the browser sends inline, and reads the answer.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn expand_inline(
+        &self,
+        version: FhirVersion,
+        query: &ConceptQuery,
+    ) -> Result<ExpandedValueSet, FhirError> {
+        self.post_json(&self.expand_post_url(version), &query.body())
+            .await
+    }
+
     /// Searches the `ValueSet` resources this root holds.
     ///
     /// # Errors
@@ -359,6 +422,32 @@ impl FhirClient {
     /// Sends a FHIR JSON `GET` and decodes the resource it answers.
     async fn get_json<T: DeserializeOwned>(&self, url: &str) -> Result<T, FhirError> {
         let response = send(Request::get(url).header("Accept", FHIR_JSON), url).await?;
+        self.read_json(response, url).await
+    }
+
+    /// Sends a FHIR JSON `POST` and decodes the resource it answers.
+    async fn post_json<T: DeserializeOwned>(&self, url: &str, body: &str) -> Result<T, FhirError> {
+        let request = Request::post(url)
+            .header("Accept", FHIR_JSON)
+            .header("Content-Type", FHIR_JSON)
+            .body(body)
+            .map_err(|error| FhirError::Transport {
+                url: url.to_owned(),
+                message: error.to_string(),
+            })?;
+        let response = request.send().await.map_err(|error| FhirError::Transport {
+            url: url.to_owned(),
+            message: error.to_string(),
+        })?;
+        self.read_json(response, url).await
+    }
+
+    /// Turns an answer into the resource it carries, or into the refusal.
+    async fn read_json<T: DeserializeOwned>(
+        &self,
+        response: Response,
+        url: &str,
+    ) -> Result<T, FhirError> {
         let status = status_of(&response, url)?;
         if !status.is_success() {
             return Err(failure(&response, status, url).await);
@@ -436,6 +525,21 @@ pub(crate) fn curl_line(url: &str) -> String {
     format!(
         "curl -H {accept} {target}",
         accept = shell_quote(&format!("Accept: {FHIR_JSON}")),
+        target = shell_quote(url),
+    )
+}
+
+/// The `curl` line that reproduces a request the viewer sent with a body.
+///
+/// An operation invoked by `POST` carries its parameters in a `Parameters`
+/// resource (<https://hl7.org/fhir/R4B/operations.html#request>), so the body
+/// is part of the request and the line a reader copies has to carry it.
+pub(crate) fn curl_post_line(url: &str, body: &str) -> String {
+    format!(
+        "curl -X POST -H {accept} -H {content} --data {body} {target}",
+        accept = shell_quote(&format!("Accept: {FHIR_JSON}")),
+        content = shell_quote(&format!("Content-Type: {FHIR_JSON}")),
+        body = shell_quote(body),
         target = shell_quote(url),
     )
 }
@@ -565,6 +669,47 @@ mod tests {
             "https://tx.example.org/r4b/ValueSet/$expand\
              ?url=http%3A%2F%2Fsnomed.info%2Fsct%3Ffhir_vs%3Disa%2F404684003&count=20&offset=40",
             "the operation name survives the path and the canonical survives the query"
+        );
+    }
+
+    #[test]
+    fn a_lookup_address_is_the_one_a_reader_would_type() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        let request = LookupRequest {
+            system: "http://snomed.info/sct".to_owned(),
+            code: "404684003".to_owned(),
+            ..LookupRequest::default()
+        };
+        assert_eq!(
+            client.lookup_url(FhirVersion::R5, &request),
+            "https://tx.example.org/r5/CodeSystem/$lookup\
+             ?system=http%3A%2F%2Fsnomed.info%2Fsct&code=404684003",
+            "the operation name survives the path and the canonical survives the query"
+        );
+    }
+
+    #[test]
+    fn an_inline_expansion_addresses_the_operation_and_carries_its_body() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        assert_eq!(
+            client.expand_post_url(FhirVersion::R4B),
+            "https://tx.example.org/r4b/ValueSet/$expand",
+            "a POST carries its parameters in the body, so the address has no query"
+        );
+    }
+
+    #[test]
+    fn the_post_curl_line_carries_the_body_the_browser_sent() {
+        assert_eq!(
+            curl_post_line("https://tx.example.org/r4b/ValueSet/$expand", r#"{"a":1}"#),
+            "curl -X POST -H 'Accept: application/fhir+json' \
+             -H 'Content-Type: application/fhir+json' --data '{\"a\":1}' \
+             'https://tx.example.org/r4b/ValueSet/$expand'",
+            "the line reproduces the request the browser made, body included"
         );
     }
 
