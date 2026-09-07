@@ -1097,7 +1097,7 @@ fn concept_view(read: &Validation) -> AnyView {
                 .map(|version| format!(" (version {version})"))
                 .unwrap_or_default();
             view! { <li class="font-mono break-all">{Coding::rendered(coding)} {version}</li> }
-            .into_any()
+                .into_any()
         })
         .collect();
     view! {
