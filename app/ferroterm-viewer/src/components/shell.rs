@@ -9,6 +9,9 @@ use leptos_router::params::Params;
 use leptos_router::path;
 
 use crate::components::health::HealthIndicator;
+use crate::components::icon;
+use crate::components::icon::Glyph;
+use crate::components::icon::Icon;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
@@ -29,17 +32,18 @@ use crate::settings::Settings;
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct SelectedVersion(pub(crate) Signal<FhirVersion>);
 
-/// The screens the header links to, each as its path segment and its label.
+/// The screens the header links to, each as its path segment, its label, and
+/// the glyph a reader recognises it by.
 ///
 /// The overview sits at the base itself, so its segment is empty.
-const SECTIONS: [(&str, &str); 7] = [
-    ("", "Overview"),
-    ("browse", "Browse"),
-    ("expand", "Expand"),
-    ("valuesets", "Value sets"),
-    ("conceptmaps", "Concept maps"),
-    ("versions", "FHIR versions"),
-    ("settings", "Settings"),
+const SECTIONS: [(&str, &str, Glyph); 7] = [
+    ("", "Overview", icon::OVERVIEW),
+    ("browse", "Browse", icon::BROWSE),
+    ("expand", "Expand", icon::EXPAND),
+    ("valuesets", "Value sets", icon::VALUE_SETS),
+    ("conceptmaps", "Concept maps", icon::CONCEPT_MAPS),
+    ("versions", "FHIR versions", icon::VERSION),
+    ("settings", "Settings", icon::SETTINGS),
 ];
 
 /// The shell's own query parameters.
@@ -56,7 +60,7 @@ struct ShellQuery {
 /// FHIR version travels in the query and every link carries it.
 fn section_links(version: Signal<FhirVersion>) -> AnyView {
     let location = use_location();
-    let link = move |segment: &'static str, label: &'static str| {
+    let link = move |segment: &'static str, label: &'static str, glyph: Glyph| {
         let target = if segment.is_empty() {
             UI_BASE.to_owned()
         } else {
@@ -70,8 +74,9 @@ fn section_links(version: Signal<FhirVersion>) -> AnyView {
                     (here.pathname.get().trim_end_matches('/') == target.trim_end_matches('/'))
                         .then_some("page")
                 }
-                class="text-slate-700 hover:underline dark:text-slate-200"
+                class="inline-flex items-center gap-1 text-slate-700 hover:underline dark:text-slate-200"
             >
+                <Icon glyph=glyph />
                 {label}
             </a>
         }
@@ -79,7 +84,7 @@ fn section_links(version: Signal<FhirVersion>) -> AnyView {
     };
     let items: Vec<AnyView> = SECTIONS
         .into_iter()
-        .map(|(segment, label)| link(segment, label))
+        .map(|(segment, label, glyph)| link(segment, label, glyph))
         .collect();
     view! {
         <nav aria-label="Sections" class="flex items-center gap-3 text-sm">

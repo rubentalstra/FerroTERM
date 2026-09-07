@@ -14,6 +14,8 @@ use leptos_router::params::Params;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::icon;
+use crate::components::icon::Icon;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
@@ -362,10 +364,18 @@ fn tools_view(system: &str, code: Option<&str>, version: FhirVersion) -> AnyView
     );
     view! {
         <nav aria-label=format!("Screens for {named}") class="mt-3 flex flex-wrap gap-3 text-sm">
-            <a href=browse class="text-brand-700 underline dark:text-brand-300">
+            <a
+                href=browse
+                class="inline-flex items-center gap-1 text-brand-700 underline dark:text-brand-300"
+            >
+                <Icon glyph=icon::BROWSE />
                 "Browse the concepts"
             </a>
-            <a href=expand class="text-brand-700 underline dark:text-brand-300">
+            <a
+                href=expand
+                class="inline-flex items-center gap-1 text-brand-700 underline dark:text-brand-300"
+            >
+                <Icon glyph=icon::EXPAND />
                 "Run an expansion"
             </a>
         </nav>

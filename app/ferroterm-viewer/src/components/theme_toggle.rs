@@ -3,7 +3,11 @@
 use leptos::prelude::*;
 
 use crate::components::button::Button;
+use crate::components::icon;
+use crate::components::icon::Glyph;
+use crate::components::icon::Icon;
 use crate::settings::Settings;
+use crate::theme::ThemeMode;
 
 /// Switches between the light and the dark theme, and remembers the choice.
 #[component]
@@ -19,7 +23,16 @@ pub(crate) fn ThemeToggle() -> impl IntoView {
             on_click=move |_| settings.theme.set(next())
             attr:aria-label=move || format!("Switch to the {} theme", next().label().to_lowercase())
         >
+            {move || view! { <Icon glyph=glyph_of(next()) /> }}
             {move || next().label()}
         </Button>
+    }
+}
+
+/// The glyph that stands for a theme.
+fn glyph_of(mode: ThemeMode) -> Glyph {
+    match mode {
+        ThemeMode::Light => icon::LIGHT,
+        ThemeMode::Dark => icon::DARK,
     }
 }
