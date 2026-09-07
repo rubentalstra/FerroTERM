@@ -15,7 +15,7 @@ memory: project
 color: orange
 ---
 
-Consult your agent memory before reviewing: it holds the Leptos and `thaw`
+Consult your agent memory before reviewing: it holds the Leptos and component
 hazards confirmed in this family of projects, each classified against
 client-side rendering. After a review, save newly confirmed patterns, one line
 each with the rule-file citation. Memory supplements

@@ -11,8 +11,6 @@ use leptos::prelude::*;
 use leptos_meta::Title;
 use leptos_meta::provide_meta_context;
 use leptos_router::components::Router;
-use thaw::ConfigProvider;
-use thaw::Theme;
 
 use crate::components::shell::Shell;
 use crate::fhir::FhirClient;
@@ -37,25 +35,16 @@ pub(crate) fn App() -> impl IntoView {
     provide_context(settings);
     provide_context(FhirClient::from_document());
 
-    let theme = RwSignal::new(Theme::light());
-    // The document element and thaw's own stylesheet are the outside world,
-    // which is what an Effect is for.
-    Effect::new(move |_| {
-        let mode = settings.theme.get();
-        theme.set(match mode {
-            ThemeMode::Light => Theme::light(),
-            ThemeMode::Dark => Theme::dark(),
-        });
-        apply_document_theme(mode);
-    });
+    // The document element is the outside world, which is what an Effect is
+    // for. Every theme-dependent style is a Tailwind `dark:` variant defined
+    // against the class this writes.
+    Effect::new(move |_| apply_document_theme(settings.theme.get()));
 
     view! {
-        <ConfigProvider theme theme_id="ferroterm-viewer">
-            <Router base=UI_BASE>
-                <Title formatter=|text| format!("{text} · FerroTERM viewer") />
-                <Shell />
-            </Router>
-        </ConfigProvider>
+        <Router base=UI_BASE>
+            <Title formatter=|text| format!("{text} · FerroTERM viewer") />
+            <Shell />
+        </Router>
     }
 }
 

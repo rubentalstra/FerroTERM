@@ -7,6 +7,18 @@ viewer is client-side rendered** (`docs/viewer.md` §1), so every entry carries 
 `moot`. A moot entry is kept for the record, never deleted, because the fact it
 records is true and the reasoning is reusable.
 
+**The viewer no longer depends on `thaw`** (2026-09-07, #454): it used three
+widgets and paid 15.5% of the bundle for the library. Every `thaw` entry below
+is now moot on that ground as well as the one recorded in it; each is kept
+because what it records is true and the method is reusable.
+
+## Confirmed here
+
+- [Unused dependency weight is already gone](unused-dep-weight-is-already-gone.md):
+  LTO plus `--gc-sections` drops a crate the viewer never calls, so `chrono`
+  and `icondata_ai` were 0 bytes of the bundle; refuse an unmeasured claim
+  about what is heavy
+
 ## Still applies, unchanged
 
 - [Polled resource needs Transition](polled-resource-needs-transition.md): an
