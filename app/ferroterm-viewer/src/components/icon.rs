@@ -8,7 +8,7 @@
 //! one it read before.
 //!
 //! The shapes are written here rather than pulled from an icon crate. The
-//! whole set is twenty-one stroked outlines, and `docs/viewer.md` section 3
+//! whole set is twenty-two stroked outlines, and `docs/viewer.md` section 3
 //! records what each answer measured.
 
 use leptos::prelude::*;
@@ -86,6 +86,12 @@ pub(crate) const UNREACHABLE: Glyph = Glyph(concat!(
 pub(crate) const FAILURE: Glyph = Glyph(concat!(
     r#"<path d="M10.3 4.3 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"/>"#,
     r#"<path d="M12 9v4"/><path d="M12 17h.01"/>"#,
+));
+
+/// A tick inside a shield: checking a code against what a system holds.
+pub(crate) const VALIDATE: Glyph = Glyph(concat!(
+    r#"<path d="M12 3 4 6v6c0 4.5 3.2 7.9 8 9 4.8-1.1 8-4.5 8-9V6Z"/>"#,
+    r#"<path d="m9 12 2 2 4-4"/>"#,
 ));
 
 /// An `i` in a circle: something worth knowing about what is on screen.
@@ -183,7 +189,7 @@ mod tests {
     use super::*;
 
     /// Every glyph the screens draw, so a new one is checked by adding it here.
-    const ALL: [Glyph; 21] = [
+    const ALL: [Glyph; 22] = [
         OVERVIEW,
         BROWSE,
         EXPAND,
@@ -194,6 +200,7 @@ mod tests {
         SERVING,
         UNREACHABLE,
         FAILURE,
+        VALIDATE,
         NOTICE,
         PAGE_FIRST,
         PAGE_PREVIOUS,

@@ -15,6 +15,7 @@ pub(crate) mod outcome;
 pub(crate) mod searchset;
 pub(crate) mod terminology;
 pub(crate) mod translate;
+pub(crate) mod validation;
 pub(crate) mod value_set;
 pub(crate) mod version;
 
@@ -38,6 +39,9 @@ use crate::fhir::searchset::SearchSet;
 use crate::fhir::terminology::TerminologyCapabilities;
 use crate::fhir::translate::TranslateAnswer;
 use crate::fhir::translate::TranslateRequest;
+use crate::fhir::validation::ParametersAnswer;
+use crate::fhir::validation::SubsumesRequest;
+use crate::fhir::validation::ValidateRequest;
 use crate::fhir::value_set::PublishedValueSet;
 use crate::fhir::version::FhirVersion;
 use crate::url::RequestUrl;
@@ -56,6 +60,9 @@ const UI_PREFIX: &str = "/ui";
 
 /// The `ValueSet` resource type, as it appears in a request path.
 pub(crate) const VALUE_SET: &str = "ValueSet";
+
+/// The `CodeSystem` resource type, as it appears in a request path.
+pub(crate) const CODE_SYSTEM: &str = "CodeSystem";
 
 /// The `ConceptMap` resource type, as it appears in a request path.
 pub(crate) const CONCEPT_MAP: &str = "ConceptMap";
@@ -384,6 +391,77 @@ impl FhirClient {
     ) -> Result<PublishedConceptMap, FhirError> {
         self.get_json(&self.resource_url(version, CONCEPT_MAP, id))
             .await
+    }
+
+    /// The address one `$validate-code` run reads.
+    ///
+    /// `$validate-code` takes its parameters in the query of a `GET`
+    /// (<https://hl7.org/fhir/R4B/codesystem-operation-validate-code.html>),
+    /// and each one is percent-encoded, so a canonical carrying its own query
+    /// string stays inside the parameter it belongs to. An instance-level run
+    /// puts the resource id in the path as one encoded segment, which is what
+    /// the read interaction does with an id
+    /// (<https://hl7.org/fhir/R4B/http.html#read>).
+    pub(crate) fn validate_code_url(
+        &self,
+        version: FhirVersion,
+        request: &ValidateRequest,
+    ) -> String {
+        let mut url = RequestUrl::new()
+            .segment(version.segment())
+            .segment(request.on.resource_type());
+        if request.instance() {
+            url = url.segment(&request.id);
+        }
+        request
+            .append(url.segment("$validate-code"))
+            .render(&self.root)
+    }
+
+    /// Runs `$validate-code` and reads the `Parameters` it answers.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. A
+    /// refusal arrives as [`FhirError::Refused`] carrying the server's own
+    /// `OperationOutcome`. A code the system does not hold is not a refusal:
+    /// the operation answers `result` false and says why.
+    pub(crate) async fn validate_code(
+        &self,
+        version: FhirVersion,
+        request: &ValidateRequest,
+    ) -> Result<ParametersAnswer, FhirError> {
+        self.get_json(&self.validate_code_url(version, request))
+            .await
+    }
+
+    /// The address one `CodeSystem/$subsumes` run reads.
+    ///
+    /// `$subsumes` takes its parameters in the query of a `GET`
+    /// (<https://hl7.org/fhir/R4B/codesystem-operation-subsumes.html>).
+    pub(crate) fn subsumes_url(&self, version: FhirVersion, request: &SubsumesRequest) -> String {
+        let mut url = RequestUrl::new()
+            .segment(version.segment())
+            .segment(CODE_SYSTEM);
+        if request.instance() {
+            url = url.segment(&request.id);
+        }
+        request.append(url.segment("$subsumes")).render(&self.root)
+    }
+
+    /// Runs `CodeSystem/$subsumes` and reads the `Parameters` it answers.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. A
+    /// system that answers no subsumption arrives as [`FhirError::Refused`]
+    /// carrying the server's own `OperationOutcome`.
+    pub(crate) async fn subsumes(
+        &self,
+        version: FhirVersion,
+        request: &SubsumesRequest,
+    ) -> Result<ParametersAnswer, FhirError> {
+        self.get_json(&self.subsumes_url(version, request)).await
     }
 
     /// The address one `ConceptMap/$translate` run reads.
@@ -770,6 +848,66 @@ mod tests {
             "https://tx.example.org/r6/ConceptMap/$translate\
              ?sourceSystem=http%3A%2F%2Fsnomed.info%2Fsct&sourceCode=404684003",
             "the R6 ballot renamed `system` and `code`"
+        );
+    }
+
+    #[test]
+    fn a_validation_addresses_the_resource_type_it_is_invoked_on() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        let request = ValidateRequest {
+            url: "https://terminology.example/x?edition=2031".to_owned(),
+            code: "cat".to_owned(),
+            ..ValidateRequest::default()
+        };
+        assert_eq!(
+            client.validate_code_url(FhirVersion::R4B, &request),
+            "https://tx.example.org/r4b/CodeSystem/$validate-code\
+             ?url=https%3A%2F%2Fterminology.example%2Fx%3Fedition%3D2031&code=cat",
+            "the operation name survives the path and the canonical survives the query"
+        );
+        assert_eq!(
+            client.validate_code_url(
+                FhirVersion::R5,
+                &ValidateRequest {
+                    on: validation::ValidateOn::ValueSet,
+                    id: "a/b".to_owned(),
+                    ..request
+                }
+            ),
+            "https://tx.example.org/r5/ValueSet/a%2Fb/$validate-code?code=cat",
+            "an id a reader typed cannot reach a route the viewer did not mean to ask for"
+        );
+    }
+
+    #[test]
+    fn a_subsumption_addresses_the_code_system_and_carries_both_codes() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        let request = SubsumesRequest {
+            system: "http://snomed.info/sct".to_owned(),
+            code_a: "404684003".to_owned(),
+            code_b: "64572001".to_owned(),
+            ..SubsumesRequest::default()
+        };
+        assert_eq!(
+            client.subsumes_url(FhirVersion::R6, &request),
+            "https://tx.example.org/r6/CodeSystem/$subsumes\
+             ?system=http%3A%2F%2Fsnomed.info%2Fsct&codeA=404684003&codeB=64572001"
+        );
+        assert_eq!(
+            client.subsumes_url(
+                FhirVersion::R4,
+                &SubsumesRequest {
+                    id: "animals".to_owned(),
+                    system: String::new(),
+                    ..request
+                }
+            ),
+            "https://tx.example.org/r4/CodeSystem/animals/$subsumes?codeA=404684003&codeB=64572001",
+            "an instance run names the system in the path and nowhere else"
         );
     }
 

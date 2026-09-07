@@ -14,6 +14,7 @@ pub(crate) mod expand;
 pub(crate) mod not_found;
 pub(crate) mod overview;
 pub(crate) mod settings;
+pub(crate) mod validate;
 pub(crate) mod value_sets;
 pub(crate) mod versions;
 
