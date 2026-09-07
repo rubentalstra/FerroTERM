@@ -39,13 +39,26 @@ pub(crate) struct SearchFilter {
 }
 
 /// What a search answered: what the server counted, and what it sent.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+///
+/// The container carries the default, so a `Bundle` that states neither
+/// element reads as an empty answer rather than as a decode error, and a
+/// resource type that has no `Default` of its own can still be searched for.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
 pub(crate) struct SearchSet<T> {
     /// `Bundle.total`, the number of matches the server counted.
     total: Option<u32>,
     /// `Bundle.entry`, one per match.
-    #[serde(default = "Vec::new")]
     entry: Vec<Entry<T>>,
+}
+
+impl<T> Default for SearchSet<T> {
+    fn default() -> Self {
+        Self {
+            total: None,
+            entry: Vec::new(),
+        }
+    }
 }
 
 /// One `Bundle.entry`.

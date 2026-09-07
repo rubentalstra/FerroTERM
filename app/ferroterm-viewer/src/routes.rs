@@ -24,6 +24,9 @@ pub(crate) const EXPAND_PATH: &str = "expand";
 /// The value set screen's path below the base.
 pub(crate) const VALUE_SETS_PATH: &str = "valuesets";
 
+/// The concept map screen's path below the base.
+pub(crate) const CONCEPT_MAPS_PATH: &str = "conceptmaps";
+
 /// The query parameter that carries a code system canonical into a screen.
 pub(crate) const SYSTEM_PARAM: &str = "system";
 

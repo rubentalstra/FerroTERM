@@ -11,6 +11,7 @@ use leptos::ev::SubmitEvent;
 use leptos::html::Input;
 use leptos::prelude::*;
 
+use crate::components::NOT_DECLARED;
 use crate::fhir::searchset::SearchFilter;
 use crate::fhir::version::FhirVersion;
 use crate::paging::Page;
@@ -121,6 +122,20 @@ impl ListParams {
     /// through untouched while it unescapes a path segment a second time
     /// (`leptos_router` 0.8.15 `src/location/mod.rs`).
     pub(crate) fn address(&self, path: &str, version: FhirVersion) -> String {
+        self.address_with(path, version, &[])
+    }
+
+    /// The same address, with `extra` parameters the screen also carries.
+    ///
+    /// A screen that puts a second form in the same address round-trips its
+    /// parameters here, so walking a page or opening a resource does not throw
+    /// away a run the reader has going.
+    pub(crate) fn address_with(
+        &self,
+        path: &str,
+        version: FhirVersion,
+        extra: &[(&str, &str)],
+    ) -> String {
         let mut url = RequestUrl::new()
             .segment(UI_BASE.trim_start_matches('/'))
             .segment(path)
@@ -137,8 +152,34 @@ impl ListParams {
         if !self.id.is_empty() {
             url = url.query(ID_PARAM, &self.id);
         }
+        for (name, value) in extra {
+            if !value.is_empty() {
+                url = url.query(name, value);
+            }
+        }
         url.render("")
     }
+}
+
+/// What a search answered, as the sentence a live region reads.
+///
+/// `counted` is `Bundle.total`, "the total number of matches" a search found
+/// (<https://hl7.org/fhir/R4B/http.html#search>), which can exceed the entries
+/// this answer carries when the server paged the search itself. This viewer
+/// walks its own pages over what arrived, so a larger total is stated as a
+/// partial answer rather than printed beside a row count it disagrees with.
+pub(crate) fn count_sentence(view: Window, noun: &str, counted: Option<u32>) -> String {
+    let shown = view.summary(noun);
+    let Some(total) = counted else {
+        return format!("{shown} This root counted {NOT_DECLARED}.");
+    };
+    let carried = u32::try_from(view.matched).unwrap_or(u32::MAX);
+    if total > carried {
+        return format!(
+            "{shown} This root counted {total} and sent {carried}, so this is part of the answer."
+        );
+    }
+    format!("{shown} This root counted {total}.")
 }
 
 /// The rows one page draws, and what the reader is told about them.
@@ -214,7 +255,9 @@ impl Window {
 /// The filter, as a form that navigates rather than reloading the page.
 ///
 /// The router installs no `submit` listener, so the submit is handled by the
-/// caller and turned into a navigation. Each control is seeded from the
+/// caller and turned into a navigation. The handler arrives boxed, so both
+/// screens share one emitted body rather than one monomorphized copy each
+/// (<https://doc.rust-lang.org/book/ch10-01-syntax.html>). Each control is seeded from the
 /// address through `prop:value`, which follows a back navigation and leaves
 /// what the reader is typing alone, and is read back at submit.
 pub(crate) fn filter_form(
@@ -223,7 +266,7 @@ pub(crate) fn filter_form(
     canonical: NodeRef<Input>,
     resource_version: NodeRef<Input>,
     params: Signal<ListParams>,
-    submit: impl FnMut(SubmitEvent) + 'static,
+    submit: Box<dyn FnMut(SubmitEvent)>,
 ) -> AnyView {
     let url_id = format!("{screen}-filter-url");
     let version_id = format!("{screen}-filter-version");
@@ -305,8 +348,9 @@ pub(crate) fn canonical_cell(canonical: &str, href: Option<String>) -> AnyView {
 /// The page controls, which are the address of another page.
 ///
 /// Each control is a link, so a page is shareable and the browser walks the
-/// list with its back button. A control that leads nowhere says so in words:
-/// a tint alone carries no meaning
+/// list with its back button. A control that leads nowhere reads "unavailable"
+/// in visible text, because a reader who cannot tell the two tints apart has
+/// nothing else to go on
 /// (<https://www.w3.org/TR/WCAG22/#use-of-color>).
 pub(crate) fn pager_view(
     label: &'static str,
@@ -314,13 +358,14 @@ pub(crate) fn pager_view(
     params: &ListParams,
     path: &'static str,
     version: FhirVersion,
+    extra: &[(&str, &str)],
 ) -> AnyView {
     let total = u32::try_from(view.matched).unwrap_or(u32::MAX);
     let here = view.page.number();
     let step = |target: Option<Page>, text: &'static str| -> AnyView {
         match target {
             Some(page) if page.number() != here => {
-                let href = params.on(page.number()).address(path, version);
+                let href = params.on(page.number()).address_with(path, version, extra);
                 view! {
                     <a href=href class=PAGE_LINK>
                         {text}
@@ -328,8 +373,9 @@ pub(crate) fn pager_view(
                 }
                 .into_any()
             }
-            Some(_) | None => view! { <span class=PAGE_END>{text} <span class="sr-only">", unavailable"</span></span> }
-            .into_any(),
+            Some(_) | None => {
+                view! { <span class=PAGE_END>{text} " (unavailable)"</span> }.into_any()
+            }
         }
     };
     view! {
@@ -430,6 +476,46 @@ mod tests {
         let reading = params.reading("vs-9");
         assert_eq!(reading.page(), 2);
         assert_eq!(reading.id, "vs-9");
+    }
+
+    #[test]
+    fn a_screen_that_carries_a_second_form_round_trips_its_parameters() {
+        let params = ListParams::read(&map(&[("page", "2")]), 25);
+        assert_eq!(
+            params.address_with(
+                "conceptmaps",
+                FhirVersion::R4B,
+                &[
+                    ("code", "x"),
+                    ("target", ""),
+                    ("system", "https://x.example/s")
+                ]
+            ),
+            "/ui/conceptmaps?fhir=r4b&page=2&code=x&system=https%3A%2F%2Fx.example%2Fs",
+            "a parameter the reader left empty is left out rather than sent empty"
+        );
+    }
+
+    #[test]
+    fn the_sentence_states_what_is_drawn_and_what_the_root_counted() {
+        assert_eq!(
+            count_sentence(window(1, 25, 3), "value sets", Some(3)),
+            "Showing value sets 1 to 3 of 3. This root counted 3."
+        );
+        assert_eq!(
+            count_sentence(window(1, 25, 0), "concept maps", None),
+            "No concept maps on this page. This root counted not declared."
+        );
+    }
+
+    #[test]
+    fn a_search_the_server_paged_itself_is_stated_as_part_of_the_answer() {
+        assert_eq!(
+            count_sentence(window(1, 25, 25), "value sets", Some(500)),
+            "Showing value sets 1 to 25 of 25. This root counted 500 and sent 25, \
+             so this is part of the answer.",
+            "a total larger than the entries carried means the server paged the search"
+        );
     }
 
     #[test]

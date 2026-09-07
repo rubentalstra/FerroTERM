@@ -1,8 +1,9 @@
 //! The value sets this root holds: the search, and one resource read by id.
 //!
-//! The screen reads and never writes. The server answers create, update, and
-//! delete on this resource type and the viewer calls none of them
-//! (`docs/viewer.md` §8), so nothing here offers one.
+//! The screen reads and never writes. The RESTful API defines create, update,
+//! and delete beside read and search
+//! (<https://hl7.org/fhir/R4B/http.html>), and this server answers all of
+//! them; the viewer calls none, so nothing here offers one.
 
 use leptos::ev::SubmitEvent;
 use leptos::html::Input;
@@ -26,8 +27,8 @@ use crate::fhir::value_set::ClauseRow;
 use crate::fhir::value_set::PublishedValueSet;
 use crate::fhir::version::FhirVersion;
 use crate::listing::ListParams;
-use crate::listing::Window;
 use crate::listing::canonical_cell;
+use crate::listing::count_sentence;
 use crate::listing::filter_form;
 use crate::listing::pager_view;
 use crate::listing::window;
@@ -40,8 +41,8 @@ use crate::settings::Settings;
 /// The filter, the page, and the resource being read all live in the address,
 /// so every one of them is shareable and the back button walks them. Each is
 /// read reactively: a click on a row is a navigation onto this same route, and
-/// `leptos_router` then updates the query without re-running this body
-/// (`.claude/rules/leptos-ui.md` §8).
+/// `leptos_router` 0.8.15 then updates the params without re-running this body
+/// (`src/nested_router.rs`, the same-route-id branch).
 #[component]
 #[expect(
     unreachable_pub,
@@ -109,7 +110,7 @@ fn search_form(params: Signal<ListParams>, version: Signal<FhirVersion>) -> AnyV
         canonical,
         resource_version,
         params,
-        submit,
+        Box::new(submit),
     )
 }
 
@@ -146,7 +147,7 @@ fn list_section(
                 .and_then(|result| result.as_ref().ok())
                 .map(|found| {
                     let view = window(params.page(), params.size(), found.matched());
-                    count_sentence(found, view)
+                    count_sentence(view, "value sets", found.total())
                 })
                 .unwrap_or_default()
         })
@@ -204,7 +205,14 @@ fn list_view(
         .filter_map(|index| resources.get(index))
         .map(|resource| row_view(resource, params, version))
         .collect();
-    let pager = pager_view("Value set pages", view, params, VALUE_SETS_PATH, version);
+    let pager = pager_view(
+        "Value set pages",
+        view,
+        params,
+        VALUE_SETS_PATH,
+        version,
+        &[],
+    );
     view! {
         <div class="mt-3 overflow-x-auto">
             <table class="w-full border-collapse text-left text-sm">
@@ -465,19 +473,6 @@ fn failure_view(error: &FhirError) -> AnyView {
     .into_any()
 }
 
-/// How much of the answer this page holds, as a sentence.
-///
-/// Every number comes from the answer, and the page is the one that is drawn
-/// rather than the one the address asked for, so a screen reader is never told
-/// about a page that is not on screen.
-fn count_sentence(found: &SearchSet<PublishedValueSet>, view: Window) -> String {
-    let counted = found.total().map_or_else(
-        || format!("This root counted {NOT_DECLARED}."),
-        |total| format!("This root counted {total}."),
-    );
-    format!("{} {counted}", view.summary("value sets"))
-}
-
 /// What a control holds now, trimmed, or the empty string when it is gone.
 fn typed_value(node: NodeRef<Input>) -> String {
     node.get()
@@ -485,32 +480,4 @@ fn typed_value(node: NodeRef<Input>) -> String {
         .unwrap_or_default()
         .trim()
         .to_owned()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn parse(json: &str) -> SearchSet<PublishedValueSet> {
-        serde_json::from_str(json).expect("the fixture is valid JSON")
-    }
-
-    #[test]
-    fn the_sentence_states_what_is_drawn_and_what_the_root_counted() {
-        let found =
-            parse(r#"{"total":1,"entry":[{"resource":{"resourceType":"ValueSet","id":"a"}}]}"#);
-        assert_eq!(
-            count_sentence(&found, window(1, 25, found.matched())),
-            "Showing value sets 1 to 1 of 1. This root counted 1."
-        );
-    }
-
-    #[test]
-    fn a_search_that_counted_nothing_says_so_rather_than_inventing_a_number() {
-        let found = parse(r#"{"entry":[]}"#);
-        assert_eq!(
-            count_sentence(&found, window(1, 25, 0)),
-            "No value sets on this page. This root counted not declared."
-        );
-    }
 }

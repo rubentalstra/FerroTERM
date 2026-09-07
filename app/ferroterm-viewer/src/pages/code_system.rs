@@ -36,9 +36,9 @@ struct SystemParams {
 /// Shows one code system, from the two documents that describe it.
 ///
 /// The canonical is read reactively. A link from one system to another matches
-/// this same `<Route>`, and `leptos_router` then updates the params signal
-/// without re-running this body, so a read taken untracked at setup would go
-/// stale (`.claude/rules/leptos-ui.md` §8).
+/// this same `<Route>`, and `leptos_router` 0.8.15 then updates the params
+/// signal without re-running this body (`src/nested_router.rs`, the
+/// same-route-id branch), so a read taken untracked at setup would go stale.
 #[component]
 #[expect(
     unreachable_pub,

@@ -18,6 +18,18 @@ because what it records is true and the method is reusable.
   LTO plus `--gc-sections` drops a crate the viewer never calls, so `chrono`
   and `icondata_ai` were 0 bytes of the bundle; refuse an unmeasured claim
   about what is heavy
+- [`<Show>` children re-run is cleaned up](show-children-rerun-is-cleaned-up.md):
+  rebuilding a form's `NodeRef`s inside `<Show>` leaks nothing, and
+  `use_navigate()` there is a plain context read; a resource there is the defect
+- [`$translate` spelling per version](translate-spelling-per-version.md): the
+  request and `match.part` names for R4/R4B/R5/R6, and which names come from the
+  ecosystem overlay rather than the vendored `OperationDefinition`
+- [`SelectedVersion` is gated](selected-version-derive-is-gated.md): it derives
+  from a `use_query` `Memo`, so it is a safe resource source despite being a
+  `Signal::derive`; do not file the ungated-derive finding against it
+- [An `sr-only` "unavailable" is colour-only](sr-only-unavailable-is-colour-only.md):
+  a disabled pager step whose only visible cue is hue fails WCAG 2.2 SC 1.4.1;
+  fixed in `listing.rs`, still open in `pages/expand.rs`
 
 ## Still applies, unchanged
 
