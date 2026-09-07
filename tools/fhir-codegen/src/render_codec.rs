@@ -40,20 +40,20 @@ fn shape<'a>(model: &'a VersionModule, field: &Field) -> Shape<'a> {
 /// The scalar's JSON constructor expression over `v` (a reference).
 fn scalar_to_value(scalar: Scalar, v: &str) -> String {
     match scalar {
-        Scalar::Bool => format!("serde_json::Value::Bool(*{v})"),
-        Scalar::I32 | Scalar::U32 => format!("serde_json::Value::from(*{v})"),
-        Scalar::I64 => format!("serde_json::Value::String({v}.to_string())"),
-        Scalar::Str => format!("serde_json::Value::String({v}.clone())"),
+        Scalar::Bool => format!("{C}::Value::Bool(*{v})"),
+        Scalar::I32 | Scalar::U32 => format!("{C}::Value::from(*{v})"),
+        Scalar::I64 => format!("{C}::Value::String({v}.to_string())"),
+        Scalar::Str => format!("{C}::Value::String({v}.clone())"),
     }
 }
 
 /// The scalar's JSON constructor expression over `v` (an owned place).
 fn scalar_to_value_owned(scalar: Scalar, v: &str) -> String {
     match scalar {
-        Scalar::Bool => format!("serde_json::Value::Bool({v})"),
-        Scalar::I32 | Scalar::U32 => format!("serde_json::Value::from({v})"),
-        Scalar::I64 => format!("serde_json::Value::String({v}.to_string())"),
-        Scalar::Str => format!("serde_json::Value::String({v}.clone())"),
+        Scalar::Bool => format!("{C}::Value::Bool({v})"),
+        Scalar::I32 | Scalar::U32 => format!("{C}::Value::from({v})"),
+        Scalar::I64 => format!("{C}::Value::String({v}.to_string())"),
+        Scalar::Str => format!("{C}::Value::String({v}.clone())"),
     }
 }
 
@@ -101,7 +101,7 @@ fn render_deserialize(out: &mut String, name: &str) -> fmt::Result {
     )?;
     writeln!(
         out,
-        "        let value = serde_json::Value::deserialize(deserializer)?;"
+        "        let value = <{C}::Value as serde::Deserialize>::deserialize(deserializer)?;"
     )?;
     writeln!(out, "        let mut path = {C}::Path::root({name:?});")?;
     writeln!(
@@ -130,7 +130,7 @@ fn render_primitive(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Re
     writeln!(out, "\nimpl {C}::Primitive for {} {{", ty.name)?;
     writeln!(
         out,
-        "    fn value_json(&self) -> Result<Option<serde_json::Value>, {C}::EncodeError> {{"
+        "    fn value_json(&self) -> Result<Option<{C}::Value>, {C}::EncodeError> {{"
     )?;
     let held = if value_required {
         "Some(&self.value)"
@@ -140,8 +140,8 @@ fn render_primitive(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Re
     match (scalar, ty.name.as_str()) {
         (Scalar::Str, "Decimal") => {
             writeln!(out, "        {held}.map(|text| {{")?;
-            writeln!(out, "            text.parse::<serde_json::Number>()")?;
-            writeln!(out, "                .map(serde_json::Value::Number)")?;
+            writeln!(out, "            text.parse::<{C}::Number>()")?;
+            writeln!(out, "                .map({C}::Value::Number)")?;
             writeln!(
                 out,
                 "                .map_err(|_| {C}::EncodeError::BadDecimal {{ text: text.clone() }})"
@@ -157,7 +157,7 @@ fn render_primitive(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Re
     writeln!(out, "    }}\n")?;
     writeln!(
         out,
-        "    fn element_json(&self) -> Result<Option<serde_json::Value>, {C}::EncodeError> {{"
+        "    fn element_json(&self) -> Result<Option<{C}::Value>, {C}::EncodeError> {{"
     )?;
     match (has_id, has_extension) {
         (true, true) => writeln!(
@@ -180,7 +180,7 @@ fn render_primitive(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Re
         writeln!(out, "        if let Some(id) = &self.id {{")?;
         writeln!(
             out,
-            "            object.insert(std::string::String::from(\"id\"), serde_json::Value::String(id.clone()));"
+            "            object.insert(std::string::String::from(\"id\"), {C}::Value::String(id.clone()));"
         )?;
         writeln!(out, "        }}")?;
     }
@@ -193,17 +193,17 @@ fn render_primitive(out: &mut String, ty: &TypeDef, fields: &[Field]) -> fmt::Re
         writeln!(out, "            for item in &self.extension {{")?;
         writeln!(
             out,
-            "                items.push(serde_json::Value::Object({C}::Json::to_json(item)?));"
+            "                items.push({C}::Value::Object({C}::Json::to_json(item)?));"
         )?;
         writeln!(out, "            }}")?;
         writeln!(
             out,
-            "            object.insert(std::string::String::from(\"extension\"), serde_json::Value::Array(items));"
+            "            object.insert(std::string::String::from(\"extension\"), {C}::Value::Array(items));"
         )?;
         writeln!(out, "        }}")?;
     }
     if has_id || has_extension {
-        writeln!(out, "        Ok(Some(serde_json::Value::Object(object)))")?;
+        writeln!(out, "        Ok(Some({C}::Value::Object(object)))")?;
     }
     writeln!(out, "    }}\n")?;
     render_primitive_serialize(out, ty, scalar, value_required, has_id, has_extension)?;
@@ -346,7 +346,7 @@ fn render_decimal_value(out: &mut String, indent: &str, text: &str) -> fmt::Resu
     writeln!(out, "{indent}serde::Serialize::serialize(")?;
     writeln!(
         out,
-        "{indent}    &{text}.parse::<serde_json::Number>().map_err(|_| {{"
+        "{indent}    &{text}.parse::<{C}::Number>().map_err(|_| {{"
     )?;
     writeln!(
         out,
@@ -369,8 +369,8 @@ fn render_primitive_decode_value(
     value_required: bool,
 ) -> fmt::Result {
     writeln!(out, "    fn from_json_parts(")?;
-    writeln!(out, "        value: Option<&serde_json::Value>,")?;
-    writeln!(out, "        element: Option<&serde_json::Value>,")?;
+    writeln!(out, "        value: Option<&{C}::Value>,")?;
+    writeln!(out, "        element: Option<&{C}::Value>,")?;
     writeln!(out, "        path: &mut {C}::Path,")?;
     writeln!(out, "    ) -> Result<Self, {C}::DecodeError> {{")?;
     writeln!(
@@ -523,7 +523,7 @@ fn render_choice_to_json_parts(
     )?;
     writeln!(
         out,
-        "    pub fn to_json_parts(&self) -> Result<(&'static str, Option<serde_json::Value>, Option<serde_json::Value>), {C}::EncodeError> {{"
+        "    pub fn to_json_parts(&self) -> Result<(&'static str, Option<{C}::Value>, Option<{C}::Value>), {C}::EncodeError> {{"
     )?;
     writeln!(out, "        match self {{")?;
     for variant in variants {
@@ -542,7 +542,7 @@ fn render_choice_to_json_parts(
             };
             writeln!(
                 out,
-                "            Self::{}(inner) => Ok(({suffix:?}, Some(serde_json::Value::Object({C}::Json::to_json({deref})?)), None)),",
+                "            Self::{}(inner) => Ok(({suffix:?}, Some({C}::Value::Object({C}::Json::to_json({deref})?)), None)),",
                 variant.name
             )?;
         }
@@ -569,8 +569,8 @@ fn render_choice_from_json_parts(
     )?;
     writeln!(out, "    pub fn from_json_parts(")?;
     writeln!(out, "        suffix: &str,")?;
-    writeln!(out, "        value: Option<&serde_json::Value>,")?;
-    writeln!(out, "        element: Option<&serde_json::Value>,")?;
+    writeln!(out, "        value: Option<&{C}::Value>,")?;
+    writeln!(out, "        element: Option<&{C}::Value>,")?;
     writeln!(out, "        path: &mut {C}::Path,")?;
     writeln!(out, "    ) -> Result<Self, {C}::DecodeError> {{")?;
     writeln!(out, "        match suffix {{")?;
@@ -633,7 +633,7 @@ fn render_resource_enum(out: &mut String, ty: &TypeDef, resources: &[String]) ->
     )?;
     writeln!(
         out,
-        "                serde_json::Value::Object(object) => Ok(object.clone()),"
+        "                {C}::Value::Object(object) => Ok(object.clone()),"
     )?;
     writeln!(
         out,
@@ -659,7 +659,7 @@ fn render_resource_enum(out: &mut String, ty: &TypeDef, resources: &[String]) ->
     writeln!(out, "                resource_type: other.to_owned(),")?;
     writeln!(
         out,
-        "                body: serde_json::Value::Object(object.clone()),"
+        "                body: {C}::Value::Object(object.clone()),"
     )?;
     writeln!(out, "            }})),")?;
     writeln!(out, "        }}\n    }}\n}}")
@@ -692,7 +692,7 @@ fn render_to_json(
     if ty.is_resource {
         writeln!(
             out,
-            "        object.insert(std::string::String::from(\"resourceType\"), serde_json::Value::String(std::string::String::from({:?})));",
+            "        object.insert(std::string::String::from(\"resourceType\"), {C}::Value::String(std::string::String::from({:?})));",
             ty.name
         )?;
     }
@@ -732,7 +732,7 @@ fn render_field_to_json(model: &VersionModule, out: &mut String, field: &Field) 
             writeln!(out, "        if !{access}.is_empty() {{")?;
             writeln!(
                 out,
-                "            object.insert(std::string::String::from({key:?}), serde_json::Value::Array({access}.iter().map(|v| {}).collect()));",
+                "            object.insert(std::string::String::from({key:?}), {C}::Value::Array({access}.iter().map(|v| {}).collect()));",
                 scalar_to_value(scalar, "v")
             )?;
             writeln!(out, "        }}")?;
@@ -799,7 +799,7 @@ fn render_field_to_json(model: &VersionModule, out: &mut String, field: &Field) 
             };
             writeln!(
                 out,
-                "        object.insert(std::string::String::from({key:?}), serde_json::Value::Object({C}::Json::to_json({inner})?));"
+                "        object.insert(std::string::String::from({key:?}), {C}::Value::Object({C}::Json::to_json({inner})?));"
             )?;
         }
         (Shape::Complex, Cardinality::Optional) => {
@@ -811,7 +811,7 @@ fn render_field_to_json(model: &VersionModule, out: &mut String, field: &Field) 
             writeln!(out, "        if let Some(item) = &{access} {{")?;
             writeln!(
                 out,
-                "            object.insert(std::string::String::from({key:?}), serde_json::Value::Object({C}::Json::to_json({inner})?));"
+                "            object.insert(std::string::String::from({key:?}), {C}::Value::Object({C}::Json::to_json({inner})?));"
             )?;
             writeln!(out, "        }}")?;
         }
@@ -824,12 +824,12 @@ fn render_field_to_json(model: &VersionModule, out: &mut String, field: &Field) 
             writeln!(out, "            for item in &{access} {{")?;
             writeln!(
                 out,
-                "                items.push(serde_json::Value::Object({C}::Json::to_json(item)?));"
+                "                items.push({C}::Value::Object({C}::Json::to_json(item)?));"
             )?;
             writeln!(out, "            }}")?;
             writeln!(
                 out,
-                "            object.insert(std::string::String::from({key:?}), serde_json::Value::Array(items));"
+                "            object.insert(std::string::String::from({key:?}), {C}::Value::Array(items));"
             )?;
             writeln!(out, "        }}")?;
         }
@@ -888,16 +888,16 @@ fn render_from_json(
             Shape::Primitive => {
                 writeln!(
                     out,
-                    "        let mut raw_{slot}: Option<&serde_json::Value> = None;"
+                    "        let mut raw_{slot}: Option<&{C}::Value> = None;"
                 )?;
                 writeln!(
                     out,
-                    "        let mut raw_{slot}_element: Option<&serde_json::Value> = None;"
+                    "        let mut raw_{slot}_element: Option<&{C}::Value> = None;"
                 )?;
             }
             Shape::Scalar(_) | Shape::Complex => writeln!(
                 out,
-                "        let mut raw_{slot}: Option<&serde_json::Value> = None;"
+                "        let mut raw_{slot}: Option<&{C}::Value> = None;"
             )?,
         }
     }
@@ -1136,9 +1136,9 @@ struct Slot<'a> {
 
 /// Every key `ty` can write, in the order the JSON object holds them.
 ///
-// NOTE: `serde_json::Map` is a `BTreeMap` unless `preserve_order` is on
-// (<https://docs.rs/serde_json/1/serde_json/struct.Map.html>), so writing the
-// keys sorted gives the direct path the bytes the document path produces.
+// NOTE: the codec holds an object as a `BTreeMap`, which iterates in key order
+// (<https://doc.rust-lang.org/std/collections/struct.BTreeMap.html>), so writing
+// the keys sorted gives the direct path the bytes the document path produces.
 fn slots<'a>(model: &'a VersionModule, ty: &'a TypeDef, fields: &'a [Field]) -> Vec<Slot<'a>> {
     let mut slots = Vec::new();
     if ty.is_resource {
@@ -1463,7 +1463,7 @@ fn render_resource_serialize(out: &mut String, ty: &TypeDef, resources: &[String
     )?;
     writeln!(
         out,
-        "                serde_json::Value::Object(object) => serde::Serialize::serialize(object, serializer),"
+        "                {C}::Value::Object(object) => serde::Serialize::serialize(object, serializer),"
     )?;
     writeln!(
         out,

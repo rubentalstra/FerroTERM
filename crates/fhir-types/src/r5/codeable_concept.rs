@@ -40,31 +40,31 @@ impl super::super::codec::Json for CodeableConcept {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.coding.is_empty() {
             let mut items = Vec::with_capacity(self.coding.len());
             for item in &self.coding {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("coding"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.text {
@@ -82,11 +82,11 @@ impl super::super::codec::Json for CodeableConcept {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_coding: Option<&serde_json::Value> = None;
-        let mut raw_text: Option<&serde_json::Value> = None;
-        let mut raw_text_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_coding: Option<&super::super::codec::Value> = None;
+        let mut raw_text: Option<&super::super::codec::Value> = None;
+        let mut raw_text_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -176,7 +176,7 @@ impl serde::Serialize for CodeableConcept {
 
 impl<'de> serde::Deserialize<'de> for CodeableConcept {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CodeableConcept");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;

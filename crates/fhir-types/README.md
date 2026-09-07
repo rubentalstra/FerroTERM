@@ -16,6 +16,21 @@ output, change the generator and regenerate; the crate is never hand-edited.
 The terminology ecosystem overlay (the HL7 terminology ecosystem IG requirements)
 is applied at generation and marked per parameter.
 
+## JSON and decimal precision
+
+The codec reads and writes FHIR JSON through its own document model,
+`fhir_types::codec::Value`, which holds a number in the text the document
+carried. FHIR says "Do not use an IEEE type floating point type, instead use
+something that works like a true decimal"
+(<https://hl7.org/fhir/R4B/datatypes.html#decimal>), so `1.10` keeps its
+trailing zero and a decimal past `f64` precision keeps its digits, through the
+`Serialize` impls and through `Json::to_json` alike.
+
+That costs a dependent nothing. The crate turns on no `serde_json` feature that
+changes how numbers deserialize, so your own types keep reading and writing the
+JSON they always did. Reading a document uses `serde_json`'s raw value, so the
+`Deserialize` impls read `serde_json`'s format.
+
 ## Where it sits
 
 `fhir-types` is one crate of [FerroTERM](https://github.com/rubentalstra/FerroTERM),

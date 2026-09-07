@@ -2,14 +2,14 @@
 //!
 //! Every resource a client can POST is decoded here: a malformed body is a
 //! `DecodeError` the server renders as an `OperationOutcome`, never a panic
-//! (`.claude/rules/fhir-terminology.md` [F-VAL-3]).
+//! (<https://hl7.org/fhir/R4B/operationoutcome.html>).
 #![no_main]
 
 use fhir_types::codec::{Json, Path};
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {
-    let Ok(value) = serde_json::from_slice::<serde_json::Value>(data) else {
+    let Ok(value) = serde_json::from_slice::<fhir_types::codec::Value>(data) else {
         return;
     };
     let Some(object) = value.as_object() else {

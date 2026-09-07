@@ -46,24 +46,24 @@ impl super::super::codec::Json for UsageContext {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         object.insert(
             std::string::String::from("code"),
-            serde_json::Value::Object(super::super::codec::Json::to_json(&self.code)?),
+            super::super::codec::Value::Object(super::super::codec::Json::to_json(&self.code)?),
         );
         let (suffix, value, element) = self.value.to_json_parts()?;
         if let Some(value) = value {
@@ -79,9 +79,9 @@ impl super::super::codec::Json for UsageContext {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_code: Option<&super::super::codec::Value> = None;
         let mut raw_value = super::super::codec::ChoiceSlot::default();
         for (key, value) in object {
             match key.as_str() {
@@ -221,7 +221,7 @@ impl serde::Serialize for UsageContext {
 
 impl<'de> serde::Deserialize<'de> for UsageContext {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("UsageContext");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -262,36 +262,36 @@ impl UsageContextValue {
     ) -> Result<
         (
             &'static str,
-            Option<serde_json::Value>,
-            Option<serde_json::Value>,
+            Option<super::super::codec::Value>,
+            Option<super::super::codec::Value>,
         ),
         super::super::codec::EncodeError,
     > {
         match self {
             Self::CodeableConcept(inner) => Ok((
                 "CodeableConcept",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Quantity(inner) => Ok((
                 "Quantity",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Range(inner) => Ok((
                 "Range",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Reference(inner) => Ok((
                 "Reference",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
@@ -311,8 +311,8 @@ impl UsageContextValue {
     /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
     pub fn from_json_parts(
         suffix: &str,
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         match suffix {

@@ -216,18 +216,20 @@ impl super::super::codec::Json for TerminologyCapabilities {
         let mut object = super::super::codec::Object::new();
         object.insert(
             std::string::String::from("resourceType"),
-            serde_json::Value::String(std::string::String::from("TerminologyCapabilities")),
+            super::super::codec::Value::String(std::string::String::from(
+                "TerminologyCapabilities",
+            )),
         );
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if let Some(item) = &self.meta {
             object.insert(
                 std::string::String::from("meta"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.implicit_rules {
@@ -249,43 +251,43 @@ impl super::super::codec::Json for TerminologyCapabilities {
         if let Some(item) = &self.text {
             object.insert(
                 std::string::String::from("text"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if !self.contained.is_empty() {
             let mut items = Vec::with_capacity(self.contained.len());
             for item in &self.contained {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("contained"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.url {
@@ -351,13 +353,13 @@ impl super::super::codec::Json for TerminologyCapabilities {
         if !self.contact.is_empty() {
             let mut items = Vec::with_capacity(self.contact.len());
             for item in &self.contact {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("contact"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.description {
@@ -371,25 +373,25 @@ impl super::super::codec::Json for TerminologyCapabilities {
         if !self.use_context.is_empty() {
             let mut items = Vec::with_capacity(self.use_context.len());
             for item in &self.use_context {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("useContext"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.jurisdiction.is_empty() {
             let mut items = Vec::with_capacity(self.jurisdiction.len());
             for item in &self.jurisdiction {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("jurisdiction"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.purpose {
@@ -417,13 +419,13 @@ impl super::super::codec::Json for TerminologyCapabilities {
         if let Some(item) = &self.software {
             object.insert(
                 std::string::String::from("software"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.implementation {
             object.insert(
                 std::string::String::from("implementation"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.locked_date {
@@ -437,19 +439,19 @@ impl super::super::codec::Json for TerminologyCapabilities {
         if !self.code_system.is_empty() {
             let mut items = Vec::with_capacity(self.code_system.len());
             for item in &self.code_system {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("codeSystem"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.expansion {
             object.insert(
                 std::string::String::from("expansion"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.code_search {
@@ -463,19 +465,19 @@ impl super::super::codec::Json for TerminologyCapabilities {
         if let Some(item) = &self.validate_code {
             object.insert(
                 std::string::String::from("validateCode"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.translation {
             object.insert(
                 std::string::String::from("translation"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.closure {
             object.insert(
                 std::string::String::from("closure"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         Ok(object)
@@ -485,54 +487,54 @@ impl super::super::codec::Json for TerminologyCapabilities {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_meta: Option<&serde_json::Value> = None;
-        let mut raw_implicit_rules: Option<&serde_json::Value> = None;
-        let mut raw_implicit_rules_element: Option<&serde_json::Value> = None;
-        let mut raw_language: Option<&serde_json::Value> = None;
-        let mut raw_language_element: Option<&serde_json::Value> = None;
-        let mut raw_text: Option<&serde_json::Value> = None;
-        let mut raw_contained: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_url: Option<&serde_json::Value> = None;
-        let mut raw_url_element: Option<&serde_json::Value> = None;
-        let mut raw_version: Option<&serde_json::Value> = None;
-        let mut raw_version_element: Option<&serde_json::Value> = None;
-        let mut raw_name: Option<&serde_json::Value> = None;
-        let mut raw_name_element: Option<&serde_json::Value> = None;
-        let mut raw_title: Option<&serde_json::Value> = None;
-        let mut raw_title_element: Option<&serde_json::Value> = None;
-        let mut raw_status: Option<&serde_json::Value> = None;
-        let mut raw_status_element: Option<&serde_json::Value> = None;
-        let mut raw_experimental: Option<&serde_json::Value> = None;
-        let mut raw_experimental_element: Option<&serde_json::Value> = None;
-        let mut raw_date: Option<&serde_json::Value> = None;
-        let mut raw_date_element: Option<&serde_json::Value> = None;
-        let mut raw_publisher: Option<&serde_json::Value> = None;
-        let mut raw_publisher_element: Option<&serde_json::Value> = None;
-        let mut raw_contact: Option<&serde_json::Value> = None;
-        let mut raw_description: Option<&serde_json::Value> = None;
-        let mut raw_description_element: Option<&serde_json::Value> = None;
-        let mut raw_use_context: Option<&serde_json::Value> = None;
-        let mut raw_jurisdiction: Option<&serde_json::Value> = None;
-        let mut raw_purpose: Option<&serde_json::Value> = None;
-        let mut raw_purpose_element: Option<&serde_json::Value> = None;
-        let mut raw_copyright: Option<&serde_json::Value> = None;
-        let mut raw_copyright_element: Option<&serde_json::Value> = None;
-        let mut raw_kind: Option<&serde_json::Value> = None;
-        let mut raw_kind_element: Option<&serde_json::Value> = None;
-        let mut raw_software: Option<&serde_json::Value> = None;
-        let mut raw_implementation: Option<&serde_json::Value> = None;
-        let mut raw_locked_date: Option<&serde_json::Value> = None;
-        let mut raw_locked_date_element: Option<&serde_json::Value> = None;
-        let mut raw_code_system: Option<&serde_json::Value> = None;
-        let mut raw_expansion: Option<&serde_json::Value> = None;
-        let mut raw_code_search: Option<&serde_json::Value> = None;
-        let mut raw_code_search_element: Option<&serde_json::Value> = None;
-        let mut raw_validate_code: Option<&serde_json::Value> = None;
-        let mut raw_translation: Option<&serde_json::Value> = None;
-        let mut raw_closure: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_meta: Option<&super::super::codec::Value> = None;
+        let mut raw_implicit_rules: Option<&super::super::codec::Value> = None;
+        let mut raw_implicit_rules_element: Option<&super::super::codec::Value> = None;
+        let mut raw_language: Option<&super::super::codec::Value> = None;
+        let mut raw_language_element: Option<&super::super::codec::Value> = None;
+        let mut raw_text: Option<&super::super::codec::Value> = None;
+        let mut raw_contained: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_url: Option<&super::super::codec::Value> = None;
+        let mut raw_url_element: Option<&super::super::codec::Value> = None;
+        let mut raw_version: Option<&super::super::codec::Value> = None;
+        let mut raw_version_element: Option<&super::super::codec::Value> = None;
+        let mut raw_name: Option<&super::super::codec::Value> = None;
+        let mut raw_name_element: Option<&super::super::codec::Value> = None;
+        let mut raw_title: Option<&super::super::codec::Value> = None;
+        let mut raw_title_element: Option<&super::super::codec::Value> = None;
+        let mut raw_status: Option<&super::super::codec::Value> = None;
+        let mut raw_status_element: Option<&super::super::codec::Value> = None;
+        let mut raw_experimental: Option<&super::super::codec::Value> = None;
+        let mut raw_experimental_element: Option<&super::super::codec::Value> = None;
+        let mut raw_date: Option<&super::super::codec::Value> = None;
+        let mut raw_date_element: Option<&super::super::codec::Value> = None;
+        let mut raw_publisher: Option<&super::super::codec::Value> = None;
+        let mut raw_publisher_element: Option<&super::super::codec::Value> = None;
+        let mut raw_contact: Option<&super::super::codec::Value> = None;
+        let mut raw_description: Option<&super::super::codec::Value> = None;
+        let mut raw_description_element: Option<&super::super::codec::Value> = None;
+        let mut raw_use_context: Option<&super::super::codec::Value> = None;
+        let mut raw_jurisdiction: Option<&super::super::codec::Value> = None;
+        let mut raw_purpose: Option<&super::super::codec::Value> = None;
+        let mut raw_purpose_element: Option<&super::super::codec::Value> = None;
+        let mut raw_copyright: Option<&super::super::codec::Value> = None;
+        let mut raw_copyright_element: Option<&super::super::codec::Value> = None;
+        let mut raw_kind: Option<&super::super::codec::Value> = None;
+        let mut raw_kind_element: Option<&super::super::codec::Value> = None;
+        let mut raw_software: Option<&super::super::codec::Value> = None;
+        let mut raw_implementation: Option<&super::super::codec::Value> = None;
+        let mut raw_locked_date: Option<&super::super::codec::Value> = None;
+        let mut raw_locked_date_element: Option<&super::super::codec::Value> = None;
+        let mut raw_code_system: Option<&super::super::codec::Value> = None;
+        let mut raw_expansion: Option<&super::super::codec::Value> = None;
+        let mut raw_code_search: Option<&super::super::codec::Value> = None;
+        let mut raw_code_search_element: Option<&super::super::codec::Value> = None;
+        let mut raw_validate_code: Option<&super::super::codec::Value> = None;
+        let mut raw_translation: Option<&super::super::codec::Value> = None;
+        let mut raw_closure: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "resourceType" => {
@@ -1087,7 +1089,7 @@ impl serde::Serialize for TerminologyCapabilities {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilities {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilities");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -1140,31 +1142,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesClosure {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.translation {
@@ -1182,11 +1184,11 @@ impl super::super::codec::Json for TerminologyCapabilitiesClosure {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_translation: Option<&serde_json::Value> = None;
-        let mut raw_translation_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_translation: Option<&super::super::codec::Value> = None;
+        let mut raw_translation_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -1284,7 +1286,7 @@ impl serde::Serialize for TerminologyCapabilitiesClosure {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesClosure {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilitiesClosure");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -1346,31 +1348,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesCodeSystem {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.uri {
@@ -1384,13 +1386,13 @@ impl super::super::codec::Json for TerminologyCapabilitiesCodeSystem {
         if !self.version.is_empty() {
             let mut items = Vec::with_capacity(self.version.len());
             for item in &self.version {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("version"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.subsumption {
@@ -1408,14 +1410,14 @@ impl super::super::codec::Json for TerminologyCapabilitiesCodeSystem {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_uri: Option<&serde_json::Value> = None;
-        let mut raw_uri_element: Option<&serde_json::Value> = None;
-        let mut raw_version: Option<&serde_json::Value> = None;
-        let mut raw_subsumption: Option<&serde_json::Value> = None;
-        let mut raw_subsumption_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_uri: Option<&super::super::codec::Value> = None;
+        let mut raw_uri_element: Option<&super::super::codec::Value> = None;
+        let mut raw_version: Option<&super::super::codec::Value> = None;
+        let mut raw_subsumption: Option<&super::super::codec::Value> = None;
+        let mut raw_subsumption_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -1547,7 +1549,7 @@ impl serde::Serialize for TerminologyCapabilitiesCodeSystem {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesCodeSystem {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilitiesCodeSystem");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -1614,31 +1616,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesCodeSystemVersion {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.code {
@@ -1675,13 +1677,13 @@ impl super::super::codec::Json for TerminologyCapabilitiesCodeSystemVersion {
         if !self.filter.is_empty() {
             let mut items = Vec::with_capacity(self.filter.len());
             for item in &self.filter {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("filter"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.property.is_empty() {
@@ -1698,20 +1700,20 @@ impl super::super::codec::Json for TerminologyCapabilitiesCodeSystemVersion {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_code: Option<&serde_json::Value> = None;
-        let mut raw_code_element: Option<&serde_json::Value> = None;
-        let mut raw_is_default: Option<&serde_json::Value> = None;
-        let mut raw_is_default_element: Option<&serde_json::Value> = None;
-        let mut raw_compositional: Option<&serde_json::Value> = None;
-        let mut raw_compositional_element: Option<&serde_json::Value> = None;
-        let mut raw_language: Option<&serde_json::Value> = None;
-        let mut raw_language_element: Option<&serde_json::Value> = None;
-        let mut raw_filter: Option<&serde_json::Value> = None;
-        let mut raw_property: Option<&serde_json::Value> = None;
-        let mut raw_property_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_code: Option<&super::super::codec::Value> = None;
+        let mut raw_code_element: Option<&super::super::codec::Value> = None;
+        let mut raw_is_default: Option<&super::super::codec::Value> = None;
+        let mut raw_is_default_element: Option<&super::super::codec::Value> = None;
+        let mut raw_compositional: Option<&super::super::codec::Value> = None;
+        let mut raw_compositional_element: Option<&super::super::codec::Value> = None;
+        let mut raw_language: Option<&super::super::codec::Value> = None;
+        let mut raw_language_element: Option<&super::super::codec::Value> = None;
+        let mut raw_filter: Option<&super::super::codec::Value> = None;
+        let mut raw_property: Option<&super::super::codec::Value> = None;
+        let mut raw_property_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -1888,7 +1890,7 @@ impl serde::Serialize for TerminologyCapabilitiesCodeSystemVersion {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesCodeSystemVersion {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilitiesCodeSystemVersion");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -1940,31 +1942,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesCodeSystemVersionFilte
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.code)? {
@@ -1987,13 +1989,13 @@ impl super::super::codec::Json for TerminologyCapabilitiesCodeSystemVersionFilte
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_code: Option<&serde_json::Value> = None;
-        let mut raw_code_element: Option<&serde_json::Value> = None;
-        let mut raw_op: Option<&serde_json::Value> = None;
-        let mut raw_op_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_code: Option<&super::super::codec::Value> = None;
+        let mut raw_code_element: Option<&super::super::codec::Value> = None;
+        let mut raw_op: Option<&super::super::codec::Value> = None;
+        let mut raw_op_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -2099,7 +2101,7 @@ impl serde::Serialize for TerminologyCapabilitiesCodeSystemVersionFilter {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesCodeSystemVersionFilter {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path =
             super::super::codec::Path::root("TerminologyCapabilitiesCodeSystemVersionFilter");
         let object =
@@ -2159,31 +2161,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesExpansion {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.hierarchical {
@@ -2213,13 +2215,13 @@ impl super::super::codec::Json for TerminologyCapabilitiesExpansion {
         if !self.parameter.is_empty() {
             let mut items = Vec::with_capacity(self.parameter.len());
             for item in &self.parameter {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("parameter"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.text_filter {
@@ -2237,18 +2239,18 @@ impl super::super::codec::Json for TerminologyCapabilitiesExpansion {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_hierarchical: Option<&serde_json::Value> = None;
-        let mut raw_hierarchical_element: Option<&serde_json::Value> = None;
-        let mut raw_paging: Option<&serde_json::Value> = None;
-        let mut raw_paging_element: Option<&serde_json::Value> = None;
-        let mut raw_incomplete: Option<&serde_json::Value> = None;
-        let mut raw_incomplete_element: Option<&serde_json::Value> = None;
-        let mut raw_parameter: Option<&serde_json::Value> = None;
-        let mut raw_text_filter: Option<&serde_json::Value> = None;
-        let mut raw_text_filter_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_hierarchical: Option<&super::super::codec::Value> = None;
+        let mut raw_hierarchical_element: Option<&super::super::codec::Value> = None;
+        let mut raw_paging: Option<&super::super::codec::Value> = None;
+        let mut raw_paging_element: Option<&super::super::codec::Value> = None;
+        let mut raw_incomplete: Option<&super::super::codec::Value> = None;
+        let mut raw_incomplete_element: Option<&super::super::codec::Value> = None;
+        let mut raw_parameter: Option<&super::super::codec::Value> = None;
+        let mut raw_text_filter: Option<&super::super::codec::Value> = None;
+        let mut raw_text_filter_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -2410,7 +2412,7 @@ impl serde::Serialize for TerminologyCapabilitiesExpansion {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesExpansion {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilitiesExpansion");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -2462,31 +2464,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesExpansionParameter {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.name)? {
@@ -2510,13 +2512,13 @@ impl super::super::codec::Json for TerminologyCapabilitiesExpansionParameter {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_name: Option<&serde_json::Value> = None;
-        let mut raw_name_element: Option<&serde_json::Value> = None;
-        let mut raw_documentation: Option<&serde_json::Value> = None;
-        let mut raw_documentation_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_name: Option<&super::super::codec::Value> = None;
+        let mut raw_name_element: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -2622,7 +2624,7 @@ impl serde::Serialize for TerminologyCapabilitiesExpansionParameter {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesExpansionParameter {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilitiesExpansionParameter");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -2683,31 +2685,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesImplementation {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.description)? {
@@ -2731,13 +2733,13 @@ impl super::super::codec::Json for TerminologyCapabilitiesImplementation {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_description: Option<&serde_json::Value> = None;
-        let mut raw_description_element: Option<&serde_json::Value> = None;
-        let mut raw_url: Option<&serde_json::Value> = None;
-        let mut raw_url_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_description: Option<&super::super::codec::Value> = None;
+        let mut raw_description_element: Option<&super::super::codec::Value> = None;
+        let mut raw_url: Option<&super::super::codec::Value> = None;
+        let mut raw_url_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -2847,7 +2849,7 @@ impl serde::Serialize for TerminologyCapabilitiesImplementation {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesImplementation {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilitiesImplementation");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -2907,31 +2909,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesSoftware {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.name)? {
@@ -2955,13 +2957,13 @@ impl super::super::codec::Json for TerminologyCapabilitiesSoftware {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_name: Option<&serde_json::Value> = None;
-        let mut raw_name_element: Option<&serde_json::Value> = None;
-        let mut raw_version: Option<&serde_json::Value> = None;
-        let mut raw_version_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_name: Option<&super::super::codec::Value> = None;
+        let mut raw_name_element: Option<&super::super::codec::Value> = None;
+        let mut raw_version: Option<&super::super::codec::Value> = None;
+        let mut raw_version_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -3067,7 +3069,7 @@ impl serde::Serialize for TerminologyCapabilitiesSoftware {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesSoftware {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilitiesSoftware");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -3118,31 +3120,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesTranslation {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.needs_map)? {
@@ -3158,11 +3160,11 @@ impl super::super::codec::Json for TerminologyCapabilitiesTranslation {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_needs_map: Option<&serde_json::Value> = None;
-        let mut raw_needs_map_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_needs_map: Option<&super::super::codec::Value> = None;
+        let mut raw_needs_map_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -3257,7 +3259,7 @@ impl serde::Serialize for TerminologyCapabilitiesTranslation {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesTranslation {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilitiesTranslation");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -3309,31 +3311,31 @@ impl super::super::codec::Json for TerminologyCapabilitiesValidateCode {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.translations)? {
@@ -3349,11 +3351,11 @@ impl super::super::codec::Json for TerminologyCapabilitiesValidateCode {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_translations: Option<&serde_json::Value> = None;
-        let mut raw_translations_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_translations: Option<&super::super::codec::Value> = None;
+        let mut raw_translations_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -3448,7 +3450,7 @@ impl serde::Serialize for TerminologyCapabilitiesValidateCode {
 
 impl<'de> serde::Deserialize<'de> for TerminologyCapabilitiesValidateCode {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TerminologyCapabilitiesValidateCode");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;

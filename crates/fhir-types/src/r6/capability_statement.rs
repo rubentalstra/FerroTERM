@@ -276,18 +276,18 @@ impl super::super::codec::Json for CapabilityStatement {
         let mut object = super::super::codec::Object::new();
         object.insert(
             std::string::String::from("resourceType"),
-            serde_json::Value::String(std::string::String::from("CapabilityStatement")),
+            super::super::codec::Value::String(std::string::String::from("CapabilityStatement")),
         );
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if let Some(item) = &self.meta {
             object.insert(
                 std::string::String::from("meta"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.implicit_rules {
@@ -309,43 +309,43 @@ impl super::super::codec::Json for CapabilityStatement {
         if let Some(item) = &self.text {
             object.insert(
                 std::string::String::from("text"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if !self.contained.is_empty() {
             let mut items = Vec::with_capacity(self.contained.len());
             for item in &self.contained {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("contained"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.url {
@@ -359,13 +359,13 @@ impl super::super::codec::Json for CapabilityStatement {
         if !self.identifier.is_empty() {
             let mut items = Vec::with_capacity(self.identifier.len());
             for item in &self.identifier {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("identifier"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.version {
@@ -432,13 +432,13 @@ impl super::super::codec::Json for CapabilityStatement {
         if !self.contact.is_empty() {
             let mut items = Vec::with_capacity(self.contact.len());
             for item in &self.contact {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("contact"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.description {
@@ -452,13 +452,13 @@ impl super::super::codec::Json for CapabilityStatement {
         if !self.use_context.is_empty() {
             let mut items = Vec::with_capacity(self.use_context.len());
             for item in &self.use_context {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("useContext"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.actor_definition.is_empty() {
@@ -471,13 +471,13 @@ impl super::super::codec::Json for CapabilityStatement {
         if !self.jurisdiction.is_empty() {
             let mut items = Vec::with_capacity(self.jurisdiction.len());
             for item in &self.jurisdiction {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("jurisdiction"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.purpose {
@@ -527,13 +527,13 @@ impl super::super::codec::Json for CapabilityStatement {
         if let Some(item) = &self.software {
             object.insert(
                 std::string::String::from("software"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.implementation {
             object.insert(
                 std::string::String::from("implementation"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.fhir_version)? {
@@ -574,37 +574,37 @@ impl super::super::codec::Json for CapabilityStatement {
         if !self.rest.is_empty() {
             let mut items = Vec::with_capacity(self.rest.len());
             for item in &self.rest {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("rest"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.messaging.is_empty() {
             let mut items = Vec::with_capacity(self.messaging.len());
             for item in &self.messaging {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("messaging"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.document.is_empty() {
             let mut items = Vec::with_capacity(self.document.len());
             for item in &self.document {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("document"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         Ok(object)
@@ -614,68 +614,68 @@ impl super::super::codec::Json for CapabilityStatement {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_meta: Option<&serde_json::Value> = None;
-        let mut raw_implicit_rules: Option<&serde_json::Value> = None;
-        let mut raw_implicit_rules_element: Option<&serde_json::Value> = None;
-        let mut raw_language: Option<&serde_json::Value> = None;
-        let mut raw_language_element: Option<&serde_json::Value> = None;
-        let mut raw_text: Option<&serde_json::Value> = None;
-        let mut raw_contained: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_url: Option<&serde_json::Value> = None;
-        let mut raw_url_element: Option<&serde_json::Value> = None;
-        let mut raw_identifier: Option<&serde_json::Value> = None;
-        let mut raw_version: Option<&serde_json::Value> = None;
-        let mut raw_version_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_meta: Option<&super::super::codec::Value> = None;
+        let mut raw_implicit_rules: Option<&super::super::codec::Value> = None;
+        let mut raw_implicit_rules_element: Option<&super::super::codec::Value> = None;
+        let mut raw_language: Option<&super::super::codec::Value> = None;
+        let mut raw_language_element: Option<&super::super::codec::Value> = None;
+        let mut raw_text: Option<&super::super::codec::Value> = None;
+        let mut raw_contained: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_url: Option<&super::super::codec::Value> = None;
+        let mut raw_url_element: Option<&super::super::codec::Value> = None;
+        let mut raw_identifier: Option<&super::super::codec::Value> = None;
+        let mut raw_version: Option<&super::super::codec::Value> = None;
+        let mut raw_version_element: Option<&super::super::codec::Value> = None;
         let mut raw_version_algorithm = super::super::codec::ChoiceSlot::default();
-        let mut raw_name: Option<&serde_json::Value> = None;
-        let mut raw_name_element: Option<&serde_json::Value> = None;
-        let mut raw_title: Option<&serde_json::Value> = None;
-        let mut raw_title_element: Option<&serde_json::Value> = None;
-        let mut raw_status: Option<&serde_json::Value> = None;
-        let mut raw_status_element: Option<&serde_json::Value> = None;
-        let mut raw_experimental: Option<&serde_json::Value> = None;
-        let mut raw_experimental_element: Option<&serde_json::Value> = None;
-        let mut raw_date: Option<&serde_json::Value> = None;
-        let mut raw_date_element: Option<&serde_json::Value> = None;
-        let mut raw_publisher: Option<&serde_json::Value> = None;
-        let mut raw_publisher_element: Option<&serde_json::Value> = None;
-        let mut raw_contact: Option<&serde_json::Value> = None;
-        let mut raw_description: Option<&serde_json::Value> = None;
-        let mut raw_description_element: Option<&serde_json::Value> = None;
-        let mut raw_use_context: Option<&serde_json::Value> = None;
-        let mut raw_actor_definition: Option<&serde_json::Value> = None;
-        let mut raw_actor_definition_element: Option<&serde_json::Value> = None;
-        let mut raw_jurisdiction: Option<&serde_json::Value> = None;
-        let mut raw_purpose: Option<&serde_json::Value> = None;
-        let mut raw_purpose_element: Option<&serde_json::Value> = None;
-        let mut raw_copyright: Option<&serde_json::Value> = None;
-        let mut raw_copyright_element: Option<&serde_json::Value> = None;
-        let mut raw_copyright_label: Option<&serde_json::Value> = None;
-        let mut raw_copyright_label_element: Option<&serde_json::Value> = None;
-        let mut raw_kind: Option<&serde_json::Value> = None;
-        let mut raw_kind_element: Option<&serde_json::Value> = None;
-        let mut raw_instantiates: Option<&serde_json::Value> = None;
-        let mut raw_instantiates_element: Option<&serde_json::Value> = None;
-        let mut raw_imports: Option<&serde_json::Value> = None;
-        let mut raw_imports_element: Option<&serde_json::Value> = None;
-        let mut raw_software: Option<&serde_json::Value> = None;
-        let mut raw_implementation: Option<&serde_json::Value> = None;
-        let mut raw_fhir_version: Option<&serde_json::Value> = None;
-        let mut raw_fhir_version_element: Option<&serde_json::Value> = None;
-        let mut raw_format: Option<&serde_json::Value> = None;
-        let mut raw_format_element: Option<&serde_json::Value> = None;
-        let mut raw_patch_format: Option<&serde_json::Value> = None;
-        let mut raw_patch_format_element: Option<&serde_json::Value> = None;
-        let mut raw_accept_language: Option<&serde_json::Value> = None;
-        let mut raw_accept_language_element: Option<&serde_json::Value> = None;
-        let mut raw_implementation_guide: Option<&serde_json::Value> = None;
-        let mut raw_implementation_guide_element: Option<&serde_json::Value> = None;
-        let mut raw_rest: Option<&serde_json::Value> = None;
-        let mut raw_messaging: Option<&serde_json::Value> = None;
-        let mut raw_document: Option<&serde_json::Value> = None;
+        let mut raw_name: Option<&super::super::codec::Value> = None;
+        let mut raw_name_element: Option<&super::super::codec::Value> = None;
+        let mut raw_title: Option<&super::super::codec::Value> = None;
+        let mut raw_title_element: Option<&super::super::codec::Value> = None;
+        let mut raw_status: Option<&super::super::codec::Value> = None;
+        let mut raw_status_element: Option<&super::super::codec::Value> = None;
+        let mut raw_experimental: Option<&super::super::codec::Value> = None;
+        let mut raw_experimental_element: Option<&super::super::codec::Value> = None;
+        let mut raw_date: Option<&super::super::codec::Value> = None;
+        let mut raw_date_element: Option<&super::super::codec::Value> = None;
+        let mut raw_publisher: Option<&super::super::codec::Value> = None;
+        let mut raw_publisher_element: Option<&super::super::codec::Value> = None;
+        let mut raw_contact: Option<&super::super::codec::Value> = None;
+        let mut raw_description: Option<&super::super::codec::Value> = None;
+        let mut raw_description_element: Option<&super::super::codec::Value> = None;
+        let mut raw_use_context: Option<&super::super::codec::Value> = None;
+        let mut raw_actor_definition: Option<&super::super::codec::Value> = None;
+        let mut raw_actor_definition_element: Option<&super::super::codec::Value> = None;
+        let mut raw_jurisdiction: Option<&super::super::codec::Value> = None;
+        let mut raw_purpose: Option<&super::super::codec::Value> = None;
+        let mut raw_purpose_element: Option<&super::super::codec::Value> = None;
+        let mut raw_copyright: Option<&super::super::codec::Value> = None;
+        let mut raw_copyright_element: Option<&super::super::codec::Value> = None;
+        let mut raw_copyright_label: Option<&super::super::codec::Value> = None;
+        let mut raw_copyright_label_element: Option<&super::super::codec::Value> = None;
+        let mut raw_kind: Option<&super::super::codec::Value> = None;
+        let mut raw_kind_element: Option<&super::super::codec::Value> = None;
+        let mut raw_instantiates: Option<&super::super::codec::Value> = None;
+        let mut raw_instantiates_element: Option<&super::super::codec::Value> = None;
+        let mut raw_imports: Option<&super::super::codec::Value> = None;
+        let mut raw_imports_element: Option<&super::super::codec::Value> = None;
+        let mut raw_software: Option<&super::super::codec::Value> = None;
+        let mut raw_implementation: Option<&super::super::codec::Value> = None;
+        let mut raw_fhir_version: Option<&super::super::codec::Value> = None;
+        let mut raw_fhir_version_element: Option<&super::super::codec::Value> = None;
+        let mut raw_format: Option<&super::super::codec::Value> = None;
+        let mut raw_format_element: Option<&super::super::codec::Value> = None;
+        let mut raw_patch_format: Option<&super::super::codec::Value> = None;
+        let mut raw_patch_format_element: Option<&super::super::codec::Value> = None;
+        let mut raw_accept_language: Option<&super::super::codec::Value> = None;
+        let mut raw_accept_language_element: Option<&super::super::codec::Value> = None;
+        let mut raw_implementation_guide: Option<&super::super::codec::Value> = None;
+        let mut raw_implementation_guide_element: Option<&super::super::codec::Value> = None;
+        let mut raw_rest: Option<&super::super::codec::Value> = None;
+        let mut raw_messaging: Option<&super::super::codec::Value> = None;
+        let mut raw_document: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "resourceType" => {
@@ -1380,7 +1380,7 @@ impl serde::Serialize for CapabilityStatement {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatement {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatement");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -1446,31 +1446,31 @@ impl super::super::codec::Json for CapabilityStatementDocument {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.mode)? {
@@ -1500,15 +1500,15 @@ impl super::super::codec::Json for CapabilityStatementDocument {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_mode: Option<&serde_json::Value> = None;
-        let mut raw_mode_element: Option<&serde_json::Value> = None;
-        let mut raw_documentation: Option<&serde_json::Value> = None;
-        let mut raw_documentation_element: Option<&serde_json::Value> = None;
-        let mut raw_profile: Option<&serde_json::Value> = None;
-        let mut raw_profile_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_mode: Option<&super::super::codec::Value> = None;
+        let mut raw_mode_element: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation_element: Option<&super::super::codec::Value> = None;
+        let mut raw_profile: Option<&super::super::codec::Value> = None;
+        let mut raw_profile_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -1622,7 +1622,7 @@ impl serde::Serialize for CapabilityStatementDocument {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementDocument {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementDocument");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -1689,31 +1689,31 @@ impl super::super::codec::Json for CapabilityStatementImplementation {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.description)? {
@@ -1733,7 +1733,7 @@ impl super::super::codec::Json for CapabilityStatementImplementation {
         if let Some(item) = &self.custodian {
             object.insert(
                 std::string::String::from("custodian"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         Ok(object)
@@ -1743,14 +1743,14 @@ impl super::super::codec::Json for CapabilityStatementImplementation {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_description: Option<&serde_json::Value> = None;
-        let mut raw_description_element: Option<&serde_json::Value> = None;
-        let mut raw_url: Option<&serde_json::Value> = None;
-        let mut raw_url_element: Option<&serde_json::Value> = None;
-        let mut raw_custodian: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_description: Option<&super::super::codec::Value> = None;
+        let mut raw_description_element: Option<&super::super::codec::Value> = None;
+        let mut raw_url: Option<&super::super::codec::Value> = None;
+        let mut raw_url_element: Option<&super::super::codec::Value> = None;
+        let mut raw_custodian: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -1878,7 +1878,7 @@ impl serde::Serialize for CapabilityStatementImplementation {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementImplementation {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementImplementation");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -1949,43 +1949,43 @@ impl super::super::codec::Json for CapabilityStatementMessaging {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.endpoint.is_empty() {
             let mut items = Vec::with_capacity(self.endpoint.len());
             for item in &self.endpoint {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("endpoint"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.reliable_cache {
@@ -2007,13 +2007,13 @@ impl super::super::codec::Json for CapabilityStatementMessaging {
         if !self.supported_message.is_empty() {
             let mut items = Vec::with_capacity(self.supported_message.len());
             for item in &self.supported_message {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("supportedMessage"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         Ok(object)
@@ -2023,15 +2023,15 @@ impl super::super::codec::Json for CapabilityStatementMessaging {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_endpoint: Option<&serde_json::Value> = None;
-        let mut raw_reliable_cache: Option<&serde_json::Value> = None;
-        let mut raw_reliable_cache_element: Option<&serde_json::Value> = None;
-        let mut raw_documentation: Option<&serde_json::Value> = None;
-        let mut raw_documentation_element: Option<&serde_json::Value> = None;
-        let mut raw_supported_message: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_endpoint: Option<&super::super::codec::Value> = None;
+        let mut raw_reliable_cache: Option<&super::super::codec::Value> = None;
+        let mut raw_reliable_cache_element: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation_element: Option<&super::super::codec::Value> = None;
+        let mut raw_supported_message: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -2190,7 +2190,7 @@ impl serde::Serialize for CapabilityStatementMessaging {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementMessaging {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementMessaging");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -2251,36 +2251,36 @@ impl super::super::codec::Json for CapabilityStatementMessagingEndpoint {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         object.insert(
             std::string::String::from("protocol"),
-            serde_json::Value::Object(super::super::codec::Json::to_json(&self.protocol)?),
+            super::super::codec::Value::Object(super::super::codec::Json::to_json(&self.protocol)?),
         );
         if let Some(v) = super::super::codec::Primitive::value_json(&self.address)? {
             object.insert(std::string::String::from("address"), v);
@@ -2295,12 +2295,12 @@ impl super::super::codec::Json for CapabilityStatementMessagingEndpoint {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_protocol: Option<&serde_json::Value> = None;
-        let mut raw_address: Option<&serde_json::Value> = None;
-        let mut raw_address_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_protocol: Option<&super::super::codec::Value> = None;
+        let mut raw_address: Option<&super::super::codec::Value> = None;
+        let mut raw_address_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -2405,7 +2405,7 @@ impl serde::Serialize for CapabilityStatementMessagingEndpoint {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementMessagingEndpoint {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementMessagingEndpoint");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -2466,31 +2466,31 @@ impl super::super::codec::Json for CapabilityStatementMessagingSupportedMessage 
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.mode)? {
@@ -2512,13 +2512,13 @@ impl super::super::codec::Json for CapabilityStatementMessagingSupportedMessage 
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_mode: Option<&serde_json::Value> = None;
-        let mut raw_mode_element: Option<&serde_json::Value> = None;
-        let mut raw_definition: Option<&serde_json::Value> = None;
-        let mut raw_definition_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_mode: Option<&super::super::codec::Value> = None;
+        let mut raw_mode_element: Option<&super::super::codec::Value> = None;
+        let mut raw_definition: Option<&super::super::codec::Value> = None;
+        let mut raw_definition_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -2621,7 +2621,7 @@ impl serde::Serialize for CapabilityStatementMessagingSupportedMessage {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementMessagingSupportedMessage {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path =
             super::super::codec::Path::root("CapabilityStatementMessagingSupportedMessage");
         let object =
@@ -2715,31 +2715,31 @@ impl super::super::codec::Json for CapabilityStatementRest {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.mode)? {
@@ -2759,55 +2759,55 @@ impl super::super::codec::Json for CapabilityStatementRest {
         if let Some(item) = &self.security {
             object.insert(
                 std::string::String::from("security"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if !self.resource.is_empty() {
             let mut items = Vec::with_capacity(self.resource.len());
             for item in &self.resource {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("resource"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.interaction.is_empty() {
             let mut items = Vec::with_capacity(self.interaction.len());
             for item in &self.interaction {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("interaction"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.search_param.is_empty() {
             let mut items = Vec::with_capacity(self.search_param.len());
             for item in &self.search_param {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("searchParam"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.operation.is_empty() {
             let mut items = Vec::with_capacity(self.operation.len());
             for item in &self.operation {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("operation"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.compartment.is_empty() {
@@ -2824,20 +2824,20 @@ impl super::super::codec::Json for CapabilityStatementRest {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_mode: Option<&serde_json::Value> = None;
-        let mut raw_mode_element: Option<&serde_json::Value> = None;
-        let mut raw_documentation: Option<&serde_json::Value> = None;
-        let mut raw_documentation_element: Option<&serde_json::Value> = None;
-        let mut raw_security: Option<&serde_json::Value> = None;
-        let mut raw_resource: Option<&serde_json::Value> = None;
-        let mut raw_interaction: Option<&serde_json::Value> = None;
-        let mut raw_search_param: Option<&serde_json::Value> = None;
-        let mut raw_operation: Option<&serde_json::Value> = None;
-        let mut raw_compartment: Option<&serde_json::Value> = None;
-        let mut raw_compartment_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_mode: Option<&super::super::codec::Value> = None;
+        let mut raw_mode_element: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation_element: Option<&super::super::codec::Value> = None;
+        let mut raw_security: Option<&super::super::codec::Value> = None;
+        let mut raw_resource: Option<&super::super::codec::Value> = None;
+        let mut raw_interaction: Option<&super::super::codec::Value> = None;
+        let mut raw_search_param: Option<&super::super::codec::Value> = None;
+        let mut raw_operation: Option<&super::super::codec::Value> = None;
+        let mut raw_compartment: Option<&super::super::codec::Value> = None;
+        let mut raw_compartment_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -3052,7 +3052,7 @@ impl serde::Serialize for CapabilityStatementRest {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementRest {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementRest");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -3112,31 +3112,31 @@ impl super::super::codec::Json for CapabilityStatementRestInteraction {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.code)? {
@@ -3160,13 +3160,13 @@ impl super::super::codec::Json for CapabilityStatementRestInteraction {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_code: Option<&serde_json::Value> = None;
-        let mut raw_code_element: Option<&serde_json::Value> = None;
-        let mut raw_documentation: Option<&serde_json::Value> = None;
-        let mut raw_documentation_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_code: Option<&super::super::codec::Value> = None;
+        let mut raw_code_element: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -3272,7 +3272,7 @@ impl serde::Serialize for CapabilityStatementRestInteraction {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementRestInteraction {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementRestInteraction");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -3428,31 +3428,31 @@ impl super::super::codec::Json for CapabilityStatementRestResource {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.r#type)? {
@@ -3496,13 +3496,13 @@ impl super::super::codec::Json for CapabilityStatementRestResource {
         if !self.interaction.is_empty() {
             let mut items = Vec::with_capacity(self.interaction.len());
             for item in &self.interaction {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("interaction"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.versioning {
@@ -3594,25 +3594,25 @@ impl super::super::codec::Json for CapabilityStatementRestResource {
         if !self.search_param.is_empty() {
             let mut items = Vec::with_capacity(self.search_param.len());
             for item in &self.search_param {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("searchParam"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.operation.is_empty() {
             let mut items = Vec::with_capacity(self.operation.len());
             for item in &self.operation {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("operation"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         Ok(object)
@@ -3622,44 +3622,44 @@ impl super::super::codec::Json for CapabilityStatementRestResource {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_type: Option<&serde_json::Value> = None;
-        let mut raw_type_element: Option<&serde_json::Value> = None;
-        let mut raw_definition: Option<&serde_json::Value> = None;
-        let mut raw_definition_element: Option<&serde_json::Value> = None;
-        let mut raw_profile: Option<&serde_json::Value> = None;
-        let mut raw_profile_element: Option<&serde_json::Value> = None;
-        let mut raw_supported_profile: Option<&serde_json::Value> = None;
-        let mut raw_supported_profile_element: Option<&serde_json::Value> = None;
-        let mut raw_documentation: Option<&serde_json::Value> = None;
-        let mut raw_documentation_element: Option<&serde_json::Value> = None;
-        let mut raw_interaction: Option<&serde_json::Value> = None;
-        let mut raw_versioning: Option<&serde_json::Value> = None;
-        let mut raw_versioning_element: Option<&serde_json::Value> = None;
-        let mut raw_read_history: Option<&serde_json::Value> = None;
-        let mut raw_read_history_element: Option<&serde_json::Value> = None;
-        let mut raw_update_create: Option<&serde_json::Value> = None;
-        let mut raw_update_create_element: Option<&serde_json::Value> = None;
-        let mut raw_conditional_create: Option<&serde_json::Value> = None;
-        let mut raw_conditional_create_element: Option<&serde_json::Value> = None;
-        let mut raw_conditional_read: Option<&serde_json::Value> = None;
-        let mut raw_conditional_read_element: Option<&serde_json::Value> = None;
-        let mut raw_conditional_update: Option<&serde_json::Value> = None;
-        let mut raw_conditional_update_element: Option<&serde_json::Value> = None;
-        let mut raw_conditional_patch: Option<&serde_json::Value> = None;
-        let mut raw_conditional_patch_element: Option<&serde_json::Value> = None;
-        let mut raw_conditional_delete: Option<&serde_json::Value> = None;
-        let mut raw_conditional_delete_element: Option<&serde_json::Value> = None;
-        let mut raw_reference_policy: Option<&serde_json::Value> = None;
-        let mut raw_reference_policy_element: Option<&serde_json::Value> = None;
-        let mut raw_search_include: Option<&serde_json::Value> = None;
-        let mut raw_search_include_element: Option<&serde_json::Value> = None;
-        let mut raw_search_rev_include: Option<&serde_json::Value> = None;
-        let mut raw_search_rev_include_element: Option<&serde_json::Value> = None;
-        let mut raw_search_param: Option<&serde_json::Value> = None;
-        let mut raw_operation: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_type: Option<&super::super::codec::Value> = None;
+        let mut raw_type_element: Option<&super::super::codec::Value> = None;
+        let mut raw_definition: Option<&super::super::codec::Value> = None;
+        let mut raw_definition_element: Option<&super::super::codec::Value> = None;
+        let mut raw_profile: Option<&super::super::codec::Value> = None;
+        let mut raw_profile_element: Option<&super::super::codec::Value> = None;
+        let mut raw_supported_profile: Option<&super::super::codec::Value> = None;
+        let mut raw_supported_profile_element: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation_element: Option<&super::super::codec::Value> = None;
+        let mut raw_interaction: Option<&super::super::codec::Value> = None;
+        let mut raw_versioning: Option<&super::super::codec::Value> = None;
+        let mut raw_versioning_element: Option<&super::super::codec::Value> = None;
+        let mut raw_read_history: Option<&super::super::codec::Value> = None;
+        let mut raw_read_history_element: Option<&super::super::codec::Value> = None;
+        let mut raw_update_create: Option<&super::super::codec::Value> = None;
+        let mut raw_update_create_element: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_create: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_create_element: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_read: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_read_element: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_update: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_update_element: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_patch: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_patch_element: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_delete: Option<&super::super::codec::Value> = None;
+        let mut raw_conditional_delete_element: Option<&super::super::codec::Value> = None;
+        let mut raw_reference_policy: Option<&super::super::codec::Value> = None;
+        let mut raw_reference_policy_element: Option<&super::super::codec::Value> = None;
+        let mut raw_search_include: Option<&super::super::codec::Value> = None;
+        let mut raw_search_include_element: Option<&super::super::codec::Value> = None;
+        let mut raw_search_rev_include: Option<&super::super::codec::Value> = None;
+        let mut raw_search_rev_include_element: Option<&super::super::codec::Value> = None;
+        let mut raw_search_param: Option<&super::super::codec::Value> = None;
+        let mut raw_operation: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -4064,7 +4064,7 @@ impl serde::Serialize for CapabilityStatementRestResource {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementRestResource {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementRestResource");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -4127,31 +4127,31 @@ impl super::super::codec::Json for CapabilityStatementRestResourceInteraction {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.code)? {
@@ -4175,13 +4175,13 @@ impl super::super::codec::Json for CapabilityStatementRestResourceInteraction {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_code: Option<&serde_json::Value> = None;
-        let mut raw_code_element: Option<&serde_json::Value> = None;
-        let mut raw_documentation: Option<&serde_json::Value> = None;
-        let mut raw_documentation_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_code: Option<&super::super::codec::Value> = None;
+        let mut raw_code_element: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -4287,7 +4287,7 @@ impl serde::Serialize for CapabilityStatementRestResourceInteraction {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementRestResourceInteraction {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path =
             super::super::codec::Path::root("CapabilityStatementRestResourceInteraction");
         let object =
@@ -4366,31 +4366,31 @@ impl super::super::codec::Json for CapabilityStatementRestResourceOperation {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.name)? {
@@ -4420,15 +4420,15 @@ impl super::super::codec::Json for CapabilityStatementRestResourceOperation {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_name: Option<&serde_json::Value> = None;
-        let mut raw_name_element: Option<&serde_json::Value> = None;
-        let mut raw_definition: Option<&serde_json::Value> = None;
-        let mut raw_definition_element: Option<&serde_json::Value> = None;
-        let mut raw_documentation: Option<&serde_json::Value> = None;
-        let mut raw_documentation_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_name: Option<&super::super::codec::Value> = None;
+        let mut raw_name_element: Option<&super::super::codec::Value> = None;
+        let mut raw_definition: Option<&super::super::codec::Value> = None;
+        let mut raw_definition_element: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -4546,7 +4546,7 @@ impl serde::Serialize for CapabilityStatementRestResourceOperation {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementRestResourceOperation {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementRestResourceOperation");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -4628,31 +4628,31 @@ impl super::super::codec::Json for CapabilityStatementRestResourceSearchParam {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.name)? {
@@ -4690,17 +4690,17 @@ impl super::super::codec::Json for CapabilityStatementRestResourceSearchParam {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_name: Option<&serde_json::Value> = None;
-        let mut raw_name_element: Option<&serde_json::Value> = None;
-        let mut raw_definition: Option<&serde_json::Value> = None;
-        let mut raw_definition_element: Option<&serde_json::Value> = None;
-        let mut raw_type: Option<&serde_json::Value> = None;
-        let mut raw_type_element: Option<&serde_json::Value> = None;
-        let mut raw_documentation: Option<&serde_json::Value> = None;
-        let mut raw_documentation_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_name: Option<&super::super::codec::Value> = None;
+        let mut raw_name_element: Option<&super::super::codec::Value> = None;
+        let mut raw_definition: Option<&super::super::codec::Value> = None;
+        let mut raw_definition_element: Option<&super::super::codec::Value> = None;
+        let mut raw_type: Option<&super::super::codec::Value> = None;
+        let mut raw_type_element: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation: Option<&super::super::codec::Value> = None;
+        let mut raw_documentation_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -4829,7 +4829,7 @@ impl serde::Serialize for CapabilityStatementRestResourceSearchParam {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementRestResourceSearchParam {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path =
             super::super::codec::Path::root("CapabilityStatementRestResourceSearchParam");
         let object =
@@ -4892,31 +4892,31 @@ impl super::super::codec::Json for CapabilityStatementRestSecurity {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.cors {
@@ -4930,13 +4930,13 @@ impl super::super::codec::Json for CapabilityStatementRestSecurity {
         if !self.service.is_empty() {
             let mut items = Vec::with_capacity(self.service.len());
             for item in &self.service {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("service"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.description {
@@ -4954,14 +4954,14 @@ impl super::super::codec::Json for CapabilityStatementRestSecurity {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_cors: Option<&serde_json::Value> = None;
-        let mut raw_cors_element: Option<&serde_json::Value> = None;
-        let mut raw_service: Option<&serde_json::Value> = None;
-        let mut raw_description: Option<&serde_json::Value> = None;
-        let mut raw_description_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_cors: Option<&super::super::codec::Value> = None;
+        let mut raw_cors_element: Option<&super::super::codec::Value> = None;
+        let mut raw_service: Option<&super::super::codec::Value> = None;
+        let mut raw_description: Option<&super::super::codec::Value> = None;
+        let mut raw_description_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -5093,7 +5093,7 @@ impl serde::Serialize for CapabilityStatementRestSecurity {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementRestSecurity {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementRestSecurity");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -5157,31 +5157,31 @@ impl super::super::codec::Json for CapabilityStatementSoftware {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.name)? {
@@ -5213,15 +5213,15 @@ impl super::super::codec::Json for CapabilityStatementSoftware {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_name: Option<&serde_json::Value> = None;
-        let mut raw_name_element: Option<&serde_json::Value> = None;
-        let mut raw_version: Option<&serde_json::Value> = None;
-        let mut raw_version_element: Option<&serde_json::Value> = None;
-        let mut raw_release_date: Option<&serde_json::Value> = None;
-        let mut raw_release_date_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_name: Option<&super::super::codec::Value> = None;
+        let mut raw_name_element: Option<&super::super::codec::Value> = None;
+        let mut raw_version: Option<&super::super::codec::Value> = None;
+        let mut raw_version_element: Option<&super::super::codec::Value> = None;
+        let mut raw_release_date: Option<&super::super::codec::Value> = None;
+        let mut raw_release_date_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -5342,7 +5342,7 @@ impl serde::Serialize for CapabilityStatementSoftware {
 
 impl<'de> serde::Deserialize<'de> for CapabilityStatementSoftware {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("CapabilityStatementSoftware");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -5373,8 +5373,8 @@ impl CapabilityStatementVersionAlgorithm {
     ) -> Result<
         (
             &'static str,
-            Option<serde_json::Value>,
-            Option<serde_json::Value>,
+            Option<super::super::codec::Value>,
+            Option<super::super::codec::Value>,
         ),
         super::super::codec::EncodeError,
     > {
@@ -5386,7 +5386,7 @@ impl CapabilityStatementVersionAlgorithm {
             )),
             Self::Coding(inner) => Ok((
                 "Coding",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
@@ -5401,8 +5401,8 @@ impl CapabilityStatementVersionAlgorithm {
     /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
     pub fn from_json_parts(
         suffix: &str,
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         match suffix {

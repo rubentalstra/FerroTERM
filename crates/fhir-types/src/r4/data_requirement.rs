@@ -79,19 +79,19 @@ impl super::super::codec::Json for DataRequirement {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.r#type)? {
@@ -126,25 +126,25 @@ impl super::super::codec::Json for DataRequirement {
         if !self.code_filter.is_empty() {
             let mut items = Vec::with_capacity(self.code_filter.len());
             for item in &self.code_filter {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("codeFilter"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.date_filter.is_empty() {
             let mut items = Vec::with_capacity(self.date_filter.len());
             for item in &self.date_filter {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("dateFilter"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.limit {
@@ -158,13 +158,13 @@ impl super::super::codec::Json for DataRequirement {
         if !self.sort.is_empty() {
             let mut items = Vec::with_capacity(self.sort.len());
             for item in &self.sort {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("sort"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         Ok(object)
@@ -174,20 +174,20 @@ impl super::super::codec::Json for DataRequirement {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_type: Option<&serde_json::Value> = None;
-        let mut raw_type_element: Option<&serde_json::Value> = None;
-        let mut raw_profile: Option<&serde_json::Value> = None;
-        let mut raw_profile_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_type: Option<&super::super::codec::Value> = None;
+        let mut raw_type_element: Option<&super::super::codec::Value> = None;
+        let mut raw_profile: Option<&super::super::codec::Value> = None;
+        let mut raw_profile_element: Option<&super::super::codec::Value> = None;
         let mut raw_subject = super::super::codec::ChoiceSlot::default();
-        let mut raw_must_support: Option<&serde_json::Value> = None;
-        let mut raw_must_support_element: Option<&serde_json::Value> = None;
-        let mut raw_code_filter: Option<&serde_json::Value> = None;
-        let mut raw_date_filter: Option<&serde_json::Value> = None;
-        let mut raw_limit: Option<&serde_json::Value> = None;
-        let mut raw_limit_element: Option<&serde_json::Value> = None;
-        let mut raw_sort: Option<&serde_json::Value> = None;
+        let mut raw_must_support: Option<&super::super::codec::Value> = None;
+        let mut raw_must_support_element: Option<&super::super::codec::Value> = None;
+        let mut raw_code_filter: Option<&super::super::codec::Value> = None;
+        let mut raw_date_filter: Option<&super::super::codec::Value> = None;
+        let mut raw_limit: Option<&super::super::codec::Value> = None;
+        let mut raw_limit_element: Option<&super::super::codec::Value> = None;
+        let mut raw_sort: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -394,7 +394,7 @@ impl serde::Serialize for DataRequirement {
 
 impl<'de> serde::Deserialize<'de> for DataRequirement {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("DataRequirement");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -464,19 +464,19 @@ impl super::super::codec::Json for DataRequirementCodeFilter {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.path {
@@ -506,13 +506,13 @@ impl super::super::codec::Json for DataRequirementCodeFilter {
         if !self.code.is_empty() {
             let mut items = Vec::with_capacity(self.code.len());
             for item in &self.code {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("code"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         Ok(object)
@@ -522,15 +522,15 @@ impl super::super::codec::Json for DataRequirementCodeFilter {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_path: Option<&serde_json::Value> = None;
-        let mut raw_path_element: Option<&serde_json::Value> = None;
-        let mut raw_search_param: Option<&serde_json::Value> = None;
-        let mut raw_search_param_element: Option<&serde_json::Value> = None;
-        let mut raw_value_set: Option<&serde_json::Value> = None;
-        let mut raw_value_set_element: Option<&serde_json::Value> = None;
-        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_path: Option<&super::super::codec::Value> = None;
+        let mut raw_path_element: Option<&super::super::codec::Value> = None;
+        let mut raw_search_param: Option<&super::super::codec::Value> = None;
+        let mut raw_search_param_element: Option<&super::super::codec::Value> = None;
+        let mut raw_value_set: Option<&super::super::codec::Value> = None;
+        let mut raw_value_set_element: Option<&super::super::codec::Value> = None;
+        let mut raw_code: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -650,7 +650,7 @@ impl serde::Serialize for DataRequirementCodeFilter {
 
 impl<'de> serde::Deserialize<'de> for DataRequirementCodeFilter {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("DataRequirementCodeFilter");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -713,19 +713,19 @@ impl super::super::codec::Json for DataRequirementDateFilter {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.path {
@@ -760,12 +760,12 @@ impl super::super::codec::Json for DataRequirementDateFilter {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_path: Option<&serde_json::Value> = None;
-        let mut raw_path_element: Option<&serde_json::Value> = None;
-        let mut raw_search_param: Option<&serde_json::Value> = None;
-        let mut raw_search_param_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_path: Option<&super::super::codec::Value> = None;
+        let mut raw_path_element: Option<&super::super::codec::Value> = None;
+        let mut raw_search_param: Option<&super::super::codec::Value> = None;
+        let mut raw_search_param_element: Option<&super::super::codec::Value> = None;
         let mut raw_value = super::super::codec::ChoiceSlot::default();
         for (key, value) in object {
             match key.as_str() {
@@ -901,7 +901,7 @@ impl serde::Serialize for DataRequirementDateFilter {
 
 impl<'de> serde::Deserialize<'de> for DataRequirementDateFilter {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("DataRequirementDateFilter");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -938,8 +938,8 @@ impl DataRequirementDateFilterValue {
     ) -> Result<
         (
             &'static str,
-            Option<serde_json::Value>,
-            Option<serde_json::Value>,
+            Option<super::super::codec::Value>,
+            Option<super::super::codec::Value>,
         ),
         super::super::codec::EncodeError,
     > {
@@ -951,14 +951,14 @@ impl DataRequirementDateFilterValue {
             )),
             Self::Period(inner) => Ok((
                 "Period",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Duration(inner) => Ok((
                 "Duration",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
@@ -973,8 +973,8 @@ impl DataRequirementDateFilterValue {
     /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
     pub fn from_json_parts(
         suffix: &str,
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         match suffix {
@@ -1061,19 +1061,19 @@ impl super::super::codec::Json for DataRequirementSort {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(v) = super::super::codec::Primitive::value_json(&self.path)? {
@@ -1095,12 +1095,12 @@ impl super::super::codec::Json for DataRequirementSort {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_path: Option<&serde_json::Value> = None;
-        let mut raw_path_element: Option<&serde_json::Value> = None;
-        let mut raw_direction: Option<&serde_json::Value> = None;
-        let mut raw_direction_element: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_path: Option<&super::super::codec::Value> = None;
+        let mut raw_path_element: Option<&super::super::codec::Value> = None;
+        let mut raw_direction: Option<&super::super::codec::Value> = None;
+        let mut raw_direction_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -1176,7 +1176,7 @@ impl serde::Serialize for DataRequirementSort {
 
 impl<'de> serde::Deserialize<'de> for DataRequirementSort {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("DataRequirementSort");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -1207,22 +1207,22 @@ impl DataRequirementSubject {
     ) -> Result<
         (
             &'static str,
-            Option<serde_json::Value>,
-            Option<serde_json::Value>,
+            Option<super::super::codec::Value>,
+            Option<super::super::codec::Value>,
         ),
         super::super::codec::EncodeError,
     > {
         match self {
             Self::CodeableConcept(inner) => Ok((
                 "CodeableConcept",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Reference(inner) => Ok((
                 "Reference",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
@@ -1237,8 +1237,8 @@ impl DataRequirementSubject {
     /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
     pub fn from_json_parts(
         suffix: &str,
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         match suffix {

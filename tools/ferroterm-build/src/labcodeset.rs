@@ -126,11 +126,11 @@ pub fn build(publication: &Publication, out: &Path) -> Result<Report, WriteError
 fn write(dir: &Path, name: &str, object: &fhir_types::codec::Object) -> Result<(), WriteError> {
     write_text(
         &dir.join(format!("{name}.json")),
-        &serde_json::Value::Object(object.clone()),
+        &fhir_types::codec::Value::Object(object.clone()),
     )
 }
 
-fn write_text(path: &Path, value: &serde_json::Value) -> Result<(), WriteError> {
+fn write_text<T: serde::Serialize>(path: &Path, value: &T) -> Result<(), WriteError> {
     let io = |source| WriteError::Io {
         path: path.to_path_buf(),
         source,

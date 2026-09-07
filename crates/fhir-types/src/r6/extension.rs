@@ -38,24 +38,24 @@ impl super::super::codec::Json for Extension {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         object.insert(
             std::string::String::from("url"),
-            serde_json::Value::String(self.url.clone()),
+            super::super::codec::Value::String(self.url.clone()),
         );
         if let Some(item) = &self.value {
             let (suffix, value, element) = item.to_json_parts()?;
@@ -73,9 +73,9 @@ impl super::super::codec::Json for Extension {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_url: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_url: Option<&super::super::codec::Value> = None;
         let mut raw_value = super::super::codec::ChoiceSlot::default();
         for (key, value) in object {
             match key.as_str() {
@@ -809,7 +809,7 @@ impl serde::Serialize for Extension {
 
 impl<'de> serde::Deserialize<'de> for Extension {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("Extension");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -946,8 +946,8 @@ impl ExtensionValue {
     ) -> Result<
         (
             &'static str,
-            Option<serde_json::Value>,
-            Option<serde_json::Value>,
+            Option<super::super::codec::Value>,
+            Option<super::super::codec::Value>,
         ),
         super::super::codec::EncodeError,
     > {
@@ -1054,245 +1054,245 @@ impl ExtensionValue {
             )),
             Self::Address(inner) => Ok((
                 "Address",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Age(inner) => Ok((
                 "Age",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Annotation(inner) => Ok((
                 "Annotation",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Attachment(inner) => Ok((
                 "Attachment",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::CodeableConcept(inner) => Ok((
                 "CodeableConcept",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::CodeableReference(inner) => Ok((
                 "CodeableReference",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Coding(inner) => Ok((
                 "Coding",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::ContactPoint(inner) => Ok((
                 "ContactPoint",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Count(inner) => Ok((
                 "Count",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Distance(inner) => Ok((
                 "Distance",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Duration(inner) => Ok((
                 "Duration",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::HumanName(inner) => Ok((
                 "HumanName",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Identifier(inner) => Ok((
                 "Identifier",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Money(inner) => Ok((
                 "Money",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Period(inner) => Ok((
                 "Period",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Quantity(inner) => Ok((
                 "Quantity",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Range(inner) => Ok((
                 "Range",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Ratio(inner) => Ok((
                 "Ratio",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::RatioRange(inner) => Ok((
                 "RatioRange",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Reference(inner) => Ok((
                 "Reference",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::SampledData(inner) => Ok((
                 "SampledData",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Signature(inner) => Ok((
                 "Signature",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Timing(inner) => Ok((
                 "Timing",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::ContactDetail(inner) => Ok((
                 "ContactDetail",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::DataRequirement(inner) => Ok((
                 "DataRequirement",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Expression(inner) => Ok((
                 "Expression",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::ParameterDefinition(inner) => Ok((
                 "ParameterDefinition",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::RelatedArtifact(inner) => Ok((
                 "RelatedArtifact",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::TriggerDefinition(inner) => Ok((
                 "TriggerDefinition",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::UsageContext(inner) => Ok((
                 "UsageContext",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Availability(inner) => Ok((
                 "Availability",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::ExtendedContactDetail(inner) => Ok((
                 "ExtendedContactDetail",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::VirtualServiceDetail(inner) => Ok((
                 "VirtualServiceDetail",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Dosage(inner) => Ok((
                 "Dosage",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Meta(inner) => Ok((
                 "Meta",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
@@ -1307,8 +1307,8 @@ impl ExtensionValue {
     /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
     pub fn from_json_parts(
         suffix: &str,
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         match suffix {

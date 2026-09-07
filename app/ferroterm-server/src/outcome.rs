@@ -131,11 +131,14 @@ impl IntoResponse for Failure {
 }
 
 /// A FHIR JSON response body with `status`.
-pub fn fhir_json(status: StatusCode, value: &serde_json::Value) -> Response {
+pub fn fhir_json(status: StatusCode, value: &fhir_types::codec::Value) -> Response {
+    let Ok(body) = serde_json::to_vec(value) else {
+        return status.into_response();
+    };
     Response::builder()
         .status(status)
         .header(CONTENT_TYPE, FHIR_JSON)
-        .body(Body::from(value.to_string()))
+        .body(Body::from(body))
         .unwrap_or_else(|_| status.into_response())
 }
 

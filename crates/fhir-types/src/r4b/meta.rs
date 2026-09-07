@@ -66,19 +66,19 @@ impl super::super::codec::Json for Meta {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.version_id {
@@ -115,25 +115,25 @@ impl super::super::codec::Json for Meta {
         if !self.security.is_empty() {
             let mut items = Vec::with_capacity(self.security.len());
             for item in &self.security {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("security"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.tag.is_empty() {
             let mut items = Vec::with_capacity(self.tag.len());
             for item in &self.tag {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("tag"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         Ok(object)
@@ -143,18 +143,18 @@ impl super::super::codec::Json for Meta {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_version_id: Option<&serde_json::Value> = None;
-        let mut raw_version_id_element: Option<&serde_json::Value> = None;
-        let mut raw_last_updated: Option<&serde_json::Value> = None;
-        let mut raw_last_updated_element: Option<&serde_json::Value> = None;
-        let mut raw_source: Option<&serde_json::Value> = None;
-        let mut raw_source_element: Option<&serde_json::Value> = None;
-        let mut raw_profile: Option<&serde_json::Value> = None;
-        let mut raw_profile_element: Option<&serde_json::Value> = None;
-        let mut raw_security: Option<&serde_json::Value> = None;
-        let mut raw_tag: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_version_id: Option<&super::super::codec::Value> = None;
+        let mut raw_version_id_element: Option<&super::super::codec::Value> = None;
+        let mut raw_last_updated: Option<&super::super::codec::Value> = None;
+        let mut raw_last_updated_element: Option<&super::super::codec::Value> = None;
+        let mut raw_source: Option<&super::super::codec::Value> = None;
+        let mut raw_source_element: Option<&super::super::codec::Value> = None;
+        let mut raw_profile: Option<&super::super::codec::Value> = None;
+        let mut raw_profile_element: Option<&super::super::codec::Value> = None;
+        let mut raw_security: Option<&super::super::codec::Value> = None;
+        let mut raw_tag: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -308,7 +308,7 @@ impl serde::Serialize for Meta {
 
 impl<'de> serde::Deserialize<'de> for Meta {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("Meta");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;

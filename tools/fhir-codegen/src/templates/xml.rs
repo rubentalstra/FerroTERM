@@ -15,9 +15,8 @@ use std::borrow::Cow;
 use quick_xml::events::attributes::Attribute;
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::{Reader, Writer, XmlVersion};
-use serde_json::{Number, Value};
 
-use super::codec::{DecodeError, DecodeErrorKind, EncodeError, Object, Path};
+use super::codec::{DecodeError, DecodeErrorKind, EncodeError, Number, Object, Path, Value};
 
 /// The FHIR XML namespace.
 pub const FHIR_NAMESPACE: &str = "http://hl7.org/fhir";
@@ -230,7 +229,7 @@ fn write_primitive_field(
     }
     let values = values.and_then(Value::as_array);
     let elements = elements.and_then(Value::as_array);
-    let len = values.map_or(0, Vec::len).max(elements.map_or(0, Vec::len));
+    let len = values.map_or(0, <[Value]>::len).max(elements.map_or(0, <[Value]>::len));
     for index in 0..len {
         let value = values.and_then(|v| v.get(index)).filter(|v| !v.is_null());
         let element = elements

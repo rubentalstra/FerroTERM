@@ -562,8 +562,10 @@ fn not_selectable_is_known_by_its_standard_uri_and_a_declared_false_stays_a_prop
                 {"code": "codeNS", "display": "Not selectable", "property": [{"code": property_code, "valueBoolean": true}]}
             ]
         });
+        let document: fhir_types::codec::Value =
+            serde_json::from_str(&object.to_string()).expect("the document parses");
         let resource = fhir_types::r5::code_system::CodeSystem::from_json(
-            object.as_object().expect("object"),
+            document.as_object().expect("object"),
             &mut Path::root("CodeSystem"),
         )
         .expect("decodes");

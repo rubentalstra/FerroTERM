@@ -66,31 +66,31 @@ impl super::super::codec::Json for Timing {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.modifier_extension.is_empty() {
             let mut items = Vec::with_capacity(self.modifier_extension.len());
             for item in &self.modifier_extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("modifierExtension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if !self.event.is_empty() {
@@ -103,13 +103,13 @@ impl super::super::codec::Json for Timing {
         if let Some(item) = &self.repeat {
             object.insert(
                 std::string::String::from("repeat"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         if let Some(item) = &self.code {
             object.insert(
                 std::string::String::from("code"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         Ok(object)
@@ -119,13 +119,13 @@ impl super::super::codec::Json for Timing {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_modifier_extension: Option<&serde_json::Value> = None;
-        let mut raw_event: Option<&serde_json::Value> = None;
-        let mut raw_event_element: Option<&serde_json::Value> = None;
-        let mut raw_repeat: Option<&serde_json::Value> = None;
-        let mut raw_code: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_modifier_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_event: Option<&super::super::codec::Value> = None;
+        let mut raw_event_element: Option<&super::super::codec::Value> = None;
+        let mut raw_repeat: Option<&super::super::codec::Value> = None;
+        let mut raw_code: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -259,7 +259,7 @@ impl serde::Serialize for Timing {
 
 impl<'de> serde::Deserialize<'de> for Timing {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("Timing");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -372,19 +372,19 @@ impl super::super::codec::Json for TimingRepeat {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.bounds {
@@ -512,37 +512,37 @@ impl super::super::codec::Json for TimingRepeat {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
         let mut raw_bounds = super::super::codec::ChoiceSlot::default();
-        let mut raw_count: Option<&serde_json::Value> = None;
-        let mut raw_count_element: Option<&serde_json::Value> = None;
-        let mut raw_count_max: Option<&serde_json::Value> = None;
-        let mut raw_count_max_element: Option<&serde_json::Value> = None;
-        let mut raw_duration: Option<&serde_json::Value> = None;
-        let mut raw_duration_element: Option<&serde_json::Value> = None;
-        let mut raw_duration_max: Option<&serde_json::Value> = None;
-        let mut raw_duration_max_element: Option<&serde_json::Value> = None;
-        let mut raw_duration_unit: Option<&serde_json::Value> = None;
-        let mut raw_duration_unit_element: Option<&serde_json::Value> = None;
-        let mut raw_frequency: Option<&serde_json::Value> = None;
-        let mut raw_frequency_element: Option<&serde_json::Value> = None;
-        let mut raw_frequency_max: Option<&serde_json::Value> = None;
-        let mut raw_frequency_max_element: Option<&serde_json::Value> = None;
-        let mut raw_period: Option<&serde_json::Value> = None;
-        let mut raw_period_element: Option<&serde_json::Value> = None;
-        let mut raw_period_max: Option<&serde_json::Value> = None;
-        let mut raw_period_max_element: Option<&serde_json::Value> = None;
-        let mut raw_period_unit: Option<&serde_json::Value> = None;
-        let mut raw_period_unit_element: Option<&serde_json::Value> = None;
-        let mut raw_day_of_week: Option<&serde_json::Value> = None;
-        let mut raw_day_of_week_element: Option<&serde_json::Value> = None;
-        let mut raw_time_of_day: Option<&serde_json::Value> = None;
-        let mut raw_time_of_day_element: Option<&serde_json::Value> = None;
-        let mut raw_when: Option<&serde_json::Value> = None;
-        let mut raw_when_element: Option<&serde_json::Value> = None;
-        let mut raw_offset: Option<&serde_json::Value> = None;
-        let mut raw_offset_element: Option<&serde_json::Value> = None;
+        let mut raw_count: Option<&super::super::codec::Value> = None;
+        let mut raw_count_element: Option<&super::super::codec::Value> = None;
+        let mut raw_count_max: Option<&super::super::codec::Value> = None;
+        let mut raw_count_max_element: Option<&super::super::codec::Value> = None;
+        let mut raw_duration: Option<&super::super::codec::Value> = None;
+        let mut raw_duration_element: Option<&super::super::codec::Value> = None;
+        let mut raw_duration_max: Option<&super::super::codec::Value> = None;
+        let mut raw_duration_max_element: Option<&super::super::codec::Value> = None;
+        let mut raw_duration_unit: Option<&super::super::codec::Value> = None;
+        let mut raw_duration_unit_element: Option<&super::super::codec::Value> = None;
+        let mut raw_frequency: Option<&super::super::codec::Value> = None;
+        let mut raw_frequency_element: Option<&super::super::codec::Value> = None;
+        let mut raw_frequency_max: Option<&super::super::codec::Value> = None;
+        let mut raw_frequency_max_element: Option<&super::super::codec::Value> = None;
+        let mut raw_period: Option<&super::super::codec::Value> = None;
+        let mut raw_period_element: Option<&super::super::codec::Value> = None;
+        let mut raw_period_max: Option<&super::super::codec::Value> = None;
+        let mut raw_period_max_element: Option<&super::super::codec::Value> = None;
+        let mut raw_period_unit: Option<&super::super::codec::Value> = None;
+        let mut raw_period_unit_element: Option<&super::super::codec::Value> = None;
+        let mut raw_day_of_week: Option<&super::super::codec::Value> = None;
+        let mut raw_day_of_week_element: Option<&super::super::codec::Value> = None;
+        let mut raw_time_of_day: Option<&super::super::codec::Value> = None;
+        let mut raw_time_of_day_element: Option<&super::super::codec::Value> = None;
+        let mut raw_when: Option<&super::super::codec::Value> = None;
+        let mut raw_when_element: Option<&super::super::codec::Value> = None;
+        let mut raw_offset: Option<&super::super::codec::Value> = None;
+        let mut raw_offset_element: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -858,7 +858,7 @@ impl serde::Serialize for TimingRepeat {
 
 impl<'de> serde::Deserialize<'de> for TimingRepeat {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("TimingRepeat");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -891,29 +891,29 @@ impl TimingRepeatBounds {
     ) -> Result<
         (
             &'static str,
-            Option<serde_json::Value>,
-            Option<serde_json::Value>,
+            Option<super::super::codec::Value>,
+            Option<super::super::codec::Value>,
         ),
         super::super::codec::EncodeError,
     > {
         match self {
             Self::Duration(inner) => Ok((
                 "Duration",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Range(inner) => Ok((
                 "Range",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
             )),
             Self::Period(inner) => Ok((
                 "Period",
-                Some(serde_json::Value::Object(
+                Some(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(inner.as_ref())?,
                 )),
                 None,
@@ -928,8 +928,8 @@ impl TimingRepeatBounds {
     /// Returns [`super::super::codec::DecodeError`] for an unknown suffix or a malformed part.
     pub fn from_json_parts(
         suffix: &str,
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         match suffix {

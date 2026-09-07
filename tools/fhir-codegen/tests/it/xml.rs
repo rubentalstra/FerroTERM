@@ -5,10 +5,10 @@
 use std::fs;
 use std::path::PathBuf;
 
+use fhir_types::codec::Value;
 use fhir_types::codec::{DecodeErrorKind, Json, expect_object};
 use fhir_types::xml::{Schemas, from_xml, to_xml};
 use proptest::prelude::*;
-use serde_json::Value;
 
 use crate::vendor_dir;
 
@@ -205,18 +205,21 @@ fn xml_refusals_name_the_element() {
 </f:Parameters>"#,
     )
     .expect("reads");
-    assert_eq!(read["resourceType"], "Parameters");
-    assert_eq!(read["parameter"][0]["id"], "p1");
-    assert_eq!(read["parameter"][0]["valueString"], "v");
-    assert_eq!(read["parameter"][0]["_valueString"]["id"], "s1");
+    let root = Value::Object(read);
+    assert_eq!(member(&root, "resourceType").as_str(), Some("Parameters"));
+    let parameter = first(member(&root, "parameter"));
+    assert_eq!(member(parameter, "id").as_str(), Some("p1"));
+    assert_eq!(member(parameter, "valueString").as_str(), Some("v"));
+    let element = member(parameter, "_valueString");
+    assert_eq!(member(element, "id").as_str(), Some("s1"));
     assert_eq!(
-        read["parameter"][0]["_valueString"]["extension"][0]["url"],
-        "http://example.org/x"
+        member(first(member(element, "extension")), "url").as_str(),
+        Some("http://example.org/x")
     );
 }
 
 fn coding(system: &str, code: &str, display: Option<String>) -> Value {
-    let mut object = serde_json::Map::new();
+    let mut object = fhir_types::codec::Object::new();
     object.insert("system".into(), Value::String(system.into()));
     object.insert("code".into(), Value::String(code.into()));
     if let Some(display) = display {
@@ -233,13 +236,13 @@ proptest! {
         text in "[a-zA-Z0-9 <>&\"'\u{e9}]{0,24}",
         flag in any::<bool>(),
         number in any::<i32>(),
-        decimal in prop_oneof![Just("1.50"), Just("0.001"), Just("-3"), Just("100"), Just("2.0")],
+        decimal in prop_oneof![Just("1.50"), Just("0.001"), Just("-3"), Just("100"), Just("2.0"), Just("0.1234567890123456789012345678")],
         code in "[a-z][a-z0-9-]{0,10}",
         display in proptest::option::of("[A-Za-z ]{1,12}"),
     ) {
         let mut parameters = Vec::new();
         let named = |name: &str, key: &str, value: Value| {
-            let mut object = serde_json::Map::new();
+            let mut object = fhir_types::codec::Object::new();
             object.insert("name".into(), Value::String(name.into()));
             object.insert(key.into(), value);
             Value::Object(object)
@@ -253,7 +256,7 @@ proptest! {
             Value::Number(decimal.parse().expect("a number")),
         ));
         parameters.push(named("coding", "valueCoding", coding("http://example.org/s", &code, display)));
-        let mut object = serde_json::Map::new();
+        let mut object = fhir_types::codec::Object::new();
         object.insert("resourceType".into(), Value::String("Parameters".into()));
         object.insert("parameter".into(), Value::Array(parameters));
         let mut path = fhir_types::codec::Path::root("Parameters");
@@ -262,4 +265,17 @@ proptest! {
         let canonical = Value::Object(typed.to_json().expect("encodes"));
         round_trip(&fhir_types::r5::schema::SCHEMAS, &canonical, "generated").expect("round trips");
     }
+}
+
+/// The member named `key`, which the document under test carries.
+fn member<'a>(value: &'a Value, key: &str) -> &'a Value {
+    value.get(key).expect("the member exists")
+}
+
+/// The first item of an array the document under test carries.
+fn first(value: &Value) -> &Value {
+    value
+        .as_array()
+        .and_then(<[Value]>::first)
+        .expect("a non-empty array")
 }

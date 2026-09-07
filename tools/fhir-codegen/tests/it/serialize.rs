@@ -9,9 +9,8 @@
 use std::fs;
 use std::path::Path;
 
-use fhir_types::codec::{Json, Path as ElementPath, expect_object};
+use fhir_types::codec::{Json, Object, Path as ElementPath, Value, expect_object};
 use proptest::prelude::*;
-use serde_json::{Map, Value};
 
 use crate::codec::root_set_files;
 
@@ -115,9 +114,7 @@ fn every_r6_root_set_resource_writes_the_same_bytes() {
 }
 
 /// The two paths over one `Parameters` document, decoded in one version.
-fn parity_of_parameters<T: Json + serde::Serialize>(
-    object: &Map<String, Value>,
-) -> Result<(), String> {
+fn parity_of_parameters<T: Json + serde::Serialize>(object: &Object) -> Result<(), String> {
     let mut path = ElementPath::root("Parameters");
     let typed = T::from_json(object, &mut path).map_err(|e| e.to_string())?;
     let (document, direct) = both_paths(&typed)?;
@@ -128,7 +125,7 @@ fn parity_of_parameters<T: Json + serde::Serialize>(
 }
 
 /// The same document through every version's `Parameters`.
-fn parity_of_every_version(object: &Map<String, Value>) -> Result<(), String> {
+fn parity_of_every_version(object: &Object) -> Result<(), String> {
     parity_of_parameters::<fhir_types::r4::parameters::Parameters>(object)?;
     parity_of_parameters::<fhir_types::r4b::parameters::Parameters>(object)?;
     parity_of_parameters::<fhir_types::r5::parameters::Parameters>(object)?;
@@ -137,22 +134,18 @@ fn parity_of_every_version(object: &Map<String, Value>) -> Result<(), String> {
 
 /// A `parameter` entry: its name and one keyed value.
 fn named(name: &str, key: &str, value: Value) -> Value {
-    let mut object = Map::new();
+    let mut object = Object::new();
     object.insert("name".into(), Value::String(name.into()));
     object.insert(key.into(), value);
     Value::Object(object)
 }
 
 /// The `Parameters` the property test writes, over the generated values.
-fn parameters(
-    entries: Vec<Value>,
-    profiles: Vec<Value>,
-    elements: Vec<Value>,
-) -> Map<String, Value> {
-    let mut meta = Map::new();
+fn parameters(entries: Vec<Value>, profiles: Vec<Value>, elements: Vec<Value>) -> Object {
+    let mut meta = Object::new();
     meta.insert("profile".into(), Value::Array(profiles));
     meta.insert("_profile".into(), Value::Array(elements));
-    let mut object = Map::new();
+    let mut object = Object::new();
     object.insert("resourceType".into(), Value::String("Parameters".into()));
     object.insert("meta".into(), Value::Object(meta));
     object.insert("parameter".into(), Value::Array(entries));
@@ -168,7 +161,7 @@ proptest! {
         text in "[a-zA-Z0-9 <>&\"'\u{e9}]{0,24}",
         flag in any::<bool>(),
         number in any::<i32>(),
-        decimal in prop_oneof![Just("1.50"), Just("0.001"), Just("-3"), Just("100"), Just("2.0e3")],
+        decimal in prop_oneof![Just("1.50"), Just("0.001"), Just("-3"), Just("100"), Just("2.0e3"), Just("0.1234567890123456789012345678")],
         code in "[a-z][a-z0-9-]{0,10}",
         identifier in "[a-z][a-z0-9-]{0,10}",
         extended in any::<bool>(),
@@ -180,35 +173,35 @@ proptest! {
             named("decimal", "valueDecimal", Value::Number(decimal.parse().expect("a number"))),
             named("instant", "valueInstant", Value::String("2026-09-06T00:00:00Z".into())),
         ];
-        let mut coding = Map::new();
+        let mut coding = Object::new();
         coding.insert("system".into(), Value::String("http://example.org/s".into()));
         coding.insert("code".into(), Value::String(code.clone()));
         entries.push(named("coding", "valueCoding", Value::Object(coding)));
         // A primitive that carries an id and an extension, with and without a
         // value (https://hl7.org/fhir/R4B/json.html#primitive).
-        let mut element = Map::new();
+        let mut element = Object::new();
         element.insert("id".into(), Value::String(identifier.clone()));
         if extended {
-            let mut extension = Map::new();
+            let mut extension = Object::new();
             extension.insert("url".into(), Value::String("http://example.org/x".into()));
             extension.insert("valueDecimal".into(), Value::Number("0.10".parse().expect("a number")));
             element.insert("extension".into(), Value::Array(vec![Value::Object(extension)]));
         }
         entries.push(named("element-only", "_valueString", Value::Object(element.clone())));
-        let mut valued = Map::new();
+        let mut valued = Object::new();
         valued.insert("name".into(), Value::String("valued".into()));
         valued.insert("valueCode".into(), Value::String(code.clone()));
         valued.insert("_valueCode".into(), Value::Object(element));
         entries.push(Value::Object(valued));
         // A resource of the root set and one outside it, which the codec keeps
         // as an unknown resource.
-        let mut system = Map::new();
+        let mut system = Object::new();
         system.insert("resourceType".into(), Value::String("CodeSystem".into()));
         system.insert("status".into(), Value::String("active".into()));
         system.insert("content".into(), Value::String("not-present".into()));
         system.insert("url".into(), Value::String("http://example.org/cs".into()));
         entries.push(named("resource", "resource", Value::Object(system)));
-        let mut outside = Map::new();
+        let mut outside = Object::new();
         outside.insert("resourceType".into(), Value::String("Practitioner".into()));
         outside.insert("id".into(), Value::String(identifier));
         entries.push(named("unknown", "resource", Value::Object(outside)));
@@ -216,7 +209,7 @@ proptest! {
             Value::String("http://example.org/a".into()),
             Value::String("http://example.org/b".into()),
         ];
-        let mut hole = Map::new();
+        let mut hole = Object::new();
         hole.insert("id".into(), Value::String("p2".into()));
         let elements = vec![Value::Null, Value::Object(hole)];
         let object = parameters(entries, profiles, elements);
@@ -225,7 +218,7 @@ proptest! {
 }
 
 /// The document the ordering test pins, in the order a client writes it.
-fn ordered_source() -> Map<String, Value> {
+fn ordered_source() -> Object {
     let text = r#"{
         "resourceType": "Parameters",
         "meta": {
@@ -264,7 +257,7 @@ const ORDERED_BYTES: &str = concat!(
 );
 
 /// The direct path's bytes for `object`, decoded as `T`.
-fn direct_bytes<T: Json + serde::Serialize>(object: &Map<String, Value>) -> String {
+fn direct_bytes<T: Json + serde::Serialize>(object: &Object) -> String {
     let mut path = ElementPath::root("Parameters");
     let typed = T::from_json(object, &mut path).expect("the document decodes");
     serde_json::to_string(&typed).expect("the typed resource writes")

@@ -2,7 +2,6 @@
 //! format on every route (<https://hl7.org/fhir/R4B/http.html#mime-type>).
 
 use ferroterm_testkit::fhir::{ANIMALS, VS_ALL, VS_PETS};
-use fhir_types::codec::Object;
 use fhir_types::xml::{Schemas, from_xml, to_xml};
 use http::StatusCode;
 use serde_json::{Value, json};
@@ -12,11 +11,13 @@ use crate::fixture::Server;
 const XML: &str = "application/fhir+xml; charset=utf-8";
 const JSON: &str = "application/fhir+json; charset=utf-8";
 
-fn parsed(schemas: &Schemas, body: &str) -> Object {
-    from_xml(schemas, body).expect("well-formed FHIR XML")
+fn parsed(schemas: &Schemas, body: &str) -> Value {
+    let object = from_xml(schemas, body).expect("well-formed FHIR XML");
+    let text = serde_json::to_string(&object).expect("the document writes");
+    serde_json::from_str(&text).expect("the document parses")
 }
 
-fn parameter<'a>(object: &'a Object, name: &str) -> Option<&'a Value> {
+fn parameter<'a>(object: &'a Value, name: &str) -> Option<&'a Value> {
     object
         .get("parameter")?
         .as_array()?
@@ -146,7 +147,9 @@ async fn an_xml_parameters_body_is_accepted_and_a_malformed_one_refused() {
         {"name": "url", "valueUri": VS_PETS},
         {"name": "coding", "valueCoding": {"system": ANIMALS, "code": "kitten", "display": "Kitten"}}
     ]});
-    let xml = to_xml(r4b, request.as_object().expect("object")).expect("XML");
+    let document: fhir_types::codec::Value =
+        serde_json::from_str(&request.to_string()).expect("the request parses");
+    let xml = to_xml(r4b, document.as_object().expect("object")).expect("XML");
     // XML in, JSON out by default.
     let (status, content_type, body) = server
         .post_text(

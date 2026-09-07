@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use fhir_types::codec::Value;
 use fhir_types::codec::{DecodeErrorKind, Json, Path as ElementPath, expect_object};
-use serde_json::Value;
 
 use crate::vendor_dir;
 
@@ -181,7 +181,9 @@ fn primitive_extensions_and_choice_types_round_trip() {
     let encoded = Value::Object(decoded.to_json().expect("encodes"));
     assert_eq!(encoded, original);
     assert!(
-        encoded.to_string().contains("2.50"),
+        serde_json::to_string(&encoded)
+            .expect("the document writes")
+            .contains("2.50"),
         "decimal precision survives"
     );
     let duplicate = r#"{"resourceType":"Parameters","parameter":[{"name":"x","valueString":"a","valueCode":"b"}]}"#;
@@ -200,7 +202,8 @@ fn serde_bridges_agree_with_the_codec() {
     let text = r#"{"resourceType":"ValueSet","status":"active","compose":{"include":[{"system":"http://snomed.info/sct","filter":[{"property":"concept","op":"is-a","value":"123"}]}]}}"#;
     let value_set: fhir_types::r4b::value_set::ValueSet =
         serde_json::from_str(text).expect("deserializes");
-    let back = serde_json::to_value(&value_set).expect("serializes");
+    let written = serde_json::to_string(&value_set).expect("serializes");
+    let back: Value = serde_json::from_str(&written).expect("json");
     let original: Value = serde_json::from_str(text).expect("json");
     assert_eq!(back, original);
     let unknown: Result<fhir_types::r4b::value_set::ValueSet, _> =

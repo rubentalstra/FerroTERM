@@ -64,19 +64,19 @@ impl super::super::codec::Json for HumanName {
         if let Some(v) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(v.clone()),
+                super::super::codec::Value::String(v.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
         if let Some(item) = &self.r#use {
@@ -127,7 +127,7 @@ impl super::super::codec::Json for HumanName {
         if let Some(item) = &self.period {
             object.insert(
                 std::string::String::from("period"),
-                serde_json::Value::Object(super::super::codec::Json::to_json(item)?),
+                super::super::codec::Value::Object(super::super::codec::Json::to_json(item)?),
             );
         }
         Ok(object)
@@ -137,21 +137,21 @@ impl super::super::codec::Json for HumanName {
         object: &super::super::codec::Object,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
-        let mut raw_id: Option<&serde_json::Value> = None;
-        let mut raw_extension: Option<&serde_json::Value> = None;
-        let mut raw_use: Option<&serde_json::Value> = None;
-        let mut raw_use_element: Option<&serde_json::Value> = None;
-        let mut raw_text: Option<&serde_json::Value> = None;
-        let mut raw_text_element: Option<&serde_json::Value> = None;
-        let mut raw_family: Option<&serde_json::Value> = None;
-        let mut raw_family_element: Option<&serde_json::Value> = None;
-        let mut raw_given: Option<&serde_json::Value> = None;
-        let mut raw_given_element: Option<&serde_json::Value> = None;
-        let mut raw_prefix: Option<&serde_json::Value> = None;
-        let mut raw_prefix_element: Option<&serde_json::Value> = None;
-        let mut raw_suffix: Option<&serde_json::Value> = None;
-        let mut raw_suffix_element: Option<&serde_json::Value> = None;
-        let mut raw_period: Option<&serde_json::Value> = None;
+        let mut raw_id: Option<&super::super::codec::Value> = None;
+        let mut raw_extension: Option<&super::super::codec::Value> = None;
+        let mut raw_use: Option<&super::super::codec::Value> = None;
+        let mut raw_use_element: Option<&super::super::codec::Value> = None;
+        let mut raw_text: Option<&super::super::codec::Value> = None;
+        let mut raw_text_element: Option<&super::super::codec::Value> = None;
+        let mut raw_family: Option<&super::super::codec::Value> = None;
+        let mut raw_family_element: Option<&super::super::codec::Value> = None;
+        let mut raw_given: Option<&super::super::codec::Value> = None;
+        let mut raw_given_element: Option<&super::super::codec::Value> = None;
+        let mut raw_prefix: Option<&super::super::codec::Value> = None;
+        let mut raw_prefix_element: Option<&super::super::codec::Value> = None;
+        let mut raw_suffix: Option<&super::super::codec::Value> = None;
+        let mut raw_suffix_element: Option<&super::super::codec::Value> = None;
+        let mut raw_period: Option<&super::super::codec::Value> = None;
         for (key, value) in object {
             match key.as_str() {
                 "id" => raw_id = Some(value),
@@ -315,7 +315,7 @@ impl serde::Serialize for HumanName {
 
 impl<'de> serde::Deserialize<'de> for HumanName {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("HumanName");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;

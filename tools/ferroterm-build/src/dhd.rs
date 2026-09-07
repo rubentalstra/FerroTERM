@@ -83,7 +83,7 @@ fn write(dir: &Path, name: &str, resource: &ConceptMap) -> Result<(), MapError> 
         source,
     };
     let object = resource.to_json()?;
-    let text = serde_json::to_string_pretty(&serde_json::Value::Object(object))
+    let text = serde_json::to_string_pretty(&fhir_types::codec::Value::Object(object))
         .map_err(|e| io(io::Error::other(e)))?;
     std::fs::write(&path, format!("{text}\n")).map_err(io)
 }

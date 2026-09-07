@@ -72,11 +72,11 @@ macro_rules! resources {
                 mut object: fhir_types::codec::Object,
             ) -> Result<(Parameters, Vec<Loaded>), Failure> {
                 let mut resources = Vec::new();
-                let mut kept: Option<Vec<serde_json::Value>> = None;
-                if let Some(serde_json::Value::Array(sent)) = object.get("parameter") {
+                let mut kept: Option<Vec<fhir_types::codec::Value>> = None;
+                if let Some(fhir_types::codec::Value::Array(sent)) = object.get("parameter") {
                     let mut own = Vec::with_capacity(sent.len());
                     for parameter in sent {
-                        match parameter.get("name").and_then(serde_json::Value::as_str) {
+                        match parameter.get("name").and_then(fhir_types::codec::Value::as_str) {
                             Some(UUID) => {}
                             Some(TX_RESOURCE) => resources.push(supplied(parameter)?),
                             _ => own.push(parameter.clone()),
@@ -93,7 +93,7 @@ macro_rules! resources {
                     if kept.is_empty() {
                         object.remove("parameter");
                     } else {
-                        object.insert("parameter".to_owned(), serde_json::Value::Array(kept));
+                        object.insert("parameter".to_owned(), fhir_types::codec::Value::Array(kept));
                     }
                 }
                 Ok((super::parameters::parameters_from_object(&object)?, resources))
@@ -101,10 +101,10 @@ macro_rules! resources {
 
             /// One `tx-resource` parameter read as the model it carries, or the
             /// record of why the server cannot use it.
-            fn supplied(parameter: &serde_json::Value) -> Result<Loaded, Failure> {
+            fn supplied(parameter: &fhir_types::codec::Value) -> Result<Loaded, Failure> {
                 let carried = parameter
                     .get("resource")
-                    .and_then(serde_json::Value::as_object)
+                    .and_then(fhir_types::codec::Value::as_object)
                     .ok_or_else(|| {
                         Failure::new(
                             StatusCode::BAD_REQUEST,
@@ -115,7 +115,7 @@ macro_rules! resources {
                 let stated = |name: &str| {
                     carried
                         .get(name)
-                        .and_then(serde_json::Value::as_str)
+                        .and_then(fhir_types::codec::Value::as_str)
                         .map(str::to_owned)
                 };
                 let root = stated("resourceType").unwrap_or_else(|| "Resource".to_owned());

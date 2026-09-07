@@ -45,7 +45,7 @@ impl super::super::codec::Json for Resource {
             }
             Self::ValueSet(inner) => super::super::codec::Json::to_json(inner.as_ref()),
             Self::Unknown(inner) => match &inner.body {
-                serde_json::Value::Object(object) => Ok(object.clone()),
+                super::super::codec::Value::Object(object) => Ok(object.clone()),
                 _ => Err(super::super::codec::EncodeError::UnknownResourceBody),
             },
         }
@@ -82,7 +82,7 @@ impl super::super::codec::Json for Resource {
             ))),
             other => Ok(Self::Unknown(UnknownResource {
                 resource_type: other.to_owned(),
-                body: serde_json::Value::Object(object.clone()),
+                body: super::super::codec::Value::Object(object.clone()),
             })),
         }
     }
@@ -106,7 +106,7 @@ impl serde::Serialize for Resource {
             }
             Self::ValueSet(inner) => serde::Serialize::serialize(inner.as_ref(), serializer),
             Self::Unknown(inner) => match &inner.body {
-                serde_json::Value::Object(object) => {
+                super::super::codec::Value::Object(object) => {
                     serde::Serialize::serialize(object, serializer)
                 }
                 _ => Err(<S::Error as serde::ser::Error>::custom(
@@ -119,7 +119,7 @@ impl serde::Serialize for Resource {
 
 impl<'de> serde::Deserialize<'de> for Resource {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = serde_json::Value::deserialize(deserializer)?;
+        let value = <super::super::codec::Value as serde::Deserialize>::deserialize(deserializer)?;
         let mut path = super::super::codec::Path::root("Resource");
         let object =
             super::super::codec::expect_object(&value, &path).map_err(serde::de::Error::custom)?;
@@ -137,5 +137,5 @@ pub struct UnknownResource {
     /// The `resourceType` of the carried resource.
     pub resource_type: std::string::String,
     /// The complete JSON object, `resourceType` included.
-    pub body: serde_json::Value,
+    pub body: super::super::codec::Value,
 }

@@ -162,7 +162,7 @@ macro_rules! parameters {
                 let path = Path::root("Parameters");
                 let object = match Wire::of_body(headers)? {
                     Wire::Json => {
-                        let value: serde_json::Value = serde_json::from_slice(body)
+                        let value: fhir_types::codec::Value = serde_json::from_slice(body)
                             .map_err(|e| structure(format!("the body is not JSON: {e}")))?;
                         expect_object(&value, &path)
                             .map_err(|e| structure(e.to_string()))?

@@ -27,17 +27,22 @@ async fn the_metadata_resources_are_r5() {
         "https://ferroterm.eu/fhir/CapabilityStatement/ferroterm-r5"
     );
     let mut path = Path::root("CapabilityStatement");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     let decoded =
         fhir_types::r5::capability_statement::CapabilityStatement::from_json(object, &mut path)
             .expect("an R5 CapabilityStatement");
-    assert_eq!(Value::Object(decoded.to_json().expect("encodes")), body);
+    assert_eq!(
+        crate::fixture::written(&decoded.to_json().expect("encodes")),
+        body
+    );
     let (status, body) = server.get("/r5/metadata?mode=terminology").await;
     assert_eq!(status, StatusCode::OK);
     // R5 makes codeSystem.content mandatory; the R4 family has no such element.
     assert_eq!(body["codeSystem"][0]["content"], "not-present");
     let mut path = Path::root("TerminologyCapabilities");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     fhir_types::r5::terminology_capabilities::TerminologyCapabilities::from_json(object, &mut path)
         .expect("an R5 TerminologyCapabilities");
     let (status, body) = server.get("/r5/$versions").await;
@@ -178,7 +183,8 @@ async fn expand_returns_properties_under_r5() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let mut path = Path::root("ValueSet");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     fhir_types::r5::value_set::ValueSet::from_json(object, &mut path).expect("an R5 ValueSet");
     assert_eq!(body["expansion"]["property"][0]["code"], "legs");
     assert_eq!(

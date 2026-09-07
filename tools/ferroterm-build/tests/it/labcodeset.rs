@@ -42,6 +42,12 @@ fn read_json(path: &std::path::Path) -> serde_json::Value {
     serde_json::from_str(&text).expect("json")
 }
 
+/// A written resource in the codec's document model, ready to decode.
+fn read_document(path: &std::path::Path) -> fhir_types::codec::Value {
+    let text = std::fs::read_to_string(path).expect("reads");
+    serde_json::from_str(&text).expect("json")
+}
+
 fn property<'a>(
     concept: &'a fhir_types::r4b::code_system::CodeSystemConcept,
     code: &str,
@@ -72,7 +78,7 @@ fn the_publication_builds_from_a_document_a_directory_or_a_zip() {
 
     // The value set: the active concepts over LOINC, Dutch displays, English
     // designations.
-    let value = read_json(&report.dir.join("ValueSet-nl-labcodeset.json"));
+    let value = read_document(&report.dir.join("ValueSet-nl-labcodeset.json"));
     let value_set = ValueSet::from_json(
         value.as_object().expect("object"),
         &mut Path::root("ValueSet"),
@@ -133,7 +139,7 @@ fn the_supplement_carries_the_dutch_names_and_the_facts() {
         panic!("a Labcodeset report");
     };
     // The LOINC supplement: every concept, with the Dutch name and the facts.
-    let value = read_json(&report.dir.join("CodeSystem-nl-labcodeset-loinc.json"));
+    let value = read_document(&report.dir.join("CodeSystem-nl-labcodeset-loinc.json"));
     let supplement = CodeSystem::from_json(
         value.as_object().expect("object"),
         &mut Path::root("CodeSystem"),
@@ -205,7 +211,7 @@ fn the_ordinal_lists_and_the_zip_build_the_same_resources() {
         panic!("a Labcodeset report");
     };
     // The ordinal list: a value set under its OID, over SNOMED CT.
-    let value = read_json(
+    let value = read_document(
         &report
             .dir
             .join(format!("ValueSet-{}.json", ORDINAL_OID.replace('.', "-"))),

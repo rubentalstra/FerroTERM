@@ -27,11 +27,15 @@ async fn the_metadata_resources_are_the_r6_ballot_and_say_so() {
     assert!(description.contains("6.0.0-ballot5"), "{description}");
     assert!(description.contains("re-verified"), "{description}");
     let mut path = Path::root("CapabilityStatement");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     let decoded =
         fhir_types::r6::capability_statement::CapabilityStatement::from_json(object, &mut path)
             .expect("an R6 CapabilityStatement");
-    assert_eq!(Value::Object(decoded.to_json().expect("encodes")), body);
+    assert_eq!(
+        crate::fixture::written(&decoded.to_json().expect("encodes")),
+        body
+    );
     let (status, body) = server.get("/r6/metadata?mode=terminology").await;
     assert_eq!(status, StatusCode::OK);
     assert!(
@@ -43,7 +47,8 @@ async fn the_metadata_resources_are_the_r6_ballot_and_say_so() {
     // R6 renames `codeSystem.version.code` to `value` and makes `content` optional.
     assert_eq!(body["codeSystem"][0]["content"], "not-present");
     let mut path = Path::root("TerminologyCapabilities");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     fhir_types::r6::terminology_capabilities::TerminologyCapabilities::from_json(object, &mut path)
         .expect("an R6 TerminologyCapabilities");
     let (status, body) = server.get("/r6/$versions").await;
@@ -86,7 +91,8 @@ async fn the_operations_answer_in_the_r5_family_shapes_under_r6() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let mut path = Path::root("ValueSet");
-    let object = expect_object(&body, &path).expect("object");
+    let carried = crate::fixture::document(&body);
+    let object = expect_object(&carried, &path).expect("object");
     fhir_types::r6::value_set::ValueSet::from_json(object, &mut path).expect("an R6 ValueSet");
     assert_eq!(body["expansion"]["property"][0]["code"], "legs");
     let (status, body) = server

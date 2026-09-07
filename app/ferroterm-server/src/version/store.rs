@@ -69,7 +69,10 @@ pub(crate) struct Request<'a> {
 pub(crate) fn create(request: &Request<'_>, body: &Bytes) -> Result<Response, Failure> {
     let mut object = body_object(request, body)?;
     let id = uuid::Uuid::new_v4().to_string();
-    object.insert("id".to_owned(), serde_json::Value::String(id.clone()));
+    object.insert(
+        "id".to_owned(),
+        fhir_types::codec::Value::String(id.clone()),
+    );
     let record = write(request, &id, object)?;
     Ok(created(request, &record))
 }
@@ -83,7 +86,7 @@ pub(crate) fn create(request: &Request<'_>, body: &Bytes) -> Result<Response, Fa
 pub(crate) fn update(request: &Request<'_>, id: &str, body: &Bytes) -> Result<Response, Failure> {
     let known = check_id(id)?;
     let mut object = body_object(request, body)?;
-    if let Some(sent) = object.get("id").and_then(serde_json::Value::as_str)
+    if let Some(sent) = object.get("id").and_then(fhir_types::codec::Value::as_str)
         && sent != known
     {
         return Err(Failure::new(
@@ -94,7 +97,10 @@ pub(crate) fn update(request: &Request<'_>, id: &str, body: &Bytes) -> Result<Re
     }
     let held = request.state.persisted_record(request.resource_type, known);
     check_if_match(request.headers, held.as_ref())?;
-    object.insert("id".to_owned(), serde_json::Value::String(known.to_owned()));
+    object.insert(
+        "id".to_owned(),
+        fhir_types::codec::Value::String(known.to_owned()),
+    );
     let record = write(request, known, object)?;
     if held.is_none() {
         return Ok(created(request, &record));
@@ -335,7 +341,7 @@ fn body_object(request: &Request<'_>, body: &Bytes) -> Result<Object, Failure> {
     let structure = |text: String| Failure::new(StatusCode::BAD_REQUEST, "structure", text);
     let object = match Wire::of_body(request.headers)? {
         Wire::Json => {
-            let value: serde_json::Value = serde_json::from_slice(body)
+            let value: fhir_types::codec::Value = serde_json::from_slice(body)
                 .map_err(|error| structure(format!("the body is not JSON: {error}")))?;
             let path = fhir_types::codec::Path::root(request.resource_type.name());
             expect_object(&value, &path)
@@ -351,7 +357,7 @@ fn body_object(request: &Request<'_>, body: &Bytes) -> Result<Object, Failure> {
     };
     let sent = object
         .get("resourceType")
-        .and_then(serde_json::Value::as_str)
+        .and_then(fhir_types::codec::Value::as_str)
         .unwrap_or_default();
     if sent != request.resource_type.name() {
         return Err(Failure::new(

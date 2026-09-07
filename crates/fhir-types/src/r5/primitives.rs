@@ -40,14 +40,18 @@ impl From<&str> for Base64Binary {
 }
 
 impl super::super::codec::Primitive for Base64Binary {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -55,22 +59,22 @@ impl super::super::codec::Primitive for Base64Binary {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -103,8 +107,8 @@ impl super::super::codec::Primitive for Base64Binary {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -191,11 +195,18 @@ impl From<bool> for Boolean {
 }
 
 impl super::super::codec::Primitive for Boolean {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
-        Ok(self.value.as_ref().map(|v| serde_json::Value::Bool(*v)))
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| super::super::codec::Value::Bool(*v)))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -203,22 +214,22 @@ impl super::super::codec::Primitive for Boolean {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -251,8 +262,8 @@ impl super::super::codec::Primitive for Boolean {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -342,14 +353,18 @@ impl From<&str> for Canonical {
 }
 
 impl super::super::codec::Primitive for Canonical {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -357,22 +372,22 @@ impl super::super::codec::Primitive for Canonical {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -405,8 +420,8 @@ impl super::super::codec::Primitive for Canonical {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -498,14 +513,18 @@ impl From<&str> for Code {
 }
 
 impl super::super::codec::Primitive for Code {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -513,22 +532,22 @@ impl super::super::codec::Primitive for Code {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -561,8 +580,8 @@ impl super::super::codec::Primitive for Code {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -656,14 +675,18 @@ impl From<&str> for Date {
 }
 
 impl super::super::codec::Primitive for Date {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -671,22 +694,22 @@ impl super::super::codec::Primitive for Date {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -719,8 +742,8 @@ impl super::super::codec::Primitive for Date {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -816,14 +839,18 @@ impl From<&str> for DateTime {
 }
 
 impl super::super::codec::Primitive for DateTime {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -831,22 +858,22 @@ impl super::super::codec::Primitive for DateTime {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -879,8 +906,8 @@ impl super::super::codec::Primitive for DateTime {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -972,12 +999,14 @@ impl From<&str> for Decimal {
 }
 
 impl super::super::codec::Primitive for Decimal {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         self.value
             .as_ref()
             .map(|text| {
-                text.parse::<serde_json::Number>()
-                    .map(serde_json::Value::Number)
+                text.parse::<super::super::codec::Number>()
+                    .map(super::super::codec::Value::Number)
                     .map_err(|_| super::super::codec::EncodeError::BadDecimal {
                         text: text.clone(),
                     })
@@ -985,7 +1014,9 @@ impl super::super::codec::Primitive for Decimal {
             .transpose()
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -993,22 +1024,22 @@ impl super::super::codec::Primitive for Decimal {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -1022,7 +1053,7 @@ impl super::super::codec::Primitive for Decimal {
     fn serialize_value<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self.value.as_ref() {
             Some(text) => serde::Serialize::serialize(
-                &text.parse::<serde_json::Number>().map_err(|_| {
+                &text.parse::<super::super::codec::Number>().map_err(|_| {
                     <S::Error as serde::ser::Error>::custom(
                         super::super::codec::EncodeError::BadDecimal { text: text.clone() },
                     )
@@ -1048,8 +1079,8 @@ impl super::super::codec::Primitive for Decimal {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -1141,14 +1172,18 @@ impl From<&str> for Id {
 }
 
 impl super::super::codec::Primitive for Id {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -1156,22 +1191,22 @@ impl super::super::codec::Primitive for Id {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -1204,8 +1239,8 @@ impl super::super::codec::Primitive for Id {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -1297,14 +1332,18 @@ impl From<&str> for Instant {
 }
 
 impl super::super::codec::Primitive for Instant {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -1312,22 +1351,22 @@ impl super::super::codec::Primitive for Instant {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -1360,8 +1399,8 @@ impl super::super::codec::Primitive for Instant {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -1448,11 +1487,18 @@ impl From<i32> for Integer {
 }
 
 impl super::super::codec::Primitive for Integer {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
-        Ok(self.value.as_ref().map(|v| serde_json::Value::from(*v)))
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| super::super::codec::Value::from(*v)))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -1460,22 +1506,22 @@ impl super::super::codec::Primitive for Integer {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -1508,8 +1554,8 @@ impl super::super::codec::Primitive for Integer {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -1596,14 +1642,18 @@ impl From<i64> for Integer64 {
 }
 
 impl super::super::codec::Primitive for Integer64 {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.to_string())))
+            .map(|v| super::super::codec::Value::String(v.to_string())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -1611,22 +1661,22 @@ impl super::super::codec::Primitive for Integer64 {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -1659,8 +1709,8 @@ impl super::super::codec::Primitive for Integer64 {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -1751,14 +1801,18 @@ impl From<&str> for Markdown {
 }
 
 impl super::super::codec::Primitive for Markdown {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -1766,22 +1820,22 @@ impl super::super::codec::Primitive for Markdown {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -1814,8 +1868,8 @@ impl super::super::codec::Primitive for Markdown {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -1905,14 +1959,18 @@ impl From<&str> for Oid {
 }
 
 impl super::super::codec::Primitive for Oid {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -1920,22 +1978,22 @@ impl super::super::codec::Primitive for Oid {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -1968,8 +2026,8 @@ impl super::super::codec::Primitive for Oid {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -2054,11 +2112,18 @@ impl From<u32> for PositiveInt {
 }
 
 impl super::super::codec::Primitive for PositiveInt {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
-        Ok(self.value.as_ref().map(|v| serde_json::Value::from(*v)))
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| super::super::codec::Value::from(*v)))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -2066,22 +2131,22 @@ impl super::super::codec::Primitive for PositiveInt {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -2114,8 +2179,8 @@ impl super::super::codec::Primitive for PositiveInt {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -2207,14 +2272,18 @@ impl From<&str> for String {
 }
 
 impl super::super::codec::Primitive for String {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -2222,22 +2291,22 @@ impl super::super::codec::Primitive for String {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -2270,8 +2339,8 @@ impl super::super::codec::Primitive for String {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -2363,14 +2432,18 @@ impl From<&str> for Time {
 }
 
 impl super::super::codec::Primitive for Time {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -2378,22 +2451,22 @@ impl super::super::codec::Primitive for Time {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -2426,8 +2499,8 @@ impl super::super::codec::Primitive for Time {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -2512,11 +2585,18 @@ impl From<u32> for UnsignedInt {
 }
 
 impl super::super::codec::Primitive for UnsignedInt {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
-        Ok(self.value.as_ref().map(|v| serde_json::Value::from(*v)))
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
+        Ok(self
+            .value
+            .as_ref()
+            .map(|v| super::super::codec::Value::from(*v)))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -2524,22 +2604,22 @@ impl super::super::codec::Primitive for UnsignedInt {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -2572,8 +2652,8 @@ impl super::super::codec::Primitive for UnsignedInt {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -2665,14 +2745,18 @@ impl From<&str> for Uri {
 }
 
 impl super::super::codec::Primitive for Uri {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -2680,22 +2764,22 @@ impl super::super::codec::Primitive for Uri {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -2728,8 +2812,8 @@ impl super::super::codec::Primitive for Uri {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -2819,14 +2903,18 @@ impl From<&str> for Url {
 }
 
 impl super::super::codec::Primitive for Url {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -2834,22 +2922,22 @@ impl super::super::codec::Primitive for Url {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -2882,8 +2970,8 @@ impl super::super::codec::Primitive for Url {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -2973,14 +3061,18 @@ impl From<&str> for Uuid {
 }
 
 impl super::super::codec::Primitive for Uuid {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         Ok(self
             .value
             .as_ref()
-            .map(|v| serde_json::Value::String(v.clone())))
+            .map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() && self.extension.is_empty() {
             return Ok(None);
         }
@@ -2988,22 +3080,22 @@ impl super::super::codec::Primitive for Uuid {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
         if !self.extension.is_empty() {
             let mut items = Vec::with_capacity(self.extension.len());
             for item in &self.extension {
-                items.push(serde_json::Value::Object(
+                items.push(super::super::codec::Value::Object(
                     super::super::codec::Json::to_json(item)?,
                 ));
             }
             object.insert(
                 std::string::String::from("extension"),
-                serde_json::Value::Array(items),
+                super::super::codec::Value::Array(items),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -3036,8 +3128,8 @@ impl super::super::codec::Primitive for Uuid {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
@@ -3118,11 +3210,15 @@ impl From<&str> for Xhtml {
 }
 
 impl super::super::codec::Primitive for Xhtml {
-    fn value_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
-        Ok(Some(&self.value).map(|v| serde_json::Value::String(v.clone())))
+    fn value_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
+        Ok(Some(&self.value).map(|v| super::super::codec::Value::String(v.clone())))
     }
 
-    fn element_json(&self) -> Result<Option<serde_json::Value>, super::super::codec::EncodeError> {
+    fn element_json(
+        &self,
+    ) -> Result<Option<super::super::codec::Value>, super::super::codec::EncodeError> {
         if self.id.is_none() {
             return Ok(None);
         }
@@ -3130,10 +3226,10 @@ impl super::super::codec::Primitive for Xhtml {
         if let Some(id) = &self.id {
             object.insert(
                 std::string::String::from("id"),
-                serde_json::Value::String(id.clone()),
+                super::super::codec::Value::String(id.clone()),
             );
         }
-        Ok(Some(serde_json::Value::Object(object)))
+        Ok(Some(super::super::codec::Value::Object(object)))
     }
 
     fn has_value(&self) -> bool {
@@ -3160,8 +3256,8 @@ impl super::super::codec::Primitive for Xhtml {
     }
 
     fn from_json_parts(
-        value: Option<&serde_json::Value>,
-        element: Option<&serde_json::Value>,
+        value: Option<&super::super::codec::Value>,
+        element: Option<&super::super::codec::Value>,
         path: &mut super::super::codec::Path,
     ) -> Result<Self, super::super::codec::DecodeError> {
         if value.is_none() && element.is_none() && !path.is_lenient() {
