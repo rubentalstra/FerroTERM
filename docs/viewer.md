@@ -532,13 +532,23 @@ today is breached by honest work next week. The two jobs are split:
   host it browses, its assets are content-hashed and cached immutably, and a
   reader downloads it once.
 - **`max_growth_gzip_bytes` is the per-change budget**, and it is the gate that
-  catches a regression. **32,000 bytes** for the wasm, which is the number with
-  the most room on both sides of the two landmarks that have been measured: the
-  largest legitimate single increment is a whole screen at 27,043, and the
-  smallest illegitimate one is the `thaw` dependency at 36,894. So a screen
-  18% richer than the one measured still passes, and a dependency of the size
-  the viewer just shed still fails. The guard prints the delta on every run,
-  passing or not, so growth is visible before it is a breach.
+  catches a surprise. **45,000 bytes** for the wasm. It was 32,000, chosen to
+  sit between the two landmarks then measured: a whole screen at 27,043 and the
+  `thaw` dependency at 36,894. A third measurement broke that separation. The
+  expansion runner (#410) is a screen with a six-parameter form, paging, three
+  distinct refusal shapes, and a live region, and it costs 40,940. A legitimate
+  screen is now larger than the illegitimate dependency the number was sized to
+  catch, so size alone cannot tell them apart and a budget between them would
+  refuse honest work.
+
+  So the budget stops trying to make that distinction, and the distinction moves
+  to instruments that can make it. A dependency arrives in `Cargo.toml` and
+  `Cargo.lock`, where it is read rather than weighed; `viewer-boundary.sh`
+  refuses a workspace crate outright; and `max_gzip_bytes` still bounds the
+  total whatever the increments were. 45,000 leaves the richest screen measured
+  a tenth of its own size in room, and still refuses an increment nobody
+  intended. The guard prints the delta on every run, passing or not, so growth
+  is visible before it is a breach.
 
 **A change cannot make its own build green by editing a number.** The guard
 reads `measured_gzip_bytes` **out of git at the merge base**, not out of the
