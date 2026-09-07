@@ -6,11 +6,11 @@
 //! below names the document behind it, so a claim can be traced to the request
 //! that produced it rather than blended into one table.
 
+use crate::components::spinner::Spinner;
 use leptos::prelude::*;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params;
 use leptos_router::params::Params;
-use thaw::Spinner;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
