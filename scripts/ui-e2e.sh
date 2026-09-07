@@ -5,6 +5,13 @@
 #
 #   scripts/ui-e2e.sh
 #   scripts/ui-e2e.sh --base-url URL --webdriver URL
+#   scripts/ui-e2e.sh --docs-shots
+#
+# The battery must not change a tracked file. The documentation capture pass is
+# the one exception, and it runs only when --docs-shots asks for it: it drives
+# the same deployment and writes one PNG per viewer screen into
+# website/book/src/operate/img/viewer, which the book embeds. An ordinary run,
+# on a pull request or on a laptop, never rewrites an image.
 #
 # Without arguments the script owns everything it drives. It builds the bundle
 # with Trunk, builds the server with the bundle inside it, builds the image
@@ -18,7 +25,16 @@
 # container reaches a server on the host as host.docker.internal, not as
 # 127.0.0.1. A server started that way serves the journeys' own fixture only if
 # it was pointed at e2e/fixtures/codesystems with FERROTERM_CODESYSTEMS, which
-# the tree journey needs.
+# the tree journey needs and the capture pass needs on every screen.
+#
+# FERROTERM_UI_E2E_SHOTS_DIR sends the capture somewhere other than the book,
+# for looking at a shot without touching the checkout.
+#
+# A capture renders the FHIR base the viewer read, so whatever address the
+# browser used lands in the images. The managed mode gives the server the fixed
+# network alias below; a manual capture reproduces the same images by serving on
+# 8080 and starting the browser container with
+# --add-host ferroterm:host-gateway, then passing --base-url http://ferroterm:8080.
 #
 # The image stages linux binaries, so the managed mode needs a Linux host.
 # Anywhere else it says so and stops rather than reporting a lane it did not
@@ -36,16 +52,21 @@ readonly BROWSER_IMAGE="selenium/standalone-chromium:4.48.0-20260905@sha256:fcf9
 # The tag the locally built server image is loaded under. It is never pushed.
 readonly SERVER_IMAGE="ferroterm-ui-e2e:local"
 
+# The name the browser addresses the server by on the private network.
+readonly SERVER_HOST="ferroterm"
+
 # Seconds to wait for the server container to answer /health, and for the
 # browser container to report itself ready.
 readonly READY_TIMEOUT=120
 
 base_url=""
 webdriver=""
+docs_shots=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --base-url) base_url=$2; shift 2 ;;
     --webdriver) webdriver=$2; shift 2 ;;
+    --docs-shots) docs_shots=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -167,7 +188,12 @@ if [[ -z "$base_url" ]]; then
   # taxonomy tree has nothing to draw. e2e/fixtures/codesystems holds one
   # shaped, synthetic CodeSystem resource so the tree journey drives a real
   # hierarchy; it is mounted read-only and never baked into the image.
+  # The alias is what the browser addresses the server by, and it is fixed
+  # while the container name carries this run's pid. A screenshot the capture
+  # pass takes renders the FHIR base it read, so an address with a pid in it
+  # would change every image on every run.
   docker run --detach --name "$server" --network "$network" \
+    --network-alias "$SERVER_HOST" \
     --env FERROTERM_UI=on --env FERROTERM_LOG_FORMAT=json \
     --env FERROTERM_CODESYSTEMS=/fixtures/codesystems \
     --volume "$root/e2e/fixtures/codesystems:/fixtures/codesystems:ro" \
@@ -225,13 +251,30 @@ if [[ -z "$base_url" ]]; then
     exit 1
   fi
 
-  base_url="http://$server:8080"
+  base_url="http://$SERVER_HOST:8080"
   webdriver="http://127.0.0.1:$webdriver_port"
 fi
 
 echo "== the journeys, against $base_url through $webdriver"
 # The journeys live outside the workspace, for the reason e2e/Cargo.toml
 # records, so they are run by manifest path rather than by package.
+#
+# The capture pass is excluded by a nextest set difference, so it never runs
+# beside the journeys and never writes an image nobody asked for
+# (https://nexte.st/docs/filtersets/).
 FERROTERM_UI_E2E_BASE_URL="$base_url" \
   FERROTERM_UI_E2E_WEBDRIVER="$webdriver" \
-  cargo nextest run --manifest-path e2e/Cargo.toml --locked
+  cargo nextest run --manifest-path e2e/Cargo.toml --locked \
+    -E 'binary(it) - test(/^docs_shots::/)'
+
+# The documentation capture pass, which is the one thing here that writes into
+# the checkout. It runs after the journeys, so an image is only ever taken of a
+# viewer the journeys have just found working.
+if [[ -n "$docs_shots" ]]; then
+  echo "== the documentation screenshots, into website/book/src/operate/img/viewer"
+  FERROTERM_UI_E2E_BASE_URL="$base_url" \
+    FERROTERM_UI_E2E_WEBDRIVER="$webdriver" \
+    FERROTERM_UI_E2E_DOCS_SHOTS=1 \
+    cargo nextest run --manifest-path e2e/Cargo.toml --locked \
+      -E 'test(/^docs_shots::/)'
+fi

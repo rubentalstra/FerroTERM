@@ -16,6 +16,7 @@
 # Operate
 
 - [Install and run](operate/install.md)
+- [The viewer](operate/viewer.md)
 - [Configuration](operate/configuration.md)
 - [Loading code systems](operate/loading-snomed.md)
 - [Hardware sizing](operate/hardware-sizing.md)
