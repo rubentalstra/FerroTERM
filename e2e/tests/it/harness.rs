@@ -98,6 +98,17 @@ impl Journey {
         Self { driver }
     }
 
+    /// Opens `address` in the same session, as a fresh load.
+    ///
+    /// A click navigation and a typed address reach the router differently, so
+    /// a journey that only clicks never exercises the address a reader shares.
+    pub async fn reopen(&self, address: &str) {
+        self.driver
+            .goto(address)
+            .await
+            .unwrap_or_else(|error| panic!("the browser could not open {address}: {error}"));
+    }
+
     /// The first element matching `selector`, once the bundle has rendered it.
     ///
     /// The wait is the library's own poller over the element condition, so

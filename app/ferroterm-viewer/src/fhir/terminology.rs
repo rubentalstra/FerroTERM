@@ -68,6 +68,9 @@ struct Version {
     /// `version.filter`, the filters `$expand` accepts for this version.
     #[serde(default)]
     filter: Vec<Filter>,
+    /// `version.property`, the properties `$lookup` answers for this version.
+    #[serde(default)]
+    property: Vec<String>,
     /// The extensions the server declared on this version.
     #[serde(default)]
     extension: Vec<Extension>,
@@ -127,6 +130,8 @@ pub(crate) struct VersionRow {
     pub(crate) languages: Vec<String>,
     /// The filters `$expand` accepts for this version.
     pub(crate) filters: Vec<FilterRow>,
+    /// The properties `$lookup` answers for this version.
+    pub(crate) properties: Vec<String>,
     /// The artifact this version was read from, when the server read one.
     pub(crate) artifact: Option<Artifact>,
 }
@@ -191,32 +196,61 @@ impl TerminologyCapabilities {
         let mut cards: BTreeMap<&str, SystemCard> = BTreeMap::new();
         for system in &self.code_system {
             let url = system.uri.as_deref().unwrap_or_default();
-            let card = cards.entry(url).or_insert_with(|| SystemCard {
-                url: url.to_owned(),
-                content: system.content.clone(),
-                subsumption: system.subsumption,
-                versions: Vec::new(),
-            });
-            card.versions.extend(system.version.iter().map(|version| {
-                VersionRow {
-                    code: version.identifier(),
-                    is_default: version.is_default.unwrap_or_default(),
-                    compositional: version.compositional,
-                    languages: version.language.clone(),
-                    filters: version
-                        .filter
-                        .iter()
-                        .map(|filter| FilterRow {
-                            code: filter.code.clone().unwrap_or_default(),
-                            operators: filter.op.clone(),
-                        })
-                        .collect(),
-                    artifact: artifact_of(&version.extension),
-                }
-            }));
+            let card = cards.entry(url).or_insert_with(|| opened(url, system));
+            add_versions(card, system);
         }
         cards.into_values().collect()
     }
+
+    /// The card for one canonical, or `None` when this root declares no such
+    /// system.
+    ///
+    /// A canonical the document does not name is an ordinary answer: a reader
+    /// followed a link, switched FHIR version, or typed an address, and the
+    /// screen says so rather than failing.
+    pub(crate) fn card(&self, url: &str) -> Option<SystemCard> {
+        let mut found: Option<SystemCard> = None;
+        for system in self
+            .code_system
+            .iter()
+            .filter(|system| system.uri.as_deref().unwrap_or_default() == url)
+        {
+            add_versions(found.get_or_insert_with(|| opened(url, system)), system);
+        }
+        found
+    }
+}
+
+/// A card carrying `system`'s system-level facts and no version yet.
+fn opened(url: &str, system: &CodeSystem) -> SystemCard {
+    SystemCard {
+        url: url.to_owned(),
+        content: system.content.clone(),
+        subsumption: system.subsumption,
+        versions: Vec::new(),
+    }
+}
+
+/// Appends every version `system` declares to `card`, in declaration order.
+fn add_versions(card: &mut SystemCard, system: &CodeSystem) {
+    card.versions.extend(system.version.iter().map(|version| {
+        VersionRow {
+            code: version.identifier(),
+            is_default: version.is_default.unwrap_or_default(),
+            compositional: version.compositional,
+            languages: version.language.clone(),
+            filters: version
+                .filter
+                .iter()
+                .map(|filter| FilterRow {
+                    code: filter.code.clone().unwrap_or_default(),
+                    operators: filter.op.clone(),
+                })
+                .collect(),
+            properties: version.property.clone(),
+            artifact: artifact_of(&version.extension),
+        }
+    }));
 }
 
 /// The trimmed text, or `None` when it names nothing.
@@ -536,6 +570,76 @@ mod tests {
             .expect("the version declares an artifact");
         assert_eq!(artifact.name, None, "the screen states the absence");
         assert_eq!(artifact.release.as_deref(), Some("20260630"));
+    }
+
+    #[test]
+    fn the_lookup_properties_are_read_per_version_on_every_fhir_version() {
+        for (root, document) in RECORDED {
+            let cards = parse(document).cards();
+            let card = card_of(&cards, "http://example.org/fhir/CodeSystem/animals");
+            let version = card
+                .versions
+                .first()
+                .expect("the fixture serves one version");
+            assert!(
+                version.properties.contains(&"legs".to_owned()),
+                "{root} declares the system's own `$lookup` property"
+            );
+        }
+    }
+
+    #[test]
+    fn a_version_that_declares_no_property_reads_as_an_empty_list() {
+        let cards = parse(
+            r#"{"codeSystem":[{"uri":"https://terminology.example/bare",
+            "version":[{"code":"1"}]}]}"#,
+        )
+        .cards();
+        assert_eq!(
+            card_of(&cards, "https://terminology.example/bare")
+                .versions
+                .first()
+                .map(|version| version.properties.len()),
+            Some(0),
+            "the screen states the absence rather than drawing an empty list"
+        );
+    }
+
+    #[test]
+    fn a_canonical_the_document_names_is_found_as_one_card() {
+        let document = parse(R5);
+        let found = document
+            .card("http://example.org/fhir/CodeSystem/animals")
+            .expect("the fixture declares this system");
+        assert_eq!(found.url, "http://example.org/fhir/CodeSystem/animals");
+        assert!(!found.versions.is_empty(), "the card carries its versions");
+    }
+
+    #[test]
+    fn a_repeated_canonical_is_one_card_whether_it_is_looked_up_or_listed() {
+        let document = parse(
+            r#"{"codeSystem":[
+                {"uri":"https://terminology.example/twice","content":"complete",
+                 "version":[{"code":"1"}]},
+                {"uri":"https://terminology.example/twice","version":[{"code":"2"}]}]}"#,
+        );
+        assert_eq!(
+            document.card("https://terminology.example/twice"),
+            document
+                .cards()
+                .into_iter()
+                .find(|card| card.url == "https://terminology.example/twice"),
+            "one canonical reads the same whichever way the screen asks for it"
+        );
+    }
+
+    #[test]
+    fn a_canonical_the_document_does_not_name_is_absent_rather_than_an_error() {
+        assert_eq!(
+            parse(R5).card("https://terminology.example/never-served"),
+            None,
+            "the screen states the absence, and does not render an error page"
+        );
     }
 
     #[test]

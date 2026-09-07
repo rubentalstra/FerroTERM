@@ -12,6 +12,7 @@ use crate::components::health::HealthIndicator;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
+use crate::pages::code_system::CodeSystemPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
 use crate::pages::settings::SettingsPage;
@@ -106,6 +107,7 @@ pub(crate) fn Shell() -> impl IntoView {
         <Routes fallback=NotFoundPage>
             <Route path=path!("/") view=OverviewPage />
             <Route path=path!("/settings") view=SettingsPage />
+            <Route path=path!("/systems/:url") view=CodeSystemPage />
         </Routes>
     }
     .into_any();

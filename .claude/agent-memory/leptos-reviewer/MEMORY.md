@@ -43,6 +43,9 @@ because what it records is true and the method is reusable.
   prop goes stale on refetch; a plain `Vec<AnyView>` rebuilds positionally
 - [`use_location().pathname` includes the base](use-location-pathname-includes-base.md):
   it is the raw `window.location.pathname`, so compare against `/ui` + path
+- [Click nav decodes the path twice](click-nav-decodeuri-asymmetry.md): the
+  anchor handler runs the PATH through `decodeURI` before pushing it, the query
+  never; only a literal `%` in a path segment is actually lossy
 
 ## Changed under CSR (the hydration half is gone, the rest stands)
 

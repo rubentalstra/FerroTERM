@@ -5,6 +5,7 @@
 //! calls `fetch`, and no second client exists.
 
 pub(crate) mod capability;
+pub(crate) mod code_system;
 pub(crate) mod error;
 pub(crate) mod outcome;
 pub(crate) mod terminology;
@@ -16,6 +17,7 @@ use http::StatusCode;
 use serde::de::DeserializeOwned;
 
 use crate::fhir::capability::CapabilityStatement;
+use crate::fhir::code_system::CodeSystemSearch;
 use crate::fhir::error::FhirError;
 use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::terminology::TerminologyCapabilities;
@@ -111,6 +113,22 @@ impl FhirClient {
             .render(&self.root)
     }
 
+    /// The address of the `CodeSystem` resources one root publishes for a
+    /// canonical.
+    ///
+    /// `url` is the search parameter every definitional resource carries
+    /// (<https://hl7.org/fhir/R4B/codesystem.html#search>), so this is the
+    /// RESTful search interaction rather than an operation. The canonical is
+    /// percent-encoded into the query, which matters because a code system URI
+    /// can carry its own query string.
+    pub(crate) fn code_system_search_url(&self, version: FhirVersion, system: &str) -> String {
+        RequestUrl::new()
+            .segment(version.segment())
+            .segment("CodeSystem")
+            .query("url", system)
+            .render(&self.root)
+    }
+
     /// Reads the `CapabilityStatement` of one served FHIR version.
     ///
     /// # Errors
@@ -133,6 +151,20 @@ impl FhirClient {
         version: FhirVersion,
     ) -> Result<TerminologyCapabilities, FhirError> {
         self.get_json(&self.terminology_metadata_url(version)).await
+    }
+
+    /// Reads the `CodeSystem` resources one root publishes for a canonical.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn code_system_search(
+        &self,
+        version: FhirVersion,
+        system: &str,
+    ) -> Result<CodeSystemSearch, FhirError> {
+        self.get_json(&self.code_system_search_url(version, system))
+            .await
     }
 
     /// Sends a FHIR JSON `GET` and decodes the resource it answers.
@@ -308,6 +340,21 @@ mod tests {
         assert_eq!(
             client.terminology_metadata_url(FhirVersion::R6),
             "https://tx.example.org/r6/metadata?mode=terminology"
+        );
+    }
+
+    #[test]
+    fn a_code_system_search_encodes_the_canonical_it_asks_about() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        assert_eq!(
+            client.code_system_search_url(
+                FhirVersion::R4B,
+                "https://terminology.example/x?edition=2031"
+            ),
+            "https://tx.example.org/r4b/CodeSystem?url=https%3A%2F%2Fterminology.example%2Fx%3Fedition%3D2031",
+            "a canonical carrying its own query string cannot truncate the search"
         );
     }
 
