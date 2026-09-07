@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use axum::body::Bytes;
 use axum::response::Response;
+use fhir_terminology::conceptmap::model::ConceptMapModel;
 use fhir_terminology::fhir_codesystem::model::CodeSystemModel;
 use fhir_terminology::provider::CodeSystemProvider;
 use fhir_terminology::valueset::model::ValueSetModel;
@@ -36,11 +37,15 @@ pub(crate) struct Surface {
     pub schemas: &'static Schemas,
     /// Reads a stored object as a resource of this version and writes it back.
     pub round_trip: fn(&Object) -> Result<Object, String>,
-    /// Renders a loaded value set as a `ValueSet` of this version.
-    pub render_value_set: fn(&ValueSetModel) -> Result<Object, String>,
+    /// Renders a loaded value set, under its instance id, as a `ValueSet` of
+    /// this version.
+    pub render_value_set: fn(&ValueSetModel, &str) -> Result<Object, String>,
     /// Renders a loaded code system, under its instance id, as a `CodeSystem`
     /// of this version.
     pub render_code_system: fn(&CodeSystemModel, &str) -> Result<Object, String>,
+    /// Renders a loaded concept map, under its instance id, as a `ConceptMap`
+    /// of this version.
+    pub render_concept_map: fn(&ConceptMapModel, &str) -> Result<Object, String>,
 }
 
 /// One request against the persisted resources of one type.
@@ -117,9 +122,9 @@ pub(crate) fn update(request: &Request<'_>, id: &str, body: &Bytes) -> Result<Re
 
 /// `GET {type}/{id}`: the current version of the resource.
 ///
-/// A `CodeSystem` or `ValueSet` id the deployment loaded reads here too,
-/// rendered from the model the engine holds; it carries no `ETag`, because a
-/// loaded resource has no version this server counts.
+/// A `CodeSystem`, `ValueSet`, or `ConceptMap` id the deployment loaded reads
+/// here too, rendered from the model the engine holds; it carries no `ETag`,
+/// because a loaded resource has no version this server counts.
 ///
 /// # Errors
 ///
@@ -149,7 +154,7 @@ pub(crate) fn read(request: &Request<'_>, id: &str) -> Result<Response, Failure>
 /// is one.
 ///
 /// The FHIR read is defined over any resource the server holds, and a code
-/// system the server serves from an index is one
+/// system, value set, or concept map the deployment loaded from disk is one
 /// (<https://hl7.org/fhir/R4B/http.html#read>); what comes back is the
 /// definition, with the concepts only where `content` says the resource
 /// carries them.
@@ -172,11 +177,18 @@ fn loaded(request: &Request<'_>, id: &str) -> Result<Option<Object>, Failure> {
             let Some(model) = request.state.value_set_instance(id) else {
                 return Ok(None);
             };
-            (request.surface.render_value_set)(&model)
+            (request.surface.render_value_set)(&model, id)
                 .map(Some)
                 .map_err(|reason| rendering(&reason))
         }
-        ResourceType::ConceptMap => Ok(None),
+        ResourceType::ConceptMap => {
+            let Some(model) = request.state.concept_map_instance(id) else {
+                return Ok(None);
+            };
+            (request.surface.render_concept_map)(&model, id)
+                .map(Some)
+                .map_err(|reason| rendering(&reason))
+        }
     }
 }
 
@@ -466,6 +478,34 @@ pub(crate) fn loaded_value_sets(
         .collect())
 }
 
+/// The ids of the concept maps the deployment loaded that `query` matches, the
+/// persisted ones left out because a search lists those from their records.
+///
+/// `ConceptMap` search defines `url` and `version`
+/// (<https://hl7.org/fhir/R4B/conceptmap.html#search>).
+///
+/// # Errors
+///
+/// A search parameter this server does not answer is a 400.
+pub(crate) fn loaded_concept_maps(
+    state: &AppState,
+    query: &[(String, String)],
+) -> Result<Vec<String>, Failure> {
+    let (url, version) = criteria(query)?;
+    Ok(state
+        .concept_map_instances()
+        .into_iter()
+        .filter(|(id, served_url, served_version)| {
+            state
+                .persisted_record(ResourceType::ConceptMap, id)
+                .is_none()
+                && url.is_none_or(|wanted| served_url == wanted)
+                && version.is_none_or(|wanted| served_version.as_deref() == Some(wanted))
+        })
+        .map(|(id, _, _)| id)
+        .collect())
+}
+
 /// One loaded code system a search matched: its instance id and the provider
 /// that serves it.
 pub(crate) type Served = (String, Arc<dyn CodeSystemProvider>);
@@ -683,7 +723,8 @@ macro_rules! store_routes {
             finish(crate::version::store::delete(&request, &id), wire)
         }
 
-        /// `GET ?url=&version=`: a `searchset` of the persisted resources.
+        /// `GET ?url=&version=`: a `searchset` of the resources this server
+        /// holds, the loaded ones beside the persisted ones.
         pub async fn $search(
             axum::extract::State(state): axum::extract::State<
                 std::sync::Arc<crate::state::AppState>,
@@ -727,14 +768,16 @@ macro_rules! store {
                     fhir_version: FHIR_VERSION,
                     schemas: &fhir_types::$fhir::schema::SCHEMAS,
                     round_trip: super::resources::round_trip,
-                    render_value_set: |model| {
-                        fhir_types::codec::Json::to_json(
-                            &fhir_terminology::valueset::render::$fhir::value_set(model, true),
-                        )
-                        .map_err(|error| error.to_string())
+                    render_value_set: |model, id| {
+                        fhir_types::codec::Json::to_json(&value_set(model, id))
+                            .map_err(|error| error.to_string())
                     },
                     render_code_system: |model, id| {
                         fhir_types::codec::Json::to_json(&code_system(model, id))
+                            .map_err(|error| error.to_string())
+                    },
+                    render_concept_map: |model, id| {
+                        fhir_types::codec::Json::to_json(&concept_map(model, id))
                             .map_err(|error| error.to_string())
                     },
                 }
@@ -748,6 +791,33 @@ macro_rules! store {
             ) -> fhir_types::$fhir::code_system::CodeSystem {
                 let mut resource =
                     fhir_terminology::fhir_codesystem::render::$fhir::code_system(model);
+                resource.id = Some(id.to_owned());
+                resource
+            }
+
+            /// A loaded value set as this version's `ValueSet`, under the
+            /// instance id the server addresses it by.
+            ///
+            /// `Resource.id` is the logical id the resource is read by, so a
+            /// client can address what a search returned
+            /// (<https://hl7.org/fhir/R4B/resource.html#id>).
+            fn value_set(
+                model: &fhir_terminology::valueset::model::ValueSetModel,
+                id: &str,
+            ) -> fhir_types::$fhir::value_set::ValueSet {
+                let mut resource =
+                    fhir_terminology::valueset::render::$fhir::value_set(model, true);
+                resource.id = Some(id.to_owned());
+                resource
+            }
+
+            /// A loaded concept map as this version's `ConceptMap`, under the
+            /// instance id the server addresses it by.
+            fn concept_map(
+                model: &fhir_terminology::conceptmap::model::ConceptMapModel,
+                id: &str,
+            ) -> fhir_types::$fhir::concept_map::ConceptMap {
+                let mut resource = fhir_terminology::conceptmap::render::$fhir::concept_map(model);
                 resource.id = Some(id.to_owned());
                 resource
             }
@@ -786,8 +856,8 @@ macro_rules! store {
                 }
             }
 
-            /// The `searchset` of the persisted resources of `resource_type`
-            /// that `query` matches.
+            /// The `searchset` of the resources of `resource_type` that
+            /// `query` matches, the loaded ones before the persisted ones.
             ///
             /// # Errors
             ///
@@ -826,9 +896,18 @@ macro_rules! store {
                         };
                         entry.push(found(
                             &format!("ValueSet/{id}"),
-                            Resource::ValueSet(Box::new(
-                                fhir_terminology::valueset::render::$fhir::value_set(&model, true),
-                            )),
+                            Resource::ValueSet(Box::new(value_set(&model, &id))),
+                        ));
+                    }
+                }
+                if resource_type == ResourceType::ConceptMap {
+                    for id in crate::version::store::loaded_concept_maps(state, query)? {
+                        let Some(model) = state.concept_map_instance(&id) else {
+                            continue;
+                        };
+                        entry.push(found(
+                            &format!("ConceptMap/{id}"),
+                            Resource::ConceptMap(Box::new(concept_map(&model, &id))),
                         ));
                     }
                 }

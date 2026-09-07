@@ -424,3 +424,22 @@ async fn validate_code_checks_membership_only_under_the_declared_name() {
         assert_eq!(body["issue"][0]["code"], "invalid", "{undeclared}: {body}");
     }
 }
+
+#[tokio::test]
+async fn a_searchset_value_set_carries_the_id_it_reads_by() {
+    let server = Server::start_with_resources();
+    let (status, body) = server.get(&format!("/r4b/ValueSet?url={VS_PETS}")).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let entry = &body["entry"][0];
+    let id = entry["fullUrl"]
+        .as_str()
+        .and_then(|url| url.strip_prefix("ValueSet/"))
+        .expect("the entry addresses a value set");
+    // `Resource.id` is "the logical id of the resource, as used in the URL for
+    // the resource" (<https://hl7.org/fhir/R4B/resource.html#id>), so a client
+    // can read what the search returned.
+    assert_eq!(entry["resource"]["id"], id, "{body}");
+    let (status, read) = server.get(&format!("/r4b/ValueSet/{id}")).await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    assert_eq!(read["id"], id, "{read}");
+}

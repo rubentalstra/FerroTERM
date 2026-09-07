@@ -8,4 +8,5 @@
 pub mod convert;
 pub mod load;
 pub mod model;
+pub mod render;
 pub mod store;
