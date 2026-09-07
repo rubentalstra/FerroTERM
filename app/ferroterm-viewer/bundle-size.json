@@ -7,7 +7,7 @@
       "pattern": "*_bg.wasm",
       "max_gzip_bytes": 470000,
       "max_growth_gzip_bytes": 45000,
-      "measured_gzip_bytes": 269401,
+      "measured_gzip_bytes": 296490,
       "claim": "the finished viewer's WebAssembly module is under 460 KiB gzipped, and no one change adds more than a whole screen's worth"
     },
     {
@@ -23,7 +23,7 @@
       "pattern": "*.css",
       "max_gzip_bytes": 8000,
       "max_growth_gzip_bytes": 2000,
-      "measured_gzip_bytes": 4488,
+      "measured_gzip_bytes": 4504,
       "claim": "the compiled Tailwind sheet is under 8 KB gzipped"
     }
   ]

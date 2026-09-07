@@ -17,6 +17,7 @@ use crate::pages::expand::ExpandPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
 use crate::pages::settings::SettingsPage;
+use crate::pages::value_sets::ValueSetsPage;
 use crate::routes::UI_BASE;
 use crate::routes::ui_link;
 use crate::settings::Settings;
@@ -92,6 +93,13 @@ pub(crate) fn Shell() -> impl IntoView {
                 "Expand"
             </a>
             <a
+                href=move || ui_link("valuesets", version.get())
+                aria-current=move || if on("/valuesets") { Some("page") } else { None }
+                class="text-slate-700 hover:underline dark:text-slate-200"
+            >
+                "Value sets"
+            </a>
+            <a
                 href=move || ui_link("settings", version.get())
                 aria-current=move || if on("/settings") { Some("page") } else { None }
                 class="text-slate-700 hover:underline dark:text-slate-200"
@@ -117,6 +125,7 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/expand") view=ExpandPage />
             <Route path=path!("/settings") view=SettingsPage />
             <Route path=path!("/systems/:url") view=CodeSystemPage />
+            <Route path=path!("/valuesets") view=ValueSetsPage />
         </Routes>
     }
     .into_any();
