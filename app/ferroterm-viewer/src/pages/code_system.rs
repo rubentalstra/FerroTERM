@@ -6,7 +6,6 @@
 //! below names the document behind it, so a claim can be traced to the request
 //! that produced it rather than blended into one table.
 
-use crate::components::spinner::Spinner;
 use leptos::prelude::*;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params;
@@ -16,6 +15,7 @@ use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
 use crate::components::icon;
 use crate::components::icon::Icon;
+use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
@@ -124,9 +124,7 @@ fn capability_section(
             <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
                 "Read from this root's terminology capabilities. Every affordance on the other screens is gated on what this pane shows."
             </p>
-            <Transition fallback=|| {
-                view! { <Spinner label="Reading the terminology capabilities" /> }
-            }>
+            <Reading label="Reading the terminology capabilities">
                 {move || {
                     capabilities
                         .with(|answered| {
@@ -144,7 +142,7 @@ fn capability_section(
                                 })
                         })
                 }}
-            </Transition>
+            </Reading>
             <RequestDisclosure url />
         </section>
     }
@@ -425,9 +423,7 @@ fn published_section(
             <p aria-live="polite" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {announcement}
             </p>
-            <Transition fallback=|| {
-                view! { <Spinner label="Reading the published CodeSystem" /> }
-            }>
+            <Reading label="Reading the published CodeSystem">
                 {move || {
                     search
                         .with(|answered| {
@@ -439,7 +435,7 @@ fn published_section(
                                 })
                         })
                 }}
-            </Transition>
+            </Reading>
             <RequestDisclosure url />
         </section>
     }

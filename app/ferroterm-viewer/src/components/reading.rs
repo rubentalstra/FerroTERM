@@ -22,12 +22,16 @@ use crate::components::spinner::Spinner;
 pub(crate) fn Reading(
     /// What the section is waiting on, read out while it waits.
     label: &'static str,
+    /// Draws the indicator at the size of the surrounding text, for a section
+    /// that sits inside a line rather than under a heading of its own.
+    #[prop(optional)]
+    inline: bool,
     /// The answer to draw once the read settles.
     children: ChildrenFn,
 ) -> impl IntoView {
     view! {
         <Transition fallback=move || {
-            view! { <Spinner label=label /> }
+            view! { <Spinner inline=inline label=label /> }
         }>{move || children()}</Transition>
     }
 }

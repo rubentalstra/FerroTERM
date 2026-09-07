@@ -220,19 +220,26 @@ pub(crate) struct Expansion {
 }
 
 impl Expansion {
-    /// How many entries this page holds, which is what a page counts.
+    /// How many concepts this answer lists, nested entries included.
     ///
-    /// `count` and `offset` page over `expansion.contains`, and a nested entry
-    /// is a child of one of those rather than an entry of its own
-    /// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.expansion.contains>),
-    /// so a hierarchy renders as more rows than the page holds members.
+    /// `expansion.total` is "the total number of concepts in the expansion",
+    /// measured against "the number of concept nodes in this resource"
+    /// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.expansion.total>),
+    /// so a nested entry counts the same as a top-level one and this number is
+    /// also the number of rows a reader can count.
     pub(crate) fn listed(&self) -> u32 {
-        let listed = self
-            .concepts
-            .iter()
-            .filter(|concept| concept.depth == 0)
-            .count();
-        u32::try_from(listed).unwrap_or(u32::MAX)
+        u32::try_from(self.concepts.len()).unwrap_or(u32::MAX)
+    }
+
+    /// Whether the server nested entries under one another.
+    ///
+    /// "Paging only applies to flat expansions: servers ignore paging if the
+    /// expansion is not flat"
+    /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>, the `count`
+    /// parameter), so a nested answer is the whole selection rather than a
+    /// page of one.
+    pub(crate) fn hierarchical(&self) -> bool {
+        self.concepts.iter().any(|concept| concept.depth > 0)
     }
 }
 
@@ -567,8 +574,25 @@ mod tests {
         );
         assert_eq!(
             expansion.listed(),
-            2,
-            "the page holds two members, and the rest are their children"
+            5,
+            "`expansion.total` counts concept nodes, so every rendered row counts"
+        );
+        assert!(
+            expansion.hierarchical(),
+            "an answer with a nested entry is not a page of a flat expansion"
+        );
+    }
+
+    #[test]
+    fn a_flat_answer_is_counted_the_same_way_and_says_it_is_flat() {
+        let expansion =
+            parse(r#"{"expansion":{"total":2,"contains":[{"code":"a"},{"code":"b"}]}}"#)
+                .expansion()
+                .expect("the answer carries an expansion");
+        assert_eq!(expansion.listed(), 2);
+        assert!(
+            !expansion.hierarchical(),
+            "nothing is nested, so the page window the request asked for applies"
         );
     }
 

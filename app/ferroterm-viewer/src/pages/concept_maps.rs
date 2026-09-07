@@ -17,9 +17,9 @@ use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
 use crate::components::icon;
 use crate::components::icon::Icon;
+use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
-use crate::components::spinner::Spinner;
 use crate::fhir::CONCEPT_MAP;
 use crate::fhir::FhirClient;
 use crate::fhir::concept_map::GroupRow;
@@ -214,9 +214,9 @@ fn list_section(
     // The live region is in the document before the read settles, which is
     // what lets a screen reader announce the count when it arrives. Every
     // number in it comes from the answer rather than from the address, because
-    // `<Transition>` keeps the previous rows on screen while the next read
-    // runs and a sentence built from the address would describe rows that are
-    // not there yet.
+    // the transition boundary keeps the previous rows on screen while the next
+    // read runs and a sentence built from the address would describe rows that
+    // are not there yet.
     let announcement = Memo::new(move |_| {
         let params = params.get();
         found.with(|answered| {
@@ -239,9 +239,7 @@ fn list_section(
             <p aria-live="polite" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {announcement}
             </p>
-            <Transition fallback=|| {
-                view! { <Spinner label="Reading the concept maps" /> }
-            }>
+            <Reading label="Reading the concept maps">
                 {move || {
                     let params = params.get();
                     let run = run.get();
@@ -256,7 +254,7 @@ fn list_section(
                                 })
                         })
                 }}
-            </Transition>
+            </Reading>
             <RequestDisclosure url />
         </section>
     }
@@ -386,9 +384,7 @@ fn detail_section(
                 <h2 id="conceptmap-detail-heading" class="text-lg font-medium">
                     "The concept map you opened"
                 </h2>
-                <Transition fallback=|| {
-                    view! { <Spinner label="Reading the concept map" /> }
-                }>
+                <Reading label="Reading the concept map">
                     {move || {
                         let params = params.get();
                         let run = run.get();
@@ -406,7 +402,7 @@ fn detail_section(
                                     })
                             })
                     }}
-                </Transition>
+                </Reading>
                 <RequestDisclosure url />
             </section>
         </Show>
@@ -568,9 +564,7 @@ fn runner_section(
             <h2 id="translate-heading" class="text-lg font-medium">
                 "Translate a code"
             </h2>
-            <Transition fallback=|| {
-                view! { <Spinner label="Reading what this root can do" /> }
-            }>
+            <Reading label="Reading what this root can do">
                 {move || {
                     statement
                         .with(|answered| {
@@ -588,7 +582,7 @@ fn runner_section(
                                 })
                         })
                 }}
-            </Transition>
+            </Reading>
             <Show when=move || declared.get() fallback=|| ()>
                 {runner_form(params, run, version)}
             </Show>
@@ -802,9 +796,7 @@ fn answer_block(
             <p aria-live="polite" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {move || announcement.get()}
             </p>
-            <Transition fallback=|| {
-                view! { <Spinner label="Running the translation" /> }
-            }>
+            <Reading label="Running the translation">
                 {move || {
                     translated
                         .with(|answered| {
@@ -817,7 +809,7 @@ fn answer_block(
                                 })
                         })
                 }}
-            </Transition>
+            </Reading>
             <RequestDisclosure url />
         </div>
     }
