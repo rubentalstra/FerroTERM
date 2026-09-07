@@ -7,6 +7,10 @@
 //! every journey skips, saying so; the `ui-e2e` CI job always runs that
 //! script, so a skip is never a pass.
 //!
+//! `docs_shots` is a capture pass rather than a journey: it writes the book's
+//! screenshots and runs only when the script is asked for it, so an ordinary
+//! run rewrites no tracked file.
+//!
 //! Client-side rendering shapes all of this. The document is an empty `<body>`
 //! until the WebAssembly bundle boots
 //! (<https://github.com/leptos-rs/book/blob/main/src/csr_wrapping_up.md>), so
@@ -21,5 +25,6 @@
     reason = "test assertions, and the notice a skipped journey prints"
 )]
 
+mod docs_shots;
 mod harness;
 mod viewer;

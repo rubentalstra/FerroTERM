@@ -1,0 +1,55 @@
+{
+  "resourceType": "ConceptMap",
+  "id": "e2e-taxonomy-map",
+  "url": "https://ferroterm.eu/fhir/ConceptMap/e2e-taxonomy-map",
+  "version": "1",
+  "name": "FerroTermE2ETaxonomyMap",
+  "title": "A shaped map out of the taxonomy",
+  "status": "active",
+  "experimental": true,
+  "publisher": "FerroTERM",
+  "description": "Synthetic content. A published ConceptMap out of the shaped taxonomy, so the concept map screen lists a resource and $translate answers a match rather than nothing. It carries no clinical meaning and no licensed content.",
+  "sourceUri": "https://ferroterm.eu/fhir/CodeSystem/e2e-taxonomy",
+  "targetUri": "https://ferroterm.eu/fhir/CodeSystem/e2e-taxonomy-target",
+  "group": [
+    {
+      "source": "https://ferroterm.eu/fhir/CodeSystem/e2e-taxonomy",
+      "target": "https://ferroterm.eu/fhir/CodeSystem/e2e-taxonomy-target",
+      "element": [
+        {
+          "code": "ca-leaf",
+          "display": "First leaf",
+          "target": [
+            {
+              "code": "ta-first",
+              "display": "The target of the first leaf",
+              "equivalence": "equivalent"
+            }
+          ]
+        },
+        {
+          "code": "cb-leaf",
+          "display": "Second leaf",
+          "target": [
+            {
+              "code": "ta-second",
+              "display": "The target of the second leaf",
+              "equivalence": "wider"
+            }
+          ]
+        },
+        {
+          "code": "bb-branch",
+          "display": "Second branch",
+          "target": [
+            {
+              "code": "ta-branch",
+              "display": "The target of the second branch",
+              "equivalence": "relatedto"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
