@@ -13,6 +13,7 @@ use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
 use crate::pages::code_system::CodeSystemPage;
+use crate::pages::concept_maps::ConceptMapsPage;
 use crate::pages::expand::ExpandPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
@@ -100,6 +101,13 @@ pub(crate) fn Shell() -> impl IntoView {
                 "Value sets"
             </a>
             <a
+                href=move || ui_link("conceptmaps", version.get())
+                aria-current=move || if on("/conceptmaps") { Some("page") } else { None }
+                class="text-slate-700 hover:underline dark:text-slate-200"
+            >
+                "Concept maps"
+            </a>
+            <a
                 href=move || ui_link("settings", version.get())
                 aria-current=move || if on("/settings") { Some("page") } else { None }
                 class="text-slate-700 hover:underline dark:text-slate-200"
@@ -125,6 +133,7 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/expand") view=ExpandPage />
             <Route path=path!("/settings") view=SettingsPage />
             <Route path=path!("/systems/:url") view=CodeSystemPage />
+            <Route path=path!("/conceptmaps") view=ConceptMapsPage />
             <Route path=path!("/valuesets") view=ValueSetsPage />
         </Routes>
     }

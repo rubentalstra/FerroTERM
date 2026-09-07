@@ -204,7 +204,14 @@ fn list_view(
         .filter_map(|index| resources.get(index))
         .map(|resource| row_view(resource, params, version))
         .collect();
-    let pager = pager_view("Value set pages", view, params, VALUE_SETS_PATH, version);
+    let pager = pager_view(
+        "Value set pages",
+        view,
+        params,
+        VALUE_SETS_PATH,
+        version,
+        &[],
+    );
     view! {
         <div class="mt-3 overflow-x-auto">
             <table class="w-full border-collapse text-left text-sm">

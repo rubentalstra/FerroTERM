@@ -15,6 +15,34 @@ pub(crate) struct CapabilityStatement {
     pub(crate) fhir_version: Option<String>,
     /// `CapabilityStatement.software`, which names the running server.
     pub(crate) software: Option<Software>,
+    /// `CapabilityStatement.rest`, which says what each resource type answers.
+    #[serde(default = "Vec::new")]
+    rest: Vec<Rest>,
+}
+
+/// One `CapabilityStatement.rest`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+struct Rest {
+    /// `rest.resource`, one per resource type this root serves.
+    #[serde(default = "Vec::new")]
+    resource: Vec<RestResource>,
+}
+
+/// One `CapabilityStatement.rest.resource`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+struct RestResource {
+    /// `resource.type`, the resource type it describes.
+    r#type: Option<String>,
+    /// `resource.operation`, the operations this root answers on that type.
+    #[serde(default = "Vec::new")]
+    operation: Vec<RestOperation>,
+}
+
+/// One `CapabilityStatement.rest.resource.operation`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+struct RestOperation {
+    /// `operation.name`, as the statement wrote it.
+    name: Option<String>,
 }
 
 /// `CapabilityStatement.software`.
@@ -43,6 +71,27 @@ impl CapabilityStatement {
             (Some(fhir), None) => Some(format!("FHIR {fhir}")),
             (None, software) => software,
         }
+    }
+}
+
+impl CapabilityStatement {
+    /// Whether this root declares `operation` on `resource_type`.
+    ///
+    /// An affordance that runs an operation appears only where the statement
+    /// declares it, so a screen never offers a run the root then refuses. A
+    /// leading `$` is trimmed from both sides of the comparison: R4B's own
+    /// example instances write the bare name
+    /// (<https://hl7.org/fhir/R4B/capabilitystatement-example.json.html>) and
+    /// a statement that writes `$translate` means the same operation.
+    pub(crate) fn declares_operation(&self, resource_type: &str, operation: &str) -> bool {
+        let wanted = operation.trim_start_matches('$');
+        self.rest
+            .iter()
+            .flat_map(|rest| rest.resource.iter())
+            .filter(|resource| resource.r#type.as_deref() == Some(resource_type))
+            .flat_map(|resource| resource.operation.iter())
+            .filter_map(|declared| declared.name.as_deref())
+            .any(|name| name.trim_start_matches('$') == wanted)
     }
 }
 
@@ -78,6 +127,33 @@ mod tests {
             parse(r#"{"resourceType":"CapabilityStatement","status":"active"}"#).summary(),
             None,
             "the shell then says the root answered without saying what it is"
+        );
+    }
+
+    #[test]
+    fn an_operation_is_declared_only_where_the_statement_names_it() {
+        let statement = parse(
+            r#"{"resourceType":"CapabilityStatement","rest":[{"mode":"server","resource":[
+                {"type":"ConceptMap","operation":[{"name":"translate"}]},
+                {"type":"ValueSet","operation":[{"name":"expand"}]}]}]}"#,
+        );
+        assert!(statement.declares_operation("ConceptMap", "translate"));
+        assert!(
+            statement.declares_operation("ConceptMap", "$translate"),
+            "a statement that writes the bare name means the same operation"
+        );
+        assert!(
+            !statement.declares_operation("ValueSet", "translate"),
+            "an operation declared on one type is not declared on another"
+        );
+        assert!(!statement.declares_operation("CodeSystem", "lookup"));
+    }
+
+    #[test]
+    fn a_statement_that_declares_no_rest_offers_no_operation() {
+        assert!(
+            !parse(r#"{"fhirVersion":"4.3.0"}"#).declares_operation("ConceptMap", "translate"),
+            "the screen then says the root does not declare the operation"
         );
     }
 

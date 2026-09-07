@@ -6,12 +6,14 @@
 
 pub(crate) mod capability;
 pub(crate) mod code_system;
+pub(crate) mod concept_map;
 pub(crate) mod error;
 pub(crate) mod expansion;
 pub(crate) mod facts;
 pub(crate) mod outcome;
 pub(crate) mod searchset;
 pub(crate) mod terminology;
+pub(crate) mod translate;
 pub(crate) mod value_set;
 pub(crate) mod version;
 
@@ -22,6 +24,7 @@ use serde::de::DeserializeOwned;
 
 use crate::fhir::capability::CapabilityStatement;
 use crate::fhir::code_system::CodeSystemSearch;
+use crate::fhir::concept_map::PublishedConceptMap;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ExpandRequest;
 use crate::fhir::expansion::ExpandedValueSet;
@@ -29,6 +32,8 @@ use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::searchset::SearchFilter;
 use crate::fhir::searchset::SearchSet;
 use crate::fhir::terminology::TerminologyCapabilities;
+use crate::fhir::translate::TranslateAnswer;
+use crate::fhir::translate::TranslateRequest;
 use crate::fhir::value_set::PublishedValueSet;
 use crate::fhir::version::FhirVersion;
 use crate::url::RequestUrl;
@@ -47,6 +52,9 @@ const UI_PREFIX: &str = "/ui";
 
 /// The `ValueSet` resource type, as it appears in a request path.
 pub(crate) const VALUE_SET: &str = "ValueSet";
+
+/// The `ConceptMap` resource type, as it appears in a request path.
+pub(crate) const CONCEPT_MAP: &str = "ConceptMap";
 
 /// A client for the FerroTERM server that served this bundle.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -285,6 +293,69 @@ impl FhirClient {
             .await
     }
 
+    /// Searches the `ConceptMap` resources this root holds.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn concept_map_search(
+        &self,
+        version: FhirVersion,
+        filter: &SearchFilter,
+    ) -> Result<SearchSet<PublishedConceptMap>, FhirError> {
+        self.get_json(&self.search_url(version, CONCEPT_MAP, filter))
+            .await
+    }
+
+    /// Reads one `ConceptMap` by its id.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. An id
+    /// this root does not hold arrives as [`FhirError::Refused`] carrying the
+    /// server's own `OperationOutcome`.
+    pub(crate) async fn concept_map_read(
+        &self,
+        version: FhirVersion,
+        id: &str,
+    ) -> Result<PublishedConceptMap, FhirError> {
+        self.get_json(&self.resource_url(version, CONCEPT_MAP, id))
+            .await
+    }
+
+    /// The address one `ConceptMap/$translate` run reads.
+    ///
+    /// `$translate` takes its parameters in the query of a `GET`
+    /// (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>), under
+    /// the names the target version's own `OperationDefinition` declares, and
+    /// every one of them is percent-encoded.
+    pub(crate) fn translate_url(&self, version: FhirVersion, request: &TranslateRequest) -> String {
+        request
+            .append(
+                RequestUrl::new()
+                    .segment(version.segment())
+                    .segment(CONCEPT_MAP)
+                    .segment("$translate"),
+                version,
+            )
+            .render(&self.root)
+    }
+
+    /// Runs `ConceptMap/$translate` and reads the `Parameters` it answers.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. A
+    /// refusal arrives as [`FhirError::Refused`] carrying the server's own
+    /// `OperationOutcome`.
+    pub(crate) async fn translate(
+        &self,
+        version: FhirVersion,
+        request: &TranslateRequest,
+    ) -> Result<TranslateAnswer, FhirError> {
+        self.get_json(&self.translate_url(version, request)).await
+    }
+
     /// Sends a FHIR JSON `GET` and decodes the resource it answers.
     async fn get_json<T: DeserializeOwned>(&self, url: &str) -> Result<T, FhirError> {
         let response = send(Request::get(url).header("Accept", FHIR_JSON), url).await?;
@@ -510,13 +581,13 @@ mod tests {
         assert_eq!(
             client.search_url(
                 FhirVersion::R5,
-                VALUE_SET,
+                CONCEPT_MAP,
                 &SearchFilter {
                     url: "https://terminology.example/cm?a=b".to_owned(),
                     version: "2031".to_owned(),
                 }
             ),
-            "https://tx.example.org/r5/ValueSet\
+            "https://tx.example.org/r5/ConceptMap\
              ?url=https%3A%2F%2Fterminology.example%2Fcm%3Fa%3Db&version=2031",
             "a canonical carrying its own query string cannot truncate the search"
         );
@@ -531,6 +602,29 @@ mod tests {
             client.resource_url(FhirVersion::R6, VALUE_SET, "a/b"),
             "https://tx.example.org/r6/ValueSet/a%2Fb",
             "an id a reader typed cannot reach a route the viewer did not mean to ask for"
+        );
+    }
+
+    #[test]
+    fn a_translation_sends_the_names_the_target_version_declares() {
+        let client = FhirClient {
+            root: "https://tx.example.org".to_owned(),
+        };
+        let request = TranslateRequest {
+            system: "http://snomed.info/sct".to_owned(),
+            code: "404684003".to_owned(),
+            ..TranslateRequest::default()
+        };
+        assert_eq!(
+            client.translate_url(FhirVersion::R4B, &request),
+            "https://tx.example.org/r4b/ConceptMap/$translate\
+             ?system=http%3A%2F%2Fsnomed.info%2Fsct&code=404684003"
+        );
+        assert_eq!(
+            client.translate_url(FhirVersion::R6, &request),
+            "https://tx.example.org/r6/ConceptMap/$translate\
+             ?sourceSystem=http%3A%2F%2Fsnomed.info%2Fsct&sourceCode=404684003",
+            "the R6 ballot renamed `system` and `code`"
         );
     }
 
