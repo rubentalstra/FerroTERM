@@ -30,9 +30,15 @@ git stash list                    # drop stashes whose work is committed
 
 Two cautions learned the hard way:
 
-- **Never remove a worktree whose agent is still running.** Check `git worktree
-  list` against the agents currently in flight; a live agent's worktree looks
-  identical to a dead one.
+- **Never remove a worktree whose agent is still running, and never loop over
+  `.claude/worktrees/*` to do it.** Remove them one at a time, by the id of an
+  agent that has reported. A loop cannot tell a live worktree from a finished
+  one, and `--force` discards the live agent's uncommitted work without asking.
+  This has happened twice: once caught by `git worktree remove` refusing on
+  modified files, once not, because the loop passed `--force`. What survives is
+  the branch, since branches outlive worktrees, so the recovery is to point the
+  agent at the branch in the main clone; what is lost is whatever it had not
+  committed.
 - **A squash-merged branch fails `git branch -d`** because its commit is not an
   ancestor of main. Confirm the PR is MERGED with `gh`, then use `-D`. Do not
   chain the whole cleanup into one compound command: the auto-mode classifier

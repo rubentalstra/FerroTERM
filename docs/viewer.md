@@ -526,29 +526,59 @@ today is breached by honest work next week. The two jobs are split:
 - **`max_gzip_bytes` is the ceiling**, the claim about what the finished viewer
   costs a reader. It is set from arithmetic over the screens still to land
   rather than from today's build, so it does not move screen by screen.
-  **470,000 bytes** (459 KiB): 201,725 today plus nine screens at the measured
-  27,043 is 445,112, and the rest covers the accessibility pass and the shell
-  growth that comes with them. The viewer is an operator tool served from the
-  host it browses, its assets are content-hashed and cached immutably, and a
-  reader downloads it once.
-- **`max_growth_gzip_bytes` is the per-change budget**, and it is the gate that
-  catches a surprise. **45,000 bytes** for the wasm. It was 32,000, chosen to
-  sit between the two landmarks then measured: a whole screen at 27,043 and the
-  `thaw` dependency at 36,894. A third measurement broke that separation. The
-  expansion runner (#410) is a screen with a six-parameter form, paging, three
-  distinct refusal shapes, and a live region, and it costs 40,940. A legitimate
-  screen is now larger than the illegitimate dependency the number was sized to
-  catch, so size alone cannot tell them apart and a budget between them would
-  refuse honest work.
+  **540,000 bytes** (528 KiB). It was 470,000, derived when one screen had been
+  measured and the arithmetic assumed nine more like it at 27,043. Five screens
+  in, the mean is 39,737 and the largest is 68,519, and the same arithmetic on
+  real figures runs past 470,000 before the last screen lands:
 
-  So the budget stops trying to make that distinction, and the distinction moves
-  to instruments that can make it. A dependency arrives in `Cargo.toml` and
-  `Cargo.lock`, where it is read rather than weighed; `viewer-boundary.sh`
-  refuses a workspace crate outright; and `max_gzip_bytes` still bounds the
-  total whatever the increments were. 45,000 leaves the richest screen measured
-  a tenth of its own size in room, and still refuses an increment nobody
-  intended. The guard prints the delta on every run, passing or not, so growth
-  is visible before it is a breach.
+  | | gzipped |
+  |---|---|
+  | main with five screens | 331,893 |
+  | the concept browser, measured | 68,519 |
+  | the four versions side by side, the evidence screen, the accessibility pass | about 90,000 together |
+  | projected finish | about 490,000 |
+
+  540,000 carries that with room for the one unmeasured thing ahead:
+  `leptos-chartistry`, which the evidence screen (#414) will pull in and which
+  nothing has weighed. **Re-derive this number when that screen lands**, since
+  it is the last guess in it.
+
+  The viewer is an operator tool served from the host it browses, its assets are
+  content-hashed and cached immutably, and a reader downloads it once.
+- **`max_growth_gzip_bytes` is the per-change budget**, and it is the gate that
+  catches a surprise. **70,000 bytes** for the wasm.
+
+  This is the third setting and the first taken from a sample worth the name.
+  32,000 was chosen between two landmarks, a screen at 27,043 and the `thaw`
+  dependency at 36,894. 45,000 followed when the expansion runner came in at
+  40,940 and showed that a legitimate screen could outweigh the dependency the
+  number was sized to catch. Five screens are now measured and they span a
+  factor of two and a half:
+
+  | screen | gzipped growth |
+  |---|---|
+  | code system detail | 26,736 |
+  | value sets | 27,089 |
+  | concept maps | 35,403 |
+  | expansion runner | 40,940 |
+  | concept browser | 68,519 |
+
+  A single number cannot separate a screen from a library across that range, so
+  it no longer tries. That job belongs to instruments that can do it: a
+  dependency arrives in `Cargo.toml` and `Cargo.lock` where it is read rather
+  than weighed, `viewer-boundary.sh` refuses a workspace crate outright, and
+  `max_gzip_bytes` bounds the total whatever the increments were. 70,000 admits
+  the largest screen measured and still refuses an increment nobody intended.
+  The guard prints the delta on every run, passing or not, so growth is visible
+  before it is a breach.
+
+  The concept browser is the evidence that the range is real rather than
+  slack. Its author took the §12 path first: a lone `format!` over an `f64` was
+  pulling `core::fmt::float` into a bundle with no other float, and removing it
+  with two other reductions bought 8,962 bytes. With the whole tree section
+  stubbed out the screen still cost 49,533, because it is a search, a concept
+  detail, a hierarchy, capability gating and a language picker over four
+  requests.
 
 **A change cannot make its own build green by editing a number.** The guard
 reads `measured_gzip_bytes` **out of git at the merge base**, not out of the
