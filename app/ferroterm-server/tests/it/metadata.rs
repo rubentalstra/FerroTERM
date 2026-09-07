@@ -157,3 +157,66 @@ async fn every_version_declares_the_artifact_each_index_backed_system_came_from(
         }
     }
 }
+/// The canonical the server declares an operation's invocation levels under.
+const OPERATION_LEVEL: &str = "https://ferroterm.eu/fhir/StructureDefinition/operation-level";
+
+/// The levels one declared operation carries, in the order the server wrote them.
+fn levels_of(operation: &serde_json::Value) -> Vec<String> {
+    operation["extension"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+        .iter()
+        .filter(|extension| extension["url"] == OPERATION_LEVEL)
+        .filter_map(|extension| extension["valueCode"].as_str())
+        .map(str::to_owned)
+        .collect()
+}
+
+// NOTE: a `CapabilityStatement` records that a server answers an operation and never at
+// which level, so the levels the version's own definition declares are an extension
+// (<https://hl7.org/fhir/R4B/operationdefinition-definitions.html#OperationDefinition.instance>).
+#[tokio::test]
+async fn every_declared_operation_states_the_levels_its_definition_declares() {
+    let server = Server::start();
+    for version in ["r4", "r4b", "r5", "r6"] {
+        let (status, body) = server.get(&format!("/{version}/metadata")).await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        for resource in body["rest"][0]["resource"]
+            .as_array()
+            .expect("resource is a list")
+        {
+            for operation in resource["operation"]
+                .as_array()
+                .expect("operation is a list")
+            {
+                assert!(
+                    levels_of(operation).contains(&"type".to_owned()),
+                    "{version} answers {} {} at the type level: {body}",
+                    resource["type"],
+                    operation["name"]
+                );
+            }
+        }
+    }
+}
+
+// NOTE: R4 and R4B declare `$lookup` at the type level only, and R5 added the instance
+// level (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>); the routes that
+// follow it are pinned by `instance_lookup_answers_exactly_where_the_version_declares_it`.
+#[tokio::test]
+async fn only_the_versions_that_define_an_instance_lookup_declare_one() {
+    let server = Server::start();
+    for (version, instance) in [("r4", false), ("r4b", false), ("r5", true), ("r6", true)] {
+        let (status, body) = server.get(&format!("/{version}/metadata")).await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        let lookup = &body["rest"][0]["resource"][0]["operation"][0];
+        assert_eq!(lookup["name"], "lookup", "{version}: {body}");
+        let expected = if instance {
+            vec!["type".to_owned(), "instance".to_owned()]
+        } else {
+            vec!["type".to_owned()]
+        };
+        assert_eq!(levels_of(lookup), expected, "{version}: {body}");
+    }
+}

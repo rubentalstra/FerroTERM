@@ -2,12 +2,23 @@
 
 use serde::Deserialize;
 
+/// The canonical a root declares an operation's invocation levels under.
+///
+/// A `CapabilityStatement` records that a server answers an operation and
+/// never at which level; `OperationDefinition.system`, `.type`, and
+/// `.instance` carry that
+/// (<https://hl7.org/fhir/R4B/operationdefinition-definitions.html#OperationDefinition.instance>).
+/// FerroTERM states the levels its generated definition declares as an
+/// extension, and a root that declares none reads as an operation with no
+/// stated level.
+const OPERATION_LEVEL: &str = "https://ferroterm.eu/fhir/StructureDefinition/operation-level";
+
 /// What `GET [base]/metadata` tells the viewer about a served root.
 ///
 /// The FHIR RESTful API defines `metadata` as the capabilities interaction
 /// (<https://hl7.org/fhir/R4B/http.html#capabilities>), and the viewer reads
-/// only the three facts the shell shows. Every field is optional here so a
-/// server that omits one still renders.
+/// only the elements it draws. Every field is optional here so a server that
+/// omits one still renders.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
 pub(crate) struct CapabilityStatement {
     /// `CapabilityStatement.fhirVersion`, the release this root speaks.
@@ -15,6 +26,8 @@ pub(crate) struct CapabilityStatement {
     pub(crate) fhir_version: Option<String>,
     /// `CapabilityStatement.software`, which names the running server.
     pub(crate) software: Option<Software>,
+    /// `CapabilityStatement.description`, where a root states what it serves.
+    pub(crate) description: Option<String>,
     /// `CapabilityStatement.rest`, which says what each resource type answers.
     #[serde(default)]
     rest: Vec<Rest>,
@@ -26,6 +39,9 @@ struct Rest {
     /// `rest.resource`, one per resource type this root serves.
     #[serde(default)]
     resource: Vec<RestResource>,
+    /// `rest.operation`, the operations this root answers at its own root.
+    #[serde(default)]
+    operation: Vec<RestOperation>,
 }
 
 /// One `CapabilityStatement.rest.resource`.
@@ -43,6 +59,38 @@ struct RestResource {
 struct RestOperation {
     /// `operation.name`, as the statement wrote it.
     name: Option<String>,
+    /// `operation.definition`, the `OperationDefinition` it points at.
+    definition: Option<String>,
+    /// `operation.documentation`, what this root adds beyond that definition.
+    documentation: Option<String>,
+    /// The extensions the root declared on the operation.
+    #[serde(default)]
+    extension: Vec<Extension>,
+}
+
+/// One `Extension`, read only for the invocation levels it may carry.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+struct Extension {
+    /// The canonical that says what the extension means.
+    url: Option<String>,
+    /// `valueCode`, the one value type read here.
+    #[serde(rename = "valueCode")]
+    value_code: Option<String>,
+}
+
+/// One operation a root declares, as the statement wrote it.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(crate) struct OperationDeclaration {
+    /// The resource type it is declared on, empty for a whole-root operation.
+    pub(crate) resource: String,
+    /// The operation code, without the `$` a URL spells it with.
+    pub(crate) code: String,
+    /// The `OperationDefinition` canonical the statement names.
+    pub(crate) definition: Option<String>,
+    /// What the root says it answers beyond that definition.
+    pub(crate) documentation: Option<String>,
+    /// The invocation levels the root declares, in the order it wrote them.
+    pub(crate) levels: Vec<String>,
 }
 
 /// `CapabilityStatement.software`.
@@ -58,19 +106,48 @@ impl CapabilityStatement {
     /// The one line the shell shows about a root, or `None` when the server
     /// declared nothing the viewer reads.
     pub(crate) fn summary(&self) -> Option<String> {
-        let software = self.software.as_ref().and_then(|software| {
-            match (software.name.as_deref(), software.version.as_deref()) {
-                (Some(name), Some(version)) => Some(format!("{name} {version}")),
-                (Some(name), None) => Some(name.to_owned()),
-                (None, Some(version)) => Some(version.to_owned()),
-                (None, None) => None,
-            }
-        });
+        let software = self.software_line();
         match (self.fhir_version.as_deref(), software) {
             (Some(fhir), Some(software)) => Some(format!("FHIR {fhir}, {software}")),
             (Some(fhir), None) => Some(format!("FHIR {fhir}")),
             (None, software) => software,
         }
+    }
+
+    /// The name of the running software, with its version where it gave one.
+    pub(crate) fn software_line(&self) -> Option<String> {
+        let software = self.software.as_ref()?;
+        match (software.name.as_deref(), software.version.as_deref()) {
+            (Some(name), Some(version)) => Some(format!("{name} {version}")),
+            (Some(name), None) => Some(name.to_owned()),
+            (None, Some(version)) => Some(version.to_owned()),
+            (None, None) => None,
+        }
+    }
+
+    /// Every operation this root declares, the whole-root ones first.
+    ///
+    /// The order is the document's own, so a screen that draws them shows what
+    /// the root sent rather than an order of its own.
+    pub(crate) fn declarations(&self) -> Vec<OperationDeclaration> {
+        let mut declared = Vec::new();
+        for rest in &self.rest {
+            declared.extend(
+                rest.operation
+                    .iter()
+                    .map(|operation| operation.read(String::new())),
+            );
+            for resource in &rest.resource {
+                let of = resource.r#type.clone().unwrap_or_default();
+                declared.extend(
+                    resource
+                        .operation
+                        .iter()
+                        .map(|operation| operation.read(of.clone())),
+                );
+            }
+        }
+        declared
     }
 
     /// Whether this root declares `operation` on `resource_type`.
@@ -90,6 +167,33 @@ impl CapabilityStatement {
             .flat_map(|resource| resource.operation.iter())
             .filter_map(|declared| declared.name.as_deref())
             .any(|name| name.trim_start_matches('$') == wanted)
+    }
+}
+
+impl RestOperation {
+    /// This operation as the comparison reads it, declared on `resource`.
+    ///
+    /// The `$` is trimmed from the code: R4B's own example instances write the
+    /// bare name (<https://hl7.org/fhir/R4B/capabilitystatement-example.json.html>)
+    /// and a statement that writes `$translate` names the same operation.
+    fn read(&self, resource: String) -> OperationDeclaration {
+        OperationDeclaration {
+            resource,
+            code: self
+                .name
+                .as_deref()
+                .unwrap_or_default()
+                .trim_start_matches('$')
+                .to_owned(),
+            definition: self.definition.clone(),
+            documentation: self.documentation.clone(),
+            levels: self
+                .extension
+                .iter()
+                .filter(|extension| extension.url.as_deref() == Some(OPERATION_LEVEL))
+                .filter_map(|extension| extension.value_code.clone())
+                .collect(),
+        }
     }
 }
 
@@ -165,6 +269,57 @@ mod tests {
             statement.summary(),
             Some("FHIR 6.0.0-ballot5, FerroTERM".to_owned()),
             "the viewer carries the fields it renders and nothing more"
+        );
+    }
+
+    #[test]
+    fn a_declaration_carries_the_levels_and_the_note_the_root_wrote() {
+        let statement = parse(
+            r#"{"resourceType":"CapabilityStatement","rest":[{"mode":"server","resource":[
+                {"type":"CodeSystem","operation":[{"name":"lookup",
+                  "definition":"http://hl7.org/fhir/OperationDefinition/CodeSystem-lookup",
+                  "documentation":"the root says what it adds",
+                  "extension":[
+                    {"url":"https://ferroterm.eu/fhir/StructureDefinition/operation-level","valueCode":"type"},
+                    {"url":"https://example.org/other","valueCode":"ignored"},
+                    {"url":"https://ferroterm.eu/fhir/StructureDefinition/operation-level","valueCode":"instance"}]}]}]}]}"#,
+        );
+        let declared = statement.declarations();
+        assert_eq!(declared.len(), 1, "{declared:?}");
+        let lookup = &declared[0];
+        assert_eq!(lookup.resource, "CodeSystem");
+        assert_eq!(lookup.code, "lookup");
+        assert_eq!(lookup.levels, ["type", "instance"]);
+        assert_eq!(
+            lookup.definition.as_deref(),
+            Some("http://hl7.org/fhir/OperationDefinition/CodeSystem-lookup")
+        );
+        assert_eq!(
+            lookup.documentation.as_deref(),
+            Some("the root says what it adds")
+        );
+    }
+
+    #[test]
+    fn an_operation_the_root_answers_on_itself_names_no_resource_type() {
+        let statement = parse(
+            r#"{"resourceType":"CapabilityStatement","rest":[{"mode":"server",
+                "operation":[{"name":"$closure"}],
+                "resource":[{"type":"ValueSet","operation":[{"name":"expand"}]}]}]}"#,
+        );
+        let declared = statement.declarations();
+        let named: Vec<(&str, &str)> = declared
+            .iter()
+            .map(|operation| (operation.resource.as_str(), operation.code.as_str()))
+            .collect();
+        assert_eq!(
+            named,
+            [("", "closure"), ("ValueSet", "expand")],
+            "a whole-root operation comes first, and the `$` is not part of the code"
+        );
+        assert!(
+            declared[0].levels.is_empty(),
+            "a root that states no level has none read into it"
         );
     }
 }

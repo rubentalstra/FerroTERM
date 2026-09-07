@@ -1,0 +1,247 @@
+{
+  "date": "2026-09-07T13:17:08.396486Z",
+  "extension": [
+    {
+      "extension": [
+        {
+          "url": "definition",
+          "valueCanonical": "http://hl7.org/fhir/uv/tx-tests/FeatureDefinition/test-version"
+        },
+        {
+          "url": "value",
+          "valueCode": "0.1.0"
+        }
+      ],
+      "url": "http://hl7.org/fhir/uv/application-feature/StructureDefinition/feature"
+    },
+    {
+      "extension": [
+        {
+          "url": "definition",
+          "valueCanonical": "http://hl7.org/fhir/uv/tx-ecosystem/FeatureDefinition/CodeSystemAsParameter"
+        },
+        {
+          "url": "value",
+          "valueBoolean": true
+        }
+      ],
+      "url": "http://hl7.org/fhir/uv/application-feature/StructureDefinition/feature"
+    }
+  ],
+  "fhirVersion": "5.0.0",
+  "format": [
+    "application/fhir+json",
+    "json",
+    "application/fhir+xml",
+    "xml"
+  ],
+  "implementation": {
+    "description": "FerroTERM terminology server"
+  },
+  "instantiates": [
+    "http://hl7.org/fhir/CapabilityStatement/terminology-server"
+  ],
+  "kind": "instance",
+  "name": "FerroTERM",
+  "resourceType": "CapabilityStatement",
+  "rest": [
+    {
+      "interaction": [
+        {
+          "code": "batch"
+        }
+      ],
+      "mode": "server",
+      "operation": [
+        {
+          "definition": "http://hl7.org/fhir/OperationDefinition/CapabilityStatement-versions",
+          "name": "versions"
+        },
+        {
+          "definition": "http://hl7.org/fhir/uv/tx-ecosystem/OperationDefinition/cache-control",
+          "name": "cache-control"
+        },
+        {
+          "definition": "http://hl7.org/fhir/OperationDefinition/ConceptMap-closure",
+          "name": "closure"
+        }
+      ],
+      "resource": [
+        {
+          "interaction": [
+            {
+              "code": "read"
+            },
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "definition": "http://hl7.org/fhir/OperationDefinition/CodeSystem-lookup",
+              "documentation": "Beyond the R5 definition, the server answers `code`, `system`, `abstract` (defined by the terminology ecosystem). See <https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>.",
+              "extension": [
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "type"
+                },
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "instance"
+                }
+              ],
+              "name": "lookup"
+            },
+            {
+              "definition": "http://hl7.org/fhir/OperationDefinition/CodeSystem-validate-code",
+              "documentation": "Beyond the R5 definition, the server accepts `lenient-display-validation` and answers `normalized-code`, `x-caused-by-unknown-system`, `x-unknown-system`, `inactive`, `status` (defined by the terminology ecosystem). See <https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>.",
+              "extension": [
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "type"
+                },
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "instance"
+                }
+              ],
+              "name": "validate-code"
+            },
+            {
+              "definition": "http://hl7.org/fhir/OperationDefinition/CodeSystem-subsumes",
+              "extension": [
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "type"
+                },
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "instance"
+                }
+              ],
+              "name": "subsumes"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "url",
+              "type": "uri"
+            },
+            {
+              "name": "version",
+              "type": "token"
+            }
+          ],
+          "type": "CodeSystem"
+        },
+        {
+          "interaction": [
+            {
+              "code": "read"
+            },
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "definition": "http://hl7.org/fhir/OperationDefinition/ValueSet-expand",
+              "documentation": "Beyond the R5 definition, the server accepts `default-valueset-version`, `check-valueset-version`, `force-valueset-version` (pre-adopted from the FHIR R6 ballot for the terminology ecosystem). See <https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>.",
+              "extension": [
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "type"
+                },
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "instance"
+                }
+              ],
+              "name": "expand"
+            },
+            {
+              "definition": "http://hl7.org/fhir/OperationDefinition/ValueSet-validate-code",
+              "documentation": "Beyond the R5 definition, the server accepts `lenient-display-validation`, `valueset-membership-only`, `inferSystem`, `system-version`, `check-system-version`, `force-system-version`, `default-valueset-version`, `check-valueset-version`, `force-valueset-version` (pre-adopted from the FHIR R6 ballot for the terminology ecosystem). Beyond the R5 definition, the server accepts `activeOnly` and answers `normalized-code`, `x-caused-by-unknown-system`, `x-unknown-system`, `inactive`, `status` (defined by the terminology ecosystem). See <https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>.",
+              "extension": [
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "type"
+                },
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "instance"
+                }
+              ],
+              "name": "validate-code"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "url",
+              "type": "uri"
+            },
+            {
+              "name": "version",
+              "type": "token"
+            }
+          ],
+          "type": "ValueSet"
+        },
+        {
+          "interaction": [
+            {
+              "code": "read"
+            },
+            {
+              "code": "search-type"
+            }
+          ],
+          "operation": [
+            {
+              "definition": "http://hl7.org/fhir/OperationDefinition/ConceptMap-translate",
+              "documentation": "Beyond the R5 definition, the server accepts `targetCode`, `targetCoding`, `targetCodeableConcept`, `sourceSystem`, `sourceVersion` (pre-adopted from the FHIR R6 ballot for the terminology ecosystem). Beyond the R5 definition, the server answers `used-conceptmap`, `used-system` (defined by the terminology ecosystem). See <https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>.",
+              "extension": [
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "type"
+                },
+                {
+                  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+                  "valueCode": "instance"
+                }
+              ],
+              "name": "translate"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "url",
+              "type": "uri"
+            },
+            {
+              "name": "version",
+              "type": "token"
+            }
+          ],
+          "type": "ConceptMap"
+        }
+      ],
+      "security": {
+        "service": [
+          {
+            "text": "The server requires no authentication of its own; a deployment puts its own in front of it."
+          }
+        ]
+      }
+    }
+  ],
+  "software": {
+    "name": "FerroTERM",
+    "releaseDate": "2026-09-06",
+    "version": "0.1.0"
+  },
+  "status": "active",
+  "title": "FerroTERM terminology server (R5)",
+  "url": "https://ferroterm.eu/fhir/CapabilityStatement/ferroterm-r5",
+  "version": "0.1.0"
+}
