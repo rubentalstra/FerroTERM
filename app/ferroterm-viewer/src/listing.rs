@@ -12,6 +12,9 @@ use leptos::html::Input;
 use leptos::prelude::*;
 
 use crate::components::NOT_DECLARED;
+use crate::components::icon;
+use crate::components::icon::Glyph;
+use crate::components::icon::Icon;
 use crate::fhir::searchset::SearchFilter;
 use crate::fhir::version::FhirVersion;
 use crate::paging::Page;
@@ -35,10 +38,10 @@ const ID_PARAM: &str = "id";
 const CONTROL: &str = "w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900";
 
 /// The classes a page control carries.
-const PAGE_LINK: &str = "rounded border border-slate-300 px-2 py-1 text-sm text-brand-700 hover:underline dark:border-slate-700 dark:text-brand-300";
+const PAGE_LINK: &str = "inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-sm text-brand-700 hover:underline dark:border-slate-700 dark:text-brand-300";
 
 /// The classes a page control that leads nowhere carries.
-const PAGE_END: &str = "rounded border border-slate-200 px-2 py-1 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400";
+const PAGE_END: &str = "inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400";
 
 /// What a listing screen's address says: the filter, the page, and the read.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -311,8 +314,9 @@ pub(crate) fn filter_form(
             <div class="sm:col-span-2">
                 <button
                     type="submit"
-                    class="rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
+                    class="inline-flex items-center gap-1.5 rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
                 >
+                    <Icon glyph=icon::SEARCH />
                     "Search"
                 </button>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -362,29 +366,35 @@ pub(crate) fn pager_view(
 ) -> AnyView {
     let total = u32::try_from(view.matched).unwrap_or(u32::MAX);
     let here = view.page.number();
-    let step = |target: Option<Page>, text: &'static str| -> AnyView {
+    let step = |target: Option<Page>, glyph: Glyph, text: &'static str| -> AnyView {
         match target {
             Some(page) if page.number() != here => {
                 let href = params.on(page.number()).address_with(path, version, extra);
                 view! {
                     <a href=href class=PAGE_LINK>
+                        <Icon glyph=glyph />
                         {text}
                     </a>
                 }
                 .into_any()
             }
-            Some(_) | None => {
-                view! { <span class=PAGE_END>{text} " (unavailable)"</span> }.into_any()
+            Some(_) | None => view! {
+                <span class=PAGE_END>
+                    <Icon glyph=glyph />
+                    {text}
+                    " (unavailable)"
+                </span>
             }
+            .into_any(),
         }
     };
     view! {
         <nav aria-label=label class="mt-3 flex flex-wrap items-center gap-2">
-            {step(Some(Page::at(0, view.page.count())), "First page")}
-            {step(view.page.previous(), "Previous page")}
+            {step(Some(Page::at(0, view.page.count())), icon::PAGE_FIRST, "First page")}
+            {step(view.page.previous(), icon::PAGE_PREVIOUS, "Previous page")}
             <p class="text-sm font-medium">{view.position()}</p>
-            {step(view.page.next(total), "Next page")}
-            {step(Some(view.page.last(total)), "Last page")}
+            {step(view.page.next(total), icon::PAGE_NEXT, "Next page")}
+            {step(Some(view.page.last(total)), icon::PAGE_LAST, "Last page")}
         </nav>
     }
     .into_any()

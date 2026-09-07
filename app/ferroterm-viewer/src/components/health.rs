@@ -4,6 +4,8 @@ use std::time::Duration;
 
 use leptos::prelude::*;
 
+use crate::components::icon;
+use crate::components::icon::Icon;
 use crate::components::spinner::Spinner;
 use crate::fhir::FhirClient;
 
@@ -35,11 +37,13 @@ pub(crate) fn HealthIndicator() -> impl IntoView {
     let state = move || {
         health.get().map(|result| match result.as_ref() {
             Ok(status) => (
+                icon::SERVING,
                 "Serving",
                 status.to_string(),
                 "bg-teal-100 text-teal-900 dark:bg-teal-900 dark:text-teal-100",
             ),
             Err(error) => (
+                icon::UNREACHABLE,
                 "Unreachable",
                 error.to_string(),
                 "bg-rose-100 text-rose-900 dark:bg-rose-900 dark:text-rose-100",
@@ -53,12 +57,15 @@ pub(crate) fn HealthIndicator() -> impl IntoView {
         }>
             {move || {
                 state()
-                    .map(|(word, detail, tint)| {
+                    .map(|(glyph, word, detail, tint)| {
                         view! {
                             <span
-                                class=format!("rounded-full px-2 py-0.5 text-xs font-medium {tint}")
+                                class=format!(
+                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium {tint}",
+                                )
                                 title=detail
                             >
+                                <Icon glyph=glyph class="h-3.5 w-3.5" />
                                 {word}
                             </span>
                         }

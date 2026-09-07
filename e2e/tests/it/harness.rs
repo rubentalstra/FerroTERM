@@ -27,13 +27,6 @@ const POLL: Duration = Duration::from_millis(100);
 /// panic, which `console_error_panic_hook` turns into one.
 const SEVERE: &str = "SEVERE";
 
-/// The one severe entry a journey passes over.
-///
-// NOTE: A browser requests the site icon on its own, so a document that asks
-// for nothing still draws the probe and its 404
-// (<https://html.spec.whatwg.org/multipage/links.html#rel-icon>).
-const UNPROMPTED: &str = "/favicon.ico";
-
 /// The flags the browser is started with.
 ///
 /// `--headless=new` is Chrome's current headless mode; the other two are what
@@ -199,14 +192,15 @@ impl Journey {
     /// Everything the browser logged as severe since the last read.
     ///
     /// Each read drains the buffer, so a journey reads it only where it
-    /// reports it. A failed request stays in scope: an asset or a code the
-    /// viewer could not fetch is exactly the defect a rendering test is here
-    /// to catch, so only the browser's own icon probe is passed over.
+    /// reports it. Nothing is passed over: a failed request for an asset or a
+    /// code is exactly the defect a rendering test is here to catch, and the
+    /// document declares its own icon, so the browser issues no probe of its
+    /// own (<https://html.spec.whatwg.org/multipage/links.html#rel-icon>).
     async fn console_errors(&self) -> Vec<String> {
         match self.driver.browser_log().await {
             Ok(entries) => entries
                 .iter()
-                .filter(|entry| entry.level == SEVERE && !entry.message.contains(UNPROMPTED))
+                .filter(|entry| entry.level == SEVERE)
                 .map(|entry| {
                     let source = entry.source.as_deref().unwrap_or("unattributed");
                     format!("[{source}] {}", entry.message)

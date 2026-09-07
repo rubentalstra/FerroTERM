@@ -180,7 +180,6 @@ creates the crate adds them, and re-checks each one at that moment.
 | `leptos_meta` | 0.8.6 | `<Title>` and document head from component bodies |
 | `leptos_router` | 0.8.15 | client-side routing, URL as state |
 | `leptos-use` | 0.19.2 | isomorphic helpers (`use_interval_fn`, storage) |
-| `leptos_icons` + `icondata_lu` + `icondata_core` | 0.7.1 + 0.1 + 0.1 | Lucide alone; the `icondata` umbrella pulls every pack |
 | `leptos-chartistry` | 0.2.3 | pure-Rust SVG charts, no JavaScript |
 | `gloo-net` | 0.7.0 | the browser fetch client |
 | `wasm-bindgen` | 0.2.128 | the generated bootstrap |
@@ -191,8 +190,20 @@ creates the crate adds them, and re-checks each one at that moment.
 | Tailwind CSS (tool) | pinned via Trunk `[tools] tailwindcss` | styling, no Node |
 | `leptosfmt` (tool) | 0.1.33 | `view!` macro formatting |
 
-Notes on three of these, each verified rather than assumed:
+Notes on four of these, each verified rather than assumed:
 
+- **There is no icon crate.** The screens draw twenty-one stroked outlines
+  written in `components/icon.rs` (#476). The pinned alternative was
+  `leptos_icons` 0.7.1 over `icondata_lu` 0.1.0, and both were built against
+  the same call sites on one host: the crate came out 1,737 gzipped bytes
+  heavier, 7,509 against 5,772. Tree shaking holds either way, and the
+  sceptical reading was wrong: `icondata_lu` carries 1,599 icons and grepping
+  the built `.wasm` for the path data of one the viewer does not reference
+  finds nothing. The bytes were the smaller half of the decision.
+  `leptos_icons::Icon` writes `role="graphics-symbol"` on every icon it draws
+  and takes no class prop, so a decorative glyph needs an `aria-hidden` spread
+  over a role the component insists on, and sizing goes through `width` and
+  `height` props instead of the Tailwind scale the rest of the viewer uses.
 - **There is no component library.** The viewer used `thaw` for three widgets,
   a button, a spinner, and the config provider that themed them, and paid
   36,894 gzipped bytes for the whole library (§12, the bundle bar). Those three
@@ -605,7 +616,10 @@ end:
    that owns each item. Then rebuild without the suspect and compare the
    gzipped `dist/` figure. An unmeasured claim about what is heavy is worth
    nothing: the claim this viewer carried for a release, that `chrono` and
-   `icondata_ai` were most of its weight, was false by 100%.
+   `icondata_ai` were most of its weight, was false by 100%. The same held for
+   a 1,599-icon pack: building the icon set both ways put `icondata_lu` at
+   1,737 gzipped bytes over hand-written SVG, not the hundreds of kilobytes a
+   whole pack would be (§3).
 2. **Remove weight the viewer does not use.** A dependency whose surface is far
    larger than the use is the first place to look, and the largest single lever
    found so far.

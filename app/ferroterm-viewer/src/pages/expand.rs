@@ -10,6 +10,9 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::icon;
+use crate::components::icon::Glyph;
+use crate::components::icon::Icon;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
@@ -51,10 +54,10 @@ const TOO_COSTLY: &str = "too-costly";
 const CONTROL: &str = "w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900";
 
 /// The classes a page control carries.
-const PAGE_LINK: &str = "rounded border border-slate-300 px-2 py-1 text-sm text-brand-700 hover:underline dark:border-slate-700 dark:text-brand-300";
+const PAGE_LINK: &str = "inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-sm text-brand-700 hover:underline dark:border-slate-700 dark:text-brand-300";
 
 /// The classes a page control that leads nowhere carries.
-const PAGE_END: &str = "rounded border border-slate-200 px-2 py-1 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400";
+const PAGE_END: &str = "inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400";
 
 /// Runs `ValueSet/$expand` and walks the pages of its answer.
 ///
@@ -432,8 +435,9 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
             <div>
                 <button
                     type="submit"
-                    class="rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
+                    class="inline-flex items-center gap-1.5 rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
                 >
+                    <Icon glyph=icon::EXPAND />
                     "Run the expansion"
                 </button>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -825,12 +829,13 @@ fn flags(row: &ConceptRow) -> String {
 /// with its back button, and the router turns the click into a navigation of
 /// its own.
 fn pager_view(pager: Pager, params: &RunnerParams, version: FhirVersion) -> AnyView {
-    let step = |target: Option<Page>, label: &'static str| -> AnyView {
+    let step = |target: Option<Page>, glyph: Glyph, label: &'static str| -> AnyView {
         match target {
             Some(page) => {
                 let href = params.on(page).address(version);
                 view! {
                     <a href=href class=PAGE_LINK>
+                        <Icon glyph=glyph />
                         {label}
                     </a>
                 }
@@ -839,17 +844,23 @@ fn pager_view(pager: Pager, params: &RunnerParams, version: FhirVersion) -> AnyV
             // An unavailable control says so in words: a tint alone carries
             // no meaning (<https://www.w3.org/TR/WCAG22/#use-of-color>), and
             // a `<span>` has no role for `aria-disabled` to qualify.
-            None => view! { <span class=PAGE_END>{label} <span class="sr-only">", unavailable"</span></span> }
+            None => view! {
+                <span class=PAGE_END>
+                    <Icon glyph=glyph />
+                    {label}
+                    <span class="sr-only">", unavailable"</span>
+                </span>
+            }
             .into_any(),
         }
     };
     view! {
         <nav aria-label="Expansion pages" class="mt-3 flex flex-wrap items-center gap-2">
-            {step(pager.first(), "First page")}
-            {step(pager.previous(), "Previous page")}
+            {step(pager.first(), icon::PAGE_FIRST, "First page")}
+            {step(pager.previous(), icon::PAGE_PREVIOUS, "Previous page")}
             <p class="text-sm font-medium">{pager.position()}</p>
-            {step(pager.next(), "Next page")}
-            {step(pager.last(), "Last page")}
+            {step(pager.next(), icon::PAGE_NEXT, "Next page")}
+            {step(pager.last(), icon::PAGE_LAST, "Last page")}
         </nav>
     }
     .into_any()

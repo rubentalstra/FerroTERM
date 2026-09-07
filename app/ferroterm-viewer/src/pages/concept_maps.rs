@@ -15,6 +15,8 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::icon;
+use crate::components::icon::Icon;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
@@ -718,8 +720,9 @@ fn runner_form(
             <div class="sm:col-span-2">
                 <button
                     type="submit"
-                    class="rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
+                    class="inline-flex items-center gap-1.5 rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
                 >
+                    <Icon glyph=icon::CONCEPT_MAPS />
                     "Translate"
                 </button>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">

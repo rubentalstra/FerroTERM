@@ -2,6 +2,8 @@
 
 use leptos::prelude::*;
 
+use crate::components::icon;
+use crate::components::icon::Icon;
 use crate::fhir::error::FhirError;
 use crate::fhir::outcome::OperationOutcome;
 
@@ -47,7 +49,11 @@ pub(crate) fn Failure(
     };
 
     let heading = view! {
-        <p class="font-medium text-rose-700 dark:text-rose-300">"The request failed: " {status}</p>
+        <p class="flex items-center gap-1.5 font-medium text-rose-700 dark:text-rose-300">
+            <Icon glyph=icon::FAILURE />
+            "The request failed: "
+            {status}
+        </p>
         <p class="mt-1 font-mono text-xs break-all text-slate-600 dark:text-slate-300">{url}</p>
     }
     .into_any();

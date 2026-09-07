@@ -2,6 +2,8 @@
 
 use leptos::prelude::*;
 
+use crate::components::icon;
+use crate::components::icon::Icon;
 use crate::fhir::curl_line;
 use crate::fhir::curl_post_line;
 
@@ -52,9 +54,10 @@ pub(crate) fn RequestDisclosure(
                 <a
                     href=move || url.get()
                     rel="external"
-                    class="text-brand-700 underline dark:text-brand-300"
+                    class="inline-flex items-center gap-1 text-brand-700 underline dark:text-brand-300"
                 >
                     "Open the answer in this browser"
+                    <Icon glyph=icon::EXTERNAL class="h-3.5 w-3.5" />
                 </a>
             </p>
         }

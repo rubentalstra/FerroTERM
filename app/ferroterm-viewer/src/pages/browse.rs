@@ -28,6 +28,8 @@ use wasm_bindgen::JsCast;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::icon;
+use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
@@ -82,6 +84,14 @@ const LINK: &str =
 
 /// The classes a sentence that states an absence carries.
 const NOTE: &str = "mt-3 text-sm text-slate-600 dark:text-slate-300";
+
+/// The classes the twist that opens and closes a tree row carries.
+///
+/// The box is 24 by 24 CSS pixels around a smaller chevron, which is the
+/// minimum target WCAG 2.2 SC 2.5.8 sets
+/// (<https://www.w3.org/TR/WCAG22/#target-size-minimum>).
+const TWIST: &str = "mr-1 inline-flex h-6 w-6 items-center justify-center rounded \
+                     text-brand-700 hover:bg-slate-200 dark:text-brand-300 dark:hover:bg-slate-700";
 
 /// The classes a table cell carries.
 const CELL: &str = "py-1 pr-3 text-left text-xs font-normal break-words";
@@ -620,8 +630,9 @@ fn search_section(
                         />
                         <button
                             type="submit"
-                            class="rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
+                            class="inline-flex items-center gap-1.5 rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
                         >
+                            <Icon glyph=icon::SEARCH />
                             "Search"
                         </button>
                     </div>
@@ -1261,17 +1272,26 @@ fn row_view(row: &TreeRow, chrome: &TreeChrome) -> AnyView {
     let name = format!("{display}, {code}");
     let short = (row.open && chrome.partial.contains(&row.concept.code)).then(|| {
         view! {
-            <span class="ml-2 text-xs text-slate-600 dark:text-slate-300">
+            <span class="ml-2 inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <Icon glyph=icon::NOTICE class="h-3.5 w-3.5" />
                 "This server counts more children here than this page size asked for."
             </span>
         }
         .into_any()
     });
+    // The chevron is hidden and the word it replaced stays as `sr-only` text,
+    // so the control keeps the accessible name it had and the row's own
+    // `aria-expanded` remains the only announcement of the state.
     let twist = row.expandable.then(|| {
-        let mark = if row.open { "Close" } else { "Open" };
+        let (glyph, mark) = if row.open {
+            (icon::TWIST_OPEN, "Close")
+        } else {
+            (icon::TWIST_CLOSED, "Open")
+        };
         view! {
-            <a href=toggle tabindex="-1" class="mr-1 font-mono text-xs ".to_owned() + LINK>
-                {mark}
+            <a href=toggle tabindex="-1" class=TWIST>
+                <Icon glyph=glyph class="h-3.5 w-3.5" />
+                <span class="sr-only">{mark}</span>
             </a>
         }
         .into_any()
