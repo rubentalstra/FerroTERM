@@ -32,11 +32,23 @@ pub(crate) struct Issue {
     pub(crate) diagnostics: Option<String>,
 }
 
-/// The `text` of a `CodeableConcept`, which is all the viewer renders of one.
+/// The parts of a `CodeableConcept` the viewer renders.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub(crate) struct CodeableConcept {
+    /// The codes classifying the issue, which a server states beside the text.
+    #[serde(default)]
+    pub(crate) coding: Vec<Coding>,
     /// The human-readable text for the concept.
     pub(crate) text: Option<String>,
+}
+
+/// One `Coding` of `issue.details`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub(crate) struct Coding {
+    /// The system the code is from.
+    pub(crate) system: Option<String>,
+    /// The code itself.
+    pub(crate) code: Option<String>,
 }
 
 /// One issue flattened into the three strings a reader is shown.
@@ -48,6 +60,8 @@ pub(crate) struct IssueLine {
     pub(crate) code: String,
     /// The server's own wording, never a paraphrase.
     pub(crate) text: String,
+    /// The codes of `issue.details`, each as `system#code`.
+    pub(crate) details: Vec<String>,
 }
 
 impl OperationOutcome {
@@ -71,8 +85,45 @@ impl OperationOutcome {
                     .and_then(|details| details.text.clone())
                     .or_else(|| issue.diagnostics.clone())
                     .unwrap_or_else(|| "the server sent no diagnostic".to_owned()),
+                details: issue
+                    .details
+                    .as_ref()
+                    .map(|details| details.coding.iter().map(Coding::rendered).collect())
+                    .unwrap_or_default(),
             })
             .collect()
+    }
+
+    /// Whether any issue is classified as `code`.
+    ///
+    /// The classification is read from `issue.code` and from the codes of
+    /// `issue.details`, because a server states the class in either place and
+    /// the reader is owed the same answer whichever it used.
+    pub(crate) fn carries_code(&self, code: &str) -> bool {
+        self.issue.iter().any(|issue| {
+            issue.code.as_deref() == Some(code)
+                || issue.details.iter().any(|details| {
+                    details
+                        .coding
+                        .iter()
+                        .any(|coding| coding.code.as_deref() == Some(code))
+                })
+        })
+    }
+}
+
+impl Coding {
+    /// The coding as `system#code`, the form the specification writes one in.
+    ///
+    /// The separator is the one FHIR uses for a code in a system
+    /// (<https://hl7.org/fhir/R4B/datatypes.html#Coding>). A coding that names
+    /// no system renders as the bare code, which is what arrived.
+    fn rendered(&self) -> String {
+        let code = self.code.clone().unwrap_or_default();
+        match self.system.as_deref() {
+            Some(system) if !system.is_empty() => format!("{system}#{code}"),
+            Some(_) | None => code,
+        }
     }
 }
 
@@ -98,8 +149,50 @@ mod tests {
                 severity: "error".to_owned(),
                 code: "not-found".to_owned(),
                 text: "Unknown code system http://example.org/cs".to_owned(),
+                details: Vec::new(),
             }],
             "details.text is the message written for a person"
+        );
+    }
+
+    #[test]
+    fn the_codes_of_the_details_are_rendered_beside_the_text() {
+        let outcome = parse(
+            r#"{"issue":[{"severity":"error","code":"too-costly",
+                "details":{"coding":[
+                   {"system":"http://hl7.org/fhir/tools/CodeSystem/tx-issue-type",
+                    "code":"too-costly"},
+                   {"code":"bare"}],
+                 "text":"the expansion is too large"}}]}"#,
+        );
+        assert_eq!(
+            outcome.lines().first().map(|line| line.details.clone()),
+            Some(vec![
+                "http://hl7.org/fhir/tools/CodeSystem/tx-issue-type#too-costly".to_owned(),
+                "bare".to_owned(),
+            ]),
+            "the classification the server stated is shown, not only its prose"
+        );
+    }
+
+    #[test]
+    fn a_refusal_is_recognised_by_the_class_the_server_stated() {
+        let by_issue_code = parse(r#"{"issue":[{"code":"too-costly","diagnostics":"too large"}]}"#);
+        assert!(
+            by_issue_code.carries_code("too-costly"),
+            "the IssueType code classifies the refusal"
+        );
+        let by_detail_coding = parse(
+            r#"{"issue":[{"code":"processing",
+                "details":{"coding":[{"code":"too-costly"}]}}]}"#,
+        );
+        assert!(
+            by_detail_coding.carries_code("too-costly"),
+            "a server that classifies in the details is read the same way"
+        );
+        assert!(
+            !by_detail_coding.carries_code("not-found"),
+            "a class the server did not state is not claimed"
         );
     }
 

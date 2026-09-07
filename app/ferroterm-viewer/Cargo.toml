@@ -33,6 +33,7 @@ web-sys = { workspace = true, features = [
   "Document",
   "DomTokenList",
   "Element",
+  "HtmlInputElement",
   "Location",
   "MediaQueryList",
   "Storage",

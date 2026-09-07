@@ -52,21 +52,30 @@ pub(crate) fn Failure(
     }
     .into_any();
 
+    // The list is a whole-value replacement with no per-issue state, so it is
+    // a plain `Vec`, which rebuilds every position. A `<For>` key it retained
+    // would be moved rather than re-rendered, and the issue would keep its old
+    // wording after a second refusal at the same position.
     let reported = view! {
         <ul class="mt-2 space-y-1">
-            <For
-                each=issues
-                key=|line| (line.severity.clone(), line.code.clone(), line.text.clone())
-                let:line
-            >
-                <li class="text-sm">
-                    <span class="font-semibold">{line.severity.clone()}</span>
-                    " ("
-                    <span class="font-mono">{line.code.clone()}</span>
-                    "): "
-                    {line.text.clone()}
-                </li>
-            </For>
+            {move || {
+                issues()
+                    .into_iter()
+                    .map(|line| {
+                        view! {
+                            <li class="text-sm">
+                                <span class="font-semibold">{line.severity}</span>
+                                " ("
+                                <span class="font-mono">{line.code}</span>
+                                "): "
+                                {line.text}
+                                {detail_codes(&line.details)}
+                            </li>
+                        }
+                            .into_any()
+                    })
+                    .collect::<Vec<AnyView>>()
+            }}
         </ul>
     }
     .into_any();
@@ -90,4 +99,21 @@ pub(crate) fn Failure(
             {evidence}
         </div>
     }
+}
+
+/// The codes of `issue.details`, which classify the refusal.
+///
+/// A server states the class of a refusal as a coding beside the prose
+/// (<https://hl7.org/fhir/R4B/operationoutcome.html>), and a reader deciding
+/// what to do next needs the code, not only the sentence.
+fn detail_codes(details: &[String]) -> AnyView {
+    if details.is_empty() {
+        return ().into_any();
+    }
+    let drawn: Vec<AnyView> = details
+        .iter()
+        .map(|coding| view! { <li class="font-mono break-all">{coding.clone()}</li> }.into_any())
+        .collect();
+    view! { <ul class="mt-1 ml-4 text-xs text-slate-700 dark:text-slate-300">{drawn}</ul> }
+        .into_any()
 }

@@ -12,6 +12,7 @@ use crate::components::health::HealthIndicator;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
+use crate::pages::expand::ExpandPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
 use crate::pages::settings::SettingsPage;
@@ -83,6 +84,13 @@ pub(crate) fn Shell() -> impl IntoView {
                 "Overview"
             </a>
             <a
+                href=move || ui_link("expand", version.get())
+                aria-current=move || if on("/expand") { Some("page") } else { None }
+                class="text-slate-700 hover:underline dark:text-slate-200"
+            >
+                "Expand"
+            </a>
+            <a
                 href=move || ui_link("settings", version.get())
                 aria-current=move || if on("/settings") { Some("page") } else { None }
                 class="text-slate-700 hover:underline dark:text-slate-200"
@@ -105,6 +113,7 @@ pub(crate) fn Shell() -> impl IntoView {
     let screens = view! {
         <Routes fallback=NotFoundPage>
             <Route path=path!("/") view=OverviewPage />
+            <Route path=path!("/expand") view=ExpandPage />
             <Route path=path!("/settings") view=SettingsPage />
         </Routes>
     }
