@@ -16,7 +16,7 @@ use std::sync::Arc;
 use super::{CodeableConceptRef, CodingRef, Issue, OperationError, Sources};
 use crate::compose::Item;
 use crate::language;
-use crate::provider::{CodeSystemProvider, Located};
+use crate::provider::{CodeSystemProvider, ContentMode, Located};
 use crate::valueset::model::{ModelError, ValueSetModel};
 use crate::valueset::negotiation::Negotiation;
 use crate::valueset::store::Resolver;
@@ -179,11 +179,24 @@ fn refuse_cyclic(
     model: &ValueSetModel,
     negotiation: &Negotiation,
 ) -> Result<(), OperationError> {
+    resolver_for(sources, model, negotiation, None)
+        .check_acyclic(&model.canonical(), &model.compose)?;
+    Ok(())
+}
+
+/// The resolver one request answers its `include.valueSet` references on: the
+/// version negotiation, the value sets the resource contains, and the display
+/// language every hop answers in.
+fn resolver_for<'a>(
+    sources: &Sources<'a>,
+    model: &'a ValueSetModel,
+    negotiation: &'a Negotiation,
+    language: Option<&str>,
+) -> Resolver<'a> {
     Resolver::new(sources.registry, sources.value_sets)
         .with_negotiation(negotiation)
         .with_contained(&model.contained)
-        .check_acyclic(&model.canonical(), &model.compose)?;
-    Ok(())
+        .with_language(language)
 }
 
 /// How one validation judges what it finds.
@@ -304,10 +317,8 @@ pub fn validate_code(
         ..*sources
     };
     refuse_cyclic(sources, &model, &negotiation)?;
-    let resolver = Resolver::new(sources.registry, sources.value_sets)
-        .with_negotiation(&negotiation)
-        .with_contained(&model.contained);
     let policy = policy_of(input, &model);
+    let resolver = resolver_for(sources, &model, &negotiation, policy.language);
     let check = |subject: &Subject<'_>| -> Result<Validation, OperationError> {
         check(sources, &model, &resolver, &negotiation, subject, &policy)
     };
@@ -632,8 +643,16 @@ fn check(
     let provider: &Arc<dyn CodeSystemProvider> = &target.provider;
     let version = provider.identity().version.clone();
     let Some(located) = provider.locate(subject.code)? else {
-        let mut validation = unknown_code(model, provider, &system, version, subject, policy);
+        let mut validation = if fragment_may_admit(provider, model, &system) {
+            unlisted_in_fragment(provider, &system, version, subject, policy)
+        } else {
+            unknown_code(model, provider, &system, version, subject, policy)
+        };
         validation.issues.splice(0..0, target.issues);
+        validation.result &= !validation
+            .issues
+            .iter()
+            .any(|issue| issue.severity == "error");
         validation.message = message_of(&validation.issues);
         validation.unknown_systems.extend(target.unknown_systems);
         return Ok(validation);
@@ -1723,6 +1742,77 @@ fn unknown_import(system: &str, version: String, url: &str, code: &str) -> Valid
     );
     validation.code = Some(code.to_owned());
     validation
+}
+
+/// Whether a code the resource does not carry could still be in the value set:
+/// the system is served from a `fragment`, and an include over it enumerates
+/// no concepts of its own.
+///
+/// A fragment carries "a subset of the code system concepts"
+/// (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>), so absence from
+/// the resource is not absence from the system. No FHIR specification says how
+/// that meets an include that lists its concepts, and such an include decides
+/// membership on its own, so leaving it out here is our own design.
+fn fragment_may_admit(
+    provider: &Arc<dyn CodeSystemProvider>,
+    model: &ValueSetModel,
+    system: &str,
+) -> bool {
+    provider.declaration().content == ContentMode::Fragment
+        && model.compose.include.iter().any(|include| {
+            include
+                .system
+                .as_ref()
+                .is_some_and(|named| named.url == system)
+                && include.concepts.is_empty()
+        })
+}
+
+/// The validation of a code a `fragment` resource does not carry.
+///
+/// The server cannot say the code is invalid, so the answer holds and states
+/// the fragment beside it, which the ecosystem requires of a fragment
+/// ("Servers SHALL reflect `content = fragment` in an error message if the
+/// code is not valid against a fragment",
+/// <https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+fn unlisted_in_fragment(
+    provider: &Arc<dyn CodeSystemProvider>,
+    system: &str,
+    version: String,
+    subject: &Subject<'_>,
+    policy: &Policy<'_>,
+) -> Validation {
+    let (message, text) = super::display::unknown_code(provider.as_ref(), subject.code);
+    // NOTE: under `valueset-membership-only` the server performs no "validation
+    // tasks beyond validating membership", so the fragment note stays unsaid
+    // (<https://hl7.org/fhir/6.0.0-ballot5/valueset-operation-validate-code.html>).
+    let issues = if policy.membership_only {
+        Vec::new()
+    } else {
+        vec![Issue {
+            severity: "warning",
+            code: "code-invalid",
+            kind: "invalid-code",
+            message,
+            text,
+            expression: super::at(subject.expression, "code"),
+        }]
+    };
+    Validation {
+        result: true,
+        message: message_of(&issues),
+        display: None,
+        system: Some(system.to_owned()),
+        version: Some(version).filter(|v| !v.is_empty()),
+        code: Some(subject.code.to_owned()),
+        normalized_code: None,
+        issues,
+        unknown_systems: Vec::new(),
+        x_unknown_systems: Vec::new(),
+        codeable_concept: None,
+        inactive: None,
+        status: None,
+    }
 }
 
 /// The failed validation of a code the system does not have: not in the value

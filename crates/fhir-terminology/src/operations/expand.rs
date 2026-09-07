@@ -222,7 +222,8 @@ pub fn expand(
     };
     let resolver = Resolver::new(sources.registry, sources.value_sets)
         .with_negotiation(&negotiation)
-        .with_contained(&model.contained);
+        .with_contained(&model.contained)
+        .with_language(options.language.as_deref());
     resolver.note_open_systems(&model.compose);
     let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;
     let used_value_sets = resolver.used_value_sets();

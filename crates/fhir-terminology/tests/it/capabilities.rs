@@ -320,6 +320,124 @@ fn a_filter_code_is_declared_once_with_the_operators_of_both_declarations() {
     }
 }
 
+/// The operator codes the `filter-operator` code system of `package` defines,
+/// read from the vendored package the generator is pinned to.
+fn defined_operators(package: &str) -> Vec<String> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+        "../../tools/fhir-codegen/vendor/{package}/package/CodeSystem-filter-operator.json"
+    ));
+    let text = std::fs::read_to_string(&path).expect("reads the vendored code system");
+    let resource: Value = serde_json::from_str(&text).expect("parses");
+    resource
+        .get("concept")
+        .and_then(Value::as_array)
+        .expect("the code system enumerates its concepts")
+        .iter()
+        .filter_map(|concept| concept.get("code").and_then(Value::as_str))
+        .map(str::to_owned)
+        .collect()
+}
+
+/// The vendored package each rendered version is generated from.
+const PACKAGES: [(&str, &str); 4] = [
+    ("r4", "hl7.fhir.r4.core"),
+    ("r4b", "hl7.fhir.r4b.core"),
+    ("r5", "hl7.fhir.r5.core"),
+    ("r6", "hl7.fhir.r6.core"),
+];
+
+#[test]
+fn no_version_advertises_a_filter_operator_its_own_value_set_does_not_define() {
+    // `ValueSet.compose.include.filter.op` is required-bound to the version's
+    // own `filter-operator` value set
+    // (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.compose.include.filter.op>),
+    // so a statement offering an operator the version lacks invites a resource
+    // that version refuses. `filter.op` is 1..*, so an entry states one at least.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let summary = Summary::of(&served(dir.path()));
+    for (version, statement) in rendered(&summary) {
+        let package = PACKAGES
+            .iter()
+            .find(|(rendered, _)| *rendered == version)
+            .expect("every rendered version names a package")
+            .1;
+        let defined = defined_operators(package);
+        for system in statement["codeSystem"].as_array().expect("codeSystem") {
+            for entry in system["version"].as_array().expect("version") {
+                for filter in entry["filter"].as_array().into_iter().flatten() {
+                    let operators = filter["op"].as_array().expect("op");
+                    assert!(
+                        !operators.is_empty(),
+                        "{version} states the filter {} with no operator",
+                        filter["code"]
+                    );
+                    for operator in operators.iter().filter_map(Value::as_str) {
+                        assert!(
+                            defined.iter().any(|code| code == operator),
+                            "{version} advertises `{operator}`, which {package} does not define"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn the_hierarchy_operators_r5_added_reach_the_r5_family_alone() {
+    // `child-of` and `descendent-leaf` enter `filter-operator` in 5.0.0; R4
+    // 4.0.1 and R4B 4.3.0 define nine operators without them.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let summary = Summary::of(&served(dir.path()));
+    for (version, statement) in rendered(&summary) {
+        let concept = &code_system(&statement, SNOMED)["version"][0]["filter"][0];
+        assert_eq!(concept["code"], "concept", "{version}");
+        let operators: Vec<&str> = concept["op"]
+            .as_array()
+            .expect("op")
+            .iter()
+            .filter_map(Value::as_str)
+            .collect();
+        let r5_family = version == "r5" || version == "r6";
+        for added in ["child-of", "descendent-leaf"] {
+            assert_eq!(
+                operators.contains(&added),
+                r5_family,
+                "{version} states `{added}`: {operators:?}"
+            );
+        }
+        assert!(
+            operators.contains(&"is-a") && operators.contains(&"generalizes"),
+            "{version} keeps the operators every version defines: {operators:?}"
+        );
+    }
+}
+
+#[test]
+fn a_declared_code_filter_states_the_operators_the_engine_answers_on_it() {
+    // `evaluate` reads `concept` and `code` as the code itself, so a system
+    // declaring `code` answers the generic set there beside its own. ISO 3166-1
+    // declares `code` with `regex`, `=`, and `in`.
+    let mut registry = Registry::new();
+    registry
+        .register(Arc::new(
+            fhir_terminology::registries::iso3166::provider().expect("builds"),
+        ))
+        .expect("registers");
+    let summary = Summary::of(&registry);
+    let filters = &summary.systems[0].versions[0].filters;
+    let code = filters
+        .iter()
+        .find(|filter| filter.code == "code")
+        .expect("the declared filter");
+    let operators: Vec<&str> = code.operators.iter().map(|op| op.code()).collect();
+    assert_eq!(
+        operators,
+        ["=", "in", "not-in", "regex", "exists"],
+        "the generic set, the declared operators folded into it"
+    );
+}
+
 #[test]
 fn the_artifact_declaration_names_no_directory_above_it_and_no_content() {
     // The artifact sits under a temporary parent the declaration must not
