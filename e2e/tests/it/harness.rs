@@ -7,8 +7,8 @@ use std::time::Duration;
 use std::time::Instant;
 
 use thirtyfour::LoggingPrefsLogLevel;
-use thirtyfour::prelude::*;
 use thirtyfour::common::keys::TypingData;
+use thirtyfour::prelude::*;
 use thirtyfour::stringmatch::Needle;
 
 /// Names the server under test, as a URL without a trailing slash.

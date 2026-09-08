@@ -374,7 +374,11 @@ async fn open(journey: &Journey, base: &str, path: &str) -> WebDriverResult<()> 
         .element(By::Css(HEADING), &format!("the heading of {path}"))
         .await;
     journey
-        .count_becoming(By::Css(SPINNER), 0, &format!("every read on {path} to land"))
+        .count_becoming(
+            By::Css(SPINNER),
+            0,
+            &format!("every read on {path} to land"),
+        )
         .await;
     let mut last = String::new();
     for _ in 0..SETTLE_TRIES {
@@ -421,9 +425,7 @@ async fn walk(journey: &Journey, path: &str, theme: &str) -> WebDriverResult<Vec
     for (index, seen) in reached.iter().enumerate() {
         if !seen {
             let named = controls.get(index).copied().unwrap_or("?");
-            findings.push(format!(
-                "{path} ({theme}): tabbing never reached {named}"
-            ));
+            findings.push(format!("{path} ({theme}): tabbing never reached {named}"));
         }
     }
     Ok(findings)
