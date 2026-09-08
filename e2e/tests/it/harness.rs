@@ -200,6 +200,27 @@ impl Journey {
             .unwrap_or_default()
     }
 
+    /// Waits until `selector` matches `wanted` elements, and says so if it
+    /// never does.
+    ///
+    /// A screen that fills from several reads draws its parts one at a time,
+    /// so the first match is on a page that is still filling. Waiting on the
+    /// count is what makes the whole of it observable.
+    pub async fn count_becoming(&self, selector: By, wanted: usize, what: &str) {
+        let deadline = Instant::now() + WAIT;
+        loop {
+            let found = self.count(selector.clone()).await;
+            if found == wanted {
+                return;
+            }
+            if Instant::now() >= deadline {
+                let reason = format!("{found} elements match, not {wanted}");
+                panic!("{}", self.failure(what, &reason).await);
+            }
+            tokio::time::sleep(POLL).await;
+        }
+    }
+
     /// The address the browser is on.
     pub async fn address(&self) -> String {
         self.driver
