@@ -29,7 +29,6 @@ cd "$root"
 bars=app/ferroterm-viewer/bundle-size.json
 dist=app/ferroterm-viewer/dist
 base=""
-verify=""
 # What a rebuild of the same tree may legitimately differ by. The recorded
 # figure comes from the CI runner, and a growth budget of tens of kilobytes
 # does not need this to be tight.
@@ -40,7 +39,6 @@ while [[ $# -gt 0 ]]; do
     --bars) bars=$2; shift 2 ;;
     --dist) dist=$2; shift 2 ;;
     --base) base=$2; shift 2 ;;
-    --verify-recorded) verify=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -120,7 +118,12 @@ done < <(jq -r '.bars[] | [.asset, .pattern, .max_gzip_bytes, .max_growth_gzip_b
 # the baseline, so a stale one silently charges the next change for this one's
 # growth. Checking it here catches that within one merge instead of at the next
 # screen (#464).
-if [[ -n "$verify" ]]; then
+# The recorded figure is checked on EVERY run, not only on main. Reading the
+# baseline from the merge base stops a change lifting its own limit; checking
+# the branch's own figure against what the branch builds stops a change growing
+# the bundle and leaving the next one to pay for it. Three changes did exactly
+# that (#463, #464, #481) before this was required rather than merely audited.
+if true; then
   while IFS=$'\t' read -r asset pattern recorded; do
     file="$(find "$dist" -maxdepth 1 -type f -name "$pattern")"
     if [[ -z "$file" ]]; then
@@ -131,8 +134,8 @@ if [[ -n "$verify" ]]; then
     checks=$((checks + 1))
     if [[ "${drift#-}" -gt "$DRIFT_TOLERANCE" ]]; then
       breached=$((breached + 1))
-      printf 'BREACH %-5s the recorded baseline is %+d bytes out (%d built, %d recorded)\n' \
-        "$asset" "$drift" "$size" "$recorded" >&2
+      printf 'BREACH %-5s this change builds %d and records %d, %+d out: record %d\n' \
+        "$asset" "$size" "$recorded" "$drift" "$size" >&2
     else
       printf 'ok     %-5s baseline accurate within %d bytes\n' "$asset" "$DRIFT_TOLERANCE"
     fi
