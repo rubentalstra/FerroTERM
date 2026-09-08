@@ -21,6 +21,7 @@ use crate::fhir::version::FhirVersion;
 use crate::pages::browse::BrowsePage;
 use crate::pages::code_system::CodeSystemPage;
 use crate::pages::concept_maps::ConceptMapsPage;
+use crate::pages::evidence::EvidencePage;
 use crate::pages::expand::ExpandPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
@@ -30,6 +31,7 @@ use crate::pages::value_sets::ValueSetsPage;
 use crate::pages::versions::VersionsPage;
 use crate::routes::BROWSE_PATH;
 use crate::routes::CONCEPT_MAPS_PATH;
+use crate::routes::EVIDENCE_PATH;
 use crate::routes::EXPAND_PATH;
 use crate::routes::OVERVIEW_PATH;
 use crate::routes::SETTINGS_PATH;
@@ -63,7 +65,7 @@ enum NavSlot {
 /// the rendered sidebar cannot drift from it. The divider belongs to the
 /// second group, whose entries are the ones a new screen is least likely to
 /// land between.
-const NAV_SLOTS: [NavSlot; 9] = [
+const NAV_SLOTS: [NavSlot; 10] = [
     NavSlot::Item(OVERVIEW_PATH, "Overview", crate::components::icon::OVERVIEW),
     NavSlot::Item(BROWSE_PATH, "Browse", crate::components::icon::BROWSE),
     NavSlot::Item(EXPAND_PATH, "Expand", crate::components::icon::EXPAND),
@@ -84,6 +86,7 @@ const NAV_SLOTS: [NavSlot; 9] = [
         "FHIR versions",
         crate::components::icon::VERSION,
     ),
+    NavSlot::Item(EVIDENCE_PATH, "Evidence", crate::components::icon::EVIDENCE),
     NavSlot::Item(SETTINGS_PATH, "Settings", crate::components::icon::SETTINGS),
 ];
 
@@ -257,6 +260,7 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/conceptmaps") view=ConceptMapsPage />
             <Route path=path!("/valuesets") view=ValueSetsPage />
             <Route path=path!("/versions") view=VersionsPage />
+            <Route path=path!("/evidence") view=EvidencePage />
         </Routes>
     }
     .into_any();

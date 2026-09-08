@@ -124,6 +124,31 @@ with the equivalence the server stated and the map it came from.
 
 ![The concept map screen, with a translated code and the match it returned](img/viewer/concept-maps.png)
 
+### Evidence
+
+The conformance and benchmark figures the repository commits, at `/ui/evidence`.
+This is the one screen that asks the server nothing. Its figures were read out
+of committed files when the bundle was built, so they describe the FerroTERM
+build your deployment is running rather than the deployment itself, and the
+screen says so at the top and names the release version.
+
+Three sections, each naming the file every one of its numbers came from:
+
+- The HL7 terminology ecosystem suite, one row per mode and served root, with
+  the cases passed of the cases run. The counts come from the pass lists under
+  `conformance/tx-ecosystem/`, and the build stops when a list and the table in
+  that directory's README disagree.
+- The latency bars from `bench/bars.json`, each with the run recorded against
+  it and the room that run had. A bar is the claim and never moves to match a
+  slower run.
+- The newest committed benchmark run under `bench/records/`, one record per
+  code system, with the machine it was taken on, the FerroTERM version that
+  answered it, and the cold, median, and percentile timings per operation.
+
+No number here is typed into the viewer's source. Each one is read from its
+committed file at build time, so you can open that file in the repository and
+check it.
+
 ### Settings
 
 The FHIR base in use, the theme, the default FHIR version, a display language,

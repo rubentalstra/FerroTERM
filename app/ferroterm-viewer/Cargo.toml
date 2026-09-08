@@ -15,6 +15,13 @@ publish = false
 name = "ferroterm-viewer"
 path = "src/main.rs"
 
+# The evidence screen states figures the repository already commits, so the
+# build script reads those files and emits the document the bundle carries.
+# A build dependency runs on the host and never reaches the browser, so the
+# FHIR-client boundary is untouched.
+[build-dependencies]
+serde_json.workspace = true
+
 # The viewer is a FHIR client and depends on NO workspace crate, so that
 # anything it can do a client can do. scripts/checks/viewer-boundary.sh fails
 # when an edge into the engine appears.

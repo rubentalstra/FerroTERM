@@ -8,6 +8,7 @@
 mod app;
 mod comparison;
 mod components;
+mod evidence;
 mod fhir;
 mod listing;
 mod pages;
