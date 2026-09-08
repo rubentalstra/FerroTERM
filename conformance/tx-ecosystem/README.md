@@ -251,17 +251,27 @@ collection of languages", so `zh` does not subsume `zh-min-nan`.
   6.0.0-ballot5, and nowhere in the ecosystem IG outside these fixtures. No
   FHIR version prescribes the order of two `expansion.contains` entries
   either. The server keeps one entry per include, in include order, and the
-  eight stay unpassed. Upstream report for the owner to post: define
-  `versionsMatch` and its default in the IG's requirements page, or drop the
-  cases.
-- **Four cases reach for terminology the FHIR specification defines**, which
-  the server does not hold and the runner does not supply:
-  `exclude/exclude-gender`, `exclude-gender2`, `exclude-combo`, and
-  `include-combo` name `http://hl7.org/fhir/administrative-gender`,
-  `http://hl7.org/fhir/publication-status`, and
+  eight stay unpassed. #507 holds the upstream report: define `versionsMatch`,
+  its default, and the member order in the IG, or drop the cases.
+- **Four `exclude` cases compare against an unsubstituted placeholder on
+  `/r4b`.** `exclude/exclude-gender`, `exclude-gender2`, `exclude-combo`, and
+  `include-combo` name `http://hl7.org/fhir/administrative-gender` and
   `http://hl7.org/fhir/ValueSet/administrative-gender`
-  (<https://hl7.org/fhir/R4B/terminologies-systems.html>). Each answers 404
-  where the case expects a 2xx. #435.
+  (<https://hl7.org/fhir/R4B/terminologies-systems.html>). #435 shipped those
+  systems, so all four pass on `/r4` and `/r5`. On `/r4b` each compares
+  `expansion.parameter[i].valueUri` against the literal `$version$`: the
+  runner substitutes that placeholder on the two surfaces whose FHIR version
+  it knows and leaves it as written on `/r4b`, where the server correctly
+  answers `4.3.0` for a FHIR core code system. Same family as the `metadata`
+  case above.
+- **A version check is applied before the version is resolved.** Four
+  `version` cases turn on it: a `check-system-version` is compared against the
+  version or pattern a value set wrote rather than the version that pattern
+  resolves to, and a version that resolves to nothing is reported as a failed
+  check rather than as unknown. `OperationError::UnknownVersion` also states
+  no list of the versions the server does serve, which the cases ask for.
+  Unlike the entries above this is a defect here, not a suite expectation.
+  #506.
 - **A supplied `tx-resource` is read leniently and refuses only the request
   that resolves it.** Cardinality is an aspect of validating a resource, which
   a server performs at its discretion, and an implementation "should be
