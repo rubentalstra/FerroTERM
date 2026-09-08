@@ -16,6 +16,7 @@ mod paging;
 mod routes;
 mod settings;
 mod storage;
+mod styles;
 mod theme;
 mod tree;
 mod url;

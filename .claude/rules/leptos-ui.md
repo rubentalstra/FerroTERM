@@ -233,6 +233,26 @@ slice, not at the end.
   Contrast meets AA in both themes.
 - A search or expansion result count is announced in a live region.
 - Motion respects `prefers-reduced-motion`.
+- A colour pairing that more than one screen paints lives in `styles.rs`,
+  never copied into each screen. Five copies of the submit button's class
+  string all read the same and all failed the contrast bar together; one copy
+  is measured once.
+- Contrast is measured over what the browser painted, never over the token the
+  source names. Tailwind writes its palette in oklch and a browser
+  resolves `color` in the space the author wrote
+  (<https://www.w3.org/TR/css-color-4/#resolving-color-values>), so a reader of
+  `getComputedStyle` sees oklch; a colour inherited from an ancestor, or one a
+  transparent background lets through, is only visible from the painted value.
+- A dark theme lightens the tint and darkens the text on it. White on `brand-600` is
+  3.7:1 and fails as text; darkening the tint further fixes the text and breaks
+  the component's own 3:1 boundary against the page
+  (<https://www.w3.org/TR/WCAG22/#non-text-contrast>). The dark theme inverts
+  the pairing instead: a light tint under dark text passes both.
+
+`e2e/tests/it/accessibility.rs` measures every item above across every screen
+in both themes, and is the one place in the battery that runs a script in the
+page: WebDriver has no primitive for the element focus landed on or for the
+colour the browser painted.
 
 ## 10. Testing and gates
 

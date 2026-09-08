@@ -347,8 +347,27 @@ shipped screen. Concretely, and checked per slice:
 - Every routed page sets a `<Title>` through `leptos_meta`, and a live region
   announces the result count after a search or an expansion.
 
-The `accessibility` tracker label marks a slice with a specific obligation,
-and a dedicated audit closes the programme.
+The `accessibility` tracker label marks a slice with a specific obligation.
+The audit that closes the programme is `e2e/tests/it/accessibility.rs`, which
+measures every item above on every screen in both themes: it tabs through each
+screen and reports any control the keyboard never reached and any stop the
+browser drew no outline on, it computes the contrast ratio of every text the
+browser painted, it reads the tables, labels, ids and headings out of the DOM,
+and it checks that a search, an expansion and a validation each announce
+themselves in a live region.
+
+Two things there are read through a script, because WebDriver has no primitive
+for either: which element focus landed on after a key press, and the colour the
+browser painted. The second matters more than it sounds. Tailwind writes its
+palette in oklch and a browser resolves `color` in the space the author wrote
+(<https://www.w3.org/TR/css-color-4/#resolving-color-values>), so measuring the
+token the source names would measure something no reader ever sees.
+
+The pass found three failures and each was fixed rather than waived: the
+version switcher's label at 4.35:1, its selected pill at 3.72:1, and the submit
+button in the dark theme at 3.74:1. The submit button's class string was
+written out five times, so the colour pairings more than one screen paints now
+live in `app/ferroterm-viewer/src/styles.rs` and are measured once.
 
 ## 8. Screen inventory
 

@@ -39,6 +39,7 @@ use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
 use crate::settings::Settings;
 use crate::settings::parse_page_size;
+use crate::styles::SUBMIT;
 use crate::url::RequestUrl;
 
 /// The runner's own path below the router base.
@@ -484,10 +485,7 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
                 seeds.include_designations,
             )}
             <div>
-                <button
-                    type="submit"
-                    class="inline-flex items-center gap-1.5 rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
-                >
+                <button type="submit" class=SUBMIT>
                     <Icon glyph=icon::EXPAND />
                     "Run the expansion"
                 </button>

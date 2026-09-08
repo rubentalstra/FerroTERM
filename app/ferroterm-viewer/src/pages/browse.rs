@@ -60,6 +60,7 @@ use crate::routes::VERSION_PARAM;
 use crate::routes::system_link;
 use crate::routes::ui_link;
 use crate::settings::Settings;
+use crate::styles::SUBMIT;
 use crate::tree::TreeAction;
 use crate::tree::TreeConcept;
 use crate::tree::TreeRow;
@@ -628,10 +629,7 @@ fn search_section(
                             node_ref=field
                             prop:value=move || term.get()
                         />
-                        <button
-                            type="submit"
-                            class="inline-flex items-center gap-1.5 rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
-                        >
+                        <button type="submit" class=SUBMIT>
                             <Icon glyph=icon::SEARCH />
                             "Search"
                         </button>

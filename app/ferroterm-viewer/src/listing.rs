@@ -20,6 +20,7 @@ use crate::fhir::version::FhirVersion;
 use crate::paging::Page;
 use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
+use crate::styles::SUBMIT;
 use crate::url::RequestUrl;
 
 /// The address parameter carrying the canonical the search filters on.
@@ -312,10 +313,7 @@ pub(crate) fn filter_form(
                 </p>
             </div>
             <div class="sm:col-span-2">
-                <button
-                    type="submit"
-                    class="inline-flex items-center gap-1.5 rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
-                >
+                <button type="submit" class=SUBMIT>
                     <Icon glyph=icon::SEARCH />
                     "Search"
                 </button>
