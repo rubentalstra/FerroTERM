@@ -260,31 +260,11 @@ impl Negotiation {
 
     /// `compose` with every system reference at its negotiated version.
     ///
-    /// # Errors
-    ///
-    /// Returns [`NegotiationError::SystemVersion`] when a check disagrees with
-    /// a version the compose names.
-    pub fn pin(&self, compose: &Compose) -> Result<Compose, NegotiationError> {
-        if self.systems.is_empty() {
-            return Ok(compose.clone());
-        }
-        let pin = |include: &Include| -> Result<Include, NegotiationError> {
-            let mut pinned = include.clone();
-            if let Some(system) = pinned.system.as_mut() {
-                system.version = self.system_version(&system.url, system.version.as_deref())?;
-            }
-            Ok(pinned)
-        };
-        Ok(Compose {
-            include: compose.include.iter().map(pin).collect::<Result<_, _>>()?,
-            exclude: compose.exclude.iter().map(pin).collect::<Result<_, _>>()?,
-            inactive: compose.inactive,
-        })
-    }
-
-    /// `compose` with every system reference at its negotiated version, the
-    /// checks left to the caller (validation reports a disagreement as an
-    /// itemised issue, never as a refusal).
+    /// The checks are left to the caller, and run on the version an include
+    /// resolves to rather than on the one it names: a value set may write a
+    /// pattern, and a version nothing serves is unknown rather than checked
+    /// (#506). Validation reports a disagreement as an itemised issue, never
+    /// as a refusal.
     #[must_use]
     pub fn pin_lenient(&self, compose: &Compose) -> Compose {
         if self.systems.is_empty() {

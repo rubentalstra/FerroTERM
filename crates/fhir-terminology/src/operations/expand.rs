@@ -211,7 +211,7 @@ pub fn expand(
         version.as_deref(),
     )?;
     let input = &with_defaults(input, &model);
-    let compose = pinned_compose(&model.compose, input, &negotiation)?;
+    let compose = pinned_compose(&model.compose, input, &negotiation);
     let options = options(input)?;
     let mut wanted = input.use_supplement.clone();
     wanted.extend(model.supplements.iter().cloned());
@@ -227,6 +227,13 @@ pub fn expand(
         .with_language(options.language.as_deref());
     resolver.note_open_systems(&model.compose);
     let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;
+    // The check runs on the version the include resolved to, never on the one
+    // the value set wrote. A value set may name a pattern (`1.x.x`), and a
+    // version that resolves to nothing is unknown rather than checked, so the
+    // resolution has to answer first (#506).
+    for used in &expansion.versions {
+        negotiation.check_system(&used.url, &used.version)?;
+    }
     let used_value_sets = resolver.used_value_sets();
     let open_systems = resolver.open_systems();
     if expansion.unclosed && input.handle_unclosed_expansion == Some(false) {
@@ -385,11 +392,7 @@ fn negotiation(input: &ExpandInput) -> Negotiation {
 
 /// `compose` less the `exclude-system` includes, with its systems at their
 /// negotiated versions.
-fn pinned_compose(
-    compose: &Compose,
-    input: &ExpandInput,
-    negotiation: &Negotiation,
-) -> Result<Compose, OperationError> {
+fn pinned_compose(compose: &Compose, input: &ExpandInput, negotiation: &Negotiation) -> Compose {
     let excluded = canonicals(&input.exclude_system);
     let keep = |include: &Include| -> bool {
         let Some(system) = &include.system else {
@@ -417,7 +420,7 @@ fn pinned_compose(
             .collect(),
         inactive: compose.inactive,
     };
-    Ok(negotiation.pin(&kept)?)
+    negotiation.pin_lenient(&kept)
 }
 
 /// Every parameter that controlled the expansion, echoed, then the code system

@@ -93,20 +93,20 @@ tempfile = "3.27.0"
 # Workspace-internal crates. The `crates/*` members carry the published crate
 # line (lockstep, bumped with their packaged content, never the product
 # version); the tools stay on the workspace version.
-fhir-types = { path = "crates/fhir-types", version = "0.1.92" }
-rf2 = { path = "crates/rf2", version = "0.1.92" }
-loinc = { path = "crates/loinc", version = "0.1.92" }
-classification = { path = "crates/classification", version = "0.1.92" }
-dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.92" }
-gstandaard = { path = "crates/gstandaard", version = "0.1.92" }
-labcodeset = { path = "crates/labcodeset", version = "0.1.92" }
-icd11 = { path = "crates/icd11", version = "0.1.92" }
-rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.92" }
-concept-graph = { path = "crates/concept-graph", version = "0.1.92" }
-concept-store = { path = "crates/concept-store", version = "0.1.92" }
-designation-index = { path = "crates/designation-index", version = "0.1.92" }
-sct-ecl = { path = "crates/sct-ecl", version = "0.1.92" }
-fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.92" }
+fhir-types = { path = "crates/fhir-types", version = "0.1.93" }
+rf2 = { path = "crates/rf2", version = "0.1.93" }
+loinc = { path = "crates/loinc", version = "0.1.93" }
+classification = { path = "crates/classification", version = "0.1.93" }
+dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.93" }
+gstandaard = { path = "crates/gstandaard", version = "0.1.93" }
+labcodeset = { path = "crates/labcodeset", version = "0.1.93" }
+icd11 = { path = "crates/icd11", version = "0.1.93" }
+rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.93" }
+concept-graph = { path = "crates/concept-graph", version = "0.1.93" }
+concept-store = { path = "crates/concept-store", version = "0.1.93" }
+designation-index = { path = "crates/designation-index", version = "0.1.93" }
+sct-ecl = { path = "crates/sct-ecl", version = "0.1.93" }
+fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.93" }
 # Path-only, with no `version`: cargo then strips the dev-dependency from a
 # packaged crates/* manifest instead of looking it up on crates.io.
 ferroterm-testkit = { path = "tools/ferroterm-testkit" }

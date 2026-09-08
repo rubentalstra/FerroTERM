@@ -166,7 +166,7 @@ fn resolve_for(
             }
             Ok(Err(unserved(registry, &url, None, code, expression)))
         }
-        Err(OperationError::UnknownVersion { url, version }) => Ok(Err(unserved(
+        Err(OperationError::UnknownVersion { url, version, .. }) => Ok(Err(unserved(
             registry,
             &url,
             Some(&version),

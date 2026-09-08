@@ -87,12 +87,22 @@ pub enum OperationError {
     #[error("code system `{0}` is not served")]
     UnknownSystem(String),
     /// The code system is served, this version is not.
-    #[error("version `{version}` of code system `{url}` is not served")]
+    ///
+    /// The wording is the ecosystem's, which names the versions that would
+    /// have worked (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>);
+    /// an answer that says only which version is missing leaves the caller
+    /// guessing.
+    #[error(
+        "A definition for CodeSystem '{url}' version '{version}' could not be found, so the value set cannot be expanded{}",
+        valid_versions(available)
+    )]
     UnknownVersion {
         /// The system.
         url: String,
         /// The version.
         version: String,
+        /// The versions the server does hold for the system.
+        available: Vec<String>,
     },
     /// The code is not in the code system.
     #[error("code `{code}` is not in code system `{system}` version `{version}`")]
@@ -269,7 +279,15 @@ impl From<ResolveError> for OperationError {
     fn from(error: ResolveError) -> Self {
         match error {
             ResolveError::UnknownSystem(url) => Self::UnknownSystem(url),
-            ResolveError::UnknownVersion { url, version } => Self::UnknownVersion { url, version },
+            ResolveError::UnknownVersion {
+                url,
+                version,
+                available,
+            } => Self::UnknownVersion {
+                url,
+                version,
+                available,
+            },
         }
     }
 }
@@ -302,9 +320,11 @@ impl From<ProviderError> for OperationError {
             // NOTE: an implicit URI whose base names an edition version the server
             // does not hold is a version it cannot find, not a malformed value set
             // (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets").
-            ProviderError::UnservedImplicitVersion { url, version } => {
-                Self::UnknownVersion { url, version }
-            }
+            ProviderError::UnservedImplicitVersion { url, version } => Self::UnknownVersion {
+                url,
+                version,
+                available: Vec::new(),
+            },
             // NOTE: R4B needs `ConceptMap.group.target` whenever the targets are real
             // codes, so a map the server cannot state one for is `not-supported`
             // (<https://hl7.org/fhir/R4B/conceptmap-definitions.html#ConceptMap.group.target>).
@@ -903,7 +923,10 @@ pub fn valid_versions(versions: &[String]) -> String {
     match versions {
         [] => String::new(),
         [one] => format!(". Valid versions: {one}"),
-        [head @ .., last] => format!(". Valid versions: {} or {last}", head.join(", ")),
+        // NOTE: the ecosystem writes two with `or` and more with `and`; both
+        // spellings are in its own fixtures.
+        [first, last] => format!(". Valid versions: {first} or {last}"),
+        [head @ .., last] => format!(". Valid versions: {} and {last}", head.join(", ")),
     }
 }
 
