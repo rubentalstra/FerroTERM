@@ -79,11 +79,11 @@ pub struct Scope {
 }
 
 impl Scope {
-    /// The served layer, unchanged.
+    /// The layer the surface of `fhir_version` serves, unchanged.
     #[must_use]
-    pub fn base(state: &AppState) -> Self {
+    pub fn base(state: &AppState, fhir_version: &str) -> Self {
         Self {
-            served: state.layer(),
+            served: state.served_layer(fhir_version),
             layered: None,
             unusable: Vec::new(),
         }
@@ -98,11 +98,15 @@ impl Scope {
     ///
     /// A `CodeSystem` the engine cannot serve is a 400; a supplement whose
     /// target is not loaded is a 404.
-    pub fn layered(state: &AppState, resources: &[Loaded]) -> Result<Self, Failure> {
+    pub fn layered(
+        state: &AppState,
+        fhir_version: &str,
+        resources: &[Loaded],
+    ) -> Result<Self, Failure> {
         if resources.is_empty() {
-            return Ok(Self::base(state));
+            return Ok(Self::base(state, fhir_version));
         }
-        let served = state.layer();
+        let served = state.served_layer(fhir_version);
         let mut registry = served.registry().clone();
         let mut value_sets = served.value_sets().clone();
         let mut concept_maps = served.concept_maps().clone();
@@ -214,6 +218,7 @@ impl Scope {
 /// A malformed or unknown `X-Cache-Id`, or a resource that cannot be layered.
 pub fn scope_of(
     state: &AppState,
+    fhir_version: &str,
     headers: &HeaderMap,
     mut resources: Vec<Loaded>,
 ) -> Result<Scope, Failure> {
@@ -224,7 +229,7 @@ pub fn scope_of(
         all.append(&mut resources);
         resources = all;
     }
-    Scope::layered(state, &resources)
+    Scope::layered(state, fhir_version, &resources)
 }
 
 /// The cache the request names, if any.

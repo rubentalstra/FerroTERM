@@ -19,43 +19,58 @@ use crate::fhir_codesystem::load::{FhirVersion, LoadError, scan_json};
 pub fn load_dir(dir: &Path, version: FhirVersion) -> Result<Vec<ValueSetModel>, LoadError> {
     let mut models = Vec::new();
     for (path, value) in scan_json(dir, "ValueSet")? {
-        let mut element = ElementPath::root("ValueSet");
-        let decode = |source| LoadError::Decode {
-            path: path.clone(),
-            version,
-            resource_type: "ValueSet",
-            source,
-        };
-        let object = expect_object(&value, &element).map_err(decode)?;
-        let model = match version {
-            FhirVersion::R4 => convert::r4::convert(
-                &fhir_types::r4::value_set::ValueSet::from_json(object, &mut element)
-                    .map_err(decode)?,
-            ),
-            FhirVersion::R4B => convert::r4b::convert(
-                &fhir_types::r4b::value_set::ValueSet::from_json(object, &mut element)
-                    .map_err(decode)?,
-            ),
-            FhirVersion::R5 => convert::r5::convert(
-                &fhir_types::r5::value_set::ValueSet::from_json(object, &mut element)
-                    .map_err(decode)?,
-            ),
-            FhirVersion::R6 => convert::r6::convert(
-                &fhir_types::r6::value_set::ValueSet::from_json(object, &mut element)
-                    .map_err(decode)?,
-            ),
-        };
-        let model = model.map_err(|source| LoadError::ValueSet {
-            path: path.clone(),
-            source,
-        })?;
-        if model.url.is_empty() {
-            return Err(LoadError::ValueSet {
-                path: path.clone(),
-                source: super::model::ModelError::NoUrl,
-            });
-        }
-        models.push(model);
+        models.push(
+            model_from_value(&value, version).map_err(|decoded| match decoded {
+                Decoded::Decode(source) => LoadError::Decode {
+                    path: path.clone(),
+                    version,
+                    resource_type: "ValueSet",
+                    source,
+                },
+                Decoded::Model(source) => LoadError::ValueSet {
+                    path: path.clone(),
+                    source,
+                },
+            })?,
+        );
     }
     Ok(models)
+}
+
+/// A decode or model failure before its source is known.
+pub(crate) enum Decoded {
+    Decode(fhir_types::codec::DecodeError),
+    Model(super::model::ModelError),
+}
+
+/// The model of one `ValueSet` resource written in `version`.
+pub(crate) fn model_from_value(
+    value: &fhir_types::codec::Value,
+    version: FhirVersion,
+) -> Result<ValueSetModel, Decoded> {
+    let mut element = ElementPath::root("ValueSet");
+    let object = expect_object(value, &element).map_err(Decoded::Decode)?;
+    let model = match version {
+        FhirVersion::R4 => convert::r4::convert(
+            &fhir_types::r4::value_set::ValueSet::from_json(object, &mut element)
+                .map_err(Decoded::Decode)?,
+        ),
+        FhirVersion::R4B => convert::r4b::convert(
+            &fhir_types::r4b::value_set::ValueSet::from_json(object, &mut element)
+                .map_err(Decoded::Decode)?,
+        ),
+        FhirVersion::R5 => convert::r5::convert(
+            &fhir_types::r5::value_set::ValueSet::from_json(object, &mut element)
+                .map_err(Decoded::Decode)?,
+        ),
+        FhirVersion::R6 => convert::r6::convert(
+            &fhir_types::r6::value_set::ValueSet::from_json(object, &mut element)
+                .map_err(Decoded::Decode)?,
+        ),
+    };
+    let model = model.map_err(Decoded::Model)?;
+    if model.url.is_empty() {
+        return Err(Decoded::Model(super::model::ModelError::NoUrl));
+    }
+    Ok(model)
 }

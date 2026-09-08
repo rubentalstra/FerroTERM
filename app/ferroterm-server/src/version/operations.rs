@@ -113,7 +113,7 @@ macro_rules! operations {
                     .collect();
                 let mut parameters = parameters::parameters_from_query(operation, &own)?;
                 parameters::apply_accept_language(operation, headers, &mut parameters);
-                Ok((scope_of(state, headers, Vec::new())?, parameters))
+                Ok((scope_of(state, super::metadata::FHIR_VERSION, headers, Vec::new())?, parameters))
             }
 
             /// A `POST` invocation: the body's `Parameters` less its `tx-resource`s, in
@@ -127,7 +127,7 @@ macro_rules! operations {
                 let (mut parameters, resources) =
                     split_supplied(parameters::object_from_body(headers, body)?)?;
                 parameters::apply_accept_language(operation, headers, &mut parameters);
-                Ok((scope_of(state, headers, resources)?, parameters))
+                Ok((scope_of(state, super::metadata::FHIR_VERSION, headers, resources)?, parameters))
             }
 
             fn run_lookup(
@@ -443,7 +443,7 @@ macro_rules! operations {
                     Some(sent) => {
                         let (mut own, resources) = split_resources(sent)?;
                         parameters::apply_accept_language(operation, headers, &mut own);
-                        (scope_of(state, headers, resources)?, own)
+                        (scope_of(state, super::metadata::FHIR_VERSION, headers, resources)?, own)
                     }
                     None => {
                         if which == Which::Translate {

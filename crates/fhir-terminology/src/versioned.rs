@@ -33,12 +33,18 @@ pub struct Duplicate {
 #[derive(Debug)]
 pub struct VersionedStore<T> {
     by_url: BTreeMap<String, BTreeMap<String, Arc<T>>>,
+    /// The store under this one: a `url` this store does not hold at all
+    /// resolves there. The FHIR core terminology of the served version is what
+    /// a server puts there, so cloning this store for one request costs the
+    /// deployment's own resources alone.
+    beneath: Option<Arc<Self>>,
 }
 
 impl<T> Default for VersionedStore<T> {
     fn default() -> Self {
         Self {
             by_url: BTreeMap::new(),
+            beneath: None,
         }
     }
 }
@@ -47,6 +53,7 @@ impl<T> Clone for VersionedStore<T> {
     fn clone(&self) -> Self {
         Self {
             by_url: self.by_url.clone(),
+            beneath: self.beneath.clone(),
         }
     }
 }
@@ -56,6 +63,28 @@ impl<T: Versioned> VersionedStore<T> {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// This store with `beneath` under it.
+    ///
+    /// A `url` this store holds shadows the one beneath entirely, so a
+    /// deployment's own resource replaces the specification's rather than
+    /// merging versions with it; a `url` this store does not hold resolves
+    /// beneath. No FHIR version governs how a server layers its content: our
+    /// own design.
+    #[must_use]
+    pub fn with_beneath(mut self, beneath: Arc<Self>) -> Self {
+        self.beneath = Some(beneath);
+        self
+    }
+
+    /// The store `url` resolves in: this one when it holds the `url`, the one
+    /// beneath when only it does.
+    fn holder(&self, url: &str) -> Option<&Self> {
+        if self.by_url.contains_key(url) {
+            return Some(self);
+        }
+        self.beneath.as_deref().and_then(|below| below.holder(url))
     }
 
     /// Stores `resource`.
@@ -95,7 +124,7 @@ impl<T: Versioned> VersionedStore<T> {
             Some((url, version)) => (url, Some(version)),
             None => (url, None),
         };
-        let versions = self.by_url.get(url)?;
+        let versions = self.holder(url)?.by_url.get(url)?;
         match version.or(embedded) {
             Some(wanted) => select_version(versions.keys().map(String::as_str), wanted)
                 .and_then(|v| versions.get(v))
@@ -120,18 +149,21 @@ impl<T: Versioned> VersionedStore<T> {
         merged
     }
 
-    /// Every stored resource, by `url` then `version`.
+    /// Every resource stored here, by `url` then `version`.
+    ///
+    /// The store beneath is left out: these are the resources this deployment
+    /// published, which is what the REST endpoints enumerate.
     pub fn iter(&self) -> impl Iterator<Item = &Arc<T>> {
         self.by_url.values().flat_map(BTreeMap::values)
     }
 
-    /// The number of stored resources.
+    /// The number of resources stored here, the store beneath excluded.
     #[must_use]
     pub fn len(&self) -> usize {
         self.by_url.values().map(BTreeMap::len).sum()
     }
 
-    /// Whether nothing is stored.
+    /// Whether nothing is stored here, the store beneath excluded.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.by_url.is_empty()

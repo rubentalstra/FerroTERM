@@ -25,6 +25,7 @@ pub mod render_codec;
 pub mod render_schema;
 pub mod roots;
 pub mod snapshot;
+pub mod terminology;
 
 use std::path::{Path, PathBuf};
 
@@ -65,6 +66,18 @@ pub enum Command {
         #[arg(long, value_name = "DIR", default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/fhir-types"))]
         out: PathBuf,
     },
+    /// Regenerates the FHIR core terminology bundles the server embeds.
+    Terminology {
+        /// Compare the bundles on disk with what the emitter produces and fail on any difference.
+        #[arg(long)]
+        check: bool,
+        /// The directory holding the vendored packages.
+        #[arg(long, value_name = "DIR", default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/vendor"))]
+        vendor: PathBuf,
+        /// The directory holding one bundle directory per version module.
+        #[arg(long, value_name = "DIR", default_value = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/fhir-terminology/data/fhir"))]
+        out: PathBuf,
+    },
 }
 
 /// A generator failure.
@@ -73,6 +86,18 @@ pub enum Error {
     /// The emit pipeline failed.
     #[error(transparent)]
     Emit(#[from] emit::EmitError),
+    /// The terminology bundles failed.
+    #[error(transparent)]
+    Terminology(#[from] terminology::BundleError),
+}
+
+/// What one run of the generator produced.
+#[derive(Debug)]
+pub enum Report {
+    /// The generated crate.
+    Emit(emit::EmitReport),
+    /// The FHIR core terminology bundles.
+    Terminology(terminology::BundleReport),
 }
 
 /// The emit inputs for every entry of [`VERSIONS`] under `vendor`.
@@ -91,14 +116,22 @@ pub fn version_inputs(vendor: &Path) -> Vec<emit::VersionInput> {
 ///
 /// # Errors
 ///
-/// Returns [`Error::Emit`] when the pipeline fails or, in check mode, when the
-/// generated crate differs from what the emitter produces.
-pub fn run(cli: &Cli) -> Result<emit::EmitReport, Error> {
+/// Returns [`Error::Emit`] or [`Error::Terminology`] when the pipeline fails
+/// or, in check mode, when what is on disk differs from what the emitter
+/// produces.
+pub fn run(cli: &Cli) -> Result<Report, Error> {
     match &cli.command {
-        Command::Emit { check, vendor, out } => Ok(emit::emit(&emit::EmitOptions {
+        Command::Emit { check, vendor, out } => Ok(Report::Emit(emit::emit(&emit::EmitOptions {
             versions: version_inputs(vendor),
             crate_dir: out.clone(),
             check: *check,
-        })?),
+        })?)),
+        Command::Terminology { check, vendor, out } => Ok(Report::Terminology(
+            terminology::bundle(&terminology::BundleOptions {
+                versions: version_inputs(vendor),
+                data_dir: out.clone(),
+                check: *check,
+            })?,
+        )),
     }
 }

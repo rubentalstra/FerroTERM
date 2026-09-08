@@ -13,7 +13,7 @@ turns the lists and the total into the README's badges at site build time.
 
 ## What is committed, per mode
 
-Recorded on 2026-09-07 with validator 6.10.4 and suite
+Recorded on 2026-09-08 with validator 6.10.4 and suite
 `eaec771d82fba4eac596c14963546f39b4ecffe7` (tests v1.9.3). Every mode run also
 carries the two mode-independent `metadata` cases, so a mode's count is two
 above the suite's own. The `snomed`, `icd-11`, `tx.fhir.org`, `mimetypes`, and
@@ -22,8 +22,8 @@ above the suite's own. The `snomed`, `icd-11`, `tx.fhir.org`, `mimetypes`, and
 | mode | surface | pass list | passed of ran | needs | open failures |
 |---|---|---|---|---|---|
 | `general` | `/r4b` | `passing.txt` | 610 of 670 | nothing | #353 |
-| `general` | `/r4` | `passing-r4.txt` | 614 of 670 | nothing | #353 |
-| `general` | `/r5` | `passing-r5.txt` | 616 of 670 | nothing | #353 |
+| `general` | `/r4` | `passing-r4.txt` | 617 of 670 | nothing | #353 |
+| `general` | `/r5` | `passing-r5.txt` | 619 of 670 | nothing | #353 |
 | `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
 | `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 55 of 227 | a LOINC release | #420, #421, #305, #349 |

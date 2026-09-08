@@ -18,6 +18,7 @@ use fhir_terminology::conceptmap::store::ConceptMapStore;
 use fhir_terminology::fhir_codesystem::load::{FhirVersion, load_dir, package_version};
 use fhir_terminology::fhir_codesystem::model::CodeSystemModel;
 use fhir_terminology::fhir_codesystem::provider::{BuildError, FhirCodeSystem};
+use fhir_terminology::fhir_core::CoreTerminology;
 use fhir_terminology::icd11::{self, Icd11Provider};
 use fhir_terminology::loinc::{self, LoincProvider};
 use fhir_terminology::operations::Sources;
@@ -121,6 +122,15 @@ pub enum LoadError {
         /// The cause.
         #[source]
         source: BuildError,
+    },
+    /// The embedded FHIR core terminology of a served version does not read.
+    #[error("cannot read the FHIR {fhir_version} core terminology")]
+    Core {
+        /// The served version.
+        fhir_version: &'static str,
+        /// The cause.
+        #[source]
+        source: Box<fhir_terminology::fhir_core::CoreError>,
     },
     /// The vendored registry data of a registry code system does not build.
     #[error("cannot build the registry code system `{url}`")]
@@ -312,11 +322,51 @@ pub enum LayerError {
     },
 }
 
+/// The terminology each served version defines, by the FHIR version its
+/// surface reports.
+///
+/// A code system the FHIR specification defines belongs to the version that
+/// defines it (<https://hl7.org/fhir/R4B/terminologies-systems.html>), so
+/// each surface answers over its own package's content.
+const CORE_VERSIONS: [(&str, FhirVersion); 4] = [
+    (crate::r4::metadata::FHIR_VERSION, FhirVersion::R4),
+    (crate::r4b::metadata::FHIR_VERSION, FhirVersion::R4B),
+    (crate::r5::metadata::FHIR_VERSION, FhirVersion::R5),
+    (crate::r6::metadata::FHIR_VERSION, FhirVersion::R6),
+];
+
+/// The FHIR core terminology of every served version, read once per process.
+///
+/// The bundles are embedded and generated, so the result is the same on every
+/// call; the cache keeps a second server in one process from reading them
+/// again.
+fn core_terminology() -> Result<BTreeMap<&'static str, CoreTerminology>, LoadError> {
+    static CACHE: std::sync::OnceLock<BTreeMap<&'static str, CoreTerminology>> =
+        std::sync::OnceLock::new();
+    if let Some(cached) = CACHE.get() {
+        return Ok(cached.clone());
+    }
+    let mut built = BTreeMap::new();
+    for (fhir_version, bundle) in CORE_VERSIONS {
+        built.insert(
+            fhir_version,
+            CoreTerminology::load(bundle).map_err(|source| LoadError::Core {
+                fhir_version,
+                source: Box::new(source),
+            })?,
+        );
+    }
+    Ok(CACHE.get_or_init(|| built).clone())
+}
+
 /// What the handlers share.
 #[derive(Debug)]
 pub struct AppState {
     /// What the deployment loaded from disk, without the persisted resources.
     base: Layer,
+    /// The terminology the FHIR specification defines, by served version; it
+    /// sits under the deployment's own in every served layer.
+    core: BTreeMap<&'static str, CoreTerminology>,
     /// The persisted client resources and the layer they and [`AppState::base`]
     /// form, replaced whole by every write.
     persisted: RwLock<Persisted>,
@@ -354,6 +404,9 @@ struct Persisted {
     records: BTreeMap<(ResourceType, String), Record>,
     /// The loaded state with `records` applied.
     layer: Arc<Layer>,
+    /// The same layer per served version, each over the terminology that
+    /// version defines.
+    served: BTreeMap<&'static str, Arc<Layer>>,
 }
 
 /// A failure to persist a client resource.
@@ -482,6 +535,7 @@ impl AppState {
         }
         state.base.value_sets = value_sets;
         state.base.concept_maps = concept_maps;
+        state.core = core_terminology()?;
         if let Some(path) = &config.resources {
             state.store =
                 Some(
@@ -507,15 +561,22 @@ impl AppState {
                 records.insert((resource_type, record.id.clone()), record);
             }
         }
-        let layer = layered(&self.base, &records)?;
+        let Layers { layer, served } = persisted_layers(&self.base, &self.core, &records)?;
         *self
             .persisted
             .get_mut()
-            .unwrap_or_else(std::sync::PoisonError::into_inner) = Persisted { records, layer };
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Persisted {
+            records,
+            layer,
+            served,
+        };
         Ok(())
     }
 
     /// Wraps an already-built registry (tests and embedders).
+    ///
+    /// The state holds no FHIR core terminology; add it with
+    /// [`Self::with_core`], which [`Self::load`] does for a real deployment.
     #[must_use]
     pub fn from_registry(registry: Registry) -> Self {
         let mut instances = BTreeMap::new();
@@ -535,8 +596,10 @@ impl AppState {
             persisted: RwLock::new(Persisted {
                 records: BTreeMap::new(),
                 layer: Arc::new(base.clone()),
+                served: BTreeMap::new(),
             }),
             base,
+            core: BTreeMap::new(),
             store: None,
             value_set_instances: BTreeMap::new(),
             concept_map_instances: BTreeMap::new(),
@@ -549,6 +612,19 @@ impl AppState {
             viewer: false,
             metrics: Arc::new(crate::metrics::Metrics::new()),
         }
+    }
+
+    /// This state holding the terminology every served FHIR version defines,
+    /// under whatever the deployment loaded.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LoadError::Core`] when an embedded bundle does not read, and
+    /// [`LoadError::Persisted`] when the served layers do not rebuild.
+    pub fn with_core(mut self) -> Result<Self, LoadError> {
+        self.core = core_terminology()?;
+        self.reload_persisted().map_err(LoadError::Persisted)?;
+        Ok(self)
     }
 
     /// This state serving, or not serving, the viewer under `/ui`.
@@ -615,6 +691,23 @@ impl AppState {
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .layer,
         )
+    }
+
+    /// What an operation on the surface of `fhir_version` resolves in: the
+    /// layer above, with the terminology that FHIR version defines beneath it.
+    ///
+    /// A state built without the core terminology, and a version this server
+    /// does not serve, answer with the layer above alone.
+    #[must_use]
+    pub fn served_layer(&self, fhir_version: &str) -> Arc<Layer> {
+        let persisted = self
+            .persisted
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        persisted
+            .served
+            .get(fhir_version)
+            .map_or_else(|| Arc::clone(&persisted.layer), Arc::clone)
     }
 
     /// The caches `$cache-control` started.
@@ -903,9 +996,13 @@ impl AppState {
         };
         let mut records = persisted.records.clone();
         records.insert(key, record.clone());
-        let layer = layered(&self.base, &records)?;
+        let Layers { layer, served } = persisted_layers(&self.base, &self.core, &records)?;
         store.put(&record)?;
-        *persisted = Persisted { records, layer };
+        *persisted = Persisted {
+            records,
+            layer,
+            served,
+        };
         Ok(record)
     }
 
@@ -930,11 +1027,48 @@ impl AppState {
         if records.remove(&(resource_type, id.to_owned())).is_none() {
             return Ok(false);
         }
-        let layer = layered(&self.base, &records)?;
+        let Layers { layer, served } = persisted_layers(&self.base, &self.core, &records)?;
         store.delete(resource_type, id)?;
-        *persisted = Persisted { records, layer };
+        *persisted = Persisted {
+            records,
+            layer,
+            served,
+        };
         Ok(true)
     }
+}
+
+/// What one rebuild of the served state produced.
+struct Layers {
+    /// The deployment's own layer with every persisted record over it.
+    layer: Arc<Layer>,
+    /// That layer per served version, each over the terminology that version
+    /// defines.
+    served: BTreeMap<&'static str, Arc<Layer>>,
+}
+
+/// The loaded state with every persisted record applied over it, and the same
+/// layer per served version over the terminology that version defines.
+fn persisted_layers(
+    base: &Layer,
+    core: &BTreeMap<&'static str, CoreTerminology>,
+    records: &BTreeMap<(ResourceType, String), Record>,
+) -> Result<Layers, PersistError> {
+    let layer = layered(base, records)?;
+    let served = core
+        .iter()
+        .map(|(fhir_version, core)| {
+            (
+                *fhir_version,
+                Arc::new(Layer::of(
+                    layer.registry.clone().with_beneath(core.code_systems()),
+                    layer.value_sets.clone().with_beneath(core.value_sets()),
+                    layer.concept_maps.clone(),
+                )),
+            )
+        })
+        .collect();
+    Ok(Layers { layer, served })
 }
 
 /// The loaded state with every persisted record applied over it.

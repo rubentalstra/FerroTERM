@@ -64,6 +64,11 @@ pub struct Registry {
     /// The supplements loaded but dormant, by their own canonical, with the
     /// system canonical each supplements; a request applies them by name.
     supplements: BTreeMap<String, (String, crate::supplement::Supplement)>,
+    /// The registry under this one: a system this registry does not hold at
+    /// all resolves there. The FHIR core terminology of the served version is
+    /// what a server puts there, so cloning this registry for one request
+    /// costs the deployment's own systems alone.
+    beneath: Option<Arc<Registry>>,
 }
 
 /// A `useSupplement` names no loaded supplement.
@@ -76,6 +81,28 @@ impl Registry {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// This registry with `beneath` under it.
+    ///
+    /// A system URI this registry holds shadows the one beneath entirely, so a
+    /// deployment's own `CodeSystem` replaces the specification's rather than
+    /// merging versions with it; a URI this registry does not hold resolves
+    /// beneath. No FHIR version governs how a server layers its content: our
+    /// own design.
+    #[must_use]
+    pub fn with_beneath(mut self, beneath: Arc<Self>) -> Self {
+        self.beneath = Some(beneath);
+        self
+    }
+
+    /// The registry `url` resolves in: this one when it holds the system, the
+    /// one beneath when only it does.
+    fn holder(&self, url: &str) -> Option<&Self> {
+        if self.systems.contains_key(url) {
+            return Some(self);
+        }
+        self.beneath.as_deref().and_then(|below| below.holder(url))
     }
 
     /// Adds a provider.
@@ -214,7 +241,7 @@ impl Registry {
     /// echoed (<https://hl7.org/fhir/R4B/terminology-service.html>).
     #[must_use]
     pub fn default_version(&self, url: &str) -> Option<&str> {
-        let system = self.systems.get(url)?;
+        let system = self.holder(url)?.systems.get(url)?;
         system
             .default
             .as_deref()
@@ -228,8 +255,8 @@ impl Registry {
     /// Returns [`ResolveError`] for an unknown system or version.
     pub fn resolve(&self, url: &str, version: Option<&str>) -> Result<Resolved, ResolveError> {
         let system = self
-            .systems
-            .get(url)
+            .holder(url)
+            .and_then(|holder| holder.systems.get(url))
             .ok_or_else(|| ResolveError::UnknownSystem(url.to_owned()))?;
         let (wanted, defaulted) = match version {
             Some(version) => (version, false),
@@ -284,10 +311,16 @@ impl Registry {
     /// default only decides the versionless form.
     fn implicit_candidates(&self, url: &str) -> Vec<Arc<dyn CodeSystemProvider>> {
         let mut candidates = Vec::new();
-        for (canonical, system) in &self.systems {
-            if !url.starts_with(canonical.as_str()) {
+        for canonical in self.canonicals() {
+            if !url.starts_with(canonical) {
                 continue;
             }
+            let Some(system) = self
+                .holder(canonical)
+                .and_then(|h| h.systems.get(canonical))
+            else {
+                continue;
+            };
             let Ok(resolved) = self.resolve(canonical, None) else {
                 continue;
             };
@@ -371,15 +404,32 @@ impl Registry {
         unserved.map(Err)
     }
 
-    /// The registered system URIs, sorted.
+    /// The system URIs registered here, sorted.
+    ///
+    /// The registry beneath is left out: these are the code systems this
+    /// deployment published, which is what the `CodeSystem` endpoints and the
+    /// `TerminologyCapabilities` statement enumerate. Use [`Self::canonicals`]
+    /// for every URI that resolves.
     pub fn systems(&self) -> impl Iterator<Item = &str> {
         self.systems.keys().map(String::as_str)
     }
 
+    /// Every system URI that resolves, sorted, this registry's and the ones
+    /// beneath it.
+    #[must_use]
+    pub fn canonicals(&self) -> Vec<&str> {
+        let mut all: std::collections::BTreeSet<&str> =
+            self.systems.keys().map(String::as_str).collect();
+        if let Some(below) = self.beneath.as_deref() {
+            all.extend(below.canonicals());
+        }
+        all.into_iter().collect()
+    }
+
     /// The registered versions of a system, sorted, with the provider.
     pub fn versions(&self, url: &str) -> impl Iterator<Item = &Arc<dyn CodeSystemProvider>> {
-        self.systems
-            .get(url)
+        self.holder(url)
+            .and_then(|holder| holder.systems.get(url))
             .into_iter()
             .flat_map(|system| system.versions.values())
     }

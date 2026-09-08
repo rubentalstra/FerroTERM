@@ -141,7 +141,7 @@ impl Decoded {
     }
 }
 
-fn model_from_value(
+pub(crate) fn model_from_value(
     value: &fhir_types::codec::Value,
     version: FhirVersion,
 ) -> Result<CodeSystemModel, Decoded> {
