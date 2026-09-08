@@ -91,11 +91,23 @@ const PARENT_LINK: &str = "nav[aria-label='Parents of this concept'] a";
 /// The canonical of the first listed value set, which is the row's own heading.
 const VALUE_SET_ROW: &str = "section[aria-labelledby='valuesets-heading'] tbody th";
 
+/// The command bar's own control, on every screen.
+const COMMAND_BAR: &str = "#command-bar";
+
+/// The command bar's submit control.
+const COMMAND_SUBMIT: &str = "form[role='search'] button[type='submit']";
+
+/// One offer the find screen made.
+const OFFER: &str = "section[aria-labelledby='find-offers-heading'] li a";
+
 /// The expansion runner's canonical control.
 const EXPAND_URL: &str = "#expand-url";
 
 /// The expansion runner's submit control.
-const EXPAND_SUBMIT: &str = "form button[type='submit']";
+///
+/// Scoped to the main region, because the command bar in the header is a form
+/// on every screen and an unscoped selector reaches it first.
+const EXPAND_SUBMIT: &str = "main form button[type='submit']";
 
 /// The expansion answer, whose arrival is what a shot of the runner waits for.
 const EXPANSION: &str = "section[aria-labelledby='expansion-heading']";
@@ -358,18 +370,47 @@ async fn expansion_runner(
     Ok(())
 }
 
-/// The concept maps this root holds, and one code translated through them.
+/// The command bar, and what this root can do with a canonical.
+///
+/// The bar is driven rather than the address typed, because the shot is of the
+/// bar doing its job. The subject is a canonical this deployment serves, taken
+/// from the overview, so the pass names no code system.
+async fn find(journey: &Journey, dir: &Path, base: &str, system: &str) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "")).await;
+    journey
+        .element(By::Css(COMMAND_BAR), "the command bar")
+        .await
+        .send_keys(system)
+        .await?;
+    journey
+        .element(By::Css(COMMAND_SUBMIT), "the command bar's submit control")
+        .await
+        .click()
+        .await?;
+    journey
+        .element(By::Css(OFFER), "an offer this root can answer")
+        .await;
+    shot(journey, &dir.join("find.png")).await?;
+    Ok(())
+}
+
+/// The concept maps this root publishes.
+async fn concept_maps(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "conceptmaps")).await;
+    journey
+        .element(By::Css(CONCEPT_MAPS), "what this root publishes")
+        .await;
+    shot(journey, &dir.join("concept-maps.png")).await?;
+    Ok(())
+}
+
+/// One code translated through the maps this root holds.
 ///
 /// The map is left unnamed, which asks the server to translate through every
-/// map it holds for the code, so the screen shows both what it publishes and
-/// what a run answers.
-async fn concept_maps(
-    journey: &Journey,
-    dir: &Path,
-    base: &str,
-    system: &str,
-) -> WebDriverResult<()> {
-    journey.reopen(&address(base, "conceptmaps")).await;
+/// map it holds for the code, so the shot is what a run answers rather than
+/// what one map says.
+async fn translate(journey: &Journey, dir: &Path, base: &str, system: &str) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "translate")).await;
     journey
         .element(
             By::Css(TRANSLATE_SYSTEM),
@@ -395,10 +436,7 @@ async fn concept_maps(
             "the runner to answer the code it was given",
         )
         .await;
-    journey
-        .element(By::Css(CONCEPT_MAPS), "what this root publishes")
-        .await;
-    shot(journey, &dir.join("concept-maps.png")).await?;
+    shot(journey, &dir.join("translate.png")).await?;
     Ok(())
 }
 
@@ -517,7 +555,9 @@ async fn the_documentation_screenshots_are_captured() {
             let canonical = value_sets(&journey, &dir, &base).await?;
             expansion_runner(&journey, &dir, &base, &canonical).await?;
             validate_runner(&journey, &dir, &base, &system).await?;
-            concept_maps(&journey, &dir, &base, &system).await?;
+            find(&journey, &dir, &base, &system).await?;
+            concept_maps(&journey, &dir, &base).await?;
+            translate(&journey, &dir, &base, &system).await?;
             versions(&journey, &dir, &base).await?;
             evidence(&journey, &dir, &base).await?;
             settings(&journey, &dir, &base).await?;
