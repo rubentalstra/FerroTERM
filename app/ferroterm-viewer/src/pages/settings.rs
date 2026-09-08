@@ -9,10 +9,8 @@ use crate::fhir::version::FhirVersion;
 use crate::paging::MAX_COUNT;
 use crate::settings::Settings;
 use crate::settings::parse_page_size;
+use crate::styles;
 use crate::theme::ThemeMode;
-
-/// The classes every control on this screen shares.
-const CONTROL: &str = "w-56 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900";
 
 /// Shows and edits the per-viewer preferences.
 ///
@@ -31,15 +29,15 @@ pub(crate) fn SettingsPage() -> impl IntoView {
 
     let heading = view! {
         <Title text="Settings" />
-        <h1 class="text-2xl font-semibold">"Settings"</h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <h1 class=styles::PAGE_TITLE>"Settings"</h1>
+        <p class=styles::LEAD>
             "These preferences are stored in this browser only. The server is neither asked nor told about them."
         </p>
     }
     .into_any();
 
     let in_use = view! {
-        <dl class="mt-6 grid gap-2 text-sm sm:grid-cols-[12rem_1fr]">
+        <dl class="mt-6 grid gap-2 text-body sm:grid-cols-[12rem_1fr]">
             <dt class="font-medium">"FHIR base in use"</dt>
             <dd class="font-mono break-all">{base}</dd>
         </dl>
@@ -62,13 +60,13 @@ pub(crate) fn SettingsPage() -> impl IntoView {
 fn theme_field(settings: Settings) -> AnyView {
     view! {
         <div class="grid gap-1">
-            <label for="viewer-theme" class="text-sm font-medium">
+            <label for="viewer-theme" class="text-body font-medium">
                 "Theme"
             </label>
             <select
                 id="viewer-theme"
                 name="theme"
-                class=CONTROL
+                class=styles::INPUT
                 prop:value=move || settings.theme.get().key()
                 on:change:target=move |ev| {
                     if let Some(mode) = ThemeMode::from_key(&ev.target().value()) {
@@ -88,13 +86,13 @@ fn theme_field(settings: Settings) -> AnyView {
 fn version_field(settings: Settings) -> AnyView {
     view! {
         <div class="grid gap-1">
-            <label for="viewer-fhir-version" class="text-sm font-medium">
+            <label for="viewer-fhir-version" class="text-body font-medium">
                 "Default FHIR version"
             </label>
             <select
                 id="viewer-fhir-version"
                 name="fhir-version"
-                class=CONTROL
+                class=styles::INPUT
                 prop:value=move || settings.version.get().segment()
                 on:change:target=move |ev| {
                     if let Ok(selected) = ev.target().value().parse::<FhirVersion>() {
@@ -106,7 +104,7 @@ fn version_field(settings: Settings) -> AnyView {
                     <option value=option.segment()>{option.label()}</option>
                 </For>
             </select>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
+            <p class="text-small text-faint">
                 "Used when an address carries no version of its own."
             </p>
         </div>
@@ -118,7 +116,7 @@ fn version_field(settings: Settings) -> AnyView {
 fn language_field(settings: Settings) -> AnyView {
     view! {
         <div class="grid gap-1">
-            <label for="viewer-display-language" class="text-sm font-medium">
+            <label for="viewer-display-language" class="text-body font-medium">
                 "Display language"
             </label>
             <input
@@ -126,11 +124,11 @@ fn language_field(settings: Settings) -> AnyView {
                 name="display-language"
                 type="text"
                 placeholder="for example nl-NL"
-                class=CONTROL
+                class=styles::INPUT
                 prop:value=move || settings.language.get()
                 on:input:target=move |ev| settings.language.set(ev.target().value())
             />
-            <p class="text-xs text-slate-500 dark:text-slate-400">
+            <p class="text-small text-faint">
                 "A BCP 47 tag sent as displayLanguage. Leave it empty to take the server default."
             </p>
         </div>
@@ -148,7 +146,7 @@ fn page_size_field(settings: Settings) -> AnyView {
     let refused = move || draft.with(|text| parse_page_size(text).is_none());
     view! {
         <div class="grid gap-1">
-            <label for="viewer-page-size" class="text-sm font-medium">
+            <label for="viewer-page-size" class="text-body font-medium">
                 "Page size"
             </label>
             <input
@@ -158,7 +156,7 @@ fn page_size_field(settings: Settings) -> AnyView {
                 min="1"
                 max=MAX_COUNT.to_string()
                 aria-describedby="viewer-page-size-note"
-                class=CONTROL
+                class=styles::INPUT
                 prop:value=move || draft.get()
                 on:input:target=move |ev| {
                     let typed = ev.target().value();
@@ -168,7 +166,7 @@ fn page_size_field(settings: Settings) -> AnyView {
                     draft.set(typed);
                 }
             />
-            <p id="viewer-page-size-note" class="text-xs text-slate-500 dark:text-slate-400">
+            <p id="viewer-page-size-note" class="text-small text-faint">
                 {move || {
                     if refused() {
                         format!(

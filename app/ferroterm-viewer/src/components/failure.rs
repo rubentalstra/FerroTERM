@@ -49,12 +49,12 @@ pub(crate) fn Failure(
     };
 
     let heading = view! {
-        <p class="flex items-center gap-1.5 font-medium text-rose-700 dark:text-rose-300">
+        <p class="flex items-center gap-1.5 font-medium text-danger">
             <Icon glyph=icon::FAILURE />
             "The request failed: "
             {status}
         </p>
-        <p class="mt-1 font-mono text-xs break-all text-slate-600 dark:text-slate-300">{url}</p>
+        <p class="mt-1 font-mono text-small break-all text-muted">{url}</p>
     }
     .into_any();
 
@@ -69,7 +69,7 @@ pub(crate) fn Failure(
                     .into_iter()
                     .map(|line| {
                         view! {
-                            <li class="text-sm">
+                            <li class="text-body">
                                 <span class="font-semibold">{line.severity}</span>
                                 " ("
                                 <span class="font-mono">{line.code}</span>
@@ -88,7 +88,7 @@ pub(crate) fn Failure(
 
     let evidence = view! {
         <Show when=move || body().is_some() fallback=|| ()>
-            <pre class="mt-2 overflow-x-auto rounded bg-slate-100 p-2 text-xs dark:bg-slate-800">
+            <pre class="mt-2 overflow-x-auto rounded-md bg-inset p-2 text-small text-fg">
                 {body}
             </pre>
         </Show>
@@ -98,7 +98,7 @@ pub(crate) fn Failure(
     view! {
         <div
             role="alert"
-            class="rounded-md border border-rose-300 bg-rose-50 p-3 dark:border-rose-800 dark:bg-rose-950"
+            class="rounded-md border border-danger-soft-fg/30 bg-danger-soft p-3 text-danger-soft-fg"
         >
             {heading}
             {reported}
@@ -120,6 +120,5 @@ fn detail_codes(details: &[String]) -> AnyView {
         .iter()
         .map(|coding| view! { <li class="font-mono break-all">{coding.clone()}</li> }.into_any())
         .collect();
-    view! { <ul class="mt-1 ml-4 text-xs text-slate-700 dark:text-slate-300">{drawn}</ul> }
-        .into_any()
+    view! { <ul class="mt-1 ml-4 text-small text-muted">{drawn}</ul> }.into_any()
 }

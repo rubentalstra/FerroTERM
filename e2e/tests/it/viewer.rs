@@ -23,7 +23,7 @@ const CURRENT_SCREEN: &str = "nav[aria-label='Screens'] a[aria-current='page']";
 /// The overview screen's rendered FHIR base, found by the term beside it.
 const RENDERED_BASE: &str = "//dt[normalize-space()='FHIR base']/following-sibling::dd[1]";
 
-/// A code system card's heading link on the overview.
+/// A code system row's link into that system's own screen.
 const SYSTEM_LINK: &str = "a[href^='/ui/systems/']";
 
 /// The code system screen's capability pane, by the heading it is labelled by.
@@ -35,17 +35,13 @@ const PUBLISHED_PANE: &str = "section[aria-labelledby='system-published-heading'
 /// The links a declared code system offers into the other screens.
 const SYSTEM_TOOLS: &str = "nav[aria-label^='Screens for']";
 
-/// A code system card whose version declares a hierarchy.
+/// A code system row whose version declares a hierarchy.
 ///
-/// The card is chosen by what the capability statement declares rather than by
-/// which system it names.
-///
-/// The operator list folds into a `<details>`, and a closed disclosure renders
-/// no text, so `contains(., 'child-of')` over the whole card matches nothing
-/// (<https://www.w3.org/TR/webdriver2/#dfn-get-element-text>). Matching the
-/// `<li>` that carries the operator reads the DOM instead, which a closed
-/// disclosure still holds.
-const WALKABLE_CARD: &str = "//article[.//li[contains(., 'child-of')]]//h3//a";
+/// The row is chosen by what the capability statement declares rather than by
+/// which system it names. A row offers the concept browser only where its
+/// version declares the direct-child operator, so the browse link is the mark.
+const WALKABLE_ROW: &str =
+    "//tr[.//a[contains(@href, '/ui/browse')]]//a[starts-with(@href, '/ui/systems/')]";
 
 /// The surface the tree journey drives.
 ///
@@ -277,15 +273,15 @@ async fn the_shell_renders_and_the_switcher_moves_the_page_onto_another_version(
     outcome.expect("the journey ran and the browser session ended cleanly");
 }
 
-/// A card on the overview opens that code system's own screen, and both panes
+/// A row on the overview opens that code system's own screen, and both panes
 /// draw from the canonical the route carried.
 ///
 /// This is the journey that proves the percent-encoded canonical survives the
 /// route: the detail screen finds the system in the capability statement only
-/// if the segment it was linked with decoded back to the canonical the card
+/// if the segment it was linked with decoded back to the canonical the row
 /// named. The links row exists only for a system the capabilities declare.
 #[tokio::test]
-async fn a_card_opens_the_code_system_screen_and_both_panes_draw() {
+async fn a_row_opens_the_code_system_screen_and_both_panes_draw() {
     let Some(base) = server() else {
         return;
     };
@@ -294,21 +290,21 @@ async fn a_card_opens_the_code_system_screen_and_both_panes_draw() {
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &base, "/ui").await;
 
-            let card = journey
+            let row = journey
                 .element(By::Css(SYSTEM_LINK), "a code system link on the overview")
                 .await;
-            let canonical = card.text().await?;
+            let canonical = row.text().await?;
             assert!(
                 !canonical.is_empty(),
-                "the card names the canonical it links to"
+                "the row names the canonical it links to"
             );
-            card.click().await?;
+            row.click().await?;
 
             journey
                 .text_becoming(
                     By::Css("h1"),
                     StringMatch::new(canonical.clone()).full(),
-                    "the detail screen to head with the canonical the card named",
+                    "the detail screen to head with the canonical the row named",
                 )
                 .await;
             journey
@@ -345,14 +341,14 @@ async fn a_card_opens_the_code_system_screen_and_both_panes_draw() {
     outcome.expect("the journey ran and the browser session ended cleanly");
 }
 
-/// The address a card links to opens the same screen when it is loaded fresh.
+/// The address a row links to opens the same screen when it is loaded fresh.
 ///
 /// A click and a typed address reach the router by different routes: the click
 /// handler pushes the path after one `decodeURI` pass, while a fresh load is
 /// read straight off `window.location`. The canonical is a percent-encoded
 /// segment on both, so the shareable address has to be driven, not modelled.
 #[tokio::test]
-async fn the_address_a_card_links_to_opens_the_same_screen_when_it_is_loaded_fresh() {
+async fn the_address_a_row_links_to_opens_the_same_screen_when_it_is_loaded_fresh() {
     let Some(base) = server() else {
         return;
     };
@@ -361,17 +357,17 @@ async fn the_address_a_card_links_to_opens_the_same_screen_when_it_is_loaded_fre
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &base, "/ui").await;
 
-            let card = journey
+            let row = journey
                 .element(By::Css(SYSTEM_LINK), "a code system link on the overview")
                 .await;
-            let canonical = card.text().await?;
-            let address = card
+            let canonical = row.text().await?;
+            let address = row
                 .prop("href")
                 .await?
                 .expect("an anchor resolves its own href");
             assert!(
                 address.contains("/ui/systems/"),
-                "the card links into the systems route: `{address}`"
+                "the row links into the systems route: `{address}`"
             );
 
             // The server has never served this path, so this also drives the
@@ -398,14 +394,14 @@ async fn the_address_a_card_links_to_opens_the_same_screen_when_it_is_loaded_fre
 
 /// Walks from the overview to a browse screen whose tree has a level drawn.
 ///
-/// The card is chosen by the operator its version declares, so the walk knows
+/// The row is chosen by the operator its version declares, so the walk knows
 /// no code system. Where the concept the search answers first turns out to be
 /// a leaf, the walk moves onto one of its parents, because a tree with no row
 /// has no tab stop to press a key on.
 async fn tree_with_a_level(journey: &Journey) -> WebDriverResult<()> {
     journey
         .element(
-            By::XPath(WALKABLE_CARD),
+            By::XPath(WALKABLE_ROW),
             "a code system whose version declares the direct-child operator",
         )
         .await
@@ -454,7 +450,7 @@ async fn tree_with_a_level(journey: &Journey) -> WebDriverResult<()> {
 /// rather than described: the tree keeps one tab stop, the right arrow opens
 /// the node under it, `Enter` selects the concept, and both moves are
 /// navigations, so a walk a reader made is a link they can share. Nothing here
-/// names a code system. The card is picked by the operator its version
+/// names a code system. The row is picked by the operator its version
 /// declares, which is the same fact the screen draws the tree from.
 #[tokio::test]
 async fn the_taxonomy_tree_is_walked_by_keyboard_alone() {

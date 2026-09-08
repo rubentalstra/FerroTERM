@@ -52,7 +52,7 @@ const CAPTURED_VERSION: &str = "r5";
 /// committing a picture of a refusal.
 const MAPPED_CODE: &str = "ca-leaf";
 
-/// A code system card's heading link on the overview.
+/// A code system row's link into that system's own screen.
 const SYSTEM_LINK: &str = "section[aria-labelledby='systems-heading'] tbody a";
 
 /// A code system row whose version declares the direct-child operator.
@@ -61,7 +61,7 @@ const SYSTEM_LINK: &str = "section[aria-labelledby='systems-heading'] tbody a";
 /// which system it names, the way the journeys choose it, so the pass names no
 /// code system. A row offers the concept browser only where its version
 /// declares the direct-child operator, so the browse link is the mark.
-const WALKABLE_CARD: &str =
+const WALKABLE_ROW: &str =
     "//tr[.//a[contains(@href, '/ui/browse')]]//a[starts-with(@href, '/ui/systems/')]";
 
 /// The code system screen's capability pane.
@@ -217,10 +217,10 @@ async fn shot(journey: &Journey, path: &Path) -> WebDriverResult<()> {
     Ok(())
 }
 
-/// The overview: what this deployment serves, one card per code system.
+/// The overview: what this deployment serves, one row per served version.
 async fn overview(journey: &Journey, dir: &Path) -> WebDriverResult<()> {
     journey
-        .element(By::Css(SYSTEM_LINK), "a code system card on the overview")
+        .element(By::Css(SYSTEM_LINK), "a code system row on the overview")
         .await;
     shot(journey, &dir.join("overview.png")).await
 }
@@ -228,7 +228,7 @@ async fn overview(journey: &Journey, dir: &Path) -> WebDriverResult<()> {
 /// One code system: what its capability statement declares, and the published
 /// resource beside it.
 ///
-/// The card is the one whose version declares the direct-child operator, so
+/// The row is the one whose version declares the direct-child operator, so
 /// the shot lands on a system with a hierarchy to browse afterwards. The
 /// canonical the screen heads with is returned: it is the one the
 /// translate runner is given further down, and reading it here keeps the pass
@@ -236,7 +236,7 @@ async fn overview(journey: &Journey, dir: &Path) -> WebDriverResult<()> {
 async fn code_system(journey: &Journey, dir: &Path) -> WebDriverResult<String> {
     journey
         .element(
-            By::XPath(WALKABLE_CARD),
+            By::XPath(WALKABLE_ROW),
             "a code system whose version declares the direct-child operator",
         )
         .await

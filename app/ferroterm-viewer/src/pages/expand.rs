@@ -10,6 +10,14 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::field::Field;
+use crate::components::field::Help;
+use crate::components::field::check_field;
+use crate::components::field::group;
+use crate::components::field::help_toggle;
+use crate::components::field::note;
+use crate::components::field::number_field;
+use crate::components::field::text_field;
 use crate::components::icon;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
@@ -39,7 +47,7 @@ use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
 use crate::settings::Settings;
 use crate::settings::parse_page_size;
-use crate::styles::SUBMIT;
+use crate::styles;
 use crate::url::RequestUrl;
 
 /// The runner's own path below the router base.
@@ -50,15 +58,6 @@ const RUNNER_PATH: &str = "expand";
 /// "The operation was refused because the value set is too costly to expand"
 /// (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
 const TOO_COSTLY: &str = "too-costly";
-
-/// The classes every text control on the form shares.
-const CONTROL: &str = "w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900";
-
-/// The classes a page control carries.
-const PAGE_LINK: &str = "inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-sm text-brand-700 hover:underline dark:border-slate-700 dark:text-brand-300";
-
-/// The classes a page control that leads nowhere carries.
-const PAGE_END: &str = "inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400";
 
 /// Runs `ValueSet/$expand` and walks the pages of its answer.
 ///
@@ -93,8 +92,8 @@ pub(crate) fn ExpandPage() -> impl IntoView {
 
     let heading = view! {
         <Title text="Expansion runner" />
-        <h1 class="text-2xl font-semibold">"Expansion runner"</h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <h1 class=styles::PAGE_TITLE>"Expansion runner"</h1>
+        <p class=styles::LEAD>
             "Expand a value set by its canonical, then walk the answer a page at a time. Every run below is one GET this server answers to any client."
         </p>
     }
@@ -164,19 +163,6 @@ struct Seeds {
     active_only: Memo<bool>,
     /// Whether every concept carries its designations.
     include_designations: Memo<bool>,
-}
-
-/// The chrome of one labelled control on the form.
-#[derive(Clone, Copy, Debug)]
-struct Field {
-    /// The `id` the label points at.
-    id: &'static str,
-    /// The `name` the control carries.
-    name: &'static str,
-    /// The label a reader reads.
-    label: &'static str,
-    /// The sentence below the control.
-    hint: &'static str,
 }
 
 impl RunnerParams {
@@ -429,41 +415,56 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
         );
     };
 
+    provide_context(Help(RwSignal::new(false)));
+
     view! {
-        <form class="mt-6 grid gap-4" on:submit=submit>
+        <form class="mt-4 grid gap-5" on:submit=submit>
+            {value_set_group(canonical, seeds)}
+            {selection_group(filter, active_only, seeds)}
+            {answer_group(count, language, designations, seeds, params)}
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="submit" class=styles::SUBMIT>
+                    <Icon glyph=icon::EXPAND />
+                    "Run the expansion"
+                </button>
+                {help_toggle()}
+            </div>
+        </form>
+    }
+    .into_any()
+}
+
+/// Which value set the run expands.
+fn value_set_group(canonical: NodeRef<Input>, seeds: Seeds) -> AnyView {
+    group(
+        "Value set",
+        vec![text_field(
+            Field {
+                id: "expand-url",
+                name: "url",
+                label: "Canonical",
+                hint: "The url parameter of $expand. An implicit canonical carrying its own query string works: the runner encodes the whole value.",
+            },
+            canonical,
+            seeds.url,
+        )],
+    )
+}
+
+/// What the run selects out of it.
+fn selection_group(filter: NodeRef<Input>, active_only: NodeRef<Input>, seeds: Seeds) -> AnyView {
+    let controls = view! {
+        <div class="grid gap-3 sm:grid-cols-2">
             {text_field(
                 Field {
-                    id: "expand-url",
-                    name: "url",
-                    label: "Value set canonical",
-                    hint: "The url parameter of $expand. An implicit canonical carrying its own query string works: the runner encodes the whole value.",
+                    id: "expand-filter",
+                    name: "filter",
+                    label: "Filter",
+                    hint: "Text the server matches against the designations it holds.",
                 },
-                canonical,
-                seeds.url,
+                filter,
+                seeds.filter,
             )}
-            <div class="grid gap-4 sm:grid-cols-2">
-                {text_field(
-                    Field {
-                        id: "expand-filter",
-                        name: "filter",
-                        label: "Filter",
-                        hint: "Text the server matches against the designations it holds.",
-                    },
-                    filter,
-                    seeds.filter,
-                )}
-                {text_field(
-                    Field {
-                        id: "expand-display-language",
-                        name: "displayLanguage",
-                        label: "Display language",
-                        hint: "A BCP 47 tag. Left empty, the server picks its own display.",
-                    },
-                    language,
-                    seeds.display_language,
-                )}
-            </div>
-            {count_field(count, params, seeds.count)}
             {check_field(
                 Field {
                     id: "expand-active-only",
@@ -473,6 +474,53 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
                 },
                 active_only,
                 seeds.active_only,
+            )}
+        </div>
+    }
+    .into_any();
+    group("Selection", vec![controls])
+}
+
+/// How the answer is paged and written.
+fn answer_group(
+    count: NodeRef<Input>,
+    language: NodeRef<Input>,
+    designations: NodeRef<Input>,
+    seeds: Seeds,
+    params: Signal<RunnerParams>,
+) -> AnyView {
+    // A page size the address carried and the runner could not use is not
+    // help, so it is a note beside the control rather than its hint.
+    let refused = Memo::new(move |_| {
+        params.with(|params| match (&params.refused_count, params.count) {
+            (Some(refused), Some(used)) => format!(
+                "Not used: the address asked for a page size of `{refused}`, which is not a whole number from 1 to {MAX_COUNT}. This run asked for {used}."
+            ),
+            _ => String::new(),
+        })
+    });
+    let controls = view! {
+        <div class="grid gap-3 sm:grid-cols-3">
+            {number_field(
+                Field {
+                    id: "expand-count",
+                    name: "count",
+                    label: "Page size",
+                    hint: "The count parameter. Left empty, the run asks for no page and the server may refuse a selection it considers too costly.",
+                },
+                count,
+                seeds.count,
+                MAX_COUNT,
+            )}
+            {text_field(
+                Field {
+                    id: "expand-display-language",
+                    name: "displayLanguage",
+                    label: "Display language",
+                    hint: "A BCP 47 tag. Left empty, the server picks its own display.",
+                },
+                language,
+                seeds.display_language,
             )}
             {check_field(
                 Field {
@@ -484,110 +532,16 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
                 designations,
                 seeds.include_designations,
             )}
-            <div>
-                <button type="submit" class=SUBMIT>
-                    <Icon glyph=icon::EXPAND />
-                    "Run the expansion"
-                </button>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    "Running puts these parameters in the address. The page controls below walk the run that is showing, so an edit you have not run yet stays in the form and is left out of the walk."
-                </p>
-            </div>
-        </form>
-    }
-    .into_any()
-}
-
-/// One labelled text control, seeded from its own parameter.
-fn text_field(field: Field, node: NodeRef<Input>, value: Memo<String>) -> AnyView {
-    let described_by = format!("{}-note", field.id);
-    view! {
-        <div class="grid gap-1">
-            <label for=field.id class="text-sm font-medium">
-                {field.label}
-            </label>
-            <input
-                id=field.id
-                name=field.name
-                type="text"
-                class=CONTROL
-                aria-describedby=described_by.clone()
-                node_ref=node
-                prop:value=move || value.get()
-            />
-            <p id=described_by class="text-xs text-slate-500 dark:text-slate-400">
-                {field.hint}
-            </p>
         </div>
     }
-    .into_any()
-}
-
-/// The page size, which is what makes the answer walkable.
-fn count_field(node: NodeRef<Input>, params: Signal<RunnerParams>, value: Memo<String>) -> AnyView {
-    view! {
-        <div class="grid gap-1 sm:max-w-xs">
-            <label for="expand-count" class="text-sm font-medium">
-                "Page size"
-            </label>
-            <input
-                id="expand-count"
-                name="count"
-                type="number"
-                min="1"
-                max=MAX_COUNT.to_string()
-                class=CONTROL
-                aria-describedby="expand-count-note"
-                node_ref=node
-                prop:value=move || value.get()
-            />
-            <p id="expand-count-note" class="text-xs text-slate-500 dark:text-slate-400">
-                {move || {
-                    params
-                        .with(|params| match (&params.refused_count, params.count) {
-                            (Some(refused), Some(used)) => {
-                                format!(
-                                    "Not used: the address asked for a page size of `{refused}`, which is not a whole number from 1 to {MAX_COUNT}. This run asked for {used}.",
-                                )
-                            }
-                            _ => {
-                                format!(
-                                    "The count parameter, from 1 to {MAX_COUNT}. Left empty, the run asks for no page and the server may refuse a selection it considers too costly.",
-                                )
-                            }
-                        })
-                }}
-            </p>
-        </div>
+    .into_any();
+    let refusal = view! {
+        <Show when=move || !refused.get().is_empty() fallback=|| ()>
+            {note(refused)}
+        </Show>
     }
-    .into_any()
-}
-
-/// One labelled checkbox, seeded from its own parameter.
-fn check_field(field: Field, node: NodeRef<Input>, checked: Memo<bool>) -> AnyView {
-    let described_by = format!("{}-note", field.id);
-    view! {
-        <div class="grid gap-1">
-            <div class="flex items-center gap-2">
-                <input
-                    id=field.id
-                    name=field.name
-                    type="checkbox"
-                    class="size-4"
-                    aria-describedby=described_by.clone()
-                    node_ref=node
-                    prop:checked=move || checked.get()
-                />
-                <label for=field.id class="text-sm font-medium">
-                    {field.label}
-                </label>
-            </div>
-            <p id=described_by class="text-xs text-slate-500 dark:text-slate-400">
-                {field.hint}
-            </p>
-        </div>
-    }
-    .into_any()
+    .into_any();
+    group("Answer", vec![controls, refusal])
 }
 
 /// The answer: the page, what it leaves out, and the request that fetched it.
@@ -636,10 +590,10 @@ fn result_section(
 
     view! {
         <section class="mt-8" aria-labelledby="expansion-heading">
-            <h2 id="expansion-heading" class="text-lg font-medium">
+            <h2 id="expansion-heading" class=styles::SECTION_TITLE>
                 "The expansion"
             </h2>
-            <p aria-live="polite" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            <p aria-live="polite" class="mt-2 text-body text-muted">
                 {announcement}
             </p>
             <Show when=move || request.with(Option::is_none) fallback=|| ()>
@@ -674,7 +628,7 @@ fn result_section(
 /// What the screen says before a canonical has been typed.
 fn invitation() -> AnyView {
     view! {
-        <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+        <p class="mt-3 text-body text-muted">
             "Name a value set above and run it. The canonical is sent exactly as you type it, so an implicit form a code system defines works here too."
         </p>
     }
@@ -689,7 +643,7 @@ fn expansion_view(
 ) -> AnyView {
     let Some(expansion) = value.expansion() else {
         return view! {
-            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p class="mt-3 text-body text-muted">
                 "The server answered a ValueSet carrying no expansion, so there is nothing to page through."
             </p>
         }
@@ -737,10 +691,7 @@ fn unclosed_view(unclosed: &Unclosed) -> AnyView {
         view! { <ul class="mt-1 ml-4 list-disc">{reasons}</ul> }.into_any()
     };
     view! {
-        <div
-            role="note"
-            class="mt-3 rounded-md border border-amber-400 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950"
-        >
+        <div role="note" class=format!("mt-3 rounded-md p-3 {}", styles::NOTICE)>
             <p class="font-medium">"Unclosed expansion"</p>
             <p class="mt-1">
                 "This value set admits codes the expansion does not list, so a code missing from the table below is not a code this server rejects."
@@ -760,7 +711,7 @@ fn unclosed_view(unclosed: &Unclosed) -> AnyView {
 fn concepts_table(rows: &[ConceptRow]) -> AnyView {
     if rows.is_empty() {
         return view! {
-            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p class="mt-3 text-body text-muted">
                 "This page holds no concepts. A page past the end of a selection is empty, and so is a filter nothing matches."
             </p>
         }
@@ -769,9 +720,9 @@ fn concepts_table(rows: &[ConceptRow]) -> AnyView {
     let body: Vec<AnyView> = rows.iter().map(concept_row).collect();
     view! {
         <div class="mt-3 overflow-x-auto">
-            <table class="w-full border-collapse text-left text-sm">
+            <table class="w-full border-collapse text-left text-body">
                 <thead>
-                    <tr class="border-b border-slate-300 dark:border-slate-700">
+                    <tr class="border-b border-line-strong">
                         <th scope="col" class="py-2 pr-3 font-medium">
                             "Code"
                         </th>
@@ -803,7 +754,7 @@ fn concept_row(row: &ConceptRow) -> AnyView {
         (system, None) => system.to_owned(),
     };
     view! {
-        <tr class="border-b border-slate-200 align-top dark:border-slate-800">
+        <tr class="border-b border-line align-top">
             <td
                 class="py-2 pr-3 font-mono break-all"
                 style=format!("padding-left:{}rem", row.depth)
@@ -815,7 +766,7 @@ fn concept_row(row: &ConceptRow) -> AnyView {
                 {row.display.clone().unwrap_or_else(|| NOT_DECLARED.to_owned())}
                 {designation_list(&row.designations)}
             </td>
-            <td class="py-2 pr-3 font-mono text-xs break-all">{system}</td>
+            <td class="py-2 pr-3 font-mono text-small break-all">{system}</td>
             <td class="py-2">{flags(row)}</td>
         </tr>
     }
@@ -831,8 +782,7 @@ fn designation_list(designations: &[DesignationRow]) -> AnyView {
         .iter()
         .map(|designation| view! { <li>{designation_line(designation)}</li> }.into_any())
         .collect();
-    view! { <ul class="mt-1 ml-4 list-disc text-xs text-slate-600 dark:text-slate-300">{lines}</ul> }
-    .into_any()
+    view! { <ul class="mt-1 ml-4 list-disc text-small text-muted">{lines}</ul> }.into_any()
 }
 
 /// One designation, as the term and what the server said about it.
@@ -873,7 +823,7 @@ fn pager_view(pager: Pager, params: &RunnerParams, version: FhirVersion) -> AnyV
             Some(page) => {
                 let href = params.on(page).address(version);
                 view! {
-                    <a href=href class=PAGE_LINK>
+                    <a href=href class=styles::BUTTON>
                         <Icon glyph=glyph />
                         {label}
                     </a>
@@ -884,7 +834,7 @@ fn pager_view(pager: Pager, params: &RunnerParams, version: FhirVersion) -> AnyV
             // no meaning (<https://www.w3.org/TR/WCAG22/#use-of-color>), and
             // a `<span>` has no role for `aria-disabled` to qualify.
             None => view! {
-                <span class=PAGE_END>
+                <span class=styles::BUTTON_DISABLED>
                     <Icon glyph=glyph />
                     {label}
                     <span class="sr-only">", unavailable"</span>
@@ -897,7 +847,7 @@ fn pager_view(pager: Pager, params: &RunnerParams, version: FhirVersion) -> AnyV
         <nav aria-label="Expansion pages" class="mt-3 flex flex-wrap items-center gap-2">
             {step(pager.first(), icon::PAGE_FIRST, "First page")}
             {step(pager.previous(), icon::PAGE_PREVIOUS, "Previous page")}
-            <p class="text-sm font-medium">{pager.position()}</p>
+            <p class="text-body font-medium">{pager.position()}</p>
             {step(pager.next(), icon::PAGE_NEXT, "Next page")}
             {step(pager.last(), icon::PAGE_LAST, "Last page")}
         </nav>
@@ -909,7 +859,7 @@ fn pager_view(pager: Pager, params: &RunnerParams, version: FhirVersion) -> AnyV
 fn parameters_view(lines: &[ParameterLine]) -> AnyView {
     if lines.is_empty() {
         return view! {
-            <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            <p class="mt-3 text-small text-faint">
                 "The server echoed no parameters with this expansion."
             </p>
         }
@@ -926,11 +876,11 @@ fn parameters_view(lines: &[ParameterLine]) -> AnyView {
         })
         .collect();
     view! {
-        <details class="mt-4 rounded border border-slate-200 text-xs dark:border-slate-800">
-            <summary class="cursor-pointer px-3 py-2 font-medium text-slate-700 dark:text-slate-200">
+        <details class="mt-4 rounded-md border border-line text-small">
+            <summary class="cursor-pointer px-3 py-2 font-medium text-muted">
                 "The parameters the server says it applied"
             </summary>
-            <dl class="grid gap-1 border-t border-slate-200 px-3 py-2 sm:grid-cols-[14rem_1fr] dark:border-slate-800">
+            <dl class="grid gap-1 border-t border-line px-3 py-2 sm:grid-cols-[14rem_1fr]">
                 {rows}
             </dl>
         </details>
@@ -945,7 +895,7 @@ fn refusal_view(error: &FhirError) -> AnyView {
         .is_some_and(|outcome| outcome.carries_code(TOO_COSTLY));
     let advice = if costly {
         view! {
-            <p class="mt-2 text-sm">
+            <p class="mt-2 text-body">
                 "The server refused to expand a selection this large in one answer. Ask for a page size and the runner walks it a page at a time."
             </p>
         }

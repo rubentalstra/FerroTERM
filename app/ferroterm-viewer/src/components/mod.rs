@@ -15,6 +15,7 @@ pub(crate) const NOT_DECLARED: &str = "not declared";
 
 pub(crate) mod button;
 pub(crate) mod failure;
+pub(crate) mod field;
 pub(crate) mod health;
 pub(crate) mod icon;
 pub(crate) mod reading;

@@ -7,6 +7,7 @@ use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::fhir::version::FhirVersion;
 use crate::routes::version_link;
+use crate::styles;
 
 /// Links to each served FHIR version, keeping the reader on the same page.
 ///
@@ -33,10 +34,7 @@ pub(crate) fn VersionSwitcher(
             aria-label="FHIR version"
             class="flex items-center gap-0.5 rounded-lg border border-line bg-inset p-0.5"
         >
-            <span class=format!(
-                "mr-1 inline-flex items-center gap-1 pl-1.5 {}",
-                crate::styles::EYEBROW,
-            )>
+            <span class=format!("mr-1 inline-flex items-center gap-1 pl-1.5 {}", styles::EYEBROW)>
                 <Icon glyph=icon::VERSION class="h-3.5 w-3.5" />
                 "FHIR"
             </span>

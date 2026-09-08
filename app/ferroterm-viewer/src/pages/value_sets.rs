@@ -15,6 +15,7 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::field::Help;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
@@ -37,6 +38,7 @@ use crate::listing::window;
 use crate::routes::VALUE_SETS_PATH;
 use crate::routes::expansion_link;
 use crate::settings::Settings;
+use crate::styles;
 
 /// Lists the `ValueSet` resources this root holds, and reads one of them.
 ///
@@ -54,6 +56,7 @@ pub(crate) fn ValueSetsPage() -> impl IntoView {
     let client = expect_context::<FhirClient>();
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
     let settings = expect_context::<Settings>();
+    provide_context(Help(RwSignal::new(false)));
 
     let query = use_query_map();
     let params: Signal<ListParams> = Memo::new(move |_| {
@@ -63,8 +66,8 @@ pub(crate) fn ValueSetsPage() -> impl IntoView {
 
     let heading = view! {
         <Title text="Value sets" />
-        <h1 class="text-2xl font-semibold">"Value sets"</h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <h1 class=styles::PAGE_TITLE>"Value sets"</h1>
+        <p class=styles::LEAD>
             "The ValueSet resources this root holds, as it publishes them. Open one to see its definition, then run it in the expansion runner. This screen only reads."
         </p>
     }
@@ -107,7 +110,6 @@ fn search_form(params: Signal<ListParams>, version: Signal<FhirVersion>) -> AnyV
         );
     };
     filter_form(
-        "valuesets",
         "The url search parameter, matched against ValueSet.url.",
         canonical,
         resource_version,
@@ -157,10 +159,10 @@ fn list_section(
 
     view! {
         <section class="mt-8" aria-labelledby="valuesets-heading">
-            <h2 id="valuesets-heading" class="text-lg font-medium">
+            <h2 id="valuesets-heading" class=styles::SECTION_TITLE>
                 "What this root holds"
             </h2>
-            <p aria-live="polite" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            <p aria-live="polite" class="mt-2 text-body text-muted">
                 {announcement}
             </p>
             <Reading label="Reading the value sets">
@@ -193,7 +195,7 @@ fn list_view(
     let resources = found.found();
     if resources.is_empty() {
         return view! {
-            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p class="mt-3 text-body text-muted">
                 "This root holds no ValueSet resource matching the filter above. A value set a code system defines implicitly is not published as a resource, and the expansion runner takes its canonical directly."
             </p>
         }
@@ -215,9 +217,9 @@ fn list_view(
     );
     view! {
         <div class="mt-3 overflow-x-auto">
-            <table class="w-full border-collapse text-left text-sm">
+            <table class="w-full border-collapse text-left text-body">
                 <thead>
-                    <tr class="border-b border-slate-300 dark:border-slate-700">
+                    <tr class="border-b border-line-strong">
                         <th scope="col" class="py-2 pr-3 font-medium">
                             "Canonical"
                         </th>
@@ -250,11 +252,11 @@ fn row_view(resource: &PublishedValueSet, params: &ListParams, version: FhirVers
             .map(|id| params.reading(id).address(VALUE_SETS_PATH, version)),
     );
     view! {
-        <tr class="border-b border-slate-200 align-top dark:border-slate-800">
-            <th scope="row" class="py-2 pr-3 font-mono text-xs font-normal break-all">
+        <tr class="border-b border-line align-top">
+            <th scope="row" class="py-2 pr-3 font-mono text-small font-normal break-all">
                 {heading}
             </th>
-            <td class="py-2 pr-3 font-mono text-xs">
+            <td class="py-2 pr-3 font-mono text-small">
                 {resource.version().unwrap_or(NOT_DECLARED).to_owned()}
             </td>
             <td class="py-2 pr-3">{resource.label().unwrap_or(NOT_DECLARED).to_owned()}</td>
@@ -291,7 +293,7 @@ fn detail_section(
     view! {
         <Show when=move || id.with(|id| !id.is_empty()) fallback=|| ()>
             <section class="mt-8" aria-labelledby="valueset-detail-heading">
-                <h2 id="valueset-detail-heading" class="text-lg font-medium">
+                <h2 id="valueset-detail-heading" class=styles::SECTION_TITLE>
                     "The value set you opened"
                 </h2>
                 <Reading label="Reading the value set">
@@ -324,7 +326,7 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
         .map(|fact| {
             let value = fact.value.unwrap_or_else(|| NOT_DECLARED.to_owned());
             view! {
-                <div class="grid gap-1 border-b border-slate-100 py-1 last:border-0 sm:grid-cols-[16rem_1fr] dark:border-slate-800">
+                <div class="grid gap-1 border-b border-line py-1 last:border-0 sm:grid-cols-[16rem_1fr]">
                     <dt class="font-medium">{fact.label}</dt>
                     <dd class="break-words">{value}</dd>
                 </div>
@@ -339,7 +341,7 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
     let run = canonical.map_or_else(
         || {
             view! {
-                <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                <p class="mt-3 text-body text-muted">
                     "This resource declares no canonical, so there is no url for the expansion runner to expand."
                 </p>
             }
@@ -349,10 +351,7 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
             let href = expansion_link(&canonical, version);
             view! {
                 <p class="mt-3">
-                    <a
-                        href=href
-                        class="inline-flex items-center gap-1 text-brand-700 underline dark:text-brand-300"
-                    >
+                    <a href=href class="inline-flex items-center gap-1 text-accent underline">
                         <Icon glyph=icon::EXPAND />
                         "Run this value set in the expansion runner"
                     </a>
@@ -363,10 +362,10 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
     );
     let clauses = clauses_view(&resource.clauses());
     view! {
-        <article class="mt-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h3 class="font-mono text-sm font-semibold break-all">{heading}</h3>
+        <article class=format!("mt-3 panel-p {}", styles::PANEL)>
+            <h3 class="font-mono text-body font-semibold break-all">{heading}</h3>
             {run}
-            <dl class="mt-3 text-sm">{rows}</dl>
+            <dl class="mt-3 text-body">{rows}</dl>
             {clauses}
         </article>
     }
@@ -381,7 +380,7 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
 fn clauses_view(clauses: &[ClauseRow]) -> AnyView {
     if clauses.is_empty() {
         return view! {
-            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p class="mt-3 text-body text-muted">
                 "This resource carries no compose element, so its content is whatever the server holds for it rather than a selection written here."
             </p>
         }
@@ -390,19 +389,19 @@ fn clauses_view(clauses: &[ClauseRow]) -> AnyView {
     let rows: Vec<AnyView> = clauses.iter().map(clause_row).collect();
     view! {
         <div class="mt-4 overflow-x-auto">
-            <table class="w-full border-collapse text-left text-sm">
-                <caption class="pb-1 text-left text-xs font-medium tracking-wide uppercase">
+            <table class="w-full border-collapse text-left text-body">
+                <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
                     "What the definition selects"
                 </caption>
                 <thead>
-                    <tr class="border-b border-slate-200 dark:border-slate-700">
-                        <th scope="col" class="py-1 pr-3 text-xs font-medium">
+                    <tr class="border-b border-line">
+                        <th scope="col" class="py-1 pr-3 text-small font-medium">
                             "Clause"
                         </th>
-                        <th scope="col" class="py-1 pr-3 text-xs font-medium">
+                        <th scope="col" class="py-1 pr-3 text-small font-medium">
                             "Code system"
                         </th>
-                        <th scope="col" class="py-1 text-xs font-medium">
+                        <th scope="col" class="py-1 text-small font-medium">
                             "Selects"
                         </th>
                     </tr>
@@ -427,12 +426,12 @@ fn clause_row(clause: &ClauseRow) -> AnyView {
         (None, _) => NOT_DECLARED.to_owned(),
     };
     view! {
-        <tr class="border-b border-slate-100 align-top last:border-0 dark:border-slate-800">
-            <th scope="row" class="py-1 pr-3 text-xs font-normal">
+        <tr class="border-b border-line align-top last:border-0">
+            <th scope="row" class="py-1 pr-3 text-small font-normal">
                 {kind}
             </th>
-            <td class="py-1 pr-3 font-mono text-xs break-all">{system}</td>
-            <td class="py-1 text-xs">{selection_view(clause)}</td>
+            <td class="py-1 pr-3 font-mono text-small break-all">{system}</td>
+            <td class="py-1 text-small">{selection_view(clause)}</td>
         </tr>
     }
     .into_any()

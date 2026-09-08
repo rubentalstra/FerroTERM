@@ -41,6 +41,7 @@ use crate::routes::VERSIONS_PATH;
 use crate::routes::nav_section;
 use crate::routes::ui_link;
 use crate::settings::Settings;
+use crate::styles;
 
 /// The FHIR version the current address selects, for every screen to read.
 #[derive(Clone, Copy, Debug)]
@@ -191,7 +192,7 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
                     type="button"
                     aria-controls=NAV_ID
                     aria-expanded=move || if open.get() { "true" } else { "false" }
-                    class=format!("{} md:hidden", crate::styles::BUTTON)
+                    class=format!("{} md:hidden", styles::BUTTON)
                     on:click=move |_| open.update(|shown| *shown = !*shown)
                 >
                     "Screens"
@@ -201,7 +202,7 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
                     class="flex items-baseline gap-2 font-semibold text-fg"
                 >
                     <span class="text-title">"FerroTERM"</span>
-                    <span class=crate::styles::EYEBROW>"viewer"</span>
+                    <span class=styles::EYEBROW>"viewer"</span>
                 </a>
                 <div class="ml-auto flex items-center gap-3">
                     <VersionSwitcher selected=version />
@@ -264,7 +265,7 @@ pub(crate) fn Shell() -> impl IntoView {
     view! {
         <div class=format!(
             "flex min-h-screen flex-col {}",
-            crate::styles::PAGE,
+            styles::PAGE,
         )>
             {bar}
             <div class="flex flex-1 flex-col md:flex-row">

@@ -34,7 +34,7 @@ const SLUG_WORDS: usize = 8;
 
 /// How much of a failing page's markup the log carries.
 ///
-/// Enough to see which cards rendered and what they held, without burying the
+/// Enough to see which sections rendered and what they held, without burying the
 /// assertion that failed. The whole document goes to the evidence file beside
 /// it, so nothing is lost by trimming here.
 const MARKUP_IN_A_FAILURE: usize = 20_000;

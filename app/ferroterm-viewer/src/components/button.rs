@@ -3,8 +3,7 @@
 use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 
-/// The classes every button shares, so one control reads the same everywhere.
-const BASE: &str = crate::styles::BUTTON_QUIET;
+use crate::styles;
 
 /// A button that runs Rust on activation and never navigates.
 ///
@@ -28,7 +27,7 @@ pub(crate) fn Button(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <button type="button" class=format!("{BASE} {class}") on:click=on_click>
+        <button type="button" class=format!("{} {class}", styles::BUTTON_QUIET) on:click=on_click>
             {children()}
         </button>
     }

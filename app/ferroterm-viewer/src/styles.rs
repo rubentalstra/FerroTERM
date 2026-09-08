@@ -23,6 +23,9 @@ pub(crate) const PAGE_TITLE: &str = "text-display font-semibold text-fg";
 /// The title of a section within a screen.
 pub(crate) const SECTION_TITLE: &str = "text-title font-medium text-fg";
 
+/// The sentence under a title that says what a screen or a section is for.
+pub(crate) const LEAD: &str = "mt-1 text-body text-muted";
+
 /// A label over a group, in small caps, for a thing that is not a heading.
 pub(crate) const EYEBROW: &str = "text-micro font-semibold tracking-wide text-muted uppercase";
 
@@ -64,6 +67,13 @@ pub(crate) const BUTTON_QUIET: &str = "inline-flex items-center gap-1.5 rounded-
                                        text-small font-medium text-muted hover:bg-inset \
                                        hover:text-fg";
 
+/// A text input.
+pub(crate) const INPUT: &str = "w-full rounded-md border border-line-strong bg-raised px-2.5 \
+                                py-1.5 text-body text-fg";
+
+/// The label over an input.
+pub(crate) const LABEL: &str = "text-small font-medium text-fg";
+
 /// A standing mark: a state a resource or a version is in.
 pub(crate) const BADGE: &str = "inline-flex items-center gap-1 rounded-full bg-inset px-2 py-0.5 \
                                 text-micro font-medium text-muted";
@@ -76,6 +86,15 @@ pub(crate) const BADGE_OK: &str = "inline-flex items-center gap-1 rounded-full b
 pub(crate) const BADGE_DANGER: &str = "inline-flex items-center gap-1 rounded-full \
                                        bg-danger-soft px-2 py-0.5 text-micro font-medium \
                                        text-danger-soft-fg";
+
+/// A control a screen offers but cannot act on right now.
+pub(crate) const BUTTON_DISABLED: &str = "inline-flex items-center gap-1.5 rounded-md border \
+                                          border-line px-2.5 py-1 text-small font-medium \
+                                          text-faint";
+
+/// A standing notice about the answer being shown.
+pub(crate) const NOTICE: &str = "border border-warn-soft-fg/30 bg-warn-soft text-small \
+                                 text-warn-soft-fg";
 
 /// A link inside prose.
 pub(crate) const LINK: &str = "text-accent underline decoration-from-font underline-offset-2";

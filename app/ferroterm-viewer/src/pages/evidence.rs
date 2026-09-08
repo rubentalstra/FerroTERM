@@ -15,9 +15,10 @@ use crate::evidence::Run;
 use crate::evidence::SystemRun;
 use crate::evidence::embedded;
 use crate::evidence::relative_width;
+use crate::styles;
 
 /// The classes every table on this screen carries.
-const TABLE: &str = "w-full border-collapse text-left text-sm";
+const TABLE: &str = "w-full border-collapse text-left text-body";
 
 /// The classes a column heading carries.
 const HEAD: &str = "py-2 pr-3 font-medium align-bottom";
@@ -29,7 +30,7 @@ const CELL: &str = "py-2 pr-3 align-top";
 const FIGURE: &str = "py-2 pr-3 align-top tabular-nums whitespace-nowrap";
 
 /// The classes a file path carries.
-const PATH: &str = "font-mono text-xs break-all text-slate-600 dark:text-slate-300";
+const PATH: &str = "font-mono text-small break-all text-muted";
 
 /// Draws the conformance and benchmark evidence the bundle carries.
 ///
@@ -43,7 +44,7 @@ const PATH: &str = "font-mono text-xs break-all text-slate-600 dark:text-slate-3
 pub(crate) fn EvidencePage() -> impl IntoView {
     let heading = view! {
         <Title text="Evidence" />
-        <h1 class="text-2xl font-semibold">"The evidence this build ships"</h1>
+        <h1 class=styles::PAGE_TITLE>"The evidence this build ships"</h1>
     }
     .into_any();
 
@@ -65,11 +66,11 @@ pub(crate) fn EvidencePage() -> impl IntoView {
 /// What the screen states, and what it does not.
 fn preamble(release: &'static str) -> AnyView {
     view! {
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <p class=styles::LEAD>
             "These figures describe FerroTERM " <span class="font-medium">{release}</span>
             ", the build this bundle was compiled from. They say nothing about the server answering this page: what it loaded and what it answers now are on the other screens."
         </p>
-        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        <p class="mt-2 text-body text-muted">
             "This screen issues no request. Every number below was read out of a file the repository commits when the bundle was built, and each one names that file, so you can open it and check the number yourself."
         </p>
     }
@@ -84,12 +85,12 @@ fn conformance_section(conformance: Conformance) -> AnyView {
         .map(|mode| {
             let share = mode.share();
             view! {
-                <tr class="border-b border-slate-200 dark:border-slate-800">
-                    <th scope="row" class="py-2 pr-3 text-left font-mono text-xs font-normal">
+                <tr class="border-b border-line">
+                    <th scope="row" class="py-2 pr-3 text-left font-mono text-small font-normal">
                         {mode.name}
                     </th>
                     <td class=CELL>
-                        <span class="font-mono text-xs">{mode.surface}</span>
+                        <span class="font-mono text-small">{mode.surface}</span>
                     </td>
                     <td class=FIGURE>{mode.passed} " of " {mode.ran}</td>
                     <td class="w-40 py-2 pr-3 align-top">
@@ -111,21 +112,21 @@ fn conformance_section(conformance: Conformance) -> AnyView {
 
     view! {
         <section class="mt-8" aria-labelledby="conformance-heading">
-            <h2 id="conformance-heading" class="text-lg font-medium">
+            <h2 id="conformance-heading" class=styles::SECTION_TITLE>
                 "The HL7 terminology ecosystem suite"
             </h2>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p class=styles::LEAD>
                 "The suite groups its cases into modes, and a run picks one. Each row is one mode run against one served FHIR root. The `general` mode runs "
                 {total}
                 " cases and needs nothing to run, so continuous integration runs it on every push; the other modes need licensed content or a code system this server does not serve, so they are run by hand before a release."
             </p>
             <div class="mt-3 overflow-x-auto">
                 <table class=TABLE>
-                    <caption class="pb-1 text-left text-xs font-medium tracking-wide uppercase">
+                    <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
                         "The cases each mode passes, from the committed pass lists"
                     </caption>
                     <thead>
-                        <tr class="border-b border-slate-300 dark:border-slate-700">
+                        <tr class="border-b border-line-strong">
                             <th scope="col" class=HEAD>
                                 "Mode"
                             </th>
@@ -146,7 +147,7 @@ fn conformance_section(conformance: Conformance) -> AnyView {
                     <tbody>{rows}</tbody>
                 </table>
             </div>
-            <p class="mt-2 text-xs text-slate-600 dark:text-slate-300">
+            <p class="mt-2 text-small text-muted">
                 "The case counts come from " <span class=PATH>{table_source}</span>
                 " and the suite total from " <span class=PATH>{total_source}</span>
                 ". The build stops when a pass list and that table disagree."
@@ -173,8 +174,8 @@ fn latency_section(latency: Latency) -> AnyView {
                 |times| format!("{times} times under it"),
             );
             view! {
-                <tr class="border-b border-slate-200 dark:border-slate-800">
-                    <th scope="row" class="py-2 pr-3 text-left font-mono text-xs font-normal">
+                <tr class="border-b border-line">
+                    <th scope="row" class="py-2 pr-3 text-left font-mono text-small font-normal">
                         {bar.bench}
                     </th>
                     <td class=FIGURE>{bar.max_us} " µs"</td>
@@ -195,20 +196,20 @@ fn latency_section(latency: Latency) -> AnyView {
 
     view! {
         <section class="mt-10" aria-labelledby="latency-heading">
-            <h2 id="latency-heading" class="text-lg font-medium">
+            <h2 id="latency-heading" class=styles::SECTION_TITLE>
                 "The latency the project claims"
             </h2>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p class=styles::LEAD>
                 "A bar is the claim, and it never moves to match a slower run. The measurement beside it records what one machine answered, so the room a run has is visible. The recorded run was taken on "
                 <span class="font-medium">{machine}</span> "."
             </p>
             <div class="mt-3 overflow-x-auto">
                 <table class=TABLE>
-                    <caption class="pb-1 text-left text-xs font-medium tracking-wide uppercase">
+                    <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
                         "Each benchmark, its bar, and the run recorded against it"
                     </caption>
                     <thead>
-                        <tr class="border-b border-slate-300 dark:border-slate-700">
+                        <tr class="border-b border-line-strong">
                             <th scope="col" class=HEAD>
                                 "Benchmark"
                             </th>
@@ -229,7 +230,7 @@ fn latency_section(latency: Latency) -> AnyView {
                     <tbody>{rows}</tbody>
                 </table>
             </div>
-            <p class="mt-2 text-xs text-slate-600 dark:text-slate-300">
+            <p class="mt-2 text-small text-muted">
                 "Every figure in this table comes from " <span class=PATH>{source}</span>
                 ". A bar beside a measurement is drawn against the slowest measurement in the table, so the shape reads; the microseconds beside it are the figure."
             </p>
@@ -245,10 +246,10 @@ fn run_section(run: Run) -> AnyView {
     let source = run.source;
     view! {
         <section class="mt-10" aria-labelledby="run-heading">
-            <h2 id="run-heading" class="text-lg font-medium">
+            <h2 id="run-heading" class=styles::SECTION_TITLE>
                 "The newest benchmark run"
             </h2>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p class=styles::LEAD>
                 "One record per code system the run loaded, from " <span class=PATH>{source}</span>
                 ", the run named " <span class="font-medium">{name}</span>
                 ". A record states the machine it was taken on and the FerroTERM version that answered it, because a timing without both says nothing."
@@ -264,8 +265,8 @@ fn system_view(system: &SystemRun) -> AnyView {
     let facts = facts_view(system);
     let timings = timings_view(system);
     view! {
-        <article class="mt-6 rounded-md border border-slate-200 p-4 dark:border-slate-800">
-            <h3 class="text-base font-medium">
+        <article class="mt-6 rounded-md border border-line p-4">
+            <h3 class="text-body font-medium">
                 {system.system} " " <span class="font-normal">{system.system_version}</span>
             </h3>
             <p class=PATH>{system.system_uri}</p>
@@ -283,25 +284,25 @@ fn facts_view(system: &SystemRun) -> AnyView {
         .map_or_else(|| NOT_DECLARED.to_owned(), |seconds| format!("{seconds} s"));
     let release = system.release.unwrap_or("built outside this run");
     view! {
-        <dl class="mt-3 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[10rem_1fr]">
+        <dl class="mt-3 grid gap-x-4 gap-y-1 text-body sm:grid-cols-[10rem_1fr]">
             <dt class="font-medium">"Concepts"</dt>
             <dd class="tabular-nums">{system.concepts}</dd>
             <dt class="font-medium">"Offline build"</dt>
             <dd class="tabular-nums">{ingest}</dd>
             <dt class="font-medium">"Built from"</dt>
-            <dd class="font-mono text-xs break-all">{release}</dd>
+            <dd class="font-mono text-small break-all">{release}</dd>
             <dt class="font-medium">"Ready after"</dt>
             <dd class="tabular-nums">{system.ready_seconds} " s"</dd>
             <dt class="font-medium">"Resident memory"</dt>
             <dd class="tabular-nums">{system.resident_memory}</dd>
             <dt class="font-medium">"Served as"</dt>
-            <dd class="font-mono text-xs">"/" {system.fhir}</dd>
+            <dd class="font-mono text-small">"/" {system.fhir}</dd>
             <dt class="font-medium">"Answered by"</dt>
             <dd>{system.built_by}</dd>
             <dt class="font-medium">"Machine"</dt>
             <dd>{system.machine}</dd>
             <dt class="font-medium">"Taken at"</dt>
-            <dd class="font-mono text-xs break-all">{system.taken_at}</dd>
+            <dd class="font-mono text-small break-all">{system.taken_at}</dd>
             <dt class="font-medium">"Record"</dt>
             <dd class=PATH>{system.source}</dd>
         </dl>
@@ -312,11 +313,7 @@ fn facts_view(system: &SystemRun) -> AnyView {
 /// The operations the run timed, one row each.
 fn timings_view(system: &SystemRun) -> AnyView {
     if system.operations.is_empty() {
-        return view! {
-            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                "This record timed no operation."
-            </p>
-        }
+        return view! { <p class="mt-3 text-body text-muted">"This record timed no operation."</p> }
         .into_any();
     }
     let rows: Vec<AnyView> = system
@@ -324,8 +321,8 @@ fn timings_view(system: &SystemRun) -> AnyView {
         .iter()
         .map(|timing| {
             view! {
-                <tr class="border-b border-slate-200 dark:border-slate-800">
-                    <th scope="row" class="py-2 pr-3 text-left font-mono text-xs font-normal">
+                <tr class="border-b border-line">
+                    <th scope="row" class="py-2 pr-3 text-left font-mono text-small font-normal">
                         {timing.operation}
                     </th>
                     <td class=FIGURE>{timing.status}</td>
@@ -343,11 +340,11 @@ fn timings_view(system: &SystemRun) -> AnyView {
     view! {
         <div class="mt-4 overflow-x-auto">
             <table class=TABLE>
-                <caption class="pb-1 text-left text-xs font-medium tracking-wide uppercase">
+                <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
                     {caption}
                 </caption>
                 <thead>
-                    <tr class="border-b border-slate-300 dark:border-slate-700">
+                    <tr class="border-b border-line-strong">
                         <th scope="col" class=HEAD>
                             "Operation"
                         </th>
@@ -386,14 +383,8 @@ fn timings_view(system: &SystemRun) -> AnyView {
 /// is readable only as a shape or only as a colour.
 fn proportion(percent: u32) -> AnyView {
     view! {
-        <span
-            aria-hidden="true"
-            class="mt-1 block h-1.5 w-full rounded bg-slate-200 dark:bg-slate-800"
-        >
-            <span
-                class="block h-1.5 rounded bg-brand-600 dark:bg-brand-400"
-                style=format!("width:{percent}%")
-            ></span>
+        <span aria-hidden="true" class="mt-1 block h-1.5 w-full rounded bg-inset">
+            <span class="block h-1.5 rounded bg-accent" style=format!("width:{percent}%")></span>
         </span>
     }
     .into_any()

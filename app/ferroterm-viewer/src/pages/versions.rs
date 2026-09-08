@@ -26,6 +26,7 @@ use crate::fhir::FhirClient;
 use crate::fhir::capability::CapabilityStatement;
 use crate::fhir::error::FhirError;
 use crate::fhir::version::FhirVersion;
+use crate::styles;
 
 /// What one root answered, before the screen has read it.
 type RootRead = LocalResource<Result<CapabilityStatement, FhirError>>;
@@ -61,8 +62,8 @@ pub(crate) fn VersionsPage() -> impl IntoView {
 
     let heading = view! {
         <Title text="FHIR versions" />
-        <h1 class="text-2xl font-semibold">"The four FHIR versions"</h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <h1 class=styles::PAGE_TITLE>"The four FHIR versions"</h1>
+        <p class=styles::LEAD>
             "This one server answers R4, R4B, R5, and the R6 ballot from four roots, each with the operation set its own release publishes. Everything below is those four capability statements, read from this browser."
         </p>
     }
@@ -86,10 +87,10 @@ fn comparison_section(roots: [RootRead; 4]) -> AnyView {
 
     view! {
         <section class="mt-6" aria-labelledby="comparison-heading">
-            <h2 id="comparison-heading" class="text-lg font-medium">
+            <h2 id="comparison-heading" class=styles::SECTION_TITLE>
                 "What each root declares"
             </h2>
-            <p aria-live="polite" class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p aria-live="polite" class=styles::LEAD>
                 {announcement}
             </p>
             <Reading label="Reading the four capability statements">
@@ -151,7 +152,7 @@ fn refusals_view(answers: &[(FhirVersion, RootAnswer)]) -> AnyView {
             Some(
                 view! {
                     <div class="mt-3">
-                        <p class="text-sm font-medium">{version.label()} " did not answer:"</p>
+                        <p class="text-body font-medium">{version.label()} " did not answer:"</p>
                         <Failure error=Signal::stored(error) />
                     </div>
                 }
@@ -168,11 +169,7 @@ fn refusals_view(answers: &[(FhirVersion, RootAnswer)]) -> AnyView {
 /// The operations table, with the sentence that reads its shape.
 fn operations_view(comparison: &Comparison) -> AnyView {
     if comparison.operations.is_empty() {
-        return view! {
-            <p class="mt-4 text-sm text-slate-600 dark:text-slate-300">
-                "No root that answered declares an operation."
-            </p>
-        }
+        return view! { <p class="mt-4 text-body text-muted">"No root that answered declares an operation."</p> }
         .into_any();
     }
     let table = table_view(
@@ -182,7 +179,7 @@ fn operations_view(comparison: &Comparison) -> AnyView {
         &comparison.operations,
     );
     view! {
-        <p class="mt-6 text-sm text-slate-600 dark:text-slate-300">
+        <p class="mt-6 text-body text-muted">
             "A row is one operation. A cell says at which levels that root answers it, which is what its release's own OperationDefinition declares. A row with no resource type in front of the $ is answered on the root itself."
         </p>
         {table}
@@ -207,7 +204,7 @@ fn table_view(caption: &str, corner: &str, columns: &[RootColumn], rows: &[Row])
             view! {
                 <th scope="col" class="py-2 pr-3 font-medium">
                     {column.version.label()}
-                    <span class="block text-xs font-normal text-slate-600 dark:text-slate-300">
+                    <span class="block text-small font-normal text-muted">
                         "FHIR " {release} ", " {column.state}
                     </span>
                 </th>
@@ -218,12 +215,12 @@ fn table_view(caption: &str, corner: &str, columns: &[RootColumn], rows: &[Row])
     let body: Vec<AnyView> = rows.iter().map(row_view).collect();
     view! {
         <div class="mt-3 overflow-x-auto">
-            <table class="w-full border-collapse text-left text-sm">
-                <caption class="pb-1 text-left text-xs font-medium tracking-wide uppercase">
+            <table class="w-full border-collapse text-left text-body">
+                <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
                     {caption.to_owned()}
                 </caption>
                 <thead>
-                    <tr class="border-b border-slate-300 dark:border-slate-700">
+                    <tr class="border-b border-line-strong">
                         <th scope="col" class="py-2 pr-3 font-medium">
                             {corner.to_owned()}
                         </th>
@@ -245,12 +242,12 @@ fn row_view(row: &Row) -> AnyView {
         .map(|cell| view! { <td class=CELL>{cell_text(cell)}</td> }.into_any())
         .collect();
     view! {
-        <tr class="border-b border-slate-200 align-top dark:border-slate-800">
+        <tr class="border-b border-line align-top">
             // `wrap-break-word` rather than `break-all`: an operation label
             // is one long token with nowhere to break, but a declaration label
             // is a sentence, and `break-all` chops it mid-word
             // (<https://developer.mozilla.org/en-US/docs/Web/CSS/overflow-wrap>).
-            <th scope="row" class="py-2 pr-3 font-mono text-xs font-normal wrap-break-word">
+            <th scope="row" class="py-2 pr-3 font-mono text-small font-normal wrap-break-word">
                 {row.label.clone()}
             </th>
             {cells}
@@ -276,8 +273,8 @@ fn notes_view(answers: &[(FhirVersion, RootAnswer)]) -> AnyView {
         .collect();
     view! {
         <div class="mt-8">
-            <h3 class="text-base font-medium">"What each root adds to its own definition"</h3>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <h3 class="text-body font-medium">"What each root adds to its own definition"</h3>
+            <p class=styles::LEAD>
                 "Each line below is one root's own operation.documentation, as it sent it. It is where a release says which parameters it takes beyond the ones its own OperationDefinition declares."
             </p>
             {drawn}
@@ -293,15 +290,15 @@ fn root_notes_view(label: &'static str, notes: &[(String, String)]) -> AnyView {
         .iter()
         .map(|(operation, note)| {
             view! {
-                <dt class="mt-2 font-mono text-xs wrap-break-word">{operation.clone()}</dt>
-                <dd class="text-sm text-slate-700 dark:text-slate-200">{note.clone()}</dd>
+                <dt class="mt-2 font-mono text-small wrap-break-word">{operation.clone()}</dt>
+                <dd class="text-body text-muted">{note.clone()}</dd>
             }
             .into_any()
         })
         .collect();
     let body = if count == 0 {
         view! {
-            <p class="text-sm text-slate-600 dark:text-slate-300">
+            <p class="text-body text-muted">
                 "This root added nothing to the definitions its release publishes, or did not answer."
             </p>
         }
@@ -310,11 +307,11 @@ fn root_notes_view(label: &'static str, notes: &[(String, String)]) -> AnyView {
         view! { <dl>{lines}</dl> }.into_any()
     };
     view! {
-        <details class="mt-3 rounded border border-slate-200 dark:border-slate-800">
-            <summary class="cursor-pointer px-3 py-2 text-sm font-medium">
+        <details class="mt-3 rounded border border-line">
+            <summary class="cursor-pointer px-3 py-2 text-body font-medium">
                 {label} " · " {note_count(count)}
             </summary>
-            <div class="border-t border-slate-200 px-3 py-2 dark:border-slate-800">{body}</div>
+            <div class="border-t border-line px-3 py-2">{body}</div>
         </details>
     }
     .into_any()

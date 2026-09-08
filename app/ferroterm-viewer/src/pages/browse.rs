@@ -60,7 +60,7 @@ use crate::routes::VERSION_PARAM;
 use crate::routes::system_link;
 use crate::routes::ui_link;
 use crate::settings::Settings;
-use crate::styles::SUBMIT;
+use crate::styles;
 use crate::tree::TreeAction;
 use crate::tree::TreeConcept;
 use crate::tree::TreeRow;
@@ -79,12 +79,8 @@ const OPEN_PARAM: &str = "open";
 /// The prefix of the element id every tree row carries.
 const ROW_ID: &str = "browse-tree-";
 
-/// The classes a link inside a list, a table, or a tree row carries.
-const LINK: &str =
-    "text-brand-700 underline decoration-dotted underline-offset-4 dark:text-brand-300";
-
 /// The classes a sentence that states an absence carries.
-const NOTE: &str = "mt-3 text-sm text-slate-600 dark:text-slate-300";
+const NOTE: &str = "mt-3 text-body text-muted";
 
 /// The classes the twist that opens and closes a tree row carries.
 ///
@@ -95,7 +91,7 @@ const TWIST: &str = "mr-1 inline-flex h-6 w-6 items-center justify-center rounde
                      text-brand-700 hover:bg-slate-200 dark:text-brand-300 dark:hover:bg-slate-700";
 
 /// The classes a table cell carries.
-const CELL: &str = "py-1 pr-3 text-left text-xs font-normal break-words";
+const CELL: &str = "py-1 pr-3 text-left text-small font-normal break-words";
 
 /// How far one level of the tree is indented, in pixels.
 ///
@@ -151,17 +147,20 @@ pub(crate) fn BrowsePage() -> impl IntoView {
 
     let heading = view! {
         <Title text="Concept browser" />
-        <h1 class="text-2xl font-semibold">"Concept browser"</h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <h1 class=styles::PAGE_TITLE>"Concept browser"</h1>
+        <p class=styles::LEAD>
             "Search one code system, read a concept, and walk what the server declares of its hierarchy. Every pane below says which request it made."
         </p>
         {move || {
             (!named.get())
                 .then(|| {
                     view! {
-                        <p class="mt-6 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950">
+                        <p class=format!(
+                            "mt-6 rounded-md p-3 {}",
+                            styles::NOTICE,
+                        )>
                             "This address names no code system. "
-                            <a href=move || ui_link("", version.get()) class=LINK>
+                            <a href=move || ui_link("", version.get()) class=styles::LINK>
                                 "Pick one from the overview"
                             </a> ", open it, and follow its browse link."
                         </p>
@@ -409,16 +408,16 @@ fn system_section(
     let body = move || {
         view! {
             <section class="mt-6" aria-labelledby="browse-system-heading">
-                <h2 id="browse-system-heading" class="text-lg font-medium">
+                <h2 id="browse-system-heading" class=styles::SECTION_TITLE>
                     "The code system being browsed"
                 </h2>
-                <p class="mt-1 text-sm break-all">
+                <p class="mt-1 text-body break-all">
                     {move || {
                         params
                             .with(|params| {
                                 let target = system_link(&params.system, version.get());
                                 view! {
-                                    <a href=target class=LINK>
+                                    <a href=target class=styles::LINK>
                                         {params.system.clone()}
                                     </a>
                                 }
@@ -476,8 +475,8 @@ fn version_view(row: &VersionRow, hierarchy: &Hierarchy) -> AnyView {
         ),
     };
     view! {
-        <p class="mt-2 font-mono text-sm break-all">{code}</p>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{walk}</p>
+        <p class="mt-2 font-mono text-body break-all">{code}</p>
+        <p class=styles::LEAD>{walk}</p>
     }
     .into_any()
 }
@@ -516,13 +515,13 @@ fn language_view(
     let picker = move || {
         view! {
             <div class="mt-3 grid max-w-xs gap-1">
-                <label for="browse-language" class="text-sm font-medium">
+                <label for="browse-language" class="text-body font-medium">
                     "Display language"
                 </label>
                 <select
                     id="browse-language"
                     name=DISPLAY_LANGUAGE_PARAMETER
-                    class="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                    class=styles::INPUT
                     aria-describedby="browse-language-note"
                     prop:value=move || params.with(|params| params.language.clone())
                     on:change=change
@@ -530,7 +529,7 @@ fn language_view(
                     <option value="">"The server's own choice"</option>
                     {options}
                 </select>
-                <p id="browse-language-note" class="text-xs text-slate-500 dark:text-slate-400">
+                <p id="browse-language-note" class="text-small text-faint">
                     "The languages this version declares. The choice is sent as displayLanguage on every operation this screen calls."
                 </p>
             </div>
@@ -612,11 +611,11 @@ fn search_section(
     let body = move || {
         view! {
             <section class="mt-8" aria-labelledby="browse-search-heading">
-                <h2 id="browse-search-heading" class="text-lg font-medium">
+                <h2 id="browse-search-heading" class=styles::SECTION_TITLE>
                     "Search"
                 </h2>
                 <form class="mt-2 grid max-w-xl gap-1" on:submit=submit>
-                    <label for="browse-filter" class="text-sm font-medium">
+                    <label for="browse-filter" class="text-body font-medium">
                         "Filter"
                     </label>
                     <div class="flex gap-2">
@@ -624,21 +623,21 @@ fn search_section(
                             id="browse-filter"
                             name=FILTER_PARAMETER
                             type="search"
-                            class="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                            class=styles::INPUT
                             aria-describedby="browse-filter-note"
                             node_ref=field
                             prop:value=move || term.get()
                         />
-                        <button type="submit" class=SUBMIT>
+                        <button type="submit" class=styles::SUBMIT>
                             <Icon glyph=icon::SEARCH />
                             "Search"
                         </button>
                     </div>
-                    <p id="browse-filter-note" class="text-xs text-slate-500 dark:text-slate-400">
+                    <p id="browse-filter-note" class="text-small text-faint">
                         "Sent as the filter parameter of $expand over a value set that selects this code system. An empty filter lists the first concepts the server answers."
                     </p>
                 </form>
-                <p aria-live="polite" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                <p aria-live="polite" class="mt-2 text-body text-muted">
                     {announcement}
                 </p>
                 <Reading label="Searching the code system">
@@ -697,11 +696,11 @@ fn matches_view(concepts: &[ConceptRow], params: &BrowseParams, version: FhirVer
             let code = concept.code.clone();
             let inactive = concept.inactive.then(|| String::from(" (inactive)"));
             view! {
-                <li class="border-b border-slate-100 py-1 last:border-0 dark:border-slate-800">
-                    <a href=target class=LINK>
+                <li class="border-b border-line py-1 last:border-0">
+                    <a href=target class=styles::LINK>
                         {display}
                     </a>
-                    <span class="ml-2 font-mono text-xs break-all text-slate-500 dark:text-slate-400">
+                    <span class="ml-2 font-mono text-small break-all text-faint">
                         {code} {inactive}
                     </span>
                 </li>
@@ -709,7 +708,7 @@ fn matches_view(concepts: &[ConceptRow], params: &BrowseParams, version: FhirVer
             .into_any()
         })
         .collect();
-    view! { <ul class="mt-2 text-sm">{items}</ul> }.into_any()
+    view! { <ul class="mt-2 text-body">{items}</ul> }.into_any()
 }
 
 /// The concept the address names, as `$lookup` answers it.
@@ -797,7 +796,7 @@ fn concept_section(
     let body = move || {
         view! {
             <section class="mt-8" aria-labelledby="browse-concept-heading">
-                <h2 id="browse-concept-heading" class="text-lg font-medium">
+                <h2 id="browse-concept-heading" class=styles::SECTION_TITLE>
                     "The concept"
                 </h2>
                 {move || {
@@ -889,9 +888,9 @@ fn concept_view(
         "This server answers no property for this concept.",
     );
     view! {
-        <h3 class="mt-2 text-base font-semibold">{display}</h3>
-        <p class="font-mono text-xs break-all text-slate-500 dark:text-slate-400">{code}</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400">{held}</p>
+        <h3 class="mt-2 text-body font-semibold">{display}</h3>
+        <p class="font-mono text-small break-all text-faint">{code}</p>
+        <p class="text-small text-faint">{held}</p>
         {parents}
         {children}
         {designations}
@@ -918,7 +917,7 @@ fn links_view(
             let code = related.clone();
             view! {
                 <li>
-                    <a href=target class="font-mono text-xs ".to_owned() + LINK>
+                    <a href=target class="font-mono text-small ".to_owned() + styles::LINK>
                         {code}
                     </a>
                 </li>
@@ -928,7 +927,7 @@ fn links_view(
         .collect();
     view! {
         <nav aria-label=format!("{label} of this concept") class="mt-3">
-            <h4 class="text-xs font-medium tracking-wide uppercase">{label}</h4>
+            <h4 class="text-small font-medium tracking-wide uppercase">{label}</h4>
             <ul class="mt-1 flex flex-wrap gap-2">{links}</ul>
         </nav>
     }
@@ -960,14 +959,12 @@ fn table_view(
                 }
             });
             view! {
-                <tr class="border-b border-slate-100 align-top last:border-0 dark:border-slate-800">
+                <tr class="border-b border-line align-top last:border-0">
                     <th scope="row" class=CELL>
                         {head}
                     </th>
                     <td class=CELL>{middle}</td>
-                    <td class="py-1 text-xs break-words text-slate-500 dark:text-slate-400">
-                        {tail}
-                    </td>
+                    <td class="py-1 text-small break-words text-faint">{tail}</td>
                 </tr>
             }
             .into_any()
@@ -976,11 +973,11 @@ fn table_view(
     view! {
         <div class="mt-3 overflow-x-auto">
             <table class="w-full border-collapse text-left">
-                <caption class="pb-1 text-left text-xs font-medium tracking-wide uppercase">
+                <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
                     {caption}
                 </caption>
                 <thead>
-                    <tr class="border-b border-slate-200 dark:border-slate-700">
+                    <tr class="border-b border-line">
                         <th scope="col" class=CELL>
                             {first}
                         </th>
@@ -1163,10 +1160,10 @@ fn tree_section(
     let body = move || {
         view! {
             <section class="mt-8" aria-labelledby="browse-tree-heading">
-                <h2 id="browse-tree-heading" class="text-lg font-medium">
+                <h2 id="browse-tree-heading" class=styles::SECTION_TITLE>
                     "Below this concept"
                 </h2>
-                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                <p class=styles::LEAD>
                     "One level at a time, each level read with the child operator the version declares. The arrow keys walk it: right opens a concept, left closes it, and Enter reads the concept the tree is on."
                 </p>
                 // The rows are the only focusable part of the tree, so both a
@@ -1237,7 +1234,7 @@ fn tree_view(rows: &[TreeRow], chrome: &TreeChrome) -> AnyView {
     }
     let items: Vec<AnyView> = rows.iter().map(|row| row_view(row, chrome)).collect();
     view! {
-        <ul role="tree" aria-label="The concepts below this one" class="mt-2 text-sm">
+        <ul role="tree" aria-label="The concepts below this one" class="mt-2 text-body">
             {items}
         </ul>
     }
@@ -1270,7 +1267,7 @@ fn row_view(row: &TreeRow, chrome: &TreeChrome) -> AnyView {
     let name = format!("{display}, {code}");
     let short = (row.open && chrome.partial.contains(&row.concept.code)).then(|| {
         view! {
-            <span class="ml-2 inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
+            <span class="ml-2 inline-flex items-center gap-1 text-small text-muted">
                 <Icon glyph=icon::NOTICE class="h-3.5 w-3.5" />
                 "This server counts more children here than this page size asked for."
             </span>
@@ -1314,12 +1311,10 @@ fn row_view(row: &TreeRow, chrome: &TreeChrome) -> AnyView {
             style=format!("padding-left: {}px", row.depth.saturating_mul(INDENT))
         >
             {twist}
-            <a href=select tabindex="-1" class=LINK>
+            <a href=select tabindex="-1" class=styles::LINK>
                 {display}
             </a>
-            <span class="ml-2 font-mono text-xs break-all text-slate-500 dark:text-slate-400">
-                {code}
-            </span>
+            <span class="ml-2 font-mono text-small break-all text-faint">{code}</span>
             {short}
         </li>
     }

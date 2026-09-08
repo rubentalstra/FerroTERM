@@ -12,6 +12,10 @@ use leptos::html::Input;
 use leptos::prelude::*;
 
 use crate::components::NOT_DECLARED;
+use crate::components::field::Field;
+use crate::components::field::help_toggle;
+use crate::components::field::row;
+use crate::components::field::text_field;
 use crate::components::icon;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
@@ -20,7 +24,7 @@ use crate::fhir::version::FhirVersion;
 use crate::paging::Page;
 use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
-use crate::styles::SUBMIT;
+use crate::styles;
 use crate::url::RequestUrl;
 
 /// The address parameter carrying the canonical the search filters on.
@@ -34,15 +38,6 @@ const PAGE_PARAM: &str = "page";
 
 /// The address parameter carrying the id of the resource being read.
 const ID_PARAM: &str = "id";
-
-/// The classes every text control on a listing form shares.
-const CONTROL: &str = "w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900";
-
-/// The classes a page control carries.
-const PAGE_LINK: &str = "inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-sm text-brand-700 hover:underline dark:border-slate-700 dark:text-brand-300";
-
-/// The classes a page control that leads nowhere carries.
-const PAGE_END: &str = "inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400";
 
 /// What a listing screen's address says: the filter, the page, and the read.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -265,61 +260,46 @@ impl Window {
 /// address through `prop:value`, which follows a back navigation and leaves
 /// what the reader is typing alone, and is read back at submit.
 pub(crate) fn filter_form(
-    screen: &'static str,
     canonical_hint: &'static str,
     canonical: NodeRef<Input>,
     resource_version: NodeRef<Input>,
     params: Signal<ListParams>,
     submit: Box<dyn FnMut(SubmitEvent)>,
 ) -> AnyView {
-    let url_id = format!("{screen}-filter-url");
-    let version_id = format!("{screen}-filter-version");
-    let url_note = format!("{url_id}-note");
-    let version_note = format!("{version_id}-note");
+    let canonical_field = Field {
+        id: "filter-url",
+        name: "url",
+        label: "Canonical",
+        hint: canonical_hint,
+    };
+    let version_field = Field {
+        id: "filter-version",
+        name: "version",
+        label: "Version",
+        hint: "The version search parameter. Left empty, every version this root holds matches.",
+    };
     view! {
-        <form class="mt-6 grid gap-4 sm:grid-cols-2" on:submit=submit>
-            <div class="grid gap-1">
-                <label for=url_id.clone() class="text-sm font-medium">
-                    "Canonical"
-                </label>
-                <input
-                    id=url_id
-                    name="url"
-                    type="text"
-                    class=CONTROL
-                    aria-describedby=url_note.clone()
-                    node_ref=canonical
-                    prop:value=move || params.with(|params| params.filter.url.clone())
-                />
-                <p id=url_note class="text-xs text-slate-500 dark:text-slate-400">
-                    {canonical_hint}
-                </p>
-            </div>
-            <div class="grid gap-1">
-                <label for=version_id.clone() class="text-sm font-medium">
-                    "Version"
-                </label>
-                <input
-                    id=version_id
-                    name="version"
-                    type="text"
-                    class=CONTROL
-                    aria-describedby=version_note.clone()
-                    node_ref=resource_version
-                    prop:value=move || params.with(|params| params.filter.version.clone())
-                />
-                <p id=version_note class="text-xs text-slate-500 dark:text-slate-400">
-                    "The version search parameter. Left empty, every version this root holds matches."
-                </p>
-            </div>
-            <div class="sm:col-span-2">
-                <button type="submit" class=SUBMIT>
+        <form class="mt-6 grid gap-4" on:submit=submit>
+            {row(
+                vec![
+                    text_field(
+                        canonical_field,
+                        canonical,
+                        Memo::new(move |_| params.with(|params| params.filter.url.clone())),
+                    ),
+                    text_field(
+                        version_field,
+                        resource_version,
+                        Memo::new(move |_| params.with(|params| params.filter.version.clone())),
+                    ),
+                ],
+            )}
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="submit" class=styles::SUBMIT>
                     <Icon glyph=icon::SEARCH />
                     "Search"
                 </button>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    "Searching puts both values in the address, so the list you are looking at is a link you can share."
-                </p>
+                {help_toggle()}
             </div>
         </form>
     }
@@ -337,7 +317,7 @@ pub(crate) fn canonical_cell(canonical: &str, href: Option<String>) -> AnyView {
     let canonical = canonical.to_owned();
     match href {
         Some(href) => view! {
-            <a href=href class="text-brand-700 underline dark:text-brand-300">
+            <a href=href class="text-accent underline">
                 {canonical}
             </a>
         }
@@ -372,7 +352,7 @@ pub(crate) fn pager_view(
             Some(page) if page.number() != here => {
                 let href = params.on(page.number()).address_with(path, version, extra);
                 view! {
-                    <a href=href class=PAGE_LINK>
+                    <a href=href class=styles::BUTTON>
                         <Icon glyph=glyph />
                         {text}
                     </a>
@@ -380,7 +360,7 @@ pub(crate) fn pager_view(
                 .into_any()
             }
             Some(_) | None => view! {
-                <span class=PAGE_END>
+                <span class=styles::BUTTON_DISABLED>
                     <Icon glyph=glyph />
                     {text}
                     " (unavailable)"
@@ -393,7 +373,7 @@ pub(crate) fn pager_view(
         <nav aria-label=label class="mt-3 flex flex-wrap items-center gap-2">
             {step(Some(Page::at(0, view.page.count())), icon::PAGE_FIRST, "First page")}
             {step(view.page.previous(), icon::PAGE_PREVIOUS, "Previous page")}
-            <p class="text-sm font-medium">{view.position()}</p>
+            <p class="text-body font-medium">{view.position()}</p>
             {step(view.page.next(total), icon::PAGE_NEXT, "Next page")}
             {step(Some(view.page.last(total)), icon::PAGE_LAST, "Last page")}
         </nav>
