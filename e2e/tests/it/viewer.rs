@@ -88,6 +88,25 @@ const VERSIONS_LINK: &str = "nav[aria-label='Screens'] a[href^='/ui/versions']";
 /// The version comparison, by the heading it is labelled by.
 const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
 
+/// The listing screens a row is opened on, each as its own address, the
+/// heading link of a listed row, and the heading its detail pane draws.
+///
+/// Both screens draw that link from `listing.rs`, which renders a row unlinked
+/// when the resource it lists carries no `Resource.id`, so a link found here is
+/// the wire carrying one.
+const LISTINGS: [(&str, &str, &str); 2] = [
+    (
+        "/ui/valuesets",
+        "section[aria-labelledby='valuesets-heading'] tbody th a",
+        "section[aria-labelledby='valueset-detail-heading'] h3",
+    ),
+    (
+        "/ui/conceptmaps",
+        "section[aria-labelledby='conceptmaps-heading'] tbody th a",
+        "section[aria-labelledby='conceptmap-detail-heading'] h3",
+    ),
+];
+
 /// A switcher link, by the version name a reader reads on it.
 fn version_link(label: &str) -> String {
     format!("//nav[@aria-label='FHIR version']//a[normalize-space()='{label}']")
@@ -569,6 +588,59 @@ async fn the_four_roots_are_compared_and_their_lookup_levels_differ() {
                 2,
                 "both comparison tables drew, so nothing blanked while the four reads settled"
             );
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
+}
+
+/// A listed value set and a listed concept map each open the resource they
+/// name.
+///
+/// The row heads with a link only where the searchset entry carried a
+/// `Resource.id`, the logical id the read interaction addresses
+/// (<https://hl7.org/fhir/R4B/resource.html#id>). A row without one renders as
+/// plain text, so a click here would find nothing to click. Opening it proves
+/// the id round-tripped: the detail pane reads the resource back by the id the
+/// address now carries, and heads with the canonical the row named.
+#[tokio::test]
+async fn a_listed_row_opens_the_resource_it_names() {
+    let Some(base) = server() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &base, "/ui").await;
+            for (path, row, heading) in LISTINGS {
+                journey.reopen(&format!("{base}{path}")).await;
+                let link = journey
+                    .element(By::Css(row), "a listed row that links to its detail")
+                    .await;
+                let canonical = link.text().await?;
+                assert!(
+                    !canonical.is_empty(),
+                    "the row names the canonical it links to, on {path}"
+                );
+                link.click().await?;
+
+                let address = journey
+                    .address_carrying("id=", "the address to carry the row that was opened")
+                    .await;
+                assert!(
+                    address.contains(path),
+                    "opening a row stays on the listing screen: `{address}`"
+                );
+                journey
+                    .text_becoming(
+                        By::Css(heading),
+                        StringMatch::new(canonical.clone()).full(),
+                        "the detail pane to head with the canonical the row named",
+                    )
+                    .await;
+            }
 
             journey.no_console_errors().await;
             Ok::<(), WebDriverError>(())

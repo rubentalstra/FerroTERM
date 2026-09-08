@@ -30,6 +30,11 @@
 # FERROTERM_UI_E2E_SHOTS_DIR sends the capture somewhere other than the book,
 # for looking at a shot without touching the checkout.
 #
+# A journey that fails writes what it was looking at into
+# target/ui-e2e-failures: a screenshot and the whole document, one pair per
+# failed wait. A passing run leaves the directory empty, and the ui-e2e CI job
+# uploads it as an artifact only when the run failed.
+#
 # A capture renders the FHIR base the viewer read, so whatever address the
 # browser used lands in the images. The managed mode gives the server the fixed
 # network alias below; a manual capture reproduces the same images by serving on
@@ -58,6 +63,23 @@ readonly SERVER_HOST="ferroterm"
 # Seconds to wait for the server container to answer /health, and for the
 # browser container to report itself ready.
 readonly READY_TIMEOUT=120
+
+# How many journeys drive the browser at once. The Selenium image allows one
+# session per container by default, so a second journey would sit in the grid's
+# new-session queue until the first quit; the image's own README says to raise
+# the ceiling with SE_NODE_MAX_SESSIONS plus SE_NODE_OVERRIDE_MAX_SESSIONS, and
+# not to exceed the available processors
+# (https://github.com/SeleniumHQ/docker-selenium).
+# Four is the ubuntu-latest runner's processor count. The same number is the
+# test-thread count below, so the journeys never ask for a session the browser
+# cannot open. A browser you started yourself has its own ceiling; give it at
+# least this many or the journeys queue behind each other.
+readonly BROWSER_SESSIONS=4
+
+# Where a failing journey writes its evidence: a screenshot and the whole
+# document. The ui-e2e CI job uploads this directory when the run fails, and a
+# passing run leaves it empty, so nothing is attached for a green lane.
+readonly FAILURES_DIR="$root/target/ui-e2e-failures"
 
 base_url=""
 webdriver=""
@@ -230,6 +252,8 @@ if [[ -z "$base_url" ]]; then
   # (https://developer.chrome.com/docs/chromium/headless).
   webdriver_port="$(free_port 4444)"
   docker run --detach --name "$browser" --network "$network" --shm-size 2g \
+    --env "SE_NODE_MAX_SESSIONS=$BROWSER_SESSIONS" \
+    --env SE_NODE_OVERRIDE_MAX_SESSIONS=true \
     --publish "127.0.0.1:$webdriver_port:4444" "$BROWSER_IMAGE" >/dev/null
   echo "== waiting for the browser on 127.0.0.1:$webdriver_port"
   ready=""
@@ -255,6 +279,11 @@ if [[ -z "$base_url" ]]; then
   webdriver="http://127.0.0.1:$webdriver_port"
 fi
 
+# A previous run's evidence would be uploaded beside this run's, so the
+# directory starts empty and is only written to by a journey that fails.
+rm -rf "$FAILURES_DIR"
+mkdir -p "$FAILURES_DIR"
+
 echo "== the journeys, against $base_url through $webdriver"
 # The journeys live outside the workspace, for the reason e2e/Cargo.toml
 # records, so they are run by manifest path rather than by package.
@@ -264,7 +293,9 @@ echo "== the journeys, against $base_url through $webdriver"
 # (https://nexte.st/docs/filtersets/).
 FERROTERM_UI_E2E_BASE_URL="$base_url" \
   FERROTERM_UI_E2E_WEBDRIVER="$webdriver" \
+  FERROTERM_UI_E2E_FAILURES="$FAILURES_DIR" \
   cargo nextest run --manifest-path e2e/Cargo.toml --locked \
+    --test-threads "$BROWSER_SESSIONS" \
     -E 'binary(it) - test(/^docs_shots::/)'
 
 # The documentation capture pass, which is the one thing here that writes into
@@ -274,6 +305,7 @@ if [[ -n "$docs_shots" ]]; then
   echo "== the documentation screenshots, into website/book/src/operate/img/viewer"
   FERROTERM_UI_E2E_BASE_URL="$base_url" \
     FERROTERM_UI_E2E_WEBDRIVER="$webdriver" \
+    FERROTERM_UI_E2E_FAILURES="$FAILURES_DIR" \
     FERROTERM_UI_E2E_DOCS_SHOTS=1 \
     cargo nextest run --manifest-path e2e/Cargo.toml --locked \
       -E 'test(/^docs_shots::/)'

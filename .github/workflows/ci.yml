@@ -438,6 +438,17 @@ jobs:
       # The browser is a container pinned by digest inside the script, so the
       # runner image's own Chrome never decides what the journeys drive.
       - run: bash scripts/ui-e2e.sh
+      # What the browser was looking at when a journey failed: a screenshot and
+      # the whole document, per failed wait. A passing run writes nothing, so
+      # this attaches only where there is something to look at, and a run that
+      # failed before the journeys started attaches nothing either.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: ui-e2e-failure
+          path: target/ui-e2e-failures
+          if-no-files-found: ignore
+          retention-days: 14
 
   codegen-drift:
     name: codegen-drift

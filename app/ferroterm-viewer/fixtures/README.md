@@ -28,6 +28,18 @@ that declares no hierarchy.
 The content is synthetic. No SNOMED CT, LOINC, or RxNorm release content
 appears here, and none ever may.
 
-To re-record, drive that harness for each of `r4`, `r4b`, `r5`, and `r6`, read
-both `metadata` bodies, and write each to the matching file. A capability
-statement carries a wall-clock `date`, so a recording always differs there.
+To re-record after an intended change to the render, run one command from the
+repository root:
+
+```bash
+FERROTERM_RECORD_VIEWER_FIXTURES=1 \
+  cargo nextest run -p ferroterm-server -E 'test(the_viewer_capability_fixtures)'
+```
+
+That is the same test that guards them
+(`app/ferroterm-server/tests/it/viewer_fixtures.rs`). Run without the variable
+it fails when a file no longer matches what the server renders, naming the
+first line that differs and the command above. It compares the documents with
+`date` normalised, because that element is the instant of the recording and
+moves on every run; nothing else is ignored, so the software version a release
+bumps is a re-recording too.

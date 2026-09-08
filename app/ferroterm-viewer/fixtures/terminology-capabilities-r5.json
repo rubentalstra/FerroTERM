@@ -893,9 +893,11 @@
             {
               "code": "code",
               "op": [
-                "regex",
                 "=",
-                "in"
+                "in",
+                "not-in",
+                "regex",
+                "exists"
               ]
             }
           ],
@@ -916,7 +918,7 @@
       ]
     }
   ],
-  "date": "2026-09-06T21:29:49.210238Z",
+  "date": "2026-09-08T04:45:34.501285Z",
   "expansion": {
     "hierarchical": false,
     "incomplete": false,

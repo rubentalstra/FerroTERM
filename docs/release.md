@@ -13,6 +13,10 @@ cut follows, in order.
 2. **The version moves everywhere**, not only in the manifests: the workspace
    `version`, `CITATION.cff`, the README, the landing page, the book.
    `scripts/checks/versions.sh` fails on any file left behind.
+   The viewer's recorded capability documents carry the software version, so
+   re-record them in the same commit:
+   `FERROTERM_RECORD_VIEWER_FIXTURES=1 cargo nextest run -p ferroterm-server
+   -E 'test(the_viewer_capability_fixtures)'`.
 3. **The changelog names the release**: `[Unreleased]` becomes the version and
    the date, with a fresh `[Unreleased]` above it and a new link reference.
 4. **The gates pass on the release commit**: `cargo fmt --all --check`,
