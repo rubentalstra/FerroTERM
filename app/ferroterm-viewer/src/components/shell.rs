@@ -4,10 +4,14 @@
 //! true of every screen at once, which is the FHIR version the reader is
 //! looking through, the server's health, and the theme.
 
+use leptos::ev::SubmitEvent;
+use leptos::html::Input;
 use leptos::prelude::*;
+use leptos_router::NavigateOptions;
 use leptos_router::components::Route;
 use leptos_router::components::Routes;
 use leptos_router::hooks::use_location;
+use leptos_router::hooks::use_navigate;
 use leptos_router::hooks::use_query;
 use leptos_router::params::Params;
 use leptos_router::path;
@@ -20,11 +24,13 @@ use crate::components::mark::Lockup;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
+use crate::find::QUERY_PARAM;
 use crate::pages::browse::BrowsePage;
 use crate::pages::code_system::CodeSystemPage;
 use crate::pages::concept_maps::ConceptMapsPage;
 use crate::pages::evidence::EvidencePage;
 use crate::pages::expand::ExpandPage;
+use crate::pages::find::FindPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
 use crate::pages::settings::SettingsPage;
@@ -36,16 +42,20 @@ use crate::routes::BROWSE_PATH;
 use crate::routes::CONCEPT_MAPS_PATH;
 use crate::routes::EVIDENCE_PATH;
 use crate::routes::EXPAND_PATH;
+use crate::routes::FIND_PATH;
 use crate::routes::OVERVIEW_PATH;
 use crate::routes::SETTINGS_PATH;
 use crate::routes::TRANSLATE_PATH;
+use crate::routes::UI_BASE;
 use crate::routes::VALIDATE_PATH;
 use crate::routes::VALUE_SETS_PATH;
+use crate::routes::VERSION_PARAM;
 use crate::routes::VERSIONS_PATH;
 use crate::routes::nav_section;
 use crate::routes::ui_link;
 use crate::settings::Settings;
 use crate::styles;
+use crate::url::RequestUrl;
 
 /// The FHIR version the current address selects, for every screen to read.
 #[derive(Clone, Copy, Debug)]
@@ -53,6 +63,9 @@ pub(crate) struct SelectedVersion(pub(crate) Signal<FhirVersion>);
 
 /// The element the navigation toggle opens and closes.
 const NAV_ID: &str = "screen-nav";
+
+/// The command bar's own control, which its label points at.
+const COMMAND_ID: &str = "command-bar";
 
 /// One screen in the sidebar: its path segment below the base, the label a
 /// reader reads, and the glyph they recognise it by.
@@ -205,7 +218,67 @@ fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     .into_any()
 }
 
-/// The top bar: the wordmark, the navigation toggle, and the FHIR version.
+/// The command bar, on every screen.
+///
+/// One field. What a reader types is read by its shape alone, in
+/// `crate::find`, and the screen it opens offers what this root can do with
+/// it. The bar is a form rather than a listbox that suggests as you type, so
+/// every offer is a real link, the keyboard needs no handler of ours, and a
+/// reader who has not seen the screen before can send the address of what they
+/// found.
+fn command_bar(version: Signal<FhirVersion>) -> AnyView {
+    let typed: NodeRef<Input> = NodeRef::new();
+    let navigate = StoredValue::new(use_navigate());
+    let submit = move |event: SubmitEvent| {
+        event.prevent_default();
+        let asked = typed
+            .get()
+            .map(|input| input.value())
+            .unwrap_or_default()
+            .trim()
+            .to_owned();
+        let target = RequestUrl::new()
+            .segment(UI_BASE.trim_start_matches('/'))
+            .segment(FIND_PATH)
+            .query(VERSION_PARAM, version.get().segment())
+            .query(QUERY_PARAM, &asked)
+            .render("");
+        // NOTE: the router resolves a navigation against its base, so an
+        // address that already carries the base is passed unresolved
+        // (`leptos_router` 0.8.15 `matching/resolve_path.rs`).
+        navigate.with_value(|navigate| {
+            navigate(
+                &target,
+                NavigateOptions {
+                    resolve: false,
+                    ..NavigateOptions::default()
+                },
+            );
+        });
+    };
+    view! {
+        <form class="flex min-w-0 flex-1 items-center gap-default" on:submit=submit role="search">
+            <label for=COMMAND_ID class="sr-only">
+                "Find a code, a canonical, or a phrase"
+            </label>
+            <input
+                id=COMMAND_ID
+                name="q"
+                type="search"
+                placeholder="A code, a canonical, or a phrase"
+                class=format!("max-w-md {}", styles::INPUT)
+                node_ref=typed
+            />
+            <button type="submit" class=styles::BUTTON>
+                <Icon glyph=icon::SEARCH />
+                "Find"
+            </button>
+        </form>
+    }
+    .into_any()
+}
+
+/// The top bar: the mark, the command bar, and the FHIR version.
 ///
 /// The version switcher sits here because it is not a screen a reader goes
 /// to: it changes which server root every screen reads from, so it belongs
@@ -226,7 +299,8 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
                 <a href=move || ui_link(OVERVIEW_PATH, version.get())>
                     <Lockup />
                 </a>
-                <div class="ml-auto flex items-center gap-default">
+                {command_bar(version)}
+                <div class="flex items-center gap-default">
                     <VersionSwitcher selected=version />
                     <HealthIndicator />
                     <ThemeToggle />
@@ -281,6 +355,7 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/valuesets") view=ValueSetsPage />
             <Route path=path!("/versions") view=VersionsPage />
             <Route path=path!("/evidence") view=EvidencePage />
+            <Route path=path!("/find") view=FindPage />
         </Routes>
     }
     .into_any();

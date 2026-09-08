@@ -33,6 +33,9 @@ pub(crate) const CONCEPT_MAPS_PATH: &str = "conceptmaps";
 /// The path segment of the translate runner.
 pub(crate) const TRANSLATE_PATH: &str = "translate";
 
+/// The path the command bar sends what a reader typed to.
+pub(crate) const FIND_PATH: &str = "find";
+
 /// The version comparison screen's path below the base.
 pub(crate) const VERSIONS_PATH: &str = "versions";
 
@@ -137,6 +140,9 @@ pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
         Some(VALUE_SETS_PATH) => Some(VALUE_SETS_PATH),
         Some(CONCEPT_MAPS_PATH) => Some(CONCEPT_MAPS_PATH),
         Some(TRANSLATE_PATH) => Some(TRANSLATE_PATH),
+        // The command bar is on every screen rather than in the sidebar, so
+        // the screen it opens marks no entry.
+        Some(FIND_PATH) => None,
         Some(VERSIONS_PATH) => Some(VERSIONS_PATH),
         Some(EVIDENCE_PATH) => Some(EVIDENCE_PATH),
         Some(SETTINGS_PATH) => Some(SETTINGS_PATH),

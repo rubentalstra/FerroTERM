@@ -26,6 +26,15 @@ const RENDERED_BASE: &str = "//dt[normalize-space()='FHIR base']/following-sibli
 /// A code system row's link into that system's own screen.
 const SYSTEM_LINK: &str = "a[href^='/ui/systems/']";
 
+/// The command bar's own control, on every screen.
+const COMMAND_BAR: &str = "#command-bar";
+
+/// The command bar's submit control.
+const COMMAND_SUBMIT: &str = "form[role='search'] button[type='submit']";
+
+/// One offer the find screen made, as the link that takes it.
+const OFFER: &str = "section[aria-labelledby='find-offers-heading'] li a";
+
 /// The overview's own table, by the heading it is labelled by.
 const SYSTEM_TABLE: &str = "section[aria-labelledby='systems-heading'] table";
 
@@ -396,6 +405,69 @@ async fn the_address_a_row_links_to_opens_the_same_screen_when_it_is_loaded_fres
                 .await;
             journey
                 .element(By::Css(SYSTEM_TOOLS), "the links into the other screens")
+                .await;
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
+}
+
+/// The command bar reads what a reader typed and offers addresses for it.
+///
+/// The reading is the viewer's own, of the string's shape, before any request:
+/// a canonical, a code, or a phrase. What gates the offers is the one request
+/// the screen makes, the root's own `CapabilityStatement`, so an operation the
+/// root does not declare is never offered. Every offer is a real link, which
+/// is what makes a run something a reader can send on.
+#[tokio::test]
+async fn the_command_bar_reads_what_was_typed_and_offers_addresses_for_it() {
+    let Some(base) = server() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &base, "/ui?fhir=r5").await;
+            let system = journey
+                .element(By::Css(SYSTEM_LINK), "a code system on the overview")
+                .await
+                .text()
+                .await?;
+
+            journey
+                .element(By::Css(COMMAND_BAR), "the command bar")
+                .await
+                .send_keys(&system)
+                .await?;
+            journey
+                .element(By::Css(COMMAND_SUBMIT), "the command bar's submit")
+                .await
+                .click()
+                .await?;
+            journey
+                .address_carrying("/ui/find", "the screen the command bar opens")
+                .await;
+            journey
+                .text_becoming(
+                    By::Css("h1 + p"),
+                    StringMatch::new("a canonical".to_owned()).partial(),
+                    "the viewer to say it read a canonical",
+                )
+                .await;
+
+            let offer = journey
+                .element(By::Css(OFFER), "an offer the screen made")
+                .await;
+            let href = offer.attr("href").await?.unwrap_or_default();
+            assert!(
+                href.starts_with("/ui/"),
+                "an offer is an address inside the viewer: `{href}`"
+            );
+            offer.click().await?;
+            journey
+                .element(By::Css("h1"), "the screen the offer opened")
                 .await;
 
             journey.no_console_errors().await;

@@ -66,13 +66,23 @@ The screenshots below come from a server loaded with one small synthetic code
 system, so every code and display in them is invented. Your own deployment
 shows the editions you built.
 
+### The command bar
+
+Above every screen. Type a code, a canonical, or a phrase, and the viewer reads
+it by its shape alone, before any request. What it offers is gated on the one
+request the screen makes: the root's own `CapabilityStatement`, so an operation
+this root does not declare is never offered. Every offer is an address you
+could have typed, so what you found is a link you can send.
+
+![The command bar, with the offers this root can answer for a canonical](img/viewer/find.png)
+
 ### Overview
 
 What this deployment serves, rendered from
-`GET /{version}/metadata?mode=terminology`. One card per code system, with the
-versions it holds, which one an unversioned request resolves to, the
-designation languages it declares, the filters `$expand` accepts, and the
-artifact the system was built from.
+`GET /{version}/metadata?mode=terminology`. One table, one row per served
+version, with the version an unversioned request resolves to, the content mode,
+whether the root subsumes over it, and the artifact it was read from. Order it
+by any of the three system-level columns; the order lives in the address.
 
 ![The overview screen, listing the code systems this server loaded](img/viewer/overview.png)
 

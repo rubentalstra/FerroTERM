@@ -28,7 +28,7 @@ use crate::harness::session;
 /// The code system screen is absent: its address carries a canonical this
 /// module would have to name, and the sidebar does not offer it. The overview
 /// links to it, and `viewer` walks that link.
-const SCREENS: [&str; 10] = [
+const SCREENS: [&str; 11] = [
     "/ui/",
     "/ui/browse",
     "/ui/expand",
@@ -36,6 +36,7 @@ const SCREENS: [&str; 10] = [
     "/ui/valuesets",
     "/ui/conceptmaps",
     "/ui/translate",
+    "/ui/find",
     "/ui/versions",
     "/ui/evidence",
     "/ui/settings",

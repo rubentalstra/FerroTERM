@@ -12,6 +12,7 @@ pub(crate) mod code_system;
 pub(crate) mod concept_maps;
 pub(crate) mod evidence;
 pub(crate) mod expand;
+pub(crate) mod find;
 pub(crate) mod not_found;
 pub(crate) mod overview;
 pub(crate) mod settings;
