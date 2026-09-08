@@ -38,13 +38,14 @@ const SYSTEM_TOOLS: &str = "nav[aria-label^='Screens for']";
 /// A code system card whose version declares a hierarchy.
 ///
 /// The card is chosen by what the capability statement declares rather than by
-/// which system it names. `is-a` is the operator to match on, because it is
-/// defined by every served version: `child-of` arrived in R5, so an R4-family
-/// surface states a hierarchy without it
-/// (<https://hl7.org/fhir/R4B/codesystem-filter-operator.html>). The operator
-/// list folds into a `<details>`, and matching on the whole card's text reads
-/// what a collapsed element still holds.
-const WALKABLE_CARD: &str = "//article[contains(., 'child-of')]//h3//a";
+/// which system it names.
+///
+/// The operator list folds into a `<details>`, and a closed disclosure renders
+/// no text, so `contains(., 'child-of')` over the whole card matches nothing
+/// (<https://www.w3.org/TR/webdriver2/#dfn-get-element-text>). Matching the
+/// `<li>` that carries the operator reads the DOM instead, which a closed
+/// disclosure still holds.
+const WALKABLE_CARD: &str = "//article[.//li[contains(., 'child-of')]]//h3//a";
 
 /// The surface the tree journey drives.
 ///
