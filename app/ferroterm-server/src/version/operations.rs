@@ -124,8 +124,24 @@ macro_rules! operations {
                 headers: &HeaderMap,
                 body: &Bytes,
             ) -> Result<(Scope, Parameters), Failure> {
+                from_body_accepting(state, operation, &[], headers, body)
+            }
+
+            /// A `POST` invocation that also takes the names in `also`.
+            ///
+            /// `$batch-validate-code` is the only caller: no `OperationDefinition`
+            /// declares it, so its `validation` parameter is declared by nothing
+            /// and would otherwise be refused as undeclared.
+            fn from_body_accepting(
+                state: &AppState,
+                operation: &fhir_types::operation::Operation,
+                also: &[&str],
+                headers: &HeaderMap,
+                body: &Bytes,
+            ) -> Result<(Scope, Parameters), Failure> {
                 let (mut parameters, resources) =
                     split_supplied(parameters::object_from_body(headers, body)?)?;
+                parameters::refuse_undeclared(operation, also, &parameters)?;
                 parameters::apply_accept_language(operation, headers, &mut parameters);
                 Ok((scope_of(state, super::metadata::FHIR_VERSION, headers, resources)?, parameters))
             }
@@ -761,8 +777,14 @@ macro_rules! operations {
                     Err(failure) => return failure.into_response(),
                 };
                 finish(
-                    from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_batch_validate(&scope, &p)),
+                    from_body_accepting(
+                        &state,
+                        &VALUE_SET_VALIDATE_CODE,
+                        &[VALIDATION],
+                        &headers,
+                        &body,
+                    )
+                    .and_then(|(scope, p)| run_batch_validate(&scope, &p)),
                     wire,
                 )
             }
@@ -795,8 +817,17 @@ macro_rules! operations {
                     Err(failure) => return failure.into_response(),
                 };
                 finish(
-                    from_body(&state, &CONCEPT_MAP_TRANSLATE, &headers, &body)
-                        .and_then(|(scope, p)| run_translate(&scope, &p)), wire)
+                    // `reverse` reaches `run_translate`, which refuses it with
+                    // the ecosystem's own wording on a version that does not
+                    // declare it; the GET route does the same before decoding.
+                    from_body_accepting(
+                        &state,
+                        &CONCEPT_MAP_TRANSLATE,
+                        &["reverse"],
+                        &headers,
+                        &body,
+                    )
+                    .and_then(|(scope, p)| run_translate(&scope, &p)), wire)
             }
         }
     };

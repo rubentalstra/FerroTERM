@@ -68,6 +68,43 @@ macro_rules! parameters {
                 })
             }
 
+            /// Refuses a parameter the operation does not declare.
+            ///
+            /// A `GET` is checked while its query is decoded; a `POST` carries a
+            /// `Parameters` the codec reads without consulting the operation, so
+            /// the same refusal is made here. The two routes have to agree, or a
+            /// parameter another version declares is taken by a version that does
+            /// not (<https://hl7.org/fhir/R4B/operations.html#3.2.0.6>).
+            ///
+            /// # Errors
+            ///
+            /// Returns a `400` failure naming the first parameter the operation
+            /// does not declare.
+            pub fn refuse_undeclared(
+                operation: &Operation,
+                also: &[&str],
+                parameters: &Parameters,
+            ) -> Result<(), Failure> {
+                for parameter in &parameters.parameter {
+                    let Some(name) = parameter.name.value.as_deref() else {
+                        continue;
+                    };
+                    if !also.contains(&name)
+                        && operation.parameter(ParameterUse::In, name).is_none()
+                    {
+                        return Err(Failure::new(
+                            StatusCode::BAD_REQUEST,
+                            "invalid",
+                            format!(
+                                "{}/${} does not declare a parameter `{name}`",
+                                operation.resource, operation.code
+                            ),
+                        ));
+                    }
+                }
+                Ok(())
+            }
+
             /// Adds a `displayLanguage` parameter from the `Accept-Language` header.
             ///
             /// Only when the operation declares the parameter and the request named none:
