@@ -436,7 +436,29 @@ fn iso3166_is_a_case_insensitive_table_with_user_assigned_codes() {
         provider.locate("EU").expect("reads").is_none(),
         "a CLDR reservation, not ISO 3166-1"
     );
-    assert!(provider.locate("ZZZ").expect("reads").is_none());
+    // All three forms of a territory are codes of this system: FHIR selects
+    // them from it with a `code` regex per form
+    // (<https://hl7.org/fhir/R5/valueset-iso3166-1-3.html>), so an alpha-3 or
+    // a numeric code the specification binds has to validate here.
+    for form in ["NLD", "528"] {
+        let found = provider
+            .locate(form)
+            .expect("reads")
+            .unwrap_or_else(|| panic!("{form} is a code of ISO 3166-1"));
+        assert_eq!(
+            provider
+                .display(found.concept, None)
+                .expect("reads")
+                .as_deref(),
+            Some("Netherlands"),
+            "{form} names the same territory as NL"
+        );
+    }
+    assert!(
+        provider.locate("ZZZ").expect("reads").is_some(),
+        "the user-assigned range is assigned in all three forms"
+    );
+    assert!(provider.locate("NLX").expect("reads").is_none());
     let regex = provider
         .filter(&filter("code", FilterOperator::Regex, "^N[A-Z]$"))
         .expect("regex");

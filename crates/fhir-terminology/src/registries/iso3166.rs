@@ -1,7 +1,15 @@
 //! ISO 3166-1 country codes (`urn:iso:std:iso:3166`) from the Unicode CLDR data.
 //!
-//! Alpha-2 codes, upper case, compared without case, with the English name,
-//! the alpha-3 code, and the numeric code
+//! All three code forms of each territory are codes of this system: the
+//! alpha-2, the alpha-3, and the numeric. FHIR says so by selecting them from
+//! it: `ValueSet/iso3166-1-2`, `-1-3`, and `-1-N` each include this system
+//! under a `code` regex of `[A-Z]{2}`, `[A-Z]{3}`, and `[0-9]{3}`
+//! (<https://hl7.org/fhir/R5/valueset-iso3166-1-3.html>). Serving only the
+//! alpha-2 form left the other two value sets empty and refused an alpha-3
+//! country code the specification binds.
+//!
+//! Upper case, compared without case, with the English name; every concept
+//! carries all three forms as properties
 //! (<https://terminology.hl7.org/ISO3166.html>).
 
 use crate::fhir_codesystem::model::{CodeSystemModel, ConceptEntry};
@@ -82,17 +90,11 @@ pub fn code_system() -> Result<CodeSystemModel, DataError> {
             .and_then(|n| n.get(code))
             .and_then(serde_json::Value::as_str)
             .map_or_else(|| String::from("User-assigned"), str::to_owned);
-        let mut properties = vec![Property {
-            code: String::from("numeric"),
-            value: PropertyValue::Code(numeric.to_owned()),
-            ..Property::default()
-        }];
-        if let Some(alpha3) = mapping.get("_alpha3").and_then(serde_json::Value::as_str) {
-            properties.push(Property {
-                code: String::from("alpha3"),
-                value: PropertyValue::Code(alpha3.to_owned()),
-                ..Property::default()
-            });
+        let alpha3 = mapping.get("_alpha3").and_then(serde_json::Value::as_str);
+        let forms = [Some(code.as_str()), alpha3, Some(numeric)];
+        let mut properties = vec![code_value("alpha2", code), code_value("numeric", numeric)];
+        if let Some(alpha3) = alpha3 {
+            properties.push(code_value("alpha3", alpha3));
         }
         if !official {
             properties.push(Property {
@@ -101,20 +103,25 @@ pub fn code_system() -> Result<CodeSystemModel, DataError> {
                 ..Property::default()
             });
         }
-        concepts.push(ConceptEntry {
-            standards_status: None,
-            code: code.clone(),
-            display: Some(display.clone()),
-            definition: None,
-            designations: vec![Designation {
+        // One concept per form, each carrying the same display and the same
+        // three properties, so a client that holds any one of them can read
+        // the others without a second request.
+        for form in forms.into_iter().flatten() {
+            concepts.push(ConceptEntry {
                 standards_status: None,
-                language: Some(String::from("en")),
-                use_: None,
-                value: display,
-            }],
-            properties,
-            parents: Vec::new(),
-        });
+                code: form.to_owned(),
+                display: Some(display.clone()),
+                definition: None,
+                designations: vec![Designation {
+                    standards_status: None,
+                    language: Some(String::from("en")),
+                    use_: None,
+                    value: display.clone(),
+                }],
+                properties: properties.clone(),
+                parents: Vec::new(),
+            });
+        }
     }
     Ok(CodeSystemModel {
         url: URL.to_owned(),
@@ -146,7 +153,16 @@ pub fn code_system() -> Result<CodeSystemModel, DataError> {
     })
 }
 
-/// The three properties every code carries: `alpha3`, `numeric`, `userAssigned`.
+/// One property as a code value.
+fn code_value(code: &str, value: &str) -> Property {
+    Property {
+        code: code.to_owned(),
+        value: PropertyValue::Code(value.to_owned()),
+        ..Property::default()
+    }
+}
+
+/// The properties every code carries: the three forms, and `userAssigned`.
 fn property_definitions() -> Vec<PropertyDefinition> {
     let code_property = |code: &str, description: &str, kind: PropertyKind| PropertyDefinition {
         code: code.to_owned(),
@@ -155,6 +171,7 @@ fn property_definitions() -> Vec<PropertyDefinition> {
         kind,
     };
     vec![
+        code_property("alpha2", "The ISO 3166-1 alpha-2 code", PropertyKind::Code),
         code_property("alpha3", "The ISO 3166-1 alpha-3 code", PropertyKind::Code),
         code_property("numeric", "The ISO 3166-1 numeric code", PropertyKind::Code),
         code_property(

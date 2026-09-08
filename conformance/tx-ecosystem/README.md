@@ -26,8 +26,8 @@ above the suite's own. The `snomed`, `icd-11`, `tx.fhir.org`, `mimetypes`, and
 | `general` | `/r5` | `passing-r5.txt` | 633 of 670 | nothing | #353 |
 | `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
-| `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 55 of 227 | a LOINC release | #420, #421, #305, #349 |
-| `tx.fhir.org` | `/r5` | `passing-r5-tx.fhir.org.txt` | 56 of 227 | a LOINC release | #420, #421, #305, #349 |
+| `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 57 of 227 | a LOINC release | #420, #421, #305, #349 |
+| `tx.fhir.org` | `/r5` | `passing-r5-tx.fhir.org.txt` | 59 of 227 | a LOINC release | #420, #421, #305, #349 |
 | `mimetypes` | `/r4b` | `passing-mimetypes.txt` | 35 of 37 | nothing | #353 |
 | `omop` | `/r4b` | `passing-omop.txt` | 1 of 28 | an OMOP vocabulary the server does not load | #345 |
 
@@ -128,12 +128,39 @@ fail.
 - **5 cases send an `$expand` limit no `OperationDefinition` declares**: four
   send `_limit` (#305) and `loinc-expand-all` sends the unprefixed `limit`
   (#349). Both refusals stand.
-- **24 cases are the `bugs` suite** and 8 are the `UCUM` suite, the reference
-  server's own regression corpora. Twelve reach for SNOMED, CPT, or NDC, which
-  this run does not serve. Six ask ISO 3166 for a table this server does not
-  hold: `country-codes` expects 789 codes against 302 here, and `3166-a`
-  expects the version `2018` against `48`. The rest differ on the designations
-  and the outputs `$lookup` carries, and on message texts. #421 triages them.
+- **The `bugs` and `UCUM` suites are the reference server's own regression
+  corpora, triaged case by case on #421.** 24 `bugs` cases and 7 `UCUM` cases
+  stay open on `/r4b`:
+  - **13 reach for content this run does not serve**: nine SNOMED
+    (`sct-ver-ex`, `sct-parse`, `sct-parse-pc`, `sct-isa`, `sct-ver`,
+    `sct-msg-4`, `sct-msg-5`, `sct-display-1`, `sct-display-2`), three CPT
+    (`cpt`, `cpt-0`, `cpt-100`), and `ndc`. CPT is licensed by the AMA and NDC
+    is an FDA registry; neither is served here.
+  - **6 are ISO 3166**, and one of them was a defect that is now fixed. FHIR
+    selects all three code forms from `urn:iso:std:iso:3166` with a `code`
+    regex per form (`ValueSet/iso3166-1-2`, `-1-3`, `-1-N`), so an alpha-3 or
+    a numeric country code the specification binds has to validate; only the
+    alpha-2 form was served, and `NLD` and `528` were refused. All three forms
+    are codes now. The six still fail on figures that are the reference
+    server's data rather than the specification's requirement:
+    `country-codes` wants a total of 789 (263 territories in three forms)
+    against 906 here (302 in three forms, CLDR 48's set including the
+    user-assigned ranges), and `3166-a` and `3166-c` want the version `2018`,
+    the ISO edition year, where this server states `48`, the version of the
+    CLDR data it actually holds. Naming a version this server does not hold
+    would be a claim about content it cannot serve.
+  - **`lang-case` and `lang-case2`** are the BCP 47 `$validate-code` parameter
+    roster adjudicated for the `langcodes` suite above; same cause.
+  - **`undefined`, `no-system`, `country-code` and `provenance`** differ on
+    the parameter roster of a `$validate-code` answer. `provenance` passes on
+    `/r5`.
+  - **7 `UCUM` cases** want three designations and an `abstract` output where
+    this server answers two designations and none (`lookup`,
+    `lookup-with-annotation`), a canonical form `$expand` and `$validate-code`
+    do not compute (`expand-ucum-canonical`, `validate-ucum-canonical-bad`),
+    and two enumerations of a grammar-defined system (`expand-ucum-all-4`,
+    `-5`). `ucum-subsumes-invalid-code` was the `issue.code` split and now
+    passes on both surfaces.
 - **The remaining LOINC cases** are the subset this project chases, carried
   from #13 and #245: the filters `$expand` still refuses, the `$lookup`
   designation shapes, and the `$validate-code` message texts.
