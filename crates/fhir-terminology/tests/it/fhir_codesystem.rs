@@ -279,6 +279,74 @@ fn example_content_refuses_validation_and_enumeration() {
     assert_eq!(error.issue_code(), "not-supported");
 }
 
+/// A one-code `CodeSystem` at `url` whose `content` is the mode named, written
+/// to a file so the generic provider loads it the way a package's is loaded.
+fn content_mode(url: &str, content: &str) -> (tempfile::TempDir, Registry) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("CodeSystem-mode.json");
+    let resource = serde_json::json!({
+        "resourceType": "CodeSystem",
+        "url": url,
+        "version": "0.1.0",
+        "status": "active",
+        "content": content,
+        "caseSensitive": true,
+        "concept": [{"code": "code1", "display": "Display 1"}]
+    });
+    std::fs::write(&path, resource.to_string()).expect("writes");
+    let model = fhir_terminology::fhir_codesystem::load::load_file(&path, FhirVersion::R5)
+        .expect("loads the resource");
+    let mut registry = Registry::new();
+    registry
+        .register(Arc::new(FhirCodeSystem::new(model).expect("builds")))
+        .expect("registers");
+    (dir, registry)
+}
+
+/// The `CodeSystem/$validate-code` answer for `code` against `url`.
+fn validated(registry: &Registry, url: &str, code: &str) -> validate_code::ValidationOutcome {
+    let request = validate_code::ValidateCodeInput {
+        url: Some(url.to_owned()),
+        code: Some(code.to_owned()),
+        ..validate_code::ValidateCodeInput::default()
+    };
+    validate_code::validate_code(registry, &Invocation::Type, &request).expect("validates")
+}
+
+#[test]
+fn a_fragment_holds_a_code_it_does_not_carry_and_a_complete_system_does_not() {
+    // A `fragment` resource carries "a subset of the code system concepts" and
+    // a `complete` one "all the concepts defined by the code system"
+    // (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>), so absence
+    // from the first is not a verdict and absence from the second is.
+    const MODE: &str = "http://example.org/fhir/CodeSystem/mode";
+    let (_fragment_dir, fragment) = content_mode(MODE, "fragment");
+    let answer = validated(&fragment, MODE, "code1x");
+    assert!(answer.result, "{answer:?}");
+    assert_eq!(answer.message, None, "a result of true says nothing");
+    assert_eq!(answer.issues.len(), 1, "{:?}", answer.issues);
+    assert_eq!(answer.issues[0].severity, "warning");
+    assert_eq!(answer.issues[0].kind, "invalid-code");
+    assert!(
+        answer.issues[0].text.contains("labeled as a fragment"),
+        "the answer reflects the fragment: {}",
+        answer.issues[0].text
+    );
+    assert!(validated(&fragment, MODE, "code1").result, "a carried code");
+
+    let (_complete_dir, complete) = content_mode(MODE, "complete");
+    let answer = validated(&complete, MODE, "code1x");
+    assert!(!answer.result, "{answer:?}");
+    assert_eq!(answer.issues[0].severity, "error");
+
+    // A `not-present` system served from an index answers for itself, so its
+    // absent code stays a code the system does not have.
+    let registry = crate::fixture::registry();
+    let answer = validated(&registry, crate::fixture::URL, "zebra");
+    assert!(!answer.result, "{answer:?}");
+    assert_eq!(answer.issues[0].severity, "error");
+}
+
 #[test]
 fn a_supplement_layers_designations_and_properties_over_the_system() {
     let (_dir, providers) = load_all();

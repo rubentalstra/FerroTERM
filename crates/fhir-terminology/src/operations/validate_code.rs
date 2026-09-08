@@ -8,7 +8,7 @@
 
 use super::{CodeableConceptRef, CodingRef, Invocation, Issue, OperationError, resolve};
 use crate::language;
-use crate::provider::CodeSystemProvider;
+use crate::provider::{CodeSystemProvider, ContentMode};
 use crate::registry::Registry;
 
 /// The input of `CodeSystem/$validate-code`.
@@ -349,16 +349,20 @@ fn check(
     let version = Some(identity.version.clone()).filter(|v| !v.is_empty());
     let Some(located) = provider.locate(code)? else {
         let (id, text) = super::display::unknown_code(provider.as_ref(), code);
+        // A `fragment` resource carries "a subset of the code system concepts"
+        // (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>), so a code
+        // it does not carry is one the server cannot call invalid.
+        let fragment = provider.declaration().content == ContentMode::Fragment;
         return Ok(ValidationOutcome {
-            result: false,
-            message: Some(text.clone()),
+            result: fragment,
+            message: (!fragment).then(|| text.clone()),
             display: None,
             code: Some(code.to_owned()),
             normalized_code: None,
             system: Some(identity.url.clone()),
             version,
             issues: vec![Issue {
-                severity: "error",
+                severity: if fragment { "warning" } else { "error" },
                 code: "code-invalid",
                 kind: "invalid-code",
                 message: id,

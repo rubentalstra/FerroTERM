@@ -3064,3 +3064,229 @@ fn membership_only_reports_membership_without_the_codes_standing_in_its_system()
     let kinds: Vec<&str> = membership.issues.iter().map(|i| i.kind).collect();
     assert_eq!(kinds, ["not-in-vs"]);
 }
+
+/// A code system with a Dutch translation, reached through a value set that
+/// references another.
+const LANGUAGES: &str = "http://example.org/fhir/CodeSystem/languages";
+/// The value set that selects [`LANGUAGES`] directly.
+const VS_INNER: &str = "http://example.org/fhir/ValueSet/inner";
+/// The value set that reaches [`LANGUAGES`] through [`VS_INNER`].
+const VS_OUTER: &str = "http://example.org/fhir/ValueSet/outer";
+
+fn referencing_world() -> World {
+    World::of(&[
+        (
+            "CodeSystem-languages.json",
+            serde_json::json!({
+              "resourceType": "CodeSystem", "language": "en",
+              "url": LANGUAGES, "version": "1", "name": "Languages", "status": "active",
+              "content": "complete", "caseSensitive": true,
+              "concept": [{"code": "cat", "display": "Cat",
+                "designation": [{"language": "nl", "value": "Kat"}]}]
+            }),
+        ),
+        (
+            "ValueSet-inner.json",
+            serde_json::json!({
+              "resourceType": "ValueSet", "url": VS_INNER, "version": "1", "name": "Inner",
+              "status": "active", "compose": {"include": [{"system": LANGUAGES}]}
+            }),
+        ),
+        (
+            "ValueSet-outer.json",
+            serde_json::json!({
+              "resourceType": "ValueSet", "url": VS_OUTER, "version": "1", "name": "Outer",
+              "status": "active", "compose": {"include": [{"valueSet": [VS_INNER]}]}
+            }),
+        ),
+    ])
+}
+
+#[test]
+fn a_code_reached_through_a_value_set_reference_carries_the_requested_display() {
+    // `displayLanguage` is "the language to use when generating the display"
+    // of an expansion's concepts
+    // (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>), so the hop
+    // through a referenced value set answers in it too.
+    let world = referencing_world();
+    let expansion = |url: &str, language: &str| {
+        let request = ExpandInput {
+            url: Some(url.to_owned()),
+            display_language: Some(language.to_owned()),
+            ..ExpandInput::default()
+        };
+        let vs = expand::expand(&world.sources(), &request).expect("expands");
+        entry(&vs.contains, "cat")
+            .expect("cat")
+            .display
+            .clone()
+            .expect("a display")
+    };
+    assert_eq!(expansion(VS_INNER, "nl"), "Kat", "the first hop");
+    assert_eq!(expansion(VS_OUTER, "nl"), "Kat", "through the reference");
+    // A language the system holds nothing in answers the display it does
+    // have, at both hops, rather than the requested tag over another language.
+    assert_eq!(expansion(VS_INNER, "de"), "Cat");
+    assert_eq!(expansion(VS_OUTER, "de"), "Cat");
+    let validate = |url: &str| {
+        let input = ValueSetValidateInput {
+            url: Some(url.to_owned()),
+            system: Some(LANGUAGES.to_owned()),
+            code: Some(String::from("cat")),
+            display_language: Some(String::from("nl")),
+            ..ValueSetValidateInput::default()
+        };
+        let validation =
+            value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+        assert!(validation.result, "{validation:?}");
+        validation.display.expect("a display")
+    };
+    assert_eq!(validate(VS_INNER), "Kat");
+    assert_eq!(validate(VS_OUTER), "Kat");
+}
+
+/// A code system whose resource carries a fragment of the system.
+const FRAGMENT: &str = "http://example.org/fhir/CodeSystem/fragment";
+/// The value set over the whole of [`FRAGMENT`].
+const VS_FRAGMENT: &str = "http://example.org/fhir/ValueSet/fragment";
+/// The value set enumerating two codes of [`FRAGMENT`].
+const VS_FRAGMENT_ENUM: &str = "http://example.org/fhir/ValueSet/fragment-enum";
+
+fn fragment_world() -> World {
+    World::of(&[
+        (
+            "CodeSystem-fragment.json",
+            serde_json::json!({
+              "resourceType": "CodeSystem", "language": "en",
+              "url": FRAGMENT, "version": "0.1.0", "name": "Fragment", "status": "active",
+              "content": "fragment", "caseSensitive": true,
+              "concept": [
+                {"code": "code1", "display": "Display 1"},
+                {"code": "code2", "display": "Display 2"}
+              ]
+            }),
+        ),
+        (
+            "ValueSet-fragment.json",
+            serde_json::json!({
+              "resourceType": "ValueSet", "url": VS_FRAGMENT, "version": "1", "name": "Frag",
+              "status": "active", "compose": {"include": [{"system": FRAGMENT}]}
+            }),
+        ),
+        (
+            "ValueSet-fragment-enum.json",
+            serde_json::json!({
+              "resourceType": "ValueSet", "url": VS_FRAGMENT_ENUM, "version": "1",
+              "name": "FragEnum", "status": "active",
+              "compose": {"include": [{"system": FRAGMENT,
+                "concept": [{"code": "code1"}, {"code": "code2"}]}]}
+            }),
+        ),
+    ])
+}
+
+#[test]
+fn a_code_a_fragment_resource_does_not_carry_is_not_a_code_the_system_lacks() {
+    // A `fragment` resource holds "a subset of the code system concepts"
+    // (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>), and the
+    // ecosystem asks a server to "reflect `content = fragment` in an error
+    // message if the code is not valid against a fragment"
+    // (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
+    let world = fragment_world();
+    let input = ValueSetValidateInput {
+        url: Some(VS_FRAGMENT.to_owned()),
+        system: Some(FRAGMENT.to_owned()),
+        code: Some(String::from("code1x")),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(validation.result, "{validation:?}");
+    assert_eq!(validation.code.as_deref(), Some("code1x"));
+    assert_eq!(validation.system.as_deref(), Some(FRAGMENT));
+    assert_eq!(validation.version.as_deref(), Some("0.1.0"));
+    assert_eq!(validation.display, None, "the system has no display for it");
+    assert_eq!(validation.message, None, "a result of true says nothing");
+    assert_eq!(validation.issues.len(), 1, "{:?}", validation.issues);
+    let issue = &validation.issues[0];
+    assert_eq!(
+        (issue.severity, issue.code, issue.kind),
+        ("warning", "code-invalid", "invalid-code")
+    );
+    assert_eq!(
+        issue.text,
+        format!(
+            "Unknown Code 'code1x' in the CodeSystem '{FRAGMENT}' version '0.1.0' - note that \
+the code system is labeled as a fragment, so the code may be valid in some other fragment"
+        )
+    );
+    assert_eq!(issue.expression.as_deref(), Some("code"));
+}
+
+#[test]
+fn a_codeable_concept_over_a_fragment_holds_on_a_code_the_resource_lacks() {
+    // A `CodeableConcept` is judged coding by coding, and a coding the fragment
+    // leaves open is not one the value set can be said to refuse, so the
+    // warning travels with a `result` of true.
+    let world = fragment_world();
+    let input = ValueSetValidateInput {
+        url: Some(VS_FRAGMENT.to_owned()),
+        codeable_concept: Some(codeable(vec![CodingRef {
+            system: Some(FRAGMENT.to_owned()),
+            code: Some(String::from("code1x")),
+            ..CodingRef::default()
+        }])),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(validation.result, "{validation:?}");
+    assert_eq!(validation.issues.len(), 1, "{:?}", validation.issues);
+    assert_eq!(validation.issues[0].severity, "warning");
+    assert_eq!(
+        validation.issues[0].expression.as_deref(),
+        Some("CodeableConcept.coding[0].code")
+    );
+    assert!(
+        validation.codeable_concept.is_some(),
+        "the concept is echoed"
+    );
+}
+
+#[test]
+fn an_include_that_enumerates_a_fragments_codes_still_decides_membership() {
+    // The include lists the codes it selects, so one it does not list is
+    // outside the value set whatever else the system defines.
+    let world = fragment_world();
+    let input = ValueSetValidateInput {
+        url: Some(VS_FRAGMENT_ENUM.to_owned()),
+        system: Some(FRAGMENT.to_owned()),
+        code: Some(String::from("code1x")),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(!validation.result, "{validation:?}");
+    let kinds: Vec<&str> = validation.issues.iter().map(|i| i.kind).collect();
+    assert_eq!(kinds, ["not-in-vs", "invalid-code"]);
+}
+
+#[test]
+fn a_complete_resource_keeps_answering_an_absent_code_as_one_the_system_lacks() {
+    // `complete` means "all the concepts defined by the code system are
+    // included in the code system resource"
+    // (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>), so absence
+    // from the resource is absence from the system.
+    let world = World::load();
+    let input = ValueSetValidateInput {
+        url: Some(VS_ALL.to_owned()),
+        system: Some(ANIMALS.to_owned()),
+        code: Some(String::from("zebra")),
+        ..ValueSetValidateInput::default()
+    };
+    let validation =
+        value_set_validate_code::validate_code(&world.sources(), &input).expect("validates");
+    assert!(!validation.result, "{validation:?}");
+    let severities: Vec<&str> = validation.issues.iter().map(|i| i.severity).collect();
+    assert_eq!(severities, ["error", "error"]);
+}

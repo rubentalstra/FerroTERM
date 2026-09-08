@@ -160,6 +160,10 @@ pub struct Expansion {
 }
 
 /// Resolves `include.valueSet` references to their complete expansions.
+///
+/// A resolver holds the request's display language for the whole reference
+/// chain, so neither method carries one: a display a referenced value set
+/// contributes is in the language the request asked for.
 pub trait ValueSetResolver: std::fmt::Debug {
     /// The full expansion of the value set at `url`.
     ///

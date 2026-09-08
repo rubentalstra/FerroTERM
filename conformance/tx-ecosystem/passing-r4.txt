@@ -51,8 +51,11 @@ extensions/validate-coding-bad-supplement-url
 extensions/validate-coding-good-supplement
 extensions/validate-coding-good2-supplement
 fragment/fragment-expansion
+fragment/validation-fragment-code-bad-code
 fragment/validation-fragment-code-good
+fragment/validation-fragment-codeableconcept-bad-code
 fragment/validation-fragment-codeableconcept-good
+fragment/validation-fragment-coding-bad-code
 fragment/validation-fragment-coding-good
 inactive/inactive-1-validate
 inactive/inactive-1a-validate

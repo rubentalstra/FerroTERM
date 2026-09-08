@@ -85,8 +85,13 @@ const HIERARCHY_OPERATORS: [FilterOperator; 6] = [
     FilterOperator::DescendentLeaf,
 ];
 
-/// The filter code the engine answers for every provider.
+/// The filter code the statement carries the generic operators under.
 const GENERIC_FILTER: &str = "concept";
+
+/// The filter codes the engine answers for every provider: `evaluate` reads
+/// `concept` and `code` as the code itself, so a declared entry under either
+/// states the generic operators beside its own.
+const GENERIC_FILTERS: [&str; 2] = ["concept", "code"];
 
 /// The filters one version declares: the generic entry first, then the
 /// provider's own, one entry per filter code.
@@ -100,36 +105,81 @@ const GENERIC_FILTER: &str = "concept";
 /// so merging into the union is our own design: the engine answers the generic
 /// set and the provider's own for the same code, and a client can send either.
 fn declared_filters(declaration: &Declaration) -> Vec<FilterSupport> {
-    let mut operators = GENERIC_OPERATORS.to_vec();
+    let mut generic = GENERIC_OPERATORS.to_vec();
     if declaration.capabilities.contains(&Capability::Subsumption) {
-        operators.extend(HIERARCHY_OPERATORS);
+        generic.extend(HIERARCHY_OPERATORS);
     }
     let mut filters = vec![FilterSupport {
         code: String::from(GENERIC_FILTER),
-        operators,
+        operators: generic.clone(),
     }];
     for declared in &declaration.filters {
-        merge(&mut filters, declared);
+        merge(&mut filters, declared, &generic);
     }
     filters
 }
 
 /// Adds `declared` to `filters`, into the entry its code already has.
-fn merge(filters: &mut Vec<FilterSupport>, declared: &FilterDefinition) {
+///
+/// A new entry under a filter code the engine answers generically starts from
+/// `generic`, which `evaluate` answers there whatever the system declares.
+fn merge(
+    filters: &mut Vec<FilterSupport>,
+    declared: &FilterDefinition,
+    generic: &[FilterOperator],
+) {
     for support in &mut *filters {
         if support.code == declared.code {
-            for operator in &declared.operators {
-                if !support.operators.contains(operator) {
-                    support.operators.push(*operator);
-                }
-            }
+            add(&mut support.operators, &declared.operators);
             return;
         }
     }
+    let mut operators = if GENERIC_FILTERS.contains(&declared.code.as_str()) {
+        generic.to_vec()
+    } else {
+        Vec::new()
+    };
+    add(&mut operators, &declared.operators);
     filters.push(FilterSupport {
         code: declared.code.clone(),
-        operators: declared.operators.clone(),
+        operators,
     });
+}
+
+/// Appends the operators of `added` that `operators` does not already carry.
+fn add(operators: &mut Vec<FilterOperator>, added: &[FilterOperator]) {
+    for operator in added {
+        if !operators.contains(operator) {
+            operators.push(*operator);
+        }
+    }
+}
+
+/// The operators one filter entry states on an R4-family surface.
+///
+/// `filter-operator` 4.0.1 and 4.3.0 define nine operators, and `child-of` and
+/// `descendent-leaf` arrive in 5.0.0.
+/// `ValueSet.compose.include.filter.op` is required-bound to the version's own
+/// value set (`filter-operator|4.3.0`,
+/// <https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.compose.include.filter.op>),
+/// so a client taking either operator from an R4 or R4B statement would write
+/// a resource that version refuses.
+fn r4_family_operators(operators: &[FilterOperator]) -> Vec<&'static str> {
+    operators
+        .iter()
+        .filter(|operator| !operator.r5_only())
+        .map(|operator| operator.code())
+        .collect()
+}
+
+/// The operators one filter entry states on an R5-family surface: every
+/// operator the engine evaluates.
+///
+/// `filter-operator` 6.0.0-ballot5 adds a twelfth, `property-value-of`
+/// (<https://hl7.org/fhir/6.0.0-ballot5/codesystem-filter-operator.html>),
+/// which the engine does not evaluate, so the R6 statement stays at eleven.
+fn r5_family_operators(operators: &[FilterOperator]) -> Vec<&'static str> {
+    operators.iter().map(|operator| operator.code()).collect()
 }
 
 impl Summary {
@@ -248,14 +298,17 @@ macro_rules! r5_family_capabilities {
                         filter: version
                             .filters
                             .iter()
-                            .map(|filter| TerminologyCapabilitiesCodeSystemVersionFilter {
-                                code: filter.code.as_str().into(),
-                                op: filter
-                                    .operators
-                                    .iter()
-                                    .map(|op| op.code().into())
-                                    .collect(),
-                                ..Default::default()
+                            .filter_map(|filter| {
+                                let ops = r5_family_operators(&filter.operators);
+                                // `filter.op` is 1..*, so an entry left with
+                                // none is left out.
+                                (!ops.is_empty()).then(|| {
+                                    TerminologyCapabilitiesCodeSystemVersionFilter {
+                                        code: filter.code.as_str().into(),
+                                        op: ops.into_iter().map(Into::into).collect(),
+                                        ..Default::default()
+                                    }
+                                })
                             })
                             .collect(),
                         property: version
@@ -364,16 +417,17 @@ macro_rules! terminology_capabilities {
                                     filter: version
                                         .filters
                                         .iter()
-                                        .map(|filter| {
-                                            TerminologyCapabilitiesCodeSystemVersionFilter {
-                                                code: filter.code.as_str().into(),
-                                                op: filter
-                                                    .operators
-                                                    .iter()
-                                                    .map(|op| op.code().into())
-                                                    .collect(),
-                                                ..Default::default()
-                                            }
+                                        .filter_map(|filter| {
+                                            let ops = r4_family_operators(&filter.operators);
+                                            // `filter.op` is 1..*, so an entry
+                                            // left with none is left out.
+                                            (!ops.is_empty()).then(|| {
+                                                TerminologyCapabilitiesCodeSystemVersionFilter {
+                                                    code: filter.code.as_str().into(),
+                                                    op: ops.into_iter().map(Into::into).collect(),
+                                                    ..Default::default()
+                                                }
+                                            })
                                         })
                                         .collect(),
                                     property: version

@@ -21,6 +21,7 @@ pub struct Resolver<'a> {
     store: &'a ValueSetStore,
     negotiation: Option<&'a Negotiation>,
     contained: Option<&'a BTreeMap<String, ValueSetModel>>,
+    language: Option<String>,
     active: RefCell<Vec<String>>,
     used: RefCell<Vec<String>>,
     open: RefCell<BTreeSet<String>>,
@@ -35,6 +36,7 @@ impl<'a> Resolver<'a> {
             store,
             negotiation: None,
             contained: None,
+            language: None,
             active: RefCell::new(Vec::new()),
             used: RefCell::new(Vec::new()),
             open: RefCell::new(BTreeSet::new()),
@@ -54,6 +56,20 @@ impl<'a> Resolver<'a> {
     #[must_use]
     pub fn with_contained(mut self, contained: &'a BTreeMap<String, ValueSetModel>) -> Self {
         self.contained = Some(contained);
+        self
+    }
+
+    /// This resolver answering every reference in `language`, the request's
+    /// `displayLanguage` range list.
+    ///
+    /// The request carries one display language for the whole answer, so the
+    /// resolver holds it for the reference chain: a display a value set
+    /// reference contributes is then in the language the request asked for,
+    /// which the ecosystem requires of every hop
+    /// (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/languages.html>).
+    #[must_use]
+    pub fn with_language(mut self, language: Option<&str>) -> Self {
+        self.language = language.map(str::to_owned);
         self
     }
 
@@ -267,11 +283,17 @@ impl Resolver<'_> {
 
 impl ValueSetResolver for Resolver<'_> {
     fn expand(&self, url: &str) -> Result<Expansion, ComposeError> {
-        self.expand_with(url, &Options::default())
+        // A referenced value set is expanded whole, so only the display
+        // language of the request carries into it.
+        let options = Options {
+            language: self.language.clone(),
+            ..Options::default()
+        };
+        self.expand_with(url, &options)
     }
 
     fn contains(&self, url: &str, system: &str, code: &str) -> Result<Option<Item>, ComposeError> {
         let compose = self.compose(url)?;
-        self.contains_compose(url, &compose, system, None, code, None)
+        self.contains_compose(url, &compose, system, None, code, self.language.as_deref())
     }
 }
