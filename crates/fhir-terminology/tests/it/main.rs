@@ -16,6 +16,7 @@ mod compose;
 mod concept_map;
 mod ecl;
 mod fhir_codesystem;
+mod fhir_core;
 mod filter;
 mod fixture;
 mod icd11;
