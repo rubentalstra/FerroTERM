@@ -4,8 +4,7 @@ use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 
 /// The classes every button shares, so one control reads the same everywhere.
-const BASE: &str = "inline-flex items-center gap-1 rounded px-2 py-1 text-sm font-medium \
-                    text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800";
+const BASE: &str = crate::styles::BUTTON_QUIET;
 
 /// A button that runs Rust on activation and never navigates.
 ///

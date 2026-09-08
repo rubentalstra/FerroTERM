@@ -14,7 +14,6 @@
 pub(crate) const NOT_DECLARED: &str = "not declared";
 
 pub(crate) mod button;
-pub(crate) mod code_system_card;
 pub(crate) mod failure;
 pub(crate) mod health;
 pub(crate) mod icon;
@@ -22,5 +21,6 @@ pub(crate) mod reading;
 pub(crate) mod request_disclosure;
 pub(crate) mod shell;
 pub(crate) mod spinner;
+pub(crate) mod system_table;
 pub(crate) mod theme_toggle;
 pub(crate) mod version_switcher;

@@ -106,6 +106,10 @@ focusable.forEach((el, index) => el.setAttribute('data-walk', String(index)));
 window.walkStops = [];
 document.addEventListener('focusin', (event) => {
   const el = event.target;
+  // The outline is judged only where `:focus-visible` matches. A burst of tab
+  // presses can record a stop before the browser has resolved the pseudo-class
+  // for it, and an outline read then is the resting one, not the focused one.
+  if (!el.matches(':focus-visible')) { return; }
   const style = getComputedStyle(el);
   const tag = el.getAttribute('data-walk');
   window.walkStops.push([tag === null ? '' : tag, style.outlineStyle, style.outlineWidth,
