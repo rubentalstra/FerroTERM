@@ -144,47 +144,84 @@ fn main() -> anyhow::Result<()> {
     let runtime = tokio::runtime::Runtime::new().context("cannot start the runtime")?;
     let machine = machine();
     let mut failed = Vec::new();
-    for system in &config.systems {
-        if cli
-            .only
-            .as_deref()
-            .is_some_and(|only| !system.name.contains(only))
-        {
-            continue;
-        }
-        if !system.artifact.join("manifest.json").exists() {
-            eprintln!(
-                "{}: no artifact at {}; skipped",
-                system.name,
-                system.artifact.display()
-            );
-            continue;
-        }
-        let record = match runtime.block_on(measure(&cli, &config, system, &machine)) {
-            Ok(record) => record,
+    // Two passes, because a build is the loudest neighbour a measurement can
+    // have. Every serving figure is taken while nothing else runs, and the
+    // builds follow (#304).
+    let wanted: Vec<&System> = config
+        .systems
+        .iter()
+        .filter(|system| {
+            cli.only
+                .as_deref()
+                .is_none_or(|only| system.name.contains(only))
+        })
+        .filter(|system| {
+            let present = system.artifact.join("manifest.json").exists();
+            if !present {
+                eprintln!(
+                    "{}: no artifact at {}; skipped",
+                    system.name,
+                    system.artifact.display()
+                );
+            }
+            present
+        })
+        .collect();
+    let mut records: Vec<(&System, Record)> = Vec::with_capacity(wanted.len());
+    for system in &wanted {
+        match runtime.block_on(measure(&cli, &config, system, &machine)) {
+            Ok(record) => {
+                println!(
+                    "{}: ready {}, rss {} open / {} warm, {} operations",
+                    system.name,
+                    duration_text(record.ready_seconds),
+                    bytes_text(record.rss_open_bytes.unwrap_or(0)),
+                    bytes_text(record.rss_warm_bytes.unwrap_or(0)),
+                    record.latency.len(),
+                );
+                records.push((system, record));
+            }
             Err(error) => {
                 eprintln!("{}: {error:#}; no record written", system.name);
                 failed.push(system.name.clone());
-                continue;
             }
-        };
+        }
+    }
+    for (system, record) in &mut records {
+        if cli.skip_ingest {
+            continue;
+        }
+        match ingest(&cli, system) {
+            Ok(measured) => {
+                if let Some(measured) = &measured {
+                    println!(
+                        "{}: built in {}, peak {}",
+                        system.name,
+                        duration_text(measured.seconds),
+                        bytes_text(measured.peak_rss_bytes.unwrap_or(0)),
+                    );
+                }
+                record.ingest = measured;
+            }
+            Err(error) => {
+                eprintln!(
+                    "{}: {error:#}; the record carries no build figure",
+                    system.name
+                );
+                failed.push(system.name.clone());
+            }
+        }
+    }
+    for (system, record) in &records {
         let path = cli.out.join(format!(
             "{}-{}.json",
             slug(&system.name),
             record.taken_at.replace([':', '.'], "-")
         ));
-        let json = serde_json::to_string_pretty(&record)?;
+        let json = serde_json::to_string_pretty(record)?;
         std::fs::write(&path, format!("{json}\n"))
             .with_context(|| format!("cannot write {}", path.display()))?;
-        println!(
-            "{}: ready {}, rss {} open / {} warm, {} operations, written to {}",
-            system.name,
-            duration_text(record.ready_seconds),
-            bytes_text(record.rss_open_bytes.unwrap_or(0)),
-            bytes_text(record.rss_warm_bytes.unwrap_or(0)),
-            record.latency.len(),
-            path.display()
-        );
+        println!("{}: written to {}", system.name, path.display());
     }
     if failed.is_empty() {
         Ok(())
@@ -209,7 +246,13 @@ fn slug(name: &str) -> String {
         .join("-")
 }
 
-/// Measures one system.
+/// Measures one system's serving figures.
+///
+/// The ingest is not run here. A build of a SNOMED edition peaks over 4 GB,
+/// and a server started in the seconds after one reports both a resident
+/// figure and a latency well above the same server on a settled machine
+/// (measured on #304). Every serving figure is taken first, and the builds
+/// follow in their own pass.
 async fn measure(
     cli: &Cli,
     config: &Config,
@@ -220,11 +263,6 @@ async fn measure(
         &std::fs::read_to_string(system.artifact.join("manifest.json"))
             .with_context(|| format!("cannot read the manifest of {}", system.name))?,
     )?;
-    let ingest = if cli.skip_ingest {
-        None
-    } else {
-        ingest(cli, system)?
-    };
     let mut server = Server::start(&cli.server, &system.artifact, cli.port)?;
     let ready_seconds = server.wait_ready().await?;
     let rss_open_bytes = server.rss();
@@ -262,7 +300,7 @@ async fn measure(
             .map(str::to_owned),
         concepts: manifest.get("concepts").and_then(serde_json::Value::as_u64),
         artifact_bytes: dir_size(&system.artifact)?,
-        ingest,
+        ingest: None,
         ready_seconds,
         rss_open_bytes,
         rss_warm_bytes,
@@ -531,6 +569,12 @@ fn peak_rss(stderr: &str) -> Option<u64> {
     None
 }
 
+/// How many resident-memory readings one figure is the median of.
+const RSS_SAMPLES: usize = 5;
+
+/// How long apart those readings are taken.
+const RSS_INTERVAL: Duration = Duration::from_millis(200);
+
 /// The server under measurement.
 struct Server {
     child: Child,
@@ -606,17 +650,31 @@ impl Server {
         )
     }
 
-    /// The resident set size of the server process, in bytes.
+    /// The resident set size of the server process, in bytes: the median of
+    /// [`RSS_SAMPLES`] readings.
+    ///
+    /// One reading is a moment, and a moment on a machine that has just
+    /// finished other work is not the figure a served edition holds. The
+    /// median of several readings a fifth of a second apart is (#304).
     fn rss(&self) -> Option<u64> {
-        let output = Command::new("ps")
-            .args(["-o", "rss=", "-p", &self.child.id().to_string()])
-            .output()
-            .ok()?;
-        String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .parse::<u64>()
-            .ok()
-            .map(|kb| kb * 1024)
+        let mut samples: Vec<u64> = Vec::with_capacity(RSS_SAMPLES);
+        for sample in 0..RSS_SAMPLES {
+            if sample > 0 {
+                std::thread::sleep(RSS_INTERVAL);
+            }
+            let output = Command::new("ps")
+                .args(["-o", "rss=", "-p", &self.child.id().to_string()])
+                .output()
+                .ok()?;
+            let kilobytes = String::from_utf8_lossy(&output.stdout)
+                .trim()
+                .parse::<u64>()
+                .ok()?;
+            samples.push(kilobytes * 1024);
+        }
+        samples.sort_unstable();
+        // The middle of an odd-length list, which RSS_SAMPLES fixes.
+        samples.get(RSS_SAMPLES.div_euclid(2)).copied()
     }
 
     fn stop(&mut self) {
