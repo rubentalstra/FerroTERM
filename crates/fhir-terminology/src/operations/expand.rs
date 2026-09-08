@@ -633,12 +633,14 @@ fn designations_of(
     // `displayLanguage`).
     let base = resolved.provider.display(located.concept, None)?;
     if let Some(base) = base
-        && item.display.as_ref().is_some_and(|shown| *shown != base)
+        && item.display.as_ref().is_none_or(|shown| *shown != base)
     {
         designations.retain(|d| Some(&d.value) != item.display.as_ref());
         let promoted = super::lookup::display_designation(resolved.provider.as_ref(), None, &base);
         if selected(&promoted) {
-            designations.push(promoted);
+            // First, because it is the display the system itself states and
+            // the rest of the list are alternates to it.
+            designations.insert(0, promoted);
         }
     }
     Ok(designations)

@@ -318,7 +318,17 @@ impl CodeSystemProvider for FhirCodeSystem {
         let Some(entry) = self.entry(concept) else {
             return Ok(None);
         };
+        // NOTE: a concept's display is already in `CodeSystem.language`, so
+        // a request for that language reads it, not a designation sharing it
+        // (<https://hl7.org/fhir/R5/codesystem-definitions.html#CodeSystem.language>).
+        let asked_for_its_own = language.is_some_and(|asked| {
+            self.model
+                .language
+                .as_deref()
+                .is_some_and(|own| text_match::same_language(own, asked))
+        });
         if let Some(language) = language
+            && !(asked_for_its_own && entry.display.is_some())
             && let Some(designation) = entry.designations.iter().find(|d| {
                 d.language
                     .as_deref()

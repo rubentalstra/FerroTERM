@@ -22,10 +22,9 @@ pub struct Range {
     pub quality: f32,
 }
 
-/// The ranges of `text`, highest quality first, ties in list order; ranges
-/// with quality `0` are dropped (RFC 9110: "not acceptable").
-#[must_use]
-pub fn ranges(text: &str) -> Vec<Range> {
+/// Every range of `text` as written, zero-quality ones included, highest
+/// quality first with ties in list order.
+fn all_ranges(text: &str) -> Vec<Range> {
     let mut ranges: Vec<Range> = text
         .split(',')
         .filter_map(|part| {
@@ -38,7 +37,7 @@ pub fn ranges(text: &str) -> Vec<Range> {
                 .filter_map(|p| p.trim().strip_prefix("q="))
                 .find_map(|q| q.trim().parse::<f32>().ok())
                 .unwrap_or(1.0);
-            (quality > 0.0).then(|| Range {
+            Some(Range {
                 tag: tag.to_owned(),
                 quality,
             })
@@ -50,6 +49,54 @@ pub fn ranges(text: &str) -> Vec<Range> {
             .unwrap_or(std::cmp::Ordering::Equal)
     });
     ranges
+}
+
+/// The ranges of `text`, highest quality first, ties in list order; ranges
+/// with quality `0` are dropped (RFC 9110: "not acceptable").
+#[must_use]
+pub fn ranges(text: &str) -> Vec<Range> {
+    all_ranges(text)
+        .into_iter()
+        .filter(|range| range.quality > 0.0)
+        .collect()
+}
+
+/// Whether `requested` refuses every language it does not name.
+///
+/// A `*` at quality zero is the one way to say it: RFC 9110 gives `q=0` the
+/// meaning "not acceptable", and `*` stands for every language not listed
+/// (<https://www.rfc-editor.org/rfc/rfc9110#field.accept-language>). Without
+/// it a request states a preference, and a system with nothing in the asked
+/// language still answers its own display.
+#[must_use]
+pub fn refuses_unnamed(requested: Option<&str>) -> bool {
+    requested.is_some_and(|text| {
+        all_ranges(text)
+            .iter()
+            .any(|range| range.tag == "*" && range.quality == 0.0)
+    })
+}
+
+/// Whether `requested` accepts a display written in `tag`.
+///
+/// A language named at quality zero is refused however the rest of the list
+/// reads, and a `*` above zero accepts whatever the list does not name.
+#[must_use]
+pub fn accepts(requested: Option<&str>, tag: &str) -> bool {
+    let Some(text) = requested else {
+        return true;
+    };
+    let ranges = all_ranges(text);
+    let named = ranges
+        .iter()
+        .find(|range| primary(&range.tag) == primary(tag));
+    if let Some(range) = named {
+        return range.quality > 0.0;
+    }
+    ranges
+        .iter()
+        .find(|range| range.tag == "*")
+        .is_none_or(|range| range.quality > 0.0)
 }
 
 /// Checks a `displayLanguage` (or `Accept-Language`) value: every range is
