@@ -28,11 +28,15 @@ use crate::fhir::searchset::SearchFilter;
 use crate::fhir::searchset::SearchSet;
 use crate::fhir::translate::TranslateRequest;
 use crate::fhir::version::FhirVersion;
+use crate::listing::Action;
 use crate::listing::ListParams;
-use crate::listing::canonical_cell;
+use crate::listing::Published;
 use crate::listing::count_sentence;
+use crate::listing::empty;
 use crate::listing::filter_form;
 use crate::listing::pager_view;
+use crate::listing::published_row;
+use crate::listing::table;
 use crate::listing::window;
 use crate::pages::translate;
 use crate::routes::CONCEPT_MAPS_PATH;
@@ -255,12 +259,9 @@ fn list_view(
 ) -> AnyView {
     let resources = found.found();
     if resources.is_empty() {
-        return view! {
-            <p class="mt-default text-body text-muted">
-                "This root holds no ConceptMap resource matching the filter above. The translate runner still works: a server may translate through a map it holds without publishing it as a resource."
-            </p>
-        }
-        .into_any();
+        return empty(
+            "This root holds no ConceptMap resource matching the filter above. The translate runner still works: a server may translate through a map it holds without publishing it as a resource.",
+        );
     }
     let view = window(params.page(), params.size(), resources.len());
     let rows: Vec<AnyView> = view
@@ -277,59 +278,37 @@ fn list_view(
         &[],
     );
     view! {
-        <div class="mt-default overflow-x-auto">
-            <table class="w-full border-collapse text-left text-body">
-                <thead>
-                    <tr class="border-b border-line-strong">
-                        <th scope="col" class="py-default pr-default font-medium">
-                            "Canonical"
-                        </th>
-                        <th scope="col" class="py-default pr-default font-medium">
-                            "Version"
-                        </th>
-                        <th scope="col" class="py-default pr-default font-medium">
-                            "Title"
-                        </th>
-                        <th scope="col" class="py-default font-medium">
-                            "Status"
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>{rows}</tbody>
-            </table>
-        </div>
+        {table(&["Concept map", "Version", "Status", "Open in"], rows)}
         {pager}
     }
     .into_any()
 }
 
-/// One published concept map, as a row that opens it.
+/// One published concept map, as a row that opens it and one that runs it.
 fn row_view(resource: &PublishedConceptMap, params: &ListParams, version: FhirVersion) -> AnyView {
-    let canonical = resource.url().unwrap_or(NOT_DECLARED).to_owned();
-    let heading = canonical_cell(
-        &canonical,
+    // The runner is handed the map and the source system this resource
+    // already names, so a reader never retypes a canonical the row shows them.
+    let filled = resource.url().map(|canonical| TranslateRequest {
+        concept_map: canonical.to_owned(),
+        concept_map_version: resource.version().unwrap_or_default().to_owned(),
+        system: resource.only_source_system().unwrap_or_default(),
+        ..TranslateRequest::default()
+    });
+    published_row(
+        &Published {
+            title: resource.label(),
+            canonical: resource.url(),
+            version: resource.version(),
+            status: resource.status(),
+        },
         resource
             .id()
             .map(|id| address(&params.reading(id), version)),
-    );
-    view! {
-        <tr class="border-b border-line align-top">
-            <th
-                scope="row"
-                class="py-default pr-default font-mono text-small font-normal break-all"
-            >
-                {heading}
-            </th>
-            <td class="py-default pr-default font-mono text-small">
-                {resource.version().unwrap_or(NOT_DECLARED).to_owned()}
-            </td>
-            <td class="py-default pr-default">
-                {resource.label().unwrap_or(NOT_DECLARED).to_owned()}
-            </td>
-            <td class="py-default">{resource.status().unwrap_or(NOT_DECLARED).to_owned()}</td>
-        </tr>
-    }
-    .into_any()
+        filled.map(|run| Action {
+            label: "Translate",
+            href: translate::address(&run, version),
+        }),
+    )
 }
 
 /// One concept map read by its id, with the groups it maps.

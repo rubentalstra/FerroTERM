@@ -29,11 +29,15 @@ use crate::fhir::searchset::SearchSet;
 use crate::fhir::value_set::ClauseRow;
 use crate::fhir::value_set::PublishedValueSet;
 use crate::fhir::version::FhirVersion;
+use crate::listing::Action;
 use crate::listing::ListParams;
-use crate::listing::canonical_cell;
+use crate::listing::Published;
 use crate::listing::count_sentence;
+use crate::listing::empty;
 use crate::listing::filter_form;
 use crate::listing::pager_view;
+use crate::listing::published_row;
+use crate::listing::table;
 use crate::listing::window;
 use crate::routes::VALUE_SETS_PATH;
 use crate::routes::expansion_link;
@@ -194,12 +198,9 @@ fn list_view(
 ) -> AnyView {
     let resources = found.found();
     if resources.is_empty() {
-        return view! {
-            <p class="mt-default text-body text-muted">
-                "This root holds no ValueSet resource matching the filter above. A value set a code system defines implicitly is not published as a resource, and the expansion runner takes its canonical directly."
-            </p>
-        }
-        .into_any();
+        return empty(
+            "This root holds no ValueSet resource matching the filter above. A value set a code system defines implicitly is not published as a resource, and the expansion runner takes its canonical directly.",
+        );
     }
     let view = window(params.page(), params.size(), resources.len());
     let rows: Vec<AnyView> = view
@@ -216,59 +217,31 @@ fn list_view(
         &[],
     );
     view! {
-        <div class="mt-default overflow-x-auto">
-            <table class="w-full border-collapse text-left text-body">
-                <thead>
-                    <tr class="border-b border-line-strong">
-                        <th scope="col" class="py-default pr-default font-medium">
-                            "Canonical"
-                        </th>
-                        <th scope="col" class="py-default pr-default font-medium">
-                            "Version"
-                        </th>
-                        <th scope="col" class="py-default pr-default font-medium">
-                            "Title"
-                        </th>
-                        <th scope="col" class="py-default font-medium">
-                            "Status"
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>{rows}</tbody>
-            </table>
-        </div>
+        {table(&["Value set", "Version", "Status", "Open in"], rows)}
         {pager}
     }
     .into_any()
 }
 
-/// One published value set, as a row that opens it.
+/// One published value set, as a row that opens it and one that expands it.
 fn row_view(resource: &PublishedValueSet, params: &ListParams, version: FhirVersion) -> AnyView {
-    let canonical = resource.url().unwrap_or(NOT_DECLARED).to_owned();
-    let heading = canonical_cell(
-        &canonical,
+    published_row(
+        &Published {
+            title: resource.label(),
+            canonical: resource.url(),
+            version: resource.version(),
+            status: resource.status(),
+        },
         resource
             .id()
             .map(|id| params.reading(id).address(VALUE_SETS_PATH, version)),
-    );
-    view! {
-        <tr class="border-b border-line align-top">
-            <th
-                scope="row"
-                class="py-default pr-default font-mono text-small font-normal break-all"
-            >
-                {heading}
-            </th>
-            <td class="py-default pr-default font-mono text-small">
-                {resource.version().unwrap_or(NOT_DECLARED).to_owned()}
-            </td>
-            <td class="py-default pr-default">
-                {resource.label().unwrap_or(NOT_DECLARED).to_owned()}
-            </td>
-            <td class="py-default">{resource.status().unwrap_or(NOT_DECLARED).to_owned()}</td>
-        </tr>
-    }
-    .into_any()
+        // The runner takes the canonical as its `url` parameter, so a row
+        // hands its subject on rather than making a reader retype one.
+        resource.url().map(|canonical| Action {
+            label: "Expand",
+            href: expansion_link(canonical, version),
+        }),
+    )
 }
 
 /// One value set read by its id, with what its definition selects.

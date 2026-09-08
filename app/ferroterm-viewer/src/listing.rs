@@ -306,28 +306,115 @@ pub(crate) fn filter_form(
     .into_any()
 }
 
-/// One canonical in a listing row: a link that opens it, or a statement.
+/// The table both publishing lists draw, in the overview's shape.
 ///
-/// A resource that carries no id cannot be read back, so it is stated rather
-/// than drawn as a link that would answer nothing. `Resource.id` is optional
-/// on the wire (<https://hl7.org/fhir/R4B/resource.html#id>), and a searchset
-/// entry is free to carry only its `fullUrl`, so the unlinked arm stays: the
-/// screen renders what arrived rather than assuming what a root sends.
-pub(crate) fn canonical_cell(canonical: &str, href: Option<String>) -> AnyView {
-    let canonical = canonical.to_owned();
-    match href {
+/// One panel, one table, the vocabulary's own cells, so a row follows the
+/// reader's density and the two lists cannot drift apart. The headings are the
+/// caller's, because the two lists name their subject differently.
+pub(crate) fn table(headings: &[&'static str], rows: Vec<AnyView>) -> AnyView {
+    let columns: Vec<AnyView> = headings
+        .iter()
+        .map(|heading| {
+            view! {
+                <th scope="col" class=styles::TH>
+                    {*heading}
+                </th>
+            }
+            .into_any()
+        })
+        .collect();
+    view! {
+        <div class=format!("mt-default overflow-x-auto {}", styles::PANEL)>
+            <table class=styles::TABLE>
+                <thead>
+                    <tr>{columns}</tr>
+                </thead>
+                <tbody>{rows}</tbody>
+            </table>
+        </div>
+    }
+    .into_any()
+}
+
+/// One row of a publishing list: what it is, and what can be done with it.
+///
+/// The title leads and the canonical sits beside it, quieter. A resource is
+/// something a person recognises by name; the canonical is what a request
+/// carries, and a monospace URL at heading weight made every row look the
+/// same. `ValueSet` and `ConceptMap` both declare `title`, `url`, `version`
+/// and `status` (<https://hl7.org/fhir/R5/valueset.html>), so one row shape
+/// draws both lists.
+pub(crate) fn published_row(
+    published: &Published<'_>,
+    open: Option<String>,
+    run: Option<Action>,
+) -> AnyView {
+    let title = published.title.unwrap_or(NOT_DECLARED).to_owned();
+    let canonical = published.canonical.unwrap_or(NOT_DECLARED).to_owned();
+    let heading = match open {
         Some(href) => view! {
-            <a href=href class="text-accent underline">
-                {canonical}
+            <a href=href class=styles::LINK>
+                {title}
             </a>
         }
         .into_any(),
         None => view! {
-            {canonical}
+            {title}
             <span class="sr-only">", which carries no id to read it by"</span>
         }
         .into_any(),
+    };
+    let action = run.map(|action| {
+        view! {
+            <a href=action.href class=styles::BUTTON_QUIET>
+                {action.label}
+            </a>
+        }
+        .into_any()
+    });
+    view! {
+        <tr>
+            <th scope="row" class=format!("{} text-left font-medium", styles::TD)>
+                {heading}
+                <span class=format!("mt-tight block {}", styles::CODE_MUTED)>{canonical}</span>
+            </th>
+            <td class=styles::TD_TIGHT>{published.version.unwrap_or(NOT_DECLARED).to_owned()}</td>
+            <td class=styles::TD_TIGHT>{published.status.unwrap_or(NOT_DECLARED).to_owned()}</td>
+            <td class=styles::TD_TIGHT>{action}</td>
+        </tr>
     }
+    .into_any()
+}
+
+/// The four facts a publishing list draws about one resource.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Published<'a> {
+    /// The name a person recognises it by.
+    pub(crate) title: Option<&'a str>,
+    /// The canonical a request carries.
+    pub(crate) canonical: Option<&'a str>,
+    /// The business version.
+    pub(crate) version: Option<&'a str>,
+    /// The publication status.
+    pub(crate) status: Option<&'a str>,
+}
+
+/// What a row hands its subject to.
+#[derive(Clone, Debug)]
+pub(crate) struct Action {
+    /// What the runner does, as a reader reads it.
+    pub(crate) label: &'static str,
+    /// The address that opens it with the subject already filled in.
+    pub(crate) href: String,
+}
+
+/// What a screen says where it found nothing.
+///
+/// The same shape on every list, so an empty answer reads as an answer rather
+/// than as a screen that failed to draw.
+pub(crate) fn empty(sentence: &'static str) -> AnyView {
+    view! { <p class=format!("mt-default panel-p {} {}", styles::PANEL, styles::MUTED)>{sentence}</p> }
+    .into_any()
 }
 
 /// The page controls, which are the address of another page.
