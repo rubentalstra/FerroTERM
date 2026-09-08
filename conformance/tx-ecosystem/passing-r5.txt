@@ -39,7 +39,10 @@ errors/unknown-system2
 exclude/exclude-1
 exclude/exclude-2
 exclude/exclude-all
+exclude/exclude-combo
+exclude/exclude-gender
 exclude/exclude-zero
+exclude/include-combo
 extensions/extensions-echo-bad-supplement
 extensions/validate-code-bad-supplement
 extensions/validate-code-inactive
