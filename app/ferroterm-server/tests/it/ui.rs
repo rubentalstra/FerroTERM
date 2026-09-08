@@ -133,6 +133,21 @@ async fn the_mount_and_the_root_redirect_onto_the_viewer() {
 }
 
 #[tokio::test]
+async fn a_redirect_carries_the_query_the_link_named() {
+    // A link naming a version is the shareable form of a page, so the redirect
+    // onto the mount has to keep it: dropping it lands the reader on the
+    // stored default and the address they shared answers a different screen.
+    let app = app(true);
+    let response = get(&app, "/ui?fhir=r5").await;
+    assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
+    assert_eq!(
+        header_of(&response, header::LOCATION),
+        "/ui/?fhir=r5",
+        "the query travels with the redirect"
+    );
+}
+
+#[tokio::test]
 async fn a_path_that_climbs_out_of_the_bundle_reaches_nothing() {
     let app = app(true);
     for uri in [

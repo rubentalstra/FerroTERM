@@ -14,6 +14,7 @@ use axum::Router;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
 use http::StatusCode;
+use http::Uri;
 use http::header::{CACHE_CONTROL, CONTENT_TYPE, X_CONTENT_TYPE_OPTIONS};
 
 /// One file of the viewer bundle, as the binary carries it.
@@ -76,7 +77,19 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/ui", get(|| async { Redirect::temporary(MOUNT) }))
+        .route(
+            "/ui",
+            // The query travels with the redirect. `Redirect` takes a whole
+            // location, so a bare path silently drops it, and `/ui?fhir=r5`
+            // then lands on the stored default instead of the version the
+            // link named (RFC 9110 section 15.4).
+            get(|uri: Uri| async move {
+                match uri.query() {
+                    Some(query) => Redirect::temporary(&format!("{MOUNT}?{query}")),
+                    None => Redirect::temporary(MOUNT),
+                }
+            }),
+        )
         .route("/ui/", get(move || async move { document(bundle) }))
         .route(
             "/ui/{*path}",
