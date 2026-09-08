@@ -175,12 +175,17 @@ pub(crate) fn BrowsePage() -> impl IntoView {
     let concept = concept_section(&client, version, params, declared, named);
     let tree = tree_section(&client, version, params, declared, count);
 
+    // Three panes side by side above the large breakpoint, each scrolling its
+    // own content, and one stack below it. The order is the order of the work:
+    // search for a concept, walk what is under it, read the one you landed on.
     view! {
         {heading}
         {system}
-        {search}
-        {concept}
-        {tree}
+        <div class="mt-section grid gap-loose lg:grid-cols-[20rem_minmax(0,1fr)_24rem]">
+            <div class="min-w-0 lg:pane-scroll">{search}</div>
+            <div class="min-w-0 lg:pane-scroll">{tree}</div>
+            <div class="min-w-0 lg:pane-scroll">{concept}</div>
+        </div>
     }
 }
 
@@ -610,7 +615,7 @@ fn search_section(
 
     let body = move || {
         view! {
-            <section class="mt-section" aria-labelledby="browse-search-heading">
+            <section aria-labelledby="browse-search-heading">
                 <h2 id="browse-search-heading" class=styles::SECTION_TITLE>
                     "Search"
                 </h2>
@@ -795,7 +800,7 @@ fn concept_section(
     };
     let body = move || {
         view! {
-            <section class="mt-section" aria-labelledby="browse-concept-heading">
+            <section aria-labelledby="browse-concept-heading">
                 <h2 id="browse-concept-heading" class=styles::SECTION_TITLE>
                     "The concept"
                 </h2>
@@ -1159,7 +1164,7 @@ fn tree_section(
 
     let body = move || {
         view! {
-            <section class="mt-section" aria-labelledby="browse-tree-heading">
+            <section aria-labelledby="browse-tree-heading">
                 <h2 id="browse-tree-heading" class=styles::SECTION_TITLE>
                     "Below this concept"
                 </h2>

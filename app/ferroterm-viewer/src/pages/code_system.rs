@@ -14,18 +14,23 @@ use leptos_router::params::Params;
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
 use crate::components::icon;
+use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
 use crate::fhir::code_system::PublishedCodeSystem;
+use crate::fhir::concept::Hierarchy;
+use crate::fhir::concept::chosen_version;
 use crate::fhir::error::FhirError;
 use crate::fhir::terminology::SystemCard;
+use crate::fhir::terminology::TerminologyCapabilities;
 use crate::fhir::terminology::VersionRow;
 use crate::fhir::version::FhirVersion;
 use crate::routes::BROWSE_PATH;
 use crate::routes::EXPAND_PATH;
+use crate::routes::VALIDATE_PATH;
 use crate::routes::system_tool_link;
 use crate::styles;
 
@@ -62,19 +67,32 @@ pub(crate) fn CodeSystemPage() -> impl IntoView {
             .unwrap_or_default()
     });
 
+    // One read of the terminology capabilities serves both the header and the
+    // pane below it: the header offers a screen only where this root declares
+    // the system can answer it, which is the same fact the pane draws.
+    let header_client = client.clone();
+    let capabilities = LocalResource::new(move || {
+        let client = header_client.clone();
+        let version = version.get();
+        async move { client.terminology_capabilities(version).await }
+    });
+
     let title = move || system.with(|system| title_of(system));
     let heading = view! {
         <Title text=title />
-        <h1 class="font-mono text-title font-semibold break-all">
-            {move || system.with(|system| heading_of(system))}
-        </h1>
-        <p class=styles::LEAD>
-            "One code system, from the two documents that describe it. Each pane below says which request it read."
-        </p>
+        <header>
+            <h1 class="font-mono text-title font-semibold break-all">
+                {move || system.with(|system| heading_of(system))}
+            </h1>
+            <p class=styles::LEAD>
+                "One code system, from the two documents that describe it. Each pane below says which request it read."
+            </p>
+            {move || tools_view(capabilities, system, version)}
+        </header>
     }
     .into_any();
 
-    let capability = capability_section(&client, version, system);
+    let capability = capability_section(&client, version, system, capabilities);
     let published = published_section(&client, version, system);
 
     view! {
@@ -107,13 +125,8 @@ fn capability_section(
     client: &FhirClient,
     version: Signal<FhirVersion>,
     system: Signal<String>,
+    capabilities: LocalResource<Result<TerminologyCapabilities, FhirError>>,
 ) -> AnyView {
-    let read_client = client.clone();
-    let capabilities = LocalResource::new(move || {
-        let client = read_client.clone();
-        let version = version.get();
-        async move { client.terminology_capabilities(version).await }
-    });
     let url_client = client.clone();
     let url = Signal::derive(move || url_client.terminology_metadata_url(version.get()));
 
@@ -135,7 +148,7 @@ fn capability_section(
                                     Ok(document) => {
                                         let found = system.with(|system| document.card(system));
                                         match found {
-                                            Some(card) => support_view(card, version.get()),
+                                            Some(card) => support_view(card),
                                             None => undeclared_view(),
                                         }
                                     }
@@ -181,7 +194,7 @@ fn failure_view(error: &FhirError) -> AnyView {
 /// than re-rendered, so switching FHIR version or code system would keep every
 /// block's old body (verified in `leptos` 0.8.20 `for_loop.rs` and `tachys`
 /// 0.2.18 `view/keyed.rs`).
-fn support_view(card: SystemCard, version: FhirVersion) -> AnyView {
+fn support_view(card: SystemCard) -> AnyView {
     let content = card.content.map_or_else(
         || format!("Content {NOT_DECLARED} at this FHIR version"),
         |mode| format!("Content: {mode}"),
@@ -200,21 +213,15 @@ fn support_view(card: SystemCard, version: FhirVersion) -> AnyView {
     .into_any();
 
     if card.versions.is_empty() {
-        let links = tools_view(&card.url, None, version);
         return view! {
             {badges}
             <p class="mt-default text-body text-muted">
                 "This server declares no version for this code system."
             </p>
-            {links}
         }
         .into_any();
     }
-    let blocks: Vec<AnyView> = card
-        .versions
-        .iter()
-        .map(|row| version_view(&card.url, row, version))
-        .collect();
+    let blocks: Vec<AnyView> = card.versions.iter().map(version_view).collect();
     view! {
         {badges}
         <div class="mt-default grid gap-loose">{blocks}</div>
@@ -223,7 +230,7 @@ fn support_view(card: SystemCard, version: FhirVersion) -> AnyView {
 }
 
 /// One served version: what it holds, what it filters on, what it answers.
-fn version_view(system: &str, row: &VersionRow, version: FhirVersion) -> AnyView {
+fn version_view(row: &VersionRow) -> AnyView {
     let code = row
         .code
         .clone()
@@ -249,7 +256,6 @@ fn version_view(system: &str, row: &VersionRow, version: FhirVersion) -> AnyView
         "This version declares no $lookup property.",
     );
     let filters = filter_view(row);
-    let links = tools_view(system, row.code.as_deref(), version);
     view! {
         <article class=format!("panel-p {}", styles::PANEL)>
             <h3 class="font-mono text-body font-semibold break-all">{code}</h3>
@@ -258,7 +264,6 @@ fn version_view(system: &str, row: &VersionRow, version: FhirVersion) -> AnyView
             {languages}
             {properties}
             {filters}
-            {links}
         </article>
     }
     .into_any()
@@ -350,29 +355,54 @@ fn filter_view(row: &VersionRow) -> AnyView {
 }
 
 /// The screens that work over this system, carrying it and its version.
-fn tools_view(system: &str, code: Option<&str>, version: FhirVersion) -> AnyView {
-    let browse = system_tool_link(BROWSE_PATH, system, code, version);
-    let expand = system_tool_link(EXPAND_PATH, system, code, version);
-    let named = code.map_or_else(
-        || "this code system".to_owned(),
-        |code| format!("version {code}"),
-    );
-    view! {
-        <nav
-            aria-label=format!("Screens for {named}")
-            class="mt-default flex flex-wrap gap-default text-body"
-        >
-            <a href=browse class="inline-flex items-center gap-tight text-accent underline">
-                <Icon glyph=icon::BROWSE />
-                "Browse the concepts"
-            </a>
-            <a href=expand class="inline-flex items-center gap-tight text-accent underline">
-                <Icon glyph=icon::EXPAND />
-                "Run an expansion"
-            </a>
-        </nav>
+///
+/// One strip, in the header, for the version an unversioned request resolves
+/// to. A per-version strip repeated the same three links down the page and put
+/// the actions below the facts they act on.
+///
+/// The concept browser appears only where that version declares the
+/// direct-child operator, because a tree with no operator to walk it has
+/// nothing to draw (<https://hl7.org/fhir/R5/codesystem-filter-operator.html>).
+fn tools_view(
+    capabilities: LocalResource<Result<TerminologyCapabilities, FhirError>>,
+    system: Signal<String>,
+    version: Signal<FhirVersion>,
+) -> Option<AnyView> {
+    let card = capabilities.with(|answered| {
+        let document = answered.as_ref()?.as_ref().ok()?;
+        system.with(|system| document.card(system))
+    })?;
+    if card.url.is_empty() {
+        return None;
     }
-    .into_any()
+    let served = chosen_version(&card, None);
+    let code = served.as_ref().and_then(|row| row.code.clone());
+    let walkable = served.is_some_and(|row| Hierarchy::of(&row).walk().is_some());
+    let at = version.get();
+    let link = |path: &str, glyph: Glyph, label: &'static str| {
+        let href = system_tool_link(path, &card.url, code.as_deref(), at);
+        view! {
+            <a href=href class=styles::BUTTON>
+                <Icon glyph=glyph />
+                {label}
+            </a>
+        }
+        .into_any()
+    };
+    let browse = walkable.then(|| link(BROWSE_PATH, icon::BROWSE, "Browse the concepts"));
+    Some(
+        view! {
+            <nav
+                aria-label="Screens for this code system"
+                class="mt-default flex flex-wrap gap-default"
+            >
+                {browse}
+                {link(EXPAND_PATH, icon::EXPAND, "Run an expansion")}
+                {link(VALIDATE_PATH, icon::VALIDATE, "Validate a code")}
+            </nav>
+        }
+        .into_any(),
+    )
 }
 
 /// What the code system itself says it is, from the published resource.

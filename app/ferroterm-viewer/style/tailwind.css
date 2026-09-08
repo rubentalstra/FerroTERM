@@ -191,6 +191,15 @@
   padding: var(--panel-p);
 }
 
+/* A pane of a reading surface scrolls its own content, so walking a tree does
+   not move the search beside it. The height follows the window between two
+   bounds: below the lower one a pane holds too few rows to walk, above the
+   upper one the eye loses the row it was on. */
+@utility pane-scroll {
+  max-height: clamp(24rem, calc(100vh - 20rem), 48rem);
+  overflow-y: auto;
+}
+
 @utility state-change {
   transition-property: color, background-color, border-color;
   transition-timing-function: ease-out;
