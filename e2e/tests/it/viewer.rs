@@ -26,6 +26,18 @@ const RENDERED_BASE: &str = "//dt[normalize-space()='FHIR base']/following-sibli
 /// A code system row's link into that system's own screen.
 const SYSTEM_LINK: &str = "a[href^='/ui/systems/']";
 
+/// The overview's own table, by the heading it is labelled by.
+const SYSTEM_TABLE: &str = "section[aria-labelledby='systems-heading'] table";
+
+/// The control that orders the table by the code system column.
+const SORT_BY_SYSTEM: &str = "//section[@aria-labelledby='systems-heading']//th[1]/button";
+
+/// The heading a screen reader hears as ordered upward.
+const SORTED_UP: &str = "section[aria-labelledby='systems-heading'] th[aria-sort='ascending']";
+
+/// The canonicals the table draws, in the order it draws them.
+const ROW_CANONICALS: &str = "section[aria-labelledby='systems-heading'] tbody a[href^='/ui/systems/']";
+
 /// The code system screen's capability pane, by the heading it is labelled by.
 const CAPABILITY_PANE: &str = "section[aria-labelledby='system-capability-heading']";
 
@@ -390,6 +402,87 @@ async fn the_address_a_row_links_to_opens_the_same_screen_when_it_is_loaded_fres
         })
         .await;
     outcome.expect("the journey ran and the browser session ended cleanly");
+}
+
+/// The overview's table is ordered from its own headings, and the order is a
+/// link.
+///
+/// The sort is a navigation rather than a private signal, so the ordered table
+/// is a URL a reader can send. `aria-sort` on the header cell is what a screen
+/// reader announces (<https://www.w3.org/WAI/ARIA/apg/patterns/table/>), and
+/// the control inside it is a real button, so the column is reordered from the
+/// keyboard with no key handler of ours.
+#[tokio::test]
+async fn the_overview_table_orders_itself_and_the_order_is_a_link() {
+    let Some(base) = server() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &base, "/ui?fhir=r5").await;
+            journey
+                .element(By::Css(SYSTEM_TABLE), "the table of served systems")
+                .await;
+            let declared = canonicals(&journey).await?;
+            assert!(
+                declared.len() > 1,
+                "the fixture serves more than one system, so an order is visible"
+            );
+
+            journey
+                .element(By::XPath(SORT_BY_SYSTEM), "the code system heading control")
+                .await
+                .click()
+                .await?;
+            let address = journey
+                .address_carrying("sort=system", "the order the reader asked for")
+                .await;
+            assert!(
+                !address.contains("dir=desc"),
+                "a first click orders the column upward: `{address}`"
+            );
+            journey
+                .element(By::Css(SORTED_UP), "the heading announced as ascending")
+                .await;
+            let mut upward = declared.clone();
+            upward.sort();
+            assert_eq!(
+                canonicals(&journey).await?,
+                upward,
+                "the table draws the systems in the order the address asked for"
+            );
+
+            journey
+                .element(By::XPath(SORT_BY_SYSTEM), "the code system heading control")
+                .await
+                .click()
+                .await?;
+            journey
+                .address_carrying("dir=desc", "the second click turning the column around")
+                .await;
+            let mut downward = upward.clone();
+            downward.reverse();
+            assert_eq!(
+                canonicals(&journey).await?,
+                downward,
+                "a second click on one column turns it around"
+            );
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
+}
+
+/// The canonicals the table draws, in the order it draws them.
+async fn canonicals(journey: &Journey) -> WebDriverResult<Vec<String>> {
+    let mut found = Vec::new();
+    for element in journey.all(By::Css(ROW_CANONICALS)).await? {
+        found.push(element.text().await?);
+    }
+    Ok(found)
 }
 
 /// Walks from the overview to a browse screen whose tree has a level drawn.

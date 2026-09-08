@@ -189,6 +189,18 @@ impl Journey {
         }
     }
 
+    /// Every element matching `selector` right now, in document order.
+    ///
+    /// The reading is of the page as it stands, so a journey takes it only
+    /// after a wait has proven the section it describes has settled.
+    ///
+    /// # Errors
+    ///
+    /// Returns the WebDriver error if the browser refused the query.
+    pub async fn all(&self, selector: By) -> WebDriverResult<Vec<WebElement>> {
+        self.driver.find_all(selector).await
+    }
+
     /// How many elements match `selector` right now.
     ///
     /// The count is a reading of the page as it stands, so a journey takes it
