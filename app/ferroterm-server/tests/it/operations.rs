@@ -94,7 +94,10 @@ async fn lookup_refusals_on_the_wire() {
         .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(body["issue"][0]["code"], "required");
-    // Unknown code: 400 not-found (the R4B page's example).
+    // Unknown code: 400 code-invalid. The code "was not valid in the context",
+    // where `not-found` is for a reference that could not be resolved
+    // (<https://hl7.org/fhir/R4B/valueset-issue-type.html>); the system below
+    // is such a reference.
     let (status, body) = server
         .get(&format!(
             "/r4b/CodeSystem/$lookup?system={SCT}&code={}",
@@ -102,7 +105,7 @@ async fn lookup_refusals_on_the_wire() {
         ))
         .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert_eq!(body["issue"][0]["code"], "not-found");
+    assert_eq!(body["issue"][0]["code"], "code-invalid");
     // Unknown system: 404.
     let (status, _) = server
         .get(&format!(
@@ -277,7 +280,10 @@ async fn subsumes_at_type_and_instance_level() {
         parameter(&body, "outcome").unwrap()["valueCode"],
         "subsumed-by"
     );
-    // An unknown code is an error, never not-subsumed.
+    // An unknown code is an error, never not-subsumed, and the error is
+    // `code-invalid` rather than `not-found`: the system resolved and the code
+    // did not (<https://hl7.org/fhir/R4B/valueset-issue-type.html>, and the
+    // ecosystem's `simple-subsumes-unknown-code`).
     let (status, body) = server
         .get(&format!(
             "/r4b/CodeSystem/$subsumes?system={SCT}&codeA={cat}&codeB={}",
@@ -285,7 +291,7 @@ async fn subsumes_at_type_and_instance_level() {
         ))
         .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert_eq!(body["issue"][0]["code"], "not-found");
+    assert_eq!(body["issue"][0]["code"], "code-invalid");
     // No system at type level.
     let (status, body) = server
         .get(&format!(

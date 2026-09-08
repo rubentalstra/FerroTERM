@@ -326,6 +326,8 @@ simple-cases/simple-subsumes-siblings
 simple-cases/simple-subsumes-siblings-coding
 simple-cases/simple-subsumes-transitive
 simple-cases/simple-subsumes-transitive-coding
+simple-cases/simple-subsumes-unknown-code
+simple-cases/simple-subsumes-unknown-code-coding
 simple-cases/simple-subsumes-unrelated
 simple-cases/simple-subsumes-unrelated-coding
 tho/act-class
@@ -341,6 +343,7 @@ tho/subsumes-act-class-property-parent
 tho/subsumes-act-class-siblings
 tho/subsumes-act-class-transitive
 tho/subsumes-act-class-transitive-reverse
+tho/subsumes-act-class-unknown-code
 tho/validate-child-of-child
 tho/validate-child-of-grandchild
 tho/validate-child-of-self

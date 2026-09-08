@@ -182,9 +182,12 @@ fn lookup_refusals_carry_their_issue_code_and_status() {
     })
     .expect("refused");
     assert!(matches!(error, OperationError::UnknownCode { ref code, .. } if code == "unicorn"));
+    // The code "was not valid in the context"; the unknown system below is a
+    // reference that was not found
+    // (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
     assert_eq!(
         (error.issue_code(), error.status()),
-        ("not-found", StatusCode::BAD_REQUEST)
+        ("code-invalid", StatusCode::BAD_REQUEST)
     );
     // An unknown system.
     let error = run(LookupInput {
