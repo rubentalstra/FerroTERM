@@ -177,7 +177,7 @@ macro_rules! convert_concept_map {
         }
     };
     // The R5 family: `relationship`, canonical `source`, `dependsOn.attribute`, `noMap`, `otherMap`.
-    ($module:ident, r5) => {
+    ($module:ident, r5, $native_comment:expr) => {
         /// The conversion for this FHIR version's `ConceptMap`.
         pub mod $module {
             use fhir_types::$module::concept_map::{
@@ -252,14 +252,19 @@ macro_rules! convert_concept_map {
                         || targets.is_empty(),
                     code,
                     display: text(e.display.as_ref().and_then(|s| s.value.as_deref())),
-                    comment: e
-                        .extension
-                        .iter()
-                        .find(|x| x.url == ELEMENT_COMMENT)
-                        .and_then(|x| match &x.value {
-                            Some(ExtensionValue::String(s)) => text(s.value.as_deref()),
-                            _ => None,
-                        }),
+                    // A version that declares the field carries it there; one
+                    // that does not carries the extension, so a document
+                    // written either way reads the same
+                    // (<https://hl7.org/fhir/6.0.0-ballot5/conceptmap-definitions.html>).
+                    comment: ($native_comment)(e).or_else(|| {
+                        e.extension
+                            .iter()
+                            .find(|x| x.url == ELEMENT_COMMENT)
+                            .and_then(|x| match &x.value {
+                                Some(ExtensionValue::String(s)) => text(s.value.as_deref()),
+                                _ => None,
+                            })
+                    }),
                     targets,
                 })
             }
@@ -334,5 +339,7 @@ macro_rules! convert_concept_map {
 
 convert_concept_map!(r4, r4);
 convert_concept_map!(r4b, r4);
-convert_concept_map!(r5, r5);
-convert_concept_map!(r6, r5);
+convert_concept_map!(r5, r5, |_: &ConceptMapGroupElement| None);
+convert_concept_map!(r6, r5, |e: &ConceptMapGroupElement| text(
+    e.comment.as_ref().and_then(|c| c.value.as_deref()),
+));
