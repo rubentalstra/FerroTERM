@@ -817,8 +817,17 @@ macro_rules! operations {
                     Err(failure) => return failure.into_response(),
                 };
                 finish(
-                    from_body(&state, &CONCEPT_MAP_TRANSLATE, &headers, &body)
-                        .and_then(|(scope, p)| run_translate(&scope, &p)), wire)
+                    // `reverse` reaches `run_translate`, which refuses it with
+                    // the ecosystem's own wording on a version that does not
+                    // declare it; the GET route does the same before decoding.
+                    from_body_accepting(
+                        &state,
+                        &CONCEPT_MAP_TRANSLATE,
+                        &["reverse"],
+                        &headers,
+                        &body,
+                    )
+                    .and_then(|(scope, p)| run_translate(&scope, &p)), wire)
             }
         }
     };
