@@ -8,7 +8,7 @@ use concept_graph::ordinal::Ordinal;
 use roaring::RoaringBitmap;
 
 use super::model::{
-    CHILD, CodeSystemModel, ConceptEntry, DEPRECATED, INACTIVE, NOT_SELECTABLE, PARENT, STATUS,
+    CHILD, CodeSystemModel, ConceptEntry, INACTIVE, NOT_SELECTABLE, PARENT, STATUS,
 };
 use crate::filter::Filter;
 use crate::provider::{
@@ -222,15 +222,11 @@ impl FhirCodeSystem {
                     active = false;
                     reason.get_or_insert_with(|| String::from("inactive"));
                 }
-                (STATUS, PropertyValue::Code(status))
-                    if status == "retired" || status == "deprecated" =>
-                {
+                // NOTE: deprecated is not inactive, so only `retired` is read
+                // here (<https://hl7.org/fhir/R5/codesystem-concept-properties.html>).
+                (STATUS, PropertyValue::Code(status)) if status == "retired" => {
                     active = false;
                     reason.get_or_insert_with(|| status.clone());
-                }
-                (DEPRECATED, PropertyValue::DateTime(when)) => {
-                    active = false;
-                    reason.get_or_insert_with(|| format!("deprecated {when}"));
                 }
                 (code, PropertyValue::Boolean(true)) if self.abstract_property(code) => {
                     abstract_concept = true;

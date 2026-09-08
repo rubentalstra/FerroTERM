@@ -86,6 +86,10 @@ language/language-echo-en-en-vs
 language/language-echo-en-en-vslang
 language/language-echo-en-multi-none
 language/language-echo-en-none
+language/language-xform-de-multi-en-default
+language/language-xform-de-multi-en-soft
+language/language-xform-en-multi-de-default
+language/language-xform-en-multi-de-soft
 language2/validation-right-de-en
 language2/validation-right-de-ende
 language2/validation-right-de-ende-N
@@ -312,6 +316,8 @@ simple-cases/simple-subsumes-transitive
 simple-cases/simple-subsumes-transitive-coding
 simple-cases/simple-subsumes-unrelated
 simple-cases/simple-subsumes-unrelated-coding
+tho/act-class
+tho/act-class-activeonly
 tho/act-exclusion
 tho/subsumes-act-class-cross-branch
 tho/subsumes-act-class-equivalent
