@@ -230,6 +230,10 @@ async fn measure(
     let rss_open_bytes = server.rss();
     let base = format!("http://127.0.0.1:{}/{}", cli.port, config.fhir);
     let client = reqwest::Client::new();
+    if let Err(refused) = served(&client, &base, system).await {
+        server.stop();
+        return Err(refused);
+    }
     let mut latency = Vec::new();
     for request in requests(&base, system) {
         let measured =
@@ -266,6 +270,59 @@ async fn measure(
         comparison: None,
         method: METHOD,
     })
+}
+
+/// Fails unless the running server is serving the system this record is about.
+///
+/// The server refuses an artifact it cannot read, logs the reason, and carries
+/// on serving whatever else it was given. That contract is right for an
+/// operator and wrong here: every timing below would be taken against a system
+/// the server is not serving, and a 404 answered in 200 microseconds is a fast
+/// number about nothing (#493). Nobody reads the log of a green run, so the
+/// run asks instead.
+///
+/// # Errors
+///
+/// When the root answers no `TerminologyCapabilities`, or answers one that
+/// does not declare this system.
+async fn served(client: &reqwest::Client, base: &str, system: &System) -> anyhow::Result<()> {
+    let capabilities: serde_json::Value = client
+        .get(format!("{base}/metadata"))
+        .query(&[("mode", "terminology")])
+        .send()
+        .await
+        .with_context(|| format!("asking {base} what it serves"))?
+        .error_for_status()
+        .with_context(|| format!("{base} answered no TerminologyCapabilities"))?
+        .json()
+        .await
+        .with_context(|| format!("reading what {base} says it serves"))?;
+    let declared: Vec<&str> = capabilities
+        .get("codeSystem")
+        .and_then(serde_json::Value::as_array)
+        .map(|systems| {
+            systems
+                .iter()
+                .filter_map(|entry| entry.get("uri").and_then(serde_json::Value::as_str))
+                .collect()
+        })
+        .unwrap_or_default();
+    if declared.contains(&system.uri.as_str()) {
+        return Ok(());
+    }
+    bail!(
+        "{}: the server read {} and refused it, then carried on. It serves {} and none of \
+         them is {}. Its log says why; a stale store layout is the usual reason. Rebuild the \
+         artifact with ferroterm-build before measuring it.",
+        system.name,
+        system.artifact.display(),
+        if declared.is_empty() {
+            "nothing".to_owned()
+        } else {
+            declared.join(", ")
+        },
+        system.uri,
+    );
 }
 
 /// One request of the fixed set: the operation name, the URL, and the query.
@@ -479,22 +536,49 @@ struct Server {
     child: Child,
     port: u16,
     started: Instant,
+    /// Where the server's own diagnostics went.
+    ///
+    /// A server told to serve an artifact it cannot read says why and exits.
+    /// With those streams discarded the run reported only an exit status, and
+    /// the one sentence naming the artifact and the reason was thrown away
+    /// (#493). They go to a file so a full pipe can never block the child.
+    log: PathBuf,
 }
 
 impl Server {
     fn start(binary: &Path, artifact: &Path, port: u16) -> anyhow::Result<Self> {
+        let log = Path::new("target/bench").join(format!("server-{port}.log"));
+        if let Some(directory) = log.parent() {
+            std::fs::create_dir_all(directory)
+                .with_context(|| format!("cannot make {}", directory.display()))?;
+        }
+        let sink = std::fs::File::create(&log)
+            .with_context(|| format!("cannot write {}", log.display()))?;
+        // Both streams, because `tracing_subscriber` writes to stdout and the
+        // panic hook writes to stderr, and the run wants whichever spoke.
+        let also = sink
+            .try_clone()
+            .with_context(|| format!("cannot write {}", log.display()))?;
         let child = Command::new(binary)
             .env("FERROTERM_INDEX", artifact)
             .env("FERROTERM_LISTEN", format!("127.0.0.1:{port}"))
             .env("FERROTERM_LOG_FORMAT", "json")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stdout(Stdio::from(also))
+            .stderr(Stdio::from(sink))
             .spawn()
             .with_context(|| format!("cannot start {}", binary.display()))?;
         Ok(Self {
             child,
             port,
             started: Instant::now(),
+            log,
+        })
+    }
+
+    /// What the server said before it stopped.
+    fn said(&self) -> String {
+        std::fs::read_to_string(&self.log).unwrap_or_else(|unreadable| {
+            format!("(nothing readable at {}: {unreadable})", self.log.display())
         })
     }
 
@@ -504,7 +588,10 @@ impl Server {
         let url = format!("http://127.0.0.1:{}/health", self.port);
         for _ in 0..600 {
             if let Some(status) = self.child.try_wait()? {
-                bail!("the server exited before it was ready: {status}");
+                bail!(
+                    "the server exited before it was ready ({status}). It said:\n{}",
+                    self.said().trim()
+                );
             }
             if let Ok(response) = client.get(&url).send().await
                 && response.status().is_success()
@@ -513,7 +600,10 @@ impl Server {
             }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        bail!("the server did not answer /health within 60 s")
+        bail!(
+            "the server did not answer /health within 60 s. It said:\n{}",
+            self.said().trim()
+        )
     }
 
     /// The resident set size of the server process, in bytes.

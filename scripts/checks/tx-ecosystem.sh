@@ -138,6 +138,10 @@ if [[ -z "$server" ]]; then
     exit 1
   fi
   echo "tx-ecosystem: serving on 127.0.0.1:$port (pid $started)"
+  # A named artifact the server refused would leave its system unserved and
+  # every case over it failing, which the pass list would then record as the
+  # state of the world (#493).
+  scripts/checks/served-artifacts.sh --server "$server" --index "$index"
 fi
 
 rm -rf "$out"

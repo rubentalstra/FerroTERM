@@ -33,6 +33,11 @@
 # distributes no licensed content (.claude/rules/vendored-inputs.md).
 set -euo pipefail
 
+# Seconds to wait for the started server to answer /health. Generous because it
+# covers reading an edition, and safe because the wait ends the moment the
+# server exits.
+READY_TIMEOUT=${FERROTERM_READY_TIMEOUT:-300}
+
 index=""
 snowstorm=""
 server=""
@@ -76,11 +81,32 @@ if [[ -z "$server" ]]; then
     target/release/ferroterm > "$out.server.log" 2>&1 &
   started=$!
   trap 'kill "$started" 2>/dev/null || true' EXIT
-  for _ in $(seq 1 100); do
-    curl -sf "http://127.0.0.1:8099/health" >/dev/null 2>&1 && break
+  ready=""
+  # The loop used to fall out of its twenty seconds without saying so, and the
+  # run then compared two servers when one of them was not running. Reading an
+  # artifact takes as long as it takes, and a server that dies is noticed at
+  # once rather than at the deadline (#425, #493).
+  for _ in $(seq 1 "$((READY_TIMEOUT * 5))"); do
+    if ! kill -0 "$started" 2>/dev/null; then
+      echo "differential: the server exited before it was ready. It said:" >&2
+      cat "$out.server.log" >&2
+      exit 1
+    fi
+    if curl -sf "http://127.0.0.1:8099/health" >/dev/null 2>&1; then
+      ready=1
+      break
+    fi
     sleep 0.2
   done
+  if [[ -z "$ready" ]]; then
+    echo "differential: the server did not answer /health within ${READY_TIMEOUT}s. It said:" >&2
+    cat "$out.server.log" >&2
+    exit 1
+  fi
   server="http://127.0.0.1:8099/$fhir"
+  # A refused artifact leaves its system unserved, and every difference this
+  # run then reports is a difference from nothing (#493).
+  scripts/checks/served-artifacts.sh --server "$server" --index "$index"
 fi
 
 rm -rf "$out"
