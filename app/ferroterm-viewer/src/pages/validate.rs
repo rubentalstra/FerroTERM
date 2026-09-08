@@ -63,6 +63,7 @@ use crate::routes::VALIDATE_PATH;
 use crate::routes::VERSION_PARAM;
 use crate::routes::system_link;
 use crate::routes::ui_link;
+use crate::styles::SUBMIT;
 use crate::url::RequestUrl;
 
 /// The address parameter carrying which resource type the code is checked in.
@@ -83,9 +84,6 @@ const SUBSUMES_ID_PARAM: &str = "subsumesId";
 
 /// The classes every text control on a form shares.
 const CONTROL: &str = "w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900";
-
-/// The classes a submit button carries.
-const SUBMIT: &str = "inline-flex items-center gap-1.5 rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500";
 
 /// The classes a sentence that states an absence carries.
 const NOTE: &str = "mt-3 text-sm text-slate-600 dark:text-slate-300";

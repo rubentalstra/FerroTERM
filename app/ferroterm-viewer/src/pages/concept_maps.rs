@@ -41,6 +41,7 @@ use crate::listing::pager_view;
 use crate::listing::window;
 use crate::routes::CONCEPT_MAPS_PATH;
 use crate::settings::Settings;
+use crate::styles::SUBMIT;
 
 /// The operation this screen gates its runner on.
 const TRANSLATE: &str = "translate";
@@ -712,10 +713,7 @@ fn runner_form(
                 Signal::derive(move || run.with(|run| run.target_system.clone())),
             )}
             <div class="sm:col-span-2">
-                <button
-                    type="submit"
-                    class="inline-flex items-center gap-1.5 rounded bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 dark:bg-brand-600 dark:hover:bg-brand-500"
-                >
+                <button type="submit" class=SUBMIT>
                     <Icon glyph=icon::CONCEPT_MAPS />
                     "Translate"
                 </button>

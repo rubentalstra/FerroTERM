@@ -7,6 +7,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use thirtyfour::LoggingPrefsLogLevel;
+use thirtyfour::common::keys::TypingData;
 use thirtyfour::prelude::*;
 use thirtyfour::stringmatch::Needle;
 
@@ -219,6 +220,29 @@ impl Journey {
             }
             tokio::time::sleep(POLL).await;
         }
+    }
+
+    /// What one script evaluated to in the page, as the string it returned.
+    ///
+    /// Every other reading here is a WebDriver primitive, because inert markup
+    /// satisfies a source assertion even when the control it describes is
+    /// unreachable. Two things have no primitive: the element focus is on
+    /// after a key press, and the colour a browser actually painted. Both are
+    /// what the accessibility pass measures, so it reads them through a script
+    /// (<https://www.w3.org/TR/webdriver2/#execute-script>) and nothing else
+    /// does.
+    pub async fn evaluate(&self, script: &str) -> WebDriverResult<String> {
+        self.driver.execute(script, Vec::new()).await?.convert()
+    }
+
+    /// Presses tab `times`, the way a keyboard reader walks a screen.
+    ///
+    /// The presses go in one WebDriver call. A walk that read the page back
+    /// after each one spent two round trips per control, and the accessibility
+    /// pass presses tab several hundred times.
+    pub async fn tab(&self, times: usize) -> WebDriverResult<()> {
+        let presses = TypingData::from(Key::Tab).to_string().repeat(times);
+        self.driver.active_element().await?.send_keys(presses).await
     }
 
     /// The address the browser is on.

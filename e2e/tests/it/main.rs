@@ -25,6 +25,7 @@
     reason = "test assertions, and the notice a skipped journey prints"
 )]
 
+mod accessibility;
 mod docs_shots;
 mod harness;
 mod viewer;

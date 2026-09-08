@@ -470,6 +470,12 @@ async fn the_taxonomy_tree_is_walked_by_keyboard_alone() {
             let stop = journey
                 .element(By::Css(TAB_STOP), "the tree's one tab stop")
                 .await;
+            assert_eq!(
+                journey.count(By::Css(TAB_STOP)).await,
+                1,
+                "a tree is one tab stop, however many rows it draws \
+                 (https://www.w3.org/WAI/ARIA/apg/patterns/treeview/)"
+            );
             let row_id = stop
                 .attr("id")
                 .await?
@@ -482,6 +488,7 @@ async fn the_taxonomy_tree_is_walked_by_keyboard_alone() {
                 "the row names the code it draws, and the journey selects by it"
             );
 
+            let closed_rows = journey.count(By::Css(TREE_ROW)).await;
             stop.send_keys(Key::Right).await?;
             let opened = journey
                 .address_carrying(
@@ -527,6 +534,32 @@ async fn the_taxonomy_tree_is_walked_by_keyboard_alone() {
                 journey.count(By::Css(SELECTED_ROW)).await,
                 1,
                 "a tree announces one selected row, so a reader is never told of two"
+            );
+
+            // The left arrow closes the node the right arrow opened, which is
+            // the other half of the pattern's walk. The tree draws the levels
+            // an address names, so the rows going back to what they were is
+            // the node having closed.
+            assert!(
+                journey.count(By::Css(TREE_ROW)).await > closed_rows,
+                "the opened node drew a level, or there is nothing to close again"
+            );
+            journey
+                .element(By::Css(TAB_STOP), "the tab stop before the node is closed")
+                .await
+                .send_keys(Key::Left)
+                .await?;
+            journey
+                .count_becoming(
+                    By::Css(TREE_ROW),
+                    closed_rows,
+                    "the left arrow to close the level the right arrow opened",
+                )
+                .await;
+            assert_eq!(
+                journey.count(By::Css(TAB_STOP)).await,
+                1,
+                "closing a node leaves the tree with one tab stop"
             );
 
             journey.no_console_errors().await;
