@@ -157,7 +157,10 @@ impl OperationError {
     pub const fn issue_code(&self) -> &'static str {
         match self {
             Self::Required(_) => "required",
-            Self::InvalidCode { .. } => "code-invalid",
+            // NOTE: a code the system does not have "was not valid in the
+            // context", where `not-found` is for a reference
+            // (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
+            Self::InvalidCode { .. } | Self::UnknownCode { .. } => "code-invalid",
             Self::Invalid(_) | Self::ValueSetInvalid(_) => "invalid",
             // NOTE: a cycle is a processing failure, "no point resubmitting the
             // same content unchanged" (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
@@ -165,12 +168,8 @@ impl OperationError {
             Self::NotSupported(_) | Self::CannotDetermine(_) | Self::UnsupportedGrammar { .. } => {
                 "not-supported"
             }
-            // NOTE: a refused operation says the reference was not found; the
-            // `code-invalid` of a `$validate-code` issue reports one code inside
-            // an answer (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
             Self::UnknownSystem(_)
             | Self::UnknownVersion { .. }
-            | Self::UnknownCode { .. }
             | Self::UnknownValueSet(_)
             | Self::UnknownImport(_)
             | Self::UnknownSupplement(_)

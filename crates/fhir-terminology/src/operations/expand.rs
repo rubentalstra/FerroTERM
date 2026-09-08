@@ -215,6 +215,7 @@ pub fn expand(
     let options = options(input)?;
     let mut wanted = input.use_supplement.clone();
     wanted.extend(model.supplements.iter().cloned());
+    let used_supplements = sources.registry.applied_supplements(&wanted)?;
     let registry = sources.with_supplements(&wanted)?;
     let sources = &Sources {
         registry: &registry,
@@ -256,7 +257,13 @@ pub fn expand(
         total: expansion.total,
         offset: (input.offset.is_some() || input.count.is_some()).then_some(offset),
         parameters: {
-            let mut out = parameters(input, &expansion, &used_value_sets, &open_systems);
+            let mut out = parameters(
+                input,
+                &expansion,
+                &used_value_sets,
+                &used_supplements,
+                &open_systems,
+            );
             out.extend(warnings(sources, &model, &expansion, &used_value_sets));
             out
         },
@@ -426,6 +433,7 @@ fn parameters(
     input: &ExpandInput,
     expansion: &Expansion,
     used_value_sets: &[String],
+    used_supplements: &[String],
     open_systems: &BTreeSet<String>,
 ) -> Vec<ExpansionParameter> {
     let mut out = Vec::new();
@@ -462,9 +470,6 @@ fn parameters(
     for designation in &input.designation {
         push("designation", ParameterValue::String(designation.clone()));
     }
-    for supplement in &input.use_supplement {
-        push("useSupplement", ParameterValue::Uri(supplement.clone()));
-    }
     // A default and a check supply a version only where the value set names
     // none; a force overrides whatever it names, so it always controls.
     for (name, list) in [
@@ -494,6 +499,12 @@ fn parameters(
             "used-codesystem",
             ParameterValue::Uri(canonical(&used.url, &used.version)),
         );
+    }
+    // NOTE: the supplements an expansion drew on, versioned, the ecosystem's
+    // `used-supplement`; the request's own `useSupplement` need carry no
+    // version (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
+    for used in used_supplements {
+        push("used-supplement", ParameterValue::Uri(used.clone()));
     }
     // NOTE: the fragments an expansion drew on, beside the `used-*` family the
     // ecosystem requires (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>,

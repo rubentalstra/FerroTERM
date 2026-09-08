@@ -168,6 +168,40 @@ impl Registry {
             })
     }
 
+    /// The canonicals, versioned, of the supplements `wanted` names.
+    ///
+    /// A request names a supplement with or without a version, and the answer
+    /// has to say which one it applied, so the resolution is reported rather
+    /// than echoed (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>,
+    /// the `used-*` family).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`UnknownSupplement`] naming the first one no registered
+    /// supplement answers.
+    pub fn applied_supplements(&self, wanted: &[String]) -> Result<Vec<String>, UnknownSupplement> {
+        wanted
+            .iter()
+            .map(|canonical| {
+                let (url, version) = match canonical.split_once('|') {
+                    Some((url, version)) => (url, Some(version)),
+                    None => (canonical.as_str(), None),
+                };
+                let (_, supplement) = self
+                    .supplements
+                    .values()
+                    .find(|(_, s)| {
+                        s.url == url && version.is_none_or(|v| s.version.as_deref() == Some(v))
+                    })
+                    .ok_or_else(|| UnknownSupplement(canonical.clone()))?;
+                Ok(match &supplement.version {
+                    Some(version) => format!("{}|{version}", supplement.url),
+                    None => supplement.url.clone(),
+                })
+            })
+            .collect()
+    }
+
     /// This registry with the dormant supplements `wanted` names (each a `url`
     /// or `url|version` canonical) layered over their systems.
     ///
