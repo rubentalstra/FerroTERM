@@ -906,6 +906,7 @@
             "en"
           ],
           "property": [
+            "alpha2",
             "alpha3",
             "numeric",
             "userAssigned",
@@ -918,7 +919,7 @@
       ]
     }
   ],
-  "date": "2026-09-08T04:45:34.501285Z",
+  "date": "2026-09-08T12:30:42.811872Z",
   "expansion": {
     "hierarchical": false,
     "incomplete": false,

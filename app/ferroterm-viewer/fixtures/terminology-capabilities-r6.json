@@ -905,6 +905,7 @@
             "en"
           ],
           "property": [
+            "alpha2",
             "alpha3",
             "numeric",
             "userAssigned",
@@ -918,7 +919,7 @@
       ]
     }
   ],
-  "date": "2026-09-08T04:45:34.509027Z",
+  "date": "2026-09-08T12:30:42.841127Z",
   "description": "Serves the FHIR R6 ballot (version 6.0.0-ballot5). Every behaviour grounded only in the ballot is re-verified against the published specification when it appears, and may change with it.",
   "expansion": {
     "hierarchical": false,

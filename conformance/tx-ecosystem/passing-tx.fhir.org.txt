@@ -4,6 +4,7 @@ UCUM/ucum-subsumes-canonical
 UCUM/ucum-subsumes-derived
 UCUM/ucum-subsumes-dimensionless
 UCUM/ucum-subsumes-equivalent
+UCUM/ucum-subsumes-invalid-code
 UCUM/ucum-subsumes-offset
 UCUM/ucum-subsumes-same-canonical
 UCUM/ucum-subsumes-scaled
@@ -35,6 +36,7 @@ tx.fhir.org/loinc-expand-prop-method
 tx.fhir.org/loinc-subsumes-child
 tx.fhir.org/loinc-subsumes-equivalent
 tx.fhir.org/loinc-subsumes-parent
+tx.fhir.org/loinc-subsumes-unknown-code
 tx.fhir.org/loinc-subsumes-unrelated
 tx.fhir.org/loinc-validate-answer
 tx.fhir.org/loinc-validate-code
