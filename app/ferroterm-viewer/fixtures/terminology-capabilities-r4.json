@@ -903,7 +903,7 @@
       ]
     }
   ],
-  "date": "2026-09-08T12:30:42.762995Z",
+  "date": "2026-09-08T13:51:18.835642Z",
   "expansion": {
     "hierarchical": false,
     "incomplete": false,
@@ -971,9 +971,9 @@
   "resourceType": "TerminologyCapabilities",
   "software": {
     "name": "FerroTERM",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "status": "active",
   "title": "FerroTERM terminology capabilities (R4)",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
