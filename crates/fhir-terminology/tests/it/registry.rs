@@ -32,9 +32,11 @@ fn unknown_systems_versions_and_duplicates_are_typed_errors() {
     );
     assert_eq!(
         registry.resolve(URL, Some("1999")).err(),
+        // The error names the versions that would have worked, in order.
         Some(ResolveError::UnknownVersion {
             url: String::from(URL),
             version: String::from("1999"),
+            available: vec![String::from("2024"), String::from("2025")],
         })
     );
     assert_eq!(
@@ -42,6 +44,7 @@ fn unknown_systems_versions_and_duplicates_are_typed_errors() {
         Some(ResolveError::UnknownVersion {
             url: String::from(FLAT_URL),
             version: String::from("2"),
+            available: vec![String::from("1")],
         })
     );
     assert_eq!(

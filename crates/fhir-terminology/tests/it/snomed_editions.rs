@@ -218,6 +218,7 @@ fn an_edition_no_provider_serves_is_not_found() {
             Err(OperationError::UnknownVersion {
                 url: system,
                 version,
+                ..
             }) => {
                 assert_eq!(system, SYSTEM);
                 assert_eq!(version, missing);

@@ -120,7 +120,7 @@ impl<'a> Resolver<'a> {
                 .ok_or_else(|| ComposeError::UnknownValueSet(url.to_owned()))?;
             self.note_open_systems(&model.compose);
             return match self.negotiation {
-                Some(negotiation) => Ok(negotiation.pin(&model.compose)?),
+                Some(negotiation) => Ok(negotiation.pin_lenient(&model.compose)),
                 None => Ok(model.compose.clone()),
             };
         }
@@ -139,7 +139,7 @@ impl<'a> Resolver<'a> {
             self.used.borrow_mut().push(canonical);
             self.note_open_systems(&model.compose);
             return Ok(match self.negotiation {
-                Some(negotiation) => negotiation.pin(&model.compose)?,
+                Some(negotiation) => negotiation.pin_lenient(&model.compose),
                 None => model.compose.clone(),
             });
         }
@@ -147,7 +147,7 @@ impl<'a> Resolver<'a> {
             Some(Ok(compose)) => {
                 self.note_open_systems(&compose);
                 Ok(match self.negotiation {
-                    Some(negotiation) => negotiation.pin(&compose)?,
+                    Some(negotiation) => negotiation.pin_lenient(&compose),
                     None => compose,
                 })
             }

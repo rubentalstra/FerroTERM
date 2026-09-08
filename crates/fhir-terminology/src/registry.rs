@@ -19,6 +19,12 @@ pub enum ResolveError {
         url: String,
         /// The version asked for.
         version: String,
+        /// The versions the registry does hold for the system, in order.
+        ///
+        /// An answer that says a version is unknown and not which ones exist
+        /// leaves the caller guessing; the ecosystem's own wording names them
+        /// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
+        available: Vec<String>,
     },
 }
 
@@ -261,6 +267,7 @@ impl Registry {
             return Err(ResolveError::UnknownVersion {
                 url: url.to_owned(),
                 version: version.to_owned(),
+                available: system.versions.keys().cloned().collect(),
             });
         }
         system.default = Some(version.to_owned());
@@ -309,6 +316,7 @@ impl Registry {
                 .ok_or_else(|| ResolveError::UnknownVersion {
                     url: url.to_owned(),
                     version: wanted.to_owned(),
+                    available: system.versions.keys().cloned().collect(),
                 })?;
         Ok(Resolved {
             provider: Arc::clone(provider),

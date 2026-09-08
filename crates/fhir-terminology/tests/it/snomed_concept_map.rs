@@ -330,7 +330,7 @@ fn an_unknown_reference_set_is_not_found_and_a_malformed_one_is_invalid() {
                 &world.sources(),
                 &input("http://snomed.info/sct/999?fhir_cm=900000000000527005")
             ),
-            Err(OperationError::UnknownVersion { ref url, ref version })
+            Err(OperationError::UnknownVersion { ref url, ref version, .. })
                 if url == SYSTEM && version == "http://snomed.info/sct/999"
         ),
         "an edition the server does not serve is not found"
