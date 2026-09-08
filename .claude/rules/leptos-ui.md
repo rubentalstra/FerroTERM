@@ -22,9 +22,12 @@ split do not apply here, and a rule reintroducing one is wrong.
 - **Rust only, zero hand-written JavaScript.** No authored `.js` files, no
   inline `<script>` bodies, no HTML `onxxx="..."` attributes carrying JS
   strings. Use an `on:` Rust listener. JS-wrapping crates (ECharts, Plotly
-  bindings) are banned; charts are `leptos-chartistry`, which is pure Rust and
-  SVG. The only JavaScript in the product is the `wasm-bindgen` bootstrap the
-  toolchain generates.
+  bindings) are banned; a chart is drawn in Rust, as SVG or as a sized
+  element. `leptos-chartistry` was the pinned pure-Rust answer until it was
+  weighed at 132,228 gzipped bytes for one bar chart (`docs/viewer.md`
+  section 3), so a screen that wants a chart draws it and justifies any
+  charting dependency against a measured bundle cost. The only JavaScript in
+  the product is the `wasm-bindgen` bootstrap the toolchain generates.
 - **The viewer is a FHIR client and nothing else.** It reaches FerroTERM only
   over the FHIR API, from the browser, same-origin. It depends on **no**
   workspace crate: not `fhir-terminology`, not `concept-graph`, not

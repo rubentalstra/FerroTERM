@@ -180,7 +180,6 @@ creates the crate adds them, and re-checks each one at that moment.
 | `leptos_meta` | 0.8.6 | `<Title>` and document head from component bodies |
 | `leptos_router` | 0.8.15 | client-side routing, URL as state |
 | `leptos-use` | 0.19.2 | isomorphic helpers (`use_interval_fn`, storage) |
-| `leptos-chartistry` | 0.2.3 | pure-Rust SVG charts, no JavaScript |
 | `gloo-net` | 0.7.0 | the browser fetch client |
 | `wasm-bindgen` | 0.2.128 | the generated bootstrap |
 | `console_error_panic_hook` | 0.1.7 | real stack traces in the browser console |
@@ -204,6 +203,19 @@ Notes on four of these, each verified rather than assumed:
   and takes no class prop, so a decorative glyph needs an `aria-hidden` spread
   over a role the component insists on, and sizing goes through `width` and
   `height` props instead of the Tailwind scale the rest of the viewer uses.
+- **There is no charting library.** `leptos-chartistry` 0.2.3 was pinned here
+  as the pure-Rust SVG answer to the no-JavaScript mandate, and nothing had
+  weighed it. The evidence screen (#414) weighed it: the same tree, the same
+  `wasm-release` profile, one three-row two-series bar chart added and nothing
+  else, on one host. The `.wasm` went from 451,872 to 584,100 gzipped, so the
+  crate costs **132,228 gzipped bytes**, and the bootstrap grew 1,157 with it.
+  That is a quarter of the whole ceiling for one dependency, and more than the
+  finished viewer's other nine screens together. It also fits the screen
+  badly: its axes are numeric, and every figure the evidence screen draws is
+  named rather than numbered. So the screen draws no chart widget. Its figures
+  are tables, and a proportional bar sits in the cell beside each number, drawn
+  as a `<span>` whose width is a percentage and hidden from assistive
+  technology, because the number it draws is already text in the same cell.
 - **There is no component library.** The viewer used `thaw` for three widgets,
   a button, a spinner, and the config provider that themed them, and paid
   36,894 gzipped bytes for the whole library (§12, the bundle bar). Those three
@@ -309,9 +321,13 @@ is a screen requirement.
 3. **The conformance and benchmark figures the repository commits.** The
    tx-ecosystem pass lists under `conformance/tx-ecosystem/` and the latency
    claims in `bench/bars.json` with the runs under `bench/records/` are facts
-   about the build, not about the running deployment. They ship as static JSON
-   emitted from those committed files at build time, stamped with the release
-   version, and the screen says plainly that they describe this build.
+   about the build, not about the running deployment. The crate's build script
+   reads those committed files and writes the constant the bundle carries,
+   stamped with the release version, and the screen says plainly that they
+   describe this build. The script checks the pass lists against the mode table
+   that records what each run covered, and stops the build with a
+   `compile_error!` when they disagree or a file does not read, so no figure
+   ships without a source.
 
 ## 7. Accessibility
 
@@ -363,7 +379,7 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | 6 | Concept maps and `$translate` | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read; `ConceptMap/$translate` with source, target, and the returned `match` list with equivalences |
 | 7 | Validate and subsume | `/ui/validate` | `CodeSystem/$validate-code`, `ValueSet/$validate-code`, `CodeSystem/$subsumes`; renders the `OperationOutcome` verbatim on refusal |
 | 8 | FHIR versions | `/ui/versions` | the four `CapabilityStatement`s side by side: `fhirVersion`, the operations each resource declares, and the differences between them |
-| 9 | Evidence | `/ui/evidence` | the static conformance and benchmark JSON emitted at build time |
+| 9 | Evidence | `/ui/evidence` | the conformance and benchmark figures its build script read out of the committed files |
 | 10 | Settings | `/ui/settings` | the FHIR base in use, the display language, page size, theme. `localStorage` only, per viewer |
 
 **The screens are reached from a left sidebar.** The sidebar is a `const` table
@@ -558,10 +574,19 @@ today is breached by honest work next week. The two jobs are split:
   | the four versions side by side, the evidence screen, the accessibility pass | about 90,000 together |
   | projected finish | about 490,000 |
 
-  540,000 carries that with room for the one unmeasured thing ahead:
-  `leptos-chartistry`, which the evidence screen (#414) will pull in and which
-  nothing has weighed. **Re-derive this number when that screen lands**, since
-  it is the last guess in it.
+  540,000 carried that with room for the one unmeasured thing ahead:
+  `leptos-chartistry`, which the evidence screen (#414) was expected to pull
+  in and which nothing had weighed.
+
+  **That guess is now resolved.** Section 3 records the measurement: the crate
+  costs 132,228 gzipped bytes, so the evidence screen refused it and draws its
+  figures as tables with a proportional bar in the cell. The last screen of the
+  inventory has now landed, so the ceiling no longer carries an unknown, and
+  the arithmetic that set it can be replaced by measurement. The owner sets the
+  number; the figures a re-derivation needs are the recorded
+  `measured_gzip_bytes` on `main` and the growth of the accessibility pass
+  (#415), which is a sweep over screens that already exist rather than a new
+  one.
 
   The viewer is an operator tool served from the host it browses, its assets are
   content-hashed and cached immutably, and a reader downloads it once.

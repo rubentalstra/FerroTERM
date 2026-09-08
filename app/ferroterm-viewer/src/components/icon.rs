@@ -8,7 +8,7 @@
 //! one it read before.
 //!
 //! The shapes are written here rather than pulled from an icon crate. The
-//! whole set is twenty-two stroked outlines, and `docs/viewer.md` section 3
+//! whole set is twenty-three stroked outlines, and `docs/viewer.md` section 3
 //! records what each answer measured.
 
 use leptos::prelude::*;
@@ -92,6 +92,14 @@ pub(crate) const FAILURE: Glyph = Glyph(concat!(
 pub(crate) const VALIDATE: Glyph = Glyph(concat!(
     r#"<path d="M12 3 4 6v6c0 4.5 3.2 7.9 8 9 4.8-1.1 8-4.5 8-9V6Z"/>"#,
     r#"<path d="m9 12 2 2 4-4"/>"#,
+));
+
+/// Three columns on a baseline: the figures this build measured.
+pub(crate) const EVIDENCE: Glyph = Glyph(concat!(
+    r#"<path d="M4 20h16"/>"#,
+    r#"<rect x="6" y="12" width="3" height="5" rx="1"/>"#,
+    r#"<rect x="11" y="8" width="3" height="9" rx="1"/>"#,
+    r#"<rect x="16" y="4" width="3" height="13" rx="1"/>"#,
 ));
 
 /// An `i` in a circle: something worth knowing about what is on screen.
@@ -189,7 +197,7 @@ mod tests {
     use super::*;
 
     /// Every glyph the screens draw, so a new one is checked by adding it here.
-    const ALL: [Glyph; 22] = [
+    const ALL: [Glyph; 23] = [
         OVERVIEW,
         BROWSE,
         EXPAND,
@@ -201,6 +209,7 @@ mod tests {
         UNREACHABLE,
         FAILURE,
         VALIDATE,
+        EVIDENCE,
         NOTICE,
         PAGE_FIRST,
         PAGE_PREVIOUS,

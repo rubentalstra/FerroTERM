@@ -33,6 +33,9 @@ pub(crate) const CONCEPT_MAPS_PATH: &str = "conceptmaps";
 /// The version comparison screen's path below the base.
 pub(crate) const VERSIONS_PATH: &str = "versions";
 
+/// The evidence screen's path below the base.
+pub(crate) const EVIDENCE_PATH: &str = "evidence";
+
 /// The settings screen's path below the base.
 pub(crate) const SETTINGS_PATH: &str = "settings";
 
@@ -131,6 +134,7 @@ pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
         Some(VALUE_SETS_PATH) => Some(VALUE_SETS_PATH),
         Some(CONCEPT_MAPS_PATH) => Some(CONCEPT_MAPS_PATH),
         Some(VERSIONS_PATH) => Some(VERSIONS_PATH),
+        Some(EVIDENCE_PATH) => Some(EVIDENCE_PATH),
         Some(SETTINGS_PATH) => Some(SETTINGS_PATH),
         Some(_unlisted) => None,
     }
@@ -276,6 +280,7 @@ mod tests {
         assert_eq!(nav_section("/ui/valuesets"), Some(VALUE_SETS_PATH));
         assert_eq!(nav_section("/ui/conceptmaps"), Some(CONCEPT_MAPS_PATH));
         assert_eq!(nav_section("/ui/versions"), Some(VERSIONS_PATH));
+        assert_eq!(nav_section("/ui/evidence"), Some(EVIDENCE_PATH));
         assert_eq!(nav_section("/ui/settings"), Some(SETTINGS_PATH));
     }
 
