@@ -28,7 +28,7 @@ The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration,
 so the first call needs nothing beyond Docker:
 
 ```console
-$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.1.0
+$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.1.1
 $ curl 'http://localhost:8080/r4b/CodeSystem/$lookup?system=http://unitsofmeasure.org&code=mg/dL'
 ```
 

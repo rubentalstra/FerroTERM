@@ -118,6 +118,27 @@ else
   note "no Cargo.toml yet — skipped"
 fi
 
+# --- Every command that names the release names the current one ---------------
+# The check above matches a bare version anywhere, so it stays on 0.0.x: a
+# sentence may name an older release on purpose (an audit of v0.1.0, "what
+# stable means in v0.1.0"), and a dependency has a version of its own. A
+# command a reader is meant to run is different: an image tag, a release
+# download, or an attestation over a named asset all claim to be the current
+# release, and a stale one sends the reader to the wrong artifact.
+echo "== release-naming commands (README, docs, book, compose <-> Cargo.toml)"
+if [[ -n "${current:-}" ]]; then
+  named=0
+  while IFS= read -r hit; do
+    [[ -n "$hit" ]] || continue
+    bad "names release ${hit##*:} where the current one is $current at ${hit%:*}"
+    named=1
+  done < <(git grep -n -o -E "(ferroterm:|ferroterm-v|release download v)0\.[0-9]+\.[0-9]+" \
+    -- README.md compose.yaml docs website/landing website/book/src \
+    | sed -E "s/^([^:]+:[0-9]+):.*[^0-9.]([0-9]+\.[0-9]+\.[0-9]+)$/\1:\2/" \
+    | grep -v ":${current}$" || true)
+  [[ "$named" -eq 0 ]] && note "OK: every image tag, download, and attestation names $current"
+fi
+
 # --- The vendored ECL grammar tag == docs/VERSIONS.md ECL pin ------------------
 echo "== vendored ECL grammar (PROVENANCE.md <-> docs/VERSIONS.md)"
 ecl_prov="crates/sct-ecl/vendor/PROVENANCE.md"
