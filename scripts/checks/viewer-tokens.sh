@@ -56,6 +56,14 @@ report "a screen uses a class Tailwind 4 renamed" \
   "wrap-break-word" \
   "$(grep -rnE '\bbreak-words\b' --include='*.rs' "$SOURCE_DIR" || true)"
 
+# Margin, padding and gap come from the four steps and nothing between them, so
+# the rhythm of one screen is the rhythm of every screen. Sizes (h-4, w-56,
+# max-w-md) are not spacing and are left alone.
+spacing='(m|p|mt|mr|mb|ml|mx|my|pt|pr|pb|pl|px|py|gap|gap-x|gap-y|space-x|space-y)'
+report "a screen names a spacing value off the scale" \
+  "a step: tight, default, loose, section" \
+  "$(grep -rnE "\b$spacing-([0-9]|\[)" --include='*.rs' "$SOURCE_DIR" || true)"
+
 if [[ $failures -gt 0 ]]; then
   echo "viewer-tokens: $failures rule(s) broken."
   exit 1

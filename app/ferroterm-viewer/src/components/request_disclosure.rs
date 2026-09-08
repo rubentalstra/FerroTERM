@@ -47,20 +47,22 @@ pub(crate) fn RequestDisclosure(
     // and would instantiate this subtree twice.
     let sent_line = body.is_some().then(|| {
         view! {
-            <dt class="mt-1 font-medium">"Body"</dt>
+            <dt class="mt-tight font-medium">"Body"</dt>
             <dd>
-                <code class="block rounded-md bg-inset p-2 wrap-break-word text-fg">{sent}</code>
+                <code class="block rounded-md bg-inset p-default wrap-break-word text-fg">
+                    {sent}
+                </code>
             </dd>
         }
         .into_any()
     });
     let open_line = body.is_none().then(|| {
         view! {
-            <p class="mt-2">
+            <p class="mt-default">
                 <a
                     href=move || url.get()
                     rel="external"
-                    class="inline-flex items-center gap-1 text-accent underline"
+                    class="inline-flex items-center gap-tight text-accent underline"
                 >
                     "Open the answer in this browser"
                     <Icon glyph=icon::EXTERNAL class="h-3.5 w-3.5" />
@@ -70,23 +72,25 @@ pub(crate) fn RequestDisclosure(
         .into_any()
     });
     view! {
-        <details class="mt-4 rounded-md border border-line text-small">
-            <summary class="cursor-pointer px-3 py-2 font-medium text-muted">{summary}</summary>
-            <div class="border-t border-line px-3 py-2">
+        <details class="mt-loose rounded-md border border-line text-small">
+            <summary class="cursor-pointer px-default py-default font-medium text-muted">
+                {summary}
+            </summary>
+            <div class="border-t border-line px-default py-default">
                 <p class="text-muted">
                     "Select a line to copy it. Each one reaches the same public API this page uses."
                 </p>
-                <dl class="mt-2 grid gap-1">
+                <dl class="mt-default grid gap-tight">
                     <dt class="font-medium">"URL"</dt>
                     <dd>
-                        <code class="block rounded-md bg-inset p-2 wrap-break-word text-fg">
+                        <code class="block rounded-md bg-inset p-default wrap-break-word text-fg">
                             {url}
                         </code>
                     </dd>
                     {sent_line}
-                    <dt class="mt-1 font-medium">"curl"</dt>
+                    <dt class="mt-tight font-medium">"curl"</dt>
                     <dd>
-                        <code class="block rounded-md bg-inset p-2 wrap-break-word text-fg">
+                        <code class="block rounded-md bg-inset p-default wrap-break-word text-fg">
                             {curl}
                         </code>
                     </dd>

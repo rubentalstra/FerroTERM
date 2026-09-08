@@ -89,7 +89,7 @@ const ID_PARAM: &str = "id";
 const SUBSUMES_ID_PARAM: &str = "subsumesId";
 
 /// The classes a sentence that states an absence carries.
-const NOTE: &str = "mt-3 text-body text-muted";
+const NOTE: &str = "mt-default text-body text-muted";
 
 /// Runs `$validate-code` and `$subsumes`, and renders what the server answers.
 ///
@@ -404,7 +404,7 @@ fn root_section(
     };
 
     view! {
-        <section class="mt-6" aria-labelledby="validate-root-heading">
+        <section class="mt-loose" aria-labelledby="validate-root-heading">
             <h2 id="validate-root-heading" class=styles::SECTION_TITLE>
                 "The code system this screen works over"
             </h2>
@@ -424,7 +424,7 @@ fn root_section(
                         } else {
                             let target = system_link(&params.system, version.get());
                             view! {
-                                <p class="mt-1 text-body break-all">
+                                <p class="mt-tight text-body break-all">
                                     <a href=target class=styles::LINK>
                                         {params.system.clone()}
                                     </a>
@@ -477,7 +477,7 @@ fn system_view(declared: &Declared) -> AnyView {
         ),
     };
     view! {
-        <p class="mt-2 font-mono text-body break-all">{code}</p>
+        <p class="mt-default font-mono text-body break-all">{code}</p>
         <p class=styles::LEAD>{subsumption}</p>
         <p class=styles::LEAD>{hierarchy}</p>
     }
@@ -539,7 +539,7 @@ fn validate_section(
         let form = validate_form(params, version, declared, offered);
         view! {
             {form}
-            <p aria-live="polite" class="mt-3 text-body text-muted">
+            <p aria-live="polite" class="mt-default text-body text-muted">
                 {announcement}
             </p>
             <Reading label="Running the validation">
@@ -566,7 +566,7 @@ fn validate_section(
     };
 
     view! {
-        <section class="mt-8" aria-labelledby="validate-heading">
+        <section class="mt-section" aria-labelledby="validate-heading">
             <h2 id="validate-heading" class=styles::SECTION_TITLE>
                 "$validate-code"
             </h2>
@@ -623,7 +623,7 @@ fn validate_form(
     };
 
     view! {
-        <form class="mt-4 grid gap-5" on:submit=submit>
+        <form class="mt-loose grid gap-loose" on:submit=submit>
             {target_group(
                 params,
                 version,
@@ -636,7 +636,7 @@ fn validate_form(
                 id,
             )}
             {code_group(params, code, display, language)}
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-default">
                 <button type="submit" class=styles::SUBMIT>
                     <Icon glyph=icon::VALIDATE />
                     "Run the validation"
@@ -902,7 +902,7 @@ fn subsumes_section(
         let form = subsumes_form(params, version, offered);
         view! {
             {form}
-            <p aria-live="polite" class="mt-3 text-body text-muted">
+            <p aria-live="polite" class="mt-default text-body text-muted">
                 {announcement}
             </p>
             <Reading label="Running the subsumption test">
@@ -929,7 +929,7 @@ fn subsumes_section(
     };
 
     view! {
-        <section class="mt-8" aria-labelledby="subsumes-heading">
+        <section class="mt-section" aria-labelledby="subsumes-heading">
             <h2 id="subsumes-heading" class=styles::SECTION_TITLE>
                 "$subsumes"
             </h2>
@@ -1021,9 +1021,9 @@ fn subsumes_form(
     );
 
     view! {
-        <form class="mt-4 grid gap-5" on:submit=submit>
+        <form class="mt-loose grid gap-loose" on:submit=submit>
             {codes}
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-default">
                 <button type="submit" class=styles::SUBMIT>
                     <Icon glyph=icon::BROWSE />
                     "Run the subsumption test"
@@ -1045,7 +1045,7 @@ fn validation_view(read: &Validation) -> AnyView {
     let message = read
         .message
         .clone()
-        .map(|message| view! { <p class="mt-2 text-body">{message}</p> }.into_any());
+        .map(|message| view! { <p class="mt-default text-body">{message}</p> }.into_any());
     let facts: Vec<AnyView> = [
         ("Code", read.code.clone()),
         ("Code as the system spells it", read.normalized_code.clone()),
@@ -1064,17 +1064,17 @@ fn validation_view(read: &Validation) -> AnyView {
     .collect();
     let inactive = (read.inactive == Some(true)).then(|| {
         view! {
-            <p role="note" class=format!("mt-3 rounded-md p-3 {}", styles::NOTICE)>
+            <p role="note" class=format!("mt-default rounded-md p-default {}", styles::NOTICE)>
                 "This concept is inactive in its code system. The server served it and marked it, which is an answer rather than a refusal."
             </p>
         }
         .into_any()
     });
     view! {
-        <p class="mt-3 text-body font-semibold">{verdict}</p>
+        <p class="mt-default text-body font-semibold">{verdict}</p>
         {message}
         {inactive}
-        <dl class="mt-3 grid gap-1 text-body sm:grid-cols-[16rem_1fr]">{facts}</dl>
+        <dl class="mt-default grid gap-tight text-body sm:grid-cols-[16rem_1fr]">{facts}</dl>
         {concept_view(read)}
         {unknown_systems_view(&read.unknown_systems)}
         {issues_view(&read.issues)}
@@ -1115,10 +1115,10 @@ fn concept_view(read: &Validation) -> AnyView {
         })
         .collect();
     view! {
-        <div class="mt-3 text-body">
+        <div class="mt-default text-body">
             <p class="font-medium">"The concept the server echoed"</p>
-            <p class="mt-1">"Text: " {text}</p>
-            <ul class="mt-1 ml-4 list-disc">{codings}</ul>
+            <p class="mt-tight">"Text: " {text}</p>
+            <ul class="mt-tight ml-loose list-disc">{codings}</ul>
         </div>
     }
     .into_any()
@@ -1134,9 +1134,9 @@ fn unknown_systems_view(systems: &[String]) -> AnyView {
         .map(|system| view! { <li class="font-mono break-all">{system.clone()}</li> }.into_any())
         .collect();
     view! {
-        <div class="mt-3 text-body">
+        <div class="mt-default text-body">
             <p class="font-medium">"Code systems this server does not hold"</p>
-            <ul class="mt-1 ml-4 list-disc">{listed}</ul>
+            <ul class="mt-tight ml-loose list-disc">{listed}</ul>
         </div>
     }
     .into_any()
@@ -1149,9 +1149,9 @@ fn issues_view(issues: &[ValidationIssue]) -> AnyView {
     }
     let lines: Vec<AnyView> = issues.iter().map(issue_view).collect();
     view! {
-        <div class="mt-4 rounded-md border border-line-strong p-3">
+        <div class="mt-loose rounded-md border border-line-strong p-default">
             <p class="text-body font-medium">"The issues the server itemised"</p>
-            <ul class="mt-2 space-y-2">{lines}</ul>
+            <ul class="mt-default space-y-default">{lines}</ul>
         </div>
     }
     .into_any()
@@ -1173,7 +1173,7 @@ fn issue_view(issue: &ValidationIssue) -> AnyView {
                 format!(" from {}", coding.system)
             };
             view! {
-                <span class="mr-2 rounded bg-inset px-1.5 py-0.5 font-mono text-micro text-fg">
+                <span class="mr-default rounded bg-inset px-tight py-tight font-mono text-micro text-fg">
                     {coding.code.clone()}
                 </span>
                 <span class="text-small break-all text-muted">{system}</span>
@@ -1193,7 +1193,7 @@ fn issue_view(issue: &ValidationIssue) -> AnyView {
     };
     let expressions = (!issue.expressions.is_empty()).then(|| {
         let paths = issue.expressions.join(", ");
-        view! { <p class="mt-1 font-mono text-small break-all text-muted">"at " {paths}</p> }
+        view! { <p class="mt-tight font-mono text-small break-all text-muted">"at " {paths}</p> }
             .into_any()
     });
     let severity = issue.severity.clone();
@@ -1201,8 +1201,8 @@ fn issue_view(issue: &ValidationIssue) -> AnyView {
     let text = issue.text.clone();
     view! {
         <li class="text-body">
-            {stated} <p class="mt-1">{text}</p>
-            <p class="mt-1 text-small text-muted">
+            {stated} <p class="mt-tight">{text}</p>
+            <p class="mt-tight text-small text-muted">
                 "severity " <span class="font-mono">{severity}</span> ", issue.code "
                 <span class="font-mono">{issue_code}</span>
             </p> {expressions}
@@ -1220,8 +1220,8 @@ fn outcome_view(answer: &ParametersAnswer, code_a: &str, code_b: &str) -> AnyVie
     };
     let sentence = subsumption_sentence(&outcome, code_a, code_b);
     view! {
-        <p class="mt-3 font-mono text-body font-semibold break-all">{outcome}</p>
-        <p class="mt-1 text-body">{sentence}</p>
+        <p class="mt-default font-mono text-body font-semibold break-all">{outcome}</p>
+        <p class="mt-tight text-body">{sentence}</p>
     }
     .into_any()
 }
@@ -1253,7 +1253,7 @@ fn note(text: &'static str) -> AnyView {
 fn failure_view(error: &FhirError) -> AnyView {
     let error = error.clone();
     view! {
-        <div class="mt-3">
+        <div class="mt-default">
             <Failure error=Signal::stored(error) />
         </div>
     }

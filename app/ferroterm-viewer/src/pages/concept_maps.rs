@@ -236,11 +236,11 @@ fn list_section(
     });
 
     view! {
-        <section class="mt-8" aria-labelledby="conceptmaps-heading">
+        <section class="mt-section" aria-labelledby="conceptmaps-heading">
             <h2 id="conceptmaps-heading" class=styles::SECTION_TITLE>
                 "What this root holds"
             </h2>
-            <p aria-live="polite" class="mt-2 text-body text-muted">
+            <p aria-live="polite" class="mt-default text-body text-muted">
                 {announcement}
             </p>
             <Reading label="Reading the concept maps">
@@ -275,7 +275,7 @@ fn list_view(
     let resources = found.found();
     if resources.is_empty() {
         return view! {
-            <p class="mt-3 text-body text-muted">
+            <p class="mt-default text-body text-muted">
                 "This root holds no ConceptMap resource matching the filter above. The runner below still works: a server may translate through a map it holds without publishing it as a resource."
             </p>
         }
@@ -301,20 +301,20 @@ fn list_view(
         &extra,
     );
     view! {
-        <div class="mt-3 overflow-x-auto">
+        <div class="mt-default overflow-x-auto">
             <table class="w-full border-collapse text-left text-body">
                 <thead>
                     <tr class="border-b border-line-strong">
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             "Canonical"
                         </th>
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             "Version"
                         </th>
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             "Title"
                         </th>
-                        <th scope="col" class="py-2 font-medium">
+                        <th scope="col" class="py-default font-medium">
                             "Status"
                         </th>
                     </tr>
@@ -343,14 +343,19 @@ fn row_view(
     );
     view! {
         <tr class="border-b border-line align-top">
-            <th scope="row" class="py-2 pr-3 font-mono text-small font-normal break-all">
+            <th
+                scope="row"
+                class="py-default pr-default font-mono text-small font-normal break-all"
+            >
                 {heading}
             </th>
-            <td class="py-2 pr-3 font-mono text-small">
+            <td class="py-default pr-default font-mono text-small">
                 {resource.version().unwrap_or(NOT_DECLARED).to_owned()}
             </td>
-            <td class="py-2 pr-3">{resource.label().unwrap_or(NOT_DECLARED).to_owned()}</td>
-            <td class="py-2">{resource.status().unwrap_or(NOT_DECLARED).to_owned()}</td>
+            <td class="py-default pr-default">
+                {resource.label().unwrap_or(NOT_DECLARED).to_owned()}
+            </td>
+            <td class="py-default">{resource.status().unwrap_or(NOT_DECLARED).to_owned()}</td>
         </tr>
     }
     .into_any()
@@ -384,7 +389,7 @@ fn detail_section(
 
     view! {
         <Show when=move || id.with(|id| !id.is_empty()) fallback=|| ()>
-            <section class="mt-8" aria-labelledby="conceptmap-detail-heading">
+            <section class="mt-section" aria-labelledby="conceptmap-detail-heading">
                 <h2 id="conceptmap-detail-heading" class=styles::SECTION_TITLE>
                     "The concept map you opened"
                 </h2>
@@ -427,7 +432,7 @@ fn resource_view(
         .map(|fact| {
             let value = fact.value.unwrap_or_else(|| NOT_DECLARED.to_owned());
             view! {
-                <div class="grid gap-1 border-b border-line py-1 last:border-0 sm:grid-cols-[16rem_1fr]">
+                <div class="grid gap-tight border-b border-line py-tight last:border-0 sm:grid-cols-[16rem_1fr]">
                     <dt class="font-medium">{fact.label}</dt>
                     <dd class="wrap-break-word">{value}</dd>
                 </div>
@@ -441,7 +446,7 @@ fn resource_view(
     let prefill = resource.url().map_or_else(
         || {
             view! {
-                <p class="mt-3 text-body text-muted">
+                <p class="mt-default text-body text-muted">
                     "This resource declares no canonical, so there is no url to name it by in a run."
                 </p>
             }
@@ -456,7 +461,7 @@ fn resource_view(
             };
             let href = address(params, &filled, version);
             view! {
-                <p class="mt-3">
+                <p class="mt-default">
                     <a href=href class="text-accent underline">
                         "Translate with this concept map"
                     </a>
@@ -467,10 +472,10 @@ fn resource_view(
     );
     let groups = groups_view(&resource.groups());
     view! {
-        <article class=format!("mt-3 panel-p {}", styles::PANEL)>
+        <article class=format!("mt-default panel-p {}", styles::PANEL)>
             <h3 class="font-mono text-body font-semibold break-all">{heading}</h3>
             {prefill}
-            <dl class="mt-3 text-body">{rows}</dl>
+            <dl class="mt-default text-body">{rows}</dl>
             {groups}
         </article>
     }
@@ -481,7 +486,7 @@ fn resource_view(
 fn groups_view(groups: &[GroupRow]) -> AnyView {
     if groups.is_empty() {
         return view! {
-            <p class="mt-3 text-body text-muted">
+            <p class="mt-default text-body text-muted">
                 "This resource declares no group, so what it maps is whatever the server holds for it rather than a table written here."
             </p>
         }
@@ -492,33 +497,36 @@ fn groups_view(groups: &[GroupRow]) -> AnyView {
         .map(|group| {
             view! {
                 <tr class="border-b border-line align-top last:border-0">
-                    <th scope="row" class="py-1 pr-3 font-mono text-small font-normal break-all">
+                    <th
+                        scope="row"
+                        class="py-tight pr-default font-mono text-small font-normal break-all"
+                    >
                         {group.source.clone().unwrap_or_else(|| NOT_DECLARED.to_owned())}
                     </th>
-                    <td class="py-1 pr-3 font-mono text-small break-all">
+                    <td class="py-tight pr-default font-mono text-small break-all">
                         {group.target.clone().unwrap_or_else(|| NOT_DECLARED.to_owned())}
                     </td>
-                    <td class="py-1 text-small">{group.elements.to_string()}</td>
+                    <td class="py-tight text-small">{group.elements.to_string()}</td>
                 </tr>
             }
             .into_any()
         })
         .collect();
     view! {
-        <div class="mt-4 overflow-x-auto">
+        <div class="mt-loose overflow-x-auto">
             <table class="w-full border-collapse text-left text-body">
-                <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
+                <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
                     "What the map maps"
                 </caption>
                 <thead>
                     <tr class="border-b border-line">
-                        <th scope="col" class="py-1 pr-3 text-small font-medium">
+                        <th scope="col" class="py-tight pr-default text-small font-medium">
                             "From"
                         </th>
-                        <th scope="col" class="py-1 pr-3 text-small font-medium">
+                        <th scope="col" class="py-tight pr-default text-small font-medium">
                             "To"
                         </th>
-                        <th scope="col" class="py-1 text-small font-medium">
+                        <th scope="col" class="py-tight text-small font-medium">
                             "Codes mapped"
                         </th>
                     </tr>
@@ -564,7 +572,7 @@ fn runner_section(
     let answer = answer_section(client, version, run);
 
     view! {
-        <section class="mt-8" aria-labelledby="translate-heading">
+        <section class="mt-section" aria-labelledby="translate-heading">
             <h2 id="translate-heading" class=styles::SECTION_TITLE>
                 "Translate a code"
             </h2>
@@ -601,7 +609,7 @@ fn runner_section(
 fn undeclared_view() -> AnyView {
     view! {
         <p class=format!(
-            "mt-3 rounded-md p-3 {}",
+            "mt-default rounded-md p-default {}",
             styles::NOTICE,
         )>
             "This root's capability statement does not declare $translate on ConceptMap, so the runner is not offered here. Another FHIR version may declare it, so try the version switcher above."
@@ -648,11 +656,11 @@ fn runner_form(
         navigate(&target, unresolved());
     };
     view! {
-        <form class="mt-4 grid gap-5" on:submit=submit>
+        <form class="mt-loose grid gap-loose" on:submit=submit>
             {map_group(run, map, map_version)}
             {code_group(run, system, system_version, code)}
             {target_group(run, target)}
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-default">
                 <button type="submit" class=styles::SUBMIT>
                     <Icon glyph=icon::CONCEPT_MAPS />
                     "Translate"
@@ -823,9 +831,9 @@ fn answer_block(
     url: Signal<String>,
 ) -> AnyView {
     view! {
-        <div class="mt-6">
+        <div class="mt-loose">
             <h3 class="text-body font-medium">"The translation"</h3>
-            <p aria-live="polite" class="mt-2 text-body text-muted">
+            <p aria-live="polite" class="mt-default text-body text-muted">
                 {move || announcement.get()}
             </p>
             <Reading label="Running the translation">
@@ -857,15 +865,17 @@ fn answer_view(answer: &TranslateAnswer) -> AnyView {
     };
     let message = answer.message().map_or_else(
         || ().into_any(),
-        |message| view! { <p class="mt-1 text-body">{message}</p> }.into_any(),
+        |message| view! { <p class="mt-tight text-body">{message}</p> }.into_any(),
     );
     let used = used_view(&answer.used_maps());
     let matches = answer.matches();
     if matches.is_empty() {
         return view! {
-            <p class="mt-3 text-body font-medium">{result}</p>
+            <p class="mt-default text-body font-medium">{result}</p>
             {message}
-            <p class="mt-2 text-body text-muted">"The server reported no match for this code."</p>
+            <p class="mt-default text-body text-muted">
+                "The server reported no match for this code."
+            </p>
             {used}
         }
         .into_any();
@@ -876,9 +886,9 @@ fn answer_view(answer: &TranslateAnswer) -> AnyView {
     // the block it had.
     let blocks: Vec<AnyView> = matches.iter().map(match_view).collect();
     view! {
-        <p class="mt-3 text-body font-medium">{result}</p>
+        <p class="mt-default text-body font-medium">{result}</p>
         {message}
-        <div class="mt-3 grid gap-4">{blocks}</div>
+        <div class="mt-default grid gap-loose">{blocks}</div>
         {used}
     }
     .into_any()
@@ -921,7 +931,7 @@ fn match_view(found: &TranslationMatch) -> AnyView {
         }
         .into_any()
     } else {
-        view! { <ul class="mt-1 text-body">{relations}</ul> }.into_any()
+        view! { <ul class="mt-tight text-body">{relations}</ul> }.into_any()
     };
     let facts: Vec<AnyView> = [
         (
@@ -936,7 +946,7 @@ fn match_view(found: &TranslationMatch) -> AnyView {
     .filter_map(|(label, value)| value.map(|value| (label, value)))
     .map(|(label, value)| {
         view! {
-            <div class="grid gap-1 sm:grid-cols-[10rem_1fr]">
+            <div class="grid gap-tight sm:grid-cols-[10rem_1fr]">
                 <dt class="font-medium">{label}</dt>
                 <dd class="font-mono break-all">{value}</dd>
             </div>
@@ -951,7 +961,7 @@ fn match_view(found: &TranslationMatch) -> AnyView {
         <article class=format!("panel-p {}", styles::PANEL)>
             <h4 class="font-mono text-body font-semibold break-all">{target}</h4>
             {stated}
-            <dl class="mt-2 text-small">{facts}</dl>
+            <dl class="mt-default text-small">{facts}</dl>
             {products}
             {depends}
             {properties}
@@ -983,8 +993,8 @@ fn values_view(label: &'static str, values: &[NamedValue]) -> AnyView {
         })
         .collect();
     view! {
-        <h5 class="mt-3 text-small font-medium tracking-wide uppercase">{label}</h5>
-        <ul class="mt-1 ml-4 list-disc text-small">{items}</ul>
+        <h5 class="mt-default text-small font-medium tracking-wide uppercase">{label}</h5>
+        <ul class="mt-tight ml-loose list-disc text-small">{items}</ul>
     }
     .into_any()
 }
@@ -999,10 +1009,10 @@ fn used_view(used: &[String]) -> AnyView {
         .map(|canonical| view! { <li class="break-all">{canonical.clone()}</li> }.into_any())
         .collect();
     view! {
-        <h4 class="mt-4 text-small font-medium tracking-wide uppercase">
+        <h4 class="mt-loose text-small font-medium tracking-wide uppercase">
             "The maps the server used"
         </h4>
-        <ul class="mt-1 ml-4 list-disc font-mono text-small">{items}</ul>
+        <ul class="mt-tight ml-loose list-disc font-mono text-small">{items}</ul>
     }
     .into_any()
 }
@@ -1011,7 +1021,7 @@ fn used_view(used: &[String]) -> AnyView {
 fn failure_view(error: &FhirError) -> AnyView {
     let error = error.clone();
     view! {
-        <div class="mt-3">
+        <div class="mt-default">
             <Failure error=Signal::stored(error) />
         </div>
     }
@@ -1071,8 +1081,8 @@ mod tests {
     fn opening_a_map_keeps_the_run_the_reader_has_going() {
         let run = read_run(&query(&[("system", "https://x.example/a"), ("code", "x")]));
         let params = ListParams::read(&query(&[("page", "2")]), 25);
-        let opened = address(&params.reading("m-1"), &run, FhirVersion::R5);
-        assert!(opened.contains("id=m-1"), "{opened}");
+        let opened = address(&params.reading("m-tight"), &run, FhirVersion::R5);
+        assert!(opened.contains("id=m-tight"), "{opened}");
         assert!(opened.contains("page=2"), "{opened}");
         assert!(opened.contains("code=x"), "{opened}");
     }

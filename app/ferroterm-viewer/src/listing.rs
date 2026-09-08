@@ -279,7 +279,7 @@ pub(crate) fn filter_form(
         hint: "The version search parameter. Left empty, every version this root holds matches.",
     };
     view! {
-        <form class="mt-6 grid gap-4" on:submit=submit>
+        <form class="mt-loose grid gap-loose" on:submit=submit>
             {row(
                 vec![
                     text_field(
@@ -294,7 +294,7 @@ pub(crate) fn filter_form(
                     ),
                 ],
             )}
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-default">
                 <button type="submit" class=styles::SUBMIT>
                     <Icon glyph=icon::SEARCH />
                     "Search"
@@ -370,7 +370,7 @@ pub(crate) fn pager_view(
         }
     };
     view! {
-        <nav aria-label=label class="mt-3 flex flex-wrap items-center gap-2">
+        <nav aria-label=label class="mt-default flex flex-wrap items-center gap-default">
             {step(Some(Page::at(0, view.page.count())), icon::PAGE_FIRST, "First page")}
             {step(view.page.previous(), icon::PAGE_PREVIOUS, "Previous page")}
             <p class="text-body font-medium">{view.position()}</p>

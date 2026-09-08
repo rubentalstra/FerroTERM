@@ -80,18 +80,18 @@ const OPEN_PARAM: &str = "open";
 const ROW_ID: &str = "browse-tree-";
 
 /// The classes a sentence that states an absence carries.
-const NOTE: &str = "mt-3 text-body text-muted";
+const NOTE: &str = "mt-default text-body text-muted";
 
 /// The classes the twist that opens and closes a tree row carries.
 ///
 /// The box is 24 by 24 CSS pixels around a smaller chevron, which is the
 /// minimum target WCAG 2.2 SC 2.5.8 sets
 /// (<https://www.w3.org/TR/WCAG22/#target-size-minimum>).
-const TWIST: &str = "state-change mr-1 inline-flex h-6 w-6 items-center justify-center \
+const TWIST: &str = "state-change mr-tight inline-flex h-6 w-6 items-center justify-center \
                      rounded text-accent hover:bg-inset";
 
 /// The classes a table cell carries.
-const CELL: &str = "py-1 pr-3 text-left text-small font-normal wrap-break-word";
+const CELL: &str = "py-tight pr-default text-left text-small font-normal wrap-break-word";
 
 /// How far one level of the tree is indented, in pixels.
 ///
@@ -156,7 +156,7 @@ pub(crate) fn BrowsePage() -> impl IntoView {
                 .then(|| {
                     view! {
                         <p class=format!(
-                            "mt-6 rounded-md p-3 {}",
+                            "mt-loose rounded-md p-default {}",
                             styles::NOTICE,
                         )>
                             "This address names no code system. "
@@ -407,11 +407,11 @@ fn system_section(
 
     let body = move || {
         view! {
-            <section class="mt-6" aria-labelledby="browse-system-heading">
+            <section class="mt-loose" aria-labelledby="browse-system-heading">
                 <h2 id="browse-system-heading" class=styles::SECTION_TITLE>
                     "The code system being browsed"
                 </h2>
-                <p class="mt-1 text-body break-all">
+                <p class="mt-tight text-body break-all">
                     {move || {
                         params
                             .with(|params| {
@@ -475,7 +475,7 @@ fn version_view(row: &VersionRow, hierarchy: &Hierarchy) -> AnyView {
         ),
     };
     view! {
-        <p class="mt-2 font-mono text-body break-all">{code}</p>
+        <p class="mt-default font-mono text-body break-all">{code}</p>
         <p class=styles::LEAD>{walk}</p>
     }
     .into_any()
@@ -514,7 +514,7 @@ fn language_view(
     };
     let picker = move || {
         view! {
-            <div class="mt-3 grid max-w-xs gap-1">
+            <div class="mt-default grid max-w-xs gap-tight">
                 <label for="browse-language" class="text-body font-medium">
                     "Display language"
                 </label>
@@ -610,15 +610,15 @@ fn search_section(
 
     let body = move || {
         view! {
-            <section class="mt-8" aria-labelledby="browse-search-heading">
+            <section class="mt-section" aria-labelledby="browse-search-heading">
                 <h2 id="browse-search-heading" class=styles::SECTION_TITLE>
                     "Search"
                 </h2>
-                <form class="mt-2 grid max-w-xl gap-1" on:submit=submit>
+                <form class="mt-default grid max-w-xl gap-tight" on:submit=submit>
                     <label for="browse-filter" class="text-body font-medium">
                         "Filter"
                     </label>
-                    <div class="flex gap-2">
+                    <div class="flex gap-default">
                         <input
                             id="browse-filter"
                             name=FILTER_PARAMETER
@@ -637,7 +637,7 @@ fn search_section(
                         "Sent as the filter parameter of $expand over a value set that selects this code system. An empty filter lists the first concepts the server answers."
                     </p>
                 </form>
-                <p aria-live="polite" class="mt-2 text-body text-muted">
+                <p aria-live="polite" class="mt-default text-body text-muted">
                     {announcement}
                 </p>
                 <Reading label="Searching the code system">
@@ -696,11 +696,11 @@ fn matches_view(concepts: &[ConceptRow], params: &BrowseParams, version: FhirVer
             let code = concept.code.clone();
             let inactive = concept.inactive.then(|| String::from(" (inactive)"));
             view! {
-                <li class="border-b border-line py-1 last:border-0">
+                <li class="border-b border-line py-tight last:border-0">
                     <a href=target class=styles::LINK>
                         {display}
                     </a>
-                    <span class="ml-2 font-mono text-small break-all text-faint">
+                    <span class="ml-default font-mono text-small break-all text-faint">
                         {code} {inactive}
                     </span>
                 </li>
@@ -708,7 +708,7 @@ fn matches_view(concepts: &[ConceptRow], params: &BrowseParams, version: FhirVer
             .into_any()
         })
         .collect();
-    view! { <ul class="mt-2 text-body">{items}</ul> }.into_any()
+    view! { <ul class="mt-default text-body">{items}</ul> }.into_any()
 }
 
 /// The concept the address names, as `$lookup` answers it.
@@ -795,7 +795,7 @@ fn concept_section(
     };
     let body = move || {
         view! {
-            <section class="mt-8" aria-labelledby="browse-concept-heading">
+            <section class="mt-section" aria-labelledby="browse-concept-heading">
                 <h2 id="browse-concept-heading" class=styles::SECTION_TITLE>
                     "The concept"
                 </h2>
@@ -888,7 +888,7 @@ fn concept_view(
         "This server answers no property for this concept.",
     );
     view! {
-        <h3 class="mt-2 text-body font-semibold">{display}</h3>
+        <h3 class="mt-default text-body font-semibold">{display}</h3>
         <p class="font-mono text-small break-all text-faint">{code}</p>
         <p class="text-small text-faint">{held}</p>
         {parents}
@@ -926,9 +926,9 @@ fn links_view(
         })
         .collect();
     view! {
-        <nav aria-label=format!("{label} of this concept") class="mt-3">
+        <nav aria-label=format!("{label} of this concept") class="mt-default">
             <h4 class="text-small font-medium tracking-wide uppercase">{label}</h4>
-            <ul class="mt-1 flex flex-wrap gap-2">{links}</ul>
+            <ul class="mt-tight flex flex-wrap gap-default">{links}</ul>
         </nav>
     }
     .into_any()
@@ -964,16 +964,16 @@ fn table_view(
                         {head}
                     </th>
                     <td class=CELL>{middle}</td>
-                    <td class="py-1 text-small wrap-break-word text-faint">{tail}</td>
+                    <td class="py-tight text-small wrap-break-word text-faint">{tail}</td>
                 </tr>
             }
             .into_any()
         })
         .collect();
     view! {
-        <div class="mt-3 overflow-x-auto">
+        <div class="mt-default overflow-x-auto">
             <table class="w-full border-collapse text-left">
-                <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
+                <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
                     {caption}
                 </caption>
                 <thead>
@@ -1159,7 +1159,7 @@ fn tree_section(
 
     let body = move || {
         view! {
-            <section class="mt-8" aria-labelledby="browse-tree-heading">
+            <section class="mt-section" aria-labelledby="browse-tree-heading">
                 <h2 id="browse-tree-heading" class=styles::SECTION_TITLE>
                     "Below this concept"
                 </h2>
@@ -1234,7 +1234,7 @@ fn tree_view(rows: &[TreeRow], chrome: &TreeChrome) -> AnyView {
     }
     let items: Vec<AnyView> = rows.iter().map(|row| row_view(row, chrome)).collect();
     view! {
-        <ul role="tree" aria-label="The concepts below this one" class="mt-2 text-body">
+        <ul role="tree" aria-label="The concepts below this one" class="mt-default text-body">
             {items}
         </ul>
     }
@@ -1267,7 +1267,7 @@ fn row_view(row: &TreeRow, chrome: &TreeChrome) -> AnyView {
     let name = format!("{display}, {code}");
     let short = (row.open && chrome.partial.contains(&row.concept.code)).then(|| {
         view! {
-            <span class="ml-2 inline-flex items-center gap-1 text-small text-muted">
+            <span class="ml-default inline-flex items-center gap-tight text-small text-muted">
                 <Icon glyph=icon::NOTICE class="h-3.5 w-3.5" />
                 "This server counts more children here than this page size asked for."
             </span>
@@ -1301,7 +1301,7 @@ fn row_view(row: &TreeRow, chrome: &TreeChrome) -> AnyView {
             aria-setsize=row.siblings.to_string()
             aria-expanded=row.expandable.then_some(if row.open { "true" } else { "false" })
             aria-selected=if selected { "true" } else { "false" }
-            class="py-0.5"
+            class="py-tight"
             // The weight carries the selection as well as the tint, because a
             // reader who cannot tell the two backgrounds apart would otherwise
             // have no cue at all (WCAG 2.2 SC 1.4.1).
@@ -1313,7 +1313,7 @@ fn row_view(row: &TreeRow, chrome: &TreeChrome) -> AnyView {
             <a href=select tabindex="-1" class=styles::LINK>
                 {display}
             </a>
-            <span class="ml-2 font-mono text-small break-all text-faint">{code}</span>
+            <span class="ml-default font-mono text-small break-all text-faint">{code}</span>
             {short}
         </li>
     }
@@ -1504,7 +1504,7 @@ fn partial_levels(answers: &[(String, Result<Level, FhirError>)]) -> BTreeSet<St
 fn failure_view(error: &FhirError) -> AnyView {
     let error = error.clone();
     view! {
-        <div class="mt-2">
+        <div class="mt-default">
             <Failure error=Signal::stored(error) />
         </div>
     }

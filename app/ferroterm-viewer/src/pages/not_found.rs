@@ -21,8 +21,8 @@ pub(crate) fn NotFoundPage() -> impl IntoView {
     view! {
         <Title text="Not found" />
         <h1 class=styles::PAGE_TITLE>"No such screen"</h1>
-        <p class="mt-2 text-body text-muted">"The viewer has no page at this address."</p>
-        <p class="mt-4 text-body">
+        <p class="mt-default text-body text-muted">"The viewer has no page at this address."</p>
+        <p class="mt-loose text-body">
             <a href=move || ui_link("", version.get()) class="text-accent underline">
                 "Back to the overview"
             </a>

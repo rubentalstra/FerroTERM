@@ -32,7 +32,7 @@ use crate::styles;
 type RootRead = LocalResource<Result<CapabilityStatement, FhirError>>;
 
 /// The classes a table cell shares across both tables.
-const CELL: &str = "py-2 pr-3 align-top";
+const CELL: &str = "py-default pr-default align-top";
 
 /// Reads the four roots and draws what they declare, side by side.
 ///
@@ -86,7 +86,7 @@ fn comparison_section(roots: [RootRead; 4]) -> AnyView {
     let announcement = Memo::new(move |_| state_sentence(&answers(roots)));
 
     view! {
-        <section class="mt-6" aria-labelledby="comparison-heading">
+        <section class="mt-loose" aria-labelledby="comparison-heading">
             <h2 id="comparison-heading" class=styles::SECTION_TITLE>
                 "What each root declares"
             </h2>
@@ -151,7 +151,7 @@ fn refusals_view(answers: &[(FhirVersion, RootAnswer)]) -> AnyView {
             let error = answer.failure()?.clone();
             Some(
                 view! {
-                    <div class="mt-3">
+                    <div class="mt-default">
                         <p class="text-body font-medium">{version.label()} " did not answer:"</p>
                         <Failure error=Signal::stored(error) />
                     </div>
@@ -169,7 +169,11 @@ fn refusals_view(answers: &[(FhirVersion, RootAnswer)]) -> AnyView {
 /// The operations table, with the sentence that reads its shape.
 fn operations_view(comparison: &Comparison) -> AnyView {
     if comparison.operations.is_empty() {
-        return view! { <p class="mt-4 text-body text-muted">"No root that answered declares an operation."</p> }
+        return view! {
+            <p class="mt-loose text-body text-muted">
+                "No root that answered declares an operation."
+            </p>
+        }
         .into_any();
     }
     let table = table_view(
@@ -179,7 +183,7 @@ fn operations_view(comparison: &Comparison) -> AnyView {
         &comparison.operations,
     );
     view! {
-        <p class="mt-6 text-body text-muted">
+        <p class="mt-loose text-body text-muted">
             "A row is one operation. A cell says at which levels that root answers it, which is what its release's own OperationDefinition declares. A row with no resource type in front of the $ is answered on the root itself."
         </p>
         {table}
@@ -202,7 +206,7 @@ fn table_view(caption: &str, corner: &str, columns: &[RootColumn], rows: &[Row])
                 .clone()
                 .unwrap_or_else(|| NOT_DECLARED.to_owned());
             view! {
-                <th scope="col" class="py-2 pr-3 font-medium">
+                <th scope="col" class="py-default pr-default font-medium">
                     {column.version.label()}
                     <span class="block text-small font-normal text-muted">
                         "FHIR " {release} ", " {column.state}
@@ -214,14 +218,14 @@ fn table_view(caption: &str, corner: &str, columns: &[RootColumn], rows: &[Row])
         .collect();
     let body: Vec<AnyView> = rows.iter().map(row_view).collect();
     view! {
-        <div class="mt-3 overflow-x-auto">
+        <div class="mt-default overflow-x-auto">
             <table class="w-full border-collapse text-left text-body">
-                <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
+                <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
                     {caption.to_owned()}
                 </caption>
                 <thead>
                     <tr class="border-b border-line-strong">
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             {corner.to_owned()}
                         </th>
                         {headers}
@@ -247,7 +251,10 @@ fn row_view(row: &Row) -> AnyView {
             // is one long token with nowhere to break, but a declaration label
             // is a sentence, and `break-all` chops it mid-word
             // (<https://developer.mozilla.org/en-US/docs/Web/CSS/overflow-wrap>).
-            <th scope="row" class="py-2 pr-3 font-mono text-small font-normal wrap-break-word">
+            <th
+                scope="row"
+                class="py-default pr-default font-mono text-small font-normal wrap-break-word"
+            >
                 {row.label.clone()}
             </th>
             {cells}
@@ -272,7 +279,7 @@ fn notes_view(answers: &[(FhirVersion, RootAnswer)]) -> AnyView {
         .map(|(version, answer)| root_notes_view(version.label(), &notes(answer)))
         .collect();
     view! {
-        <div class="mt-8">
+        <div class="mt-section">
             <h3 class="text-body font-medium">"What each root adds to its own definition"</h3>
             <p class=styles::LEAD>
                 "Each line below is one root's own operation.documentation, as it sent it. It is where a release says which parameters it takes beyond the ones its own OperationDefinition declares."
@@ -290,7 +297,7 @@ fn root_notes_view(label: &'static str, notes: &[(String, String)]) -> AnyView {
         .iter()
         .map(|(operation, note)| {
             view! {
-                <dt class="mt-2 font-mono text-small wrap-break-word">{operation.clone()}</dt>
+                <dt class="mt-default font-mono text-small wrap-break-word">{operation.clone()}</dt>
                 <dd class="text-body text-muted">{note.clone()}</dd>
             }
             .into_any()
@@ -307,11 +314,11 @@ fn root_notes_view(label: &'static str, notes: &[(String, String)]) -> AnyView {
         view! { <dl>{lines}</dl> }.into_any()
     };
     view! {
-        <details class="mt-3 rounded border border-line">
-            <summary class="cursor-pointer px-3 py-2 text-body font-medium">
+        <details class="mt-default rounded border border-line">
+            <summary class="cursor-pointer px-default py-default text-body font-medium">
                 {label} " · " {note_count(count)}
             </summary>
-            <div class="border-t border-line px-3 py-2">{body}</div>
+            <div class="border-t border-line px-default py-default">{body}</div>
         </details>
     }
     .into_any()
@@ -335,5 +342,5 @@ fn requests_section(client: &FhirClient) -> AnyView {
             view! { <RequestDisclosure url=url label=version.label() /> }.into_any()
         })
         .collect();
-    view! { <div class="mt-8">{drawn}</div> }.into_any()
+    view! { <div class="mt-section">{drawn}</div> }.into_any()
 }

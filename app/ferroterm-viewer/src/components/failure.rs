@@ -49,12 +49,12 @@ pub(crate) fn Failure(
     };
 
     let heading = view! {
-        <p class="flex items-center gap-1.5 font-medium text-danger">
+        <p class="flex items-center gap-tight font-medium text-danger">
             <Icon glyph=icon::FAILURE />
             "The request failed: "
             {status}
         </p>
-        <p class="mt-1 font-mono text-small break-all text-muted">{url}</p>
+        <p class="mt-tight font-mono text-small break-all text-muted">{url}</p>
     }
     .into_any();
 
@@ -63,7 +63,7 @@ pub(crate) fn Failure(
     // would be moved rather than re-rendered, and the issue would keep its old
     // wording after a second refusal at the same position.
     let reported = view! {
-        <ul class="mt-2 space-y-1">
+        <ul class="mt-default space-y-tight">
             {move || {
                 issues()
                     .into_iter()
@@ -88,7 +88,7 @@ pub(crate) fn Failure(
 
     let evidence = view! {
         <Show when=move || body().is_some() fallback=|| ()>
-            <pre class="mt-2 overflow-x-auto rounded-md bg-inset p-2 text-small text-fg">
+            <pre class="mt-default overflow-x-auto rounded-md bg-inset p-default text-small text-fg">
                 {body}
             </pre>
         </Show>
@@ -98,7 +98,7 @@ pub(crate) fn Failure(
     view! {
         <div
             role="alert"
-            class="rounded-md border border-danger-soft-fg/30 bg-danger-soft p-3 text-danger-soft-fg"
+            class="rounded-md border border-danger-soft-fg/30 bg-danger-soft p-default text-danger-soft-fg"
         >
             {heading}
             {reported}
@@ -120,5 +120,5 @@ fn detail_codes(details: &[String]) -> AnyView {
         .iter()
         .map(|coding| view! { <li class="font-mono break-all">{coding.clone()}</li> }.into_any())
         .collect();
-    view! { <ul class="mt-1 ml-4 text-small text-muted">{drawn}</ul> }.into_any()
+    view! { <ul class="mt-tight ml-loose text-small text-muted">{drawn}</ul> }.into_any()
 }

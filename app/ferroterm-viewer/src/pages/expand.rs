@@ -418,11 +418,11 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
     provide_context(Help(RwSignal::new(false)));
 
     view! {
-        <form class="mt-4 grid gap-5" on:submit=submit>
+        <form class="mt-loose grid gap-loose" on:submit=submit>
             {value_set_group(canonical, seeds)}
             {selection_group(filter, active_only, seeds)}
             {answer_group(count, language, designations, seeds, params)}
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-default">
                 <button type="submit" class=styles::SUBMIT>
                     <Icon glyph=icon::EXPAND />
                     "Run the expansion"
@@ -454,7 +454,7 @@ fn value_set_group(canonical: NodeRef<Input>, seeds: Seeds) -> AnyView {
 /// What the run selects out of it.
 fn selection_group(filter: NodeRef<Input>, active_only: NodeRef<Input>, seeds: Seeds) -> AnyView {
     let controls = view! {
-        <div class="grid gap-3 sm:grid-cols-2">
+        <div class="grid gap-default sm:grid-cols-2">
             {text_field(
                 Field {
                     id: "expand-filter",
@@ -500,7 +500,7 @@ fn answer_group(
         })
     });
     let controls = view! {
-        <div class="grid gap-3 sm:grid-cols-3">
+        <div class="grid gap-default sm:grid-cols-3">
             {number_field(
                 Field {
                     id: "expand-count",
@@ -589,11 +589,11 @@ fn result_section(
     });
 
     view! {
-        <section class="mt-8" aria-labelledby="expansion-heading">
+        <section class="mt-section" aria-labelledby="expansion-heading">
             <h2 id="expansion-heading" class=styles::SECTION_TITLE>
                 "The expansion"
             </h2>
-            <p aria-live="polite" class="mt-2 text-body text-muted">
+            <p aria-live="polite" class="mt-default text-body text-muted">
                 {announcement}
             </p>
             <Show when=move || request.with(Option::is_none) fallback=|| ()>
@@ -628,7 +628,7 @@ fn result_section(
 /// What the screen says before a canonical has been typed.
 fn invitation() -> AnyView {
     view! {
-        <p class="mt-3 text-body text-muted">
+        <p class="mt-default text-body text-muted">
             "Name a value set above and run it. The canonical is sent exactly as you type it, so an implicit form a code system defines works here too."
         </p>
     }
@@ -643,7 +643,7 @@ fn expansion_view(
 ) -> AnyView {
     let Some(expansion) = value.expansion() else {
         return view! {
-            <p class="mt-3 text-body text-muted">
+            <p class="mt-default text-body text-muted">
                 "The server answered a ValueSet carrying no expansion, so there is nothing to page through."
             </p>
         }
@@ -686,14 +686,14 @@ fn unclosed_view(unclosed: &Unclosed) -> AnyView {
         .map(|reason| view! { <li>{reason.clone()}</li> }.into_any())
         .collect();
     let stated = if reasons.is_empty() {
-        view! { <p class="mt-1">"The server stated no reason for it."</p> }.into_any()
+        view! { <p class="mt-tight">"The server stated no reason for it."</p> }.into_any()
     } else {
-        view! { <ul class="mt-1 ml-4 list-disc">{reasons}</ul> }.into_any()
+        view! { <ul class="mt-tight ml-loose list-disc">{reasons}</ul> }.into_any()
     };
     view! {
-        <div role="note" class=format!("mt-3 rounded-md p-3 {}", styles::NOTICE)>
+        <div role="note" class=format!("mt-default rounded-md p-default {}", styles::NOTICE)>
             <p class="font-medium">"Unclosed expansion"</p>
-            <p class="mt-1">
+            <p class="mt-tight">
                 "This value set admits codes the expansion does not list, so a code missing from the table below is not a code this server rejects."
             </p>
             {stated}
@@ -711,7 +711,7 @@ fn unclosed_view(unclosed: &Unclosed) -> AnyView {
 fn concepts_table(rows: &[ConceptRow]) -> AnyView {
     if rows.is_empty() {
         return view! {
-            <p class="mt-3 text-body text-muted">
+            <p class="mt-default text-body text-muted">
                 "This page holds no concepts. A page past the end of a selection is empty, and so is a filter nothing matches."
             </p>
         }
@@ -719,20 +719,20 @@ fn concepts_table(rows: &[ConceptRow]) -> AnyView {
     }
     let body: Vec<AnyView> = rows.iter().map(concept_row).collect();
     view! {
-        <div class="mt-3 overflow-x-auto">
+        <div class="mt-default overflow-x-auto">
             <table class="w-full border-collapse text-left text-body">
                 <thead>
                     <tr class="border-b border-line-strong">
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             "Code"
                         </th>
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             "Display"
                         </th>
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             "System"
                         </th>
-                        <th scope="col" class="py-2 font-medium">
+                        <th scope="col" class="py-default font-medium">
                             "Flags"
                         </th>
                     </tr>
@@ -756,18 +756,18 @@ fn concept_row(row: &ConceptRow) -> AnyView {
     view! {
         <tr class="border-b border-line align-top">
             <td
-                class="py-2 pr-3 font-mono break-all"
+                class="py-default pr-default font-mono break-all"
                 style=format!("padding-left:{}rem", row.depth)
             >
                 <span class="sr-only">{nesting}</span>
                 {row.code.clone()}
             </td>
-            <td class="py-2 pr-3">
+            <td class="py-default pr-default">
                 {row.display.clone().unwrap_or_else(|| NOT_DECLARED.to_owned())}
                 {designation_list(&row.designations)}
             </td>
-            <td class="py-2 pr-3 font-mono text-small break-all">{system}</td>
-            <td class="py-2">{flags(row)}</td>
+            <td class="py-default pr-default font-mono text-small break-all">{system}</td>
+            <td class="py-default">{flags(row)}</td>
         </tr>
     }
     .into_any()
@@ -782,7 +782,7 @@ fn designation_list(designations: &[DesignationRow]) -> AnyView {
         .iter()
         .map(|designation| view! { <li>{designation_line(designation)}</li> }.into_any())
         .collect();
-    view! { <ul class="mt-1 ml-4 list-disc text-small text-muted">{lines}</ul> }.into_any()
+    view! { <ul class="mt-tight ml-loose list-disc text-small text-muted">{lines}</ul> }.into_any()
 }
 
 /// One designation, as the term and what the server said about it.
@@ -844,7 +844,10 @@ fn pager_view(pager: Pager, params: &RunnerParams, version: FhirVersion) -> AnyV
         }
     };
     view! {
-        <nav aria-label="Expansion pages" class="mt-3 flex flex-wrap items-center gap-2">
+        <nav
+            aria-label="Expansion pages"
+            class="mt-default flex flex-wrap items-center gap-default"
+        >
             {step(pager.first(), icon::PAGE_FIRST, "First page")}
             {step(pager.previous(), icon::PAGE_PREVIOUS, "Previous page")}
             <p class="text-body font-medium">{pager.position()}</p>
@@ -859,7 +862,7 @@ fn pager_view(pager: Pager, params: &RunnerParams, version: FhirVersion) -> AnyV
 fn parameters_view(lines: &[ParameterLine]) -> AnyView {
     if lines.is_empty() {
         return view! {
-            <p class="mt-3 text-small text-faint">
+            <p class="mt-default text-small text-faint">
                 "The server echoed no parameters with this expansion."
             </p>
         }
@@ -876,11 +879,11 @@ fn parameters_view(lines: &[ParameterLine]) -> AnyView {
         })
         .collect();
     view! {
-        <details class="mt-4 rounded-md border border-line text-small">
-            <summary class="cursor-pointer px-3 py-2 font-medium text-muted">
+        <details class="mt-loose rounded-md border border-line text-small">
+            <summary class="cursor-pointer px-default py-default font-medium text-muted">
                 "The parameters the server says it applied"
             </summary>
-            <dl class="grid gap-1 border-t border-line px-3 py-2 sm:grid-cols-[14rem_1fr]">
+            <dl class="grid gap-tight border-t border-line px-default py-default sm:grid-cols-[14rem_1fr]">
                 {rows}
             </dl>
         </details>
@@ -895,7 +898,7 @@ fn refusal_view(error: &FhirError) -> AnyView {
         .is_some_and(|outcome| outcome.carries_code(TOO_COSTLY));
     let advice = if costly {
         view! {
-            <p class="mt-2 text-body">
+            <p class="mt-default text-body">
                 "The server refused to expand a selection this large in one answer. Ask for a page size and the runner walks it a page at a time."
             </p>
         }
@@ -905,7 +908,7 @@ fn refusal_view(error: &FhirError) -> AnyView {
     };
     let error = error.clone();
     view! {
-        <div class="mt-3">
+        <div class="mt-default">
             <Failure error=Signal::stored(error) />
             {advice}
         </div>

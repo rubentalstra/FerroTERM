@@ -21,13 +21,13 @@ use crate::styles;
 const TABLE: &str = "w-full border-collapse text-left text-body";
 
 /// The classes a column heading carries.
-const HEAD: &str = "py-2 pr-3 font-medium align-bottom";
+const HEAD: &str = "py-default pr-default font-medium align-bottom";
 
 /// The classes a body cell carries.
-const CELL: &str = "py-2 pr-3 align-top";
+const CELL: &str = "py-default pr-default align-top";
 
 /// The classes a cell holding a figure carries.
-const FIGURE: &str = "py-2 pr-3 align-top tabular-nums whitespace-nowrap";
+const FIGURE: &str = "py-default pr-default align-top tabular-nums whitespace-nowrap";
 
 /// The classes a file path carries.
 const PATH: &str = "font-mono text-small break-all text-muted";
@@ -70,7 +70,7 @@ fn preamble(release: &'static str) -> AnyView {
             "These figures describe FerroTERM " <span class="font-medium">{release}</span>
             ", the build this bundle was compiled from. They say nothing about the server answering this page: what it loaded and what it answers now are on the other screens."
         </p>
-        <p class="mt-2 text-body text-muted">
+        <p class="mt-default text-body text-muted">
             "This screen issues no request. Every number below was read out of a file the repository commits when the bundle was built, and each one names that file, so you can open it and check the number yourself."
         </p>
     }
@@ -86,14 +86,17 @@ fn conformance_section(conformance: Conformance) -> AnyView {
             let share = mode.share();
             view! {
                 <tr class="border-b border-line">
-                    <th scope="row" class="py-2 pr-3 text-left font-mono text-small font-normal">
+                    <th
+                        scope="row"
+                        class="py-default pr-default text-left font-mono text-small font-normal"
+                    >
                         {mode.name}
                     </th>
                     <td class=CELL>
                         <span class="font-mono text-small">{mode.surface}</span>
                     </td>
                     <td class=FIGURE>{mode.passed} " of " {mode.ran}</td>
-                    <td class="w-40 py-2 pr-3 align-top">
+                    <td class="w-40 py-default pr-default align-top">
                         <span class="tabular-nums">{share} "%"</span>
                         {proportion(share)}
                     </td>
@@ -111,7 +114,7 @@ fn conformance_section(conformance: Conformance) -> AnyView {
     let table_source = conformance.table_source;
 
     view! {
-        <section class="mt-8" aria-labelledby="conformance-heading">
+        <section class="mt-section" aria-labelledby="conformance-heading">
             <h2 id="conformance-heading" class=styles::SECTION_TITLE>
                 "The HL7 terminology ecosystem suite"
             </h2>
@@ -120,9 +123,9 @@ fn conformance_section(conformance: Conformance) -> AnyView {
                 {total}
                 " cases and needs nothing to run, so continuous integration runs it on every push; the other modes need licensed content or a code system this server does not serve, so they are run by hand before a release."
             </p>
-            <div class="mt-3 overflow-x-auto">
+            <div class="mt-default overflow-x-auto">
                 <table class=TABLE>
-                    <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
+                    <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
                         "The cases each mode passes, from the committed pass lists"
                     </caption>
                     <thead>
@@ -147,7 +150,7 @@ fn conformance_section(conformance: Conformance) -> AnyView {
                     <tbody>{rows}</tbody>
                 </table>
             </div>
-            <p class="mt-2 text-small text-muted">
+            <p class="mt-default text-small text-muted">
                 "The case counts come from " <span class=PATH>{table_source}</span>
                 " and the suite total from " <span class=PATH>{total_source}</span>
                 ". The build stops when a pass list and that table disagree."
@@ -175,11 +178,14 @@ fn latency_section(latency: Latency) -> AnyView {
             );
             view! {
                 <tr class="border-b border-line">
-                    <th scope="row" class="py-2 pr-3 text-left font-mono text-small font-normal">
+                    <th
+                        scope="row"
+                        class="py-default pr-default text-left font-mono text-small font-normal"
+                    >
                         {bar.bench}
                     </th>
                     <td class=FIGURE>{bar.max_us} " µs"</td>
-                    <td class="w-48 py-2 pr-3 align-top">
+                    <td class="w-48 py-default pr-default align-top">
                         <span class="tabular-nums whitespace-nowrap">{bar.measured_us} " µs"</span>
                         {proportion(relative_width(bar.measured_us, widest))}
                     </td>
@@ -195,7 +201,7 @@ fn latency_section(latency: Latency) -> AnyView {
     let source = latency.source;
 
     view! {
-        <section class="mt-10" aria-labelledby="latency-heading">
+        <section class="mt-section" aria-labelledby="latency-heading">
             <h2 id="latency-heading" class=styles::SECTION_TITLE>
                 "The latency the project claims"
             </h2>
@@ -203,9 +209,9 @@ fn latency_section(latency: Latency) -> AnyView {
                 "A bar is the claim, and it never moves to match a slower run. The measurement beside it records what one machine answered, so the room a run has is visible. The recorded run was taken on "
                 <span class="font-medium">{machine}</span> "."
             </p>
-            <div class="mt-3 overflow-x-auto">
+            <div class="mt-default overflow-x-auto">
                 <table class=TABLE>
-                    <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
+                    <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
                         "Each benchmark, its bar, and the run recorded against it"
                     </caption>
                     <thead>
@@ -230,7 +236,7 @@ fn latency_section(latency: Latency) -> AnyView {
                     <tbody>{rows}</tbody>
                 </table>
             </div>
-            <p class="mt-2 text-small text-muted">
+            <p class="mt-default text-small text-muted">
                 "Every figure in this table comes from " <span class=PATH>{source}</span>
                 ". A bar beside a measurement is drawn against the slowest measurement in the table, so the shape reads; the microseconds beside it are the figure."
             </p>
@@ -245,7 +251,7 @@ fn run_section(run: Run) -> AnyView {
     let name = run.name;
     let source = run.source;
     view! {
-        <section class="mt-10" aria-labelledby="run-heading">
+        <section class="mt-section" aria-labelledby="run-heading">
             <h2 id="run-heading" class=styles::SECTION_TITLE>
                 "The newest benchmark run"
             </h2>
@@ -265,7 +271,7 @@ fn system_view(system: &SystemRun) -> AnyView {
     let facts = facts_view(system);
     let timings = timings_view(system);
     view! {
-        <article class="mt-6 rounded-md border border-line p-4">
+        <article class="mt-loose rounded-md border border-line p-loose">
             <h3 class="text-body font-medium">
                 {system.system} " " <span class="font-normal">{system.system_version}</span>
             </h3>
@@ -284,7 +290,7 @@ fn facts_view(system: &SystemRun) -> AnyView {
         .map_or_else(|| NOT_DECLARED.to_owned(), |seconds| format!("{seconds} s"));
     let release = system.release.unwrap_or("built outside this run");
     view! {
-        <dl class="mt-3 grid gap-x-4 gap-y-1 text-body sm:grid-cols-[10rem_1fr]">
+        <dl class="mt-default grid gap-x-loose gap-y-tight text-body sm:grid-cols-[10rem_1fr]">
             <dt class="font-medium">"Concepts"</dt>
             <dd class="tabular-nums">{system.concepts}</dd>
             <dt class="font-medium">"Offline build"</dt>
@@ -313,7 +319,7 @@ fn facts_view(system: &SystemRun) -> AnyView {
 /// The operations the run timed, one row each.
 fn timings_view(system: &SystemRun) -> AnyView {
     if system.operations.is_empty() {
-        return view! { <p class="mt-3 text-body text-muted">"This record timed no operation."</p> }
+        return view! { <p class="mt-default text-body text-muted">"This record timed no operation."</p> }
         .into_any();
     }
     let rows: Vec<AnyView> = system
@@ -322,7 +328,10 @@ fn timings_view(system: &SystemRun) -> AnyView {
         .map(|timing| {
             view! {
                 <tr class="border-b border-line">
-                    <th scope="row" class="py-2 pr-3 text-left font-mono text-small font-normal">
+                    <th
+                        scope="row"
+                        class="py-default pr-default text-left font-mono text-small font-normal"
+                    >
                         {timing.operation}
                     </th>
                     <td class=FIGURE>{timing.status}</td>
@@ -338,9 +347,9 @@ fn timings_view(system: &SystemRun) -> AnyView {
         .collect();
     let caption = format!("What {} answered, in milliseconds", system.system);
     view! {
-        <div class="mt-4 overflow-x-auto">
+        <div class="mt-loose overflow-x-auto">
             <table class=TABLE>
-                <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
+                <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
                     {caption}
                 </caption>
                 <thead>
@@ -383,7 +392,7 @@ fn timings_view(system: &SystemRun) -> AnyView {
 /// is readable only as a shape or only as a colour.
 fn proportion(percent: u32) -> AnyView {
     view! {
-        <span aria-hidden="true" class="mt-1 block h-1.5 w-full rounded bg-inset">
+        <span aria-hidden="true" class="mt-tight block h-1.5 w-full rounded bg-inset">
             <span class="block h-1.5 rounded bg-accent" style=format!("width:{percent}%")></span>
         </span>
     }

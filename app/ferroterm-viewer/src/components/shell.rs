@@ -93,7 +93,8 @@ const NAV_SLOTS: [NavSlot; 10] = [
 ];
 
 /// The classes every sidebar link carries, whichever screen it leads to.
-const ENTRY_BASE: &str = "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-small font-medium";
+const ENTRY_BASE: &str =
+    "flex items-center gap-default rounded-md px-default py-tight text-small font-medium";
 
 /// The classes the entry for the screen being read carries.
 const ENTRY_ACTIVE: &str = "bg-accent-soft text-accent-soft-fg";
@@ -146,7 +147,7 @@ fn nav_entry(
 /// It draws a grouping the labels already carry, so it says nothing to a
 /// screen reader and is hidden from one.
 fn nav_divider() -> AnyView {
-    view! { <li aria-hidden="true" class="my-2 border-t border-line"></li> }.into_any()
+    view! { <li aria-hidden="true" class="my-default border-t border-line"></li> }.into_any()
 }
 
 /// The sidebar every screen is reached from.
@@ -172,8 +173,8 @@ fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
             class="w-full shrink-0 border-b border-line bg-raised md:block md:w-56 md:border-r md:border-b-0"
             class:hidden=move || !open.get()
         >
-            <nav aria-label="Screens" class="p-2">
-                <ul class="flex flex-col gap-1">{slots}</ul>
+            <nav aria-label="Screens" class="p-default">
+                <ul class="flex flex-col gap-tight">{slots}</ul>
             </nav>
         </aside>
     }
@@ -188,7 +189,7 @@ fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
 fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     view! {
         <header class="border-b border-line bg-raised">
-            <div class="flex flex-wrap items-center gap-3 px-4 py-2.5">
+            <div class="flex flex-wrap items-center gap-default px-loose py-default">
                 <button
                     type="button"
                     aria-controls=NAV_ID
@@ -201,7 +202,7 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
                 <a href=move || ui_link(OVERVIEW_PATH, version.get())>
                     <Lockup />
                 </a>
-                <div class="ml-auto flex items-center gap-3">
+                <div class="ml-auto flex items-center gap-default">
                     <VersionSwitcher selected=version />
                     <HealthIndicator />
                     <ThemeToggle />
@@ -266,7 +267,7 @@ pub(crate) fn Shell() -> impl IntoView {
         )>
             {bar}
             <div class="flex flex-1 flex-col md:flex-row">
-                {nav} <main class="min-w-0 flex-1 px-4 py-6">
+                {nav} <main class="min-w-0 flex-1 px-loose py-loose">
                     <div class="mx-auto max-w-6xl">{screens}</div>
                 </main>
             </div>

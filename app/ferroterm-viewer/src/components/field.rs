@@ -77,7 +77,7 @@ fn hint(id: &str, text: &'static str) -> AnyView {
 pub(crate) fn text_field(field: Field, node: NodeRef<Input>, value: Memo<String>) -> AnyView {
     let described_by = format!("{}-note", field.id);
     view! {
-        <div class="grid gap-1">
+        <div class="grid gap-tight">
             <label for=field.id class=styles::LABEL>
                 {field.label}
             </label>
@@ -100,8 +100,8 @@ pub(crate) fn text_field(field: Field, node: NodeRef<Input>, value: Memo<String>
 pub(crate) fn check_field(field: Field, node: NodeRef<Input>, value: Memo<bool>) -> AnyView {
     let described_by = format!("{}-note", field.id);
     view! {
-        <div class="grid gap-1">
-            <div class="flex items-center gap-2">
+        <div class="grid gap-tight">
+            <div class="flex items-center gap-default">
                 <input
                     id=field.id
                     name=field.name
@@ -130,7 +130,7 @@ pub(crate) fn number_field(
 ) -> AnyView {
     let described_by = format!("{}-note", field.id);
     view! {
-        <div class="grid gap-1">
+        <div class="grid gap-tight">
             <label for=field.id class=styles::LABEL>
                 {field.label}
             </label>
@@ -163,7 +163,7 @@ pub(crate) fn select_field(
 ) -> AnyView {
     let described_by = format!("{}-note", field.id);
     view! {
-        <div class="grid gap-1">
+        <div class="grid gap-tight">
             <label for=field.id class=styles::LABEL>
                 {field.label}
             </label>
@@ -185,7 +185,7 @@ pub(crate) fn select_field(
 
 /// Controls that sit side by side on a wide screen.
 pub(crate) fn row(fields: Vec<AnyView>) -> AnyView {
-    view! { <div class="grid gap-3 sm:grid-cols-2">{fields}</div> }.into_any()
+    view! { <div class="grid gap-default sm:grid-cols-2">{fields}</div> }.into_any()
 }
 
 /// A note beside a control about the run that is showing.
@@ -204,8 +204,8 @@ pub(crate) fn note(text: Memo<String>) -> AnyView {
 /// A labelled group of controls that belong together.
 pub(crate) fn group(label: &'static str, fields: Vec<AnyView>) -> AnyView {
     view! {
-        <fieldset class="grid gap-3">
-            <legend class=format!("{} mb-1", styles::EYEBROW)>{label}</legend>
+        <fieldset class="grid gap-default">
+            <legend class=format!("{} mb-tight", styles::EYEBROW)>{label}</legend>
             {fields}
         </fieldset>
     }

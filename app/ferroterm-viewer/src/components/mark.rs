@@ -69,9 +69,9 @@ pub(crate) fn Mark(
 )]
 pub(crate) fn Lockup() -> impl IntoView {
     view! {
-        <span class="flex items-center gap-2">
+        <span class="flex items-center gap-default">
             <Mark />
-            <span class="flex items-baseline gap-1.5">
+            <span class="flex items-baseline gap-tight">
                 <span class="text-title font-semibold text-fg">"FerroTERM"</span>
                 <span class=styles::EYEBROW>"viewer"</span>
             </span>

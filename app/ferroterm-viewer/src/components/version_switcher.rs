@@ -32,9 +32,12 @@ pub(crate) fn VersionSwitcher(
     view! {
         <nav
             aria-label="FHIR version"
-            class="flex items-center gap-0.5 rounded-lg border border-line bg-inset p-0.5"
+            class="flex items-center gap-tight rounded-lg border border-line bg-inset p-tight"
         >
-            <span class=format!("mr-1 inline-flex items-center gap-1 pl-1.5 {}", styles::EYEBROW)>
+            <span class=format!(
+                "mr-tight inline-flex items-center gap-tight pl-tight {}",
+                styles::EYEBROW,
+            )>
                 <Icon glyph=icon::VERSION class="h-3.5 w-3.5" />
                 "FHIR"
             </span>
@@ -56,9 +59,9 @@ pub(crate) fn VersionSwitcher(
                             aria-current=move || if active() { Some("page") } else { None }
                             class=move || {
                                 if active() {
-                                    "rounded-md bg-accent px-2 py-0.5 text-small font-semibold text-accent-fg"
+                                    "rounded-md bg-accent px-default py-tight text-small font-semibold text-accent-fg"
                                 } else {
-                                    "state-change rounded-md px-2 py-0.5 text-small font-medium text-muted \
+                                    "state-change rounded-md px-default py-tight text-small font-medium text-muted \
                                      hover:bg-raised hover:text-fg"
                                 }
                             }

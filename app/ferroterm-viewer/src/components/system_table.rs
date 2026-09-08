@@ -39,7 +39,7 @@ pub(crate) fn SystemTable(
         .flat_map(|card| system_rows(&card, version))
         .collect();
     view! {
-        <div class=format!("mt-3 overflow-x-auto {}", styles::PANEL)>
+        <div class=format!("mt-default overflow-x-auto {}", styles::PANEL)>
             <table class=styles::TABLE>
                 <thead>
                     <tr>
@@ -157,7 +157,8 @@ fn tools_cell(
         .into_any()
     };
     let browse = walkable.then(|| link(BROWSE_PATH, "Browse"));
-    view! { <span class="flex gap-1">{browse} {link(VALIDATE_PATH, "Validate")}</span> }.into_any()
+    view! { <span class="flex gap-tight">{browse} {link(VALIDATE_PATH, "Validate")}</span> }
+        .into_any()
 }
 
 /// The system's canonical, as the link onto its screen, once per system.

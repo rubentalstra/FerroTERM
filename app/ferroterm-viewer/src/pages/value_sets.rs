@@ -158,11 +158,11 @@ fn list_section(
     });
 
     view! {
-        <section class="mt-8" aria-labelledby="valuesets-heading">
+        <section class="mt-section" aria-labelledby="valuesets-heading">
             <h2 id="valuesets-heading" class=styles::SECTION_TITLE>
                 "What this root holds"
             </h2>
-            <p aria-live="polite" class="mt-2 text-body text-muted">
+            <p aria-live="polite" class="mt-default text-body text-muted">
                 {announcement}
             </p>
             <Reading label="Reading the value sets">
@@ -195,7 +195,7 @@ fn list_view(
     let resources = found.found();
     if resources.is_empty() {
         return view! {
-            <p class="mt-3 text-body text-muted">
+            <p class="mt-default text-body text-muted">
                 "This root holds no ValueSet resource matching the filter above. A value set a code system defines implicitly is not published as a resource, and the expansion runner takes its canonical directly."
             </p>
         }
@@ -216,20 +216,20 @@ fn list_view(
         &[],
     );
     view! {
-        <div class="mt-3 overflow-x-auto">
+        <div class="mt-default overflow-x-auto">
             <table class="w-full border-collapse text-left text-body">
                 <thead>
                     <tr class="border-b border-line-strong">
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             "Canonical"
                         </th>
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             "Version"
                         </th>
-                        <th scope="col" class="py-2 pr-3 font-medium">
+                        <th scope="col" class="py-default pr-default font-medium">
                             "Title"
                         </th>
-                        <th scope="col" class="py-2 font-medium">
+                        <th scope="col" class="py-default font-medium">
                             "Status"
                         </th>
                     </tr>
@@ -253,14 +253,19 @@ fn row_view(resource: &PublishedValueSet, params: &ListParams, version: FhirVers
     );
     view! {
         <tr class="border-b border-line align-top">
-            <th scope="row" class="py-2 pr-3 font-mono text-small font-normal break-all">
+            <th
+                scope="row"
+                class="py-default pr-default font-mono text-small font-normal break-all"
+            >
                 {heading}
             </th>
-            <td class="py-2 pr-3 font-mono text-small">
+            <td class="py-default pr-default font-mono text-small">
                 {resource.version().unwrap_or(NOT_DECLARED).to_owned()}
             </td>
-            <td class="py-2 pr-3">{resource.label().unwrap_or(NOT_DECLARED).to_owned()}</td>
-            <td class="py-2">{resource.status().unwrap_or(NOT_DECLARED).to_owned()}</td>
+            <td class="py-default pr-default">
+                {resource.label().unwrap_or(NOT_DECLARED).to_owned()}
+            </td>
+            <td class="py-default">{resource.status().unwrap_or(NOT_DECLARED).to_owned()}</td>
         </tr>
     }
     .into_any()
@@ -292,7 +297,7 @@ fn detail_section(
 
     view! {
         <Show when=move || id.with(|id| !id.is_empty()) fallback=|| ()>
-            <section class="mt-8" aria-labelledby="valueset-detail-heading">
+            <section class="mt-section" aria-labelledby="valueset-detail-heading">
                 <h2 id="valueset-detail-heading" class=styles::SECTION_TITLE>
                     "The value set you opened"
                 </h2>
@@ -326,7 +331,7 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
         .map(|fact| {
             let value = fact.value.unwrap_or_else(|| NOT_DECLARED.to_owned());
             view! {
-                <div class="grid gap-1 border-b border-line py-1 last:border-0 sm:grid-cols-[16rem_1fr]">
+                <div class="grid gap-tight border-b border-line py-tight last:border-0 sm:grid-cols-[16rem_1fr]">
                     <dt class="font-medium">{fact.label}</dt>
                     <dd class="wrap-break-word">{value}</dd>
                 </div>
@@ -341,7 +346,7 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
     let run = canonical.map_or_else(
         || {
             view! {
-                <p class="mt-3 text-body text-muted">
+                <p class="mt-default text-body text-muted">
                     "This resource declares no canonical, so there is no url for the expansion runner to expand."
                 </p>
             }
@@ -350,8 +355,8 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
         |canonical| {
             let href = expansion_link(&canonical, version);
             view! {
-                <p class="mt-3">
-                    <a href=href class="inline-flex items-center gap-1 text-accent underline">
+                <p class="mt-default">
+                    <a href=href class="inline-flex items-center gap-tight text-accent underline">
                         <Icon glyph=icon::EXPAND />
                         "Run this value set in the expansion runner"
                     </a>
@@ -362,10 +367,10 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
     );
     let clauses = clauses_view(&resource.clauses());
     view! {
-        <article class=format!("mt-3 panel-p {}", styles::PANEL)>
+        <article class=format!("mt-default panel-p {}", styles::PANEL)>
             <h3 class="font-mono text-body font-semibold break-all">{heading}</h3>
             {run}
-            <dl class="mt-3 text-body">{rows}</dl>
+            <dl class="mt-default text-body">{rows}</dl>
             {clauses}
         </article>
     }
@@ -380,7 +385,7 @@ fn resource_view(resource: &PublishedValueSet, version: FhirVersion) -> AnyView 
 fn clauses_view(clauses: &[ClauseRow]) -> AnyView {
     if clauses.is_empty() {
         return view! {
-            <p class="mt-3 text-body text-muted">
+            <p class="mt-default text-body text-muted">
                 "This resource carries no compose element, so its content is whatever the server holds for it rather than a selection written here."
             </p>
         }
@@ -388,20 +393,20 @@ fn clauses_view(clauses: &[ClauseRow]) -> AnyView {
     }
     let rows: Vec<AnyView> = clauses.iter().map(clause_row).collect();
     view! {
-        <div class="mt-4 overflow-x-auto">
+        <div class="mt-loose overflow-x-auto">
             <table class="w-full border-collapse text-left text-body">
-                <caption class="pb-1 text-left text-small font-medium tracking-wide uppercase">
+                <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
                     "What the definition selects"
                 </caption>
                 <thead>
                     <tr class="border-b border-line">
-                        <th scope="col" class="py-1 pr-3 text-small font-medium">
+                        <th scope="col" class="py-tight pr-default text-small font-medium">
                             "Clause"
                         </th>
-                        <th scope="col" class="py-1 pr-3 text-small font-medium">
+                        <th scope="col" class="py-tight pr-default text-small font-medium">
                             "Code system"
                         </th>
-                        <th scope="col" class="py-1 text-small font-medium">
+                        <th scope="col" class="py-tight text-small font-medium">
                             "Selects"
                         </th>
                     </tr>
@@ -427,11 +432,11 @@ fn clause_row(clause: &ClauseRow) -> AnyView {
     };
     view! {
         <tr class="border-b border-line align-top last:border-0">
-            <th scope="row" class="py-1 pr-3 text-small font-normal">
+            <th scope="row" class="py-tight pr-default text-small font-normal">
                 {kind}
             </th>
-            <td class="py-1 pr-3 font-mono text-small break-all">{system}</td>
-            <td class="py-1 text-small">{selection_view(clause)}</td>
+            <td class="py-tight pr-default font-mono text-small break-all">{system}</td>
+            <td class="py-tight text-small">{selection_view(clause)}</td>
         </tr>
     }
     .into_any()
@@ -460,14 +465,14 @@ fn selection_view(clause: &ClauseRow) -> AnyView {
         .into_iter()
         .map(|line| view! { <li class="break-all">{line}</li> }.into_any())
         .collect();
-    view! { <ul class="ml-4 list-disc">{items}</ul> }.into_any()
+    view! { <ul class="ml-loose list-disc">{items}</ul> }.into_any()
 }
 
 /// A refused read, in the server's own words.
 fn failure_view(error: &FhirError) -> AnyView {
     let error = error.clone();
     view! {
-        <div class="mt-3">
+        <div class="mt-default">
             <Failure error=Signal::stored(error) />
         </div>
     }

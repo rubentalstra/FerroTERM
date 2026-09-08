@@ -33,7 +33,7 @@ pub(crate) fn OverviewPage() -> impl IntoView {
         <Title text="Overview" />
         <h1 class=styles::PAGE_TITLE>"This server"</h1>
         <p class=format!(
-            "mt-1 {}",
+            "mt-tight {}",
             styles::MUTED,
         )>"Everything on this page came from the FHIR API below, over HTTP, from your browser."</p>
     }
@@ -64,11 +64,11 @@ fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView 
     let url = Signal::derive(move || url_client.metadata_url(version.get()));
 
     view! {
-        <section class="mt-6" aria-labelledby="capability-heading">
+        <section class="mt-loose" aria-labelledby="capability-heading">
             <h2 id="capability-heading" class=styles::SECTION_TITLE>
                 "What the root declares"
             </h2>
-            <dl class="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-[8rem_1fr]">
+            <dl class="mt-default grid gap-x-loose gap-y-tight sm:grid-cols-[8rem_1fr]">
                 <dt class=styles::MUTED>"FHIR base"</dt>
                 <dd class=styles::CODE>{base}</dd>
             </dl>
@@ -87,14 +87,17 @@ fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView 
                                                     .to_owned()
                                             });
                                         view! {
-                                            <p class=format!("mt-2 {}", styles::MUTED)>{summary}</p>
+                                            <p class=format!(
+                                                "mt-default {}",
+                                                styles::MUTED,
+                                            )>{summary}</p>
                                         }
                                             .into_any()
                                     }
                                     Err(error) => {
                                         let error = error.clone();
                                         view! {
-                                            <div class="mt-2">
+                                            <div class="mt-default">
                                                 <Failure error=Signal::stored(error) />
                                             </div>
                                         }
@@ -135,17 +138,17 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
     });
 
     view! {
-        <section class="mt-8" aria-labelledby="systems-heading">
+        <section class="mt-section" aria-labelledby="systems-heading">
             <h2 id="systems-heading" class=styles::SECTION_TITLE>
                 "The code systems this server loaded"
             </h2>
             <p class=format!(
-                "mt-1 {}",
+                "mt-tight {}",
                 styles::MUTED,
             )>
                 "One row per served version, read from this root's terminology capabilities. The viewer names no code system of its own; a row opens the system."
             </p>
-            <p aria-live="polite" class=format!("mt-2 {}", styles::MUTED)>
+            <p aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
                 {announcement}
             </p>
             <Reading label="Reading the terminology capabilities">
@@ -159,7 +162,7 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
                                     Err(error) => {
                                         let error = error.clone();
                                         view! {
-                                            <div class="mt-2">
+                                            <div class="mt-default">
                                                 <Failure error=Signal::stored(error) />
                                             </div>
                                         }
@@ -187,7 +190,7 @@ fn systems_view(cards: Vec<SystemCard>) -> AnyView {
     if cards.is_empty() {
         return view! {
             <p class=format!(
-                "mt-3 {}",
+                "mt-default {}",
                 styles::MUTED,
             )>
                 "This root declares no code system. A deployment loads one with the offline build."

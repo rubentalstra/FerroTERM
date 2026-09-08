@@ -38,7 +38,7 @@ pub(crate) fn SettingsPage() -> impl IntoView {
     .into_any();
 
     let in_use = view! {
-        <dl class="mt-6 grid gap-2 text-body sm:grid-cols-[12rem_1fr]">
+        <dl class="mt-loose grid gap-default text-body sm:grid-cols-[12rem_1fr]">
             <dt class="font-medium">"FHIR base in use"</dt>
             <dd class="font-mono break-all">{base}</dd>
         </dl>
@@ -48,7 +48,7 @@ pub(crate) fn SettingsPage() -> impl IntoView {
     view! {
         {heading}
         {in_use}
-        <form class="mt-6 grid gap-5" on:submit=|ev| ev.prevent_default()>
+        <form class="mt-loose grid gap-loose" on:submit=|ev| ev.prevent_default()>
             {theme_field(settings)}
             {density_field(settings)}
             {version_field(settings)}
@@ -61,7 +61,7 @@ pub(crate) fn SettingsPage() -> impl IntoView {
 /// The light and dark choice.
 fn theme_field(settings: Settings) -> AnyView {
     view! {
-        <div class="grid gap-1">
+        <div class="grid gap-tight">
             <label for="viewer-theme" class=styles::LABEL>
                 "Theme"
             </label>
@@ -87,7 +87,7 @@ fn theme_field(settings: Settings) -> AnyView {
 /// How much room a row and a panel take.
 fn density_field(settings: Settings) -> AnyView {
     view! {
-        <div class="grid gap-1">
+        <div class="grid gap-tight">
             <label for="viewer-density" class=styles::LABEL>
                 "Density"
             </label>
@@ -117,7 +117,7 @@ fn density_field(settings: Settings) -> AnyView {
 /// The FHIR version an address without one falls back to.
 fn version_field(settings: Settings) -> AnyView {
     view! {
-        <div class="grid gap-1">
+        <div class="grid gap-tight">
             <label for="viewer-fhir-version" class=styles::LABEL>
                 "Default FHIR version"
             </label>
@@ -145,7 +145,7 @@ fn version_field(settings: Settings) -> AnyView {
 /// The BCP 47 tag sent as `displayLanguage`.
 fn language_field(settings: Settings) -> AnyView {
     view! {
-        <div class="grid gap-1">
+        <div class="grid gap-tight">
             <label for="viewer-display-language" class=styles::LABEL>
                 "Display language"
             </label>
@@ -175,7 +175,7 @@ fn page_size_field(settings: Settings) -> AnyView {
     let draft = RwSignal::new(settings.page_size.get_untracked().to_string());
     let refused = move || draft.with(|text| parse_page_size(text).is_none());
     view! {
-        <div class="grid gap-1">
+        <div class="grid gap-tight">
             <label for="viewer-page-size" class=styles::LABEL>
                 "Page size"
             </label>
