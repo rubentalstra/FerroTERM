@@ -19,6 +19,12 @@ pub const WEBDRIVER_ENV: &str = "FERROTERM_UI_E2E_WEBDRIVER";
 const DEFAULT_WEBDRIVER: &str = "http://127.0.0.1:4444";
 
 /// How long a wait keeps trying before the journey fails.
+/// How much of a failing page's markup a failure carries.
+///
+/// Enough to see which cards rendered and what they held, without burying the
+/// assertion that failed.
+const MARKUP_IN_A_FAILURE: usize = 20_000;
+
 const WAIT: Duration = Duration::from_secs(30);
 
 /// How often a wait re-reads the page while it waits.
@@ -223,7 +229,22 @@ impl Journey {
         } else {
             format!("the browser logged:\n  {}", console.join("\n  "))
         };
-        format!("waiting for {what} failed: {error}\n{logged}")
+        // A selector that matched nothing says nothing about why. The address
+        // and the markup say which page was actually open and what it held, so
+        // a failure that cannot be reproduced locally is still diagnosable
+        // from the log alone.
+        let address = self.driver.current_url().await.map_or_else(
+            |error| format!("(the address could not be read: {error})"),
+            |url| url.to_string(),
+        );
+        let markup = match self.driver.source().await {
+            Ok(source) => {
+                let trimmed: String = source.chars().take(MARKUP_IN_A_FAILURE).collect();
+                format!("the page held:\n{trimmed}")
+            }
+            Err(error) => format!("(the markup could not be read: {error})"),
+        };
+        format!("waiting for {what} failed: {error}\nthe address was {address}\n{logged}\n{markup}")
     }
 
     /// Fails the journey when the browser logged anything severe.
