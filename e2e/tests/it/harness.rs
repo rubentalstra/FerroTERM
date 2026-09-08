@@ -2,6 +2,7 @@
 //! The browser session every journey drives, and the waits it is built from.
 
 use std::path::Path;
+use std::path::PathBuf;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -18,13 +19,26 @@ pub const WEBDRIVER_ENV: &str = "FERROTERM_UI_E2E_WEBDRIVER";
 /// The WebDriver endpoint used when [`WEBDRIVER_ENV`] is unset.
 const DEFAULT_WEBDRIVER: &str = "http://127.0.0.1:4444";
 
-/// How long a wait keeps trying before the journey fails.
-/// How much of a failing page's markup a failure carries.
+/// Names the directory a failure writes its evidence into.
+pub const FAILURES_ENV: &str = "FERROTERM_UI_E2E_FAILURES";
+
+/// Where the evidence goes when nothing names a directory.
+const DEFAULT_FAILURES: &str = "target/ui-e2e-failures";
+
+/// How many words of a wait's description name its evidence files.
+///
+/// Enough to tell two failures apart in an artifact listing, short of a file
+/// name nothing can read.
+const SLUG_WORDS: usize = 8;
+
+/// How much of a failing page's markup the log carries.
 ///
 /// Enough to see which cards rendered and what they held, without burying the
-/// assertion that failed.
+/// assertion that failed. The whole document goes to the evidence file beside
+/// it, so nothing is lost by trimming here.
 const MARKUP_IN_A_FAILURE: usize = 20_000;
 
+/// How long a wait keeps trying before the journey fails.
 const WAIT: Duration = Duration::from_secs(30);
 
 /// How often a wait re-reads the page while it waits.
@@ -81,6 +95,34 @@ pub async fn session() -> WebDriver {
         .unwrap_or_else(|error| panic!("no browser session at {endpoint}: {error}"))
 }
 
+/// `what` as a file name: lowercase words joined by hyphens.
+///
+/// A wait describes itself in a sentence, and that sentence is what names the
+/// evidence, so the file in the artifact says which wait wrote it.
+fn slug(what: &str) -> String {
+    let name: String = what
+        .chars()
+        .map(|letter| {
+            if letter.is_ascii_alphanumeric() {
+                letter.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    let trimmed: String = name
+        .split('-')
+        .filter(|word| !word.is_empty())
+        .take(SLUG_WORDS)
+        .collect::<Vec<&str>>()
+        .join("-");
+    if trimmed.is_empty() {
+        "failure".to_owned()
+    } else {
+        trimmed
+    }
+}
+
 /// One browser session pointed at the server under test.
 #[derive(Debug)]
 pub struct Journey {
@@ -117,7 +159,7 @@ impl Journey {
     pub async fn element(&self, selector: By, what: &str) -> WebElement {
         match self.driver.query(selector).wait(WAIT, POLL).first().await {
             Ok(element) => element,
-            Err(error) => panic!("{}", self.failure(what, &error).await),
+            Err(error) => panic!("{}", self.failure(what, &error.to_string()).await),
         }
     }
 
@@ -142,7 +184,7 @@ impl Journey {
                 .text()
                 .await
                 .unwrap_or_else(|error| panic!("reading {what}: {error}")),
-            Err(error) => panic!("{}", self.failure(what, &error).await),
+            Err(error) => panic!("{}", self.failure(what, &error.to_string()).await),
         }
     }
 
@@ -181,16 +223,9 @@ impl Journey {
                 return address;
             }
             if Instant::now() >= deadline {
-                let console = self.console_errors().await;
-                let logged = if console.is_empty() {
-                    "the browser logged nothing severe".to_owned()
-                } else {
-                    format!("the browser logged:\n  {}", console.join("\n  "))
-                };
-                panic!(
-                    "waiting for {what} failed: the address is still `{address}`, \
-                     which carries no `{needle}`\n{logged}"
-                );
+                let reason =
+                    format!("the address is still `{address}`, which carries no `{needle}`");
+                panic!("{}", self.failure(what, &reason).await);
             }
             tokio::time::sleep(POLL).await;
         }
@@ -222,7 +257,7 @@ impl Journey {
     /// A boot failure shows up as an element that never appears, so the
     /// console goes into the message: without it the report says only that a
     /// selector did not match.
-    async fn failure(&self, what: &str, error: &WebDriverError) -> String {
+    async fn failure(&self, what: &str, reason: &str) -> String {
         let console = self.console_errors().await;
         let logged = if console.is_empty() {
             "the browser logged nothing severe".to_owned()
@@ -237,14 +272,57 @@ impl Journey {
             |error| format!("(the address could not be read: {error})"),
             |url| url.to_string(),
         );
-        let markup = match self.driver.source().await {
-            Ok(source) => {
-                let trimmed: String = source.chars().take(MARKUP_IN_A_FAILURE).collect();
+        let source = self.driver.source().await;
+        let markup = match &source {
+            Ok(text) => {
+                let trimmed: String = text.chars().take(MARKUP_IN_A_FAILURE).collect();
                 format!("the page held:\n{trimmed}")
             }
             Err(error) => format!("(the markup could not be read: {error})"),
         };
-        format!("waiting for {what} failed: {error}\nthe address was {address}\n{logged}\n{markup}")
+        let evidence = self.evidence(what, source.ok().as_deref()).await;
+        format!(
+            "waiting for {what} failed: {reason}\nthe address was {address}\n\
+             {logged}\n{evidence}\n{markup}"
+        )
+    }
+
+    /// Writes a screenshot and the whole document to the failure directory.
+    ///
+    /// The `ui-e2e` CI job uploads that directory when the run fails, so a
+    /// failure that reproduces only on the runner is looked at rather than
+    /// re-run. Nothing here is allowed to raise: a browser that cannot answer
+    /// a screenshot request is already the failure being reported, and a
+    /// second panic on the way out would hide it. Each outcome is returned as
+    /// a line of the report instead.
+    async fn evidence(&self, what: &str, source: Option<&str>) -> String {
+        let dir = std::env::var(FAILURES_ENV)
+            .map_or_else(|_absent| PathBuf::from(DEFAULT_FAILURES), PathBuf::from);
+        if let Err(error) = std::fs::create_dir_all(&dir) {
+            return format!("(no evidence written: creating {}: {error})", dir.display());
+        }
+        // Two journeys can fail on the same wait, and nextest gives each test
+        // its own process, so the pid is what keeps one from overwriting the
+        // other's evidence.
+        let stem = format!("{}-{}", slug(what), std::process::id());
+        let shot = dir.join(format!("{stem}.png"));
+        let page = dir.join(format!("{stem}.html"));
+        let mut written = Vec::new();
+        match self.driver.screenshot(&shot).await {
+            Ok(()) => written.push(format!("a screenshot in {}", shot.display())),
+            Err(error) => written.push(format!("(no screenshot: {error})")),
+        }
+        match source {
+            Some(text) => match std::fs::write(&page, text) {
+                Ok(()) => written.push(format!("the whole document in {}", page.display())),
+                Err(error) => written.push(format!(
+                    "(no document: writing {}: {error})",
+                    page.display()
+                )),
+            },
+            None => written.push("(no document: the markup could not be read)".to_owned()),
+        }
+        format!("the failure left {}", written.join(", and "))
     }
 
     /// Fails the journey when the browser logged anything severe.
@@ -303,5 +381,28 @@ impl Journey {
             .await
             .unwrap_or_else(|error| panic!("writing {}: {error}", path.display()));
         println!("captured {}", path.display());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::slug;
+
+    #[test]
+    fn a_waits_description_names_a_file_that_a_filesystem_accepts() {
+        assert_eq!(
+            slug("the switcher to mark R4B, the default version, as current"),
+            "the-switcher-to-mark-r4b-the-default-version"
+        );
+        assert_eq!(
+            slug("a code system card on the overview"),
+            "a-code-system-card-on-the-overview"
+        );
+        assert_eq!(
+            slug("/ui/systems/x?fhir=r4b"),
+            "ui-systems-x-fhir-r4b",
+            "a description carrying an address leaves no separator in the name"
+        );
+        assert_eq!(slug("..."), "failure", "a name is never empty");
     }
 }

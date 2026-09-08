@@ -556,16 +556,42 @@ mod tests {
         serde_json::from_str(json).expect("the fixture is valid JSON")
     }
 
+    /// The roots whose `filter-operator` value set defines `child-of`.
+    ///
+    /// R5 added `child-of` and `descendent-leaf` to the value set; the R4
+    /// family defines neither
+    /// (<https://hl7.org/fhir/R4B/codesystem-filter-operator.html>,
+    /// <https://hl7.org/fhir/R5/codesystem-filter-operator.html>). So a root of
+    /// the R4 family states a hierarchy it has no way to select a direct child
+    /// of, whatever the code system behind it can do.
+    const ROOTS_DEFINING_CHILD_OF: [&str; 2] = ["r5", "r6"];
+
     #[test]
-    fn a_version_declaring_the_child_operator_is_walkable_on_every_root() {
+    fn the_tree_is_walkable_exactly_where_the_root_can_express_a_direct_child_filter() {
         for (root, document) in RECORDED {
-            assert_eq!(
-                hierarchy_of(document, "http://example.org/fhir/CodeSystem/animals"),
-                Hierarchy::Walkable {
-                    property: String::from("concept")
-                },
-                "{root} declares the operator, so the tree walks the property it is declared on"
-            );
+            let hierarchy = hierarchy_of(document, "http://example.org/fhir/CodeSystem/animals");
+            if ROOTS_DEFINING_CHILD_OF.contains(&root) {
+                assert_eq!(
+                    hierarchy,
+                    Hierarchy::Walkable {
+                        property: String::from("concept")
+                    },
+                    "{root} declares the direct-child operator, so the tree walks the property it is declared on"
+                );
+            } else {
+                assert_eq!(
+                    hierarchy,
+                    Hierarchy::WithoutChildren {
+                        operators: vec![
+                            String::from("descendent-of"),
+                            String::from("generalizes"),
+                            String::from("is-a"),
+                            String::from("is-not-a"),
+                        ]
+                    },
+                    "{root} states the hierarchy operators it does define, and none of them selects a direct child, so the screen lists rather than walks"
+                );
+            }
         }
     }
 

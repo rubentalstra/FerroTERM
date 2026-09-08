@@ -19,9 +19,7 @@
                 "is-a",
                 "descendent-of",
                 "is-not-a",
-                "generalizes",
-                "child-of",
-                "descendent-leaf"
+                "generalizes"
               ]
             },
             {
@@ -144,9 +142,7 @@
                 "is-a",
                 "descendent-of",
                 "is-not-a",
-                "generalizes",
-                "child-of",
-                "descendent-leaf"
+                "generalizes"
               ]
             },
             {
@@ -523,9 +519,7 @@
                 "is-a",
                 "descendent-of",
                 "is-not-a",
-                "generalizes",
-                "child-of",
-                "descendent-leaf"
+                "generalizes"
               ]
             },
             {
@@ -883,9 +877,11 @@
             {
               "code": "code",
               "op": [
-                "regex",
                 "=",
-                "in"
+                "in",
+                "not-in",
+                "regex",
+                "exists"
               ]
             }
           ],
@@ -906,7 +902,7 @@
       ]
     }
   ],
-  "date": "2026-09-06T21:29:49.202398Z",
+  "date": "2026-09-08T04:45:34.48126Z",
   "expansion": {
     "hierarchical": false,
     "incomplete": false,

@@ -97,6 +97,16 @@ workspace would make the test run write FHIR JSON in a key order the shipped
 server does not. The job therefore also runs the formatting and clippy passes
 that crate would otherwise miss.
 
+A failing journey leaves the page it failed on. The harness writes a
+screenshot and the whole document into `target/ui-e2e-failures`, and the job
+uploads that directory as the `ui-e2e-failure` artifact when the run fails, so
+a failure that reproduces only on the runner is looked at rather than re-run. A
+passing run writes nothing there, and the capture itself never raises: a
+screenshot the browser cannot answer is reported in the failure message. The
+browser container is started with `SE_NODE_MAX_SESSIONS` raised to the runner's
+processor count and the journeys run with the same test-thread count, so they
+run beside each other rather than queueing on the grid's one default session.
+
 On a tag, `release-build.yml` runs `trunk build --release --locked` before
 `cargo auditable build`, and builds the server with the feature that embeds
 `dist/` into the binary. The bundle is architecture-independent, so the build

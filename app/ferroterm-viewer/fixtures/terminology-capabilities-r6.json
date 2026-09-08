@@ -892,9 +892,11 @@
             {
               "code": "code",
               "op": [
-                "regex",
                 "=",
-                "in"
+                "in",
+                "not-in",
+                "regex",
+                "exists"
               ]
             }
           ],
@@ -916,7 +918,7 @@
       ]
     }
   ],
-  "date": "2026-09-06T21:29:49.213733Z",
+  "date": "2026-09-08T04:45:34.509027Z",
   "description": "Serves the FHIR R6 ballot (version 6.0.0-ballot5). Every behaviour grounded only in the ballot is re-verified against the published specification when it appears, and may change with it.",
   "expansion": {
     "hierarchical": false,

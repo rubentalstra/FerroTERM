@@ -33,4 +33,5 @@ mod telemetry;
 mod translate;
 mod ui;
 mod value_set;
+mod viewer_fixtures;
 mod xml;

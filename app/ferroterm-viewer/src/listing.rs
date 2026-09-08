@@ -331,7 +331,10 @@ pub(crate) fn filter_form(
 /// One canonical in a listing row: a link that opens it, or a statement.
 ///
 /// A resource that carries no id cannot be read back, so it is stated rather
-/// than drawn as a link that would answer nothing.
+/// than drawn as a link that would answer nothing. `Resource.id` is optional
+/// on the wire (<https://hl7.org/fhir/R4B/resource.html#id>), and a searchset
+/// entry is free to carry only its `fullUrl`, so the unlinked arm stays: the
+/// screen renders what arrived rather than assuming what a root sends.
 pub(crate) fn canonical_cell(canonical: &str, href: Option<String>) -> AnyView {
     let canonical = canonical.to_owned();
     match href {
