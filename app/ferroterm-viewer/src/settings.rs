@@ -8,6 +8,7 @@ use leptos::prelude::RwSignal;
 use leptos::prelude::Set;
 use leptos::prelude::With;
 
+use crate::density::Density;
 use crate::fhir::version::FhirVersion;
 use crate::paging::MAX_COUNT;
 use crate::storage;
@@ -21,6 +22,8 @@ const VERSION_KEY: &str = "ferroterm.viewer.fhir-version";
 const LANGUAGE_KEY: &str = "ferroterm.viewer.display-language";
 /// Where the page size is stored.
 const PAGE_SIZE_KEY: &str = "ferroterm.viewer.page-size";
+/// Where the density choice is stored.
+const DENSITY_KEY: &str = "ferroterm.viewer.density";
 
 /// The preferences the viewer keeps, one signal each.
 ///
@@ -36,6 +39,8 @@ pub(crate) struct Settings {
     pub(crate) language: RwSignal<String>,
     /// How many rows a paged screen asks for.
     pub(crate) page_size: RwSignal<u32>,
+    /// How much room a row and a panel take.
+    pub(crate) density: RwSignal<Density>,
 }
 
 impl Default for Settings {
@@ -45,6 +50,7 @@ impl Default for Settings {
             version: RwSignal::new(FhirVersion::default()),
             language: RwSignal::new(String::new()),
             page_size: RwSignal::new(50),
+            density: RwSignal::new(Density::default()),
         }
     }
 }
@@ -74,6 +80,12 @@ impl Settings {
         if let Some(size) = storage::read(PAGE_SIZE_KEY).and_then(|text| parse_page_size(&text)) {
             settings.page_size.set(size);
         }
+        if let Some(density) = storage::read(DENSITY_KEY)
+            .as_deref()
+            .and_then(Density::from_key)
+        {
+            settings.density.set(density);
+        }
         settings
     }
 
@@ -89,6 +101,7 @@ impl Settings {
         Effect::new(move |_| {
             storage::write(PAGE_SIZE_KEY, &self.page_size.get().to_string());
         });
+        Effect::new(move |_| storage::write(DENSITY_KEY, self.density.get().key()));
     }
 }
 

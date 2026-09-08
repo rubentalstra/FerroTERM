@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use leptos_meta::Title;
 
 use crate::components::shell::SelectedVersion;
+use crate::density::Density;
 use crate::fhir::FhirClient;
 use crate::fhir::version::FhirVersion;
 use crate::paging::MAX_COUNT;
@@ -49,6 +50,7 @@ pub(crate) fn SettingsPage() -> impl IntoView {
         {in_use}
         <form class="mt-6 grid gap-5" on:submit=|ev| ev.prevent_default()>
             {theme_field(settings)}
+            {density_field(settings)}
             {version_field(settings)}
             {language_field(settings)}
             {page_size_field(settings)}
@@ -60,7 +62,7 @@ pub(crate) fn SettingsPage() -> impl IntoView {
 fn theme_field(settings: Settings) -> AnyView {
     view! {
         <div class="grid gap-1">
-            <label for="viewer-theme" class="text-body font-medium">
+            <label for="viewer-theme" class=styles::LABEL>
                 "Theme"
             </label>
             <select
@@ -82,11 +84,41 @@ fn theme_field(settings: Settings) -> AnyView {
     .into_any()
 }
 
+/// How much room a row and a panel take.
+fn density_field(settings: Settings) -> AnyView {
+    view! {
+        <div class="grid gap-1">
+            <label for="viewer-density" class=styles::LABEL>
+                "Density"
+            </label>
+            <select
+                id="viewer-density"
+                name="density"
+                aria-describedby="viewer-density-note"
+                class=styles::INPUT
+                prop:value=move || settings.density.get().key()
+                on:change:target=move |ev| {
+                    if let Some(chosen) = Density::from_key(&ev.target().value()) {
+                        settings.density.set(chosen);
+                    }
+                }
+            >
+                <option value="comfortable">{Density::Comfortable.label()}</option>
+                <option value="compact">{Density::Compact.label()}</option>
+            </select>
+            <p id="viewer-density-note" class=styles::HINT>
+                "Compact tightens every table row and panel, so more of an expansion or a searchset fits one screen."
+            </p>
+        </div>
+    }
+    .into_any()
+}
+
 /// The FHIR version an address without one falls back to.
 fn version_field(settings: Settings) -> AnyView {
     view! {
         <div class="grid gap-1">
-            <label for="viewer-fhir-version" class="text-body font-medium">
+            <label for="viewer-fhir-version" class=styles::LABEL>
                 "Default FHIR version"
             </label>
             <select
@@ -104,9 +136,7 @@ fn version_field(settings: Settings) -> AnyView {
                     <option value=option.segment()>{option.label()}</option>
                 </For>
             </select>
-            <p class="text-small text-faint">
-                "Used when an address carries no version of its own."
-            </p>
+            <p class=styles::HINT>"Used when an address carries no version of its own."</p>
         </div>
     }
     .into_any()
@@ -116,7 +146,7 @@ fn version_field(settings: Settings) -> AnyView {
 fn language_field(settings: Settings) -> AnyView {
     view! {
         <div class="grid gap-1">
-            <label for="viewer-display-language" class="text-body font-medium">
+            <label for="viewer-display-language" class=styles::LABEL>
                 "Display language"
             </label>
             <input
@@ -128,7 +158,7 @@ fn language_field(settings: Settings) -> AnyView {
                 prop:value=move || settings.language.get()
                 on:input:target=move |ev| settings.language.set(ev.target().value())
             />
-            <p class="text-small text-faint">
+            <p class=styles::HINT>
                 "A BCP 47 tag sent as displayLanguage. Leave it empty to take the server default."
             </p>
         </div>
@@ -146,7 +176,7 @@ fn page_size_field(settings: Settings) -> AnyView {
     let refused = move || draft.with(|text| parse_page_size(text).is_none());
     view! {
         <div class="grid gap-1">
-            <label for="viewer-page-size" class="text-body font-medium">
+            <label for="viewer-page-size" class=styles::LABEL>
                 "Page size"
             </label>
             <input
@@ -166,7 +196,7 @@ fn page_size_field(settings: Settings) -> AnyView {
                     draft.set(typed);
                 }
             />
-            <p id="viewer-page-size-note" class="text-small text-faint">
+            <p id="viewer-page-size-note" class=styles::HINT>
                 {move || {
                     if refused() {
                         format!(

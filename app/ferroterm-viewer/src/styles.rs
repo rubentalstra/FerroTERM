@@ -55,17 +55,18 @@ pub(crate) const TD: &str = "row-y border-b border-line px-3 align-top";
 pub(crate) const TD_TIGHT: &str = "row-y border-b border-line px-3 align-top whitespace-nowrap";
 
 /// The control that submits a form.
-pub(crate) const SUBMIT: &str = "inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 \
-                                 text-small font-medium text-accent-fg";
+pub(crate) const SUBMIT: &str = "state-change inline-flex items-center gap-1.5 rounded-md \
+                                 bg-accent px-3 py-1.5 text-small font-medium text-accent-fg";
 
 /// A control that acts without submitting.
-pub(crate) const BUTTON: &str = "inline-flex items-center gap-1.5 rounded-md border border-line \
-                                 px-2.5 py-1 text-small font-medium text-fg hover:bg-inset";
+pub(crate) const BUTTON: &str = "state-change inline-flex items-center gap-1.5 rounded-md border \
+                                 border-line px-2.5 py-1 text-small font-medium text-fg \
+                                 hover:bg-inset";
 
 /// A control with no chrome until it is pointed at.
-pub(crate) const BUTTON_QUIET: &str = "inline-flex items-center gap-1.5 rounded-md px-2 py-1 \
-                                       text-small font-medium text-muted hover:bg-inset \
-                                       hover:text-fg";
+pub(crate) const BUTTON_QUIET: &str = "state-change inline-flex items-center gap-1.5 rounded-md \
+                                       px-2 py-1 text-small font-medium text-muted \
+                                       hover:bg-inset hover:text-fg";
 
 /// A text input.
 pub(crate) const INPUT: &str = "w-full rounded-md border border-line-strong bg-raised px-2.5 \

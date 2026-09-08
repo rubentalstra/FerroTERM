@@ -142,6 +142,10 @@
 :root {
   --row-y: 0.5rem;
   --panel-p: 1rem;
+
+  /* Motion marks a state change and nothing else, at one duration. Anything
+     longer reads as an animation the reader did not ask for. */
+  --motion-state: 120ms;
 }
 
 :root[data-density="compact"] {
@@ -176,4 +180,10 @@
 
 @utility panel-p {
   padding: var(--panel-p);
+}
+
+@utility state-change {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: ease-out;
+  transition-duration: var(--motion-state);
 }

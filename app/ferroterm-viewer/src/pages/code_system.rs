@@ -478,7 +478,7 @@ fn resource_view(resource: &PublishedCodeSystem) -> AnyView {
             view! {
                 <div class="grid gap-1 border-b border-line py-1 last:border-0 sm:grid-cols-[16rem_1fr]">
                     <dt class="font-medium">{fact.label}</dt>
-                    <dd class="break-words">{value}</dd>
+                    <dd class="wrap-break-word">{value}</dd>
                 </div>
             }
             .into_any()

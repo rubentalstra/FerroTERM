@@ -99,7 +99,7 @@ const ENTRY_BASE: &str = "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-
 const ENTRY_ACTIVE: &str = "bg-accent-soft text-accent-soft-fg";
 
 /// The classes every other entry carries.
-const ENTRY_RESTING: &str = "text-muted hover:bg-inset hover:text-fg";
+const ENTRY_RESTING: &str = "state-change text-muted hover:bg-inset hover:text-fg";
 
 /// The shell's own query parameters.
 #[derive(Clone, Debug, Params, PartialEq)]

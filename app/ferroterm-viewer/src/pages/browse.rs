@@ -87,11 +87,11 @@ const NOTE: &str = "mt-3 text-body text-muted";
 /// The box is 24 by 24 CSS pixels around a smaller chevron, which is the
 /// minimum target WCAG 2.2 SC 2.5.8 sets
 /// (<https://www.w3.org/TR/WCAG22/#target-size-minimum>).
-const TWIST: &str = "mr-1 inline-flex h-6 w-6 items-center justify-center rounded \
-                     text-brand-700 hover:bg-slate-200 dark:text-brand-300 dark:hover:bg-slate-700";
+const TWIST: &str = "state-change mr-1 inline-flex h-6 w-6 items-center justify-center \
+                     rounded text-accent hover:bg-inset";
 
 /// The classes a table cell carries.
-const CELL: &str = "py-1 pr-3 text-left text-small font-normal break-words";
+const CELL: &str = "py-1 pr-3 text-left text-small font-normal wrap-break-word";
 
 /// How far one level of the tree is indented, in pixels.
 ///
@@ -964,7 +964,7 @@ fn table_view(
                         {head}
                     </th>
                     <td class=CELL>{middle}</td>
-                    <td class="py-1 text-small break-words text-faint">{tail}</td>
+                    <td class="py-1 text-small wrap-break-word text-faint">{tail}</td>
                 </tr>
             }
             .into_any()
@@ -1306,8 +1306,7 @@ fn row_view(row: &TreeRow, chrome: &TreeChrome) -> AnyView {
             // reader who cannot tell the two backgrounds apart would otherwise
             // have no cue at all (WCAG 2.2 SC 1.4.1).
             class:font-semibold=selected
-            class:bg-slate-100=selected
-            class:dark:bg-slate-800=selected
+            class:bg-inset=selected
             style=format!("padding-left: {}px", row.depth.saturating_mul(INDENT))
         >
             {twist}

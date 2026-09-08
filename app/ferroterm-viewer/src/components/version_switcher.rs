@@ -58,7 +58,8 @@ pub(crate) fn VersionSwitcher(
                                 if active() {
                                     "rounded-md bg-accent px-2 py-0.5 text-small font-semibold text-accent-fg"
                                 } else {
-                                    "rounded-md px-2 py-0.5 text-small font-medium text-muted hover:bg-raised hover:text-fg"
+                                    "state-change rounded-md px-2 py-0.5 text-small font-medium text-muted \
+                                     hover:bg-raised hover:text-fg"
                                 }
                             }
                         >
