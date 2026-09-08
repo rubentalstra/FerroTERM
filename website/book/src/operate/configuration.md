@@ -36,6 +36,23 @@ client error logs at `warn`, a server error at `error`. On `SIGTERM` or
 `SIGINT`: the signal, then `ferroterm stopped`. A refused start is one
 `cannot start` line with the reason.
 
+## A refused artifact stops the start
+
+An artifact the server cannot open stops the whole start. Nine good artifacts
+and one damaged one serve nothing, and the `cannot start` line names the
+directory and the reason.
+
+That is deliberate. A server that dropped the damaged one and served the other
+nine would answer every code of the tenth system with "not found", and a caller
+cannot tell that from "this code does not exist". A terminology answer that is
+wrong and confident is worse for a clinical system downstream than a server
+that did not start, so the refusal is loud and total.
+
+The practical consequence for an operator is that a rebuilt artifact is
+swapped in before a restart, not after one. The practical consequence for a
+benchmark or a conformance run is that it fails at once, naming the artifact,
+rather than reporting a figure taken over a system nothing served.
+
 ## The registry systems
 
 Four systems ship with the server and are served without configuration: BCP
