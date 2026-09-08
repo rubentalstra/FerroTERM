@@ -358,18 +358,23 @@ async fn expansion_runner(
     Ok(())
 }
 
-/// The concept maps this root holds, and one code translated through them.
+/// The concept maps this root publishes.
+async fn concept_maps(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "conceptmaps")).await;
+    journey
+        .element(By::Css(CONCEPT_MAPS), "what this root publishes")
+        .await;
+    shot(journey, &dir.join("concept-maps.png")).await?;
+    Ok(())
+}
+
+/// One code translated through the maps this root holds.
 ///
 /// The map is left unnamed, which asks the server to translate through every
-/// map it holds for the code, so the screen shows both what it publishes and
-/// what a run answers.
-async fn concept_maps(
-    journey: &Journey,
-    dir: &Path,
-    base: &str,
-    system: &str,
-) -> WebDriverResult<()> {
-    journey.reopen(&address(base, "conceptmaps")).await;
+/// map it holds for the code, so the shot is what a run answers rather than
+/// what one map says.
+async fn translate(journey: &Journey, dir: &Path, base: &str, system: &str) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "translate")).await;
     journey
         .element(
             By::Css(TRANSLATE_SYSTEM),
@@ -395,10 +400,7 @@ async fn concept_maps(
             "the runner to answer the code it was given",
         )
         .await;
-    journey
-        .element(By::Css(CONCEPT_MAPS), "what this root publishes")
-        .await;
-    shot(journey, &dir.join("concept-maps.png")).await?;
+    shot(journey, &dir.join("translate.png")).await?;
     Ok(())
 }
 
@@ -517,7 +519,8 @@ async fn the_documentation_screenshots_are_captured() {
             let canonical = value_sets(&journey, &dir, &base).await?;
             expansion_runner(&journey, &dir, &base, &canonical).await?;
             validate_runner(&journey, &dir, &base, &system).await?;
-            concept_maps(&journey, &dir, &base, &system).await?;
+            concept_maps(&journey, &dir, &base).await?;
+            translate(&journey, &dir, &base, &system).await?;
             versions(&journey, &dir, &base).await?;
             evidence(&journey, &dir, &base).await?;
             settings(&journey, &dir, &base).await?;

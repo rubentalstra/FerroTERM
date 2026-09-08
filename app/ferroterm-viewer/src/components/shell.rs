@@ -28,6 +28,7 @@ use crate::pages::expand::ExpandPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
 use crate::pages::settings::SettingsPage;
+use crate::pages::translate::TranslatePage;
 use crate::pages::validate::ValidatePage;
 use crate::pages::value_sets::ValueSetsPage;
 use crate::pages::versions::VersionsPage;
@@ -37,6 +38,7 @@ use crate::routes::EVIDENCE_PATH;
 use crate::routes::EXPAND_PATH;
 use crate::routes::OVERVIEW_PATH;
 use crate::routes::SETTINGS_PATH;
+use crate::routes::TRANSLATE_PATH;
 use crate::routes::VALIDATE_PATH;
 use crate::routes::VALUE_SETS_PATH;
 use crate::routes::VERSIONS_PATH;
@@ -66,9 +68,10 @@ const EXPLORE: [NavItem; 2] = [
 ];
 
 /// The screens a reader asks this server a question on.
-const RUN: [NavItem; 2] = [
+const RUN: [NavItem; 3] = [
     NavItem(EXPAND_PATH, "Expand", icon::EXPAND),
     NavItem(VALIDATE_PATH, "Validate and subsume", icon::VALIDATE),
+    NavItem(TRANSLATE_PATH, "Translate", icon::CONCEPT_MAPS),
 ];
 
 /// The screens that list what this server publishes.
@@ -274,6 +277,7 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/settings") view=SettingsPage />
             <Route path=path!("/systems/:url") view=CodeSystemPage />
             <Route path=path!("/conceptmaps") view=ConceptMapsPage />
+            <Route path=path!("/translate") view=TranslatePage />
             <Route path=path!("/valuesets") view=ValueSetsPage />
             <Route path=path!("/versions") view=VersionsPage />
             <Route path=path!("/evidence") view=EvidencePage />

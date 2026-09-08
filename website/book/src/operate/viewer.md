@@ -131,12 +131,20 @@ resource, so it is absent here; the runner takes its canonical directly.
 
 ### Concept maps
 
-The `ConceptMap` resources this root publishes, and `ConceptMap/$translate`
-over them. Name a code and the system it belongs to; leave the map empty and
-the server picks the maps it holds for that code. The answer lists each match
-with the equivalence the server stated and the map it came from.
+The `ConceptMap` resources this root publishes, searched by `url` and
+`version`. Opening one shows the groups it maps and links into the translate
+runner with the map already named.
 
-![The concept map screen, with a translated code and the match it returned](img/viewer/concept-maps.png)
+![The concept map screen, listing what this root publishes](img/viewer/concept-maps.png)
+
+### Translate
+
+`ConceptMap/$translate`, over the maps this root holds. Name a code and the
+system it belongs to; leave the map empty and the server picks the maps it
+holds for that code. The answer lists each match with the equivalence the
+server stated and the map it came from.
+
+![The translate runner, with a translated code and the match it returned](img/viewer/translate.png)
 
 ### FHIR versions
 
