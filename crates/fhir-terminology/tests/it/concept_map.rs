@@ -8,6 +8,7 @@ use fhir_terminology::conceptmap::convert;
 use fhir_terminology::conceptmap::model::Relationship;
 use fhir_terminology::operations::translate::{Match, TranslateInput, Translation, translate};
 use fhir_terminology::operations::{CodeableConceptRef, CodingRef, OperationError};
+use fhir_types::codec::Json;
 use fhir_types::r4b::concept_map::{
     ConceptMap, ConceptMapGroup, ConceptMapGroupElement, ConceptMapGroupElementTarget,
 };
@@ -320,4 +321,58 @@ fn an_inline_map_translates_and_malformed_requests_are_refused() {
     let translation = run(&world, &other_system);
     assert!(!translation.result);
     assert!(translation.matches.is_empty(), "no group covers the system");
+}
+
+#[test]
+fn an_r6_element_comment_reads_from_the_field_and_from_the_extension() {
+    // R6 declares `ConceptMap.group.element.comment`; R5 and earlier carry the
+    // same fact in an extension, so a document written either way has to read
+    // the same (<https://hl7.org/fhir/6.0.0-ballot5/conceptmap-definitions.html>).
+    let native = serde_json::json!({
+        "resourceType": "ConceptMap",
+        "url": "http://example.org/fhir/ConceptMap/native-comment",
+        "status": "active",
+        "group": [{
+            "source": "http://example.org/fhir/CodeSystem/animals",
+            "element": [{
+                "code": "dog",
+                "comment": "stated the R6 way",
+                "target": [{"code": "brown", "relationship": "equivalent"}]
+            }]
+        }]
+    });
+    let extended = serde_json::json!({
+        "resourceType": "ConceptMap",
+        "url": "http://example.org/fhir/ConceptMap/extended-comment",
+        "status": "active",
+        "group": [{
+            "source": "http://example.org/fhir/CodeSystem/animals",
+            "element": [{
+                "code": "dog",
+                "extension": [{
+                    "url": "http://hl7.org/fhir/6.0/StructureDefinition/extension-ConceptMap.group.element.comment",
+                    "valueString": "stated the R5 way"
+                }],
+                "target": [{"code": "brown", "relationship": "equivalent"}]
+            }]
+        }]
+    });
+    for (document, expected) in [
+        (native, "stated the R6 way"),
+        (extended, "stated the R5 way"),
+    ] {
+        let parsed: fhir_types::codec::Value =
+            serde_json::from_str(&document.to_string()).expect("the document parses");
+        let resource = fhir_types::r6::concept_map::ConceptMap::from_json(
+            parsed.as_object().expect("object"),
+            &mut fhir_types::codec::Path::root("ConceptMap"),
+        )
+        .expect("an R6 ConceptMap");
+        let model = convert::r6::convert(&resource).expect("converts");
+        assert_eq!(
+            model.groups[0].elements[0].comment.as_deref(),
+            Some(expected),
+            "the comment reads whichever way the document stated it"
+        );
+    }
 }
