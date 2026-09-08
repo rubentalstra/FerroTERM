@@ -34,7 +34,7 @@ const SLUG_WORDS: usize = 8;
 
 /// How much of a failing page's markup the log carries.
 ///
-/// Enough to see which cards rendered and what they held, without burying the
+/// Enough to see which sections rendered and what they held, without burying the
 /// assertion that failed. The whole document goes to the evidence file beside
 /// it, so nothing is lost by trimming here.
 const MARKUP_IN_A_FAILURE: usize = 20_000;
@@ -187,6 +187,18 @@ impl Journey {
                 .unwrap_or_else(|error| panic!("reading {what}: {error}")),
             Err(error) => panic!("{}", self.failure(what, &error.to_string()).await),
         }
+    }
+
+    /// Every element matching `selector` right now, in document order.
+    ///
+    /// The reading is of the page as it stands, so a journey takes it only
+    /// after a wait has proven the section it describes has settled.
+    ///
+    /// # Errors
+    ///
+    /// Returns the WebDriver error if the browser refused the query.
+    pub async fn all(&self, selector: By) -> WebDriverResult<Vec<WebElement>> {
+        self.driver.find_all(selector).await
     }
 
     /// How many elements match `selector` right now.

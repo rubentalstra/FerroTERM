@@ -3,14 +3,15 @@
 use leptos::prelude::*;
 use leptos_meta::Title;
 
-use crate::components::code_system_card::CodeSystemCard;
 use crate::components::failure::Failure;
 use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
+use crate::components::system_table::SystemTable;
 use crate::fhir::FhirClient;
 use crate::fhir::terminology::SystemCard;
 use crate::fhir::version::FhirVersion;
+use crate::styles;
 
 /// Shows the FHIR base in use and the code systems the root has loaded.
 ///
@@ -28,27 +29,23 @@ pub(crate) fn OverviewPage() -> impl IntoView {
     let client = expect_context::<FhirClient>();
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
 
-    let heading = view! {
-        <Title text="Overview" />
-        <h1 class="text-2xl font-semibold">"This server"</h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            "Everything on this page came from the FHIR API below, over HTTP, from your browser."
-        </p>
-    }
-    .into_any();
-
-    let server = server_section(&client, version);
+    let header = header_view(&client, version);
     let systems = systems_section(&client, version);
 
     view! {
-        {heading}
-        {server}
+        <Title text="Overview" />
+        {header}
         {systems}
     }
 }
 
-/// What the selected root says about itself.
-fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView {
+/// The screen's own header: what it is, and which root it read.
+///
+/// The two facts about the root sit in the header rather than in a section of
+/// their own. A heading and a lead sentence over one address cost more of the
+/// screen than the address does, and this screen's subject is the inventory
+/// below.
+fn header_view(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView {
     let statement_client = client.clone();
     let statement = LocalResource::new(move || {
         let client = statement_client.clone();
@@ -62,13 +59,14 @@ fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView 
     let url = Signal::derive(move || url_client.metadata_url(version.get()));
 
     view! {
-        <section class="mt-6" aria-labelledby="capability-heading">
-            <h2 id="capability-heading" class="text-lg font-medium">
-                "What the root declares"
-            </h2>
-            <dl class="mt-2 grid gap-2 text-sm sm:grid-cols-[10rem_1fr]">
-                <dt class="font-medium">"FHIR base"</dt>
-                <dd class="font-mono break-all">{base}</dd>
+        <header>
+            <h1 class=styles::PAGE_TITLE>"This server"</h1>
+            <p class=styles::LEAD>
+                "Everything on this page came from the FHIR API below, over HTTP, from your browser."
+            </p>
+            <dl class="mt-default grid gap-x-loose gap-y-tight sm:grid-cols-[8rem_1fr]">
+                <dt class=styles::MUTED>"FHIR base"</dt>
+                <dd class=styles::CODE>{base}</dd>
             </dl>
             <Reading label="Reading the capability statement">
                 {move || {
@@ -84,12 +82,18 @@ fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView 
                                                 "the root answered, and declared neither a FHIR version nor its software"
                                                     .to_owned()
                                             });
-                                        view! { <p class="mt-2 text-sm">{summary}</p> }.into_any()
+                                        view! {
+                                            <p class=format!(
+                                                "mt-default {}",
+                                                styles::MUTED,
+                                            )>{summary}</p>
+                                        }
+                                            .into_any()
                                     }
                                     Err(error) => {
                                         let error = error.clone();
                                         view! {
-                                            <div class="mt-2">
+                                            <div class="mt-default">
                                                 <Failure error=Signal::stored(error) />
                                             </div>
                                         }
@@ -100,12 +104,12 @@ fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView 
                 }}
             </Reading>
             <RequestDisclosure url />
-        </section>
+        </header>
     }
     .into_any()
 }
 
-/// The code systems the selected root declares, one card each.
+/// The code systems the selected root declares, as one table.
 fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView {
     let capabilities_client = client.clone();
     let capabilities = LocalResource::new(move || {
@@ -130,14 +134,11 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
     });
 
     view! {
-        <section class="mt-8" aria-labelledby="systems-heading">
-            <h2 id="systems-heading" class="text-lg font-medium">
+        <section class="mt-section" aria-labelledby="systems-heading">
+            <h2 id="systems-heading" class=styles::SECTION_TITLE>
                 "The code systems this server loaded"
             </h2>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                "Every card below is this root's terminology capabilities, rendered. The viewer names no code system of its own."
-            </p>
-            <p aria-live="polite" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            <p aria-live="polite" class=styles::LEAD>
                 {announcement}
             </p>
             <Reading label="Reading the terminology capabilities">
@@ -147,11 +148,11 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
                             answered
                                 .as_ref()
                                 .map(|result| match result {
-                                    Ok(capabilities) => cards_view(capabilities.cards()),
+                                    Ok(capabilities) => systems_view(capabilities.cards()),
                                     Err(error) => {
                                         let error = error.clone();
                                         view! {
-                                            <div class="mt-2">
+                                            <div class="mt-default">
                                                 <Failure error=Signal::stored(error) />
                                             </div>
                                         }
@@ -167,7 +168,7 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
     .into_any()
 }
 
-/// The cards themselves, or the statement that the root declared none.
+/// The table itself, or the statement that the root declared none.
 ///
 /// The list is a whole-document replacement with no per-card state, so it is a
 /// plain `Vec`, which rebuilds every position when the read settles again. A
@@ -175,27 +176,33 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
 /// re-rendered, so switching FHIR version would keep every card's old body
 /// while its canonical stayed the same (verified in `leptos` 0.8.20
 /// `for_loop.rs` and `tachys` 0.2.18 `view/keyed.rs`).
-fn cards_view(cards: Vec<SystemCard>) -> AnyView {
+fn systems_view(cards: Vec<SystemCard>) -> AnyView {
     if cards.is_empty() {
         return view! {
-            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p class=format!(
+                "mt-default {}",
+                styles::MUTED,
+            )>
                 "This root declares no code system. A deployment loads one with the offline build."
             </p>
         }
         .into_any();
     }
-    let drawn: Vec<AnyView> = cards
-        .into_iter()
-        .map(|card| view! { <CodeSystemCard card /> }.into_any())
-        .collect();
-    view! { <div class="mt-3 grid gap-4">{drawn}</div> }.into_any()
+    view! { <SystemTable cards /> }.into_any()
 }
 
 /// How many code systems the root declared, as a sentence.
+///
+/// The sentence carries what the table is as well as how much of it there is,
+/// because a lead paragraph saying the same thing costs a line of every visit
+/// and a reader reads it once.
 fn count_sentence(count: usize) -> String {
     if count == 1 {
-        "1 code system".to_owned()
+        "1 code system, one row per served version, from this root's terminology capabilities."
+            .to_owned()
     } else {
-        format!("{count} code systems")
+        format!(
+            "{count} code systems, one row per served version, from this root's terminology capabilities."
+        )
     }
 }

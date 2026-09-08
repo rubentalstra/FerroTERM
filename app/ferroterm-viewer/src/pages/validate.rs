@@ -23,6 +23,13 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::field::Field;
+use crate::components::field::Help;
+use crate::components::field::group;
+use crate::components::field::help_toggle;
+use crate::components::field::row;
+use crate::components::field::select_field;
+use crate::components::field::text_field;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
@@ -41,7 +48,6 @@ use crate::fhir::terminology::VersionRow;
 use crate::fhir::translate::Coding;
 use crate::fhir::validation::CODE_A_PARAMETER;
 use crate::fhir::validation::CODE_B_PARAMETER;
-
 use crate::fhir::validation::DISPLAY_PARAMETER;
 use crate::fhir::validation::Offered;
 use crate::fhir::validation::ParametersAnswer;
@@ -63,7 +69,7 @@ use crate::routes::VALIDATE_PATH;
 use crate::routes::VERSION_PARAM;
 use crate::routes::system_link;
 use crate::routes::ui_link;
-use crate::styles::SUBMIT;
+use crate::styles;
 use crate::url::RequestUrl;
 
 /// The address parameter carrying which resource type the code is checked in.
@@ -82,15 +88,8 @@ const ID_PARAM: &str = "id";
 /// always names a `CodeSystem`.
 const SUBSUMES_ID_PARAM: &str = "subsumesId";
 
-/// The classes every text control on a form shares.
-const CONTROL: &str = "w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900";
-
 /// The classes a sentence that states an absence carries.
-const NOTE: &str = "mt-3 text-sm text-slate-600 dark:text-slate-300";
-
-/// The classes a link inside a sentence or a table carries.
-const LINK: &str =
-    "text-brand-700 underline decoration-dotted underline-offset-4 dark:text-brand-300";
+const NOTE: &str = "mt-default text-body text-muted";
 
 /// Runs `$validate-code` and `$subsumes`, and renders what the server answers.
 ///
@@ -106,6 +105,9 @@ const LINK: &str =
 pub(crate) fn ValidatePage() -> impl IntoView {
     let client = expect_context::<FhirClient>();
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
+    // Both runners on this screen share the one help switch, so a reader who
+    // asks for the parameters to be explained gets both forms explained.
+    provide_context(Help(RwSignal::new(false)));
     let query = use_query_map();
     let params: Signal<RunnerParams> =
         Memo::new(move |_| query.with(|map| RunnerParams::read(&|name| map.get(name)))).into();
@@ -152,8 +154,8 @@ pub(crate) fn ValidatePage() -> impl IntoView {
 
     let heading = view! {
         <Title text="Validate and subsume" />
-        <h1 class="text-2xl font-semibold">"Validate and subsume"</h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <h1 class=styles::PAGE_TITLE>"Validate and subsume"</h1>
+        <p class=styles::LEAD>
             "Check one code against a code system or a value set, and ask how two codes of one system relate. The interesting answers are the ones that say no, so each panel renders the whole answer the server sent."
         </p>
     }
@@ -366,19 +368,6 @@ impl RunnerParams {
     }
 }
 
-/// The chrome of one labelled control on a form.
-#[derive(Clone, Copy, Debug)]
-struct Field {
-    /// The `id` the label points at.
-    id: &'static str,
-    /// The `name` the control carries.
-    name: &'static str,
-    /// The label a reader reads.
-    label: &'static str,
-    /// The sentence below the control.
-    hint: &'static str,
-}
-
 /// What this root declares about the system the screen is working over.
 fn root_section(
     client: &FhirClient,
@@ -415,8 +404,8 @@ fn root_section(
     };
 
     view! {
-        <section class="mt-6" aria-labelledby="validate-root-heading">
-            <h2 id="validate-root-heading" class="text-lg font-medium">
+        <section class="mt-loose" aria-labelledby="validate-root-heading">
+            <h2 id="validate-root-heading" class=styles::SECTION_TITLE>
                 "The code system this screen works over"
             </h2>
             {move || {
@@ -426,7 +415,7 @@ fn root_section(
                             view! {
                                 <p class=NOTE>
                                     "No code system is named yet. Type a canonical into the form below and run it, or "
-                                    <a href=move || ui_link("", version.get()) class=LINK>
+                                    <a href=move || ui_link("", version.get()) class=styles::LINK>
                                         "pick one from the overview"
                                     </a> "."
                                 </p>
@@ -435,8 +424,8 @@ fn root_section(
                         } else {
                             let target = system_link(&params.system, version.get());
                             view! {
-                                <p class="mt-1 text-sm break-all">
-                                    <a href=target class=LINK>
+                                <p class="mt-tight text-body break-all">
+                                    <a href=target class=styles::LINK>
                                         {params.system.clone()}
                                     </a>
                                 </p>
@@ -488,9 +477,9 @@ fn system_view(declared: &Declared) -> AnyView {
         ),
     };
     view! {
-        <p class="mt-2 font-mono text-sm break-all">{code}</p>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{subsumption}</p>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{hierarchy}</p>
+        <p class="mt-default font-mono text-body break-all">{code}</p>
+        <p class=styles::LEAD>{subsumption}</p>
+        <p class=styles::LEAD>{hierarchy}</p>
     }
     .into_any()
 }
@@ -550,7 +539,7 @@ fn validate_section(
         let form = validate_form(params, version, declared, offered);
         view! {
             {form}
-            <p aria-live="polite" class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p aria-live="polite" class="mt-default text-body text-muted">
                 {announcement}
             </p>
             <Reading label="Running the validation">
@@ -577,8 +566,8 @@ fn validate_section(
     };
 
     view! {
-        <section class="mt-8" aria-labelledby="validate-heading">
-            <h2 id="validate-heading" class="text-lg font-medium">
+        <section class="mt-section" aria-labelledby="validate-heading">
+            <h2 id="validate-heading" class=styles::SECTION_TITLE>
                 "$validate-code"
             </h2>
             {move || {
@@ -633,33 +622,72 @@ fn validate_form(
         navigate.with_value(|navigate| go(navigate, &target));
     };
 
+    view! {
+        <form class="mt-loose grid gap-loose" on:submit=submit>
+            {target_group(
+                params,
+                version,
+                declared,
+                offered,
+                system,
+                system_version,
+                value_set,
+                value_set_version,
+                id,
+            )}
+            {code_group(params, code, display, language)}
+            <div class="flex flex-wrap items-center gap-default">
+                <button type="submit" class=styles::SUBMIT>
+                    <Icon glyph=icon::VALIDATE />
+                    "Run the validation"
+                </button>
+                {help_toggle()}
+            </div>
+        </form>
+    }
+    .into_any()
+}
+
+/// Which resource the code is checked against, and which version of it.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one group of a form owns one node reference per control it draws"
+)]
+fn target_group(
+    params: Signal<RunnerParams>,
+    version: Signal<FhirVersion>,
+    declared: Memo<Declared>,
+    offered: Memo<Offered>,
+    system: NodeRef<Input>,
+    system_version: NodeRef<Input>,
+    value_set: NodeRef<Input>,
+    value_set_version: NodeRef<Input>,
+    id: NodeRef<Input>,
+) -> AnyView {
     let value_set_fields = move || {
         (params.with(|params| params.on) == ValidateOn::ValueSet).then(|| {
-            view! {
-                <div class="grid gap-4 sm:grid-cols-2">
-                    {text_field(
-                        Field {
-                            id: "validate-value-set",
-                            name: "url",
-                            label: "Value set canonical",
-                            hint: "The url parameter of ValueSet/$validate-code. An implicit canonical carrying its own query string works: the runner encodes the whole value.",
-                        },
-                        value_set,
-                        seeded(params, |params| params.value_set.clone()),
-                    )}
-                    {text_field(
-                        Field {
-                            id: "validate-value-set-version",
-                            name: VALUE_SET_VERSION_PARAMETER,
-                            label: "Value set version",
-                            hint: "The valueSetVersion parameter. Left empty, the server picks the version it holds.",
-                        },
-                        value_set_version,
-                        seeded(params, |params| params.value_set_version.clone()),
-                    )}
-                </div>
-            }
-            .into_any()
+            row(vec![
+                text_field(
+                    Field {
+                        id: "validate-value-set",
+                        name: "url",
+                        label: "Value set canonical",
+                        hint: "The url parameter of ValueSet/$validate-code. An implicit canonical carrying its own query string works: the runner encodes the whole value.",
+                    },
+                    value_set,
+                    seeded(params, |params| params.value_set.clone()),
+                ),
+                text_field(
+                    Field {
+                        id: "validate-value-set-version",
+                        name: VALUE_SET_VERSION_PARAMETER,
+                        label: "Value set version",
+                        hint: "The valueSetVersion parameter. Left empty, the server picks the version it holds.",
+                    },
+                    value_set_version,
+                    seeded(params, |params| params.value_set_version.clone()),
+                ),
+            ])
         })
     };
     let instance_field = move || {
@@ -676,26 +704,20 @@ fn validate_form(
             )
         })
     };
-
-    view! {
-        <form class="mt-4 grid gap-4" on:submit=submit>
-            {on_field(params, version, declared)}
-            {system_fields(params, system, system_version)}
-            {value_set_fields}
-            {instance_field}
-            {code_fields(params, code, display, language)}
-            <div>
-                <button type="submit" class=SUBMIT>
-                    <Icon glyph=icon::VALIDATE />
-                    "Run the validation"
-                </button>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    "Running puts these parameters in the address, so the case is shareable by link."
-                </p>
-            </div>
-        </form>
+    let optional = view! {
+        {value_set_fields}
+        {instance_field}
     }
-    .into_any()
+    .into_any();
+
+    group(
+        "What the code is checked against",
+        vec![
+            on_field(params, version, declared),
+            system_fields(params, system, system_version),
+            optional,
+        ],
+    )
 }
 
 /// The code system both runners work over, and the version of it.
@@ -704,75 +726,74 @@ fn system_fields(
     system: NodeRef<Input>,
     system_version: NodeRef<Input>,
 ) -> AnyView {
-    view! {
-        <div class="grid gap-4 sm:grid-cols-2">
-            {text_field(
-                Field {
-                    id: "validate-system",
-                    name: "system",
-                    label: "Code system canonical",
-                    hint: "The code system the code belongs to. It is the url of a CodeSystem run and the system of a value set run, and the $subsumes panel below reads it too.",
-                },
-                system,
-                seeded(params, |params| params.system.clone()),
-            )}
-            {text_field(
-                Field {
-                    id: "validate-system-version",
-                    name: "version",
-                    label: "Code system version",
-                    hint: "Left empty, the server resolves the version an unversioned request goes to.",
-                },
-                system_version,
-                seeded(params, |params| params.system_version.clone()),
-            )}
-        </div>
-    }
-    .into_any()
+    row(vec![
+        text_field(
+            Field {
+                id: "validate-system",
+                name: "system",
+                label: "Code system canonical",
+                hint: "The code system the code belongs to. It is the url of a CodeSystem run and the system of a value set run, and the $subsumes panel below reads it too.",
+            },
+            system,
+            seeded(params, |params| params.system.clone()),
+        ),
+        text_field(
+            Field {
+                id: "validate-system-version",
+                name: "version",
+                label: "Code system version",
+                hint: "Left empty, the server resolves the version an unversioned request goes to.",
+            },
+            system_version,
+            seeded(params, |params| params.system_version.clone()),
+        ),
+    ])
 }
 
 /// The code being checked, the display asserted for it, and the language.
-fn code_fields(
+fn code_group(
     params: Signal<RunnerParams>,
     code: NodeRef<Input>,
     display: NodeRef<Input>,
     language: NodeRef<Input>,
 ) -> AnyView {
-    view! {
-        <div class="grid gap-4 sm:grid-cols-2">
-            {text_field(
+    group(
+        "The code",
+        vec![
+            row(vec![
+                text_field(
+                    Field {
+                        id: "validate-code",
+                        name: CODE_PARAMETER,
+                        label: "Code",
+                        hint: "The code to check. Nothing is sent until this is filled in.",
+                    },
+                    code,
+                    seeded(params, |params| params.code.clone()),
+                ),
+                text_field(
+                    Field {
+                        id: "validate-display",
+                        name: DISPLAY_PARAMETER,
+                        label: "Display",
+                        hint: "The display you assert for the code. A wrong one comes back with the display the system prefers.",
+                    },
+                    display,
+                    seeded(params, |params| params.display.clone()),
+                ),
+            ]),
+            text_field(
                 Field {
-                    id: "validate-code",
-                    name: CODE_PARAMETER,
-                    label: "Code",
-                    hint: "The code to check. Nothing is sent until this is filled in.",
+                    id: "validate-display-language",
+                    name: DISPLAY_LANGUAGE_PARAMETER,
+                    label: "Display language",
+                    hint: "A BCP 47 tag the display is asserted in. Left empty, the server picks its own display.",
                 },
-                code,
-                seeded(params, |params| params.code.clone()),
-            )}
-            {text_field(
-                Field {
-                    id: "validate-display",
-                    name: DISPLAY_PARAMETER,
-                    label: "Display",
-                    hint: "The display you assert for the code. A wrong one comes back with the display the system prefers.",
-                },
-                display,
-                seeded(params, |params| params.display.clone()),
-            )}
-        </div>
-        {text_field(
-            Field {
-                id: "validate-display-language",
-                name: DISPLAY_LANGUAGE_PARAMETER,
-                label: "Display language",
-                hint: "A BCP 47 tag the display is asserted in. Left empty, the server picks its own display.",
-            },
-            language,
-            seeded(params, |params| params.language.clone()),
-        )}
-    }
-    .into_any()
+                language,
+                seeded(params, |params| params.language.clone()),
+            ),
+        ],
+    )
 }
 
 /// The resource type the code is checked against, as the root declares them.
@@ -813,27 +834,17 @@ fn on_field(
         .map(|(on, label)| view! { <option value=on.segment()>{label}</option> }.into_any())
         .collect::<Vec<AnyView>>()
     };
-    view! {
-        <div class="grid max-w-md gap-1">
-            <label for="validate-on" class="text-sm font-medium">
-                "Validate against"
-            </label>
-            <select
-                id="validate-on"
-                name=ON_PARAM
-                class=CONTROL
-                aria-describedby="validate-on-note"
-                prop:value=move || params.with(|params| params.on.segment())
-                on:change=change
-            >
-                {options}
-            </select>
-            <p id="validate-on-note" class="text-xs text-slate-500 dark:text-slate-400">
-                "Only the resource types this root's capability statement declares $validate-code on are offered."
-            </p>
-        </div>
-    }
-    .into_any()
+    select_field(
+        Field {
+            id: "validate-on",
+            name: ON_PARAM,
+            label: "Validate against",
+            hint: "Only the resource types this root's capability statement declares $validate-code on are offered.",
+        },
+        Memo::new(move |_| params.with(|params| params.on.segment().to_owned())),
+        options,
+        change,
+    )
 }
 
 /// The `$subsumes` form, and the answer it gets back.
@@ -891,7 +902,7 @@ fn subsumes_section(
         let form = subsumes_form(params, version, offered);
         view! {
             {form}
-            <p aria-live="polite" class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p aria-live="polite" class="mt-default text-body text-muted">
                 {announcement}
             </p>
             <Reading label="Running the subsumption test">
@@ -918,8 +929,8 @@ fn subsumes_section(
     };
 
     view! {
-        <section class="mt-8" aria-labelledby="subsumes-heading">
-            <h2 id="subsumes-heading" class="text-lg font-medium">
+        <section class="mt-section" aria-labelledby="subsumes-heading">
+            <h2 id="subsumes-heading" class=styles::SECTION_TITLE>
                 "$subsumes"
             </h2>
             {move || {
@@ -980,10 +991,11 @@ fn subsumes_form(
         })
     };
 
-    view! {
-        <form class="mt-4 grid gap-4" on:submit=submit>
-            <div class="grid gap-4 sm:grid-cols-2">
-                {text_field(
+    let codes = group(
+        "The two codes",
+        vec![
+            row(vec![
+                text_field(
                     Field {
                         id: "subsumes-code-a",
                         name: CODE_A_PARAMETER,
@@ -992,8 +1004,8 @@ fn subsumes_form(
                     },
                     code_a,
                     seeded(params, |params| params.code_a.clone()),
-                )}
-                {text_field(
+                ),
+                text_field(
                     Field {
                         id: "subsumes-code-b",
                         name: CODE_B_PARAMETER,
@@ -1002,14 +1014,21 @@ fn subsumes_form(
                     },
                     code_b,
                     seeded(params, |params| params.code_b.clone()),
-                )}
-            </div>
-            {instance_field}
-            <div>
-                <button type="submit" class=SUBMIT>
+                ),
+            ]),
+            view! { {instance_field} }.into_any(),
+        ],
+    );
+
+    view! {
+        <form class="mt-loose grid gap-loose" on:submit=submit>
+            {codes}
+            <div class="flex flex-wrap items-center gap-default">
+                <button type="submit" class=styles::SUBMIT>
                     <Icon glyph=icon::BROWSE />
                     "Run the subsumption test"
                 </button>
+                {help_toggle()}
             </div>
         </form>
     }
@@ -1026,7 +1045,7 @@ fn validation_view(read: &Validation) -> AnyView {
     let message = read
         .message
         .clone()
-        .map(|message| view! { <p class="mt-2 text-sm">{message}</p> }.into_any());
+        .map(|message| view! { <p class="mt-default text-body">{message}</p> }.into_any());
     let facts: Vec<AnyView> = [
         ("Code", read.code.clone()),
         ("Code as the system spells it", read.normalized_code.clone()),
@@ -1045,20 +1064,17 @@ fn validation_view(read: &Validation) -> AnyView {
     .collect();
     let inactive = (read.inactive == Some(true)).then(|| {
         view! {
-            <p
-                role="note"
-                class="mt-3 rounded-md border border-amber-400 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950"
-            >
+            <p role="note" class=format!("mt-default rounded-md p-default {}", styles::NOTICE)>
                 "This concept is inactive in its code system. The server served it and marked it, which is an answer rather than a refusal."
             </p>
         }
         .into_any()
     });
     view! {
-        <p class="mt-3 text-base font-semibold">{verdict}</p>
+        <p class="mt-default text-body font-semibold">{verdict}</p>
         {message}
         {inactive}
-        <dl class="mt-3 grid gap-1 text-sm sm:grid-cols-[16rem_1fr]">{facts}</dl>
+        <dl class="mt-default grid gap-tight text-body sm:grid-cols-[16rem_1fr]">{facts}</dl>
         {concept_view(read)}
         {unknown_systems_view(&read.unknown_systems)}
         {issues_view(&read.issues)}
@@ -1099,10 +1115,10 @@ fn concept_view(read: &Validation) -> AnyView {
         })
         .collect();
     view! {
-        <div class="mt-3 text-sm">
+        <div class="mt-default text-body">
             <p class="font-medium">"The concept the server echoed"</p>
-            <p class="mt-1">"Text: " {text}</p>
-            <ul class="mt-1 ml-4 list-disc">{codings}</ul>
+            <p class="mt-tight">"Text: " {text}</p>
+            <ul class="mt-tight ml-loose list-disc">{codings}</ul>
         </div>
     }
     .into_any()
@@ -1118,9 +1134,9 @@ fn unknown_systems_view(systems: &[String]) -> AnyView {
         .map(|system| view! { <li class="font-mono break-all">{system.clone()}</li> }.into_any())
         .collect();
     view! {
-        <div class="mt-3 text-sm">
+        <div class="mt-default text-body">
             <p class="font-medium">"Code systems this server does not hold"</p>
-            <ul class="mt-1 ml-4 list-disc">{listed}</ul>
+            <ul class="mt-tight ml-loose list-disc">{listed}</ul>
         </div>
     }
     .into_any()
@@ -1133,9 +1149,9 @@ fn issues_view(issues: &[ValidationIssue]) -> AnyView {
     }
     let lines: Vec<AnyView> = issues.iter().map(issue_view).collect();
     view! {
-        <div class="mt-4 rounded-md border border-slate-300 p-3 dark:border-slate-700">
-            <p class="text-sm font-medium">"The issues the server itemised"</p>
-            <ul class="mt-2 space-y-2">{lines}</ul>
+        <div class="mt-loose rounded-md border border-line-strong p-default">
+            <p class="text-body font-medium">"The issues the server itemised"</p>
+            <ul class="mt-default space-y-default">{lines}</ul>
         </div>
     }
     .into_any()
@@ -1157,17 +1173,17 @@ fn issue_view(issue: &ValidationIssue) -> AnyView {
                 format!(" from {}", coding.system)
             };
             view! {
-                <span class="mr-2 rounded bg-slate-200 px-1.5 py-0.5 font-mono text-xs dark:bg-slate-700">
+                <span class="mr-default rounded bg-inset px-tight py-tight font-mono text-micro text-fg">
                     {coding.code.clone()}
                 </span>
-                <span class="text-xs break-all text-slate-600 dark:text-slate-300">{system}</span>
+                <span class="text-small break-all text-muted">{system}</span>
             }
             .into_any()
         })
         .collect();
     let stated = if classifications.is_empty() {
         view! {
-            <p class="text-xs text-slate-600 dark:text-slate-300">
+            <p class="text-small text-muted">
                 "The server stated no classification coding for this issue."
             </p>
         }
@@ -1177,20 +1193,16 @@ fn issue_view(issue: &ValidationIssue) -> AnyView {
     };
     let expressions = (!issue.expressions.is_empty()).then(|| {
         let paths = issue.expressions.join(", ");
-        view! {
-            <p class="mt-1 font-mono text-xs break-all text-slate-600 dark:text-slate-300">
-                "at " {paths}
-            </p>
-        }
-        .into_any()
+        view! { <p class="mt-tight font-mono text-small break-all text-muted">"at " {paths}</p> }
+            .into_any()
     });
     let severity = issue.severity.clone();
     let issue_code = issue.issue_code.clone();
     let text = issue.text.clone();
     view! {
-        <li class="text-sm">
-            {stated} <p class="mt-1">{text}</p>
-            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">
+        <li class="text-body">
+            {stated} <p class="mt-tight">{text}</p>
+            <p class="mt-tight text-small text-muted">
                 "severity " <span class="font-mono">{severity}</span> ", issue.code "
                 <span class="font-mono">{issue_code}</span>
             </p> {expressions}
@@ -1208,8 +1220,8 @@ fn outcome_view(answer: &ParametersAnswer, code_a: &str, code_b: &str) -> AnyVie
     };
     let sentence = subsumption_sentence(&outcome, code_a, code_b);
     view! {
-        <p class="mt-3 font-mono text-base font-semibold break-all">{outcome}</p>
-        <p class="mt-1 text-sm">{sentence}</p>
+        <p class="mt-default font-mono text-body font-semibold break-all">{outcome}</p>
+        <p class="mt-tight text-body">{sentence}</p>
     }
     .into_any()
 }
@@ -1241,33 +1253,8 @@ fn note(text: &'static str) -> AnyView {
 fn failure_view(error: &FhirError) -> AnyView {
     let error = error.clone();
     view! {
-        <div class="mt-3">
+        <div class="mt-default">
             <Failure error=Signal::stored(error) />
-        </div>
-    }
-    .into_any()
-}
-
-/// One labelled text control, seeded from its own field of the address.
-fn text_field(field: Field, node: NodeRef<Input>, value: Memo<String>) -> AnyView {
-    let described_by = format!("{}-note", field.id);
-    view! {
-        <div class="grid gap-1">
-            <label for=field.id class="text-sm font-medium">
-                {field.label}
-            </label>
-            <input
-                id=field.id
-                name=field.name
-                type="text"
-                class=CONTROL
-                aria-describedby=described_by.clone()
-                node_ref=node
-                prop:value=move || value.get()
-            />
-            <p id=described_by class="text-xs text-slate-500 dark:text-slate-400">
-                {field.hint}
-            </p>
         </div>
     }
     .into_any()

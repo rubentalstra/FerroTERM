@@ -15,6 +15,7 @@ use leptos_router::path;
 use crate::components::health::HealthIndicator;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
+use crate::components::mark::Lockup;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
@@ -41,6 +42,7 @@ use crate::routes::VERSIONS_PATH;
 use crate::routes::nav_section;
 use crate::routes::ui_link;
 use crate::settings::Settings;
+use crate::styles;
 
 /// The FHIR version the current address selects, for every screen to read.
 #[derive(Clone, Copy, Debug)]
@@ -91,14 +93,14 @@ const NAV_SLOTS: [NavSlot; 10] = [
 ];
 
 /// The classes every sidebar link carries, whichever screen it leads to.
-const ENTRY_BASE: &str = "flex items-center rounded-md px-3 py-2 text-sm font-medium";
+const ENTRY_BASE: &str =
+    "flex items-center gap-default rounded-md px-default py-tight text-small font-medium";
 
 /// The classes the entry for the screen being read carries.
-const ENTRY_ACTIVE: &str = "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-100";
+const ENTRY_ACTIVE: &str = "bg-accent-soft text-accent-soft-fg";
 
 /// The classes every other entry carries.
-const ENTRY_RESTING: &str = "text-slate-700 hover:bg-slate-200 hover:text-slate-900 \
-                             dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50";
+const ENTRY_RESTING: &str = "state-change text-muted hover:bg-inset hover:text-fg";
 
 /// The shell's own query parameters.
 #[derive(Clone, Debug, Params, PartialEq)]
@@ -145,8 +147,7 @@ fn nav_entry(
 /// It draws a grouping the labels already carry, so it says nothing to a
 /// screen reader and is hidden from one.
 fn nav_divider() -> AnyView {
-    view! { <li aria-hidden="true" class="my-2 border-t border-slate-200 dark:border-slate-800"></li> }
-        .into_any()
+    view! { <li aria-hidden="true" class="my-default border-t border-line"></li> }.into_any()
 }
 
 /// The sidebar every screen is reached from.
@@ -169,11 +170,11 @@ fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     view! {
         <aside
             id=NAV_ID
-            class="w-full shrink-0 border-b border-slate-200 bg-white md:block md:w-56 md:border-r md:border-b-0 dark:border-slate-800 dark:bg-slate-900"
+            class="w-full shrink-0 border-b border-line bg-raised md:block md:w-56 md:border-r md:border-b-0"
             class:hidden=move || !open.get()
         >
-            <nav aria-label="Screens" class="p-3">
-                <ul class="flex flex-col gap-1">{slots}</ul>
+            <nav aria-label="Screens" class="p-default">
+                <ul class="flex flex-col gap-tight">{slots}</ul>
             </nav>
         </aside>
     }
@@ -187,27 +188,21 @@ fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
 /// with the chrome that is true everywhere rather than in the list of places.
 fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     view! {
-        <header class="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-            <div class="flex flex-wrap items-center gap-3 px-4 py-3">
+        <header class="border-b border-line bg-raised">
+            <div class="flex flex-wrap items-center gap-default px-loose py-default">
                 <button
                     type="button"
                     aria-controls=NAV_ID
                     aria-expanded=move || if open.get() { "true" } else { "false" }
-                    class="rounded-md border border-slate-300 px-2 py-1 text-sm font-medium text-slate-700 md:hidden dark:border-slate-700 dark:text-slate-200"
+                    class=format!("{} md:hidden", styles::BUTTON)
                     on:click=move |_| open.update(|shown| *shown = !*shown)
                 >
                     "Screens"
                 </button>
-                <a
-                    href=move || ui_link(OVERVIEW_PATH, version.get())
-                    class="flex items-baseline gap-2 font-semibold text-slate-900 dark:text-slate-50"
-                >
-                    <span class="text-lg">"FerroTERM"</span>
-                    <span class="text-xs font-normal text-slate-500 dark:text-slate-400">
-                        "viewer"
-                    </span>
+                <a href=move || ui_link(OVERVIEW_PATH, version.get())>
+                    <Lockup />
                 </a>
-                <div class="ml-auto flex items-center gap-3">
+                <div class="ml-auto flex items-center gap-default">
                     <VersionSwitcher selected=version />
                     <HealthIndicator />
                     <ThemeToggle />
@@ -266,10 +261,13 @@ pub(crate) fn Shell() -> impl IntoView {
     .into_any();
 
     view! {
-        <div class="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <div class=format!(
+            "flex min-h-screen flex-col {}",
+            styles::PAGE,
+        )>
             {bar}
             <div class="flex flex-1 flex-col md:flex-row">
-                {nav} <main class="min-w-0 flex-1 px-4 py-6">
+                {nav} <main class="min-w-0 flex-1 px-loose py-loose">
                     <div class="mx-auto max-w-6xl">{screens}</div>
                 </main>
             </div>

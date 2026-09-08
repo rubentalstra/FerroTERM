@@ -327,6 +327,23 @@ jobs:
       - uses: ./.github/actions/setup-rust
       - run: bash scripts/checks/viewer-boundary.sh
 
+  # A screen names a role and a step from the token layer, never a palette
+  # entry. The palette is measured once by the accessibility battery, and a
+  # colour written into a screen escapes that measurement silently.
+  viewer-tokens:
+    name: viewer-tokens
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/checks/viewer-tokens.sh
+
   # The viewer ships to a browser, so the target it must compile for is
   # wasm32-unknown-unknown and no ordinary workspace lane covers it. The wasm
   # clippy pass is the load-bearing gate here: it is the only place a
@@ -647,6 +664,7 @@ jobs:
       - doc
       - cargo-deny
       - viewer-boundary
+      - viewer-tokens
       - viewer
       - ui-e2e
       - codegen-drift

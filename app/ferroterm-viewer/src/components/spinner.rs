@@ -27,10 +27,7 @@ pub(crate) fn Spinner(
         "h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent"
     };
     view! {
-        <span
-            role="status"
-            class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400"
-        >
+        <span role="status" class="inline-flex items-center gap-default text-small text-muted">
             <span class=ring aria-hidden="true"></span>
             {label}
         </span>

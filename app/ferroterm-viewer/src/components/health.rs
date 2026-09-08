@@ -8,6 +8,7 @@ use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::fhir::FhirClient;
+use crate::styles;
 
 /// How often the indicator asks the server whether it is still up.
 const POLL: Duration = Duration::from_secs(15);
@@ -40,13 +41,13 @@ pub(crate) fn HealthIndicator() -> impl IntoView {
                 icon::SERVING,
                 "Serving",
                 status.to_string(),
-                "bg-teal-100 text-teal-900 dark:bg-teal-900 dark:text-teal-100",
+                styles::BADGE_OK,
             ),
             Err(error) => (
                 icon::UNREACHABLE,
                 "Unreachable",
                 error.to_string(),
-                "bg-rose-100 text-rose-900 dark:bg-rose-900 dark:text-rose-100",
+                styles::BADGE_DANGER,
             ),
         })
     };
@@ -57,12 +58,7 @@ pub(crate) fn HealthIndicator() -> impl IntoView {
                 state()
                     .map(|(glyph, word, detail, tint)| {
                         view! {
-                            <span
-                                class=format!(
-                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium {tint}",
-                                )
-                                title=detail
-                            >
+                            <span class=tint title=detail>
                                 <Icon glyph=glyph class="h-3.5 w-3.5" />
                                 {word}
                             </span>

@@ -47,9 +47,9 @@ pub(crate) fn RequestDisclosure(
     // and would instantiate this subtree twice.
     let sent_line = body.is_some().then(|| {
         view! {
-            <dt class="mt-1 font-medium">"Body"</dt>
+            <dt class="mt-tight font-medium">"Body"</dt>
             <dd>
-                <code class="block rounded bg-slate-100 p-2 break-all dark:bg-slate-800">
+                <code class="block rounded-md bg-inset p-default wrap-break-word text-fg">
                     {sent}
                 </code>
             </dd>
@@ -58,11 +58,11 @@ pub(crate) fn RequestDisclosure(
     });
     let open_line = body.is_none().then(|| {
         view! {
-            <p class="mt-2">
+            <p class="mt-default">
                 <a
                     href=move || url.get()
                     rel="external"
-                    class="inline-flex items-center gap-1 text-brand-700 underline dark:text-brand-300"
+                    class="inline-flex items-center gap-tight text-accent underline"
                 >
                     "Open the answer in this browser"
                     <Icon glyph=icon::EXTERNAL class="h-3.5 w-3.5" />
@@ -72,25 +72,25 @@ pub(crate) fn RequestDisclosure(
         .into_any()
     });
     view! {
-        <details class="mt-4 rounded border border-slate-200 text-xs dark:border-slate-800">
-            <summary class="cursor-pointer px-3 py-2 font-medium text-slate-700 dark:text-slate-200">
+        <details class="mt-loose rounded-md border border-line text-small">
+            <summary class="cursor-pointer px-default py-default font-medium text-muted">
                 {summary}
             </summary>
-            <div class="border-t border-slate-200 px-3 py-2 dark:border-slate-800">
-                <p class="text-slate-600 dark:text-slate-300">
+            <div class="border-t border-line px-default py-default">
+                <p class="text-muted">
                     "Select a line to copy it. Each one reaches the same public API this page uses."
                 </p>
-                <dl class="mt-2 grid gap-1">
+                <dl class="mt-default grid gap-tight">
                     <dt class="font-medium">"URL"</dt>
                     <dd>
-                        <code class="block rounded bg-slate-100 p-2 break-all dark:bg-slate-800">
+                        <code class="block rounded-md bg-inset p-default wrap-break-word text-fg">
                             {url}
                         </code>
                     </dd>
                     {sent_line}
-                    <dt class="mt-1 font-medium">"curl"</dt>
+                    <dt class="mt-tight font-medium">"curl"</dt>
                     <dd>
-                        <code class="block rounded bg-slate-100 p-2 break-all dark:bg-slate-800">
+                        <code class="block rounded-md bg-inset p-default wrap-break-word text-fg">
                             {curl}
                         </code>
                     </dd>

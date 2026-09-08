@@ -7,9 +7,13 @@
 //! the colour the browser actually painted. Everything else in the battery
 //! stays on the primitives.
 //!
-//! Both journeys run over both themes. A palette that passes in light and
-//! fails in dark is the failure this pass exists to catch, and it cannot be
-//! seen from one of them.
+//! The colour passes run over both themes. A palette that passes in light
+//! and fails in dark is the failure this pass exists to catch, and it cannot
+//! be seen from one of them.
+//!
+//! The keyboard walk and the markup pass also run over both densities. A
+//! density moves padding, which is what a stop and a target are made of, and
+//! leaves every ratio where it was, so the contrast pass stays on the themes.
 
 use std::time::Duration;
 
@@ -45,6 +49,12 @@ const VERSION: &str = "r5";
 
 /// The theme control on the settings screen.
 const THEME_CONTROL: &str = "#viewer-theme";
+
+/// The density control on the settings screen.
+const DENSITY_CONTROL: &str = "#viewer-density";
+
+/// The two densities a reader can choose between.
+const DENSITIES: [&str; 2] = ["comfortable", "compact"];
 
 /// The heading every screen renders once it has booted.
 const HEADING: &str = "h1";
@@ -106,6 +116,10 @@ focusable.forEach((el, index) => el.setAttribute('data-walk', String(index)));
 window.walkStops = [];
 document.addEventListener('focusin', (event) => {
   const el = event.target;
+  // The outline is judged only where `:focus-visible` matches. A burst of tab
+  // presses can record a stop before the browser has resolved the pseudo-class
+  // for it, and an outline read then is the resting one, not the focused one.
+  if (!el.matches(':focus-visible')) { return; }
   const style = getComputedStyle(el);
   const tag = el.getAttribute('data-walk');
   window.walkStops.push([tag === null ? '' : tag, style.outlineStyle, style.outlineWidth,
@@ -363,6 +377,24 @@ async fn choose_theme(journey: &Journey, base: &str, mode: &str) -> WebDriverRes
     Ok(())
 }
 
+/// Puts the viewer in `density`, which the settings screen is the one way to
+/// do.
+///
+/// The choice is remembered by the browser, so every screen opened afterwards
+/// in this session is drawn at it.
+async fn choose_density(journey: &Journey, base: &str, density: &str) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "/ui/settings")).await;
+    let control = journey
+        .element(By::Css(DENSITY_CONTROL), "the density control")
+        .await;
+    control
+        .find(By::Css(format!("option[value='{density}']")))
+        .await?
+        .click()
+        .await?;
+    Ok(())
+}
+
 /// Opens one screen and waits for every read on it to have landed.
 ///
 /// The heading arrives with the bundle, the rings go when the reads answer,
@@ -449,11 +481,15 @@ async fn every_control_on_every_screen_is_reached_by_the_keyboard_alone() {
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &base, &format!("/ui?fhir={VERSION}")).await;
             let mut findings = Vec::new();
-            for theme in ["light", "dark"] {
-                choose_theme(&journey, &base, theme).await?;
-                for path in SCREENS {
-                    open(&journey, &base, path).await?;
-                    findings.extend(walk(&journey, path, theme).await?);
+            for density in DENSITIES {
+                choose_density(&journey, &base, density).await?;
+                for theme in ["light", "dark"] {
+                    choose_theme(&journey, &base, theme).await?;
+                    let drawn = format!("{theme}, {density}");
+                    for path in SCREENS {
+                        open(&journey, &base, path).await?;
+                        findings.extend(walk(&journey, path, &drawn).await?);
+                    }
                 }
             }
             assert!(
@@ -524,11 +560,14 @@ async fn every_screen_renders_the_markup_a_screen_reader_needs() {
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &base, &format!("/ui?fhir={VERSION}")).await;
             let mut findings = Vec::new();
-            for path in SCREENS {
-                open(&journey, &base, path).await?;
-                let reported = journey.evaluate(SEMANTICS).await?;
-                if !reported.is_empty() {
-                    findings.push(format!("{path}:\n{reported}"));
+            for density in DENSITIES {
+                choose_density(&journey, &base, density).await?;
+                for path in SCREENS {
+                    open(&journey, &base, path).await?;
+                    let reported = journey.evaluate(SEMANTICS).await?;
+                    if !reported.is_empty() {
+                        findings.push(format!("{path} ({density}):\n{reported}"));
+                    }
                 }
             }
             assert_eq!(

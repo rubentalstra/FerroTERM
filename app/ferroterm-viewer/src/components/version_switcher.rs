@@ -7,6 +7,7 @@ use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::fhir::version::FhirVersion;
 use crate::routes::version_link;
+use crate::styles;
 
 /// Links to each served FHIR version, keeping the reader on the same page.
 ///
@@ -31,9 +32,12 @@ pub(crate) fn VersionSwitcher(
     view! {
         <nav
             aria-label="FHIR version"
-            class="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800"
+            class="flex items-center gap-tight rounded-lg border border-line bg-inset p-tight"
         >
-            <span class="mr-1 inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
+            <span class=format!(
+                "mr-tight inline-flex items-center gap-tight pl-tight {}",
+                styles::EYEBROW,
+            )>
                 <Icon glyph=icon::VERSION class="h-3.5 w-3.5" />
                 "FHIR"
             </span>
@@ -55,9 +59,10 @@ pub(crate) fn VersionSwitcher(
                             aria-current=move || if active() { Some("page") } else { None }
                             class=move || {
                                 if active() {
-                                    "rounded-md bg-brand-700 px-2 py-1 text-xs font-semibold text-white dark:bg-brand-400 dark:text-slate-900"
+                                    "rounded-md bg-accent px-default py-tight text-small font-semibold text-accent-fg"
                                 } else {
-                                    "rounded-md px-2 py-1 text-xs font-medium text-slate-700 hover:bg-white dark:text-slate-200 dark:hover:bg-slate-700"
+                                    "state-change rounded-md px-default py-tight text-small font-medium text-muted \
+                                     hover:bg-raised hover:text-fg"
                                 }
                             }
                         >

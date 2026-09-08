@@ -4,15 +4,14 @@ use leptos::prelude::*;
 use leptos_meta::Title;
 
 use crate::components::shell::SelectedVersion;
+use crate::density::Density;
 use crate::fhir::FhirClient;
 use crate::fhir::version::FhirVersion;
 use crate::paging::MAX_COUNT;
 use crate::settings::Settings;
 use crate::settings::parse_page_size;
+use crate::styles;
 use crate::theme::ThemeMode;
-
-/// The classes every control on this screen shares.
-const CONTROL: &str = "w-56 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900";
 
 /// Shows and edits the per-viewer preferences.
 ///
@@ -31,15 +30,15 @@ pub(crate) fn SettingsPage() -> impl IntoView {
 
     let heading = view! {
         <Title text="Settings" />
-        <h1 class="text-2xl font-semibold">"Settings"</h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+        <h1 class=styles::PAGE_TITLE>"Settings"</h1>
+        <p class=styles::LEAD>
             "These preferences are stored in this browser only. The server is neither asked nor told about them."
         </p>
     }
     .into_any();
 
     let in_use = view! {
-        <dl class="mt-6 grid gap-2 text-sm sm:grid-cols-[12rem_1fr]">
+        <dl class="mt-loose grid gap-default text-body sm:grid-cols-[12rem_1fr]">
             <dt class="font-medium">"FHIR base in use"</dt>
             <dd class="font-mono break-all">{base}</dd>
         </dl>
@@ -49,8 +48,9 @@ pub(crate) fn SettingsPage() -> impl IntoView {
     view! {
         {heading}
         {in_use}
-        <form class="mt-6 grid gap-5" on:submit=|ev| ev.prevent_default()>
+        <form class="mt-loose grid gap-loose" on:submit=|ev| ev.prevent_default()>
             {theme_field(settings)}
+            {density_field(settings)}
             {version_field(settings)}
             {language_field(settings)}
             {page_size_field(settings)}
@@ -61,14 +61,14 @@ pub(crate) fn SettingsPage() -> impl IntoView {
 /// The light and dark choice.
 fn theme_field(settings: Settings) -> AnyView {
     view! {
-        <div class="grid gap-1">
-            <label for="viewer-theme" class="text-sm font-medium">
+        <div class="grid gap-tight">
+            <label for="viewer-theme" class=styles::LABEL>
                 "Theme"
             </label>
             <select
                 id="viewer-theme"
                 name="theme"
-                class=CONTROL
+                class=styles::INPUT
                 prop:value=move || settings.theme.get().key()
                 on:change:target=move |ev| {
                     if let Some(mode) = ThemeMode::from_key(&ev.target().value()) {
@@ -84,17 +84,47 @@ fn theme_field(settings: Settings) -> AnyView {
     .into_any()
 }
 
+/// How much room a row and a panel take.
+fn density_field(settings: Settings) -> AnyView {
+    view! {
+        <div class="grid gap-tight">
+            <label for="viewer-density" class=styles::LABEL>
+                "Density"
+            </label>
+            <select
+                id="viewer-density"
+                name="density"
+                aria-describedby="viewer-density-note"
+                class=styles::INPUT
+                prop:value=move || settings.density.get().key()
+                on:change:target=move |ev| {
+                    if let Some(chosen) = Density::from_key(&ev.target().value()) {
+                        settings.density.set(chosen);
+                    }
+                }
+            >
+                <option value="comfortable">{Density::Comfortable.label()}</option>
+                <option value="compact">{Density::Compact.label()}</option>
+            </select>
+            <p id="viewer-density-note" class=styles::HINT>
+                "Compact tightens every table row and panel, so more of an expansion or a searchset fits one screen."
+            </p>
+        </div>
+    }
+    .into_any()
+}
+
 /// The FHIR version an address without one falls back to.
 fn version_field(settings: Settings) -> AnyView {
     view! {
-        <div class="grid gap-1">
-            <label for="viewer-fhir-version" class="text-sm font-medium">
+        <div class="grid gap-tight">
+            <label for="viewer-fhir-version" class=styles::LABEL>
                 "Default FHIR version"
             </label>
             <select
                 id="viewer-fhir-version"
                 name="fhir-version"
-                class=CONTROL
+                class=styles::INPUT
                 prop:value=move || settings.version.get().segment()
                 on:change:target=move |ev| {
                     if let Ok(selected) = ev.target().value().parse::<FhirVersion>() {
@@ -106,9 +136,7 @@ fn version_field(settings: Settings) -> AnyView {
                     <option value=option.segment()>{option.label()}</option>
                 </For>
             </select>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-                "Used when an address carries no version of its own."
-            </p>
+            <p class=styles::HINT>"Used when an address carries no version of its own."</p>
         </div>
     }
     .into_any()
@@ -117,8 +145,8 @@ fn version_field(settings: Settings) -> AnyView {
 /// The BCP 47 tag sent as `displayLanguage`.
 fn language_field(settings: Settings) -> AnyView {
     view! {
-        <div class="grid gap-1">
-            <label for="viewer-display-language" class="text-sm font-medium">
+        <div class="grid gap-tight">
+            <label for="viewer-display-language" class=styles::LABEL>
                 "Display language"
             </label>
             <input
@@ -126,11 +154,11 @@ fn language_field(settings: Settings) -> AnyView {
                 name="display-language"
                 type="text"
                 placeholder="for example nl-NL"
-                class=CONTROL
+                class=styles::INPUT
                 prop:value=move || settings.language.get()
                 on:input:target=move |ev| settings.language.set(ev.target().value())
             />
-            <p class="text-xs text-slate-500 dark:text-slate-400">
+            <p class=styles::HINT>
                 "A BCP 47 tag sent as displayLanguage. Leave it empty to take the server default."
             </p>
         </div>
@@ -147,8 +175,8 @@ fn page_size_field(settings: Settings) -> AnyView {
     let draft = RwSignal::new(settings.page_size.get_untracked().to_string());
     let refused = move || draft.with(|text| parse_page_size(text).is_none());
     view! {
-        <div class="grid gap-1">
-            <label for="viewer-page-size" class="text-sm font-medium">
+        <div class="grid gap-tight">
+            <label for="viewer-page-size" class=styles::LABEL>
                 "Page size"
             </label>
             <input
@@ -158,7 +186,7 @@ fn page_size_field(settings: Settings) -> AnyView {
                 min="1"
                 max=MAX_COUNT.to_string()
                 aria-describedby="viewer-page-size-note"
-                class=CONTROL
+                class=styles::INPUT
                 prop:value=move || draft.get()
                 on:input:target=move |ev| {
                     let typed = ev.target().value();
@@ -168,7 +196,7 @@ fn page_size_field(settings: Settings) -> AnyView {
                     draft.set(typed);
                 }
             />
-            <p id="viewer-page-size-note" class="text-xs text-slate-500 dark:text-slate-400">
+            <p id="viewer-page-size-note" class=styles::HINT>
                 {move || {
                     if refused() {
                         format!(

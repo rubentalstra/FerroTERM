@@ -14,19 +14,25 @@ use leptos_router::params::Params;
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
 use crate::components::icon;
+use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
 use crate::fhir::code_system::PublishedCodeSystem;
+use crate::fhir::concept::Hierarchy;
+use crate::fhir::concept::chosen_version;
 use crate::fhir::error::FhirError;
 use crate::fhir::terminology::SystemCard;
+use crate::fhir::terminology::TerminologyCapabilities;
 use crate::fhir::terminology::VersionRow;
 use crate::fhir::version::FhirVersion;
 use crate::routes::BROWSE_PATH;
 use crate::routes::EXPAND_PATH;
+use crate::routes::VALIDATE_PATH;
 use crate::routes::system_tool_link;
+use crate::styles;
 
 /// The path parameter this screen is addressed by.
 #[derive(Clone, Debug, Params, PartialEq)]
@@ -61,19 +67,32 @@ pub(crate) fn CodeSystemPage() -> impl IntoView {
             .unwrap_or_default()
     });
 
+    // One read of the terminology capabilities serves both the header and the
+    // pane below it: the header offers a screen only where this root declares
+    // the system can answer it, which is the same fact the pane draws.
+    let header_client = client.clone();
+    let capabilities = LocalResource::new(move || {
+        let client = header_client.clone();
+        let version = version.get();
+        async move { client.terminology_capabilities(version).await }
+    });
+
     let title = move || system.with(|system| title_of(system));
     let heading = view! {
         <Title text=title />
-        <h1 class="font-mono text-xl font-semibold break-all">
-            {move || system.with(|system| heading_of(system))}
-        </h1>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            "One code system, from the two documents that describe it. Each pane below says which request it read."
-        </p>
+        <header>
+            <h1 class="font-mono text-title font-semibold break-all">
+                {move || system.with(|system| heading_of(system))}
+            </h1>
+            <p class=styles::LEAD>
+                "One code system, from the two documents that describe it. Each pane below says which request it read."
+            </p>
+            {move || tools_view(capabilities, system, version)}
+        </header>
     }
     .into_any();
 
-    let capability = capability_section(&client, version, system);
+    let capability = capability_section(&client, version, system, capabilities);
     let published = published_section(&client, version, system);
 
     view! {
@@ -106,22 +125,17 @@ fn capability_section(
     client: &FhirClient,
     version: Signal<FhirVersion>,
     system: Signal<String>,
+    capabilities: LocalResource<Result<TerminologyCapabilities, FhirError>>,
 ) -> AnyView {
-    let read_client = client.clone();
-    let capabilities = LocalResource::new(move || {
-        let client = read_client.clone();
-        let version = version.get();
-        async move { client.terminology_capabilities(version).await }
-    });
     let url_client = client.clone();
     let url = Signal::derive(move || url_client.terminology_metadata_url(version.get()));
 
     view! {
-        <section class="mt-6" aria-labelledby="system-capability-heading">
-            <h2 id="system-capability-heading" class="text-lg font-medium">
+        <section class="mt-loose" aria-labelledby="system-capability-heading">
+            <h2 id="system-capability-heading" class=styles::SECTION_TITLE>
                 "What this server can do with it"
             </h2>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p class=styles::LEAD>
                 "Read from this root's terminology capabilities. Every affordance on the other screens is gated on what this pane shows."
             </p>
             <Reading label="Reading the terminology capabilities">
@@ -134,7 +148,7 @@ fn capability_section(
                                     Ok(document) => {
                                         let found = system.with(|system| document.card(system));
                                         match found {
-                                            Some(card) => support_view(card, version.get()),
+                                            Some(card) => support_view(card),
                                             None => undeclared_view(),
                                         }
                                     }
@@ -152,7 +166,10 @@ fn capability_section(
 /// The statement that this root's capabilities do not name the system.
 fn undeclared_view() -> AnyView {
     view! {
-        <p class="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950">
+        <p class=format!(
+            "mt-default rounded-md p-default {}",
+            styles::NOTICE,
+        )>
             "This root's terminology capabilities do not name this code system. Another FHIR version may serve it, so try the version switcher above; otherwise this deployment has not loaded it."
         </p>
     }
@@ -163,7 +180,7 @@ fn undeclared_view() -> AnyView {
 fn failure_view(error: &FhirError) -> AnyView {
     let error = error.clone();
     view! {
-        <div class="mt-2">
+        <div class="mt-default">
             <Failure error=Signal::stored(error) />
         </div>
     }
@@ -177,7 +194,7 @@ fn failure_view(error: &FhirError) -> AnyView {
 /// than re-rendered, so switching FHIR version or code system would keep every
 /// block's old body (verified in `leptos` 0.8.20 `for_loop.rs` and `tachys`
 /// 0.2.18 `view/keyed.rs`).
-fn support_view(card: SystemCard, version: FhirVersion) -> AnyView {
+fn support_view(card: SystemCard) -> AnyView {
     let content = card.content.map_or_else(
         || format!("Content {NOT_DECLARED} at this FHIR version"),
         |mode| format!("Content: {mode}"),
@@ -188,42 +205,32 @@ fn support_view(card: SystemCard, version: FhirVersion) -> AnyView {
         None => format!("Subsumption {NOT_DECLARED}"),
     };
     let badges = view! {
-        <ul class="mt-3 flex flex-wrap gap-2 text-xs">
-            <li class="rounded bg-slate-100 px-2 py-1 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
-                {content}
-            </li>
-            <li class="rounded bg-slate-100 px-2 py-1 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
-                {subsumption}
-            </li>
+        <ul class="mt-default flex flex-wrap gap-default text-small">
+            <li class=styles::BADGE>{content}</li>
+            <li class=styles::BADGE>{subsumption}</li>
         </ul>
     }
     .into_any();
 
     if card.versions.is_empty() {
-        let links = tools_view(&card.url, None, version);
         return view! {
             {badges}
-            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p class="mt-default text-body text-muted">
                 "This server declares no version for this code system."
             </p>
-            {links}
         }
         .into_any();
     }
-    let blocks: Vec<AnyView> = card
-        .versions
-        .iter()
-        .map(|row| version_view(&card.url, row, version))
-        .collect();
+    let blocks: Vec<AnyView> = card.versions.iter().map(version_view).collect();
     view! {
         {badges}
-        <div class="mt-3 grid gap-4">{blocks}</div>
+        <div class="mt-default grid gap-loose">{blocks}</div>
     }
     .into_any()
 }
 
 /// One served version: what it holds, what it filters on, what it answers.
-fn version_view(system: &str, row: &VersionRow, version: FhirVersion) -> AnyView {
+fn version_view(row: &VersionRow) -> AnyView {
     let code = row
         .code
         .clone()
@@ -249,16 +256,14 @@ fn version_view(system: &str, row: &VersionRow, version: FhirVersion) -> AnyView
         "This version declares no $lookup property.",
     );
     let filters = filter_view(row);
-    let links = tools_view(system, row.code.as_deref(), version);
     view! {
-        <article class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h3 class="font-mono text-sm font-semibold break-all">{code}</h3>
-            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">{default}</p>
-            <p class="text-xs text-slate-600 dark:text-slate-300">{compositional}</p>
+        <article class=format!("panel-p {}", styles::PANEL)>
+            <h3 class="font-mono text-body font-semibold break-all">{code}</h3>
+            <p class="mt-tight text-small text-muted">{default}</p>
+            <p class="text-small text-muted">{compositional}</p>
             {languages}
             {properties}
             {filters}
-            {links}
         </article>
     }
     .into_any()
@@ -268,25 +273,21 @@ fn version_view(system: &str, row: &VersionRow, version: FhirVersion) -> AnyView
 fn list_view(label: &'static str, values: &[String], absent: &'static str) -> AnyView {
     if values.is_empty() {
         return view! {
-            <h4 class="mt-3 text-xs font-medium tracking-wide uppercase">{label}</h4>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{absent}</p>
+            <h4 class="mt-default text-small font-medium tracking-wide uppercase">{label}</h4>
+            <p class=styles::LEAD>{absent}</p>
         }
         .into_any();
     }
     let items: Vec<AnyView> = values
         .iter()
         .map(|value| {
-            view! {
-                <li class="rounded bg-slate-100 px-2 py-1 font-mono dark:bg-slate-800">
-                    {value.clone()}
-                </li>
-            }
-            .into_any()
+            view! { <li class="rounded bg-inset px-default py-tight font-mono text-fg">{value.clone()}</li> }
+                .into_any()
         })
         .collect();
     view! {
-        <h4 class="mt-3 text-xs font-medium tracking-wide uppercase">{label}</h4>
-        <ul class="mt-1 flex flex-wrap gap-1 text-xs">{items}</ul>
+        <h4 class="mt-default text-small font-medium tracking-wide uppercase">{label}</h4>
+        <ul class="mt-tight flex flex-wrap gap-tight text-small">{items}</ul>
     }
     .into_any()
 }
@@ -295,12 +296,10 @@ fn list_view(label: &'static str, values: &[String], absent: &'static str) -> An
 fn filter_view(row: &VersionRow) -> AnyView {
     if row.filters.is_empty() {
         return view! {
-            <h4 class="mt-3 text-xs font-medium tracking-wide uppercase">
+            <h4 class="mt-default text-small font-medium tracking-wide uppercase">
                 "Filters $expand accepts"
             </h4>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                "This version declares no filter."
-            </p>
+            <p class=styles::LEAD>"This version declares no filter."</p>
         }
         .into_any();
     }
@@ -319,28 +318,31 @@ fn filter_view(row: &VersionRow) -> AnyView {
                 filter.operators.join(", ")
             };
             view! {
-                <tr class="border-b border-slate-100 align-top last:border-0 dark:border-slate-800">
-                    <th scope="row" class="py-1 pr-3 font-mono text-xs font-normal break-all">
+                <tr class="border-b border-line align-top last:border-0">
+                    <th
+                        scope="row"
+                        class="py-tight pr-default font-mono text-small font-normal break-all"
+                    >
                         {code}
                     </th>
-                    <td class="py-1 font-mono text-xs break-all">{operators}</td>
+                    <td class="py-tight font-mono text-small break-all">{operators}</td>
                 </tr>
             }
             .into_any()
         })
         .collect();
     view! {
-        <div class="mt-3 overflow-x-auto">
-            <table class="w-full border-collapse text-left text-sm">
-                <caption class="pb-1 text-left text-xs font-medium tracking-wide uppercase">
+        <div class="mt-default overflow-x-auto">
+            <table class="w-full border-collapse text-left text-body">
+                <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
                     "Filters $expand accepts"
                 </caption>
                 <thead>
-                    <tr class="border-b border-slate-200 dark:border-slate-700">
-                        <th scope="col" class="py-1 pr-3 text-xs font-medium">
+                    <tr class="border-b border-line">
+                        <th scope="col" class="py-tight pr-default text-small font-medium">
                             "Property"
                         </th>
-                        <th scope="col" class="py-1 text-xs font-medium">
+                        <th scope="col" class="py-tight text-small font-medium">
                             "Operators"
                         </th>
                     </tr>
@@ -353,32 +355,54 @@ fn filter_view(row: &VersionRow) -> AnyView {
 }
 
 /// The screens that work over this system, carrying it and its version.
-fn tools_view(system: &str, code: Option<&str>, version: FhirVersion) -> AnyView {
-    let browse = system_tool_link(BROWSE_PATH, system, code, version);
-    let expand = system_tool_link(EXPAND_PATH, system, code, version);
-    let named = code.map_or_else(
-        || "this code system".to_owned(),
-        |code| format!("version {code}"),
-    );
-    view! {
-        <nav aria-label=format!("Screens for {named}") class="mt-3 flex flex-wrap gap-3 text-sm">
-            <a
-                href=browse
-                class="inline-flex items-center gap-1 text-brand-700 underline dark:text-brand-300"
-            >
-                <Icon glyph=icon::BROWSE />
-                "Browse the concepts"
-            </a>
-            <a
-                href=expand
-                class="inline-flex items-center gap-1 text-brand-700 underline dark:text-brand-300"
-            >
-                <Icon glyph=icon::EXPAND />
-                "Run an expansion"
-            </a>
-        </nav>
+///
+/// One strip, in the header, for the version an unversioned request resolves
+/// to. A per-version strip repeated the same three links down the page and put
+/// the actions below the facts they act on.
+///
+/// The concept browser appears only where that version declares the
+/// direct-child operator, because a tree with no operator to walk it has
+/// nothing to draw (<https://hl7.org/fhir/R5/codesystem-filter-operator.html>).
+fn tools_view(
+    capabilities: LocalResource<Result<TerminologyCapabilities, FhirError>>,
+    system: Signal<String>,
+    version: Signal<FhirVersion>,
+) -> Option<AnyView> {
+    let card = capabilities.with(|answered| {
+        let document = answered.as_ref()?.as_ref().ok()?;
+        system.with(|system| document.card(system))
+    })?;
+    if card.url.is_empty() {
+        return None;
     }
-    .into_any()
+    let served = chosen_version(&card, None);
+    let code = served.as_ref().and_then(|row| row.code.clone());
+    let walkable = served.is_some_and(|row| Hierarchy::of(&row).walk().is_some());
+    let at = version.get();
+    let link = |path: &str, glyph: Glyph, label: &'static str| {
+        let href = system_tool_link(path, &card.url, code.as_deref(), at);
+        view! {
+            <a href=href class=styles::BUTTON>
+                <Icon glyph=glyph />
+                {label}
+            </a>
+        }
+        .into_any()
+    };
+    let browse = walkable.then(|| link(BROWSE_PATH, icon::BROWSE, "Browse the concepts"));
+    Some(
+        view! {
+            <nav
+                aria-label="Screens for this code system"
+                class="mt-default flex flex-wrap gap-default"
+            >
+                {browse}
+                {link(EXPAND_PATH, icon::EXPAND, "Run an expansion")}
+                {link(VALIDATE_PATH, icon::VALIDATE, "Validate a code")}
+            </nav>
+        }
+        .into_any(),
+    )
 }
 
 /// What the code system itself says it is, from the published resource.
@@ -413,14 +437,14 @@ fn published_section(
     });
 
     view! {
-        <section class="mt-8" aria-labelledby="system-published-heading">
-            <h2 id="system-published-heading" class="text-lg font-medium">
+        <section class="mt-section" aria-labelledby="system-published-heading">
+            <h2 id="system-published-heading" class=styles::SECTION_TITLE>
                 "What the code system says it is"
             </h2>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p class=styles::LEAD>
                 "Read from the published CodeSystem resources this root holds for the canonical above. This pane describes the code system; the pane above describes this server."
             </p>
-            <p aria-live="polite" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            <p aria-live="polite" class="mt-default text-body text-muted">
                 {announcement}
             </p>
             <Reading label="Reading the published CodeSystem">
@@ -463,14 +487,14 @@ fn match_sentence(drawn: usize, total: Option<u32>) -> String {
 fn resources_view(published: &[PublishedCodeSystem]) -> AnyView {
     if published.is_empty() {
         return view! {
-            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p class="mt-default text-body text-muted">
                 "This root publishes no CodeSystem resource for this canonical. A system served from a built index is declared in the capabilities above and need not be published as a resource."
             </p>
         }
         .into_any();
     }
     let blocks: Vec<AnyView> = published.iter().map(resource_view).collect();
-    view! { <div class="mt-3 grid gap-4">{blocks}</div> }.into_any()
+    view! { <div class="mt-default grid gap-loose">{blocks}</div> }.into_any()
 }
 
 /// One published resource, as a definition list of its declared facts.
@@ -488,21 +512,19 @@ fn resource_view(resource: &PublishedCodeSystem) -> AnyView {
         .map(|fact| {
             let value = fact.value.unwrap_or_else(|| NOT_DECLARED.to_owned());
             view! {
-                <div class="grid gap-1 border-b border-slate-100 py-1 last:border-0 sm:grid-cols-[16rem_1fr] dark:border-slate-800">
+                <div class="grid gap-tight border-b border-line py-tight last:border-0 sm:grid-cols-[16rem_1fr]">
                     <dt class="font-medium">{fact.label}</dt>
-                    <dd class="break-words">{value}</dd>
+                    <dd class="wrap-break-word">{value}</dd>
                 </div>
             }
             .into_any()
         })
         .collect();
     view! {
-        <article class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h3 class="font-mono text-sm font-semibold break-all">{heading}</h3>
-            <p class="mt-1 font-mono text-xs break-all text-slate-600 dark:text-slate-300">
-                {canonical}
-            </p>
-            <dl class="mt-2 text-sm">{rows}</dl>
+        <article class=format!("panel-p {}", styles::PANEL)>
+            <h3 class="font-mono text-body font-semibold break-all">{heading}</h3>
+            <p class="mt-tight font-mono text-small break-all text-muted">{canonical}</p>
+            <dl class="mt-default text-body">{rows}</dl>
         </article>
     }
     .into_any()
