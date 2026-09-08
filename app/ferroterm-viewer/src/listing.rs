@@ -306,28 +306,188 @@ pub(crate) fn filter_form(
     .into_any()
 }
 
+/// The address parameter naming the column a list is ordered on.
+const SORT_PARAM: &str = "sort";
+
+/// The address parameter naming which way that column is ordered.
+const DIRECTION_PARAM: &str = "dir";
+
+/// The value that parameter carries for a descending order.
+const DESCENDING: &str = "desc";
+
+/// A column a publishing list can be ordered by.
+///
+/// The three the list draws as facts. The fourth column is what a row hands
+/// its subject to, which is the same on every row and orders nothing.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum SortColumn {
+    /// The name a person recognises the resource by.
+    Name,
+    /// The business version.
+    Version,
+    /// The publication status.
+    Status,
+}
+
+impl SortColumn {
+    /// The value the address carries for this column.
+    fn key(self) -> &'static str {
+        match self {
+            Self::Name => "name",
+            Self::Version => "version",
+            Self::Status => "status",
+        }
+    }
+
+    /// Reads a column out of the address, or `None` for the server's order.
+    fn read(text: &str) -> Option<Self> {
+        [Self::Name, Self::Version, Self::Status]
+            .into_iter()
+            .find(|column| column.key() == text)
+    }
+
+    /// What this column orders on: whether the fact is absent, and its text.
+    ///
+    /// A fact the resource did not state sorts after every one it did, in both
+    /// directions, so absence never lands in the middle of the answers.
+    fn of(self, published: &Published<'_>) -> (bool, String) {
+        let stated = match self {
+            Self::Name => published.title,
+            Self::Version => published.version,
+            Self::Status => published.status,
+        };
+        (stated.is_none(), stated.unwrap_or_default().to_lowercase())
+    }
+}
+
+/// How a publishing list is ordered right now.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(crate) struct SortOrder {
+    /// The column, or `None` for the order the server answered in.
+    column: Option<SortColumn>,
+    /// Whether that column runs the other way.
+    descending: bool,
+}
+
+impl SortOrder {
+    /// Reads the order out of the address.
+    pub(crate) fn read(query: &dyn Fn(&str) -> Option<String>) -> Self {
+        Self {
+            column: query(SORT_PARAM)
+                .as_deref()
+                .map(str::trim)
+                .and_then(SortColumn::read),
+            descending: query(DIRECTION_PARAM).as_deref().map(str::trim) == Some(DESCENDING),
+        }
+    }
+
+    /// The order a click on `column` asks for.
+    fn toggled(self, column: SortColumn) -> Self {
+        Self {
+            column: Some(column),
+            descending: self.column == Some(column) && !self.descending,
+        }
+    }
+
+    /// What a screen reader announces about `column` on this order.
+    fn announced(self, column: SortColumn) -> &'static str {
+        if self.column != Some(column) {
+            "none"
+        } else if self.descending {
+            "descending"
+        } else {
+            "ascending"
+        }
+    }
+
+    /// The address parameters this order is, for a link.
+    fn pairs(self) -> Vec<(&'static str, &'static str)> {
+        let Some(column) = self.column else {
+            return Vec::new();
+        };
+        let mut carried = vec![(SORT_PARAM, column.key())];
+        if self.descending {
+            carried.push((DIRECTION_PARAM, DESCENDING));
+        }
+        carried
+    }
+
+    /// This order, ordering `published`.
+    ///
+    /// A stable sort, so resources that compare equal keep the order the
+    /// server answered in rather than one this function invented.
+    pub(crate) fn ordering(self, published: &mut [(Published<'_>, usize)]) {
+        let Some(column) = self.column else {
+            return;
+        };
+        published.sort_by(|(left, _), (right, _)| {
+            let (left_absent, left_key) = column.of(left);
+            let (right_absent, right_key) = column.of(right);
+            left_absent.cmp(&right_absent).then_with(|| {
+                let ordering = left_key.cmp(&right_key);
+                if self.descending {
+                    ordering.reverse()
+                } else {
+                    ordering
+                }
+            })
+        });
+    }
+}
+
+/// One heading a reader can order a publishing list by.
+///
+/// `aria-sort` on the header cell is what a screen reader announces, and the
+/// control inside it is a real link, so the order is shareable and the
+/// keyboard needs no handler of ours
+/// (<https://www.w3.org/WAI/ARIA/apg/patterns/table/>).
+pub(crate) fn sortable(
+    column: SortColumn,
+    label: &'static str,
+    order: SortOrder,
+    path: &'static str,
+    params: &ListParams,
+    version: FhirVersion,
+) -> AnyView {
+    let asked = order.toggled(column);
+    let href = params.address_with(path, version, &asked.pairs());
+    let mark = match (order.column == Some(column), order.descending) {
+        (false, _) => "",
+        (true, false) => " \u{2191}",
+        (true, true) => " \u{2193}",
+    };
+    view! {
+        <th scope="col" class=styles::TH aria-sort=order.announced(column)>
+            <a href=href class="state-change hover:text-fg">
+                {label}
+                {mark}
+            </a>
+        </th>
+    }
+    .into_any()
+}
+
+/// A heading for a column that orders nothing.
+pub(crate) fn heading(label: &'static str) -> AnyView {
+    view! {
+        <th scope="col" class=styles::TH>
+            {label}
+        </th>
+    }
+    .into_any()
+}
+
 /// The table both publishing lists draw, in the overview's shape.
 ///
 /// One panel, one table, the vocabulary's own cells, so a row follows the
-/// reader's density and the two lists cannot drift apart. The headings are the
-/// caller's, because the two lists name their subject differently.
-pub(crate) fn table(headings: &[&'static str], rows: Vec<AnyView>) -> AnyView {
-    let columns: Vec<AnyView> = headings
-        .iter()
-        .map(|heading| {
-            view! {
-                <th scope="col" class=styles::TH>
-                    {*heading}
-                </th>
-            }
-            .into_any()
-        })
-        .collect();
+/// reader's density and the two lists cannot drift apart. The headings arrive
+/// built, because three of the four order the list and one does not.
+pub(crate) fn table(headings: Vec<AnyView>, rows: Vec<AnyView>) -> AnyView {
     view! {
         <div class=format!("mt-default overflow-x-auto {}", styles::PANEL)>
             <table class=styles::TABLE>
                 <thead>
-                    <tr>{columns}</tr>
+                    <tr>{headings}</tr>
                 </thead>
                 <tbody>{rows}</tbody>
             </table>
@@ -470,6 +630,127 @@ pub(crate) fn pager_view(
 
 #[cfg(test)]
 mod tests {
+    /// Three resources, one of which states no version.
+    fn published() -> Vec<Published<'static>> {
+        vec![
+            Published {
+                title: Some("Beta"),
+                canonical: Some("urn:b"),
+                version: Some("2"),
+                status: Some("draft"),
+            },
+            Published {
+                title: Some("alpha"),
+                canonical: Some("urn:a"),
+                version: None,
+                status: Some("active"),
+            },
+            Published {
+                title: Some("Gamma"),
+                canonical: Some("urn:g"),
+                version: Some("1"),
+                status: Some("retired"),
+            },
+        ]
+    }
+
+    /// The titles of an ordered answer, in the order it holds them.
+    fn titles(order: SortOrder) -> Vec<&'static str> {
+        let held = published();
+        let mut ordered: Vec<(Published<'static>, usize)> = held.iter().copied().zip(0..).collect();
+        order.ordering(&mut ordered);
+        ordered
+            .into_iter()
+            .map(|(published, _)| published.title.unwrap_or_default())
+            .collect()
+    }
+
+    /// An order naming one column, read the way the address carries it.
+    fn asked(column: &str, direction: Option<&str>) -> SortOrder {
+        let column = column.to_owned();
+        let direction = direction.map(str::to_owned);
+        SortOrder::read(&|name| match name {
+            "sort" => Some(column.clone()),
+            "dir" => direction.clone(),
+            _ => None,
+        })
+    }
+
+    #[test]
+    fn an_address_naming_no_column_keeps_the_order_the_server_answered_in() {
+        let order = SortOrder::read(&|_| None);
+        assert_eq!(order, SortOrder::default());
+        assert_eq!(
+            titles(order),
+            ["Beta", "alpha", "Gamma"],
+            "the server's own order is an answer, not an absence of one"
+        );
+    }
+
+    #[test]
+    fn a_name_orders_without_regard_to_its_capital() {
+        assert_eq!(
+            titles(asked("name", None)),
+            ["alpha", "Beta", "Gamma"],
+            "a reader looking for `alpha` does not care that it is lower case"
+        );
+    }
+
+    #[test]
+    fn the_second_click_turns_a_column_around() {
+        let up = SortOrder::default().toggled(SortColumn::Status);
+        let down = up.toggled(SortColumn::Status);
+        assert!(down.descending);
+        assert_eq!(titles(up), ["alpha", "Beta", "Gamma"]);
+        assert_eq!(titles(down), ["Gamma", "Beta", "alpha"]);
+    }
+
+    #[test]
+    fn moving_to_another_column_starts_it_upward() {
+        let down = SortOrder::default()
+            .toggled(SortColumn::Name)
+            .toggled(SortColumn::Name);
+        let moved = down.toggled(SortColumn::Status);
+        assert_eq!(moved.column, Some(SortColumn::Status));
+        assert!(
+            !moved.descending,
+            "a column a reader has not ordered yet starts upward"
+        );
+    }
+
+    #[test]
+    fn a_fact_the_resource_did_not_state_sorts_after_every_one_it_did() {
+        for direction in [None, Some("desc")] {
+            assert_eq!(
+                titles(asked("version", direction)).last().copied(),
+                Some("alpha"),
+                "the resource with no version sorts last in both directions"
+            );
+        }
+    }
+
+    #[test]
+    fn an_order_the_address_does_not_name_is_the_server_s_own() {
+        assert_eq!(
+            asked("colour", None),
+            SortOrder::default(),
+            "a link a reader typed cannot name a column this list does not draw"
+        );
+    }
+
+    #[test]
+    fn a_screen_reader_is_told_which_column_is_ordered_and_which_way() {
+        let order = SortOrder::default().toggled(SortColumn::Version);
+        assert_eq!(order.announced(SortColumn::Version), "ascending");
+        assert_eq!(order.announced(SortColumn::Name), "none");
+        assert_eq!(
+            order
+                .toggled(SortColumn::Version)
+                .announced(SortColumn::Version),
+            "descending"
+        );
+    }
+
     use super::*;
 
     /// A stand-in for the address, which reads the same way a `ParamsMap` does.

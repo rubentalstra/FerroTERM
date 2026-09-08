@@ -31,11 +31,15 @@ use crate::fhir::version::FhirVersion;
 use crate::listing::Action;
 use crate::listing::ListParams;
 use crate::listing::Published;
+use crate::listing::SortColumn;
+use crate::listing::SortOrder;
 use crate::listing::count_sentence;
 use crate::listing::empty;
 use crate::listing::filter_form;
+use crate::listing::heading;
 use crate::listing::pager_view;
 use crate::listing::published_row;
+use crate::listing::sortable;
 use crate::listing::table;
 use crate::listing::window;
 use crate::pages::translate;
@@ -108,7 +112,9 @@ pub(crate) fn ConceptMapsPage() -> impl IntoView {
     .into_any();
 
     let form = search_form(params, version);
-    let list = list_section(&client, version, params);
+    // The order lives in the address, so an ordered list is a link.
+    let order = Memo::new(move |_| query.with(|map| SortOrder::read(&|name| map.get(name))));
+    let list = list_section(&client, version, params, order);
     let detail = detail_section(&client, version, params);
 
     view! {
@@ -188,6 +194,7 @@ fn list_section(
     client: &FhirClient,
     version: Signal<FhirVersion>,
     params: Signal<ListParams>,
+    order: Memo<SortOrder>,
 ) -> AnyView {
     let read_client = client.clone();
     let filter = Memo::new(move |_| params.with(|params| params.filter.clone()));
@@ -239,7 +246,7 @@ fn list_section(
                             answered
                                 .as_ref()
                                 .map(|result| match result {
-                                    Ok(found) => list_view(found, &params, version),
+                                    Ok(found) => list_view(order.get(), found, &params, version),
                                     Err(error) => failure_view(error),
                                 })
                         })
@@ -253,6 +260,7 @@ fn list_section(
 
 /// The rows of one page, with the controls that walk the rest.
 fn list_view(
+    order: SortOrder,
     found: &SearchSet<PublishedConceptMap>,
     params: &ListParams,
     version: FhirVersion,
@@ -263,10 +271,19 @@ fn list_view(
             "This root holds no ConceptMap resource matching the filter above. The translate runner still works: a server may translate through a map it holds without publishing it as a resource.",
         );
     }
+    // The whole answer is ordered before it is paged, so a walk through the
+    // pages walks the order the reader asked for rather than the server's.
+    let mut ordered: Vec<(Published<'_>, usize)> = resources
+        .iter()
+        .enumerate()
+        .map(|(index, resource)| (facts(resource), index))
+        .collect();
+    order.ordering(&mut ordered);
     let view = window(params.page(), params.size(), resources.len());
     let rows: Vec<AnyView> = view
         .indexes()
-        .filter_map(|index| resources.get(index))
+        .filter_map(|index| ordered.get(index))
+        .filter_map(|(_, index)| resources.get(*index))
         .map(|resource| row_view(resource, params, version))
         .collect();
     let pager = pager_view(
@@ -278,10 +295,35 @@ fn list_view(
         &[],
     );
     view! {
-        {table(&["Concept map", "Version", "Status", "Open in"], rows)}
+        {table(
+            vec![
+                sortable(
+                    SortColumn::Name,
+                    "Concept map",
+                    order,
+                    CONCEPT_MAPS_PATH,
+                    params,
+                    version,
+                ),
+                sortable(SortColumn::Version, "Version", order, CONCEPT_MAPS_PATH, params, version),
+                sortable(SortColumn::Status, "Status", order, CONCEPT_MAPS_PATH, params, version),
+                heading("Open in"),
+            ],
+            rows,
+        )}
         {pager}
     }
     .into_any()
+}
+
+/// The four facts a row draws about one published concept map.
+fn facts(resource: &PublishedConceptMap) -> Published<'_> {
+    Published {
+        title: resource.label(),
+        canonical: resource.url(),
+        version: resource.version(),
+        status: resource.status(),
+    }
 }
 
 /// One published concept map, as a row that opens it and one that runs it.
@@ -295,12 +337,7 @@ fn row_view(resource: &PublishedConceptMap, params: &ListParams, version: FhirVe
         ..TranslateRequest::default()
     });
     published_row(
-        &Published {
-            title: resource.label(),
-            canonical: resource.url(),
-            version: resource.version(),
-            status: resource.status(),
-        },
+        &facts(resource),
         resource
             .id()
             .map(|id| address(&params.reading(id), version)),
