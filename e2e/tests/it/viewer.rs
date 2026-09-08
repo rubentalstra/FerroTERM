@@ -36,7 +36,8 @@ const SORT_BY_SYSTEM: &str = "//section[@aria-labelledby='systems-heading']//th[
 const SORTED_UP: &str = "section[aria-labelledby='systems-heading'] th[aria-sort='ascending']";
 
 /// The canonicals the table draws, in the order it draws them.
-const ROW_CANONICALS: &str = "section[aria-labelledby='systems-heading'] tbody a[href^='/ui/systems/']";
+const ROW_CANONICALS: &str =
+    "section[aria-labelledby='systems-heading'] tbody a[href^='/ui/systems/']";
 
 /// The code system screen's capability pane, by the heading it is labelled by.
 const CAPABILITY_PANE: &str = "section[aria-labelledby='system-capability-heading']";

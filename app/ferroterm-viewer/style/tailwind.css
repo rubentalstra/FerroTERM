@@ -137,18 +137,22 @@
 
   /* Four steps on an 8-point grid, and nothing between them. A screen names a
      step, so the rhythm of one screen is the rhythm of every screen and a gap
-     is never re-decided in the file that needed it. */
-  --spacing-tight: 0.25rem;
-  --spacing-default: 0.5rem;
-  --spacing-loose: 1rem;
-  --spacing-section: 2rem;
+     is never re-decided in the file that needed it. The values follow the
+     density, which is why they reach Tailwind through a variable. */
+  --spacing-tight: var(--step-tight);
+  --spacing-default: var(--step-default);
+  --spacing-loose: var(--step-loose);
+  --spacing-section: var(--step-section);
 }
 
-
-/* Density is the reader's choice, and one variable apart. A table row and a
-   panel breathe in the comfortable default and tighten in compact, so a
-   twenty-system deployment fits one screen. */
+/* Density is the reader's choice, and one block apart. The four spacing steps
+   follow it, so compact tightens the whole rhythm of a screen rather than the
+   rows alone, and a twenty-system deployment fits one screen. */
 :root {
+  --step-tight: 0.25rem;
+  --step-default: 0.5rem;
+  --step-loose: 1rem;
+  --step-section: 2rem;
   --row-y: 0.5rem;
   --panel-p: 1rem;
 
@@ -158,6 +162,10 @@
 }
 
 :root[data-density="compact"] {
+  --step-tight: 0.125rem;
+  --step-default: 0.375rem;
+  --step-loose: 0.625rem;
+  --step-section: 1rem;
   --row-y: 0.25rem;
   --panel-p: 0.625rem;
 }

@@ -29,28 +29,23 @@ pub(crate) fn OverviewPage() -> impl IntoView {
     let client = expect_context::<FhirClient>();
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
 
-    let heading = view! {
-        <Title text="Overview" />
-        <h1 class=styles::PAGE_TITLE>"This server"</h1>
-        <p class=format!(
-            "mt-tight {}",
-            styles::MUTED,
-        )>"Everything on this page came from the FHIR API below, over HTTP, from your browser."</p>
-    }
-    .into_any();
-
-    let server = server_section(&client, version);
+    let header = header_view(&client, version);
     let systems = systems_section(&client, version);
 
     view! {
-        {heading}
-        {server}
+        <Title text="Overview" />
+        {header}
         {systems}
     }
 }
 
-/// What the selected root says about itself.
-fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView {
+/// The screen's own header: what it is, and which root it read.
+///
+/// The two facts about the root sit in the header rather than in a section of
+/// their own. A heading and a lead sentence over one address cost more of the
+/// screen than the address does, and this screen's subject is the inventory
+/// below.
+fn header_view(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView {
     let statement_client = client.clone();
     let statement = LocalResource::new(move || {
         let client = statement_client.clone();
@@ -64,10 +59,11 @@ fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView 
     let url = Signal::derive(move || url_client.metadata_url(version.get()));
 
     view! {
-        <section class="mt-loose" aria-labelledby="capability-heading">
-            <h2 id="capability-heading" class=styles::SECTION_TITLE>
-                "What the root declares"
-            </h2>
+        <header>
+            <h1 class=styles::PAGE_TITLE>"This server"</h1>
+            <p class=styles::LEAD>
+                "Everything on this page came from the FHIR API below, over HTTP, from your browser."
+            </p>
             <dl class="mt-default grid gap-x-loose gap-y-tight sm:grid-cols-[8rem_1fr]">
                 <dt class=styles::MUTED>"FHIR base"</dt>
                 <dd class=styles::CODE>{base}</dd>
@@ -108,12 +104,12 @@ fn server_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView 
                 }}
             </Reading>
             <RequestDisclosure url />
-        </section>
+        </header>
     }
     .into_any()
 }
 
-/// The code systems the selected root declares, one card each.
+/// The code systems the selected root declares, as one table.
 fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView {
     let capabilities_client = client.clone();
     let capabilities = LocalResource::new(move || {
@@ -142,13 +138,7 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
             <h2 id="systems-heading" class=styles::SECTION_TITLE>
                 "The code systems this server loaded"
             </h2>
-            <p class=format!(
-                "mt-tight {}",
-                styles::MUTED,
-            )>
-                "One row per served version, read from this root's terminology capabilities. The viewer names no code system of its own; a row opens the system."
-            </p>
-            <p aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
+            <p aria-live="polite" class=styles::LEAD>
                 {announcement}
             </p>
             <Reading label="Reading the terminology capabilities">
@@ -202,10 +192,17 @@ fn systems_view(cards: Vec<SystemCard>) -> AnyView {
 }
 
 /// How many code systems the root declared, as a sentence.
+///
+/// The sentence carries what the table is as well as how much of it there is,
+/// because a lead paragraph saying the same thing costs a line of every visit
+/// and a reader reads it once.
 fn count_sentence(count: usize) -> String {
     if count == 1 {
-        "1 code system".to_owned()
+        "1 code system, one row per served version, from this root's terminology capabilities."
+            .to_owned()
     } else {
-        format!("{count} code systems")
+        format!(
+            "{count} code systems, one row per served version, from this root's terminology capabilities."
+        )
     }
 }
