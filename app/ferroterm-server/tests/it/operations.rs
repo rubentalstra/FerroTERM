@@ -72,6 +72,45 @@ async fn lookup_by_get_and_post() {
     assert_eq!(english, 3, "lang.en keeps the English designations only");
 }
 
+/// A parameter the operation does not declare is refused on both routes.
+///
+/// A `GET` is checked while its query is decoded, and a `POST` carries a
+/// `Parameters` the codec reads without consulting the operation. The two have
+/// to agree, or a server silently accepts an input it then ignores
+/// (<https://hl7.org/fhir/R4B/operations.html#3.2.0.6>).
+#[tokio::test]
+async fn an_undeclared_parameter_is_refused_on_get_and_on_post() {
+    let server = Server::start();
+    let cat = sctid(item(CAT));
+
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/CodeSystem/$lookup?system={SCT}&code={cat}&colour=red"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["issue"][0]["code"], "invalid");
+
+    let (status, body) = server
+        .post(
+            "/r4b/CodeSystem/$lookup",
+            &parameters(&[
+                ("system", json!({"valueUri": SCT})),
+                ("code", json!({"valueCode": cat})),
+                ("colour", json!({"valueString": "red"})),
+            ]),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["issue"][0]["code"], "invalid");
+    assert!(
+        body["issue"][0]["details"]["text"]
+            .as_str()
+            .is_some_and(|text| text.contains("colour")),
+        "the refusal names the parameter: {body}"
+    );
+}
+
 #[tokio::test]
 async fn lookup_refusals_on_the_wire() {
     let server = Server::start();
