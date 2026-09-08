@@ -15,6 +15,7 @@ use leptos_router::path;
 use crate::components::health::HealthIndicator;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
+use crate::components::mark::Lockup;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
@@ -197,12 +198,8 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
                 >
                     "Screens"
                 </button>
-                <a
-                    href=move || ui_link(OVERVIEW_PATH, version.get())
-                    class="flex items-baseline gap-2 font-semibold text-fg"
-                >
-                    <span class="text-title">"FerroTERM"</span>
-                    <span class=styles::EYEBROW>"viewer"</span>
+                <a href=move || ui_link(OVERVIEW_PATH, version.get())>
+                    <Lockup />
                 </a>
                 <div class="ml-auto flex items-center gap-3">
                     <VersionSwitcher selected=version />

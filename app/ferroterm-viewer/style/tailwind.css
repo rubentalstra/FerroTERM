@@ -56,6 +56,13 @@
   --role-danger: #b91c1c;
   --role-danger-soft: #fef2f2;
   --role-danger-soft-fg: #7f1d1d;
+
+  /* The brand mark, which is artwork rather than a surface. The pairing is
+     the one assets/brand/README.md records: teal edges, teal-deep nodes, and
+     a cyan highlight on the top node. */
+  --role-mark: #0d9488;
+  --role-mark-node: #0f766e;
+  --role-mark-accent: #22d3ee;
 }
 
 /* `:root.dark` rather than `:where(.dark)`: a zero-specificity selector loses
@@ -81,6 +88,12 @@
   --role-danger: #fca5a5;
   --role-danger-soft: #450a0a;
   --role-danger-soft-fg: #fecaca;
+
+  /* On a dark tile the mark brightens so it holds against the ground
+     (assets/brand/README.md). */
+  --role-mark: #14b8a6;
+  --role-mark-node: #2dd4bf;
+  --role-mark-accent: #22d3ee;
 }
 
 @theme inline {
@@ -103,6 +116,9 @@
   --color-danger: var(--role-danger);
   --color-danger-soft: var(--role-danger-soft);
   --color-danger-soft-fg: var(--role-danger-soft-fg);
+  --color-mark: var(--role-mark);
+  --color-mark-node: var(--role-mark-node);
+  --color-mark-accent: var(--role-mark-accent);
 
   /* Six steps. Weight carries the hierarchy below the top two; size carries
      it above them. A screen names a step and never a raw size. */
