@@ -106,6 +106,20 @@ walk the rest.
 
 ![The expansion runner, showing an expansion and the page controls](img/viewer/expand.png)
 
+### Validate and subsume
+
+Two runners on one screen, because both answer a question about codes rather
+than about a set. `$validate-code` takes a code and either the code system or
+the value set to judge it against; the root's capability statement decides
+which levels the form offers, and where a root declares the instance level a
+stored resource's id stands in for the canonical. The answer states the
+verdict, the message the server gave, the display it holds, and whether the
+concept is inactive. `$subsumes` takes two codes in one system and states the
+relation the server found between them. Running either puts its parameters in
+the address, so a case is shareable by link.
+
+![The validation runner, with a verdict on one code and the subsumption runner below it](img/viewer/validate.png)
+
 ### Value sets
 
 The `ValueSet` resources this root publishes, searched by `url` and `version`.
@@ -123,6 +137,17 @@ the server picks the maps it holds for that code. The answer lists each match
 with the equivalence the server stated and the map it came from.
 
 ![The concept map screen, with a translated code and the match it returned](img/viewer/concept-maps.png)
+
+### FHIR versions
+
+The four served roots side by side, each read from its own
+`GET /{version}/metadata`. One table compares what each root declares of the
+terminology operations, the other what it declares of the resources. The screen
+exists because the versions genuinely differ: R4 and R4B declare `$lookup` at
+the type level and R5 added the instance level, and the viewer offers on each
+screen only what the root you are on declares.
+
+![The version comparison, with the four served roots side by side](img/viewer/versions.png)
 
 ### Evidence
 
@@ -148,6 +173,8 @@ Three sections, each naming the file every one of its numbers came from:
 No number here is typed into the viewer's source. Each one is read from its
 committed file at build time, so you can open that file in the repository and
 check it.
+
+![The evidence screen: the suite table and the latency bars, with the benchmark records continuing below the image](img/viewer/evidence.png)
 
 ### Settings
 

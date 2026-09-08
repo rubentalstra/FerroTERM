@@ -246,7 +246,11 @@ fn row_view(row: &Row) -> AnyView {
         .collect();
     view! {
         <tr class="border-b border-slate-200 align-top dark:border-slate-800">
-            <th scope="row" class="py-2 pr-3 font-mono text-xs font-normal break-all">
+            // `wrap-break-word` rather than `break-all`: an operation label
+            // is one long token with nowhere to break, but a declaration label
+            // is a sentence, and `break-all` chops it mid-word
+            // (<https://developer.mozilla.org/en-US/docs/Web/CSS/overflow-wrap>).
+            <th scope="row" class="py-2 pr-3 font-mono text-xs font-normal wrap-break-word">
                 {row.label.clone()}
             </th>
             {cells}
@@ -289,7 +293,7 @@ fn root_notes_view(label: &'static str, notes: &[(String, String)]) -> AnyView {
         .iter()
         .map(|(operation, note)| {
             view! {
-                <dt class="mt-2 font-mono text-xs break-all">{operation.clone()}</dt>
+                <dt class="mt-2 font-mono text-xs wrap-break-word">{operation.clone()}</dt>
                 <dd class="text-sm text-slate-700 dark:text-slate-200">{note.clone()}</dd>
             }
             .into_any()

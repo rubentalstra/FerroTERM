@@ -37,7 +37,12 @@ const BOOK_IMAGES: &str = "../website/book/src/operate/img/viewer";
 
 /// The FHIR version every capture is taken on, so the shots agree with each
 /// other and with the page that embeds them.
-const CAPTURED_VERSION: &str = "r4b";
+///
+/// R5 rather than the default, because the concept browser draws a tree only
+/// for a version declaring `child-of`, and `filter-operator` defines that from
+/// R5 onward (<https://hl7.org/fhir/R4B/codesystem-filter-operator.html>). A
+/// capture on an R4-family root would show the browser with nothing to walk.
+const CAPTURED_VERSION: &str = "r5";
 
 /// A code the mounted fixture concept map maps.
 ///
@@ -54,8 +59,11 @@ const SYSTEM_LINK: &str = "section[aria-labelledby='systems-heading'] article h3
 ///
 /// The card is chosen by what the capability statement declares rather than by
 /// which system it names, the way the journeys choose it, so the pass names no
-/// code system.
-const WALKABLE_CARD: &str = "//article[contains(., 'child-of')]//h3//a";
+/// code system. The operator list sits inside a `<details>`, and a closed
+/// disclosure renders no text, so the match is on the `<li>` in the DOM rather
+/// than on the card's text
+/// (<https://www.w3.org/TR/webdriver2/#dfn-get-element-text>).
+const WALKABLE_CARD: &str = "//article[.//li[contains(., 'child-of')]]//h3//a";
 
 /// The code system screen's capability pane.
 const CAPABILITY_PANE: &str = "section[aria-labelledby='system-capability-heading']";
@@ -113,6 +121,43 @@ const TRANSLATE_ANSWER: &str = "section[aria-labelledby='translate-heading']";
 
 /// The sentence a translated code is answered with.
 const TRANSLATED: &str = "The server translated the code.";
+
+/// The validate runner's code system control.
+const VALIDATE_SYSTEM: &str = "#validate-system";
+
+/// The validate runner's code control.
+const VALIDATE_CODE: &str = "#validate-code";
+
+/// The validate runner's submit control.
+const VALIDATE_SUBMIT: &str = "section[aria-labelledby='validate-heading'] button[type='submit']";
+
+/// The validate runner's answer.
+const VALIDATE_ANSWER: &str = "section[aria-labelledby='validate-heading']";
+
+/// The opening words of the verdict a validated code is answered with.
+const VALIDATED: &str = "result:";
+
+/// The subsumption runner, which the same screen carries below the validation.
+const SUBSUMES_SECTION: &str = "section[aria-labelledby='subsumes-heading']";
+
+/// The version comparison, once the four reads have filled it.
+const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
+
+/// One of the comparison's two tables.
+const COMPARISON_TABLE: &str = "section[aria-labelledby='comparison-heading'] table";
+
+/// How many tables the comparison draws, so a shot is never taken while one
+/// root is still answering.
+const COMPARISON_TABLES: usize = 2;
+
+/// The evidence screen's conformance pane.
+const CONFORMANCE_PANE: &str = "section[aria-labelledby='conformance-heading']";
+
+/// The evidence screen's latency pane.
+const LATENCY_PANE: &str = "section[aria-labelledby='latency-heading']";
+
+/// The evidence screen's benchmark-run pane.
+const RUN_PANE: &str = "section[aria-labelledby='run-heading']";
 
 /// The settings screen's theme control.
 const THEME_CONTROL: &str = "#viewer-theme";
@@ -358,6 +403,81 @@ async fn concept_maps(
     Ok(())
 }
 
+/// The validate and subsume runners, on a code the fixture holds.
+///
+/// The code system and the code are the ones the earlier screens already
+/// named, so the pass names no code system of its own. The subsumption runner
+/// below is left unrun: it is a second form on the same screen, and a shot of
+/// one answer and one empty form shows what the screen offers without claiming
+/// a result nobody asked for.
+async fn validate_runner(
+    journey: &Journey,
+    dir: &Path,
+    base: &str,
+    system: &str,
+) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "validate")).await;
+    journey
+        .element(By::Css(VALIDATE_SYSTEM), "the runner's code system control")
+        .await
+        .send_keys(system)
+        .await?;
+    journey
+        .element(By::Css(VALIDATE_CODE), "the runner's code control")
+        .await
+        .send_keys(MAPPED_CODE)
+        .await?;
+    journey
+        .element(By::Css(VALIDATE_SUBMIT), "the runner's submit control")
+        .await
+        .click()
+        .await?;
+    journey
+        .text_becoming(
+            By::Css(VALIDATE_ANSWER),
+            StringMatch::new(VALIDATED.to_owned()).partial(),
+            "the runner to state a verdict on the code it was given",
+        )
+        .await;
+    journey
+        .element(By::Css(SUBSUMES_SECTION), "the subsumption runner below it")
+        .await;
+    shot(journey, &dir.join("validate.png")).await?;
+    Ok(())
+}
+
+/// The four served roots side by side, as their capability statements differ.
+async fn versions(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "versions")).await;
+    journey
+        .element(By::Css(COMPARISON), "the comparison the four reads fill")
+        .await;
+    journey
+        .count_becoming(
+            By::Css(COMPARISON_TABLE),
+            COMPARISON_TABLES,
+            "both comparison tables to draw before the shot is taken",
+        )
+        .await;
+    shot(journey, &dir.join("versions.png")).await
+}
+
+/// The evidence this build carries: the suite, the latency bars, and the
+/// newest committed benchmark run.
+async fn evidence(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "evidence")).await;
+    journey
+        .element(By::Css(CONFORMANCE_PANE), "the conformance pane")
+        .await;
+    journey
+        .element(By::Css(LATENCY_PANE), "the latency pane")
+        .await;
+    journey
+        .element(By::Css(RUN_PANE), "the benchmark run pane")
+        .await;
+    shot(journey, &dir.join("evidence.png")).await
+}
+
 /// Settings: what this browser remembers, and nothing the server holds.
 async fn settings(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
     journey.reopen(&address(base, "settings")).await;
@@ -397,7 +517,10 @@ async fn the_documentation_screenshots_are_captured() {
             concept_browser(&journey, &dir).await?;
             let canonical = value_sets(&journey, &dir, &base).await?;
             expansion_runner(&journey, &dir, &base, &canonical).await?;
+            validate_runner(&journey, &dir, &base, &system).await?;
             concept_maps(&journey, &dir, &base, &system).await?;
+            versions(&journey, &dir, &base).await?;
+            evidence(&journey, &dir, &base).await?;
             settings(&journey, &dir, &base).await?;
             journey.no_console_errors().await;
             Ok::<(), WebDriverError>(())
