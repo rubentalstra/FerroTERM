@@ -21,6 +21,7 @@ pub(crate) mod icon;
 pub(crate) mod mark;
 pub(crate) mod reading;
 pub(crate) mod request_disclosure;
+pub(crate) mod runs;
 pub(crate) mod shell;
 pub(crate) mod spinner;
 pub(crate) mod system_table;

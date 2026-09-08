@@ -24,6 +24,7 @@ use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
+use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::CONCEPT_MAP;
 use crate::fhir::FhirClient;
@@ -37,6 +38,7 @@ use crate::fhir::version::FhirVersion;
 use crate::routes::TRANSLATE_PATH;
 use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
+use crate::runs::Run;
 use crate::styles;
 use crate::url::RequestUrl;
 
@@ -91,11 +93,30 @@ pub(crate) fn TranslatePage() -> impl IntoView {
     }
     .into_any();
 
-    let runner = runner_section(&client, version, run);
+    // A run this browser remembers is the address that made it, and the
+    // address is what the form already puts every parameter in.
+    let made = Memo::new(move |_| {
+        run.with(|run| {
+            run.runnable().then(|| Run {
+                screen: "Translate".to_owned(),
+                subject: run.code.clone(),
+                address: address(run, version.get()),
+            })
+        })
+    });
+    let history = History::recording(made);
 
+    let form = runner_section(&client, version, run);
+    let answer = answer_section(&client, version, run);
+
+    // The answer keeps its own column above the large breakpoint, so a
+    // parameter that lengthens the form never pushes it down the page.
     view! {
         {heading}
-        {runner}
+        <div class="mt-loose grid items-start gap-loose lg:grid-cols-[24rem_minmax(0,1fr)]">
+            <div class="min-w-0">{form} {history.view()}</div>
+            <div class="min-w-0">{answer}</div>
+        </div>
     }
 }
 
@@ -191,8 +212,6 @@ fn runner_section(
                 .is_some_and(|statement| statement.declares_operation(CONCEPT_MAP, TRANSLATE))
         })
     });
-    let answer = answer_section(client, version, run);
-
     view! {
         <section class="mt-loose" aria-labelledby="translate-heading">
             <h2 id="translate-heading" class="sr-only">
@@ -221,7 +240,6 @@ fn runner_section(
                 {runner_form(run, version)}
             </Show>
             <RequestDisclosure url />
-            {answer}
         </section>
     }
     .into_any()
@@ -448,8 +466,10 @@ fn answer_block(
     url: Signal<String>,
 ) -> AnyView {
     view! {
-        <div class="mt-loose">
-            <h3 class="text-body font-medium">"The translation"</h3>
+        <section class="mt-loose" aria-labelledby="translate-answer-heading">
+            <h2 id="translate-answer-heading" class=styles::SECTION_TITLE>
+                "The translation"
+            </h2>
             <p aria-live="polite" class="mt-default text-body text-muted">
                 {move || announcement.get()}
             </p>
@@ -468,7 +488,7 @@ fn answer_block(
                 }}
             </Reading>
             <RequestDisclosure url />
-        </div>
+        </section>
     }
     .into_any()
 }

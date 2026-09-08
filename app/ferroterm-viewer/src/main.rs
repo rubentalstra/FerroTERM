@@ -16,6 +16,7 @@ mod listing;
 mod pages;
 mod paging;
 mod routes;
+mod runs;
 mod settings;
 mod storage;
 mod styles;

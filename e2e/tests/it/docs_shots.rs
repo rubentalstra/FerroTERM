@@ -128,7 +128,7 @@ const TRANSLATE_CODE: &str = "#translate-code";
 const TRANSLATE_SUBMIT: &str = "section[aria-labelledby='translate-heading'] button[type='submit']";
 
 /// The translate runner's answer.
-const TRANSLATE_ANSWER: &str = "section[aria-labelledby='translate-heading']";
+const TRANSLATE_ANSWER: &str = "section[aria-labelledby='translate-answer-heading']";
 
 /// The sentence a translated code is answered with.
 const TRANSLATED: &str = "The server translated the code.";
