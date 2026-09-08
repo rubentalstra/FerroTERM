@@ -618,12 +618,32 @@ fn designations_of(
             None => d.language.as_deref() == Some(*w),
         })
     };
-    Ok(resolved
+    let mut designations: Vec<Designation> = resolved
         .provider
         .designations(located.concept, None)?
         .into_iter()
         .filter(selected)
-        .collect())
+        .collect();
+    // A `displayLanguage` that lands on a designation makes that designation
+    // the display, and the system's own display then has nowhere else to go.
+    // It moves into the designation list, marked preferred for the language
+    // the system states, and the one that became the display is not repeated,
+    // so the answer carries each translation once
+    // (<https://hl7.org/fhir/R5/valueset-operation-expand.html>,
+    // `displayLanguage`).
+    let base = resolved.provider.display(located.concept, None)?;
+    if let Some(base) = base
+        && item.display.as_ref().is_none_or(|shown| *shown != base)
+    {
+        designations.retain(|d| Some(&d.value) != item.display.as_ref());
+        let promoted = super::lookup::display_designation(resolved.provider.as_ref(), None, &base);
+        if selected(&promoted) {
+            // First, because it is the display the system itself states and
+            // the rest of the list are alternates to it.
+            designations.insert(0, promoted);
+        }
+    }
+    Ok(designations)
 }
 
 /// The `warning-<standing>` parameters for every resource the expansion drew

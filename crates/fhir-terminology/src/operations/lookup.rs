@@ -291,7 +291,7 @@ fn check_properties(
 
 /// The display as a designation: in the language the system answered in,
 /// marked preferred for that language.
-fn display_designation(
+pub(super) fn display_designation(
     provider: &dyn CodeSystemProvider,
     requested: Option<&str>,
     display: &str,

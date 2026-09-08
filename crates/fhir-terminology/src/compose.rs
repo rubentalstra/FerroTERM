@@ -1033,14 +1033,24 @@ fn materialize(
             .map_err(&failed)?
             .unwrap_or_else(|| index.to_string()),
     };
-    let display = match selection.overrides.get(&index) {
-        Some(display) => Some(display.clone()),
-        None => provider
-            .display(
-                concept,
-                language::for_provider(provider.as_ref(), options.language.as_deref()).as_deref(),
-            )
-            .map_err(&failed)?,
+    let requested = options.language.as_deref();
+    let display = if let Some(display) = selection.overrides.get(&index) {
+        Some(display.clone())
+    } else {
+        let asked = language::for_provider(provider.as_ref(), requested);
+        let shown = provider
+            .display(concept, asked.as_deref())
+            .map_err(&failed)?;
+        // NOTE: a request refusing every language it does not name has no
+        // display to answer with here, so the item carries none
+        // (<https://www.rfc-editor.org/rfc/rfc9110#field.accept-language>).
+        if language::refuses_unnamed(requested)
+            && !acceptable_display(provider.as_ref(), concept, requested).map_err(&failed)?
+        {
+            None
+        } else {
+            shown
+        }
     };
     let status = provider.status(concept).map_err(&failed)?;
     Ok(Item {
@@ -1052,6 +1062,26 @@ fn materialize(
         abstract_concept: status.abstract_concept,
         depth,
     })
+}
+
+/// Whether the concept has a display `requested` accepts: the system's own
+/// language, or a designation in a language the request did not refuse.
+fn acceptable_display(
+    provider: &dyn CodeSystemProvider,
+    concept: Concept,
+    requested: Option<&str>,
+) -> Result<bool, ProviderError> {
+    if provider
+        .language()
+        .is_some_and(|own| language::accepts(requested, own))
+    {
+        return Ok(true);
+    }
+    Ok(provider.designations(concept, None)?.iter().any(|d| {
+        d.language
+            .as_deref()
+            .is_some_and(|tag| language::accepts(requested, tag))
+    }))
 }
 
 impl Expander<'_> {

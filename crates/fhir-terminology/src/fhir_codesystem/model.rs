@@ -233,7 +233,6 @@ pub(crate) fn designation_use(
 /// (<https://hl7.org/fhir/R4B/codesystem-concept-properties.html>).
 pub(crate) const INACTIVE: &str = "inactive";
 pub(crate) const STATUS: &str = "status";
-pub(crate) const DEPRECATED: &str = "deprecated";
 pub(crate) const NOT_SELECTABLE: &str = "notSelectable";
 pub(crate) const PARENT: &str = "parent";
 pub(crate) const CHILD: &str = "child";
