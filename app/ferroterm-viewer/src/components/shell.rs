@@ -13,6 +13,7 @@ use leptos_router::params::Params;
 use leptos_router::path;
 
 use crate::components::health::HealthIndicator;
+use crate::components::icon;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
 use crate::components::mark::Lockup;
@@ -51,45 +52,49 @@ pub(crate) struct SelectedVersion(pub(crate) Signal<FhirVersion>);
 /// The element the navigation toggle opens and closes.
 const NAV_ID: &str = "screen-nav";
 
-/// One slot of the sidebar, in the order it is drawn.
-enum NavSlot {
-    /// A screen: its path segment below the base, its label, and the glyph a
-    /// reader recognises it by.
-    Item(&'static str, &'static str, Glyph),
-    /// The hairline between the two groups.
-    Divider,
-}
+/// One screen in the sidebar: its path segment below the base, the label a
+/// reader reads, and the glyph they recognise it by.
+struct NavItem(&'static str, &'static str, Glyph);
 
-/// The sidebar, in the order it renders: the screens over what the server
-/// serves, a divider, then the screens about the viewer itself.
+/// One labelled group of the sidebar.
+struct NavGroup(&'static str, &'static [NavItem]);
+
+/// The screens a reader reads what this server holds on.
+const EXPLORE: [NavItem; 2] = [
+    NavItem(OVERVIEW_PATH, "Overview", icon::OVERVIEW),
+    NavItem(BROWSE_PATH, "Concept browser", icon::BROWSE),
+];
+
+/// The screens a reader asks this server a question on.
+const RUN: [NavItem; 2] = [
+    NavItem(EXPAND_PATH, "Expand", icon::EXPAND),
+    NavItem(VALIDATE_PATH, "Validate and subsume", icon::VALIDATE),
+];
+
+/// The screens that list what this server publishes.
+const PUBLISH: [NavItem; 2] = [
+    NavItem(VALUE_SETS_PATH, "Value sets", icon::VALUE_SETS),
+    NavItem(CONCEPT_MAPS_PATH, "Concept maps", icon::CONCEPT_MAPS),
+];
+
+/// The screens about this server and this viewer, rather than about a code.
+const ABOUT: [NavItem; 3] = [
+    NavItem(VERSIONS_PATH, "FHIR versions", icon::VERSION),
+    NavItem(EVIDENCE_PATH, "Evidence", icon::EVIDENCE),
+    NavItem(SETTINGS_PATH, "Settings", icon::SETTINGS),
+];
+
+/// The sidebar, as the four groups in the order it renders them.
 ///
 /// The order lives here rather than in the markup, so one table decides it and
-/// the rendered sidebar cannot drift from it. The divider belongs to the
-/// second group, whose entries are the ones a new screen is least likely to
-/// land between.
-const NAV_SLOTS: [NavSlot; 10] = [
-    NavSlot::Item(OVERVIEW_PATH, "Overview", crate::components::icon::OVERVIEW),
-    NavSlot::Item(BROWSE_PATH, "Browse", crate::components::icon::BROWSE),
-    NavSlot::Item(EXPAND_PATH, "Expand", crate::components::icon::EXPAND),
-    NavSlot::Item(VALIDATE_PATH, "Validate", crate::components::icon::VALIDATE),
-    NavSlot::Item(
-        VALUE_SETS_PATH,
-        "Value sets",
-        crate::components::icon::VALUE_SETS,
-    ),
-    NavSlot::Item(
-        CONCEPT_MAPS_PATH,
-        "Concept maps",
-        crate::components::icon::CONCEPT_MAPS,
-    ),
-    NavSlot::Divider,
-    NavSlot::Item(
-        VERSIONS_PATH,
-        "FHIR versions",
-        crate::components::icon::VERSION,
-    ),
-    NavSlot::Item(EVIDENCE_PATH, "Evidence", crate::components::icon::EVIDENCE),
-    NavSlot::Item(SETTINGS_PATH, "Settings", crate::components::icon::SETTINGS),
+/// the rendered sidebar cannot drift from it. The groups are what a reader
+/// came to do: read what the server holds, ask it something, see what it
+/// publishes, or ask about the server itself.
+const NAV_GROUPS: [NavGroup; 4] = [
+    NavGroup("Explore", &EXPLORE),
+    NavGroup("Run", &RUN),
+    NavGroup("Publish", &PUBLISH),
+    NavGroup("About this server", &ABOUT),
 ];
 
 /// The classes every sidebar link carries, whichever screen it leads to.
@@ -142,12 +147,33 @@ fn nav_entry(
     .into_any()
 }
 
-/// The hairline between the sidebar's two groups.
+/// One labelled group of the sidebar.
 ///
-/// It draws a grouping the labels already carry, so it says nothing to a
-/// screen reader and is hidden from one.
-fn nav_divider() -> AnyView {
-    view! { <li aria-hidden="true" class="my-default border-t border-line"></li> }.into_any()
+/// The label is the group's accessible name through `aria-labelledby`, so a
+/// screen reader announces which group a link is in rather than reading twelve
+/// links in a row (<https://www.w3.org/WAI/ARIA/apg/patterns/landmarks/>).
+fn nav_group(
+    section: Memo<Option<&'static str>>,
+    version: Signal<FhirVersion>,
+    group: &'static NavGroup,
+) -> AnyView {
+    let NavGroup(label, items) = group;
+    let id = format!("screen-nav-{}", label.split(' ').next().unwrap_or(label)).to_lowercase();
+    let entries: Vec<AnyView> = items
+        .iter()
+        .map(|NavItem(segment, name, glyph)| nav_entry(section, version, segment, name, *glyph))
+        .collect();
+    view! {
+        <li>
+            <p id=id.clone() class=format!("px-default pt-default pb-tight {}", styles::EYEBROW)>
+                {*label}
+            </p>
+            <ul aria-labelledby=id class="flex flex-col gap-tight">
+                {entries}
+            </ul>
+        </li>
+    }
+    .into_any()
 }
 
 /// The sidebar every screen is reached from.
@@ -158,14 +184,9 @@ fn nav_divider() -> AnyView {
 fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     let location = use_location();
     let section = Memo::new(move |_| location.pathname.with(|path| nav_section(path)));
-    let slots: Vec<AnyView> = NAV_SLOTS
-        .into_iter()
-        .map(|slot| match slot {
-            NavSlot::Item(segment, label, glyph) => {
-                nav_entry(section, version, segment, label, glyph)
-            }
-            NavSlot::Divider => nav_divider(),
-        })
+    let groups: Vec<AnyView> = NAV_GROUPS
+        .iter()
+        .map(|group| nav_group(section, version, group))
         .collect();
     view! {
         <aside
@@ -174,7 +195,7 @@ fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
             class:hidden=move || !open.get()
         >
             <nav aria-label="Screens" class="p-default">
-                <ul class="flex flex-col gap-tight">{slots}</ul>
+                <ul class="flex flex-col">{groups}</ul>
             </nav>
         </aside>
     }
@@ -277,19 +298,18 @@ pub(crate) fn Shell() -> impl IntoView {
 
 #[cfg(test)]
 mod tests {
-    use super::NAV_SLOTS;
-    use super::NavSlot;
+    use super::ABOUT;
+    use super::EXPLORE;
+    use super::NAV_GROUPS;
+    use super::NavItem;
     use crate::routes::UI_BASE;
     use crate::routes::nav_section;
 
     /// The path segment of every entry, in the order the sidebar draws them.
     fn entries() -> Vec<&'static str> {
-        NAV_SLOTS
+        NAV_GROUPS
             .iter()
-            .filter_map(|slot| match slot {
-                NavSlot::Item(segment, _, _) => Some(*segment),
-                NavSlot::Divider => None,
-            })
+            .flat_map(|group| group.1.iter().map(|NavItem(segment, _, _)| *segment))
             .collect()
     }
 
@@ -320,22 +340,31 @@ mod tests {
     }
 
     #[test]
-    fn the_divider_separates_two_groups_it_never_ends() {
-        let dividers = NAV_SLOTS
-            .iter()
-            .filter(|slot| matches!(slot, NavSlot::Divider))
-            .count();
+    fn every_group_is_labelled_and_holds_a_screen() {
+        for group in &NAV_GROUPS {
+            assert!(
+                !group.0.is_empty(),
+                "a group with no label reads as a run of links"
+            );
+            assert!(
+                !group.1.is_empty(),
+                "the `{}` group draws a label over nothing",
+                group.0
+            );
+        }
+    }
+
+    #[test]
+    fn the_server_facts_are_the_last_group_and_the_reading_screens_the_first() {
         assert_eq!(
-            dividers, 1,
-            "one hairline, so the sidebar reads as two groups"
+            NAV_GROUPS.first().map(|group| group.1.len()),
+            Some(EXPLORE.len()),
+            "a reader arrives to read what the server holds"
         );
-        assert!(
-            !matches!(NAV_SLOTS.first(), Some(NavSlot::Divider)),
-            "a hairline at either end draws a group with nothing in it"
-        );
-        assert!(
-            !matches!(NAV_SLOTS.last(), Some(NavSlot::Divider)),
-            "a hairline at either end draws a group with nothing in it"
+        assert_eq!(
+            NAV_GROUPS.last().map(|group| group.1.len()),
+            Some(ABOUT.len()),
+            "the screens about the server come after the screens about a code"
         );
     }
 
