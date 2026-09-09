@@ -24,3 +24,4 @@
 - [Clean up agent worktrees](clean-up-agent-worktrees.md), remove a subagent's worktree and its branches the moment its PR merges, unprompted; check `gh` for MERGED then `git branch -D` (squash merges defeat `-d`), never touch a live agent's worktree
 - [Enum width sets every value](enum-width-sets-every-value.md), a Rust enum costs its largest variant for every value; box the wide rare variants (Cloudflare's 1.1.1.1 DNS cache post is the reference case); this took FerroTERM's `$lookup` from ~630 us to 232 us and is the first thing to check on any layout work
 - [e2e is its own workspace](e2e-own-workspace.md), root `cargo fmt --all` and clippy never touch `e2e/tests/`; run both inside `e2e/` or CI's ui-e2e job fails on formatting a round trip later
+- [Auto-merge every PR](auto-merge-every-pr.md), owner directive 2026-09-09: enable `gh pr merge <n> --squash --auto --delete-branch` at open time and keep working; never stall waiting for the owner to merge
