@@ -8,7 +8,6 @@
 //! screen follows with no edit here.
 
 use leptos::prelude::*;
-use leptos_meta::Title;
 
 use crate::comparison::Cell;
 use crate::comparison::Comparison;
@@ -45,12 +44,7 @@ const CELL: &str = "py-default pr-default align-top";
 ///
 /// Nothing on this screen depends on the version switcher: it reads every
 /// root, so no read refetches and none goes stale.
-#[component]
-#[expect(
-    unreachable_pub,
-    reason = "the leptos component macro emits a pub props type, and a binary crate has no reachable public API"
-)]
-pub(crate) fn VersionsPage() -> impl IntoView {
+pub(crate) fn pane() -> AnyView {
     let client = expect_context::<FhirClient>();
     let roots: [RootRead; 4] = FhirVersion::ALL.map(|version| {
         let client = client.clone();
@@ -60,23 +54,22 @@ pub(crate) fn VersionsPage() -> impl IntoView {
         })
     });
 
-    let heading = view! {
-        <Title text="FHIR versions" />
-        <h1 class=styles::PAGE_TITLE>"The four FHIR versions"</h1>
-        <p class=styles::LEAD>
-            "This one server answers R4, R4B, R5, and the R6 ballot from four roots, each with the operation set its own release publishes. Everything below is those four capability statements, read from this browser."
-        </p>
-    }
-    .into_any();
-
     let comparison = comparison_section(roots);
     let requests = requests_section(&client);
 
     view! {
-        {heading}
-        {comparison}
-        {requests}
+        <section class="mt-section" aria-labelledby="about-versions-heading">
+            <h2 id="about-versions-heading" class=styles::SECTION_TITLE>
+                "The four FHIR versions"
+            </h2>
+            <p class=styles::LEAD>
+                "This one server answers R4, R4B, R5, and the R6 ballot from four roots, each with the operation set its own release publishes. Everything below is those four capability statements, read from this browser."
+            </p>
+            {comparison}
+            {requests}
+        </section>
     }
+    .into_any()
 }
 
 /// The four documents, read together and drawn as one comparison.
@@ -87,9 +80,9 @@ fn comparison_section(roots: [RootRead; 4]) -> AnyView {
 
     view! {
         <section class="mt-loose" aria-labelledby="comparison-heading">
-            <h2 id="comparison-heading" class=styles::SECTION_TITLE>
+            <h3 id="comparison-heading" class=styles::SECTION_TITLE>
                 "What each root declares"
-            </h2>
+            </h3>
             <p aria-live="polite" class=styles::LEAD>
                 {announcement}
             </p>

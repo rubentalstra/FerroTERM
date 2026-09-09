@@ -497,9 +497,10 @@ async fn validate_runner(
     Ok(())
 }
 
-/// The four served roots side by side, as their capability statements differ.
-async fn versions(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
-    journey.reopen(&address(base, "versions")).await;
+/// About: the four served roots, the evidence the build ships, and what this
+/// browser remembers. One screen, so one shot.
+async fn about(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
+    journey.reopen(&address(base, "about")).await;
     journey
         .element(By::Css(COMPARISON), "the comparison the four reads fill")
         .await;
@@ -510,13 +511,6 @@ async fn versions(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<
             "both comparison tables to draw before the shot is taken",
         )
         .await;
-    shot(journey, &dir.join("versions.png")).await
-}
-
-/// The evidence this build carries: the suite, the latency bars, and the
-/// newest committed benchmark run.
-async fn evidence(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
-    journey.reopen(&address(base, "evidence")).await;
     journey
         .element(By::Css(CONFORMANCE_PANE), "the conformance pane")
         .await;
@@ -526,16 +520,10 @@ async fn evidence(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<
     journey
         .element(By::Css(RUN_PANE), "the benchmark run pane")
         .await;
-    shot(journey, &dir.join("evidence.png")).await
-}
-
-/// Settings: what this browser remembers, and nothing the server holds.
-async fn settings(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
-    journey.reopen(&address(base, "settings")).await;
     journey
         .element(By::Css(THEME_CONTROL), "the theme control")
         .await;
-    shot(journey, &dir.join("settings.png")).await
+    shot(journey, &dir.join("about.png")).await
 }
 
 /// Captures one canonical image per viewer screen, in reading order.
@@ -572,9 +560,7 @@ async fn the_documentation_screenshots_are_captured() {
             find(&journey, &dir, &base, &system).await?;
             concept_maps(&journey, &dir, &base).await?;
             translate(&journey, &dir, &base, &system).await?;
-            versions(&journey, &dir, &base).await?;
-            evidence(&journey, &dir, &base).await?;
-            settings(&journey, &dir, &base).await?;
+            about(&journey, &dir, &base).await?;
             journey.no_console_errors().await;
             Ok::<(), WebDriverError>(())
         })

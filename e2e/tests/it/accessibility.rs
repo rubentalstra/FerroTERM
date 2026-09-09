@@ -28,7 +28,7 @@ use crate::harness::session;
 /// The code system screen is absent: its address carries a canonical this
 /// module would have to name, and the sidebar does not offer it. The overview
 /// links to it, and `viewer` walks that link.
-const SCREENS: [&str; 11] = [
+const SCREENS: [&str; 9] = [
     "/ui/",
     "/ui/browse",
     "/ui/expand",
@@ -37,9 +37,7 @@ const SCREENS: [&str; 11] = [
     "/ui/conceptmaps",
     "/ui/translate",
     "/ui/find",
-    "/ui/versions",
-    "/ui/evidence",
-    "/ui/settings",
+    "/ui/about",
 ];
 
 /// The version every screen is opened on.
@@ -367,7 +365,7 @@ async fn announcement(journey: &Journey, what: &str) -> String {
 /// The choice is remembered by the browser, so every screen opened afterwards
 /// in this session is drawn in it.
 async fn choose_theme(journey: &Journey, base: &str, mode: &str) -> WebDriverResult<()> {
-    journey.reopen(&address(base, "/ui/settings")).await;
+    journey.reopen(&address(base, "/ui/about")).await;
     let control = journey
         .element(By::Css(THEME_CONTROL), "the theme control")
         .await;
@@ -385,7 +383,7 @@ async fn choose_theme(journey: &Journey, base: &str, mode: &str) -> WebDriverRes
 /// The choice is remembered by the browser, so every screen opened afterwards
 /// in this session is drawn at it.
 async fn choose_density(journey: &Journey, base: &str, density: &str) -> WebDriverResult<()> {
-    journey.reopen(&address(base, "/ui/settings")).await;
+    journey.reopen(&address(base, "/ui/about")).await;
     let control = journey
         .element(By::Css(DENSITY_CONTROL), "the density control")
         .await;

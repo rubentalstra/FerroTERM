@@ -6,7 +6,6 @@
 //! the deployment itself. Each figure names the file it came from.
 
 use leptos::prelude::*;
-use leptos_meta::Title;
 
 use crate::components::NOT_DECLARED;
 use crate::evidence::Conformance;
@@ -36,18 +35,7 @@ const PATH: &str = "font-mono text-small break-all text-muted";
 ///
 /// Nothing here is reactive, and nothing here is fetched. The figures were
 /// fixed when the bundle was built, so the screen draws a constant.
-#[component]
-#[expect(
-    unreachable_pub,
-    reason = "the leptos component macro emits a pub props type, and a binary crate has no reachable public API"
-)]
-pub(crate) fn EvidencePage() -> impl IntoView {
-    let heading = view! {
-        <Title text="Evidence" />
-        <h1 class=styles::PAGE_TITLE>"The evidence this build ships"</h1>
-    }
-    .into_any();
-
+pub(crate) fn pane() -> AnyView {
     let evidence = embedded();
     let preamble = preamble(evidence.release);
     let conformance = conformance_section(evidence.conformance);
@@ -55,12 +43,17 @@ pub(crate) fn EvidencePage() -> impl IntoView {
     let run = run_section(evidence.run);
 
     view! {
-        {heading}
-        {preamble}
-        {conformance}
-        {latency}
-        {run}
+        <section class="mt-section" aria-labelledby="about-evidence-heading">
+            <h2 id="about-evidence-heading" class=styles::SECTION_TITLE>
+                "The evidence this build ships"
+            </h2>
+            {preamble}
+            {conformance}
+            {latency}
+            {run}
+        </section>
     }
+    .into_any()
 }
 
 /// What the screen states, and what it does not.
@@ -134,9 +127,9 @@ fn conformance_section(conformance: Conformance) -> AnyView {
 
     view! {
         <section class="mt-section" aria-labelledby="conformance-heading">
-            <h2 id="conformance-heading" class=styles::SECTION_TITLE>
+            <h3 id="conformance-heading" class=styles::SECTION_TITLE>
                 "The HL7 terminology ecosystem suite"
-            </h2>
+            </h3>
             <p class=styles::LEAD>
                 "The suite groups its cases into modes, and a run picks one. Each row is one mode run against one served FHIR root. The `general` mode runs "
                 {total}
@@ -223,9 +216,9 @@ fn latency_section(latency: Latency) -> AnyView {
 
     view! {
         <section class="mt-section" aria-labelledby="latency-heading">
-            <h2 id="latency-heading" class=styles::SECTION_TITLE>
+            <h3 id="latency-heading" class=styles::SECTION_TITLE>
                 "The latency the project claims"
-            </h2>
+            </h3>
             <p class=styles::LEAD>
                 "A bar is the claim, and it never moves to match a slower run. The measurement beside it records what one machine answered, so the room a run has is visible. The recorded run was taken on "
                 <span class="font-medium">{machine}</span> "."
@@ -275,9 +268,9 @@ fn run_section(run: Run) -> AnyView {
     let source = run.source;
     view! {
         <section class="mt-section" aria-labelledby="run-heading">
-            <h2 id="run-heading" class=styles::SECTION_TITLE>
+            <h3 id="run-heading" class=styles::SECTION_TITLE>
                 "The newest benchmark run"
-            </h2>
+            </h3>
             <p class=styles::LEAD>
                 "One record per code system the run loaded, from " <span class=PATH>{source}</span>
                 ", the run named " <span class="font-medium">{name}</span>
