@@ -412,10 +412,10 @@ async fn choose_density(journey: &Journey, base: &str, density: &str) -> WebDriv
 /// A pane of the About screen is a `<details>`, and so is every request
 /// disclosure. A pass that measured only what is open would report on a
 /// screen no reader ends up looking at.
-const OPEN_DISCLOSURES: &str = r#"
+const OPEN_DISCLOSURES: &str = r"
 document.querySelectorAll('details:not([open])').forEach((el) => { el.open = true; });
 return 'opened';
-"#;
+";
 
 /// Opens one screen and waits for every read on it to have landed.
 ///
