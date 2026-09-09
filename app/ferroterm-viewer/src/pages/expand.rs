@@ -23,6 +23,7 @@ use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
+use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
 use crate::fhir::error::FhirError;
@@ -45,6 +46,7 @@ use crate::paging::MAX_COUNT;
 use crate::paging::Page;
 use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
+use crate::runs::Run;
 use crate::settings::Settings;
 use crate::settings::parse_page_size;
 use crate::styles;
@@ -99,13 +101,32 @@ pub(crate) fn ExpandPage() -> impl IntoView {
     }
     .into_any();
 
+    // A run this browser remembers is the address that made it, and the
+    // address is what the form already puts every parameter in.
+    let made = Memo::new(move |_| {
+        params.with(|params| {
+            params.request().map(|_| Run {
+                screen: "Expand".to_owned(),
+                subject: params.url.clone(),
+                address: params.address(version.get()),
+            })
+        })
+    });
+    let history = History::recording(made);
+
     let form = form_section(params, version);
     let results = result_section(&client, version, params, request);
 
+    // The answer keeps its own column above the large breakpoint, so a
+    // parameter that lengthens the form never pushes it down the page. Below
+    // that breakpoint the two stack, form first, which is the order the work
+    // happens in.
     view! {
         {heading}
-        {form}
-        {results}
+        <div class="mt-loose grid items-start gap-loose lg:grid-cols-[24rem_minmax(0,1fr)]">
+            <div class="min-w-0">{form} {history.view()}</div>
+            <div class="min-w-0">{results}</div>
+        </div>
     }
 }
 
@@ -500,7 +521,7 @@ fn answer_group(
         })
     });
     let controls = view! {
-        <div class="grid gap-default sm:grid-cols-3">
+        <div class="grid gap-default sm:grid-cols-2">
             {number_field(
                 Field {
                     id: "expand-count",
@@ -756,7 +777,7 @@ fn concept_row(row: &ConceptRow) -> AnyView {
     view! {
         <tr class="border-b border-line align-top">
             <td
-                class="py-default pr-default font-mono break-all"
+                class="py-default pr-default font-mono whitespace-nowrap"
                 style=format!("padding-left:{}rem", row.depth)
             >
                 <span class="sr-only">{nesting}</span>
@@ -766,7 +787,7 @@ fn concept_row(row: &ConceptRow) -> AnyView {
                 {row.display.clone().unwrap_or_else(|| NOT_DECLARED.to_owned())}
                 {designation_list(&row.designations)}
             </td>
-            <td class="py-default pr-default font-mono text-small break-all">{system}</td>
+            <td class="py-default pr-default font-mono text-small wrap-break-word">{system}</td>
             <td class="py-default">{flags(row)}</td>
         </tr>
     }

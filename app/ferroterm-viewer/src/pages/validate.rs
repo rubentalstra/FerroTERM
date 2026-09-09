@@ -34,6 +34,7 @@ use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
+use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
 use crate::fhir::capability::CapabilityStatement;
@@ -69,6 +70,7 @@ use crate::routes::VALIDATE_PATH;
 use crate::routes::VERSION_PARAM;
 use crate::routes::system_link;
 use crate::routes::ui_link;
+use crate::runs::Run;
 use crate::styles;
 use crate::url::RequestUrl;
 
@@ -161,6 +163,22 @@ pub(crate) fn ValidatePage() -> impl IntoView {
     }
     .into_any();
 
+    // A run this browser remembers is the address that made it, and the
+    // address is what the form already puts every parameter in. Only the
+    // validation is recorded: a subsumption is two codes of the system a
+    // validation already named, so it rides in the same address.
+    let made = Memo::new(move |_| {
+        params.with(|params| {
+            let offered = declared.with(|d| d.operations.validate(params.on));
+            params.validation(offered).map(|_| Run {
+                screen: "Validate".to_owned(),
+                subject: params.code.clone(),
+                address: params.address(version.get()),
+            })
+        })
+    });
+    let history = History::recording(made);
+
     let root = root_section(&client, version, params, capabilities, statement, declared);
     let validate = validate_section(&client, version, params, declared);
     let subsumes = subsumes_section(&client, version, params, declared);
@@ -170,6 +188,7 @@ pub(crate) fn ValidatePage() -> impl IntoView {
         {root}
         {validate}
         {subsumes}
+        {history.view()}
     }
 }
 
@@ -537,9 +556,8 @@ fn validate_section(
     };
     let body = move || {
         let form = validate_form(params, version, declared, offered);
-        view! {
-            {form}
-            <p aria-live="polite" class="mt-default text-body text-muted">
+        let answered = view! {
+            <p aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
                 {announcement}
             </p>
             <Reading label="Running the validation">
@@ -561,6 +579,15 @@ fn validate_section(
                 }}
             </Reading>
             {disclosure}
+        }
+            .into_any();
+        // The answer keeps its own column above the large breakpoint, so a
+        // parameter that lengthens the form never pushes it down the page.
+        view! {
+            <div class="mt-default grid items-start gap-loose lg:grid-cols-[24rem_minmax(0,1fr)]">
+                <div class="min-w-0">{form}</div>
+                <div class="min-w-0">{answered}</div>
+            </div>
         }
         .into_any()
     };
@@ -900,9 +927,8 @@ fn subsumes_section(
     };
     let panel = move || {
         let form = subsumes_form(params, version, offered);
-        view! {
-            {form}
-            <p aria-live="polite" class="mt-default text-body text-muted">
+        let answered = view! {
+            <p aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
                 {announcement}
             </p>
             <Reading label="Running the subsumption test">
@@ -924,6 +950,13 @@ fn subsumes_section(
                 }}
             </Reading>
             {disclosure}
+        }
+        .into_any();
+        view! {
+            <div class="mt-default grid items-start gap-loose lg:grid-cols-[24rem_minmax(0,1fr)]">
+                <div class="min-w-0">{form}</div>
+                <div class="min-w-0">{answered}</div>
+            </div>
         }
         .into_any()
     };

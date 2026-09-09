@@ -26,6 +26,18 @@ const RENDERED_BASE: &str = "//dt[normalize-space()='FHIR base']/following-sibli
 /// A code system row's link into that system's own screen.
 const SYSTEM_LINK: &str = "a[href^='/ui/systems/']";
 
+/// The expansion runner's canonical control.
+const EXPAND_URL: &str = "#expand-url";
+
+/// The expansion runner's submit control, scoped past the command bar.
+const EXPAND_SUBMIT: &str = "main form button[type='submit']";
+
+/// The disclosure holding the runs this browser remembers.
+const REMEMBERED: &str = "main details";
+
+/// One remembered run, as the link that re-runs it.
+const REMEMBERED_RUN: &str = "main details li a";
+
 /// The command bar's own control, on every screen.
 const COMMAND_BAR: &str = "#command-bar";
 
@@ -406,6 +418,77 @@ async fn the_address_a_row_links_to_opens_the_same_screen_when_it_is_loaded_fres
             journey
                 .element(By::Css(SYSTEM_TOOLS), "the links into the other screens")
                 .await;
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
+}
+
+/// A run is remembered in this browser and re-run from the list.
+///
+/// A run is already a URL, because every runner puts its parameters in the
+/// address, so the list holds links and nothing else. That is what makes a
+/// remembered run safe: it is re-run when a reader returns to it, and can
+/// never show a stale answer beside a live one. Nothing is sent anywhere.
+#[tokio::test]
+async fn a_run_is_remembered_in_this_browser_and_re_run_from_the_list() {
+    let Some(base) = server() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &base, "/ui/expand?fhir=r5").await;
+            let canonical = "https://ferroterm.eu/fhir/ValueSet/e2e-taxonomy-all";
+            journey
+                .element(By::Css(EXPAND_URL), "the runner's canonical control")
+                .await
+                .send_keys(canonical)
+                .await?;
+            journey
+                .element(By::Css(EXPAND_SUBMIT), "the runner's submit control")
+                .await
+                .click()
+                .await?;
+            let ran = journey
+                .address_carrying("url=", "the run the reader made")
+                .await;
+
+            let held = journey
+                .element(By::Css(REMEMBERED), "the runs this browser remembers")
+                .await;
+            held.click().await?;
+            let remembered = journey
+                .element(By::Css(REMEMBERED_RUN), "the run the list holds")
+                .await;
+            let href = remembered.attr("href").await?.unwrap_or_default();
+            assert!(
+                href.contains("url="),
+                "the list holds the address that made the run: `{href}`"
+            );
+
+            // Somewhere else, then back through the list: the run has to be
+            // reachable from a screen that is not the one that made it.
+            journey.reopen(&format!("{base}/ui/expand?fhir=r5")).await;
+            journey
+                .element(By::Css(REMEMBERED), "the runs this browser remembers")
+                .await
+                .click()
+                .await?;
+            journey
+                .element(By::Css(REMEMBERED_RUN), "the run the list still holds")
+                .await
+                .click()
+                .await?;
+            let returned = journey
+                .address_carrying("url=", "the run the reader returned to")
+                .await;
+            assert_eq!(
+                returned, ran,
+                "the list re-runs the address it remembered, exactly"
+            );
 
             journey.no_console_errors().await;
             Ok::<(), WebDriverError>(())
