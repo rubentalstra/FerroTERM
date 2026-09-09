@@ -91,6 +91,9 @@ const PARENT_LINK: &str = "nav[aria-label='Parents of this concept'] a";
 /// The canonical of the first listed value set, which is the row's own heading.
 const VALUE_SET_ROW: &str = "section[aria-labelledby='valuesets-heading'] tbody th";
 
+/// The canonical a listed value set carries beside its name.
+const VALUE_SET_CANONICAL: &str = "section[aria-labelledby='valuesets-heading'] tbody th span";
+
 /// The command bar's own control, on every screen.
 const COMMAND_BAR: &str = "#command-bar";
 
@@ -314,19 +317,30 @@ async fn concept_browser(journey: &Journey, dir: &Path) -> WebDriverResult<()> {
 /// value set this deployment actually holds without the pass naming one.
 async fn value_sets(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<String> {
     journey.reopen(&address(base, "valuesets")).await;
-    let row = journey
+    journey
         .element(By::Css(VALUE_SET_ROW), "a published value set")
         .await;
     shot(journey, &dir.join("value-sets.png")).await?;
-    let canonical = canonical_of(&row.text().await?);
+    // The row leads with the name and carries the canonical beside it, which
+    // is the one the runner then expands.
+    let canonical = canonical_of(
+        &journey
+            .element(
+                By::Css(VALUE_SET_CANONICAL),
+                "the canonical the row carries",
+            )
+            .await
+            .text()
+            .await?,
+    );
     assert!(
         !canonical.is_empty(),
-        "the row heads with the canonical the runner then expands"
+        "the row carries the canonical the runner then expands"
     );
     Ok(canonical)
 }
 
-/// The canonical a listed row heads with, which is its first token.
+/// The canonical a listed row carries, which is its first token.
 ///
 /// A canonical carries no whitespace, and the row appends a sentence for a
 /// screen reader when the resource it lists carries no id to open it by.

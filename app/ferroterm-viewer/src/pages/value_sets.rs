@@ -29,11 +29,19 @@ use crate::fhir::searchset::SearchSet;
 use crate::fhir::value_set::ClauseRow;
 use crate::fhir::value_set::PublishedValueSet;
 use crate::fhir::version::FhirVersion;
+use crate::listing::Action;
 use crate::listing::ListParams;
-use crate::listing::canonical_cell;
+use crate::listing::Published;
+use crate::listing::SortColumn;
+use crate::listing::SortOrder;
 use crate::listing::count_sentence;
+use crate::listing::empty;
 use crate::listing::filter_form;
+use crate::listing::heading;
 use crate::listing::pager_view;
+use crate::listing::published_row;
+use crate::listing::sortable;
+use crate::listing::table;
 use crate::listing::window;
 use crate::routes::VALUE_SETS_PATH;
 use crate::routes::expansion_link;
@@ -74,7 +82,9 @@ pub(crate) fn ValueSetsPage() -> impl IntoView {
     .into_any();
 
     let form = search_form(params, version);
-    let list = list_section(&client, version, params);
+    // The order lives in the address, so an ordered list is a link.
+    let order = Memo::new(move |_| query.with(|map| SortOrder::read(&|name| map.get(name))));
+    let list = list_section(&client, version, params, order);
     let detail = detail_section(&client, version, params);
 
     view! {
@@ -123,6 +133,7 @@ fn list_section(
     client: &FhirClient,
     version: Signal<FhirVersion>,
     params: Signal<ListParams>,
+    order: Memo<SortOrder>,
 ) -> AnyView {
     let read_client = client.clone();
     let filter = Memo::new(move |_| params.with(|params| params.filter.clone()));
@@ -174,7 +185,7 @@ fn list_section(
                             answered
                                 .as_ref()
                                 .map(|result| match result {
-                                    Ok(found) => list_view(found, &params, version),
+                                    Ok(found) => list_view(order.get(), found, &params, version),
                                     Err(error) => failure_view(error),
                                 })
                         })
@@ -188,23 +199,30 @@ fn list_section(
 
 /// The rows of one page, with the controls that walk the rest.
 fn list_view(
+    order: SortOrder,
     found: &SearchSet<PublishedValueSet>,
     params: &ListParams,
     version: FhirVersion,
 ) -> AnyView {
     let resources = found.found();
     if resources.is_empty() {
-        return view! {
-            <p class="mt-default text-body text-muted">
-                "This root holds no ValueSet resource matching the filter above. A value set a code system defines implicitly is not published as a resource, and the expansion runner takes its canonical directly."
-            </p>
-        }
-        .into_any();
+        return empty(
+            "This root holds no ValueSet resource matching the filter above. A value set a code system defines implicitly is not published as a resource, and the expansion runner takes its canonical directly.",
+        );
     }
+    // The whole answer is ordered before it is paged, so a walk through the
+    // pages walks the order the reader asked for rather than the server's.
+    let mut ordered: Vec<(Published<'_>, usize)> = resources
+        .iter()
+        .enumerate()
+        .map(|(index, resource)| (facts(resource), index))
+        .collect();
+    order.ordering(&mut ordered);
     let view = window(params.page(), params.size(), resources.len());
     let rows: Vec<AnyView> = view
         .indexes()
-        .filter_map(|index| resources.get(index))
+        .filter_map(|index| ordered.get(index))
+        .filter_map(|(_, index)| resources.get(*index))
         .map(|resource| row_view(resource, params, version))
         .collect();
     let pager = pager_view(
@@ -216,59 +234,44 @@ fn list_view(
         &[],
     );
     view! {
-        <div class="mt-default overflow-x-auto">
-            <table class="w-full border-collapse text-left text-body">
-                <thead>
-                    <tr class="border-b border-line-strong">
-                        <th scope="col" class="py-default pr-default font-medium">
-                            "Canonical"
-                        </th>
-                        <th scope="col" class="py-default pr-default font-medium">
-                            "Version"
-                        </th>
-                        <th scope="col" class="py-default pr-default font-medium">
-                            "Title"
-                        </th>
-                        <th scope="col" class="py-default font-medium">
-                            "Status"
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>{rows}</tbody>
-            </table>
-        </div>
+        {table(
+            vec![
+                sortable(SortColumn::Name, "Value set", order, VALUE_SETS_PATH, params, version),
+                sortable(SortColumn::Version, "Version", order, VALUE_SETS_PATH, params, version),
+                sortable(SortColumn::Status, "Status", order, VALUE_SETS_PATH, params, version),
+                heading("Open in"),
+            ],
+            rows,
+        )}
         {pager}
     }
     .into_any()
 }
 
-/// One published value set, as a row that opens it.
+/// The four facts a row draws about one published value set.
+fn facts(resource: &PublishedValueSet) -> Published<'_> {
+    Published {
+        title: resource.label(),
+        canonical: resource.url(),
+        version: resource.version(),
+        status: resource.status(),
+    }
+}
+
+/// One published value set, as a row that opens it and one that expands it.
 fn row_view(resource: &PublishedValueSet, params: &ListParams, version: FhirVersion) -> AnyView {
-    let canonical = resource.url().unwrap_or(NOT_DECLARED).to_owned();
-    let heading = canonical_cell(
-        &canonical,
+    published_row(
+        &facts(resource),
         resource
             .id()
             .map(|id| params.reading(id).address(VALUE_SETS_PATH, version)),
-    );
-    view! {
-        <tr class="border-b border-line align-top">
-            <th
-                scope="row"
-                class="py-default pr-default font-mono text-small font-normal break-all"
-            >
-                {heading}
-            </th>
-            <td class="py-default pr-default font-mono text-small">
-                {resource.version().unwrap_or(NOT_DECLARED).to_owned()}
-            </td>
-            <td class="py-default pr-default">
-                {resource.label().unwrap_or(NOT_DECLARED).to_owned()}
-            </td>
-            <td class="py-default">{resource.status().unwrap_or(NOT_DECLARED).to_owned()}</td>
-        </tr>
-    }
-    .into_any()
+        // The runner takes the canonical as its `url` parameter, so a row
+        // hands its subject on rather than making a reader retype one.
+        resource.url().map(|canonical| Action {
+            label: "Expand",
+            href: expansion_link(canonical, version),
+        }),
+    )
 }
 
 /// One value set read by its id, with what its definition selects.

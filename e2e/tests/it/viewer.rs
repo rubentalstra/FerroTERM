@@ -124,15 +124,17 @@ const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
 /// Both screens draw that link from `listing.rs`, which renders a row unlinked
 /// when the resource it lists carries no `Resource.id`, so a link found here is
 /// the wire carrying one.
-const LISTINGS: [(&str, &str, &str); 2] = [
+const LISTINGS: [(&str, &str, &str, &str); 2] = [
     (
         "/ui/valuesets",
         "section[aria-labelledby='valuesets-heading'] tbody th a",
+        "section[aria-labelledby='valuesets-heading'] tbody th span",
         "section[aria-labelledby='valueset-detail-heading'] h3",
     ),
     (
         "/ui/conceptmaps",
         "section[aria-labelledby='conceptmaps-heading'] tbody th a",
+        "section[aria-labelledby='conceptmaps-heading'] tbody th span",
         "section[aria-labelledby='conceptmap-detail-heading'] h3",
     ),
 ];
@@ -882,7 +884,8 @@ async fn the_four_roots_are_compared_and_their_lookup_levels_differ() {
 /// (<https://hl7.org/fhir/R4B/resource.html#id>). A row without one renders as
 /// plain text, so a click here would find nothing to click. Opening it proves
 /// the id round-tripped: the detail pane reads the resource back by the id the
-/// address now carries, and heads with the canonical the row named.
+/// address now carries, and heads with the canonical the row carried beside
+/// its name.
 #[tokio::test]
 async fn a_listed_row_opens_the_resource_it_names() {
     let Some(base) = server() else {
@@ -892,16 +895,24 @@ async fn a_listed_row_opens_the_resource_it_names() {
         .await
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &base, "/ui").await;
-            for (path, row, heading) in LISTINGS {
+            for (path, row, subject, heading) in LISTINGS {
                 journey.reopen(&format!("{base}{path}")).await;
                 let link = journey
                     .element(By::Css(row), "a listed row that links to its detail")
                     .await;
-                let canonical = link.text().await?;
+                let title = link.text().await?;
                 assert!(
-                    !canonical.is_empty(),
-                    "the row names the canonical it links to, on {path}"
+                    !title.is_empty(),
+                    "the row leads with the name of the resource, on {path}"
                 );
+                // The row leads with the title and carries the canonical
+                // beside it, so the canonical is read from the row rather than
+                // from the link that opens it.
+                let canonical = journey
+                    .element(By::Css(subject), "the canonical the row carries")
+                    .await
+                    .text()
+                    .await?;
                 link.click().await?;
 
                 let address = journey
