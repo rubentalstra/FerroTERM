@@ -98,7 +98,7 @@ pub(crate) struct Run {
 /// The figures arrive already rounded for reading. Formatting one `f64` in
 /// the browser pulls the whole floating-point formatter into a bundle that
 /// holds no other float, so the emitter rounds on the host instead
-/// (`docs/viewer.md` section 12).
+/// (`docs/viewer.md` section 13).
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct SystemRun {
     /// The code system the record is about, as the record names it.

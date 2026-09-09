@@ -16,7 +16,7 @@
 # is a rate change, for every future change at once, and it is read in review.
 #
 # A breach is bytes to justify or a claim to re-adjudicate, never a bar to
-# raise. `docs/viewer.md` section 12 records the basis and the ordered path.
+# raise. `docs/viewer.md` section 13 records the basis and the ordered path.
 #
 # The bundle is built by `trunk build --release` from app/ferroterm-viewer; a
 # missing dist/ SKIPS LOUDLY rather than failing, because no ordinary cargo
@@ -149,7 +149,7 @@ fi
 if [[ "$breached" -gt 0 ]]; then
   {
     echo "bundle-size: a breach is bytes to justify or a claim to re-adjudicate, never a bar to raise"
-    echo "  the ordered path is in docs/viewer.md section 12: measure the composition first"
+    echo "  the ordered path is in docs/viewer.md section 13: measure the composition first"
     echo "  a growth breach whose bytes are justified records this build's figure as"
     echo "  measured_gzip_bytes, which moves the baseline for the next change by one change"
     echo "  a baseline breach means a change grew the bundle and did not record it, so the"

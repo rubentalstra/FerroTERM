@@ -218,7 +218,7 @@ Notes on four of these, each verified rather than assumed:
   technology, because the number it draws is already text in the same cell.
 - **There is no component library.** The viewer used `thaw` for three widgets,
   a button, a spinner, and the config provider that themed them, and paid
-  36,894 gzipped bytes for the whole library (§12, the bundle bar). Those three
+  36,894 gzipped bytes for the whole library (§13, the bundle bar). Those three
   are now `components/button.rs`, `components/spinner.rs`, and a Tailwind
   `dark:` variant driven by a class on the document element. A component
   library is reconsidered only against a measured bundle cost and a use that is
@@ -369,7 +369,72 @@ button in the dark theme at 3.74:1. The submit button's class string was
 written out five times, so the colour pairings more than one screen paints now
 live in `app/ferroterm-viewer/src/styles.rs` and are measured once.
 
-## 8. Screen inventory
+## 8. The design system
+
+Every look decision used to be made in the screen that needed it:
+`text-slate-600` appeared 72 times, `mt-3` 64 times, and a theme was a `dark:`
+prefix on every element. The token layer replaces that. A screen names a role,
+a type step and a spacing step, and nothing else.
+
+**Colour is a role, not a colour.** `style/tailwind.css` declares each role as
+a plain custom property on `:root`, redefines it once under `:root.dark`, and
+maps it through `@theme inline`, which is how a Tailwind utility follows a
+variable that changes under a selector
+(<https://tailwindcss.com/docs/colors#referencing-other-variables>). The
+selector is `:root.dark` rather than `:where(.dark)`: a zero-specificity
+selector loses to `:root`, and a dark run drew the light surfaces until it was
+fixed.
+
+The roles are `fg`, `muted`, `faint`; `surface`, `raised`, `inset`; `line`,
+`line-strong`; `accent` with its `accent-fg` and a soft pair; soft pairs for
+`ok`, `warn` and `danger`; and the three the brand mark is drawn in. Nothing
+outside that list names a colour.
+
+**Type is six steps**, `display` through `micro`. Weight carries the hierarchy
+below the top two steps and size carries it above them, so a screen does not
+need a seventh size to make one heading louder than another.
+
+**Spacing is four steps on an 8-point grid**: `tight`, `default`, `loose`,
+`section`, and nothing between them. They reach Tailwind through the
+`--spacing-*` namespace, so `mt-loose`, `gap-tight` and `px-section` are
+ordinary utilities.
+
+**Density is a density.** The four spacing steps follow it, so compact moves
+the whole rhythm of a screen rather than its rows alone. It is a choice on the
+About screen, remembered in `localStorage`, and carried on the document element
+as `data-density="compact"`, the way the theme is carried as a class.
+
+**Motion marks a state change and nothing else**, at one duration, on colour,
+background and border. The base layer already stops every animation and
+transition under `prefers-reduced-motion`
+(<https://www.w3.org/TR/WCAG22/#animation-from-interactions>).
+
+**Absence is a mark, not a sentence.** A fact the server did not state is an
+em dash carrying its explanation in `title`. Eleven cells each saying "Not
+loaded from an artifact" made absence the densest thing on the screen.
+
+`src/styles.rs` is the vocabulary built on the tokens: the class string for a
+panel, a table cell, an input, a badge, a link. A pairing that more than one
+screen paints lives there and is measured once, which is what lets the WCAG
+pass in `e2e/tests/it/accessibility.rs` cover every pairing the viewer draws.
+
+**The rule is checked, not remembered.**
+`scripts/checks/viewer-tokens.sh` runs as its own CI job and fails on a palette
+entry, a per-element `dark:` variant, a raw type size, a spacing value off the
+scale, or an arbitrary value in brackets, anywhere under `app/ferroterm-viewer/src`.
+
+### Less prose, not more
+
+Three long tables and a lead paragraph over every one of them is not a design.
+A heading that says what a section is does not need a sentence saying it again,
+and a figure a reader is deciding against should be the first thing they meet,
+not the last. Each section of the About screen's evidence pane opens with the
+one line it exists to say and keeps its table one press away; the runners hide
+every parameter's explanation behind one switch, in the accessibility tree
+throughout so a screen reader still reads it
+(<https://www.w3.org/WAI/WCAG22/Techniques/css/C7>).
+
+## 9. Screen inventory
 
 The reference scope is Snowstorm Lite's dashboard, read from
 `IHTSDO/snowstorm-lite` at `master` on 2026-09-06. Its sections are
@@ -387,28 +452,55 @@ feed of installable editions; FerroTERM takes its content from an offline
 build over a licensed release, so there is no feed to browse. **Upload SCT** is
 the same story: `tools/ferroterm-build` does that, offline, once per edition.
 
-| # | Screen | Route | Reads |
-|---|---|---|---|
-| 0 | Shell | all | `GET /health`; `GET /{v}/metadata` per version for the version switcher; theme and display language from `localStorage` |
-| 1 | Overview | `/ui` | `GET /{v}/metadata?mode=terminology`: one card per system with its versions, default, content mode, subsumption, languages, and the artifact it came from |
-| 2 | Code system detail | `/ui/systems/:url` | the same capability statement, plus `GET /{v}/CodeSystem?url=` for the published resource: declared filters with operators, `$lookup` properties, designation languages |
-| 3 | Concept browser | `/ui/browse` | search through `ValueSet/$expand` with `filter`; concept detail through `CodeSystem/$lookup`; the hierarchy walk through `$expand` over the system's declared child filter. Renders a tree only for a system whose capability statement declares hierarchy operators |
-| 4 | Expansion runner | `/ui/expand` | `ValueSet/$expand` by `url` or inline compose, with `filter`, `count`, `offset`, `displayLanguage`, `activeOnly`, `includeDesignations`; shows `expansion.total`, the echoed `expansion.parameter`, and pages through the result |
-| 5 | Value sets | `/ui/valuesets` | `GET /{v}/ValueSet` search and read, with a link into the expansion runner |
-| 6 | Concept maps and `$translate` | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read; `ConceptMap/$translate` with source, target, and the returned `match` list with equivalences |
-| 7 | Validate and subsume | `/ui/validate` | `CodeSystem/$validate-code`, `ValueSet/$validate-code`, `CodeSystem/$subsumes`; renders the `OperationOutcome` verbatim on refusal |
-| 8 | FHIR versions | `/ui/versions` | the four `CapabilityStatement`s side by side: `fhirVersion`, the operations each resource declares, and the differences between them |
-| 9 | Evidence | `/ui/evidence` | the conformance and benchmark figures its build script read out of the committed files |
-| 10 | Settings | `/ui/settings` | the FHIR base in use, the display language, page size, theme. `localStorage` only, per viewer |
+| Screen | Route | Reads |
+|---|---|---|
+| Shell | all | `GET /health`; `GET /{v}/metadata` per version for the switcher; theme, density, language and page size from `localStorage` |
+| Find | `/ui/find` | nothing until it offers: the typed string is read by its shape, and the offers are gated on `GET /{v}/metadata` |
+| Overview | `/ui` | `GET /{v}/metadata?mode=terminology`, as one table, one row per served version |
+| Code system | `/ui/systems/:url` | the same capability statement, plus `GET /{v}/CodeSystem?url=` for the published resource |
+| Concept browser | `/ui/browse` | search through `ValueSet/$expand` with `filter`; the concept through `CodeSystem/$lookup`; the hierarchy through `$expand` over the version's declared child filter |
+| Expand | `/ui/expand` | `ValueSet/$expand` by `url`, with `filter`, `count`, `offset`, `displayLanguage`, `activeOnly`, `includeDesignations` |
+| Validate and subsume | `/ui/validate` | `CodeSystem/$validate-code`, `ValueSet/$validate-code`, `CodeSystem/$subsumes` |
+| Translate | `/ui/translate` | `ConceptMap/$translate`, with the map, the source system, the code, and the target |
+| Value sets | `/ui/valuesets` | `GET /{v}/ValueSet` search and read, with a link into the expansion runner |
+| Concept maps | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read, with a link into the translate runner |
+| About this server | `/ui/about` | three panes: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |
 
-**The screens are reached from a left sidebar.** The sidebar is a `const` table
-of slots read in render order, so the order is data and one function draws every
-entry, and it is a `<nav>` with its own name whose active entry carries
-`aria-current="page"`. Below the `md` breakpoint it is hidden until the top
-bar's toggle opens it. The top bar keeps what is true of every screen at once:
-the FHIR version switcher, the health chip, and the theme toggle. The switcher
+`/ui/versions`, `/ui/evidence` and `/ui/settings` were screens of their own and
+now redirect to the About pane they named, so a link written before the merge
+still opens what it pointed at.
+
+**A command bar sits above every screen.** One field. What a reader types is
+read by its shape alone, before any request: a scheme with something after it
+is a canonical, a short run with no space is a code, anything else is a phrase.
+The offers are gated on what the root's `CapabilityStatement` declares, and
+each one is an address the reader could have typed. It is a form rather than a
+listbox that suggests as you type, so every offer is a real link and the
+keyboard contract is the browser's own.
+
+**The screens are reached from a left sidebar, in four labelled groups.**
+Explore reads what the server holds, Run asks it something, Publish lists what
+it publishes, About answers questions about the server rather than about a
+code. Each group is a `const` table read in render order, so the order is data
+and one function draws every entry, and each group's label is its list's
+accessible name through `aria-labelledby`. Below the `md` breakpoint the
+sidebar is hidden until the top bar's toggle opens it.
+
+The top bar keeps what is true of every screen at once: the command bar, the
+FHIR version switcher, the health chip, and the theme toggle. The switcher
 changes which root every screen reads from, so it is a lens over the whole
 viewer rather than a place to go, and that is why it stays out of the sidebar.
+
+**A runner puts its answer in its own column.** Above the large breakpoint the
+form takes a fixed column and the answer takes the rest, so a parameter that
+lengthens the form never pushes the answer down the page; below it the two
+stack, form first. A refusal renders where the answer would, as the server's
+own `OperationOutcome`.
+
+**A run is remembered in this browser.** Every runner puts its parameters in
+the address, so a run is already a URL and the list holds links and nothing
+else: a remembered run is re-run when a reader returns to it and can never show
+a stale answer beside a live one. Twelve are kept, in `localStorage` alone.
 
 **The request disclosure is shell-level, not a screen.** Every data section can
 reveal the exact FHIR request it issued, as a copyable URL and a `curl` line.
@@ -431,7 +523,7 @@ themselves.
   languages a system declares; its own labels are English until someone asks
   for more.
 
-## 9. What ports from FerroEHR, and what does not
+## 10. What ports from FerroEHR, and what does not
 
 FerroEHR's viewer is 52,796 lines of Rust over 23 screens for a clinical data
 repository: sessions, OIDC, EHRs, compositions, templates, AQL, subscriptions,
@@ -443,7 +535,7 @@ sharp, and it favours porting the discipline rather than the code.
 | From FerroEHR | To FerroTERM | Adaptation |
 |---|---|---|
 | `.claude/rules/leptos-ui.md` | `.claude/rules/leptos-ui.md` | rewritten for CSR: the `ssr`/`hydrate` split, server functions, `<ActionForm>`, SSR modes, and progressive enhancement are gone; `LocalResource`, the fetch client, and the FHIR boundary replace them |
-| `.claude/agent-memory/leptos-reviewer/` (17 hazards) | the same path | 16 ported and classified against CSR (§10); one dropped as tool-specific |
+| `.claude/agent-memory/leptos-reviewer/` (17 hazards) | the same path | 16 ported and classified against CSR (§11); one dropped as tool-specific |
 | `.claude/agents/leptos-reviewer.md` | the same path | the review priorities re-ordered around the FHIR boundary and bundle size |
 | `.claude/agents/ui-implementer.md` | the same path | the gate list re-pointed at Trunk and the wasm target |
 | `.claude/skills/leptos-lookup/SKILL.md` | the same path | unchanged in method; the cache path and the CSR chapters differ |
@@ -464,11 +556,11 @@ viewer has. `queries_api.rs`, `builder/`, `aql_text.rs`, `adl2.rs`,
 `clinical.rs`, `subscriptions.rs`, and every `pages/` module are openEHR
 domain code.
 
-**Every screen in §8 is written from scratch.** The estimate that a large
+**Every screen in §9 is written from scratch.** The estimate that a large
 amount ports is right about the scaffolding and the discipline, and wrong
 about the screens.
 
-## 10. The recorded hazards, re-audited under CSR
+## 11. The recorded hazards, re-audited under CSR
 
 FerroEHR's `leptos-reviewer` agent memory holds seventeen confirmed hazards.
 They are the most valuable thing in the port, because each was paid for once
@@ -497,7 +589,7 @@ deleted.
 | `seed-once-form-idiom` | changed | the hydration half is moot. The refetch-versus-edit-in-progress half stands: a form seeded from a resource must not overwrite what the reader is typing |
 | `default-style-guard-untracked-blindspot` | not ported | it describes `scripts/checks/default-style.sh`, a FerroEHR script with no counterpart here |
 
-## 11. The build checklist
+## 12. The build checklist
 
 Ordered so the ported foundation lands first and every step after it is
 independently shippable. Each row is one tracker sub-issue of #366, in
@@ -526,7 +618,7 @@ Slice 5 blocks slice 6, because the overview screen cannot show an artifact
 the wire does not carry. Slice 1 blocks every screen. Slice 2 blocks the E2E
 harness, which needs a served bundle to drive.
 
-## 12. What CI and CD gain
+## 13. What CI and CD gain
 
 The additions, recorded in `docs/ci-cd.md` as they land. Everything below is
 built except the `ui-e2e` job:
@@ -637,7 +729,7 @@ today is breached by honest work next week. The two jobs are split:
   before it is a breach.
 
   The concept browser is the evidence that the range is real rather than
-  slack. Its author took the §12 path first: a lone `format!` over an `f64` was
+  slack. Its author took the §13 path first: a lone `format!` over an `f64` was
   pulling `core::fmt::float` into a bundle with no other float, and removing it
   with two other reductions bought 8,962 bytes. With the whole tree section
   stubbed out the screen still cost 49,533, because it is a search, a concept
@@ -717,7 +809,7 @@ Three alternatives were ruled out.
   more re-adjudications, each one a change making its own build green, which is
   the failure this section exists to prevent.
 
-## 13. Sources
+## 14. Sources
 
 - Leptos book, getting started and CSR wrap-up:
   <https://github.com/leptos-rs/book/blob/main/src/getting_started/README.md>,

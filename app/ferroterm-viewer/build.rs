@@ -332,7 +332,7 @@ fn number(value: &Value, field: &str, path: &str) -> Result<u64, String> {
 /// The rounding happens here rather than in the browser. Formatting one `f64`
 /// pulls the whole floating-point formatter into a WebAssembly bundle that
 /// otherwise holds no float at all, which the concept browser measured at 11 KB
-/// gzipped (`docs/viewer.md` section 12). The screen shows these figures and
+/// gzipped (`docs/viewer.md` section 13). The screen shows these figures and
 /// computes nothing from them, so they cross as text.
 fn rounded(value: &Value, field: &str, path: &str, places: usize) -> Result<String, String> {
     let number = value

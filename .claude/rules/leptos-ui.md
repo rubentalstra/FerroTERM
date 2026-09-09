@@ -76,11 +76,43 @@ operation in the browser.
   tree over deeply nested components blows rustc's layout-recursion depth at
   codegen. Break every screen into section functions bound to erased locals.
   Erasure is also the second-largest bundle lever, after removing a dependency
-  the viewer barely uses (`docs/viewer.md` §12, the bundle bar).
+  the viewer barely uses (`docs/viewer.md` §13, the bundle bar).
 - No `unsafe` (the workspace forbids it), no `unwrap`/`expect` outside tests,
   `thiserror` for the viewer's own error enum, every public item documented,
   suppressions as `#[expect(lint, reason = "…")]` scoped to the smallest item.
   `.claude/rules/reliability.md` applies unchanged.
+
+## 1b. The token layer (a screen names no colour, size or spacing of its own)
+
+**A screen names a role, a type step and a spacing step, and nothing else.**
+The tokens are in `app/ferroterm-viewer/style/tailwind.css` and the class
+strings built on them in `app/ferroterm-viewer/src/styles.rs`. Concretely, and
+enforced by `scripts/checks/viewer-tokens.sh` as its own CI job:
+
+- **No palette entry.** `bg-slate-100`, `text-teal-700` and the rest are
+  refused. Name the role: `bg-inset`, `text-accent`. The palette is measured
+  once, which is what lets the WCAG pass in `e2e/tests/it/accessibility.rs`
+  cover every pairing the viewer draws.
+- **No per-element `dark:` variant.** A role is redefined once under
+  `:root.dark`. A `dark:` prefix on an element puts a theme decision in the
+  screen, where it cannot be measured with the others.
+- **No raw type size.** `text-sm`, `text-lg`, `text-2xl` are refused; the six
+  steps are `text-display`, `text-title`, `text-heading`, `text-body`,
+  `text-small`, `text-micro`.
+- **No spacing off the scale.** Margin, padding and gap take `tight`,
+  `default`, `loose` or `section`, and nothing between them. A numeric or
+  bracketed value (`mt-3`, `p-[13px]`) is refused. Sizes are not spacing: an
+  icon is still `h-4 w-4`.
+- **A pairing more than one screen paints belongs in `styles.rs`**, not copied
+  into each screen. Five copies of one class string all read the same and all
+  failed the contrast bar together.
+
+**Prose is part of the design, and less of it is the rule.** A heading that
+says what a section is does not need a paragraph saying it again, and a figure
+a reader is deciding against is the first thing they should meet. A control's
+explanation lives behind the form's one help switch, `sr-only` when it is off
+so it stays in the accessibility tree
+(<https://www.w3.org/WAI/WCAG22/Techniques/css/C7>).
 
 ## 2. Reactivity
 
