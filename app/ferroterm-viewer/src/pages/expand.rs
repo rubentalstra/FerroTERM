@@ -95,9 +95,7 @@ pub(crate) fn ExpandPage() -> impl IntoView {
     let heading = view! {
         <Title text="Expansion runner" />
         <h1 class=styles::PAGE_TITLE>"Expansion runner"</h1>
-        <p class=styles::LEAD>
-            "Expand a value set by its canonical, then walk the answer a page at a time. Every run below is one GET this server answers to any client."
-        </p>
+        <p class=styles::LEAD>"Expand a value set by its canonical, a page at a time."</p>
     }
     .into_any();
 

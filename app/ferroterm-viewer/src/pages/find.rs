@@ -68,15 +68,9 @@ pub(crate) fn FindPage() -> impl IntoView {
                 subject
                     .with(|subject| match subject {
                         Some(subject) => {
-                            format!(
-                                "The viewer read what you typed as {}, from its shape alone. Every offer below is an address you could have typed.",
-                                subject.label(),
-                            )
+                            format!("Read as {} from its shape alone.", subject.label())
                         }
-                        None => {
-                            "The command bar was given nothing to read. Type a code, a canonical, or a phrase into it."
-                                .to_owned()
-                        }
+                        None => "Nothing was typed.".to_owned(),
                     })
             }}
         </p>

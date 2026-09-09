@@ -88,9 +88,7 @@ pub(crate) fn TranslatePage() -> impl IntoView {
     let heading = view! {
         <Title text="Translate" />
         <h1 class=styles::PAGE_TITLE>"Translate a code"</h1>
-        <p class=styles::LEAD>
-            "Send one code through the concept maps this root holds, and read every match it answered. Every run below is one GET this server answers to any client."
-        </p>
+        <p class=styles::LEAD>"One code through the maps this root holds."</p>
     }
     .into_any();
 

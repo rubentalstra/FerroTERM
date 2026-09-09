@@ -115,6 +115,9 @@ const PARENT_LINK: &str = "nav[aria-label='Parents of this concept'] a";
 /// The sidebar entry onto the screen the version comparison is a pane of.
 const ABOUT_LINK: &str = "nav[aria-label='Screens'] a[href^='/ui/about']";
 
+/// The control that opens that pane, which is the disclosure's own summary.
+const VERSIONS_PANE: &str = "#about-versions-heading > summary";
+
 /// The version comparison, by the heading it is labelled by.
 const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
 
@@ -844,6 +847,13 @@ async fn the_four_roots_are_compared_and_their_lookup_levels_differ() {
                     By::Css(ABOUT_LINK),
                     "the sidebar entry onto the screen the comparison is a pane of",
                 )
+                .await
+                .click()
+                .await?;
+            // The panes are closed until a reader opens one, which is what a
+            // reader coming for the comparison does.
+            journey
+                .element(By::Css(VERSIONS_PANE), "the control that opens the pane")
                 .await
                 .click()
                 .await?;

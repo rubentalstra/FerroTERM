@@ -85,9 +85,7 @@ pub(crate) fn CodeSystemPage() -> impl IntoView {
             <h1 class="font-mono text-title font-semibold break-all">
                 {move || system.with(|system| heading_of(system))}
             </h1>
-            <p class=styles::LEAD>
-                "One code system, from the two documents that describe it. Each pane below says which request it read."
-            </p>
+            <p class=styles::LEAD>"From the two documents that describe it."</p>
             {move || tools_view(capabilities, system, version)}
         </header>
     }
@@ -136,9 +134,7 @@ fn capability_section(
             <h2 id="system-capability-heading" class=styles::SECTION_TITLE>
                 "What this server can do with it"
             </h2>
-            <p class=styles::LEAD>
-                "Read from this root's terminology capabilities. Every affordance on the other screens is gated on what this pane shows."
-            </p>
+            <p class=styles::LEAD>"From this root's terminology capabilities."</p>
             <Reading label="Reading the terminology capabilities">
                 {move || {
                     capabilities

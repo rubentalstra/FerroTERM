@@ -157,6 +157,9 @@ const SUBSUMES_SECTION: &str = "section[aria-labelledby='subsumes-heading']";
 /// The version comparison, once the four reads have filled it.
 const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
 
+/// The control that opens the About pane the comparison is in.
+const VERSIONS_PANE: &str = "#about-versions-heading > summary";
+
 /// One of the comparison's two tables.
 const COMPARISON_TABLE: &str = "section[aria-labelledby='comparison-heading'] table";
 
@@ -501,6 +504,16 @@ async fn validate_runner(
 /// browser remembers. One screen, so one shot.
 async fn about(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
     journey.reopen(&address(base, "about")).await;
+    // The panes are closed until a reader opens one, so the shot opens the
+    // first: an image of three closed rows shows the shape and nothing else.
+    journey
+        .element(
+            By::Css(VERSIONS_PANE),
+            "the control that opens the first pane",
+        )
+        .await
+        .click()
+        .await?;
     journey
         .element(By::Css(COMPARISON), "the comparison the four reads fill")
         .await;

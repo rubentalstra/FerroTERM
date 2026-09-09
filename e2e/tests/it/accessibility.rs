@@ -47,7 +47,15 @@ const SCREENS: [&str; 9] = [
 /// (<https://www.w3.org/TR/WCAG22/#keyboard>).
 const VERSION: &str = "r5";
 
-/// The theme control on the settings screen.
+/// The fragment naming the About screen's settings pane.
+///
+/// The panes are closed until an address names one, so the address the
+/// preference controls are reached by is the one a reader would use. It goes
+/// after the query, which is where a fragment belongs
+/// (<https://www.rfc-editor.org/rfc/rfc3986#section-3.5>).
+const SETTINGS_PANE: &str = "about-settings-heading";
+
+/// The theme control in that pane.
 const THEME_CONTROL: &str = "#viewer-theme";
 
 /// The density control on the settings screen.
@@ -365,7 +373,9 @@ async fn announcement(journey: &Journey, what: &str) -> String {
 /// The choice is remembered by the browser, so every screen opened afterwards
 /// in this session is drawn in it.
 async fn choose_theme(journey: &Journey, base: &str, mode: &str) -> WebDriverResult<()> {
-    journey.reopen(&address(base, "/ui/about")).await;
+    journey
+        .reopen(&format!("{}#{SETTINGS_PANE}", address(base, "/ui/about")))
+        .await;
     let control = journey
         .element(By::Css(THEME_CONTROL), "the theme control")
         .await;
@@ -383,7 +393,9 @@ async fn choose_theme(journey: &Journey, base: &str, mode: &str) -> WebDriverRes
 /// The choice is remembered by the browser, so every screen opened afterwards
 /// in this session is drawn at it.
 async fn choose_density(journey: &Journey, base: &str, density: &str) -> WebDriverResult<()> {
-    journey.reopen(&address(base, "/ui/about")).await;
+    journey
+        .reopen(&format!("{}#{SETTINGS_PANE}", address(base, "/ui/about")))
+        .await;
     let control = journey
         .element(By::Css(DENSITY_CONTROL), "the density control")
         .await;
@@ -394,6 +406,16 @@ async fn choose_density(journey: &Journey, base: &str, density: &str) -> WebDriv
         .await?;
     Ok(())
 }
+
+/// Opens every disclosure on the screen, so what is behind one is measured.
+///
+/// A pane of the About screen is a `<details>`, and so is every request
+/// disclosure. A pass that measured only what is open would report on a
+/// screen no reader ends up looking at.
+const OPEN_DISCLOSURES: &str = r#"
+document.querySelectorAll('details:not([open])').forEach((el) => { el.open = true; });
+return 'opened';
+"#;
 
 /// Opens one screen and waits for every read on it to have landed.
 ///
@@ -412,6 +434,7 @@ async fn open(journey: &Journey, base: &str, path: &str) -> WebDriverResult<()> 
             &format!("every read on {path} to land"),
         )
         .await;
+    journey.evaluate(OPEN_DISCLOSURES).await?;
     let mut last = String::new();
     for _ in 0..SETTLE_TRIES {
         let now = journey.evaluate(COUNT_FOCUSABLE).await?;

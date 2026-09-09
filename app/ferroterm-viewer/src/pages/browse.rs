@@ -145,9 +145,7 @@ pub(crate) fn BrowsePage() -> impl IntoView {
     let heading = view! {
         <Title text="Concept browser" />
         <h1 class=styles::PAGE_TITLE>"Concept browser"</h1>
-        <p class=styles::LEAD>
-            "Search one code system, read a concept, and walk what the server declares of its hierarchy. Every pane below says which request it made."
-        </p>
+        <p class=styles::LEAD>"Search a code system, read a concept, walk its hierarchy."</p>
         {move || {
             (!named.get())
                 .then(|| {
@@ -1165,9 +1163,7 @@ fn tree_section(
                 <h2 id="browse-tree-heading" class=styles::SECTION_TITLE>
                     "Below this concept"
                 </h2>
-                <p class=styles::LEAD>
-                    "One level at a time, each level read with the child operator the version declares. The arrow keys walk it: right opens a concept, left closes it, and Enter reads the concept the tree is on."
-                </p>
+                <p class=styles::LEAD>"Arrow keys walk it. Enter reads the concept."</p>
                 // The rows are the only focusable part of the tree, so both a
                 // key press and a focus move arrive here by bubbling from the
                 // row that has focus.

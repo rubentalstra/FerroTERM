@@ -31,22 +31,15 @@ pub(crate) fn pane() -> AnyView {
     .into_any();
 
     view! {
-        <section class="mt-section" aria-labelledby="about-settings-heading">
-            <h2 id="about-settings-heading" class=styles::SECTION_TITLE>
-                "Settings"
-            </h2>
-            <p class=styles::LEAD>
-                "These preferences are stored in this browser only. The server is neither asked nor told about them."
-            </p>
-            {in_use}
-            <form class="mt-loose grid gap-loose" on:submit=|ev| ev.prevent_default()>
-                {theme_field(settings)}
-                {density_field(settings)}
-                {version_field(settings)}
-                {language_field(settings)}
-                {page_size_field(settings)}
-            </form>
-        </section>
+        <p class=styles::MUTED>"Stored in this browser only."</p>
+        {in_use}
+        <form class="mt-loose grid gap-loose" on:submit=|ev| ev.prevent_default()>
+            {theme_field(settings)}
+            {density_field(settings)}
+            {version_field(settings)}
+            {language_field(settings)}
+            {page_size_field(settings)}
+        </form>
     }
     .into_any()
 }

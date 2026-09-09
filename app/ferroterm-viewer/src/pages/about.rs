@@ -1,16 +1,15 @@
 //! Everything about this server and this viewer, on one screen.
 //!
-//! Three panes: what the four served roots declare, the figures the build
-//! committed, and what this browser remembers about the reader. They are one
-//! screen rather than three because none of them is about a code, and a reader
-//! who came to ask about the server should not have to guess which of three
-//! entries holds the answer.
+//! Three panes, each closed until a reader opens it. They are one screen
+//! because none of them is about a code, and they are closed because a reader
+//! comes here with one of the three questions, not all three.
 //!
 //! Each pane keeps the address it had. A link written before they were one
 //! screen still opens the pane it named, through the redirects in `shell.rs`.
 
 use leptos::prelude::*;
 use leptos_meta::Title;
+use leptos_router::hooks::use_location;
 
 use crate::components::icon;
 use crate::components::icon::Glyph;
@@ -20,22 +19,14 @@ use crate::pages::settings;
 use crate::pages::versions;
 use crate::styles;
 
-/// The pane a fragment names, as the link that jumps to it.
+/// One pane: the heading it is labelled by, its name, and its glyph.
 struct Pane(&'static str, &'static str, Glyph);
 
 /// The panes, in the order the screen draws them.
 const PANES: [Pane; 3] = [
-    Pane(
-        "about-versions-heading",
-        "The four FHIR versions",
-        icon::VERSION,
-    ),
-    Pane(
-        "about-evidence-heading",
-        "The evidence this build ships",
-        icon::EVIDENCE,
-    ),
-    Pane("about-settings-heading", "Settings", icon::SETTINGS),
+    Pane("versions", "The four FHIR versions", icon::VERSION),
+    Pane("evidence", "The evidence this build ships", icon::EVIDENCE),
+    Pane("settings", "Settings", icon::SETTINGS),
 ];
 
 /// Shows the three panes about this server and this viewer.
@@ -45,35 +36,59 @@ const PANES: [Pane; 3] = [
     reason = "the leptos component macro emits a pub props type, and a binary crate has no reachable public API"
 )]
 pub(crate) fn AboutPage() -> impl IntoView {
-    let jumps: Vec<AnyView> = PANES
-        .iter()
-        .map(|Pane(id, label, glyph)| {
-            view! {
-                <li>
-                    <a
-                        href=format!("#{id}")
-                        class=format!("inline-flex items-center gap-tight {}", styles::LINK)
-                    >
-                        <Icon glyph=*glyph />
-                        {*label}
-                    </a>
-                </li>
-            }
-            .into_any()
-        })
+    // An address naming a pane opens it, and a link to another pane from
+    // this screen is a fragment navigation that never re-runs this body, so
+    // the fragment is followed rather than read once
+    // (`leptos_router` 0.8.15 `use_location`).
+    let named = use_location().hash;
+    let bodies = [versions::pane(), evidence::pane(), settings::pane()];
+    let panes: Vec<AnyView> = PANES
+        .into_iter()
+        .zip(bodies)
+        .map(|(Pane(id, label, glyph), body)| pane(id, label, glyph, named, body))
         .collect();
 
     view! {
         <Title text="About this server" />
         <h1 class=styles::PAGE_TITLE>"About this server"</h1>
-        <p class=styles::LEAD>
-            "What the four served roots declare, what the build measured before it shipped, and what this browser remembers about you. Nothing here is about a code."
-        </p>
-        <nav aria-label="The panes of this screen" class="mt-default">
-            <ul class="flex flex-wrap gap-loose text-body">{jumps}</ul>
-        </nav>
-        {versions::pane()}
-        {evidence::pane()}
-        {settings::pane()}
+        <div class="mt-loose grid gap-default">{panes}</div>
     }
+}
+
+/// The element id one pane answers to.
+fn anchor(id: &str) -> String {
+    format!("about-{id}-heading")
+}
+
+/// One pane, closed until a reader opens it or an address names it.
+///
+/// A `<details>` rather than a tab list: the browser gives the disclosure its
+/// keyboard contract and its announcement for free
+/// (<https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/>).
+///
+/// The `id` is on the `<details>`, so an address naming a pane scrolls to it,
+/// and the `name` groups the three under one accordion, which is what closes
+/// the others when one opens
+/// (<https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details#name>).
+fn pane(
+    id: &'static str,
+    label: &'static str,
+    glyph: Glyph,
+    named: Memo<String>,
+    body: AnyView,
+) -> AnyView {
+    let opened = move || named.with(|named| named.trim_start_matches('#') == anchor(id));
+    view! {
+        <details id=anchor(id) name="about" open=opened class=styles::PANEL>
+            <summary class=format!(
+                "flex cursor-pointer items-center gap-default panel-p {}",
+                styles::SECTION_TITLE,
+            )>
+                <Icon glyph=glyph />
+                {label}
+            </summary>
+            <div class="border-t border-line panel-p">{body}</div>
+        </details>
+    }
+    .into_any()
 }

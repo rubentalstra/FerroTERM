@@ -58,16 +58,8 @@ pub(crate) fn pane() -> AnyView {
     let requests = requests_section(&client);
 
     view! {
-        <section class="mt-section" aria-labelledby="about-versions-heading">
-            <h2 id="about-versions-heading" class=styles::SECTION_TITLE>
-                "The four FHIR versions"
-            </h2>
-            <p class=styles::LEAD>
-                "This one server answers R4, R4B, R5, and the R6 ballot from four roots, each with the operation set its own release publishes. Everything below is those four capability statements, read from this browser."
-            </p>
-            {comparison}
-            {requests}
-        </section>
+        {comparison}
+        {requests}
     }
     .into_any()
 }
@@ -170,18 +162,12 @@ fn operations_view(comparison: &Comparison) -> AnyView {
         .into_any();
     }
     let table = table_view(
-        "The operations each root declares, and at which levels it answers them",
+        "Operations, and the levels each answers at",
         "Operation",
         &comparison.columns,
         &comparison.operations,
     );
-    view! {
-        <p class="mt-loose text-body text-muted">
-            "A row is one operation. A cell says at which levels that root answers it, which is what its release's own OperationDefinition declares. A row with no resource type in front of the $ is answered on the root itself."
-        </p>
-        {table}
-    }
-    .into_any()
+    view! { {table} }.into_any()
 }
 
 /// One comparison table: a row heading, then one cell per root.
@@ -274,9 +260,7 @@ fn notes_view(answers: &[(FhirVersion, RootAnswer)]) -> AnyView {
     view! {
         <div class="mt-section">
             <h3 class="text-body font-medium">"What each root adds to its own definition"</h3>
-            <p class=styles::LEAD>
-                "Each line below is one root's own operation.documentation, as it sent it. It is where a release says which parameters it takes beyond the ones its own OperationDefinition declares."
-            </p>
+            <p class=styles::LEAD>"One root's own operation.documentation, as it sent it."</p>
             {drawn}
         </div>
     }

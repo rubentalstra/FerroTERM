@@ -61,9 +61,7 @@ fn header_view(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView {
     view! {
         <header>
             <h1 class=styles::PAGE_TITLE>"This server"</h1>
-            <p class=styles::LEAD>
-                "Everything on this page came from the FHIR API below, over HTTP, from your browser."
-            </p>
+            <p class=styles::LEAD>"Read from this root, over HTTP, from your browser."</p>
             <dl class="mt-default grid gap-x-loose gap-y-tight sm:grid-cols-[8rem_1fr]">
                 <dt class=styles::MUTED>"FHIR base"</dt>
                 <dd class=styles::CODE>{base}</dd>
