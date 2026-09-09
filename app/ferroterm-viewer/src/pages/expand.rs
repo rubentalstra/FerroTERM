@@ -648,12 +648,9 @@ fn result_section(
 
 /// What the screen says before a canonical has been typed.
 fn invitation() -> AnyView {
-    view! {
-        <p class="mt-default text-body text-muted">
-            "Name a value set above and run it. The canonical is sent exactly as you type it, so an implicit form a code system defines works here too."
-        </p>
-    }
-    .into_any()
+    crate::components::state::invitation(
+        "Name a value set above and run it. The canonical is sent exactly as you type it, so an implicit form a code system defines works here too.",
+    )
 }
 
 /// The page, the mark saying what it leaves out, and the echoed parameters.

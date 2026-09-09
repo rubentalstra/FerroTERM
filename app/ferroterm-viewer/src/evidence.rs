@@ -168,6 +168,59 @@ impl Mode {
     }
 }
 
+impl Conformance {
+    /// What the suite table says, in one line a reader can scan.
+    ///
+    /// The modes are counted as well as the cases, because a mode that runs
+    /// nothing and a mode that passes nothing read the same from a case count
+    /// alone.
+    pub(crate) fn summary(&self) -> String {
+        let passed: u32 = self.modes.iter().map(|mode| mode.passed).sum();
+        let ran: u32 = self.modes.iter().map(|mode| mode.ran).sum();
+        let modes = self.modes.len();
+        format!(
+            "{passed} of {ran} cases pass, across {modes} mode runs. The general mode alone runs {} of them.",
+            self.suite_total,
+        )
+    }
+}
+
+impl Latency {
+    /// What the bars say, in one line a reader can scan.
+    ///
+    /// The tightest bar is the one worth naming: it is the claim a slower
+    /// machine breaks first, and the number a reader is deciding against.
+    pub(crate) fn summary(&self) -> String {
+        let bars = self.bars.len();
+        let Some(tightest) = self
+            .bars
+            .iter()
+            .min_by_key(|bar| bar.headroom().unwrap_or(u32::MAX))
+        else {
+            return "No latency bar is recorded.".to_owned();
+        };
+        match tightest.headroom() {
+            Some(times) => format!(
+                "{bars} bars, every one met. The tightest is {}, {times} times under its bar.",
+                tightest.bench,
+            ),
+            None => format!("{bars} bars, every one met faster than the run could time."),
+        }
+    }
+}
+
+impl Run {
+    /// What the run says, in one line a reader can scan.
+    pub(crate) fn summary(&self) -> String {
+        let systems = self.systems.len();
+        let noun = if systems == 1 { "system" } else { "systems" };
+        format!(
+            "{systems} code {noun} loaded, in the run named {}.",
+            self.name
+        )
+    }
+}
+
 impl LatencyBar {
     /// How many times under its bar the recorded measurement came in.
     ///
@@ -191,6 +244,92 @@ pub(crate) fn relative_width(value: u32, largest: u32) -> u32 {
 
 #[cfg(test)]
 mod tests {
+    /// Two modes, one of which passes every case it ran.
+    const MODES: [Mode; 2] = [
+        Mode {
+            name: "general",
+            surface: "r4b",
+            passed: 600,
+            ran: 670,
+            source: "conformance/tx-ecosystem/README.md",
+        },
+        Mode {
+            name: "bugs",
+            surface: "r5",
+            passed: 30,
+            ran: 30,
+            source: "conformance/tx-ecosystem/README.md",
+        },
+    ];
+
+    /// Two bars, the second of which has less room than the first.
+    const BARS: [LatencyBar; 2] = [
+        LatencyBar {
+            bench: "operations/lookup",
+            max_us: 1000,
+            measured_us: 10,
+            claim: "a point read answers in under a millisecond",
+        },
+        LatencyBar {
+            bench: "http/expand_page_10",
+            max_us: 1000,
+            measured_us: 500,
+            claim: "one page of an expansion answers in under a millisecond",
+        },
+    ];
+
+    #[test]
+    fn the_suite_summary_counts_the_cases_and_the_mode_runs() {
+        let conformance = Conformance {
+            suite_total: 670,
+            total_source: "conformance/tx-ecosystem/total.txt",
+            table_source: "conformance/tx-ecosystem/README.md",
+            modes: &MODES,
+        };
+        assert_eq!(
+            conformance.summary(),
+            "630 of 700 cases pass, across 2 mode runs. The general mode alone runs 670 of them.",
+            "a mode that runs nothing and one that passes nothing read the same from a case count alone"
+        );
+    }
+
+    #[test]
+    fn the_latency_summary_names_the_bar_with_the_least_room() {
+        let latency = Latency {
+            machine: "Apple M2 Pro",
+            source: "bench/bars.json",
+            bars: &BARS,
+        };
+        assert_eq!(
+            latency.summary(),
+            "2 bars, every one met. The tightest is http/expand_page_10, 2 times under its bar.",
+            "the tightest bar is the claim a slower machine breaks first"
+        );
+    }
+
+    #[test]
+    fn a_latency_summary_with_no_bar_says_so_rather_than_naming_one() {
+        let latency = Latency {
+            machine: "Apple M2 Pro",
+            source: "bench/bars.json",
+            bars: &[],
+        };
+        assert_eq!(latency.summary(), "No latency bar is recorded.");
+    }
+
+    #[test]
+    fn the_run_summary_counts_the_systems_and_names_the_run() {
+        let run = Run {
+            name: "2026-09-06-apple-m2",
+            source: "bench/records/2026-09-06-apple-m2",
+            systems: &[],
+        };
+        assert_eq!(
+            run.summary(),
+            "0 code systems loaded, in the run named 2026-09-06-apple-m2."
+        );
+    }
+
     use super::*;
 
     #[test]

@@ -568,15 +568,6 @@ pub(crate) struct Action {
     pub(crate) href: String,
 }
 
-/// What a screen says where it found nothing.
-///
-/// The same shape on every list, so an empty answer reads as an answer rather
-/// than as a screen that failed to draw.
-pub(crate) fn empty(sentence: &'static str) -> AnyView {
-    view! { <p class=format!("mt-default panel-p {} {}", styles::PANEL, styles::MUTED)>{sentence}</p> }
-    .into_any()
-}
-
 /// The page controls, which are the address of another page.
 ///
 /// Each control is a link, so a page is shareable and the browser walks the

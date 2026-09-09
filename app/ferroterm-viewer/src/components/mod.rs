@@ -24,6 +24,7 @@ pub(crate) mod request_disclosure;
 pub(crate) mod runs;
 pub(crate) mod shell;
 pub(crate) mod spinner;
+pub(crate) mod state;
 pub(crate) mod system_table;
 pub(crate) mod theme_toggle;
 pub(crate) mod version_switcher;

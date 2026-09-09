@@ -77,6 +77,25 @@ fn preamble(release: &'static str) -> AnyView {
     .into_any()
 }
 
+/// The line a reader scans, and the table it summarises behind a disclosure.
+///
+/// Every figure and every source file stays on the screen. What changes is
+/// what a reader meets first: three long tables became three sentences, and
+/// the table is one press away for the reader who wants the rows.
+fn scannable(summary: String, caption: &'static str, table: AnyView) -> AnyView {
+    view! {
+        <p class="mt-default text-title font-medium text-fg">{summary}</p>
+        <details class="mt-default rounded-md border border-line">
+            <summary class=format!(
+                "cursor-pointer px-default py-default font-medium {}",
+                styles::MUTED,
+            )>{caption}</summary>
+            <div class="overflow-x-auto border-t border-line px-default py-default">{table}</div>
+        </details>
+    }
+    .into_any()
+}
+
 /// The HL7 terminology ecosystem suite, mode by mode.
 fn conformance_section(conformance: Conformance) -> AnyView {
     let rows: Vec<AnyView> = conformance
@@ -123,33 +142,35 @@ fn conformance_section(conformance: Conformance) -> AnyView {
                 {total}
                 " cases and needs nothing to run, so continuous integration runs it on every push; the other modes need licensed content or a code system this server does not serve, so they are run by hand before a release."
             </p>
-            <div class="mt-default overflow-x-auto">
-                <table class=TABLE>
-                    <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
-                        "The cases each mode passes, from the committed pass lists"
-                    </caption>
-                    <thead>
-                        <tr class="border-b border-line-strong">
-                            <th scope="col" class=HEAD>
-                                "Mode"
-                            </th>
-                            <th scope="col" class=HEAD>
-                                "Surface"
-                            </th>
-                            <th scope="col" class=HEAD>
-                                "Passed"
-                            </th>
-                            <th scope="col" class=HEAD>
-                                "Share"
-                            </th>
-                            <th scope="col" class=HEAD>
-                                "From"
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>{rows}</tbody>
-                </table>
-            </div>
+            {scannable(
+                conformance.summary(),
+                "The cases each mode passes, from the committed pass lists",
+                view! {
+                    <table class=TABLE>
+                        <thead>
+                            <tr class="border-b border-line-strong">
+                                <th scope="col" class=HEAD>
+                                    "Mode"
+                                </th>
+                                <th scope="col" class=HEAD>
+                                    "Surface"
+                                </th>
+                                <th scope="col" class=HEAD>
+                                    "Passed"
+                                </th>
+                                <th scope="col" class=HEAD>
+                                    "Share"
+                                </th>
+                                <th scope="col" class=HEAD>
+                                    "From"
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>{rows}</tbody>
+                    </table>
+                }
+                    .into_any(),
+            )}
             <p class="mt-default text-small text-muted">
                 "The case counts come from " <span class=PATH>{table_source}</span>
                 " and the suite total from " <span class=PATH>{total_source}</span>
@@ -209,33 +230,35 @@ fn latency_section(latency: Latency) -> AnyView {
                 "A bar is the claim, and it never moves to match a slower run. The measurement beside it records what one machine answered, so the room a run has is visible. The recorded run was taken on "
                 <span class="font-medium">{machine}</span> "."
             </p>
-            <div class="mt-default overflow-x-auto">
-                <table class=TABLE>
-                    <caption class="pb-tight text-left text-small font-medium tracking-wide uppercase">
-                        "Each benchmark, its bar, and the run recorded against it"
-                    </caption>
-                    <thead>
-                        <tr class="border-b border-line-strong">
-                            <th scope="col" class=HEAD>
-                                "Benchmark"
-                            </th>
-                            <th scope="col" class=HEAD>
-                                "Bar"
-                            </th>
-                            <th scope="col" class=HEAD>
-                                "Measured"
-                            </th>
-                            <th scope="col" class=HEAD>
-                                "Room"
-                            </th>
-                            <th scope="col" class=HEAD>
-                                "What the bar claims"
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>{rows}</tbody>
-                </table>
-            </div>
+            {scannable(
+                latency.summary(),
+                "Each benchmark, its bar, and the run recorded against it",
+                view! {
+                    <table class=TABLE>
+                        <thead>
+                            <tr class="border-b border-line-strong">
+                                <th scope="col" class=HEAD>
+                                    "Benchmark"
+                                </th>
+                                <th scope="col" class=HEAD>
+                                    "Bar"
+                                </th>
+                                <th scope="col" class=HEAD>
+                                    "Measured"
+                                </th>
+                                <th scope="col" class=HEAD>
+                                    "Room"
+                                </th>
+                                <th scope="col" class=HEAD>
+                                    "What the bar claims"
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>{rows}</tbody>
+                    </table>
+                }
+                    .into_any(),
+            )}
             <p class="mt-default text-small text-muted">
                 "Every figure in this table comes from " <span class=PATH>{source}</span>
                 ". A bar beside a measurement is drawn against the slowest measurement in the table, so the shape reads; the microseconds beside it are the figure."
@@ -260,7 +283,11 @@ fn run_section(run: Run) -> AnyView {
                 ", the run named " <span class="font-medium">{name}</span>
                 ". A record states the machine it was taken on and the FerroTERM version that answered it, because a timing without both says nothing."
             </p>
-            {systems}
+            {scannable(
+                run.summary(),
+                "One record per code system the run loaded",
+                view! { {systems} }.into_any(),
+            )}
         </section>
     }
     .into_any()
