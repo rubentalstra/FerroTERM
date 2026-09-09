@@ -95,7 +95,7 @@ jobs:
       # architecture costs a few minutes and adds no attestation subject: the
       # bundle rides inside the binary the existing lane already signs.
       - name: Install Trunk
-        uses: taiki-e/install-action@0758d235715de2f3551eacc980d9ae8fce9342c3 # v2.87.3
+        uses: taiki-e/install-action@84f5ac3124727fb3d284d4d22ee9ab3654fd09a6 # v2.87.7
         with:
           tool: trunk@0.21.14
       - name: Add the WebAssembly target
@@ -109,7 +109,7 @@ jobs:
       # syft/trivy/grype/osv-scanner even when the release page's SBOM never
       # travelled with it (https://github.com/rust-secure-code/cargo-auditable).
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@0758d235715de2f3551eacc980d9ae8fce9342c3 # v2.87.3
+        uses: taiki-e/install-action@84f5ac3124727fb3d284d4d22ee9ab3654fd09a6 # v2.87.7
         with:
           tool: cargo-auditable@0.7.5
 
@@ -161,7 +161,7 @@ jobs:
       # actionable. Generated from the release commit's own Cargo.lock with
       # `--locked`, so it describes the graph that was actually built.
       - name: Install cargo-cyclonedx
-        uses: taiki-e/install-action@0758d235715de2f3551eacc980d9ae8fce9342c3 # v2.87.3
+        uses: taiki-e/install-action@84f5ac3124727fb3d284d4d22ee9ab3654fd09a6 # v2.87.7
         with:
           tool: cargo-cyclonedx
       - name: Generate the dependency SBOM
