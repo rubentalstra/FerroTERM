@@ -6,7 +6,6 @@
 //! the deployment itself. Each figure names the file it came from.
 
 use leptos::prelude::*;
-use leptos_meta::Title;
 
 use crate::components::NOT_DECLARED;
 use crate::evidence::Conformance;
@@ -36,18 +35,7 @@ const PATH: &str = "font-mono text-small break-all text-muted";
 ///
 /// Nothing here is reactive, and nothing here is fetched. The figures were
 /// fixed when the bundle was built, so the screen draws a constant.
-#[component]
-#[expect(
-    unreachable_pub,
-    reason = "the leptos component macro emits a pub props type, and a binary crate has no reachable public API"
-)]
-pub(crate) fn EvidencePage() -> impl IntoView {
-    let heading = view! {
-        <Title text="Evidence" />
-        <h1 class=styles::PAGE_TITLE>"The evidence this build ships"</h1>
-    }
-    .into_any();
-
+pub(crate) fn pane() -> AnyView {
     let evidence = embedded();
     let preamble = preamble(evidence.release);
     let conformance = conformance_section(evidence.conformance);
@@ -55,23 +43,21 @@ pub(crate) fn EvidencePage() -> impl IntoView {
     let run = run_section(evidence.run);
 
     view! {
-        {heading}
         {preamble}
         {conformance}
         {latency}
         {run}
     }
+    .into_any()
 }
 
 /// What the screen states, and what it does not.
 fn preamble(release: &'static str) -> AnyView {
     view! {
         <p class=styles::LEAD>
-            "These figures describe FerroTERM " <span class="font-medium">{release}</span>
-            ", the build this bundle was compiled from. They say nothing about the server answering this page: what it loaded and what it answers now are on the other screens."
-        </p>
-        <p class="mt-default text-body text-muted">
-            "This screen issues no request. Every number below was read out of a file the repository commits when the bundle was built, and each one names that file, so you can open it and check the number yourself."
+            "Read from files this repository committed for FerroTERM "
+            <span class="font-medium">{release}</span>
+            ", not from the server answering this page. Each figure names its file."
         </p>
     }
     .into_any()
@@ -128,20 +114,14 @@ fn conformance_section(conformance: Conformance) -> AnyView {
         })
         .collect();
 
-    let total = conformance.suite_total;
     let total_source = conformance.total_source;
     let table_source = conformance.table_source;
 
     view! {
         <section class="mt-section" aria-labelledby="conformance-heading">
-            <h2 id="conformance-heading" class=styles::SECTION_TITLE>
+            <h3 id="conformance-heading" class=styles::SECTION_TITLE>
                 "The HL7 terminology ecosystem suite"
-            </h2>
-            <p class=styles::LEAD>
-                "The suite groups its cases into modes, and a run picks one. Each row is one mode run against one served FHIR root. The `general` mode runs "
-                {total}
-                " cases and needs nothing to run, so continuous integration runs it on every push; the other modes need licensed content or a code system this server does not serve, so they are run by hand before a release."
-            </p>
+            </h3>
             {scannable(
                 conformance.summary(),
                 "The cases each mode passes, from the committed pass lists",
@@ -171,10 +151,10 @@ fn conformance_section(conformance: Conformance) -> AnyView {
                 }
                     .into_any(),
             )}
-            <p class="mt-default text-small text-muted">
-                "The case counts come from " <span class=PATH>{table_source}</span>
-                " and the suite total from " <span class=PATH>{total_source}</span>
-                ". The build stops when a pass list and that table disagree."
+            <p class=format!("mt-default {}", styles::HINT)>
+                <span class=PATH>{table_source}</span>
+                " and "
+                <span class=PATH>{total_source}</span>
             </p>
         </section>
     }
@@ -223,13 +203,10 @@ fn latency_section(latency: Latency) -> AnyView {
 
     view! {
         <section class="mt-section" aria-labelledby="latency-heading">
-            <h2 id="latency-heading" class=styles::SECTION_TITLE>
+            <h3 id="latency-heading" class=styles::SECTION_TITLE>
                 "The latency the project claims"
-            </h2>
-            <p class=styles::LEAD>
-                "A bar is the claim, and it never moves to match a slower run. The measurement beside it records what one machine answered, so the room a run has is visible. The recorded run was taken on "
-                <span class="font-medium">{machine}</span> "."
-            </p>
+            </h3>
+            <p class=styles::LEAD>"Recorded on " <span class="font-medium">{machine}</span> "."</p>
             {scannable(
                 latency.summary(),
                 "Each benchmark, its bar, and the run recorded against it",
@@ -259,9 +236,9 @@ fn latency_section(latency: Latency) -> AnyView {
                 }
                     .into_any(),
             )}
-            <p class="mt-default text-small text-muted">
-                "Every figure in this table comes from " <span class=PATH>{source}</span>
-                ". A bar beside a measurement is drawn against the slowest measurement in the table, so the shape reads; the microseconds beside it are the figure."
+            <p class=format!("mt-default {}", styles::HINT)>
+                <span class=PATH>{source}</span>
+                ". A bar is drawn against the slowest measurement beside it."
             </p>
         </section>
     }
@@ -271,18 +248,13 @@ fn latency_section(latency: Latency) -> AnyView {
 /// The newest committed benchmark run, system by system.
 fn run_section(run: Run) -> AnyView {
     let systems: Vec<AnyView> = run.systems.iter().map(system_view).collect();
-    let name = run.name;
     let source = run.source;
     view! {
         <section class="mt-section" aria-labelledby="run-heading">
-            <h2 id="run-heading" class=styles::SECTION_TITLE>
+            <h3 id="run-heading" class=styles::SECTION_TITLE>
                 "The newest benchmark run"
-            </h2>
-            <p class=styles::LEAD>
-                "One record per code system the run loaded, from " <span class=PATH>{source}</span>
-                ", the run named " <span class="font-medium">{name}</span>
-                ". A record states the machine it was taken on and the FerroTERM version that answered it, because a timing without both says nothing."
-            </p>
+            </h3>
+            <p class=styles::LEAD>"From " <span class=PATH>{source}</span> "."</p>
             {scannable(
                 run.summary(),
                 "One record per code system the run loaded",

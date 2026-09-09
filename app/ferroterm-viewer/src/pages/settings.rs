@@ -1,7 +1,6 @@
 //! The settings screen: what this browser remembers about this reader.
 
 use leptos::prelude::*;
-use leptos_meta::Title;
 
 use crate::components::shell::SelectedVersion;
 use crate::density::Density;
@@ -17,25 +16,11 @@ use crate::theme::ThemeMode;
 ///
 /// Every value here lives in this browser's `localStorage`. The server holds
 /// nothing about a reader, so nothing on this screen is sent anywhere.
-#[component]
-#[expect(
-    unreachable_pub,
-    reason = "the leptos component macro emits a pub props type, and a binary crate has no reachable public API"
-)]
-pub(crate) fn SettingsPage() -> impl IntoView {
+pub(crate) fn pane() -> AnyView {
     let settings = expect_context::<Settings>();
     let client = expect_context::<FhirClient>();
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
     let base = move || client.version_base(version.get());
-
-    let heading = view! {
-        <Title text="Settings" />
-        <h1 class=styles::PAGE_TITLE>"Settings"</h1>
-        <p class=styles::LEAD>
-            "These preferences are stored in this browser only. The server is neither asked nor told about them."
-        </p>
-    }
-    .into_any();
 
     let in_use = view! {
         <dl class="mt-loose grid gap-default text-body sm:grid-cols-[12rem_1fr]">
@@ -46,7 +31,7 @@ pub(crate) fn SettingsPage() -> impl IntoView {
     .into_any();
 
     view! {
-        {heading}
+        <p class=styles::MUTED>"Stored in this browser only."</p>
         {in_use}
         <form class="mt-loose grid gap-loose" on:submit=|ev| ev.prevent_default()>
             {theme_field(settings)}
@@ -56,6 +41,7 @@ pub(crate) fn SettingsPage() -> impl IntoView {
             {page_size_field(settings)}
         </form>
     }
+    .into_any()
 }
 
 /// The light and dark choice.

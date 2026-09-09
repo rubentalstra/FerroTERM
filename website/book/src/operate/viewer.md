@@ -156,26 +156,26 @@ server stated and the map it came from.
 
 ![The translate runner, with a translated code and the match it returned](img/viewer/translate.png)
 
-### FHIR versions
+### About this server
 
-The four served roots side by side, each read from its own
-`GET /{version}/metadata`. One table compares what each root declares of the
-terminology operations, the other what it declares of the resources. The screen
-exists because the versions genuinely differ: R4 and R4B declare `$lookup` at
-the type level and R5 added the instance level, and the viewer offers on each
+One screen at `/ui/about`, in three panes, for the questions that are not about
+a code. Each pane opens with the line it is there to say and keeps its detail
+one press away. The addresses the three used to have still work: `/ui/versions`,
+`/ui/evidence` and `/ui/settings` open the pane they named.
+
+**The four FHIR versions.** The four served roots side by side, each read from
+its own `GET /{version}/metadata`. One table compares what each root declares of
+the terminology operations, the other what it declares of the resources. The
+pane exists because the versions genuinely differ: R4 and R4B declare `$lookup`
+at the type level and R5 added the instance level, and the viewer offers on each
 screen only what the root you are on declares.
 
-![The version comparison, with the four served roots side by side](img/viewer/versions.png)
-
-### Evidence
-
-The conformance and benchmark figures the repository commits, at `/ui/evidence`.
-This is the one screen that asks the server nothing. Its figures were read out
-of committed files when the bundle was built, so they describe the FerroTERM
-build your deployment is running rather than the deployment itself, and the
-screen says so at the top and names the release version.
-
-Three sections, each naming the file every one of its numbers came from:
+**The evidence this build ships.** The conformance and benchmark figures the
+repository commits. This is the one pane that asks the server nothing: its
+figures were read out of committed files when the bundle was built, so they
+describe the FerroTERM build your deployment is running rather than the
+deployment itself, and it says so and names the release version. Three
+summaries, each naming the file every one of its numbers came from:
 
 - The HL7 terminology ecosystem suite, one row per mode and served root, with
   the cases passed of the cases run. The counts come from the pass lists under
@@ -192,16 +192,12 @@ No number here is typed into the viewer's source. Each one is read from its
 committed file at build time, so you can open that file in the repository and
 check it.
 
-![The evidence screen: the suite table and the latency bars, with the benchmark records continuing below the image](img/viewer/evidence.png)
+**Settings.** The FHIR base in use, the theme, the density, the default FHIR
+version, a display language, and the page size. These live in the browser that
+shows them. The server is neither asked nor told about any of them, so nothing
+here changes what another reader sees.
 
-### Settings
-
-The FHIR base in use, the theme, the default FHIR version, a display language,
-and the page size. These live in the browser that shows them. The server is
-neither asked nor told about any of them, so nothing here changes what another
-reader sees.
-
-![The settings screen, showing the preferences this browser stores](img/viewer/settings.png)
+![The About screen, with the version comparison open and the evidence and settings panes below it](img/viewer/about.png)
 
 ## About these screenshots
 

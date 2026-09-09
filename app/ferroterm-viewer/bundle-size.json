@@ -7,7 +7,7 @@
       "pattern": "*_bg.wasm",
       "max_gzip_bytes": 540000,
       "max_growth_gzip_bytes": 70000,
-      "measured_gzip_bytes": 499573,
+      "measured_gzip_bytes": 501724,
       "claim": "the finished viewer's WebAssembly module is under 528 KiB gzipped, and no one change adds more than the largest screen measured"
     },
     {

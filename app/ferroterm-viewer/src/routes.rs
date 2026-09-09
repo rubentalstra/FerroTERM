@@ -36,7 +36,10 @@ pub(crate) const TRANSLATE_PATH: &str = "translate";
 /// The path the command bar sends what a reader typed to.
 pub(crate) const FIND_PATH: &str = "find";
 
-/// The version comparison screen's path below the base.
+/// The About screen's path below the base.
+pub(crate) const ABOUT_PATH: &str = "about";
+
+/// The version comparison's path, which the About screen's pane took over.
 pub(crate) const VERSIONS_PATH: &str = "versions";
 
 /// The evidence screen's path below the base.
@@ -143,9 +146,9 @@ pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
         // The command bar is on every screen rather than in the sidebar, so
         // the screen it opens marks no entry.
         Some(FIND_PATH) => None,
-        Some(VERSIONS_PATH) => Some(VERSIONS_PATH),
-        Some(EVIDENCE_PATH) => Some(EVIDENCE_PATH),
-        Some(SETTINGS_PATH) => Some(SETTINGS_PATH),
+        // The three panes are one screen and one sidebar entry, and the
+        // addresses they had still open the pane they named.
+        Some(ABOUT_PATH | VERSIONS_PATH | EVIDENCE_PATH | SETTINGS_PATH) => Some(ABOUT_PATH),
         Some(_unlisted) => None,
     }
 }
@@ -289,9 +292,19 @@ mod tests {
         assert_eq!(nav_section("/ui/validate"), Some(VALIDATE_PATH));
         assert_eq!(nav_section("/ui/valuesets"), Some(VALUE_SETS_PATH));
         assert_eq!(nav_section("/ui/conceptmaps"), Some(CONCEPT_MAPS_PATH));
-        assert_eq!(nav_section("/ui/versions"), Some(VERSIONS_PATH));
-        assert_eq!(nav_section("/ui/evidence"), Some(EVIDENCE_PATH));
-        assert_eq!(nav_section("/ui/settings"), Some(SETTINGS_PATH));
+        assert_eq!(nav_section("/ui/translate"), Some(TRANSLATE_PATH));
+        assert_eq!(nav_section("/ui/about"), Some(ABOUT_PATH));
+    }
+
+    #[test]
+    fn an_address_a_pane_used_to_have_marks_the_screen_it_moved_into() {
+        for address in ["/ui/versions", "/ui/evidence", "/ui/settings"] {
+            assert_eq!(
+                nav_section(address),
+                Some(ABOUT_PATH),
+                "`{address}` opens a pane of About, so About is the entry it marks"
+            );
+        }
     }
 
     #[test]

@@ -105,9 +105,7 @@ pub(crate) fn ConceptMapsPage() -> impl IntoView {
     let heading = view! {
         <Title text="Concept maps" />
         <h1 class=styles::PAGE_TITLE>"Concept maps"</h1>
-        <p class=styles::LEAD>
-            "The ConceptMap resources this root holds, as it publishes them. Open one to see the groups it maps, then run a code through it in the translate runner. This screen only reads."
-        </p>
+        <p class=styles::LEAD>"What this root publishes. Open one to see the groups it maps."</p>
     }
     .into_any();
 

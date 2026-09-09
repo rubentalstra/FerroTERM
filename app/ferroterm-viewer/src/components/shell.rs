@@ -21,36 +21,33 @@ use crate::components::icon;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
 use crate::components::mark::Lockup;
+use crate::components::spinner::Spinner;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
 use crate::fhir::version::FhirVersion;
 use crate::find::QUERY_PARAM;
+use crate::pages::about::AboutPage;
 use crate::pages::browse::BrowsePage;
 use crate::pages::code_system::CodeSystemPage;
 use crate::pages::concept_maps::ConceptMapsPage;
-use crate::pages::evidence::EvidencePage;
 use crate::pages::expand::ExpandPage;
 use crate::pages::find::FindPage;
 use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
-use crate::pages::settings::SettingsPage;
 use crate::pages::translate::TranslatePage;
 use crate::pages::validate::ValidatePage;
 use crate::pages::value_sets::ValueSetsPage;
-use crate::pages::versions::VersionsPage;
+use crate::routes::ABOUT_PATH;
 use crate::routes::BROWSE_PATH;
 use crate::routes::CONCEPT_MAPS_PATH;
-use crate::routes::EVIDENCE_PATH;
 use crate::routes::EXPAND_PATH;
 use crate::routes::FIND_PATH;
 use crate::routes::OVERVIEW_PATH;
-use crate::routes::SETTINGS_PATH;
 use crate::routes::TRANSLATE_PATH;
 use crate::routes::UI_BASE;
 use crate::routes::VALIDATE_PATH;
 use crate::routes::VALUE_SETS_PATH;
 use crate::routes::VERSION_PARAM;
-use crate::routes::VERSIONS_PATH;
 use crate::routes::nav_section;
 use crate::routes::ui_link;
 use crate::settings::Settings;
@@ -93,12 +90,8 @@ const PUBLISH: [NavItem; 2] = [
     NavItem(CONCEPT_MAPS_PATH, "Concept maps", icon::CONCEPT_MAPS),
 ];
 
-/// The screens about this server and this viewer, rather than about a code.
-const ABOUT: [NavItem; 3] = [
-    NavItem(VERSIONS_PATH, "FHIR versions", icon::VERSION),
-    NavItem(EVIDENCE_PATH, "Evidence", icon::EVIDENCE),
-    NavItem(SETTINGS_PATH, "Settings", icon::SETTINGS),
-];
+/// The one screen about this server and this viewer, rather than about a code.
+const ABOUT: [NavItem; 1] = [NavItem(ABOUT_PATH, "About this server", icon::EVIDENCE)];
 
 /// The sidebar, as the four groups in the order it renders them.
 ///
@@ -311,6 +304,30 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     .into_any()
 }
 
+/// Sends an address a pane used to have to the pane it named.
+///
+/// A replacing navigation rather than a push, so the browser's back button
+/// leaves the viewer the way it came in rather than bouncing off the address
+/// that redirected (`leptos_router` 0.8.15 `NavigateOptions::replace`).
+fn moved_to(pane: &'static str) -> impl IntoView {
+    let SelectedVersion(version) = expect_context::<SelectedVersion>();
+    let navigate = StoredValue::new(use_navigate());
+    Effect::new(move |_| {
+        let target = format!("{}#{pane}", ui_link(ABOUT_PATH, version.get()));
+        navigate.with_value(|navigate| {
+            navigate(
+                &target,
+                NavigateOptions {
+                    resolve: false,
+                    replace: true,
+                    ..NavigateOptions::default()
+                },
+            );
+        });
+    });
+    view! { <Spinner label="Opening the pane this address names" /> }
+}
+
 /// The chrome, the routed screen, and the sidebar beside it.
 ///
 /// The version is read reactively from the query on every render, because a
@@ -348,14 +365,17 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/browse") view=BrowsePage />
             <Route path=path!("/expand") view=ExpandPage />
             <Route path=path!("/validate") view=ValidatePage />
-            <Route path=path!("/settings") view=SettingsPage />
+            <Route path=path!("/about") view=AboutPage />
             <Route path=path!("/systems/:url") view=CodeSystemPage />
             <Route path=path!("/conceptmaps") view=ConceptMapsPage />
             <Route path=path!("/translate") view=TranslatePage />
             <Route path=path!("/valuesets") view=ValueSetsPage />
-            <Route path=path!("/versions") view=VersionsPage />
-            <Route path=path!("/evidence") view=EvidencePage />
             <Route path=path!("/find") view=FindPage />
+            // The three panes were three screens. A link written then still
+            // opens the pane it named, which is the fragment each carries.
+            <Route path=path!("/versions") view=|| moved_to("about-versions-heading") />
+            <Route path=path!("/evidence") view=|| moved_to("about-evidence-heading") />
+            <Route path=path!("/settings") view=|| moved_to("about-settings-heading") />
         </Routes>
     }
     .into_any();
@@ -393,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn the_sidebar_opens_on_the_overview_and_ends_on_settings() {
+    fn the_sidebar_opens_on_the_overview_and_ends_on_the_server_itself() {
         let listed = entries();
         assert_eq!(
             listed.first().copied(),
@@ -402,8 +422,8 @@ mod tests {
         );
         assert_eq!(
             listed.last().copied(),
-            Some("settings"),
-            "what a reader sets for themselves is the last entry: {listed:?}"
+            Some("about"),
+            "the questions about the server come after the questions about a code: {listed:?}"
         );
     }
 

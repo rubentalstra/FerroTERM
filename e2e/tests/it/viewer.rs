@@ -112,11 +112,20 @@ const SELECTED_ROW: &str = "li[role='treeitem'][aria-selected='true']";
 /// A parent of the concept being read, as the link that moves onto it.
 const PARENT_LINK: &str = "nav[aria-label='Parents of this concept'] a";
 
-/// The sidebar entry onto the version comparison.
-const VERSIONS_LINK: &str = "nav[aria-label='Screens'] a[href^='/ui/versions']";
+/// The sidebar entry onto the screen the version comparison is a pane of.
+const ABOUT_LINK: &str = "nav[aria-label='Screens'] a[href^='/ui/about']";
+
+/// The control that opens that pane, which is the disclosure's own summary.
+const VERSIONS_PANE: &str = "#about-versions-heading > summary";
 
 /// The version comparison, by the heading it is labelled by.
 const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
+
+/// The two tables that comparison draws.
+///
+/// Scoped to the comparison, because it is a pane of the About screen now and
+/// the panes beside it draw tables of their own.
+const COMPARISON_TABLE: &str = "section[aria-labelledby='comparison-heading'] table";
 
 /// The listing screens a row is opened on, each as its own address, the
 /// heading link of a listed row, and the heading its detail pane draws.
@@ -835,9 +844,16 @@ async fn the_four_roots_are_compared_and_their_lookup_levels_differ() {
 
             journey
                 .element(
-                    By::Css(VERSIONS_LINK),
-                    "the header link onto the versions screen",
+                    By::Css(ABOUT_LINK),
+                    "the sidebar entry onto the screen the comparison is a pane of",
                 )
+                .await
+                .click()
+                .await?;
+            // The panes are closed until a reader opens one, which is what a
+            // reader coming for the comparison does.
+            journey
+                .element(By::Css(VERSIONS_PANE), "the control that opens the pane")
                 .await
                 .click()
                 .await?;
@@ -864,7 +880,7 @@ async fn the_four_roots_are_compared_and_their_lookup_levels_differ() {
                 "the screen exists to show that two roots answer one operation differently"
             );
             assert_eq!(
-                journey.count(By::Css("table")).await,
+                journey.count(By::Css(COMPARISON_TABLE)).await,
                 2,
                 "both comparison tables drew, so nothing blanked while the four reads settled"
             );

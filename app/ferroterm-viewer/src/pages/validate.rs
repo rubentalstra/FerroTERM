@@ -155,9 +155,7 @@ pub(crate) fn ValidatePage() -> impl IntoView {
     let heading = view! {
         <Title text="Validate and subsume" />
         <h1 class=styles::PAGE_TITLE>"Validate and subsume"</h1>
-        <p class=styles::LEAD>
-            "Check one code against a code system or a value set, and ask how two codes of one system relate. The interesting answers are the ones that say no, so each panel renders the whole answer the server sent."
-        </p>
+        <p class=styles::LEAD>"Check one code, and ask how two codes relate."</p>
     }
     .into_any();
 

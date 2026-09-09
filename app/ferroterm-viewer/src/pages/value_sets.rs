@@ -75,9 +75,7 @@ pub(crate) fn ValueSetsPage() -> impl IntoView {
     let heading = view! {
         <Title text="Value sets" />
         <h1 class=styles::PAGE_TITLE>"Value sets"</h1>
-        <p class=styles::LEAD>
-            "The ValueSet resources this root holds, as it publishes them. Open one to see its definition, then run it in the expansion runner. This screen only reads."
-        </p>
+        <p class=styles::LEAD>"What this root publishes. Open one to see what it selects."</p>
     }
     .into_any();
 
