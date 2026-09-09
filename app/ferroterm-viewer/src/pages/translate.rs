@@ -26,6 +26,7 @@ use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
+use crate::components::state::undeclared;
 use crate::fhir::CONCEPT_MAP;
 use crate::fhir::FhirClient;
 use crate::fhir::error::FhirError;
@@ -247,15 +248,9 @@ fn runner_section(
 
 /// The statement that this root does not declare the operation.
 fn undeclared_view() -> AnyView {
-    view! {
-        <p class=format!(
-            "mt-default rounded-md p-default {}",
-            styles::NOTICE,
-        )>
-            "This root's capability statement does not declare $translate on ConceptMap, so the runner is not offered here. Another FHIR version may declare it, so try the version switcher above."
-        </p>
-    }
-    .into_any()
+    undeclared(
+        "This root's capability statement does not declare $translate on ConceptMap, so the runner is not offered here. Another FHIR version may declare it, so try the version switcher above.",
+    )
 }
 
 /// A control's own value, gated so an unrelated navigation cannot wipe an edit.

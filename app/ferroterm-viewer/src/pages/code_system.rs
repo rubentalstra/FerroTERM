@@ -19,6 +19,7 @@ use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
+use crate::components::state::undeclared;
 use crate::fhir::FhirClient;
 use crate::fhir::code_system::PublishedCodeSystem;
 use crate::fhir::concept::Hierarchy;
@@ -165,15 +166,9 @@ fn capability_section(
 
 /// The statement that this root's capabilities do not name the system.
 fn undeclared_view() -> AnyView {
-    view! {
-        <p class=format!(
-            "mt-default rounded-md p-default {}",
-            styles::NOTICE,
-        )>
-            "This root's terminology capabilities do not name this code system. Another FHIR version may serve it, so try the version switcher above; otherwise this deployment has not loaded it."
-        </p>
-    }
-    .into_any()
+    undeclared(
+        "This root's terminology capabilities do not name this code system. Another FHIR version may serve it, so try the version switcher above; otherwise this deployment has not loaded it.",
+    )
 }
 
 /// A refused read, in the server's own words.

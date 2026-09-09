@@ -79,9 +79,6 @@ const OPEN_PARAM: &str = "open";
 /// The prefix of the element id every tree row carries.
 const ROW_ID: &str = "browse-tree-";
 
-/// The classes a sentence that states an absence carries.
-const NOTE: &str = "mt-default text-body text-muted";
-
 /// The classes the twist that opens and closes a tree row carries.
 ///
 /// The box is 24 by 24 CSS pixels around a smaller chevron, which is the
@@ -1231,7 +1228,7 @@ struct TreeChrome<'a> {
 fn tree_view(rows: &[TreeRow], chrome: &TreeChrome) -> AnyView {
     if rows.is_empty() {
         return view! {
-            <p id="browse-tree-empty" class=NOTE>
+            <p id="browse-tree-empty" class=format!("mt-default {}", styles::MUTED)>
                 "This server answers no child for this concept, so nothing hangs below it."
             </p>
         }
@@ -1441,7 +1438,7 @@ fn go(navigate: &dyn Fn(&str, NavigateOptions), target: &str) {
 
 /// A sentence stating what the server did not declare.
 fn note(text: &'static str) -> AnyView {
-    view! { <p class=NOTE>{text}</p> }.into_any()
+    crate::components::state::invitation(text)
 }
 
 /// The concepts an expansion listed, at every depth it answered at.

@@ -36,6 +36,7 @@ use crate::components::reading::Reading;
 use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
+use crate::components::state::undeclared;
 use crate::fhir::FhirClient;
 use crate::fhir::capability::CapabilityStatement;
 use crate::fhir::concept::CHILD_OF_OPERATOR;
@@ -89,9 +90,6 @@ const ID_PARAM: &str = "id";
 /// types: one id names whatever `$validate-code` is running against, the other
 /// always names a `CodeSystem`.
 const SUBSUMES_ID_PARAM: &str = "subsumesId";
-
-/// The classes a sentence that states an absence carries.
-const NOTE: &str = "mt-default text-body text-muted";
 
 /// Runs `$validate-code` and `$subsumes`, and renders what the server answers.
 ///
@@ -432,7 +430,10 @@ fn root_section(
                     .with(|params| {
                         if params.system.is_empty() {
                             view! {
-                                <p class=NOTE>
+                                <p class=format!(
+                                    "mt-default {}",
+                                    styles::MUTED,
+                                )>
                                     "No code system is named yet. Type a canonical into the form below and run it, or "
                                     <a href=move || ui_link("", version.get()) class=styles::LINK>
                                         "pick one from the overview"
@@ -1274,12 +1275,12 @@ fn outcome_sentence(answer: &ParametersAnswer, code_a: &str, code_b: &str) -> St
 
 /// What a panel says before it has been given enough to run.
 fn invitation(text: &'static str) -> AnyView {
-    view! { <p class=NOTE>{text}</p> }.into_any()
+    crate::components::state::invitation(text)
 }
 
 /// A sentence stating what the server did not declare.
 fn note(text: &'static str) -> AnyView {
-    view! { <p class=NOTE>{text}</p> }.into_any()
+    undeclared(text)
 }
 
 /// A refusal, in the server's own words.
