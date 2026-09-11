@@ -103,8 +103,8 @@ const COMMAND_SUBMIT: &str = "form[role='search'] button[type='submit']";
 /// One offer the find screen made.
 const OFFER: &str = "section[aria-labelledby='find-offers-heading'] li a";
 
-/// The expansion runner's canonical control.
-const EXPAND_URL: &str = "#expand-url";
+/// The expansion runner's value set control.
+const EXPAND_URL: &str = "expand-url";
 
 /// The expansion runner's submit control.
 ///
@@ -121,8 +121,8 @@ const EXPANDED_ROW: &str = "section[aria-labelledby='expansion-heading'] tbody t
 /// The concept maps this root holds, as the section a shot waits for.
 const CONCEPT_MAPS: &str = "section[aria-labelledby='conceptmaps-heading']";
 
-/// The translate runner's system control.
-const TRANSLATE_SYSTEM: &str = "#translate-system";
+/// The translate runner's code system control.
+const TRANSLATE_SYSTEM: &str = "translate-system";
 
 /// The translate runner's code control.
 const TRANSLATE_CODE: &str = "#translate-code";
@@ -137,7 +137,7 @@ const TRANSLATE_ANSWER: &str = "section[aria-labelledby='translate-answer-headin
 const TRANSLATED: &str = "The server translated the code.";
 
 /// The validate runner's code system control.
-const VALIDATE_SYSTEM: &str = "#validate-system";
+const VALIDATE_SYSTEM: &str = "validate-system";
 
 /// The validate runner's code control.
 const VALIDATE_CODE: &str = "#validate-code";
@@ -157,8 +157,8 @@ const SUBSUMES_SECTION: &str = "section[aria-labelledby='subsumes-heading']";
 /// The version comparison, once the four reads have filled it.
 const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
 
-/// The control that opens the About pane the comparison is in.
-const VERSIONS_PANE: &str = "#about-versions-heading > summary";
+/// The About screen's first tab, which is the one it opens on.
+const VERSIONS_TAB: &str = "nav[aria-label='About this server'] a[href='#about-versions-heading']";
 
 /// One of the comparison's two tables.
 const COMPARISON_TABLE: &str = "section[aria-labelledby='comparison-heading'] table";
@@ -367,11 +367,7 @@ async fn expansion_runner(
     canonical: &str,
 ) -> WebDriverResult<()> {
     journey.reopen(&address(base, "expand")).await;
-    journey
-        .element(By::Css(EXPAND_URL), "the runner's canonical control")
-        .await
-        .send_keys(canonical)
-        .await?;
+    pick(journey, EXPAND_URL, canonical).await?;
     journey
         .element(By::Css(EXPAND_SUBMIT), "the runner's submit control")
         .await
@@ -385,6 +381,21 @@ async fn expansion_runner(
         .await;
     shot(journey, &dir.join("expand.png")).await?;
     Ok(())
+}
+
+/// Names `canonical` in the picker of the control `field` draws.
+///
+/// A runner offers what this root publishes, so the capture picks the way a
+/// reader does rather than typing a canonical into the field behind the list.
+async fn pick(journey: &Journey, field: &str, canonical: &str) -> WebDriverResult<()> {
+    journey
+        .element(
+            By::Css(format!("#{field}-pick option[value='{canonical}']")),
+            &format!("the offer of {canonical} in {field}"),
+        )
+        .await
+        .click()
+        .await
 }
 
 /// The command bar, and what this root can do with a canonical.
@@ -428,14 +439,7 @@ async fn concept_maps(journey: &Journey, dir: &Path, base: &str) -> WebDriverRes
 /// what one map says.
 async fn translate(journey: &Journey, dir: &Path, base: &str, system: &str) -> WebDriverResult<()> {
     journey.reopen(&address(base, "translate")).await;
-    journey
-        .element(
-            By::Css(TRANSLATE_SYSTEM),
-            "the runner's code system control",
-        )
-        .await
-        .send_keys(system)
-        .await?;
+    pick(journey, TRANSLATE_SYSTEM, system).await?;
     journey
         .element(By::Css(TRANSLATE_CODE), "the runner's code control")
         .await
@@ -471,11 +475,7 @@ async fn validate_runner(
     system: &str,
 ) -> WebDriverResult<()> {
     journey.reopen(&address(base, "validate")).await;
-    journey
-        .element(By::Css(VALIDATE_SYSTEM), "the runner's code system control")
-        .await
-        .send_keys(system)
-        .await?;
+    pick(journey, VALIDATE_SYSTEM, system).await?;
     journey
         .element(By::Css(VALIDATE_CODE), "the runner's code control")
         .await
@@ -504,16 +504,11 @@ async fn validate_runner(
 /// browser remembers. One screen, so one shot.
 async fn about(journey: &Journey, dir: &Path, base: &str) -> WebDriverResult<()> {
     journey.reopen(&address(base, "about")).await;
-    // The panes are closed until a reader opens one, so the shot opens the
-    // first: an image of three closed rows shows the shape and nothing else.
+    // The screen opens on its first tab, and the shot is of that tab with its
+    // comparison drawn rather than of the strip alone.
     journey
-        .element(
-            By::Css(VERSIONS_PANE),
-            "the control that opens the first pane",
-        )
-        .await
-        .click()
-        .await?;
+        .element(By::Css(VERSIONS_TAB), "the tab the comparison is on")
+        .await;
     journey
         .element(By::Css(COMPARISON), "the comparison the four reads fill")
         .await;
