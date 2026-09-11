@@ -2,7 +2,7 @@
 [package]
 name = "designation-index"
 description = "The fst and roaring description search index"
-version = "0.1.94"
+version = "0.1.95"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
