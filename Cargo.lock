@@ -913,6 +913,10 @@ version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
+ "concept-graph",
+ "concept-store",
+ "designation-index",
+ "fhir-terminology",
  "jiff",
  "reqwest",
  "serde",
