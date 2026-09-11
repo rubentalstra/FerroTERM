@@ -1,24 +1,42 @@
 /* SPDX-License-Identifier: BUSL-1.1 */
-/* FerroTERM brand tokens. Import this, or copy the values. */
+/* FerroTERM brand tokens. Import this, or copy the values.
+
+   Every core token carries what it is safe for on each ground, measured
+   against --ferroterm-surface and --ferroterm-tile below. WCAG 2.2 asks 4.5:1
+   for body text and 3:1 for a graphical object or large text
+   (https://www.w3.org/TR/WCAG22/#contrast-minimum), so "graphics" means the
+   mark, a rule, or an icon, and never a label. scripts/checks/brand-contrast.sh
+   measures the values and fails when a claim here stops being true. */
 :root {
   /* Core palette */
-  --ferroterm-teal: #0d9488;        /* primary mark and accents */
-  --ferroterm-teal-deep: #0f766e;   /* nodes, hover, pressed */
-  --ferroterm-cyan: #22d3ee;        /* highlight node and the diagonal edge */
-  --ferroterm-ink: #0f172a;         /* text on light */
-  --ferroterm-mist: #f1f5f9;        /* text on dark, light surface tint */
-  --ferroterm-tile: #0b1220;        /* dark tile background */
-  --ferroterm-surface: #f8fafc;     /* light surface background */
+  --ferroterm-teal: #0d9488;        /* primary mark and accents; safe: light: graphics, dark: text */
+  --ferroterm-teal-deep: #0f766e;   /* nodes, hover, pressed; safe: light: text, dark: graphics */
+  --ferroterm-cyan: #22d3ee;        /* highlight node and the diagonal edge; safe: light: neither, dark: text */
+  --ferroterm-ink: #0f172a;         /* text on light; safe: light: text, dark: neither */
+  --ferroterm-mist: #f1f5f9;        /* text on dark; safe: light: neither, dark: text */
+  --ferroterm-tile: #0b1220;        /* dark tile background; safe: light: text, dark: neither */
+  --ferroterm-surface: #f8fafc;     /* light surface background; safe: light: neither, dark: text */
 
   /* Roles */
   --ferroterm-brand: var(--ferroterm-teal);
   --ferroterm-brand-2: var(--ferroterm-cyan);
   --ferroterm-fg: var(--ferroterm-ink);
   --ferroterm-bg: var(--ferroterm-surface);
+
+  /* The brand colour as text, which is not the same colour as the mark.
+     Teal reaches 3.58:1 on the light surface, enough for the mark and short of
+     the 4.5:1 a label needs, so text in the brand colour takes the deeper teal
+     here and the brighter teal on the dark tile. Use this for a link, a small
+     bold label, or anything else a reader reads; use --ferroterm-brand for the
+     mark and for graphics. */
+  --ferroterm-brand-text: var(--ferroterm-teal-deep);
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --ferroterm-fg: var(--ferroterm-mist);
     --ferroterm-bg: var(--ferroterm-tile);
+    /* Deep teal falls to 3.42:1 on the tile, so the brighter teal carries text
+       there. The mark is unchanged: --ferroterm-brand still resolves to teal. */
+    --ferroterm-brand-text: var(--ferroterm-teal);
   }
 }
