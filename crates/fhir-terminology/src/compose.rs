@@ -1113,9 +1113,9 @@ impl Expander<'_> {
                 break;
             }
         }
-        let Some(item) = found else {
-            return Ok(None);
-        };
+        // NOTE: the ecosystem answers an unresolvable reference by naming it
+        // (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>), so the
+        // excludes are walked whether or not an include held the code.
         for exclude in &compose.exclude {
             if self
                 .include_contains(exclude, Role::Exclude, system, version, code, language)?
@@ -1124,6 +1124,9 @@ impl Expander<'_> {
                 return Ok(None);
             }
         }
+        let Some(item) = found else {
+            return Ok(None);
+        };
         if compose.inactive == Some(false) && item.inactive {
             return Ok(None);
         }
