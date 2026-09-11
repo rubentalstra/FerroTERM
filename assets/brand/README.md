@@ -26,6 +26,47 @@ is the largest.
 The values live in `tokens.css` as custom properties. On a dark tile the mark
 brightens to teal `#14b8a6` edges and `#2dd4bf` nodes so it holds contrast.
 
+## Contrast
+
+WCAG 2.2 asks **4.5:1** for body text and **3:1** for a graphical object or
+large text ([contrast minimum](https://www.w3.org/TR/WCAG22/#contrast-minimum),
+[non-text contrast](https://www.w3.org/TR/WCAG22/#non-text-contrast)). Every
+token is measured against both grounds this palette draws on, the light surface
+and the dark tile. "Graphics" in the last column means the mark, a rule, or an
+icon, and never a label.
+
+| Token | Value | On #f8fafc | On #0b1220 | Safe for |
+|---|---|---|---|---|
+| `--ferroterm-teal` | `#0d9488` | 3.58 | 5.00 | light: graphics, dark: text |
+| `--ferroterm-teal-deep` | `#0f766e` | 5.23 | 3.42 | light: text, dark: graphics |
+| `--ferroterm-cyan` | `#22d3ee` | 1.73 | 10.36 | light: neither, dark: text |
+| `--ferroterm-ink` | `#0f172a` | 17.06 | 1.05 | light: text, dark: neither |
+| `--ferroterm-mist` | `#f1f5f9` | 1.05 | 17.09 | light: neither, dark: text |
+| `--ferroterm-tile` | `#0b1220` | 17.89 | 1.00 | light: text, dark: neither |
+| `--ferroterm-surface` | `#f8fafc` | 1.00 | 17.89 | light: neither, dark: text |
+
+Three of these are safe for the mark and not for text, which is the distinction
+the table exists to make:
+
+- **Teal is a mark colour on light.** At 3.58:1 it clears the 3:1 a graphic
+  needs and falls short of the 4.5:1 a label needs. The role token
+  `--ferroterm-brand` is teal because the mark is teal; text in the brand colour
+  takes `--ferroterm-brand-text`, which resolves to deep teal on light and to
+  teal on the dark tile, where each reaches 4.5:1.
+- **Deep teal is the mirror image.** It carries text on light at 5.23:1 and
+  drops to 3.42:1 on the tile, where it is a graphic only.
+- **Cyan is a highlight, not a colour to write in.** At 1.73:1 on the light
+  surface it misses even the graphics threshold, so on light it is safe for
+  neither; on the dark tile it reaches 10.36:1.
+
+The mark itself is unchanged. It is a graphic, it passes 3:1 on both grounds,
+and the same artwork is used by FerroHEALTH.
+
+`scripts/checks/brand-contrast.sh` measures the values in `tokens.css` and fails
+when this table or a token's own `safe:` comment stops matching what it
+measures, so the figures here are checked rather than remembered. The `brand`
+CI job runs it on every pull request.
+
 ## Files
 
 | File | What it is |
