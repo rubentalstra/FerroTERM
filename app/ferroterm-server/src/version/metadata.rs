@@ -282,6 +282,11 @@ macro_rules! metadata {
             }
 
             /// The search parameters every stored resource type answers.
+            ///
+            /// `_elements` names what to return rather than what to match, and
+            /// every served version defines it on `Resource`, so it is declared
+            /// with its own definition
+            /// (<https://hl7.org/fhir/R5/search.html#elements>).
             fn search_params() -> Vec<CapabilityStatementRestResourceSearchParam> {
                 let search_param = |name: &str, code: &str| {
                     CapabilityStatementRestResourceSearchParam {
@@ -290,7 +295,19 @@ macro_rules! metadata {
                         ..Default::default()
                     }
                 };
-                vec![search_param("url", "uri"), search_param("version", "token")]
+                let elements = CapabilityStatementRestResourceSearchParam {
+                    name: crate::elements::PARAMETER.into(),
+                    definition: Some(
+                        "http://hl7.org/fhir/SearchParameter/Resource-elements".into(),
+                    ),
+                    r#type: "string".into(),
+                    ..Default::default()
+                };
+                vec![
+                    search_param("url", "uri"),
+                    search_param("version", "token"),
+                    elements,
+                ]
             }
 
             /// The three resource types this server serves, with their

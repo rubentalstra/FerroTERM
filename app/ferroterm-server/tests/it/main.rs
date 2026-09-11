@@ -18,6 +18,7 @@ mod code_system;
 mod concept_map;
 mod config;
 mod ecosystem;
+mod elements;
 mod fixture;
 mod health;
 mod metadata;

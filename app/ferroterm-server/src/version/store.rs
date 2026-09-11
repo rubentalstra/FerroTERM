@@ -546,6 +546,10 @@ pub(crate) fn loaded_code_systems(
 }
 
 /// The `url` and `version` a search names.
+///
+/// `_elements` names what to return rather than what to match, so it passes
+/// through here and is applied to the answer
+/// (<https://hl7.org/fhir/R5/search.html#elements>).
 fn criteria(query: &[(String, String)]) -> Result<(Option<&str>, Option<&str>), Failure> {
     let mut url = None;
     let mut version = None;
@@ -553,17 +557,32 @@ fn criteria(query: &[(String, String)]) -> Result<(Option<&str>, Option<&str>), 
         match name.as_str() {
             "url" => url = Some(value.as_str()),
             "version" => version = Some(value.as_str()),
-            "_format" => {}
+            "_format" | crate::elements::PARAMETER => {}
             other => {
                 return Err(Failure::new(
                     StatusCode::BAD_REQUEST,
                     "not-supported",
-                    format!("search parameter `{other}` is not supported; use `url` and `version`"),
+                    format!(
+                        "search parameter `{other}` is not supported; use `url`, `version` or `_elements`"
+                    ),
                 ));
             }
         }
     }
     Ok((url, version))
+}
+
+/// The elements a search asked to be returned, or none when it named no
+/// `_elements`.
+///
+/// A repeated parameter is one list: the specification lets a client send
+/// `_elements` more than once, and the union is what it asked for.
+pub(crate) fn wanted_elements(query: &[(String, String)]) -> Vec<String> {
+    query
+        .iter()
+        .filter(|(name, _)| name == crate::elements::PARAMETER)
+        .flat_map(|(_, value)| crate::elements::requested(value))
+        .collect()
 }
 
 /// The `500` of a resource the server holds but cannot encode.
@@ -927,15 +946,23 @@ macro_rules! store {
                         "too many resources to count",
                     )
                 })?;
-                parameters::respond_resource(
-                    &Bundle {
-                        r#type: "searchset".into(),
-                        total: Some(total.into()),
-                        entry,
-                        ..Default::default()
-                    },
-                    wire,
-                )
+                let bundle = Bundle {
+                    r#type: "searchset".into(),
+                    total: Some(total.into()),
+                    entry,
+                    ..Default::default()
+                };
+                let wanted = crate::version::store::wanted_elements(query);
+                if wanted.is_empty() {
+                    return parameters::respond_resource(&bundle, wire);
+                }
+                // A subset of a resource is not a resource, so it has no typed
+                // form to build: the projection is over the wire object, which
+                // is also what lets one implementation serve all four versions.
+                let mut object = fhir_types::codec::Json::to_json(&bundle)
+                    .map_err(|reason| crate::version::store::rendering(&reason.to_string()))?;
+                crate::elements::project_bundle(&mut object, &wanted);
+                wire.object(StatusCode::OK, &object, &fhir_types::$fhir::schema::SCHEMAS)
             }
 
             /// The stored resource of `resource_type` with `id`, when there is

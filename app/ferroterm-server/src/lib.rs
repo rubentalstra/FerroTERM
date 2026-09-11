@@ -13,6 +13,7 @@
 
 pub mod banner;
 pub mod config;
+pub mod elements;
 pub mod metrics;
 pub mod outcome;
 pub mod persistence;
