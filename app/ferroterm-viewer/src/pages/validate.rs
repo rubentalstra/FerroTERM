@@ -23,20 +23,26 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::field::CANONICAL_WORDS;
 use crate::components::field::Field;
 use crate::components::field::Help;
+use crate::components::field::VERSION_WORDS;
 use crate::components::field::group;
 use crate::components::field::help_toggle;
+use crate::components::field::picked_field;
 use crate::components::field::row;
 use crate::components::field::select_field;
 use crate::components::field::text_field;
+use crate::components::field::versioned_row;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
 use crate::components::state::undeclared;
+use crate::fhir::CODE_SYSTEM;
 use crate::fhir::FhirClient;
+use crate::fhir::VALUE_SET;
 use crate::fhir::capability::CapabilityStatement;
 use crate::fhir::concept::CHILD_OF_OPERATOR;
 use crate::fhir::concept::CODE_PARAMETER;
@@ -44,6 +50,7 @@ use crate::fhir::concept::Hierarchy;
 use crate::fhir::concept::chosen_version;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::DISPLAY_LANGUAGE_PARAMETER;
+use crate::fhir::named::Choice;
 use crate::fhir::terminology::TerminologyCapabilities;
 use crate::fhir::terminology::VersionRow;
 use crate::fhir::translate::Coding;
@@ -63,13 +70,15 @@ use crate::fhir::validation::ValidationIssue;
 use crate::fhir::validation::offered;
 use crate::fhir::validation::subsumption_sentence;
 use crate::fhir::version::FhirVersion;
+use crate::offers::choices;
+use crate::offers::published;
+use crate::offers::versions;
 use crate::routes::SYSTEM_PARAM;
 use crate::routes::SYSTEM_VERSION_PARAM;
 use crate::routes::UI_BASE;
 use crate::routes::VALIDATE_PATH;
 use crate::routes::VERSION_PARAM;
 use crate::routes::system_link;
-use crate::routes::ui_link;
 use crate::runs::Run;
 use crate::styles;
 use crate::url::RequestUrl;
@@ -152,9 +161,9 @@ pub(crate) fn ValidatePage() -> impl IntoView {
     });
 
     let heading = view! {
-        <Title text="Validate and subsume" />
-        <h1 class=styles::PAGE_TITLE>"Validate and subsume"</h1>
-        <p class=styles::LEAD>"Check one code, and ask how two codes relate."</p>
+        <Title text="Check a code" />
+        <h1 class=styles::PAGE_TITLE>"Check a code"</h1>
+        <p class=styles::LEAD>"Is this code valid, and how do two codes relate?"</p>
     }
     .into_any();
 
@@ -174,8 +183,23 @@ pub(crate) fn ValidatePage() -> impl IntoView {
     });
     let history = History::recording(made);
 
+    let system_search = published(&client, version, CODE_SYSTEM);
+    let value_set_search = published(&client, version, VALUE_SET);
+    let picks = Picks {
+        systems: choices(system_search),
+        system_versions: versions(
+            system_search,
+            Memo::new(move |_| params.with(|params| params.system.clone())),
+        ),
+        value_sets: choices(value_set_search),
+        value_set_versions: versions(
+            value_set_search,
+            Memo::new(move |_| params.with(|params| params.value_set.clone())),
+        ),
+    };
+
     let root = root_section(version, params, capabilities, statement, declared);
-    let validate = validate_section(&client, version, params, declared);
+    let validate = validate_section(&client, version, params, declared, picks);
     let subsumes = subsumes_section(&client, version, params, declared);
 
     view! {
@@ -185,6 +209,19 @@ pub(crate) fn ValidatePage() -> impl IntoView {
         {subsumes}
         {history.view()}
     }
+}
+
+/// What this root publishes, as the offers this screen's pickers make.
+#[derive(Clone, Copy)]
+struct Picks {
+    /// The code systems a code can be checked against.
+    systems: Memo<Vec<Choice>>,
+    /// The versions of the code system the form names.
+    system_versions: Memo<Vec<Choice>>,
+    /// The value sets a code can be checked against.
+    value_sets: Memo<Vec<Choice>>,
+    /// The versions of the value set the form names.
+    value_set_versions: Memo<Vec<Choice>>,
 }
 
 /// What the served root declares, as every section below reads it.
@@ -425,10 +462,7 @@ fn root_section(
                                     "mt-default {}",
                                     styles::MUTED,
                                 )>
-                                    "No code system is named yet. Type a canonical into the form below and run it, or "
-                                    <a href=move || ui_link("", version.get()) class=styles::LINK>
-                                        "pick one from the overview"
-                                    </a> "."
+                                    "No code system is named yet. Choose one below, name the code, and run it."
                                 </p>
                             }
                                 .into_any()
@@ -499,6 +533,7 @@ fn validate_section(
     version: Signal<FhirVersion>,
     params: Signal<RunnerParams>,
     declared: Memo<Declared>,
+    picks: Picks,
 ) -> AnyView {
     let offered: Memo<Offered> = Memo::new(move |_| {
         params.with(|params| declared.with(|d| d.operations.validate(params.on)))
@@ -533,7 +568,7 @@ fn validate_section(
     });
 
     let body = move || {
-        let form = validate_form(params, version, declared, offered);
+        let form = validate_form(params, version, declared, offered, picks);
         let answered = view! {
             <p aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
                 {announcement}
@@ -572,8 +607,9 @@ fn validate_section(
     view! {
         <section class="mt-section" aria-labelledby="validate-heading">
             <h2 id="validate-heading" class=styles::SECTION_TITLE>
-                "$validate-code"
+                "Is this code valid?"
             </h2>
+            <p class=styles::HINT>"$validate-code"</p>
             {move || {
                 if offered.get().declared {
                     body()
@@ -598,6 +634,7 @@ fn validate_form(
     version: Signal<FhirVersion>,
     declared: Memo<Declared>,
     offered: Memo<Offered>,
+    picks: Picks,
 ) -> AnyView {
     let system: NodeRef<Input> = NodeRef::new();
     let system_version: NodeRef<Input> = NodeRef::new();
@@ -633,11 +670,14 @@ fn validate_form(
                 version,
                 declared,
                 offered,
-                system,
-                system_version,
-                value_set,
-                value_set_version,
-                id,
+                picks,
+                Nodes {
+                    system,
+                    system_version,
+                    value_set,
+                    value_set_version,
+                    id,
+                },
             )}
             {code_group(params, code, display, language)}
             <div class="flex flex-wrap items-center gap-default">
@@ -652,44 +692,56 @@ fn validate_form(
     .into_any()
 }
 
+/// The controls one group of the form draws, by the value each carries.
+#[derive(Clone, Copy)]
+struct Nodes {
+    /// The code system canonical.
+    system: NodeRef<Input>,
+    /// The version of that code system.
+    system_version: NodeRef<Input>,
+    /// The value set canonical.
+    value_set: NodeRef<Input>,
+    /// The version of that value set.
+    value_set_version: NodeRef<Input>,
+    /// The id of a stored resource, for an instance-level run.
+    id: NodeRef<Input>,
+}
+
 /// Which resource the code is checked against, and which version of it.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "one group of a form owns one node reference per control it draws"
-)]
 fn target_group(
     params: Signal<RunnerParams>,
     version: Signal<FhirVersion>,
     declared: Memo<Declared>,
     offered: Memo<Offered>,
-    system: NodeRef<Input>,
-    system_version: NodeRef<Input>,
-    value_set: NodeRef<Input>,
-    value_set_version: NodeRef<Input>,
-    id: NodeRef<Input>,
+    picks: Picks,
+    nodes: Nodes,
 ) -> AnyView {
     let value_set_fields = move || {
         (params.with(|params| params.on) == ValidateOn::ValueSet).then(|| {
-            row(vec![
-                text_field(
+            versioned_row(vec![
+                picked_field(
                     Field {
                         id: "validate-value-set",
                         name: "url",
-                        label: "Value set canonical",
-                        hint: "The url parameter of ValueSet/$validate-code. An implicit canonical carrying its own query string works: the runner encodes the whole value.",
+                        label: "Value set",
+                        hint: "The url parameter of ValueSet/$validate-code. The list is what this root publishes; an implicit canonical carrying its own query string is typed, and the runner encodes the whole value.",
                     },
-                    value_set,
+                    nodes.value_set,
                     seeded(params, |params| params.value_set.clone()),
+                    picks.value_sets,
+                    CANONICAL_WORDS,
                 ),
-                text_field(
+                picked_field(
                     Field {
                         id: "validate-value-set-version",
                         name: VALUE_SET_VERSION_PARAMETER,
                         label: "Value set version",
-                        hint: "The valueSetVersion parameter. Left empty, the server picks the version it holds.",
+                        hint: "The valueSetVersion parameter. The list is the versions this root published of the value set named beside it.",
                     },
-                    value_set_version,
+                    nodes.value_set_version,
                     seeded(params, |params| params.value_set_version.clone()),
+                    picks.value_set_versions,
+                    VERSION_WORDS,
                 ),
             ])
         })
@@ -703,7 +755,7 @@ fn target_group(
                     label: "Resource id (instance level)",
                     hint: "This root declares the instance level of $validate-code, so a stored resource's id can stand in for the canonical. Filled in, the run addresses that resource and sends no url.",
                 },
-                id,
+                nodes.id,
                 seeded(params, |params| params.id.clone()),
             )
         })
@@ -718,38 +770,38 @@ fn target_group(
         "What the code is checked against",
         vec![
             on_field(params, version, declared),
-            system_fields(params, system, system_version),
+            system_fields(params, picks, nodes),
             optional,
         ],
     )
 }
 
 /// The code system both runners work over, and the version of it.
-fn system_fields(
-    params: Signal<RunnerParams>,
-    system: NodeRef<Input>,
-    system_version: NodeRef<Input>,
-) -> AnyView {
-    row(vec![
-        text_field(
+fn system_fields(params: Signal<RunnerParams>, picks: Picks, nodes: Nodes) -> AnyView {
+    versioned_row(vec![
+        picked_field(
             Field {
                 id: "validate-system",
                 name: "system",
-                label: "Code system canonical",
-                hint: "The code system the code belongs to. It is the url of a CodeSystem run and the system of a value set run, and the $subsumes panel below reads it too.",
+                label: "Code system",
+                hint: "The code system the code belongs to. The list is what this root publishes, and a canonical it does not is typed. It is the url of a CodeSystem run and the system of a value set run, and the $subsumes panel below reads it too.",
             },
-            system,
+            nodes.system,
             seeded(params, |params| params.system.clone()),
+            picks.systems,
+            CANONICAL_WORDS,
         ),
-        text_field(
+        picked_field(
             Field {
                 id: "validate-system-version",
                 name: "version",
                 label: "Code system version",
-                hint: "Left empty, the server resolves the version an unversioned request goes to.",
+                hint: "The list is the versions this root published of the code system named beside it. Left unnamed, the server resolves the version an unversioned request goes to.",
             },
-            system_version,
+            nodes.system_version,
             seeded(params, |params| params.system_version.clone()),
+            picks.system_versions,
+            VERSION_WORDS,
         ),
     ])
 }
@@ -928,8 +980,9 @@ fn subsumes_section(
     view! {
         <section class="mt-section" aria-labelledby="subsumes-heading">
             <h2 id="subsumes-heading" class=styles::SECTION_TITLE>
-                "$subsumes"
+                "How do two codes relate?"
             </h2>
+            <p class=styles::HINT>"$subsumes"</p>
             {move || {
                 if !offered.get().declared {
                     note(

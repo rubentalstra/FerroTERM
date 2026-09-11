@@ -14,27 +14,35 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::field::CANONICAL_WORDS;
 use crate::components::field::Field;
 use crate::components::field::Help;
+use crate::components::field::VERSION_WORDS;
 use crate::components::field::group;
 use crate::components::field::help_toggle;
-use crate::components::field::row;
+use crate::components::field::picked_field;
 use crate::components::field::text_field;
+use crate::components::field::versioned_row;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
 use crate::components::state::undeclared;
+use crate::fhir::CODE_SYSTEM;
 use crate::fhir::CONCEPT_MAP;
 use crate::fhir::FhirClient;
 use crate::fhir::error::FhirError;
+use crate::fhir::named::Choice;
 use crate::fhir::translate::Coding;
 use crate::fhir::translate::NamedValue;
 use crate::fhir::translate::TranslateAnswer;
 use crate::fhir::translate::TranslateRequest;
 use crate::fhir::translate::TranslationMatch;
 use crate::fhir::version::FhirVersion;
+use crate::offers::choices;
+use crate::offers::published;
+use crate::offers::versions;
 use crate::routes::TRANSLATE_PATH;
 use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
@@ -85,8 +93,8 @@ pub(crate) fn TranslatePage() -> impl IntoView {
         Memo::new(move |_| query.with(|map| read_run(&|name| map.get(name)))).into();
 
     let heading = view! {
-        <Title text="Translate" />
-        <h1 class=styles::PAGE_TITLE>"Translate a code"</h1>
+        <Title text="Map a code" />
+        <h1 class=styles::PAGE_TITLE>"Map a code"</h1>
         <p class=styles::LEAD>"One code through the maps this root holds."</p>
     }
     .into_any();
@@ -194,6 +202,20 @@ fn runner_section(
     version: Signal<FhirVersion>,
     run: Signal<TranslateRequest>,
 ) -> AnyView {
+    let map_search = published(client, version, CONCEPT_MAP);
+    let system_search = published(client, version, CODE_SYSTEM);
+    let picks = Picks {
+        maps: choices(map_search),
+        map_versions: versions(
+            map_search,
+            Memo::new(move |_| run.with(|run| run.concept_map.clone())),
+        ),
+        systems: choices(system_search),
+        system_versions: versions(
+            system_search,
+            Memo::new(move |_| run.with(|run| run.system.clone())),
+        ),
+    };
     let read_client = client.clone();
     let statement = LocalResource::new(move || {
         let client = read_client.clone();
@@ -233,7 +255,7 @@ fn runner_section(
                 }}
             </Reading>
             <Show when=move || declared.get() fallback=|| ()>
-                {runner_form(run, version)}
+                {runner_form(run, version, picks)}
             </Show>
         </section>
     }
@@ -258,8 +280,25 @@ fn seeded(run: Signal<TranslateRequest>, read: fn(&TranslateRequest) -> String) 
     Memo::new(move |_| run.with(read))
 }
 
+/// What this root publishes, as the offers this screen's pickers make.
+#[derive(Clone, Copy)]
+struct Picks {
+    /// The concept maps a translation can run over.
+    maps: Memo<Vec<Choice>>,
+    /// The versions of the concept map the form names.
+    map_versions: Memo<Vec<Choice>>,
+    /// The code systems a code can be read in, and translated into.
+    systems: Memo<Vec<Choice>>,
+    /// The versions of the code system the form names.
+    system_versions: Memo<Vec<Choice>>,
+}
+
 /// The runner, as a form that navigates rather than reloading the page.
-fn runner_form(run: Signal<TranslateRequest>, version: Signal<FhirVersion>) -> AnyView {
+fn runner_form(
+    run: Signal<TranslateRequest>,
+    version: Signal<FhirVersion>,
+    picks: Picks,
+) -> AnyView {
     let map: NodeRef<Input> = NodeRef::new();
     let map_version: NodeRef<Input> = NodeRef::new();
     let system: NodeRef<Input> = NodeRef::new();
@@ -281,9 +320,9 @@ fn runner_form(run: Signal<TranslateRequest>, version: Signal<FhirVersion>) -> A
     };
     view! {
         <form class="mt-loose grid gap-loose" on:submit=submit>
-            {map_group(run, map, map_version)}
-            {code_group(run, system, system_version, code)}
-            {target_group(run, target)}
+            {map_group(run, map, map_version, picks)}
+            {code_group(run, system, system_version, code, picks)}
+            {target_group(run, target, picks)}
             <div class="flex flex-wrap items-center gap-default">
                 <button type="submit" class=styles::SUBMIT>
                     <Icon glyph=icon::CONCEPT_MAPS />
@@ -301,29 +340,34 @@ fn map_group(
     run: Signal<TranslateRequest>,
     map: NodeRef<Input>,
     map_version: NodeRef<Input>,
+    picks: Picks,
 ) -> AnyView {
     group(
         "The map",
-        vec![row(vec![
-            text_field(
+        vec![versioned_row(vec![
+            picked_field(
                 Field {
                     id: "translate-map",
                     name: MAP_PARAM,
-                    label: "Concept map canonical",
-                    hint: "Sent as the url parameter. Left empty, the server picks the maps it holds for the code.",
+                    label: "Concept map",
+                    hint: "Sent as the url parameter. The list is what this root publishes. Left empty, the server picks the maps it holds for the code.",
                 },
                 map,
                 seeded(run, |run| run.concept_map.clone()),
+                picks.maps,
+                CANONICAL_WORDS,
             ),
-            text_field(
+            picked_field(
                 Field {
                     id: "translate-map-version",
                     name: MAP_VERSION_PARAM,
                     label: "Concept map version",
-                    hint: "Sent as conceptMapVersion.",
+                    hint: "Sent as conceptMapVersion. The list is the versions this root published of the map named beside it.",
                 },
                 map_version,
                 seeded(run, |run| run.concept_map_version.clone()),
+                picks.map_versions,
+                VERSION_WORDS,
             ),
         ])],
     )
@@ -335,30 +379,35 @@ fn code_group(
     system: NodeRef<Input>,
     system_version: NodeRef<Input>,
     code: NodeRef<Input>,
+    picks: Picks,
 ) -> AnyView {
     group(
         "The code",
         vec![
-            row(vec![
-                text_field(
+            versioned_row(vec![
+                picked_field(
                     Field {
                         id: "translate-system",
                         name: SYSTEM_PARAM,
                         label: "Code system",
-                        hint: "The system the code belongs to. The operation requires one with a code.",
+                        hint: "The system the code belongs to. The list is what this root publishes. The operation requires one with a code.",
                     },
                     system,
                     seeded(run, |run| run.system.clone()),
+                    picks.systems,
+                    CANONICAL_WORDS,
                 ),
-                text_field(
+                picked_field(
                     Field {
                         id: "translate-system-version",
                         name: SYSTEM_VERSION_PARAM,
                         label: "Code system version",
-                        hint: "Left empty, the server resolves the code against its default version.",
+                        hint: "The list is the versions this root published of the code system named beside it. Left unnamed, the server resolves the code against its default version.",
                     },
                     system_version,
                     seeded(run, |run| run.system_version.clone()),
+                    picks.system_versions,
+                    VERSION_WORDS,
                 ),
             ]),
             text_field(
@@ -376,18 +425,20 @@ fn code_group(
 }
 
 /// Where the answer is allowed to land.
-fn target_group(run: Signal<TranslateRequest>, target: NodeRef<Input>) -> AnyView {
+fn target_group(run: Signal<TranslateRequest>, target: NodeRef<Input>, picks: Picks) -> AnyView {
     group(
         "The target",
-        vec![text_field(
+        vec![picked_field(
             Field {
                 id: "translate-target",
                 name: TARGET_PARAM,
                 label: "Target code system",
-                hint: "Narrows the answer to matches in this system. Left empty, every target the map reaches is returned.",
+                hint: "Narrows the answer to matches in this system. The list is what this root publishes. Left empty, every target the map reaches is returned.",
             },
             target,
             seeded(run, |run| run.target_system.clone()),
+            picks.systems,
+            CANONICAL_WORDS,
         )],
     )
 }

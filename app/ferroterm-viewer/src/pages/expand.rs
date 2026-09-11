@@ -10,6 +10,7 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
+use crate::components::field::CANONICAL_WORDS;
 use crate::components::field::Field;
 use crate::components::field::Help;
 use crate::components::field::check_field;
@@ -17,6 +18,7 @@ use crate::components::field::group;
 use crate::components::field::help_toggle;
 use crate::components::field::note;
 use crate::components::field::number_field;
+use crate::components::field::picked_field;
 use crate::components::field::text_field;
 use crate::components::icon;
 use crate::components::icon::Glyph;
@@ -25,6 +27,7 @@ use crate::components::reading::Reading;
 use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
+use crate::fhir::VALUE_SET;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ACTIVE_ONLY_PARAMETER;
 use crate::fhir::expansion::COUNT_PARAMETER;
@@ -40,7 +43,10 @@ use crate::fhir::expansion::OFFSET_PARAMETER;
 use crate::fhir::expansion::ParameterLine;
 use crate::fhir::expansion::URL_PARAMETER;
 use crate::fhir::expansion::Unclosed;
+use crate::fhir::named::Choice;
 use crate::fhir::version::FhirVersion;
+use crate::offers::choices;
+use crate::offers::published;
 use crate::paging::MAX_COUNT;
 use crate::paging::Page;
 use crate::routes::UI_BASE;
@@ -92,9 +98,9 @@ pub(crate) fn ExpandPage() -> impl IntoView {
         Memo::new(move |_| params.with(RunnerParams::request)).into();
 
     let heading = view! {
-        <Title text="Expansion runner" />
-        <h1 class=styles::PAGE_TITLE>"Expansion runner"</h1>
-        <p class=styles::LEAD>"Expand a value set by its canonical, a page at a time."</p>
+        <Title text="List a value set" />
+        <h1 class=styles::PAGE_TITLE>"List a value set"</h1>
+        <p class=styles::LEAD>"Which codes are in it, a page at a time."</p>
     }
     .into_any();
 
@@ -111,7 +117,11 @@ pub(crate) fn ExpandPage() -> impl IntoView {
     });
     let history = History::recording(made);
 
-    let form = form_section(params, version);
+    let form = form_section(
+        params,
+        version,
+        choices(published(&client, version, VALUE_SET)),
+    );
     let results = result_section(&client, version, params, request);
 
     // The answer keeps its own column above the large breakpoint, so a
@@ -395,7 +405,11 @@ impl Pager {
 /// parameter, so a back navigation refills it while a navigation that moves
 /// another parameter leaves it as the reader left it, and it is read back from
 /// the document when they submit.
-fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> AnyView {
+fn form_section(
+    params: Signal<RunnerParams>,
+    version: Signal<FhirVersion>,
+    value_sets: Memo<Vec<Choice>>,
+) -> AnyView {
     let seeds = Seeds::of(params);
     let canonical: NodeRef<Input> = NodeRef::new();
     let filter: NodeRef<Input> = NodeRef::new();
@@ -437,7 +451,7 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
 
     view! {
         <form class="mt-loose grid gap-loose" on:submit=submit>
-            {value_set_group(canonical, seeds)}
+            {value_set_group(canonical, seeds, value_sets)}
             {selection_group(filter, active_only, seeds)}
             {answer_group(count, language, designations, seeds, params)}
             <div class="flex flex-wrap items-center gap-default">
@@ -453,18 +467,24 @@ fn form_section(params: Signal<RunnerParams>, version: Signal<FhirVersion>) -> A
 }
 
 /// Which value set the run expands.
-fn value_set_group(canonical: NodeRef<Input>, seeds: Seeds) -> AnyView {
+fn value_set_group(
+    canonical: NodeRef<Input>,
+    seeds: Seeds,
+    value_sets: Memo<Vec<Choice>>,
+) -> AnyView {
     group(
         "Value set",
-        vec![text_field(
+        vec![picked_field(
             Field {
                 id: "expand-url",
                 name: "url",
-                label: "Canonical",
-                hint: "The url parameter of $expand. An implicit canonical carrying its own query string works: the runner encodes the whole value.",
+                label: "Value set",
+                hint: "The url parameter of $expand. The list is what this root publishes; an implicit canonical carrying its own query string is typed, and the runner encodes the whole value.",
             },
             canonical,
             seeds.url,
+            value_sets,
+            CANONICAL_WORDS,
         )],
     )
 }

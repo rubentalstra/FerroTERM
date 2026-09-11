@@ -11,6 +11,7 @@ pub(crate) mod concept_map;
 pub(crate) mod error;
 pub(crate) mod expansion;
 pub(crate) mod facts;
+pub(crate) mod named;
 pub(crate) mod outcome;
 pub(crate) mod searchset;
 pub(crate) mod terminology;
@@ -33,6 +34,7 @@ use crate::fhir::concept_map::PublishedConceptMap;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ExpandRequest;
 use crate::fhir::expansion::ExpandedValueSet;
+use crate::fhir::named::NamedSearch;
 use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::searchset::SearchFilter;
 use crate::fhir::searchset::SearchSet;
@@ -160,30 +162,33 @@ impl FhirClient {
             .render(&self.root)
     }
 
-    /// The address the overview reads every published system's name from.
+    /// The address the name of every published resource of one type is read
+    /// from.
     ///
-    /// `_elements` narrows the answer to the three fields a row draws. A
-    /// published `CodeSystem` may carry its concepts inline, so the whole
+    /// `_elements` narrows the answer to the four fields a picker needs. A
+    /// published resource may carry its whole content inline, so the whole
     /// search is a quarter of a megabyte where this is four kilobytes
     /// (<https://hl7.org/fhir/R5/search.html#elements>).
-    pub(crate) fn code_system_names_url(&self, version: FhirVersion) -> String {
+    pub(crate) fn published_names_url(&self, version: FhirVersion, resource_type: &str) -> String {
         RequestUrl::new()
             .segment(version.segment())
-            .segment("CodeSystem")
-            .query("_elements", "url,name,title")
+            .segment(resource_type)
+            .query("_elements", "url,name,title,version")
             .render(&self.root)
     }
 
-    /// Reads the name every published code system carries.
+    /// Reads the name every published resource of one type carries.
     ///
     /// # Errors
     ///
     /// Returns the variant of [`FhirError`] describing what went wrong.
-    pub(crate) async fn code_system_names(
+    pub(crate) async fn published_names(
         &self,
         version: FhirVersion,
-    ) -> Result<CodeSystemSearch, FhirError> {
-        self.get_json(&self.code_system_names_url(version)).await
+        resource_type: &str,
+    ) -> Result<NamedSearch, FhirError> {
+        self.get_json(&self.published_names_url(version, resource_type))
+            .await
     }
 
     /// Reads the `CapabilityStatement` of one served FHIR version.

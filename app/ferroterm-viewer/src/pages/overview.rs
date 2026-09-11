@@ -9,8 +9,9 @@ use crate::components::failure::Failure;
 use crate::components::reading::Reading;
 use crate::components::shell::SelectedVersion;
 use crate::components::system_table::SystemTable;
+use crate::fhir::CODE_SYSTEM;
 use crate::fhir::FhirClient;
-use crate::fhir::code_system::CodeSystemSearch;
+use crate::fhir::named::NamedSearch;
 use crate::fhir::terminology::SystemCard;
 use crate::fhir::version::FhirVersion;
 use crate::styles;
@@ -114,14 +115,14 @@ fn systems_section(client: &FhirClient, version: Signal<FhirVersion>) -> AnyView
     let published = LocalResource::new(move || {
         let client = names_client.clone();
         let version = version.get();
-        async move { client.code_system_names(version).await }
+        async move { client.published_names(version, CODE_SYSTEM).await }
     });
     let names = Memo::new(move |_| {
         published.with(|answered| {
             answered
                 .as_ref()
                 .and_then(|result| result.as_ref().ok())
-                .map(CodeSystemSearch::names)
+                .map(NamedSearch::names)
                 .unwrap_or_default()
         })
     });
