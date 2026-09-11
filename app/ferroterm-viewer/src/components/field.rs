@@ -307,6 +307,13 @@ pub(crate) fn picked_field(
         })
     };
     let typed = move || typing.get() || unlisted();
+    // A select drops a value it has no option for, and the address is read
+    // before the search that fills the list answers, so the offers are read
+    // here: reading them is what writes the value again when they arrive.
+    let selected = move || {
+        choices.with(Vec::len);
+        value.get()
+    };
     let choose = move |event: Event| {
         let canonical = event_target_value(&event);
         if canonical == TYPE_IT {
@@ -335,14 +342,7 @@ pub(crate) fn picked_field(
                 class=styles::INPUT
                 aria-describedby=described_by.clone()
                 hidden=typed
-                prop:value=move || {
-                    // The offers are read here so that the value is written
-                    // again when they arrive: a select drops a value it has no
-                    // option for, and the address is read before the search
-                    // that fills the list answers.
-                    choices.with(Vec::len);
-                    value.get()
-                }
+                prop:value=selected
                 on:change=choose
             >
                 <option value="">{words.empty}</option>
