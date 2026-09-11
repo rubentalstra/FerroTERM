@@ -102,6 +102,35 @@ impl Server {
         }
     }
 
+    /// A server holding one archetype's local terminology and nothing else.
+    ///
+    /// The four resources are what a producer derives from an openEHR
+    /// archetype, written into a directory the way any other supplied resource
+    /// is, so the server reads them through the ordinary path.
+    pub(crate) fn start_with_archetype_terminology() -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let derived = dir.path().join("openehr");
+        std::fs::create_dir_all(&derived).expect("creates");
+        ferroterm_testkit::openehr::write_archetype_terminology(&derived)
+            .expect("writes the archetype's terminology");
+        // A second producer of the same archetype, under its own domain, so a
+        // test can show the two canonicals do not collide.
+        let elsewhere = dir.path().join("elsewhere");
+        std::fs::create_dir_all(&elsewhere).expect("creates");
+        ferroterm_testkit::openehr::write_second_deployer(&elsewhere)
+            .expect("writes the second deployer's resources");
+        let config = Config {
+            code_systems: vec![derived, elsewhere],
+            ..Config::default()
+        };
+        let state = Arc::new(AppState::load(&config).expect("loads"));
+        Self {
+            _dir: Arc::new(dir),
+            config,
+            state,
+        }
+    }
+
     fn start_with(resources: bool, persists: bool) -> Self {
         let dir = tempfile::tempdir().expect("tempdir");
         ferroterm_testkit::snomed::write(dir.path()).expect("writes the edition");

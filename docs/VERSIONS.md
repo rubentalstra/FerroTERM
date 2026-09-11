@@ -36,7 +36,13 @@ discovery-phase repo.
 
 ## openEHR: n/a
 
-FerroTERM is a FHIR/SNOMED project; it has no openEHR pins.
+FerroTERM is a FHIR/SNOMED project; it has no openEHR pins, and this stays
+true now that it serves an archetype's local terminology. It ingests the FHIR
+resources a producer derives from an archetype and reads no openEHR artefact,
+which is the scope decision recorded on #445 (`docs/terminologies.md`, openEHR
+archetype terminology). The one openEHR document cited anywhere is the
+Archetype Object Model 2 specification §3.2, for the archetype id a producer
+mints a canonical from, and it is cited rather than pinned.
 
 ## FHIR
 

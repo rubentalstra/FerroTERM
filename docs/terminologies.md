@@ -120,7 +120,47 @@ engine. Each row is a tracker issue under the program issue.
   `CodeSystem` in them is served, the version from the package manifest,
   and a supplement is layered over the system it names.
 
+## openEHR archetype terminology
+
+An openEHR archetype constrains most of its coded fields with an
+archetype-local `at`-code list, and nothing publishes those lists as FHIR
+resources, so no terminology server can address them. FerroTERM serves them,
+and it does so **without reading an openEHR artefact**.
+
+- **The scope decision (#445).** This server ingests the FHIR resources a
+  producer derives from an archetype, and does not read operational templates
+  or archetypes itself. The alternative would give a FHIR/SNOMED project an
+  openEHR dependency it does not have (`docs/VERSIONS.md`), and it would buy
+  nothing: the producer already holds the archetype, and the derivation is a
+  mapping onto resources this server already serves. FerroCHART is the
+  producer side (`docs/architecture.md` §7.2 in that repository).
+- **The shape.** One archetype's `at`-codes become a `CodeSystem` whose
+  concepts carry the rubric as the display and the description as the
+  definition, each language a designation; an `ac`-code or an inline code list
+  becomes a `ValueSet` over it; `term_bindings` become a `ConceptMap` onto the
+  external system each binds to.
+- **Identity.** **No openEHR specification defines a canonical URI for an
+  archetype's local terminology.** The archetype id is globally unique (the
+  Archetype Object Model 2 specification, §3.2 Archetype Identification), so
+  whoever produces the resources mints the URL from it under a domain they
+  own. This server reads that URL as an opaque canonical and attaches no
+  meaning to its shape.
+- **Resolution order, and why a minted URL cannot collide with a release.** A
+  code system is identified by its canonical, so two producers of one archetype
+  mint two canonicals under their own domains and both are served side by side.
+  A minted URL cannot collide with a loaded release because a release's systems
+  carry the canonicals their publishers own (`http://snomed.info/sct`,
+  `http://loinc.org`), and a producer mints under a domain it owns. Where two
+  directories do name one canonical at one version, the load refuses rather
+  than picking a winner, so a collision is reported and never silently
+  resolved.
+- **Loading.** `FERROTERM_CODESYSTEMS`, the same directories as any other
+  supplied resource. Nothing about the request shape is openEHR-specific: the
+  ordinary `$lookup`, `$expand`, `$validate-code`, and `$translate` answer over
+  them (`app/ferroterm-server/tests/it/openehr.rs`).
+
 ## LOINC
+
 
 - **Identity.** System `http://loinc.org`, version `2.82` style; codes
   `nnnnn-n` with a mod-10 check digit, part codes `LP…`, answer list codes

@@ -23,6 +23,7 @@ mod fixture;
 mod health;
 mod metadata;
 mod metrics;
+mod openehr;
 mod operations;
 mod persisted;
 mod r4;
