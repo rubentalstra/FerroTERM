@@ -129,6 +129,32 @@ pub struct ValueSetValidateInput {
     pub membership_only: Option<bool>,
 }
 
+/// Refuses a request naming a parameter this server does not answer.
+///
+/// # Errors
+///
+/// Returns [`OperationError::NotSupported`] naming the parameter, or the
+/// language error when the request's display language is not a language.
+fn refuse_unsupported(input: &ValueSetValidateInput) -> Result<(), OperationError> {
+    language::check(input.display_language.as_deref())?;
+    if let Some(name) = input.unsupported.first() {
+        return Err(OperationError::NotSupported(format!(
+            "`{name}` is not supported by this server"
+        )));
+    }
+    if input.context {
+        return Err(OperationError::NotSupported(String::from(
+            "`context` is not supported; name the value set with `url` or `valueSet`",
+        )));
+    }
+    if input.date {
+        return Err(OperationError::NotSupported(String::from(
+            "`date` is not supported: codes are validated against the versions served now",
+        )));
+    }
+    Ok(())
+}
+
 /// The value set at its negotiated version with its systems pinned, and the
 /// negotiation itself, for the subjects and the imports.
 fn prepare(
@@ -197,6 +223,26 @@ fn resolver_for<'a>(
         .with_negotiation(negotiation)
         .with_contained(&model.contained)
         .with_language(language)
+}
+
+/// What one `validate_code` call resolves once, for every phase below to read.
+///
+/// These five are invariant for a whole call: the same sources, the same value
+/// set, the same resolver over it, the same version negotiation, and the same
+/// policy. Threading them one by one is what made this file's argument lists
+/// what they are.
+#[derive(Debug, Clone, Copy)]
+struct Context<'a> {
+    /// The registries and stores this call reads.
+    sources: &'a Sources<'a>,
+    /// The value set being validated against.
+    model: &'a ValueSetModel,
+    /// The resolver the model's references are answered on.
+    resolver: &'a Resolver<'a>,
+    /// The version negotiation the request asked for.
+    negotiation: &'a Negotiation,
+    /// How this validation judges what it finds.
+    policy: &'a Policy<'a>,
 }
 
 /// How one validation judges what it finds.
@@ -292,22 +338,7 @@ pub fn validate_code(
     sources: &Sources<'_>,
     input: &ValueSetValidateInput,
 ) -> Result<Validation, OperationError> {
-    language::check(input.display_language.as_deref())?;
-    if let Some(name) = input.unsupported.first() {
-        return Err(OperationError::NotSupported(format!(
-            "`{name}` is not supported by this server"
-        )));
-    }
-    if input.context {
-        return Err(OperationError::NotSupported(String::from(
-            "`context` is not supported; name the value set with `url` or `valueSet`",
-        )));
-    }
-    if input.date {
-        return Err(OperationError::NotSupported(String::from(
-            "`date` is not supported: codes are validated against the versions served now",
-        )));
-    }
+    refuse_unsupported(input)?;
     let (model, negotiation) = prepare(sources, input)?;
     let mut wanted = input.use_supplement.clone();
     wanted.extend(model.supplements.iter().cloned());
@@ -319,9 +350,15 @@ pub fn validate_code(
     refuse_cyclic(sources, &model, &negotiation)?;
     let policy = policy_of(input, &model);
     let resolver = resolver_for(sources, &model, &negotiation, policy.language);
-    let check = |subject: &Subject<'_>| -> Result<Validation, OperationError> {
-        check(sources, &model, &resolver, &negotiation, subject, &policy)
+    let context = &Context {
+        sources,
+        model: &model,
+        resolver: &resolver,
+        negotiation: &negotiation,
+        policy: &policy,
     };
+    let check =
+        |subject: &Subject<'_>| -> Result<Validation, OperationError> { check(context, subject) };
     let inputs = usize::from(input.code.is_some())
         + usize::from(input.coding.is_some())
         + usize::from(input.codeable_concept.is_some());
@@ -589,12 +626,10 @@ fn none_in_value_set(model: &ValueSetModel, judged: &[(&CodingRef, Validation)])
 /// value set (by membership under `inferSystem`, else the value set's only
 /// system); the failed validation when none can be found.
 fn subject_system(
-    sources: &Sources<'_>,
-    model: &ValueSetModel,
-    resolver: &Resolver<'_>,
+    context: &Context<'_>,
     subject: &Subject<'_>,
-    policy: &Policy<'_>,
 ) -> Result<Result<String, Box<Validation>>, OperationError> {
+    let Context { model, policy, .. } = *context;
     if let Some(system) = subject.system {
         return Ok(Ok(system.to_owned()));
     }
@@ -604,7 +639,7 @@ fn subject_system(
         return Ok(Err(Box::new(no_system(model, subject))));
     }
     let inferred = if policy.infer_system {
-        infer_by_membership(sources, model, resolver, subject, policy.language)?
+        infer_by_membership(context, subject, policy.language)?
     } else {
         infer_system(model).into_iter().collect()
     };
@@ -616,29 +651,26 @@ fn subject_system(
 
 /// Checks one code against the value set: its system, the code, membership,
 /// and the display, in order.
-fn check(
-    sources: &Sources<'_>,
-    model: &ValueSetModel,
-    resolver: &Resolver<'_>,
-    negotiation: &Negotiation,
-    subject: &Subject<'_>,
-    policy: &Policy<'_>,
-) -> Result<Validation, OperationError> {
+fn check(context: &Context<'_>, subject: &Subject<'_>) -> Result<Validation, OperationError> {
+    let Context {
+        model,
+        resolver,
+        policy,
+        ..
+    } = *context;
     let language = policy.language;
-    let system = match subject_system(sources, model, resolver, subject, policy)? {
+    let system = match subject_system(context, subject)? {
         Ok(system) => system,
         Err(unresolved) => return Ok(*unresolved),
     };
-    let mut target = match resolve_target(sources, model, negotiation, &system, subject) {
+    let mut target = match resolve_target(context, &system, subject) {
         Ok(target) => target,
         Err(unserved) => return Ok(*unserved),
     };
     if target.resolvable && !target.alternatives.is_empty() {
         let alternatives = std::mem::take(&mut target.alternatives);
         let candidates = std::iter::once(Arc::clone(&target.provider)).chain(alternatives);
-        if let Some(found) =
-            containing_version(model, resolver, &system, subject, language, candidates)
-        {
+        if let Some(found) = containing_version(context, &system, subject, language, candidates) {
             target.provider = found;
         }
     }
@@ -689,14 +721,13 @@ fn check(
     };
     let Some(item) = contained else {
         let mut validation = outside_value_set(
-            model,
+            context,
             &system,
             version,
             &located,
             display.as_deref(),
             subject,
             &provider.status(located.concept)?,
-            policy,
         );
         validation.issues.splice(0..0, target.issues);
         validation.message = message_of(&validation.issues);
@@ -704,33 +735,32 @@ fn check(
         return Ok(validation);
     };
     conclude(
-        sources, model, resolver, subject, policy, target, &located, &item, display, system,
-        version,
+        context,
+        subject,
+        target,
+        &located,
+        &item,
+        display,
+        Resolved { system, version },
     )
 }
 
 /// The validation of a code the value set contains: the notes about the code,
 /// the value set, and the code system, then the outputs.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the phases of `check` hand over what they resolved"
-)]
 fn conclude(
-    sources: &Sources<'_>,
-    model: &ValueSetModel,
-    resolver: &Resolver<'_>,
+    context: &Context<'_>,
     subject: &Subject<'_>,
-    policy: &Policy<'_>,
     target: Target,
     located: &Located,
     item: &Item,
     display: Option<String>,
-    system: String,
-    version: String,
+    resolved: Resolved,
 ) -> Result<Validation, OperationError> {
+    let Resolved { system, version } = resolved;
+    let Context { model, policy, .. } = *context;
     let provider = &target.provider;
     let mut issues = target.issues;
-    issues.extend(assess(model, provider, located, item, subject, policy)?);
+    issues.extend(assess(context, provider, located, item, subject)?);
     let (inactive, status) = inactive_outputs(&provider.status(located.concept)?);
     // NOTE: the value set's own deprecation note stays out of `message`, the
     // ecosystem's shape (its `CONCEPT_DEPRECATED_IN_VALUESET` cases).
@@ -742,7 +772,7 @@ fn conclude(
             &format!("{system}|{version}"),
             &provider.standing(),
         ));
-        issues.extend(value_set_notes(sources, model, resolver));
+        issues.extend(value_set_notes(context));
     }
     let result = !issues.iter().any(|issue| issue.severity == "error");
     Ok(Validation {
@@ -814,11 +844,13 @@ fn inactive_outputs(concept_status: &crate::provider::Status) -> (Option<bool>, 
 
 /// The `status-check` notes for the value set validated against and every
 /// value set it drew on that the ecosystem marks (a withdrawn value set).
-fn value_set_notes(
-    sources: &Sources<'_>,
-    model: &ValueSetModel,
-    resolver: &Resolver<'_>,
-) -> Vec<Issue> {
+fn value_set_notes(context: &Context<'_>) -> Vec<Issue> {
+    let Context {
+        sources,
+        model,
+        resolver,
+        ..
+    } = *context;
     let mut notes = Vec::new();
     let mut seen = Vec::new();
     let mut note = |canonical: &str, standards_status: Option<&str>| {
@@ -857,22 +889,20 @@ fn value_set_notes(
 /// to the validation
 /// (<https://hl7.org/fhir/R5/valueset-operation-validate-code.html>).
 fn containing_version(
-    model: &ValueSetModel,
-    resolver: &Resolver<'_>,
+    context: &Context<'_>,
     system: &str,
     subject: &Subject<'_>,
     language: Option<&str>,
     candidates: impl Iterator<Item = Arc<dyn CodeSystemProvider>>,
 ) -> Option<Arc<dyn CodeSystemProvider>> {
+    let Context { .. } = *context;
     let mut candidates: Vec<Arc<dyn CodeSystemProvider>> = candidates.collect();
     candidates.sort_by(|a, b| {
         crate::versioned::version_order(&b.identity().version, &a.identity().version)
     });
     let holding: Vec<&Arc<dyn CodeSystemProvider>> = candidates
         .iter()
-        .filter(|candidate| {
-            holds_in_value_set(model, resolver, system, subject.code, language, candidate)
-        })
+        .filter(|candidate| holds_in_value_set(context, system, subject.code, language, candidate))
         .collect();
     holding
         .iter()
@@ -885,13 +915,15 @@ fn containing_version(
 /// Whether `candidate` has `code` and the value set contains it at that
 /// version.
 fn holds_in_value_set(
-    model: &ValueSetModel,
-    resolver: &Resolver<'_>,
+    context: &Context<'_>,
     system: &str,
     code: &str,
     language: Option<&str>,
     candidate: &Arc<dyn CodeSystemProvider>,
 ) -> bool {
+    let Context {
+        model, resolver, ..
+    } = *context;
     // NOTE: a candidate whose provider or compose fails to answer is not the
     // version to validate in, and the chosen version answers for itself.
     candidate
@@ -940,6 +972,17 @@ fn accepts_display(
         None,
     )
     .is_ok_and(|issue| issue.is_none())
+}
+
+/// The code system version a subject was resolved to.
+///
+/// The two are decided together and are carried together from there on, so
+/// they travel as one rather than as a pair of strings a caller could swap.
+struct Resolved {
+    /// The system the code was read in.
+    system: String,
+    /// The version of it the validation ran against.
+    version: String,
 }
 
 /// The version a subject is validated against and what the choice cost.
@@ -1007,12 +1050,16 @@ fn message_of(issues: &[Issue]) -> Option<String> {
 /// Returns the unserved-system validation when neither the include's version
 /// nor the subject's nor a default resolves.
 fn resolve_target(
-    sources: &Sources<'_>,
-    model: &ValueSetModel,
-    negotiation: &Negotiation,
+    context: &Context<'_>,
     system: &str,
     subject: &Subject<'_>,
 ) -> Result<Target, Box<Validation>> {
+    let Context {
+        sources,
+        model,
+        negotiation,
+        ..
+    } = *context;
     let registry = sources.registry;
     let valid: Vec<String> = registry
         .versions(system)
@@ -1044,16 +1091,7 @@ fn resolve_target(
     let mut unknown_systems = Vec::new();
     let expression = subject.expression;
     let Some(resolved) = resolved else {
-        return unresolvable_include(
-            sources,
-            model,
-            negotiation,
-            system,
-            subject,
-            subject_served,
-            literal,
-            &valid,
-        );
+        return unresolvable_include(context, system, subject, subject_served, literal, &valid);
     };
     let version = resolved.provider.identity().version.clone();
     if let Err(error) = negotiation.check_system(system, &version) {
@@ -1135,7 +1173,7 @@ fn include_literal_for<'m>(
 /// unserved subject version, the not-found issue, in the ecosystem's order.
 #[expect(
     clippy::too_many_arguments,
-    reason = "the disagreement is described by exactly these facts"
+    reason = "none of these is call-invariant, so the context carries none of them: seven describe one disagreement and two are the itemised outputs it adds to"
 )]
 fn disagreement(
     system: &str,
@@ -1204,20 +1242,19 @@ fn disagreement(
 
 /// The target when the include's version is not served: the subject's version
 /// when served, else the default, and the validation fails regardless.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the fallback is described by exactly these facts"
-)]
 fn unresolvable_include(
-    sources: &Sources<'_>,
-    model: &ValueSetModel,
-    negotiation: &Negotiation,
+    context: &Context<'_>,
     system: &str,
     subject: &Subject<'_>,
     subject_served: bool,
     literal: Option<String>,
     valid: &[String],
 ) -> Result<Target, Box<Validation>> {
+    let Context {
+        sources,
+        negotiation,
+        ..
+    } = *context;
     let registry = sources.registry;
     let expression = subject.expression;
     // NOTE: a versionless subject falls back to the negotiated default
@@ -1232,9 +1269,7 @@ fn unresolvable_include(
         |v| registry.resolve(system, Some(v)),
     );
     let Ok(fallback) = fallback else {
-        return Err(Box::new(unserved_subject(
-            sources, model, system, subject, valid,
-        )));
+        return Err(Box::new(unserved_subject(context, system, subject, valid)));
     };
     let bad = literal.unwrap_or_default();
     let mut issues = Vec::new();
@@ -1320,12 +1355,12 @@ fn supplement_as_system(system: &str, version: Option<&str>, subject: &Subject<'
 /// The failed validation of a subject whose system or version the server does
 /// not serve at all.
 fn unserved_subject(
-    sources: &Sources<'_>,
-    model: &ValueSetModel,
+    context: &Context<'_>,
     system: &str,
     subject: &Subject<'_>,
     valid: &[String],
 ) -> Validation {
+    let Context { sources, model, .. } = *context;
     let registry = sources.registry;
     if let Some(supplement_version) = registry.supplement_named(system) {
         return supplement_as_system(system, supplement_version.version.as_deref(), subject);
@@ -1450,13 +1485,13 @@ fn with_target(
 /// The issues of a code the value set contains: abstract, inactive, and the
 /// display check.
 fn assess(
-    model: &ValueSetModel,
+    context: &Context<'_>,
     provider: &Arc<dyn CodeSystemProvider>,
     located: &Located,
     item: &Item,
     subject: &Subject<'_>,
-    policy: &Policy<'_>,
 ) -> Result<Vec<Issue>, OperationError> {
+    let Context { model, policy, .. } = *context;
     let language = policy.language;
     let mut issues = Vec::new();
     if !policy.membership_only
@@ -1567,12 +1602,16 @@ fn infer_system(model: &ValueSetModel) -> Option<String> {
 /// (`inferSystem`), in system order; one is the inferred system and several
 /// leave it undetermined.
 fn infer_by_membership(
-    sources: &Sources<'_>,
-    model: &ValueSetModel,
-    resolver: &Resolver<'_>,
+    context: &Context<'_>,
     subject: &Subject<'_>,
     language: Option<&str>,
 ) -> Result<Vec<String>, OperationError> {
+    let Context {
+        sources,
+        model,
+        resolver,
+        ..
+    } = *context;
     let mut systems: Vec<&str> = model
         .compose
         .include
@@ -1869,20 +1908,16 @@ fn unknown_code(
 
 /// The failed validation of a code the system has but the value set does
 /// not: the code and its display are still echoed.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the phases of `check` hand over what they resolved"
-)]
 fn outside_value_set(
-    model: &ValueSetModel,
+    context: &Context<'_>,
     system: &str,
     version: String,
     located: &Located,
     display: Option<&str>,
     subject: &Subject<'_>,
     concept_status: &crate::provider::Status,
-    policy: &Policy<'_>,
 ) -> Validation {
+    let Context { model, policy, .. } = *context;
     let (given, expression) = (subject.display, subject.expression);
     let mut issues = Vec::new();
     // NOTE: a concept the value set refuses because it is inactive is valid in
