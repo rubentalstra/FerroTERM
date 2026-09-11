@@ -423,9 +423,392 @@ pub fn unpack_labcodeset(zip_path: &Path, into: &Path) -> Result<PathBuf, Archiv
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
     use std::path::{Path, PathBuf};
 
-    use super::snapshot_root;
+    use super::{
+        ArchiveError, snapshot_root, unpack_claml, unpack_dhd, unpack_icd10cm, unpack_labcodeset,
+        unpack_loinc, unpack_rxnorm, unpack_snapshot,
+    };
+
+    /// A zip holding `entries`, each an entry name and its bytes.
+    ///
+    /// A name ending in `/` is written as a directory, which is what a real
+    /// release carries and what the unpackers have to pass over.
+    fn zip_of(dir: &Path, name: &str, entries: &[(&str, &str)]) -> PathBuf {
+        let path = dir.join(name);
+        let file = std::fs::File::create(&path).expect("a zip to write");
+        let mut writer = zip::ZipWriter::new(file);
+        let options: zip::write::FileOptions<'_, ()> =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        for (entry, body) in entries {
+            if let Some(folder) = entry.strip_suffix('/') {
+                writer
+                    .add_directory(folder, options)
+                    .expect("a directory entry");
+                continue;
+            }
+            writer.start_file(*entry, options).expect("an entry");
+            writer
+                .write_all(body.as_bytes())
+                .expect("the entry's bytes");
+        }
+        writer.finish().expect("the zip is finished");
+        path
+    }
+
+    /// A directory the test writes into, and its path.
+    fn workspace() -> (tempfile::TempDir, PathBuf) {
+        let dir = tempfile::tempdir().expect("a directory");
+        let into = dir.path().join("out");
+        std::fs::create_dir_all(&into).expect("the target directory");
+        (dir, into)
+    }
+
+    // NOTE: a release is one zip holding Full/, Snapshot/ and Delta/ trees
+    // under a release folder, and only the Snapshot is read
+    // (<https://docs.snomed.org/snomed-ct-specifications/release-file-specification>).
+    #[test]
+    fn the_snapshot_tree_is_unpacked_and_the_other_trees_are_left_in_the_zip() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "release.zip",
+            &[
+                ("SnomedCT_X/Snapshot/", ""),
+                (
+                    "SnomedCT_X/Snapshot/Terminology/sct2_Concept_Snapshot_INT_20260101.txt",
+                    "id\teffectiveTime\n",
+                ),
+                (
+                    "SnomedCT_X/Full/Terminology/sct2_Concept_Full_INT_20260101.txt",
+                    "full\n",
+                ),
+                ("SnomedCT_X/Snapshot/Readme.pdf", "not a table"),
+            ],
+        );
+        let root = unpack_snapshot(&zip, &into).expect("one Snapshot tree");
+        assert_eq!(root, into.join("SnomedCT_X"));
+        assert!(
+            root.join("Snapshot/Terminology/sct2_Concept_Snapshot_INT_20260101.txt")
+                .is_file(),
+            "the snapshot table is written out"
+        );
+        assert!(
+            !into.join("SnomedCT_X/Full").exists(),
+            "the Full tree stays in the zip, so no release content is copied twice"
+        );
+        assert!(
+            !root.join("Snapshot/Readme.pdf").exists(),
+            "only the tab-separated tables are read"
+        );
+    }
+
+    #[test]
+    fn a_zip_with_no_snapshot_tree_is_refused() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "no-snapshot.zip",
+            &[("SnomedCT_X/Full/Terminology/x.txt", "full\n")],
+        );
+        let error = unpack_snapshot(&zip, &into).expect_err("no Snapshot tree");
+        assert!(matches!(error, ArchiveError::NoSnapshot { .. }), "{error}");
+    }
+
+    #[test]
+    fn a_zip_holding_two_release_folders_is_refused() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "two.zip",
+            &[
+                ("SnomedCT_A/Snapshot/Terminology/x.txt", "a\n"),
+                ("SnomedCT_B/Snapshot/Terminology/x.txt", "b\n"),
+            ],
+        );
+        let error = unpack_snapshot(&zip, &into).expect_err("two Snapshot trees");
+        assert!(
+            matches!(error, ArchiveError::SeveralSnapshots { .. }),
+            "a build that picked one of two editions would load the wrong one: {error}"
+        );
+    }
+
+    /// Entry names that leave the target directory once resolved.
+    ///
+    /// Each is shaped like an entry the unpacker would otherwise take, so what
+    /// stops it is the escape and not the filter over what the build reads. A
+    /// name that only climbs back to where it started (`a/b/../c.txt`) does
+    /// not escape and is deliberately not here.
+    const ESCAPING: [&str; 3] = [
+        "../SnomedCT_X/Snapshot/Terminology/escaped.txt",
+        "SnomedCT_X/Snapshot/Terminology/../../../../escaped.txt",
+        "../../escaped.txt",
+    ];
+
+    // NOTE: an entry name is taken through `enclosed_name`, which answers
+    // `None` for a name that leaves the target directory
+    // (<https://docs.rs/zip/8.6.0/zip/read/struct.ZipFile.html#method.enclosed_name>).
+    #[test]
+    fn an_entry_named_to_climb_out_of_the_target_is_skipped() {
+        for escaping in ESCAPING {
+            let (dir, into) = workspace();
+            let zip = zip_of(
+                dir.path(),
+                "escape.zip",
+                &[
+                    (escaping, "outside\n"),
+                    ("SnomedCT_X/Snapshot/Terminology/kept.txt", "inside\n"),
+                ],
+            );
+            let root = unpack_snapshot(&zip, &into).expect("the entry that stays inside");
+            assert!(
+                root.join("Snapshot/Terminology/kept.txt").is_file(),
+                "the entry that stays inside is written"
+            );
+            assert!(
+                !escaped_anywhere(dir.path()),
+                "`{escaping}` was written outside the directory the unpacker was given"
+            );
+        }
+    }
+
+    // NOTE: `unpack_matching` joins an entry name onto the target the same way,
+    // so every unpacker built on it holds the same property.
+    #[test]
+    fn an_escaping_entry_is_skipped_by_the_unpackers_that_match_on_a_name() {
+        for escaping in ESCAPING {
+            let (dir, into) = workspace();
+            let zip = zip_of(
+                dir.path(),
+                "escape.zip",
+                &[
+                    (
+                        &format!("{}.csv", escaping.trim_end_matches(".txt")),
+                        "outside\n",
+                    ),
+                    ("tables/kept.csv", "inside\n"),
+                ],
+            );
+            unpack_dhd(&zip, &into).expect("the entry that stays inside");
+            assert!(into.join("tables/kept.csv").is_file());
+            assert!(
+                !escaped_anywhere(dir.path()),
+                "`{escaping}` was written outside the directory the unpacker was given"
+            );
+        }
+    }
+
+    /// Whether an entry named `escaped` landed anywhere under `root`.
+    ///
+    /// The whole temporary directory is walked rather than the two or three
+    /// paths a test could guess, because what is being proved is that the file
+    /// is nowhere outside the target, not that it missed one guess.
+    fn escaped_anywhere(root: &Path) -> bool {
+        let Ok(entries) = std::fs::read_dir(root) else {
+            return false;
+        };
+        entries.flatten().any(|entry| {
+            let path = entry.path();
+            if path.is_dir() {
+                return escaped_anywhere(&path);
+            }
+            path.file_name()
+                .and_then(std::ffi::OsStr::to_str)
+                .is_some_and(|name| name.starts_with("escaped."))
+        })
+    }
+
+    #[test]
+    fn a_zip_that_is_not_a_zip_is_refused() {
+        let (dir, into) = workspace();
+        let path = dir.path().join("broken.zip");
+        std::fs::write(&path, b"not a zip at all").expect("a file that is not a zip");
+        let error = unpack_snapshot(&path, &into).expect_err("not a zip");
+        assert!(matches!(error, ArchiveError::Read { .. }), "{error}");
+    }
+
+    #[test]
+    fn the_loinc_tables_the_build_reads_are_unpacked_and_the_rest_stay() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "loinc.zip",
+            &[
+                ("LoincTable/Loinc.csv", "LOINC_NUM\n"),
+                ("LoincTable/Part.csv", "PartNumber\n"),
+                (
+                    "AccessoryFiles/LinguisticVariants/deDE26LinguisticVariant.csv",
+                    "de\n",
+                ),
+                (
+                    "AccessoryFiles/PartFile/LoincPartLink_Supplementary.csv",
+                    "a quarter of a gigabyte\n",
+                ),
+            ],
+        );
+        unpack_loinc(&zip, &into).expect("a Loinc.csv");
+        assert!(into.join("LoincTable/Loinc.csv").is_file());
+        assert!(into.join("LoincTable/Part.csv").is_file());
+        assert!(
+            into.join("AccessoryFiles/LinguisticVariants/deDE26LinguisticVariant.csv")
+                .is_file(),
+            "every linguistic variant is read"
+        );
+        assert!(
+            !into
+                .join("AccessoryFiles/PartFile/LoincPartLink_Supplementary.csv")
+                .exists(),
+            "the supplementary part links stay in the zip"
+        );
+    }
+
+    // NOTE: the panels and forms folder carries its own `Loinc.csv`, a subset
+    // that is not the term table (the LOINC release layout).
+    #[test]
+    fn the_panels_folder_loinc_table_is_not_read_as_the_term_table() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "panels.zip",
+            &[("AccessoryFiles/PanelsAndForms/Loinc.csv", "a subset\n")],
+        );
+        let error = unpack_loinc(&zip, &into).expect_err("the subset is not the term table");
+        assert!(matches!(error, ArchiveError::NoSnapshot { .. }), "{error}");
+        assert!(
+            !into
+                .join("AccessoryFiles/PanelsAndForms/Loinc.csv")
+                .exists(),
+            "the subset is not written out either"
+        );
+    }
+
+    #[test]
+    fn a_loinc_zip_with_no_term_table_is_refused() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "no-loinc.zip",
+            &[("LoincTable/Part.csv", "x\n")],
+        );
+        let error = unpack_loinc(&zip, &into).expect_err("no Loinc.csv");
+        assert!(matches!(error, ArchiveError::NoSnapshot { .. }), "{error}");
+    }
+
+    #[test]
+    fn the_claml_unpacker_takes_the_largest_document_and_refuses_a_zip_with_none() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "claml.zip",
+            &[
+                ("small.xml", "<ClaML/>"),
+                ("big.xml", "<ClaML>a much longer document</ClaML>"),
+                ("notes.txt", "not a document"),
+            ],
+        );
+        let found = unpack_claml(&zip, &into).expect("an xml entry");
+        assert_eq!(
+            found.file_name().and_then(std::ffi::OsStr::to_str),
+            Some("big.xml"),
+            "a release that ships a stub beside the classification is read by size"
+        );
+
+        let empty = zip_of(dir.path(), "no-xml.zip", &[("notes.txt", "x")]);
+        let error = unpack_claml(&empty, &into).expect_err("no xml entry");
+        let ArchiveError::NoEntry { wanted, .. } = error else {
+            panic!("a missing entry, not {error}");
+        };
+        assert_eq!(wanted, "ClaML `.xml` document");
+    }
+
+    #[test]
+    fn the_icd10cm_unpacker_takes_either_file_and_refuses_a_zip_with_neither() {
+        let (dir, into) = workspace();
+        let tabular = format!("{}2026.xml", ::classification::icd10cm::TABULAR_PREFIX);
+        let order = format!("{}2026.txt", ::classification::icd10cm::ORDER_PREFIX);
+        let zip = zip_of(
+            dir.path(),
+            "icd10cm.zip",
+            &[(tabular.as_str(), "<x/>"), (order.as_str(), "order\n")],
+        );
+        unpack_icd10cm(&zip, &into).expect("the two files CMS ships");
+        assert!(into.join(&tabular).is_file());
+        assert!(into.join(&order).is_file());
+
+        let empty = zip_of(dir.path(), "icd10cm-empty.zip", &[("readme.txt", "x")]);
+        let error = unpack_icd10cm(&empty, &into).expect_err("neither file");
+        assert!(matches!(error, ArchiveError::NoEntry { .. }), "{error}");
+    }
+
+    #[test]
+    fn the_rxnorm_unpacker_needs_the_concept_table() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "rxnorm.zip",
+            &[
+                ("rrf/RXNCONSO.RRF", "conso\n"),
+                ("rrf/RXNREL.RRF", "rel\n"),
+                ("Readme.txt", "readme\n"),
+                ("rrf/RXNDOC.RRF", "a table the build does not read\n"),
+            ],
+        );
+        unpack_rxnorm(&zip, &into).expect("RXNCONSO.RRF");
+        assert!(into.join("rrf/RXNCONSO.RRF").is_file());
+        assert!(into.join("Readme.txt").is_file());
+        assert!(
+            !into.join("rrf/RXNDOC.RRF").exists(),
+            "a table the build does not read stays in the zip"
+        );
+
+        let without = zip_of(dir.path(), "rxnorm-bad.zip", &[("rrf/RXNREL.RRF", "rel\n")]);
+        let error = unpack_rxnorm(&without, &into).expect_err("no RXNCONSO.RRF");
+        let ArchiveError::NoEntry { wanted, .. } = error else {
+            panic!("a missing entry, not {error}");
+        };
+        assert_eq!(wanted, "RXNCONSO.RRF");
+    }
+
+    #[test]
+    fn the_dhd_unpacker_takes_the_csv_tables_and_refuses_a_zip_with_none() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "dhd.zip",
+            &[("tables/concepts.csv", "a,b\n"), ("notes.pdf", "x")],
+        );
+        unpack_dhd(&zip, &into).expect("a csv table");
+        assert!(into.join("tables/concepts.csv").is_file());
+        assert!(!into.join("notes.pdf").exists());
+
+        let empty = zip_of(dir.path(), "dhd-empty.zip", &[("notes.pdf", "x")]);
+        let error = unpack_dhd(&empty, &into).expect_err("no csv table");
+        assert!(matches!(error, ArchiveError::NoEntry { .. }), "{error}");
+    }
+
+    #[test]
+    fn the_labcodeset_unpacker_takes_the_labconcepts_document_only() {
+        let (dir, into) = workspace();
+        let zip = zip_of(
+            dir.path(),
+            "labcodeset.zip",
+            &[
+                ("labconcepts-20260101.xml", "<labconcepts/>"),
+                ("other-20260101.xml", "<other/>"),
+            ],
+        );
+        unpack_labcodeset(&zip, &into).expect("a labconcepts document");
+        assert!(into.join("labconcepts-20260101.xml").is_file());
+        assert!(
+            !into.join("other-20260101.xml").exists(),
+            "another document in the same delivery is not the one the reader wants"
+        );
+
+        let empty = zip_of(dir.path(), "lab-empty.zip", &[("other.xml", "<other/>")]);
+        let error = unpack_labcodeset(&empty, &into).expect_err("no labconcepts document");
+        assert!(matches!(error, ArchiveError::NoEntry { .. }), "{error}");
+    }
 
     #[test]
     fn the_release_root_precedes_the_snapshot_tree() {

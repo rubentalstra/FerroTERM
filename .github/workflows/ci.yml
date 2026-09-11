@@ -161,6 +161,23 @@ jobs:
           persist-credentials: false
       - run: bash scripts/checks/versions.sh
 
+  # brand — the brand palette's contrast, measured rather than remembered.
+  # scripts/checks/brand-contrast.sh reads assets/brand/tokens.css and fails when
+  # a token's `safe:` comment or the README's table stops matching the ratio the
+  # value actually has, so a colour safe for the mark is never quietly used for
+  # text (WCAG 2.2 asks 4.5:1 for body text and 3:1 for a graphic).
+  brand:
+    name: brand
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/checks/brand-contrast.sh
+
   # code-systems — the served code systems are listed once: the book's table
   # is the source, and the README and the landing page must name every row.
   code-systems:
@@ -655,6 +672,7 @@ jobs:
       - shellcheck
       - dockerfile-lint
       - versions
+      - brand
       - code-systems
       - bench-table
       - detect
