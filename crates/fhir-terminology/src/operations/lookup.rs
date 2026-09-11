@@ -133,6 +133,16 @@ impl<'a> Asked<'a> {
         self.all || self.names.contains(&code)
     }
 
+    /// Whether a property the provider generates was asked for.
+    ///
+    /// A generated property costs more than a read, so it is answered only
+    /// where the request named it: by its own name, or through `*`, which asks
+    /// for everything there is. A request naming no property leaves them out,
+    /// which is what "the server chooses what to return" admits.
+    fn generated(&self, code: &str) -> bool {
+        self.names.contains(&code) || self.names.contains(&EVERY_PROPERTY)
+    }
+
     // NOTE: the R4B `property` parameter lists `designation` and `lang.X` among
     // the properties a client asks for, so naming other properties only leaves
     // designations out (<https://hl7.org/fhir/R4B/codesystem-operation-lookup.html>).
@@ -331,6 +341,14 @@ fn properties(
             continue;
         }
         properties.push(property);
+    }
+    for name in provider.generated_properties() {
+        if !asked.generated(name) {
+            continue;
+        }
+        if let Some(property) = provider.generated_property(concept, name)? {
+            properties.push(property);
+        }
     }
     Ok(properties)
 }

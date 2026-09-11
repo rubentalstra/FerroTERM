@@ -490,9 +490,7 @@ fn a_language_reference_set_is_listed_and_its_member_forms_are_refused() {
 /// `$lookup` bounds its `property` values: beside the ones it names itself,
 /// "any property codes defined by this specification or by the `CodeSystem` are
 /// allowed" (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>). A
-/// code outside that set is refused, and the two normal form properties the
-/// FHIR SNOMED CT page defines and this server does not generate are
-/// `not-supported`.
+/// code outside that set is refused.
 #[test]
 fn a_property_the_code_system_does_not_define_is_refused_rather_than_dropped() {
     let (_dir, p) = provider();
@@ -510,13 +508,13 @@ fn a_property_the_code_system_does_not_define_is_refused_rather_than_dropped() {
             },
         )
     };
+    assert!(matches!(ask("nonesuch"), Err(OperationError::Invalid(_))));
     for property in ["normalForm", "normalFormTerse"] {
         assert!(
-            matches!(ask(property), Err(OperationError::NotSupported(_))),
-            "`{property}` is defined for SNOMED CT and not generated here"
+            ask(property).is_ok(),
+            "`{property}` is defined by the FHIR SNOMED CT page and generated here"
         );
     }
-    assert!(matches!(ask("nonesuch"), Err(OperationError::Invalid(_))));
     // The page's own properties, the standard ones, and a concept model
     // attribute by concept id all answer.
     for property in ["inactive", "moduleId", "parent", "designation"] {
@@ -900,4 +898,118 @@ fn a_display_in_the_editions_language_does_not_satisfy_a_request_for_another_one
         "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK"
     );
     assert!(none.message.is_some(), "{none:?}");
+}
+/// The Necessary Normal Form is the concept's inferred view rendered in
+/// SNOMED CT Compositional Grammar.
+///
+/// The FHIR SNOMED CT page defines `normalForm` and `normalFormTerse` as that
+/// expression with terms and with concept ids only
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, "SNOMED CT Properties"). The
+/// fixture's cat is sufficiently defined, is under the animal, and carries one
+/// role group holding a covering and a leg count, so the expression states the
+/// prefix, the focus concept, and the group.
+#[test]
+fn the_normal_form_renders_the_inferred_view_of_a_concept() {
+    let (_dir, p) = provider();
+    let ask = |code: u32, property: &str| -> Option<String> {
+        let concept = p
+            .locate(&sctid(item(code)))
+            .expect("locates")
+            .expect("a concept")
+            .concept;
+        match p.generated_property(concept, property).expect("generates") {
+            Some(property) => match property.value {
+                PropertyValue::String(text) => Some(text),
+                other => panic!("a string, not {other:?}"),
+            },
+            None => None,
+        }
+    };
+
+    let terse = ask(CAT, "normalFormTerse").expect("the cat has a normal form");
+    assert_eq!(
+        terse,
+        format!(
+            "=== {animal} : {{ {covering} = {fur}, {legs} = #4 }}",
+            animal = sctid(item(ANIMAL)),
+            covering = sctid(item(COVERING)),
+            fur = sctid(item(FUR)),
+            legs = sctid(item(LEGS)),
+        ),
+        "the terse form carries concept ids only"
+    );
+
+    let with_terms = ask(CAT, "normalForm").expect("the cat has a normal form");
+    assert!(
+        with_terms.contains(&format!("{} |", sctid(item(ANIMAL)))),
+        "the form with terms writes each reference as `id |term|`: {with_terms}"
+    );
+    assert!(
+        with_terms.replace(char::is_whitespace, "").len()
+            > terse.replace(char::is_whitespace, "").len(),
+        "the form with terms is the longer of the two"
+    );
+
+    // The dog states the same two attributes in two groups where the cat
+    // states them in one, so its expression carries two.
+    let dog = ask(DOG, "normalFormTerse").expect("the dog has a normal form");
+    assert_eq!(
+        dog.matches('{').count(),
+        2,
+        "each role group is rendered as its own set: {dog}"
+    );
+}
+
+/// The root has no inferred parent, and the grammar makes a focus concept
+/// mandatory, so there is no expression to render for it.
+#[test]
+fn the_root_of_the_hierarchy_has_no_normal_form() {
+    let (_dir, p) = provider();
+    let concept = p
+        .locate(&sctid(item(TOP)))
+        .expect("locates")
+        .expect("the root")
+        .concept;
+    assert_eq!(
+        p.generated_property(concept, "normalForm")
+            .expect("generates"),
+        None,
+        "inventing a focus concept for the root would say something the release does not"
+    );
+}
+
+/// A request that names no property is answered without the generated ones,
+/// which is what "if no properties are specified, the server chooses what to
+/// return" admits
+/// (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
+#[test]
+fn the_normal_form_is_answered_only_where_a_request_asks_for_it() {
+    let (_dir, p) = provider();
+    let mut registry = Registry::new();
+    registry.register(Arc::new(p)).expect("registers");
+    let ask = |properties: Vec<String>| {
+        lookup::lookup(
+            &registry,
+            &Invocation::Type,
+            &lookup::LookupInput {
+                code: Some(sctid(item(CAT))),
+                system: Some(String::from(SYSTEM)),
+                properties,
+                ..lookup::LookupInput::default()
+            },
+        )
+        .expect("looks up")
+        .properties
+        .iter()
+        .any(|property| property.code == "normalForm")
+    };
+    assert!(!ask(Vec::new()), "a request naming none pays for none");
+    assert!(
+        ask(vec![String::from("normalForm")]),
+        "naming it answers it"
+    );
+    assert!(
+        ask(vec![String::from("*")]),
+        "`*` asks for everything there is"
+    );
 }
