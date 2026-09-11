@@ -26,8 +26,8 @@ const RENDERED_BASE: &str = "//dt[normalize-space()='FHIR base']/following-sibli
 /// A code system row's link into that system's own screen.
 const SYSTEM_LINK: &str = "a[href^='/ui/systems/']";
 
-/// The expansion runner's canonical control.
-const EXPAND_URL: &str = "#expand-url";
+/// The expansion runner's value set control, which offers what the root publishes.
+const EXPAND_URL: &str = "#expand-url-pick";
 
 /// The expansion runner's submit control, scoped past the command bar.
 const EXPAND_SUBMIT: &str = "main form button[type='submit']";
@@ -68,6 +68,31 @@ const SYSTEMS_ON_ONE_SCREEN: f64 = 20.0;
 /// browser draws its chrome inside it. The bar is a screen a reader has, so
 /// the journey asks for one and measures the viewport it got.
 const DESKTOP: (u32, u32) = (1280, 1024);
+
+/// The sidebar entry onto the screen a code is checked on.
+const CHECK_LINK: &str = "nav[aria-label='Screens'] a[href^='/ui/validate']";
+
+/// The control that names the code system that screen works over.
+const CHECK_SYSTEM: &str = "#validate-system-pick";
+
+/// The first code system that control offers.
+const FIRST_OFFER: &str = "#validate-system-pick option:nth-child(2)";
+
+/// The field the code being checked is typed into.
+const CHECK_CODE: &str = "#validate-code";
+
+/// The submit of the runner on the screen, rather than the command bar's.
+const CHECK_SUBMIT: &str = "main form button[type='submit']";
+
+/// A live region on the screen, once it carries something.
+const ANNOUNCEMENT: &str = "p[aria-live='polite']";
+
+/// A code to check, which the journey never assumes is in the system it picks.
+///
+/// What is being proved is the path: three clicks reach an answer with no
+/// canonical typed. A code the picked system does not have is answered with a
+/// result of false, which is an answer the server gave.
+const A_CODE: &str = "ca-leaf";
 
 /// The overview's own table, by the heading it is labelled by.
 const SYSTEM_TABLE: &str = "section[aria-labelledby='systems-heading'] table";
@@ -473,11 +498,12 @@ async fn a_run_is_remembered_in_this_browser_and_re_run_from_the_list() {
         .await
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &base, "/ui/expand?fhir=r5").await;
-            let canonical = "https://ferroterm.eu/fhir/ValueSet/e2e-taxonomy-all";
             journey
-                .element(By::Css(EXPAND_URL), "the runner's canonical control")
+                .element(By::Css(EXPAND_URL), "the runner's value set control")
                 .await
-                .send_keys(canonical)
+                .find(By::Css("option:nth-child(2)"))
+                .await?
+                .click()
                 .await?;
             journey
                 .element(By::Css(EXPAND_SUBMIT), "the runner's submit control")
@@ -715,6 +741,81 @@ async fn the_overview_reads_twenty_systems_on_one_screen_in_compact_mode() {
                  {tallest:.0}px under a header of {top:.0}px, so a reader comparing twenty \
                  scrolls for some of them"
             );
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
+}
+
+/// A code is checked in three clicks, with no canonical typed.
+///
+/// The runners take a canonical, and almost no reader knows one by heart, so
+/// each offers what this root publishes. The journey is the whole path a
+/// reader who has never seen the viewer takes: the sidebar entry, the code
+/// system, the code. Nothing here names a code system: the offer it picks is
+/// whatever the root published first, so a deployment this server has never
+/// served drives the same way.
+#[tokio::test]
+async fn a_code_is_checked_in_three_clicks_with_no_canonical_typed() {
+    let Some(base) = server() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &base, "/ui?fhir=r5").await;
+
+            journey
+                .element(By::Css(CHECK_LINK), "the sidebar entry onto the check")
+                .await
+                .click()
+                .await?;
+
+            journey
+                .element(By::Css(CHECK_SYSTEM), "the code system control")
+                .await;
+            let offer = journey
+                .element(By::Css(FIRST_OFFER), "the first code system offered")
+                .await;
+            let picked = offer.text().await?;
+            assert!(
+                !picked.is_empty(),
+                "an offer a reader cannot read is an offer they cannot pick"
+            );
+            let canonical = offer.attr("value").await?.unwrap_or_default();
+            assert!(
+                !canonical.is_empty(),
+                "the offer carries the canonical the run sends"
+            );
+            offer.click().await?;
+
+            journey
+                .element(By::Css(CHECK_CODE), "the code field")
+                .await
+                .send_keys(A_CODE)
+                .await?;
+            journey
+                .element(By::Css(CHECK_SUBMIT), "the runner's submit")
+                .await
+                .click()
+                .await?;
+
+            let address = journey
+                .address_carrying("system=", "the picked system in the address")
+                .await;
+            assert!(
+                address.contains("code=") && address.contains("/ui/validate"),
+                "a run is a link a reader can send: `{address}`"
+            );
+            journey
+                .text_becoming(
+                    By::Css(ANNOUNCEMENT),
+                    StringMatch::new("result".to_owned()).partial(),
+                    "the validation to announce what the server answered",
+                )
+                .await;
 
             journey.no_console_errors().await;
             Ok::<(), WebDriverError>(())

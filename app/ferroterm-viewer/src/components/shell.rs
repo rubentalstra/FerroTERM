@@ -78,10 +78,14 @@ struct NavGroup(&'static str, &'static [NavItem]);
 const EXPLORE: [NavItem; 1] = [NavItem(OVERVIEW_PATH, "Overview", icon::OVERVIEW)];
 
 /// The screens a reader asks this server a question on.
+///
+/// Each is named for the question rather than the operation that answers it.
+/// A reader who wants to know whether a code is valid does not know that
+/// `$validate-code` is the one to open.
 const RUN: [NavItem; 3] = [
-    NavItem(EXPAND_PATH, "Expand", icon::EXPAND),
-    NavItem(VALIDATE_PATH, "Validate and subsume", icon::VALIDATE),
-    NavItem(TRANSLATE_PATH, "Translate", icon::CONCEPT_MAPS),
+    NavItem(VALIDATE_PATH, "Check a code", icon::VALIDATE),
+    NavItem(EXPAND_PATH, "List a value set", icon::EXPAND),
+    NavItem(TRANSLATE_PATH, "Map a code", icon::CONCEPT_MAPS),
 ];
 
 /// The screens that list what this server publishes.

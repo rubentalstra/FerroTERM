@@ -423,6 +423,28 @@ pass in `e2e/tests/it/accessibility.rs` cover every pairing the viewer draws.
 entry, a per-element `dark:` variant, a raw type size, a spacing value off the
 scale, or an arbitrary value in brackets, anywhere under `app/ferroterm-viewer/src`.
 
+### A runner names nothing a reader has to know by heart
+
+Every operation takes a canonical, and almost nobody knows one by heart. A
+runner that opens with an empty "Code system canonical" box is a screen that
+cannot be used without another screen, so each control offers what this root
+publishes: `GET /{v}/{type}?_elements=url,name,title,version`, about four
+kilobytes, the same narrowed search the overview reads names from
+(<https://hl7.org/fhir/R5/search.html#elements>). The name leads and the
+canonical is the value the run carries. The version beside it offers the
+versions that canonical was published in, so picking a code system fills its
+versions and nothing else.
+
+The text field stays, as the picker's last option: a root may hold a resource
+it does not publish, and a reader may be checking a canonical against a root on
+purpose. A canonical the root does not publish opens the control on the text
+field rather than snapping back to a list the value is not in.
+
+**The screens are named for the question, not the operation.** A reader who
+wants to know whether a code is valid does not know that `$validate-code`
+answers it, so the sidebar says Check a code, List a value set, Map a code, and
+each screen names the operation it sends under its own heading.
+
 ### Less prose, not more
 
 Three long tables and a lead paragraph over every one of them is not a design.
@@ -456,12 +478,12 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 |---|---|---|
 | Shell | all | `GET /health`; `GET /{v}/metadata` per version for the switcher; theme, density, language and page size from `localStorage` |
 | Find | `/ui/find` | nothing until it offers: the typed string is read by its shape, and the offers are gated on `GET /{v}/metadata` |
-| Overview | `/ui` | `GET /{v}/metadata?mode=terminology`, as one table, one row per served version, plus `GET /{v}/CodeSystem?_elements=url,name,title` so a row leads with the name its system was published under |
+| Overview | `/ui` | `GET /{v}/metadata?mode=terminology`, as one table, one row per served version, plus `GET /{v}/CodeSystem?_elements=url,name,title,version` so a row leads with the name its system was published under |
 | Code system | `/ui/systems/:url` | the same capability statement, plus `GET /{v}/CodeSystem?url=` for the published resource |
 | Concept browser | `/ui/browse` | search through `ValueSet/$expand` with `filter`; the concept through `CodeSystem/$lookup`; the hierarchy through `$expand` over the version's declared child filter |
-| Expand | `/ui/expand` | `ValueSet/$expand` by `url`, with `filter`, `count`, `offset`, `displayLanguage`, `activeOnly`, `includeDesignations` |
-| Validate and subsume | `/ui/validate` | `CodeSystem/$validate-code`, `ValueSet/$validate-code`, `CodeSystem/$subsumes` |
-| Translate | `/ui/translate` | `ConceptMap/$translate`, with the map, the source system, the code, and the target |
+| Check a code | `/ui/validate` | `CodeSystem/$validate-code`, `ValueSet/$validate-code`, `CodeSystem/$subsumes` |
+| List a value set | `/ui/expand` | `ValueSet/$expand` by `url`, with `filter`, `count`, `offset`, `displayLanguage`, `activeOnly`, `includeDesignations` |
+| Map a code | `/ui/translate` | `ConceptMap/$translate`, with the map, the source system, the code, and the target |
 | Value sets | `/ui/valuesets` | `GET /{v}/ValueSet` search and read, with a link into the expansion runner |
 | Concept maps | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read, with a link into the translate runner |
 | About this server | `/ui/about` | three tabs: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |

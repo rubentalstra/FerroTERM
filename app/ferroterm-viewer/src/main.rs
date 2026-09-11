@@ -13,6 +13,7 @@ mod evidence;
 mod fhir;
 mod find;
 mod listing;
+mod offers;
 mod pages;
 mod paging;
 mod routes;

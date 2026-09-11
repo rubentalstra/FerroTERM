@@ -33,6 +33,7 @@ use crate::components::icon::Icon;
 use crate::components::reading::Reading;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
+use crate::fhir::CODE_SYSTEM;
 use crate::fhir::FhirClient;
 use crate::fhir::concept::CHILD_OF_OPERATOR;
 use crate::fhir::concept::CODE_PARAMETER;
@@ -47,9 +48,12 @@ use crate::fhir::expansion::ConceptRow;
 use crate::fhir::expansion::DISPLAY_LANGUAGE_PARAMETER;
 use crate::fhir::expansion::ExpandedValueSet;
 use crate::fhir::expansion::FILTER_PARAMETER;
+use crate::fhir::named::Choice;
 use crate::fhir::terminology::TerminologyCapabilities;
 use crate::fhir::terminology::VersionRow;
 use crate::fhir::version::FhirVersion;
+use crate::offers::choices;
+use crate::offers::published;
 use crate::paging::MAX_COUNT;
 use crate::routes::BROWSE_PATH;
 use crate::routes::SYSTEM_PARAM;
@@ -57,7 +61,6 @@ use crate::routes::SYSTEM_VERSION_PARAM;
 use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
 use crate::routes::system_link;
-use crate::routes::ui_link;
 use crate::settings::Settings;
 use crate::styles;
 use crate::tree::TreeAction;
@@ -145,22 +148,7 @@ pub(crate) fn BrowsePage() -> impl IntoView {
         <Title text="Concept browser" />
         <h1 class=styles::PAGE_TITLE>"Concept browser"</h1>
         <p class=styles::LEAD>"Search a code system, read a concept, walk its hierarchy."</p>
-        {move || {
-            (!named.get())
-                .then(|| {
-                    view! {
-                        <p class=format!(
-                            "mt-loose rounded-md p-default {}",
-                            styles::NOTICE,
-                        )>
-                            "This address names no code system. "
-                            <a href=move || ui_link("", version.get()) class=styles::LINK>
-                                "Pick one from the overview"
-                            </a> ", open it, and follow its browse link."
-                        </p>
-                    }
-                })
-        }}
+        {system_picker(version, params, choices(published(&client, version, CODE_SYSTEM)))}
     }
     .into_any();
 
@@ -280,6 +268,19 @@ impl BrowseParams {
         Self {
             term: term.trim().to_owned(),
             ..self.clone()
+        }
+    }
+
+    /// Parameters over `system`, with everything read of the one before it
+    /// left behind.
+    ///
+    /// A concept, a search term and an opened tree all belong to the system
+    /// they were read in, so moving to another system starts it clean rather
+    /// than carrying a code that system does not have.
+    fn browsing(system: &str) -> Self {
+        Self {
+            system: system.trim().to_owned(),
+            ..Self::default()
         }
     }
 
@@ -1397,6 +1398,61 @@ fn go(navigate: &dyn Fn(&str, NavigateOptions), target: &str) {
             ..NavigateOptions::default()
         },
     );
+}
+
+/// The code system this screen browses, picked from what the root publishes.
+///
+/// The browser works over one code system, so an address naming none draws
+/// nothing. Picking one is a navigation onto this same screen, which is what
+/// keeps a browsed system a link a reader can send.
+fn system_picker(
+    version: Signal<FhirVersion>,
+    params: Signal<BrowseParams>,
+    systems: Memo<Vec<Choice>>,
+) -> AnyView {
+    let navigate = StoredValue::new(use_navigate());
+    let choose = move |event: Event| {
+        let canonical = event_target_value(&event);
+        if canonical.is_empty() {
+            return;
+        }
+        let target = BrowseParams::browsing(&canonical).address(version.get());
+        navigate.with_value(|navigate| go(navigate, &target));
+    };
+    let offered = move || {
+        systems.with(|systems| {
+            systems
+                .iter()
+                .map(|choice| {
+                    let canonical = choice.canonical.clone();
+                    let label = choice.label.clone();
+                    view! {
+                        <option value=canonical.clone() title=canonical>
+                            {label}
+                        </option>
+                    }
+                    .into_any()
+                })
+                .collect::<Vec<AnyView>>()
+        })
+    };
+    view! {
+        <div class="mt-loose grid max-w-xl gap-tight">
+            <label for="browse-system" class=styles::LABEL>
+                "Code system"
+            </label>
+            <select
+                id="browse-system"
+                class=styles::INPUT
+                prop:value=move || params.with(|params| params.system.clone())
+                on:change=choose
+            >
+                <option value="">"Choose a code system"</option>
+                {offered}
+            </select>
+        </div>
+    }
+    .into_any()
 }
 
 /// A sentence stating what the server did not declare.
