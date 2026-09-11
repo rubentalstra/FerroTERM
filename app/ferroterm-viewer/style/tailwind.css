@@ -213,3 +213,13 @@
   transition-timing-function: ease-out;
   transition-duration: var(--motion-state);
 }
+
+/* The inventory's first column. A name and the canonical beside it read on one
+   line, and the canonical is clipped rather than wrapped: a wrapped canonical
+   makes every row of the table two lines tall, which is the difference between
+   a deployment a reader compares on one screen and one they scroll. The whole
+   canonical is still selected and copied, and the row links to the screen that
+   spells it out. */
+@utility system-cell {
+  max-width: 34rem;
+}

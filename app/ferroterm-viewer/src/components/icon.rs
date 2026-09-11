@@ -132,12 +132,6 @@ pub(crate) const SEARCH: Glyph = Glyph(concat!(
     r#"<path d="m21 21-4.3-4.3"/>"#,
 ));
 
-/// An arrow leaving a frame: this link hands the browser to the server.
-pub(crate) const EXTERNAL: Glyph = Glyph(concat!(
-    r#"<path d="M15 3h6v6"/><path d="M10 14 21 3"/>"#,
-    r#"<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>"#,
-));
-
 /// A sun: the light theme.
 pub(crate) const LIGHT: Glyph = Glyph(concat!(
     r#"<circle cx="12" cy="12" r="4"/>"#,
@@ -197,7 +191,7 @@ mod tests {
     use super::*;
 
     /// Every glyph the screens draw, so a new one is checked by adding it here.
-    const ALL: [Glyph; 23] = [
+    const ALL: [Glyph; 22] = [
         OVERVIEW,
         BROWSE,
         EXPAND,
@@ -216,7 +210,6 @@ mod tests {
         PAGE_NEXT,
         PAGE_LAST,
         SEARCH,
-        EXTERNAL,
         LIGHT,
         DARK,
         TWIST_OPEN,

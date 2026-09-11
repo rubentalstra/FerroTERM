@@ -1,11 +1,11 @@
 //! Everything about this server and this viewer, on one screen.
 //!
-//! Three panes, each closed until a reader opens it. They are one screen
-//! because none of them is about a code, and they are closed because a reader
-//! comes here with one of the three questions, not all three.
+//! Three tabs, one shown at a time. They are one screen because none of them
+//! is about a code, and a reader arrives with one of the three questions.
 //!
-//! Each pane keeps the address it had. A link written before they were one
-//! screen still opens the pane it named, through the redirects in `shell.rs`.
+//! Each tab keeps the address its pane had. A link written before they were
+//! one screen still opens the tab it named, through the redirects in
+//! `shell.rs`.
 
 use leptos::prelude::*;
 use leptos_meta::Title;
@@ -19,76 +19,135 @@ use crate::pages::settings;
 use crate::pages::versions;
 use crate::styles;
 
-/// One pane: the heading it is labelled by, its name, and its glyph.
-struct Pane(&'static str, &'static str, Glyph);
+/// One tab: the id it answers to, its name, and its glyph.
+struct Tab(&'static str, &'static str, Glyph);
 
-/// The panes, in the order the screen draws them.
-const PANES: [Pane; 3] = [
-    Pane("versions", "The four FHIR versions", icon::VERSION),
-    Pane("evidence", "The evidence this build ships", icon::EVIDENCE),
-    Pane("settings", "Settings", icon::SETTINGS),
+/// The tabs, in the order the screen draws them.
+///
+/// The first is what a reader who named none of them gets.
+const TABS: [Tab; 3] = [
+    Tab("versions", "The four FHIR versions", icon::VERSION),
+    Tab("evidence", "The evidence this build ships", icon::EVIDENCE),
+    Tab("settings", "Settings", icon::SETTINGS),
 ];
 
-/// Shows the three panes about this server and this viewer.
+/// The classes every tab carries, whichever one is being read.
+const TAB_BASE: &str = "flex items-center gap-default rounded-t-md border-b-2 px-default py-tight text-small font-medium";
+
+/// The classes the tab being read carries.
+const TAB_ACTIVE: &str = "border-accent text-accent";
+
+/// The classes every other tab carries.
+const TAB_RESTING: &str = "state-change border-transparent text-muted hover:bg-inset hover:text-fg";
+
+/// Shows the three tabs about this server and this viewer.
 #[component]
 #[expect(
     unreachable_pub,
     reason = "the leptos component macro emits a pub props type, and a binary crate has no reachable public API"
 )]
 pub(crate) fn AboutPage() -> impl IntoView {
-    // An address naming a pane opens it, and a link to another pane from
-    // this screen is a fragment navigation that never re-runs this body, so
-    // the fragment is followed rather than read once
+    // An address naming a tab opens it, and a tab is a link to a fragment of
+    // this same screen, which never re-runs this body, so the fragment is
+    // followed rather than read once
     // (`leptos_router` 0.8.15 `use_location`).
     let named = use_location().hash;
+    let shown = Memo::new(move |_| {
+        named.with(|named| {
+            let asked = named.trim_start_matches('#');
+            TABS.iter()
+                .position(|Tab(id, _, _)| anchor(id) == asked)
+                .unwrap_or_default()
+        })
+    });
+
+    let strip: Vec<AnyView> = TABS
+        .iter()
+        .enumerate()
+        .map(|(index, Tab(id, label, glyph))| tab(index, id, label, *glyph, shown))
+        .collect();
     let bodies = [versions::pane(), evidence::pane(), settings::pane()];
-    let panes: Vec<AnyView> = PANES
-        .into_iter()
+    let panes: Vec<AnyView> = TABS
+        .iter()
         .zip(bodies)
-        .map(|(Pane(id, label, glyph), body)| pane(id, label, glyph, named, body))
+        .enumerate()
+        .map(|(index, (Tab(id, label, _), body))| pane(index, id, label, shown, body))
         .collect();
 
     view! {
         <Title text="About this server" />
         <h1 class=styles::PAGE_TITLE>"About this server"</h1>
-        <div class="mt-loose grid gap-default">{panes}</div>
+        <nav
+            aria-label="About this server"
+            class="mt-loose flex flex-wrap gap-default border-b border-line"
+        >
+            {strip}
+        </nav>
+        {panes}
     }
 }
 
-/// The element id one pane answers to.
+/// The element id one tab answers to.
 fn anchor(id: &str) -> String {
     format!("about-{id}-heading")
 }
 
-/// One pane, closed until a reader opens it or an address names it.
+/// One tab, as the link that opens it.
 ///
-/// A `<details>` rather than a tab list: the browser gives the disclosure its
-/// keyboard contract and its announcement for free
-/// (<https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/>).
-///
-/// The `id` is on the `<details>`, so an address naming a pane scrolls to it,
-/// and the `name` groups the three under one accordion, which is what closes
-/// the others when one opens
-/// (<https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details#name>).
-fn pane(
+/// A link rather than a tab widget: the tab being read is an address a reader
+/// can send and the browser can go back to, the keyboard needs no handler of
+/// ours, and `aria-current` is what a screen reader announces
+/// (<https://www.w3.org/TR/wai-aria-1.2/#aria-current>).
+fn tab(
+    index: usize,
     id: &'static str,
     label: &'static str,
     glyph: Glyph,
-    named: Memo<String>,
+    shown: Memo<usize>,
+) -> AnyView {
+    let here = move || shown.get() == index;
+    view! {
+        <a
+            href=format!("#{}", anchor(id))
+            aria-current=move || if here() { "true" } else { "false" }
+            class=move || {
+                format!("{TAB_BASE} {}", if here() { TAB_ACTIVE } else { TAB_RESTING })
+            }
+        >
+            <Icon glyph=glyph />
+            {label}
+        </a>
+    }
+    .into_any()
+}
+
+/// One pane, drawn under the strip and shown only while its tab is the one
+/// being read.
+///
+/// The three stay in the document so that every address this screen answers
+/// finds the element it names. A hidden one is out of the accessibility tree,
+/// which is what `hidden` means
+/// (<https://html.spec.whatwg.org/multipage/interaction.html#the-hidden-attribute>).
+fn pane(
+    index: usize,
+    id: &'static str,
+    label: &'static str,
+    shown: Memo<usize>,
     body: AnyView,
 ) -> AnyView {
-    let opened = move || named.with(|named| named.trim_start_matches('#') == anchor(id));
+    let heading = anchor(id);
     view! {
-        <details id=anchor(id) name="about" open=opened class=styles::PANEL>
-            <summary class=format!(
-                "flex cursor-pointer items-center gap-default panel-p {}",
-                styles::SECTION_TITLE,
-            )>
-                <Icon glyph=glyph />
+        <section
+            id=heading.clone()
+            aria-labelledby=format!("{heading}-name")
+            hidden=move || shown.get() != index
+            class=format!("mt-loose panel-p {}", styles::PANEL)
+        >
+            <h2 id=format!("{heading}-name") class="sr-only">
                 {label}
-            </summary>
-            <div class="border-t border-line panel-p">{body}</div>
-        </details>
+            </h2>
+            {body}
+        </section>
     }
     .into_any()
 }

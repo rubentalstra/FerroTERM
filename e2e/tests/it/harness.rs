@@ -238,11 +238,12 @@ impl Journey {
     ///
     /// Every other reading here is a WebDriver primitive, because inert markup
     /// satisfies a source assertion even when the control it describes is
-    /// unreachable. Two things have no primitive: the element focus is on
-    /// after a key press, and the colour a browser actually painted. Both are
-    /// what the accessibility pass measures, so it reads them through a script
-    /// (<https://www.w3.org/TR/webdriver2/#execute-script>) and nothing else
-    /// does.
+    /// unreachable. Three things have no primitive: the element focus is on
+    /// after a key press, the colour a browser actually painted, and the height
+    /// of the viewport, because Get Window Rect reports the window around it
+    /// (<https://www.w3.org/TR/webdriver2/#get-window-rect>). They are read
+    /// through a script (<https://www.w3.org/TR/webdriver2/#execute-script>)
+    /// and nothing else is.
     pub async fn evaluate(&self, script: &str) -> WebDriverResult<String> {
         self.driver.execute(script, Vec::new()).await?.convert()
     }
@@ -255,6 +256,16 @@ impl Journey {
     pub async fn tab(&self, times: usize) -> WebDriverResult<()> {
         let presses = TypingData::from(Key::Tab).to_string().repeat(times);
         self.driver.active_element().await?.send_keys(presses).await
+    }
+
+    /// How tall the viewport is, in CSS pixels.
+    ///
+    /// # Errors
+    ///
+    /// Returns the WebDriver error when the browser does not answer.
+    pub async fn viewport_height(&self) -> WebDriverResult<f64> {
+        let read = self.evaluate("return String(window.innerHeight);").await?;
+        Ok(read.trim().parse::<f64>().unwrap_or_default())
     }
 
     /// The address the browser is on.
