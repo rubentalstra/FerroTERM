@@ -154,6 +154,31 @@ impl Wire {
         Ok(self.body(status, body))
     }
 
+    /// A resource already in its wire form, for an answer no typed value
+    /// can hold.
+    ///
+    /// A `_elements` projection is the case: a subset of a resource is not a
+    /// resource, so it has no typed form to serialize from
+    /// (<https://hl7.org/fhir/R5/search.html#elements>).
+    ///
+    /// # Errors
+    ///
+    /// Returns the `500` of an object with no wire form.
+    pub fn object(
+        self,
+        status: StatusCode,
+        object: &Object,
+        schemas: &Schemas,
+    ) -> Result<Response, Failure> {
+        let body = match self {
+            Self::Json => serde_json::to_vec(object).map_err(|e| encoding(&e))?,
+            Self::Xml => fhir_types::xml::to_xml(schemas, object)
+                .map_err(|e| encoding(&e))?
+                .into_bytes(),
+        };
+        Ok(self.body(status, body))
+    }
+
     /// The response of `body` with this format's `Content-Type`.
     fn body(self, status: StatusCode, body: Vec<u8>) -> Response {
         Response::builder()

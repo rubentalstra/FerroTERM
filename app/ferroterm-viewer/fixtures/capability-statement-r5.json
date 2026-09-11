@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-08T13:51:18.843206Z",
+  "date": "2026-09-11T06:59:08.619875Z",
   "extension": [
     {
       "extension": [
@@ -130,6 +130,11 @@
             {
               "name": "version",
               "type": "token"
+            },
+            {
+              "definition": "http://hl7.org/fhir/SearchParameter/Resource-elements",
+              "name": "_elements",
+              "type": "string"
             }
           ],
           "type": "CodeSystem"
@@ -183,6 +188,11 @@
             {
               "name": "version",
               "type": "token"
+            },
+            {
+              "definition": "http://hl7.org/fhir/SearchParameter/Resource-elements",
+              "name": "_elements",
+              "type": "string"
             }
           ],
           "type": "ValueSet"
@@ -221,6 +231,11 @@
             {
               "name": "version",
               "type": "token"
+            },
+            {
+              "definition": "http://hl7.org/fhir/SearchParameter/Resource-elements",
+              "name": "_elements",
+              "type": "string"
             }
           ],
           "type": "ConceptMap"
