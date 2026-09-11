@@ -7,19 +7,19 @@ commercial licence?" without reading the parameters.
 
 The code systems are a separate question, answered at the bottom of this page.
 
-## Do I need a commercial licence?
+## Do you need a commercial licence?
 
-| You are | What you are doing | Licence |
+| What you are doing | What you need | Why |
 |---|---|---|
-| Anyone | Reading, building, modifying, or redistributing the source | Free |
-| Anyone | Development, testing, evaluation, prototyping | Free |
-| A person | Personal use | Free |
-| A university or research group | Academic or scientific research, or teaching | Free |
-| A non-profit or public body | Production use that is not in the course of a business, does not deliver a service for payment, and is not for commercial advantage | Free |
-| A hospital, clinic, or care provider | Treating patients | Commercial licence |
-| A vendor or integrator | Any production use | Commercial licence |
-| Anyone | Offering FerroTERM, or a work derived from it, to third parties as a hosted, managed, or embedded terminology service | Commercial licence |
-| Anyone | Selling, sublicensing, or otherwise distributing it for a fee, on its own or inside another product | Commercial licence |
+| Reading, building, modifying, or redistributing the source | Free | The licence grants this without a fee and without asking anyone; only production use is restricted. |
+| Development, testing, evaluation, prototyping | Free | None of these is production use, which is the only thing the Additional Use Grant limits. |
+| Personal use | Free | Named in the grant's definition of Non-Commercial Purposes. |
+| Academic or scientific research, or teaching | Free | Named in the grant's definition of Non-Commercial Purposes. |
+| Production use by a non-profit or public body that is not in the course of a business, does not deliver a service for payment, and is not for commercial advantage | Free | The grant's definition of Non-Commercial Purposes, in the licence's own words. |
+| Treating patients, or delivering any other service for payment | Commercial licence | The grant ends with "any other production use, including the delivery of health care or any other service for payment, requires a commercial license from the Licensor". |
+| Any production use by a vendor or integrator | Commercial licence | A business's production use is not a Non-Commercial Purpose, so the same closing sentence of the grant applies. |
+| Offering FerroTERM, or a work derived from it, to third parties as a hosted, managed, or embedded terminology service | Commercial licence | Carve-out (a) of the grant, which the licence defines as a service through which anyone other than you and your affiliates stores, manages, or queries terminology, code system content, or health data. |
+| Selling, sublicensing, or otherwise distributing it for a fee, on its own or inside another product | Commercial licence | Carve-out (b) of the grant. |
 
 The last two rows hold whatever else you are. Hosting FerroTERM for third
 parties, and distributing it for a fee, need a commercial licence in every
