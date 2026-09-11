@@ -17,10 +17,8 @@ use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
 use crate::components::field::Help;
 use crate::components::reading::Reading;
-use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::components::state::empty;
-use crate::fhir::CONCEPT_MAP;
 use crate::fhir::FhirClient;
 use crate::fhir::concept_map::GroupRow;
 use crate::fhir::concept_map::PublishedConceptMap;
@@ -202,10 +200,6 @@ fn list_section(
         let filter = filter.get();
         async move { client.concept_map_search(version, &filter).await }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || {
-        filter.with(|filter| url_client.search_url(version.get(), CONCEPT_MAP, filter))
-    });
 
     // The live region is in the document before the read settles, which is
     // what lets a screen reader announce the count when it arrives. Every
@@ -250,7 +244,6 @@ fn list_section(
                         })
                 }}
             </Reading>
-            <RequestDisclosure url />
         </section>
     }
     .into_any()
@@ -366,10 +359,6 @@ fn detail_section(
             }
         }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || {
-        id.with(|id| url_client.resource_url(version.get(), CONCEPT_MAP, id))
-    });
 
     view! {
         <Show when=move || id.with(|id| !id.is_empty()) fallback=|| ()>
@@ -392,7 +381,6 @@ fn detail_section(
                             })
                     }}
                 </Reading>
-                <RequestDisclosure url />
             </section>
         </Show>
     }

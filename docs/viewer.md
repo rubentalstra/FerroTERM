@@ -456,7 +456,7 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 |---|---|---|
 | Shell | all | `GET /health`; `GET /{v}/metadata` per version for the switcher; theme, density, language and page size from `localStorage` |
 | Find | `/ui/find` | nothing until it offers: the typed string is read by its shape, and the offers are gated on `GET /{v}/metadata` |
-| Overview | `/ui` | `GET /{v}/metadata?mode=terminology`, as one table, one row per served version |
+| Overview | `/ui` | `GET /{v}/metadata?mode=terminology`, as one table, one row per served version, plus `GET /{v}/CodeSystem?_elements=url,name,title` so a row leads with the name its system was published under |
 | Code system | `/ui/systems/:url` | the same capability statement, plus `GET /{v}/CodeSystem?url=` for the published resource |
 | Concept browser | `/ui/browse` | search through `ValueSet/$expand` with `filter`; the concept through `CodeSystem/$lookup`; the hierarchy through `$expand` over the version's declared child filter |
 | Expand | `/ui/expand` | `ValueSet/$expand` by `url`, with `filter`, `count`, `offset`, `displayLanguage`, `activeOnly`, `includeDesignations` |
@@ -464,11 +464,13 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | Translate | `/ui/translate` | `ConceptMap/$translate`, with the map, the source system, the code, and the target |
 | Value sets | `/ui/valuesets` | `GET /{v}/ValueSet` search and read, with a link into the expansion runner |
 | Concept maps | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read, with a link into the translate runner |
-| About this server | `/ui/about` | three panes: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |
+| About this server | `/ui/about` | three tabs: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |
 
 `/ui/versions`, `/ui/evidence` and `/ui/settings` were screens of their own and
-now redirect to the About pane they named, so a link written before the merge
-still opens what it pointed at.
+now redirect to the About tab they named, so a link written before the merge
+still opens what it pointed at. A tab is a link to a fragment of the About
+screen, so the tab being read is an address a reader can send and the browser
+can go back to, and the keyboard contract is the browser's own.
 
 **A command bar sits above every screen.** One field. What a reader types is
 read by its shape alone, before any request: a scheme with something after it
@@ -481,13 +483,21 @@ keyboard contract is the browser's own.
 **The screens are reached from a left sidebar, in four labelled groups.**
 Explore reads what the server holds, Run asks it something, Publish lists what
 it publishes, About answers questions about the server rather than about a
-code. Each group is a `const` table read in render order, so the order is data
+code. The concept browser is not in it: it browses one code system, so it is
+reached from that system's row on the overview rather than from an address
+that names none. Each group is a `const` table read in render order, so the order is data
 and one function draws every entry, and each group's label is its list's
 accessible name through `aria-labelledby`. Below the `md` breakpoint the
 sidebar is hidden until the top bar's toggle opens it.
 
-The top bar keeps what is true of every screen at once: the command bar, the
-FHIR version switcher, the health chip, and the theme toggle. The switcher
+**The top bar and the sidebar stay put, and the screen scrolls under them.**
+The shell is one viewport tall and only the main pane scrolls, so the command
+bar, the version switcher and the list of places are in the same spot however
+long the screen under them runs.
+
+The top bar keeps what is true of every screen at once: the command bar,
+centred in what is left between the mark and the controls, the FHIR version
+switcher, the health chip, and the theme toggle. The switcher
 changes which root every screen reads from, so it is a lens over the whole
 viewer rather than a place to go, and that is why it stays out of the sidebar.
 
@@ -501,12 +511,6 @@ own `OperationOutcome`.
 the address, so a run is already a URL and the list holds links and nothing
 else: a remembered run is re-run when a reader returns to it and can never show
 a stale answer beside a live one. Twelve are kept, in `localStorage` alone.
-
-**The request disclosure is shell-level, not a screen.** Every data section can
-reveal the exact FHIR request it issued, as a copyable URL and a `curl` line.
-That is the cheapest possible demonstration of the boundary this design
-exists to hold: the reader sees that the page did nothing they cannot do
-themselves.
 
 ### Deliberately out of scope
 

@@ -409,8 +409,8 @@ async fn choose_density(journey: &Journey, base: &str, density: &str) -> WebDriv
 
 /// Opens every disclosure on the screen, so what is behind one is measured.
 ///
-/// A pane of the About screen is a `<details>`, and so is every request
-/// disclosure. A pass that measured only what is open would report on a
+/// A remembered run list, an evidence table and a root's notes are each a
+/// `<details>`. A pass that measured only what is open would report on a
 /// screen no reader ends up looking at.
 const OPEN_DISCLOSURES: &str = r"
 document.querySelectorAll('details:not([open])').forEach((el) => { el.open = true; });

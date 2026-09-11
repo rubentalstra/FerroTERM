@@ -33,7 +33,6 @@ use crate::components::field::text_field;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
-use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
 use crate::components::state::undeclared;
@@ -175,7 +174,7 @@ pub(crate) fn ValidatePage() -> impl IntoView {
     });
     let history = History::recording(made);
 
-    let root = root_section(&client, version, params, capabilities, statement, declared);
+    let root = root_section(version, params, capabilities, statement, declared);
     let validate = validate_section(&client, version, params, declared);
     let subsumes = subsumes_section(&client, version, params, declared);
 
@@ -385,18 +384,12 @@ impl RunnerParams {
 
 /// What this root declares about the system the screen is working over.
 fn root_section(
-    client: &FhirClient,
     version: Signal<FhirVersion>,
     params: Signal<RunnerParams>,
     capabilities: LocalResource<Result<TerminologyCapabilities, FhirError>>,
     statement: LocalResource<Result<CapabilityStatement, FhirError>>,
     declared: Memo<Declared>,
 ) -> AnyView {
-    let terminology_client = client.clone();
-    let terminology_url =
-        Signal::derive(move || terminology_client.terminology_metadata_url(version.get()));
-    let statement_client = client.clone();
-    let statement_url = Signal::derive(move || statement_client.metadata_url(version.get()));
     let named = Memo::new(move |_| params.with(|params| !params.system.is_empty()));
 
     let body = move || {
@@ -453,8 +446,6 @@ fn root_section(
                     })
             }}
             {move || named.get().then(body)}
-            <RequestDisclosure url=terminology_url label="terminology capabilities" />
-            <RequestDisclosure url=statement_url label="capability statement" />
         </section>
     }
     .into_any()
@@ -527,14 +518,6 @@ fn validate_section(
             }
         }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || {
-        request.with(|request| {
-            request
-                .as_ref()
-                .map(|request| url_client.validate_code_url(version.get(), request))
-        })
-    });
 
     // The live region is in the document before the read settles, which is
     // what lets a screen reader announce the outcome when it arrives.
@@ -549,10 +532,6 @@ fn validate_section(
         })
     });
 
-    let disclosure = move || {
-        url.get()
-            .map(|url| view! { <RequestDisclosure url=url label="validation" /> }.into_any())
-    };
     let body = move || {
         let form = validate_form(params, version, declared, offered);
         let answered = view! {
@@ -577,7 +556,6 @@ fn validate_section(
                         })
                 }}
             </Reading>
-            {disclosure}
         }
             .into_any();
         // The answer keeps its own column above the large breakpoint, so a
@@ -900,14 +878,6 @@ fn subsumes_section(
             }
         }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || {
-        request.with(|request| {
-            request
-                .as_ref()
-                .map(|request| url_client.subsumes_url(version.get(), request))
-        })
-    });
     let announcement = Memo::new(move |_| {
         let (code_a, code_b) = params.with(|params| (params.code_a.clone(), params.code_b.clone()));
         answer.with(|answered| {
@@ -920,10 +890,6 @@ fn subsumes_section(
         })
     });
 
-    let disclosure = move || {
-        url.get()
-            .map(|url| view! { <RequestDisclosure url=url label="subsumption" /> }.into_any())
-    };
     let panel = move || {
         let form = subsumes_form(params, version, offered);
         let answered = view! {
@@ -948,7 +914,6 @@ fn subsumes_section(
                         })
                 }}
             </Reading>
-            {disclosure}
         }
         .into_any();
         view! {

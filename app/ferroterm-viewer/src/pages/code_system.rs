@@ -17,7 +17,6 @@ use crate::components::icon;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
-use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::components::state::undeclared;
 use crate::fhir::FhirClient;
@@ -91,7 +90,7 @@ pub(crate) fn CodeSystemPage() -> impl IntoView {
     }
     .into_any();
 
-    let capability = capability_section(&client, version, system, capabilities);
+    let capability = capability_section(system, capabilities);
     let published = published_section(&client, version, system);
 
     view! {
@@ -121,14 +120,9 @@ fn heading_of(system: &str) -> String {
 
 /// What this server declares it can do with the system.
 fn capability_section(
-    client: &FhirClient,
-    version: Signal<FhirVersion>,
     system: Signal<String>,
     capabilities: LocalResource<Result<TerminologyCapabilities, FhirError>>,
 ) -> AnyView {
-    let url_client = client.clone();
-    let url = Signal::derive(move || url_client.terminology_metadata_url(version.get()));
-
     view! {
         <section class="mt-loose" aria-labelledby="system-capability-heading">
             <h2 id="system-capability-heading" class=styles::SECTION_TITLE>
@@ -154,7 +148,6 @@ fn capability_section(
                         })
                 }}
             </Reading>
-            <RequestDisclosure url />
         </section>
     }
     .into_any()
@@ -409,10 +402,6 @@ fn published_section(
         let system = system.get();
         async move { client.code_system_search(version, &system).await }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || {
-        system.with(|system| url_client.code_system_search_url(version.get(), system))
-    });
 
     // The live region is in the document before the read settles, which is
     // what lets a screen reader announce the count when it arrives. It stays
@@ -451,7 +440,6 @@ fn published_section(
                         })
                 }}
             </Reading>
-            <RequestDisclosure url />
         </section>
     }
     .into_any()

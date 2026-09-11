@@ -38,7 +38,6 @@ use crate::pages::translate::TranslatePage;
 use crate::pages::validate::ValidatePage;
 use crate::pages::value_sets::ValueSetsPage;
 use crate::routes::ABOUT_PATH;
-use crate::routes::BROWSE_PATH;
 use crate::routes::CONCEPT_MAPS_PATH;
 use crate::routes::EXPAND_PATH;
 use crate::routes::FIND_PATH;
@@ -72,10 +71,11 @@ struct NavItem(&'static str, &'static str, Glyph);
 struct NavGroup(&'static str, &'static [NavItem]);
 
 /// The screens a reader reads what this server holds on.
-const EXPLORE: [NavItem; 2] = [
-    NavItem(OVERVIEW_PATH, "Overview", icon::OVERVIEW),
-    NavItem(BROWSE_PATH, "Concept browser", icon::BROWSE),
-];
+///
+/// The concept browser is not among them. It browses one code system, and the
+/// address of a browser with no system named is a screen that can only send a
+/// reader to the overview, so the overview is where it is reached from.
+const EXPLORE: [NavItem; 1] = [NavItem(OVERVIEW_PATH, "Overview", icon::OVERVIEW)];
 
 /// The screens a reader asks this server a question on.
 const RUN: [NavItem; 3] = [
@@ -189,7 +189,8 @@ fn nav_group(
 ///
 /// It is a landmark with its own name, and it stays in the document at every
 /// width: below the `md` breakpoint it is hidden until the top bar's toggle
-/// opens it, and from `md` up it is always shown.
+/// opens it, and from `md` up it is always shown. It scrolls on its own, so a
+/// reader walking a long screen keeps every place they can go in view.
 fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     let location = use_location();
     let section = Memo::new(move |_| location.pathname.with(|path| nav_section(path)));
@@ -200,7 +201,7 @@ fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     view! {
         <aside
             id=NAV_ID
-            class="w-full shrink-0 border-b border-line bg-raised md:block md:w-56 md:border-r md:border-b-0"
+            class="w-full shrink-0 overflow-y-auto border-b border-line bg-raised md:block md:w-56 md:border-r md:border-b-0"
             class:hidden=move || !open.get()
         >
             <nav aria-label="Screens" class="p-default">
@@ -213,7 +214,8 @@ fn sidebar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
 
 /// The command bar, on every screen.
 ///
-/// One field. What a reader types is read by its shape alone, in
+/// It is centred in what the top bar has left between the mark and the
+/// controls, where a reader looks for it. One field. What a reader types is read by its shape alone, in
 /// `crate::find`, and the screen it opens offers what this root can do with
 /// it. The bar is a form rather than a listbox that suggests as you type, so
 /// every offer is a real link, the keyboard needs no handler of ours, and a
@@ -250,7 +252,11 @@ fn command_bar(version: Signal<FhirVersion>) -> AnyView {
         });
     };
     view! {
-        <form class="flex min-w-0 flex-1 items-center gap-default" on:submit=submit role="search">
+        <form
+            class="flex min-w-0 flex-1 items-center justify-center gap-default"
+            on:submit=submit
+            role="search"
+        >
             <label for=COMMAND_ID class="sr-only">
                 "Find a code, a canonical, or a phrase"
             </label>
@@ -259,7 +265,7 @@ fn command_bar(version: Signal<FhirVersion>) -> AnyView {
                 name="q"
                 type="search"
                 placeholder="A code, a canonical, or a phrase"
-                class=format!("max-w-md {}", styles::INPUT)
+                class=format!("w-full min-w-0 max-w-md {}", styles::INPUT)
                 node_ref=typed
             />
             <button type="submit" class=styles::BUTTON>
@@ -278,7 +284,7 @@ fn command_bar(version: Signal<FhirVersion>) -> AnyView {
 /// with the chrome that is true everywhere rather than in the list of places.
 fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     view! {
-        <header class="border-b border-line bg-raised">
+        <header class="shrink-0 border-b border-line bg-raised">
             <div class="flex flex-wrap items-center gap-default px-loose py-default">
                 <button
                     type="button"
@@ -382,12 +388,12 @@ pub(crate) fn Shell() -> impl IntoView {
 
     view! {
         <div class=format!(
-            "flex min-h-screen flex-col {}",
+            "flex h-screen flex-col overflow-hidden {}",
             styles::PAGE,
         )>
             {bar}
-            <div class="flex flex-1 flex-col md:flex-row">
-                {nav} <main class="min-w-0 flex-1 px-loose py-loose">
+            <div class="flex min-h-0 flex-1 flex-col md:flex-row">
+                {nav} <main class="min-w-0 flex-1 overflow-y-auto px-loose py-loose">
                     <div class="mx-auto max-w-6xl">{screens}</div>
                 </main>
             </div>

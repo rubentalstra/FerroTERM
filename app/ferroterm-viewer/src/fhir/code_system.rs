@@ -8,6 +8,8 @@
 //! screen reads both and keeps them apart. Reading lives here, outside every
 //! component, so the screen renders a value plain unit tests can pin.
 
+use std::collections::BTreeMap;
+
 use serde::Deserialize;
 
 /// The resource type an entry must declare to be drawn as a code system.
@@ -96,6 +98,22 @@ impl CodeSystemSearch {
         self.total
     }
 
+    /// The name each published system carries, keyed by its canonical.
+    ///
+    /// `title` is the name written for a person and `name` the computer-
+    /// friendly one, so the first that is stated is the one a row leads with
+    /// (<https://hl7.org/fhir/R5/codesystem.html>). A resource stating
+    /// neither contributes nothing, and its row keeps the canonical alone.
+    pub(crate) fn names(&self) -> BTreeMap<String, String> {
+        self.carried()
+            .filter_map(|published| {
+                let url = published.url()?.to_owned();
+                let name = published.label().or(published.name())?.to_owned();
+                Some((url, name))
+            })
+            .collect()
+    }
+
     /// The published code systems the answer carries, in the server's order.
     ///
     /// An entry carrying something other than a `CodeSystem` is passed over
@@ -132,6 +150,16 @@ impl PublishedCodeSystem {
     /// The canonical the resource declares, when it declared one.
     pub(crate) fn url(&self) -> Option<&str> {
         named(self.url.as_deref())
+    }
+
+    /// `CodeSystem.title`, the name written for a person.
+    pub(crate) fn label(&self) -> Option<&str> {
+        named(self.title.as_deref())
+    }
+
+    /// `CodeSystem.name`, the computer-friendly name.
+    pub(crate) fn name(&self) -> Option<&str> {
+        named(self.name.as_deref())
     }
 
     /// The facts the screen draws, in a fixed order.

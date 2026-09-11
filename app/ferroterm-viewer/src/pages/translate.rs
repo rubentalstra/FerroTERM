@@ -23,7 +23,6 @@ use crate::components::field::text_field;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
-use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
 use crate::components::state::undeclared;
@@ -201,8 +200,6 @@ fn runner_section(
         let version = version.get();
         async move { client.capability_statement(version).await }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || url_client.metadata_url(version.get()));
     let declared = Signal::derive(move || {
         statement.with(|answered| {
             answered
@@ -238,7 +235,6 @@ fn runner_section(
             <Show when=move || declared.get() fallback=|| ()>
                 {runner_form(run, version)}
             </Show>
-            <RequestDisclosure url />
         </section>
     }
     .into_any()
@@ -419,16 +415,6 @@ fn answer_section(
             }
         }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || {
-        run.with(|run| {
-            if run.runnable() {
-                url_client.translate_url(version.get(), run)
-            } else {
-                String::new()
-            }
-        })
-    });
 
     // The live region is mounted the moment the address names a run, which is
     // before the read settles, so a screen reader hears the count when it
@@ -446,17 +432,16 @@ fn answer_section(
 
     view! {
         <Show when=move || run.with(TranslateRequest::runnable) fallback=|| ()>
-            {answer_block(translated, announcement, url)}
+            {answer_block(translated, announcement)}
         </Show>
     }
     .into_any()
 }
 
-/// The heading, the live region, the answer, and the request that fetched it.
+/// The heading, the live region, and the answer.
 fn answer_block(
     translated: LocalResource<Option<Result<TranslateAnswer, FhirError>>>,
     announcement: Memo<String>,
-    url: Signal<String>,
 ) -> AnyView {
     view! {
         <section class="mt-loose" aria-labelledby="translate-answer-heading">
@@ -480,7 +465,6 @@ fn answer_block(
                         })
                 }}
             </Reading>
-            <RequestDisclosure url />
         </section>
     }
     .into_any()

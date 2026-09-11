@@ -19,11 +19,9 @@ use crate::components::field::Help;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
-use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::components::state::empty;
 use crate::fhir::FhirClient;
-use crate::fhir::VALUE_SET;
 use crate::fhir::error::FhirError;
 use crate::fhir::searchset::SearchFilter;
 use crate::fhir::searchset::SearchSet;
@@ -141,10 +139,6 @@ fn list_section(
         let filter = filter.get();
         async move { client.value_set_search(version, &filter).await }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || {
-        filter.with(|filter| url_client.search_url(version.get(), VALUE_SET, filter))
-    });
 
     // The live region is in the document before the read settles, which is
     // what lets a screen reader announce the count when it arrives. Every
@@ -189,7 +183,6 @@ fn list_section(
                         })
                 }}
             </Reading>
-            <RequestDisclosure url />
         </section>
     }
     .into_any()
@@ -292,9 +285,6 @@ fn detail_section(
             }
         }
     });
-    let url_client = client.clone();
-    let url =
-        Signal::derive(move || id.with(|id| url_client.resource_url(version.get(), VALUE_SET, id)));
 
     view! {
         <Show when=move || id.with(|id| !id.is_empty()) fallback=|| ()>
@@ -317,7 +307,6 @@ fn detail_section(
                             })
                     }}
                 </Reading>
-                <RequestDisclosure url />
             </section>
         </Show>
     }

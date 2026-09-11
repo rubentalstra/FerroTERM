@@ -22,7 +22,6 @@ use crate::components::icon;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
-use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::runs::History;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
@@ -583,15 +582,6 @@ fn result_section(
         }
     });
 
-    let url_client = client.clone();
-    let url = Signal::derive(move || {
-        request.with(|request| {
-            request
-                .as_ref()
-                .map(|request| url_client.expand_url(version.get(), request))
-        })
-    });
-
     // The live region is in the document before the read settles, which is
     // what lets a screen reader announce the count when it arrives.
     let announcement = Memo::new(move |_| {
@@ -635,9 +625,6 @@ fn result_section(
                             })
                     }}
                 </Reading>
-            </Show>
-            <Show when=move || url.with(Option::is_some) fallback=|| ()>
-                <RequestDisclosure url=Signal::derive(move || { url.get().unwrap_or_default() }) />
             </Show>
         </section>
     }

@@ -20,7 +20,6 @@ use crate::comparison::state_sentence;
 use crate::components::NOT_DECLARED;
 use crate::components::failure::Failure;
 use crate::components::reading::Reading;
-use crate::components::request_disclosure::RequestDisclosure;
 use crate::fhir::FhirClient;
 use crate::fhir::capability::CapabilityStatement;
 use crate::fhir::error::FhirError;
@@ -55,13 +54,8 @@ pub(crate) fn pane() -> AnyView {
     });
 
     let comparison = comparison_section(roots);
-    let requests = requests_section(&client);
 
-    view! {
-        {comparison}
-        {requests}
-    }
-    .into_any()
+    view! { {comparison} }.into_any()
 }
 
 /// The four documents, read together and drawn as one comparison.
@@ -308,16 +302,4 @@ fn note_count(count: usize) -> String {
     } else {
         format!("{count} operations with a note")
     }
-}
-
-/// The four requests this screen made, each one a reader can repeat.
-fn requests_section(client: &FhirClient) -> AnyView {
-    let drawn: Vec<AnyView> = FhirVersion::ALL
-        .into_iter()
-        .map(|version| {
-            let url = client.metadata_url(version);
-            view! { <RequestDisclosure url=url label=version.label() /> }.into_any()
-        })
-        .collect();
-    view! { <div class="mt-section">{drawn}</div> }.into_any()
 }

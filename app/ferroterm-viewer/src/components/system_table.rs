@@ -10,6 +10,8 @@
 //! Every cell is the capability statement rendered, so a system this server
 //! has never served draws correctly with no change to this file.
 
+use std::collections::BTreeMap;
+
 use leptos::prelude::*;
 use leptos_router::NavigateOptions;
 use leptos_router::hooks::use_navigate;
@@ -47,7 +49,8 @@ const DESCENDING: &str = "desc";
 /// reader looking for a version is looking inside a system they already found.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Column {
-    /// The canonical the system is identified by.
+    /// The name the system is known by, or its canonical where the server
+    /// published no name.
     System,
     /// The content mode the server declared for it.
     Content,
@@ -86,9 +89,15 @@ impl Column {
     ///
     /// A fact the server did not state sorts after every one it did, in both
     /// directions, so absence never lands in the middle of the answers.
-    fn of(self, card: &SystemCard) -> (bool, String) {
+    fn of(self, card: &SystemCard, names: &BTreeMap<String, String>) -> (bool, String) {
         match self {
-            Self::System => (card.url.is_empty(), card.url.clone()),
+            // A reader ordering this column is looking for a name, so the sort
+            // runs on the name where the server published one, case-folded so
+            // that two spellings of one letter sit together.
+            Self::System => (
+                card.url.is_empty(),
+                name_of(card, names).unwrap_or(&card.url).to_lowercase(),
+            ),
             Self::Content => (
                 card.content.is_none(),
                 card.content.clone().unwrap_or_default(),
@@ -165,8 +174,17 @@ impl Order {
     }
 }
 
+/// The name the server published for `card`, where it published one.
+fn name_of<'a>(card: &SystemCard, names: &'a BTreeMap<String, String>) -> Option<&'a str> {
+    names.get(&card.url).map(String::as_str)
+}
+
 /// The systems in the order the address asks for.
-fn ordered(mut cards: Vec<SystemCard>, order: Order) -> Vec<SystemCard> {
+fn ordered(
+    mut cards: Vec<SystemCard>,
+    order: Order,
+    names: &BTreeMap<String, String>,
+) -> Vec<SystemCard> {
     let Some(column) = order.column else {
         return cards;
     };
@@ -175,8 +193,8 @@ fn ordered(mut cards: Vec<SystemCard>, order: Order) -> Vec<SystemCard> {
     // compared first and never reversed, which is what keeps a fact the server
     // did not state at the foot of the table in both directions.
     cards.sort_by(|left, right| {
-        let (left_absent, left_key) = column.of(left);
-        let (right_absent, right_key) = column.of(right);
+        let (left_absent, left_key) = column.of(left, names);
+        let (right_absent, right_key) = column.of(right, names);
         left_absent.cmp(&right_absent).then_with(|| {
             let ordering = left_key.cmp(&right_key);
             if order.descending {
@@ -198,6 +216,9 @@ fn ordered(mut cards: Vec<SystemCard>, order: Order) -> Vec<SystemCard> {
 pub(crate) fn SystemTable(
     /// The systems to draw, as the capability statement declared them.
     cards: Vec<SystemCard>,
+    /// The name each canonical was published under, where the search that
+    /// read them answered. A system missing from it leads with its canonical.
+    names: BTreeMap<String, String>,
 ) -> impl IntoView {
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
     let query = use_query_map();
@@ -207,12 +228,15 @@ pub(crate) fn SystemTable(
     // answers by updating the query without re-running this body
     // (`src/nested_router.rs`, the same-route-id branch).
     let declared = StoredValue::new(cards);
+    let published = StoredValue::new(names);
     let rows = move || {
-        declared
-            .with_value(|cards| ordered(cards.clone(), order.get()))
-            .into_iter()
-            .flat_map(|card| system_rows(&card, version))
-            .collect::<Vec<AnyView>>()
+        published.with_value(|names| {
+            declared
+                .with_value(|cards| ordered(cards.clone(), order.get(), names))
+                .into_iter()
+                .flat_map(|card| system_rows(&card, version, name_of(&card, names)))
+                .collect::<Vec<AnyView>>()
+        })
     };
     view! {
         <div class=format!("mt-default overflow-x-auto {}", styles::PANEL)>
@@ -277,7 +301,11 @@ fn sortable(column: Column, order: Memo<Order>, version: Signal<FhirVersion>) ->
 
 /// Every row one system contributes: one per served version, or one saying the
 /// server declared none.
-fn system_rows(card: &SystemCard, version: Signal<FhirVersion>) -> Vec<AnyView> {
+fn system_rows(
+    card: &SystemCard,
+    version: Signal<FhirVersion>,
+    name: Option<&str>,
+) -> Vec<AnyView> {
     let content = card.content.clone();
     let subsumption = card.subsumption;
     if card.versions.is_empty() {
@@ -288,6 +316,7 @@ fn system_rows(card: &SystemCard, version: Signal<FhirVersion>) -> Vec<AnyView> 
             content.as_deref(),
             subsumption,
             true,
+            name,
         )];
     }
     card.versions
@@ -301,6 +330,7 @@ fn system_rows(card: &SystemCard, version: Signal<FhirVersion>) -> Vec<AnyView> 
                 content.as_deref(),
                 subsumption,
                 index == 0,
+                name,
             )
         })
         .collect()
@@ -314,8 +344,9 @@ fn row(
     content: Option<&str>,
     subsumption: Option<bool>,
     first: bool,
+    name: Option<&str>,
 ) -> AnyView {
-    let system = system_cell(card, version, first);
+    let system = system_cell(card, version, first, name);
     let code = served.and_then(|served| served.code.clone());
     let default = served.is_some_and(|served| served.is_default);
     let artifact = served.and_then(|served| served.artifact.clone());
@@ -364,8 +395,17 @@ fn tools_cell(
         .into_any()
 }
 
-/// The system's canonical, as the link onto its screen, once per system.
-fn system_cell(card: &SystemCard, version: Signal<FhirVersion>, first: bool) -> AnyView {
+/// The system, as the link onto its screen, once per system.
+///
+/// A reader picks a system by the name they know it as, so the name leads and
+/// the canonical sits beside it, quieter and still selectable. Where the server
+/// published no name, the canonical is the name.
+fn system_cell(
+    card: &SystemCard,
+    version: Signal<FhirVersion>,
+    first: bool,
+    name: Option<&str>,
+) -> AnyView {
     if !first {
         return absent("the version above belongs to the same code system");
     }
@@ -379,11 +419,26 @@ fn system_cell(card: &SystemCard, version: Signal<FhirVersion>, first: bool) -> 
     }
     let target = card.url.clone();
     let href = move || system_link(&target, version.get());
-    let label = card.url.clone();
+    let canonical = card.url.clone();
+    let Some(name) = name else {
+        return view! {
+            <a href=href class=format!("{} {}", styles::CODE, styles::LINK)>
+                {canonical}
+            </a>
+        }
+        .into_any();
+    };
+    let name = name.to_owned();
+    let full = canonical.clone();
     view! {
-        <a href=href class=format!("{} {}", styles::CODE, styles::LINK)>
-            {label}
-        </a>
+        <span class="flex items-baseline gap-default system-cell">
+            <a href=href class=format!("shrink-0 {}", styles::LINK)>
+                {name}
+            </a>
+            <span class=format!("min-w-0 truncate {}", styles::CODE_MUTED) title=full>
+                {canonical}
+            </span>
+        </span>
     }
     .into_any()
 }
@@ -482,12 +537,17 @@ mod tests {
         cards.iter().map(|card| card.url.as_str()).collect()
     }
 
+    /// The three cards ordered, with no name published for any of them.
+    fn unnamed(order: Order) -> Vec<SystemCard> {
+        ordered(served(), order, &BTreeMap::new())
+    }
+
     #[test]
     fn an_address_naming_no_column_keeps_the_order_the_server_declared() {
         let order = Order::read(&|_| None);
         assert_eq!(order, Order::default());
         assert_eq!(
-            urls(&ordered(served(), order)),
+            urls(&unnamed(order)),
             ["urn:b", "urn:a", "urn:c"],
             "the server's own order is an answer, not an absence of one"
         );
@@ -496,10 +556,10 @@ mod tests {
     #[test]
     fn a_column_orders_the_systems_and_turns_around_on_the_second_click() {
         let up = Order::default().toggled(Column::System);
-        assert_eq!(urls(&ordered(served(), up)), ["urn:a", "urn:b", "urn:c"]);
+        assert_eq!(urls(&unnamed(up)), ["urn:a", "urn:b", "urn:c"]);
         let down = up.toggled(Column::System);
         assert!(down.descending, "a second click on one column turns it");
-        assert_eq!(urls(&ordered(served(), down)), ["urn:c", "urn:b", "urn:a"]);
+        assert_eq!(urls(&unnamed(down)), ["urn:c", "urn:b", "urn:a"]);
     }
 
     #[test]
@@ -519,13 +579,13 @@ mod tests {
     fn a_fact_the_server_did_not_state_sorts_after_every_one_it_did() {
         let up = Order::default().toggled(Column::Content);
         assert_eq!(
-            urls(&ordered(served(), up)).last().copied(),
+            urls(&unnamed(up)).last().copied(),
             Some("urn:a"),
             "the system with no content mode sorts last going up"
         );
         let down = up.toggled(Column::Content);
         assert_eq!(
-            urls(&ordered(served(), down)).last().copied(),
+            urls(&unnamed(down)).last().copied(),
             Some("urn:a"),
             "and last going down, so absence never lands among the answers"
         );
@@ -563,6 +623,20 @@ mod tests {
         assert_eq!(
             order.toggled(Column::Subsumes).announced(Column::Subsumes),
             "descending"
+        );
+    }
+
+    #[test]
+    fn the_column_orders_by_the_name_a_system_was_published_under() {
+        let names = BTreeMap::from([
+            ("urn:a".to_owned(), "Zinc".to_owned()),
+            ("urn:c".to_owned(), "Almanac".to_owned()),
+        ]);
+        let up = Order::default().toggled(Column::System);
+        assert_eq!(
+            urls(&ordered(served(), up, &names)),
+            ["urn:c", "urn:b", "urn:a"],
+            "a reader ordering this column is looking for the name, and a system published without one is ordered by the canonical that names it"
         );
     }
 }

@@ -13,7 +13,6 @@ use leptos_router::hooks::use_query_map;
 
 use crate::components::failure::Failure;
 use crate::components::reading::Reading;
-use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::CODE_SYSTEM;
 use crate::fhir::CONCEPT_MAP;
@@ -57,8 +56,6 @@ pub(crate) fn FindPage() -> impl IntoView {
         let version = version.get();
         async move { client.capability_statement(version).await }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || url_client.metadata_url(version.get()));
 
     let heading = view! {
         <Title text="Find" />
@@ -116,7 +113,6 @@ pub(crate) fn FindPage() -> impl IntoView {
                 "Where it goes"
             </h2>
             <Reading label="Reading what this root declares">{body}</Reading>
-            <RequestDisclosure url />
         </section>
     }
 }

@@ -47,6 +47,28 @@ const COMMAND_SUBMIT: &str = "form[role='search'] button[type='submit']";
 /// One offer the find screen made, as the link that takes it.
 const OFFER: &str = "section[aria-labelledby='find-offers-heading'] li a";
 
+/// The settings pane of the About screen, by the anchor that opens it.
+const SETTINGS_PANE: &str = "about-settings-heading";
+
+/// The density control that pane carries.
+const DENSITY_CONTROL: &str = "#viewer-density";
+
+/// One drawn row of the overview's table.
+const SYSTEM_ROW: &str = "section[aria-labelledby='systems-heading'] tbody tr";
+
+/// How many code systems a deployment is read on one screen at.
+///
+/// The number is the bar issue #519 set: a real deployment serves twenty, and
+/// a reader comparing them scrolls for none of them.
+const SYSTEMS_ON_ONE_SCREEN: f64 = 20.0;
+
+/// The desktop window the fit is measured in.
+///
+/// The battery's own window is shorter than a desktop screen, because the
+/// browser draws its chrome inside it. The bar is a screen a reader has, so
+/// the journey asks for one and measures the viewport it got.
+const DESKTOP: (u32, u32) = (1280, 1024);
+
 /// The overview's own table, by the heading it is labelled by.
 const SYSTEM_TABLE: &str = "section[aria-labelledby='systems-heading'] table";
 
@@ -56,9 +78,8 @@ const SORT_BY_SYSTEM: &str = "//section[@aria-labelledby='systems-heading']//th[
 /// The heading a screen reader hears as ordered upward.
 const SORTED_UP: &str = "section[aria-labelledby='systems-heading'] th[aria-sort='ascending']";
 
-/// The canonicals the table draws, in the order it draws them.
-const ROW_CANONICALS: &str =
-    "section[aria-labelledby='systems-heading'] tbody a[href^='/ui/systems/']";
+/// What the table leads each system with, in the order it draws them.
+const ROW_LABELS: &str = "section[aria-labelledby='systems-heading'] tbody a[href^='/ui/systems/']";
 
 /// The code system screen's capability pane, by the heading it is labelled by.
 const CAPABILITY_PANE: &str = "section[aria-labelledby='system-capability-heading']";
@@ -112,11 +133,11 @@ const SELECTED_ROW: &str = "li[role='treeitem'][aria-selected='true']";
 /// A parent of the concept being read, as the link that moves onto it.
 const PARENT_LINK: &str = "nav[aria-label='Parents of this concept'] a";
 
-/// The sidebar entry onto the screen the version comparison is a pane of.
+/// The sidebar entry onto the screen the version comparison is a tab of.
 const ABOUT_LINK: &str = "nav[aria-label='Screens'] a[href^='/ui/about']";
 
-/// The control that opens that pane, which is the disclosure's own summary.
-const VERSIONS_PANE: &str = "#about-versions-heading > summary";
+/// The tab that shows that comparison.
+const VERSIONS_TAB: &str = "nav[aria-label='About this server'] a[href='#about-versions-heading']";
 
 /// The version comparison, by the heading it is labelled by.
 const COMPARISON: &str = "section[aria-labelledby='comparison-heading']";
@@ -338,7 +359,7 @@ async fn a_row_opens_the_code_system_screen_and_both_panes_draw() {
             let row = journey
                 .element(By::Css(SYSTEM_LINK), "a code system link on the overview")
                 .await;
-            let canonical = row.text().await?;
+            let canonical = row_canonical(&row).await?;
             assert!(
                 !canonical.is_empty(),
                 "the row names the canonical it links to"
@@ -405,7 +426,7 @@ async fn the_address_a_row_links_to_opens_the_same_screen_when_it_is_loaded_fres
             let row = journey
                 .element(By::Css(SYSTEM_LINK), "a code system link on the overview")
                 .await;
-            let canonical = row.text().await?;
+            let canonical = row_canonical(&row).await?;
             let address = row
                 .prop("href")
                 .await?
@@ -524,11 +545,10 @@ async fn the_command_bar_reads_what_was_typed_and_offers_addresses_for_it() {
         .await
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &base, "/ui?fhir=r5").await;
-            let system = journey
+            let row = journey
                 .element(By::Css(SYSTEM_LINK), "a code system on the overview")
-                .await
-                .text()
-                .await?;
+                .await;
+            let system = row_canonical(&row).await?;
 
             journey
                 .element(By::Css(COMMAND_BAR), "the command bar")
@@ -591,7 +611,7 @@ async fn the_overview_table_orders_itself_and_the_order_is_a_link() {
             journey
                 .element(By::Css(SYSTEM_TABLE), "the table of served systems")
                 .await;
-            let declared = canonicals(&journey).await?;
+            let declared = labels(&journey).await?;
             assert!(
                 declared.len() > 1,
                 "the fixture serves more than one system, so an order is visible"
@@ -613,9 +633,9 @@ async fn the_overview_table_orders_itself_and_the_order_is_a_link() {
                 .element(By::Css(SORTED_UP), "the heading announced as ascending")
                 .await;
             let mut upward = declared.clone();
-            upward.sort();
+            upward.sort_by_key(|label| label.to_lowercase());
             assert_eq!(
-                canonicals(&journey).await?,
+                labels(&journey).await?,
                 upward,
                 "the table draws the systems in the order the address asked for"
             );
@@ -631,7 +651,7 @@ async fn the_overview_table_orders_itself_and_the_order_is_a_link() {
             let mut downward = upward.clone();
             downward.reverse();
             assert_eq!(
-                canonicals(&journey).await?,
+                labels(&journey).await?,
                 downward,
                 "a second click on one column turns it around"
             );
@@ -643,13 +663,88 @@ async fn the_overview_table_orders_itself_and_the_order_is_a_link() {
     outcome.expect("the journey ran and the browser session ended cleanly");
 }
 
-/// The canonicals the table draws, in the order it draws them.
-async fn canonicals(journey: &Journey) -> WebDriverResult<Vec<String>> {
+/// Twenty code systems are read on one screen in compact mode.
+///
+/// The fixture serves a handful of systems and a real deployment serves
+/// twenty, so the journey measures what the screen costs rather than counting
+/// what this deployment happens to hold: where the first row starts, and what
+/// the tallest row drawn takes. Twenty rows of that height have to end above
+/// under the foot of the viewport.
+#[tokio::test]
+async fn the_overview_reads_twenty_systems_on_one_screen_in_compact_mode() {
+    let Some(base) = server() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &base, "/ui/about?fhir=r5").await;
+            journey.resize(DESKTOP.0, DESKTOP.1).await;
+            journey
+                .reopen(&format!("{base}/ui/about?fhir=r5#{SETTINGS_PANE}"))
+                .await;
+            journey
+                .element(By::Css(DENSITY_CONTROL), "the density control")
+                .await
+                .find(By::Css("option[value='compact']"))
+                .await?
+                .click()
+                .await?;
+
+            journey.reopen(&format!("{base}/ui?fhir=r5")).await;
+            journey
+                .element(By::Css(SYSTEM_TABLE), "the table of served systems")
+                .await;
+            let rows = journey.all(By::Css(SYSTEM_ROW)).await?;
+            assert!(
+                !rows.is_empty(),
+                "the fixture serves a code system, so the table has a row to measure"
+            );
+            let mut top = f64::MAX;
+            let mut tallest: f64 = 0.0;
+            for row in &rows {
+                let rect = row.rect().await?;
+                top = top.min(rect.y);
+                tallest = tallest.max(rect.height);
+            }
+            let viewport = journey.viewport_height().await?;
+            let taken = top + SYSTEMS_ON_ONE_SCREEN * tallest;
+            assert!(
+                taken <= viewport,
+                "twenty systems take {taken:.0}px of a {viewport:.0}px viewport at a row of \
+                 {tallest:.0}px under a header of {top:.0}px, so a reader comparing twenty \
+                 scrolls for some of them"
+            );
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
+}
+
+/// What the table leads each system with, in the order it draws them.
+///
+/// This is the text the column is ordered by: the name the code system was
+/// published under, or the canonical where the server published no name.
+async fn labels(journey: &Journey) -> WebDriverResult<Vec<String>> {
     let mut found = Vec::new();
-    for element in journey.all(By::Css(ROW_CANONICALS)).await? {
+    for element in journey.all(By::Css(ROW_LABELS)).await? {
         found.push(element.text().await?);
     }
     Ok(found)
+}
+
+/// The canonical an overview row carries, wherever the row put it.
+///
+/// A row leads with the name its code system was published under and sets the
+/// canonical beside it, so the canonical is the link's own sibling. A system
+/// the server published no name for leads with the canonical itself.
+async fn row_canonical(row: &WebElement) -> WebDriverResult<String> {
+    match row.find(By::XPath("following-sibling::span[1]")).await {
+        Ok(beside) => beside.text().await,
+        Err(_absent) => row.text().await,
+    }
 }
 
 /// Walks from the overview to a browse screen whose tree has a level drawn.
@@ -850,10 +945,10 @@ async fn the_four_roots_are_compared_and_their_lookup_levels_differ() {
                 .await
                 .click()
                 .await?;
-            // The panes are closed until a reader opens one, which is what a
-            // reader coming for the comparison does.
+            // A reader coming for the comparison opens its tab, which is the
+            // one the screen opens on and a link they can send.
             journey
-                .element(By::Css(VERSIONS_PANE), "the control that opens the pane")
+                .element(By::Css(VERSIONS_TAB), "the tab the comparison is on")
                 .await
                 .click()
                 .await?;

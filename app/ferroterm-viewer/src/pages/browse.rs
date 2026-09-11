@@ -31,7 +31,6 @@ use crate::components::failure::Failure;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
-use crate::components::request_disclosure::RequestDisclosure;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
 use crate::fhir::FhirClient;
@@ -165,7 +164,7 @@ pub(crate) fn BrowsePage() -> impl IntoView {
     }
     .into_any();
 
-    let system = system_section(&client, version, params, capabilities, declared, named);
+    let system = system_section(version, params, capabilities, declared, named);
     let search = search_section(&client, version, params, count, named);
     let concept = concept_section(&client, version, params, declared, named);
     let tree = tree_section(&client, version, params, declared, count);
@@ -395,16 +394,12 @@ impl ChildWalk {
 
 /// What this server declares it can do with the system being browsed.
 fn system_section(
-    client: &FhirClient,
     version: Signal<FhirVersion>,
     params: Signal<BrowseParams>,
     capabilities: LocalResource<Result<TerminologyCapabilities, FhirError>>,
     declared: Memo<Declared>,
     named: Memo<bool>,
 ) -> AnyView {
-    let url_client = client.clone();
-    let url = Signal::derive(move || url_client.terminology_metadata_url(version.get()));
-
     let body = move || {
         view! {
             <section class="mt-loose" aria-labelledby="browse-system-heading">
@@ -448,7 +443,6 @@ fn system_section(
                     }}
                 </Reading>
                 {language_view(params, declared, version)}
-                <RequestDisclosure url />
             </section>
         }
         .into_any()
@@ -572,11 +566,6 @@ fn search_section(
             }
         }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || url_client.expand_post_url(version.get()));
-    let sent = Signal::derive(move || {
-        query.with(|query| query.as_ref().map(ConceptQuery::body).unwrap_or_default())
-    });
 
     // The live region is in the document before the read settles, which is
     // what lets a screen reader announce the count when it arrives. It is
@@ -658,7 +647,6 @@ fn search_section(
                             })
                     }}
                 </Reading>
-                <RequestDisclosure url body=sent />
             </section>
         }
         .into_any()
@@ -742,15 +730,6 @@ fn concept_section(
             }
         }
     });
-    let url_client = client.clone();
-    let url = Signal::derive(move || {
-        request.with(|request| {
-            request
-                .as_ref()
-                .map(|request| url_client.lookup_url(version.get(), request))
-                .unwrap_or_default()
-        })
-    });
     let asked: Memo<bool> = Memo::new(move |_| request.with(Option::is_some));
 
     let answered = move || {
@@ -789,7 +768,6 @@ fn concept_section(
                         })
                 }}
             </Reading>
-            <RequestDisclosure url />
         }
         .into_any()
     };
@@ -1147,16 +1125,6 @@ fn tree_section(
     };
     let pressed = tree_keys(version, params, focused, drawn);
 
-    let url_client = client.clone();
-    let url = Signal::derive(move || url_client.expand_post_url(version.get()));
-    let sent = Signal::derive(move || {
-        walk.with(|walk| {
-            walk.as_ref()
-                .map(|walk| walk.query(&walk.root).body())
-                .unwrap_or_default()
-        })
-    });
-
     let body = move || {
         view! {
             <section aria-labelledby="browse-tree-heading">
@@ -1195,7 +1163,6 @@ fn tree_section(
                         {move || { refusals().iter().map(failure_view).collect::<Vec<AnyView>>() }}
                     </Reading>
                 </div>
-                <RequestDisclosure url body=sent />
             </section>
         }
         .into_any()

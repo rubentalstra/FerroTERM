@@ -160,6 +160,32 @@ impl FhirClient {
             .render(&self.root)
     }
 
+    /// The address the overview reads every published system's name from.
+    ///
+    /// `_elements` narrows the answer to the three fields a row draws. A
+    /// published `CodeSystem` may carry its concepts inline, so the whole
+    /// search is a quarter of a megabyte where this is four kilobytes
+    /// (<https://hl7.org/fhir/R5/search.html#elements>).
+    pub(crate) fn code_system_names_url(&self, version: FhirVersion) -> String {
+        RequestUrl::new()
+            .segment(version.segment())
+            .segment("CodeSystem")
+            .query("_elements", "url,name,title")
+            .render(&self.root)
+    }
+
+    /// Reads the name every published code system carries.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn code_system_names(
+        &self,
+        version: FhirVersion,
+    ) -> Result<CodeSystemSearch, FhirError> {
+        self.get_json(&self.code_system_names_url(version)).await
+    }
+
     /// Reads the `CapabilityStatement` of one served FHIR version.
     ///
     /// # Errors
@@ -595,42 +621,6 @@ fn excerpt(body: &str) -> String {
         .collect()
 }
 
-/// The `curl` line that reproduces a request the viewer made.
-///
-/// Every screen shows this beside the URL it read, which is the cheapest
-/// demonstration that the page did nothing a reader cannot do themselves.
-pub(crate) fn curl_line(url: &str) -> String {
-    format!(
-        "curl -H {accept} {target}",
-        accept = shell_quote(&format!("Accept: {FHIR_JSON}")),
-        target = shell_quote(url),
-    )
-}
-
-/// The `curl` line that reproduces a request the viewer sent with a body.
-///
-/// An operation invoked by `POST` carries its parameters in a `Parameters`
-/// resource (<https://hl7.org/fhir/R4B/operations.html#request>), so the body
-/// is part of the request and the line a reader copies has to carry it.
-pub(crate) fn curl_post_line(url: &str, body: &str) -> String {
-    format!(
-        "curl -X POST -H {accept} -H {content} --data {body} {target}",
-        accept = shell_quote(&format!("Accept: {FHIR_JSON}")),
-        content = shell_quote(&format!("Content-Type: {FHIR_JSON}")),
-        body = shell_quote(body),
-        target = shell_quote(url),
-    )
-}
-
-/// Quotes one argument for a POSIX shell, so a reader can paste it as it is.
-///
-/// Single quotes take everything literally and the only character they cannot
-/// carry is a single quote itself, which is closed, escaped, and reopened
-/// (<https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html>).
-fn shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', r"'\''"))
-}
-
 /// Derives the server root from the address of the page the bundle came from.
 ///
 /// The bundle is served under `/ui`, so everything before that prefix is where
@@ -781,17 +771,6 @@ mod tests {
     }
 
     #[test]
-    fn the_post_curl_line_carries_the_body_the_browser_sent() {
-        assert_eq!(
-            curl_post_line("https://tx.example.org/r4b/ValueSet/$expand", r#"{"a":1}"#),
-            "curl -X POST -H 'Accept: application/fhir+json' \
-             -H 'Content-Type: application/fhir+json' --data '{\"a\":1}' \
-             'https://tx.example.org/r4b/ValueSet/$expand'",
-            "the line reproduces the request the browser made, body included"
-        );
-    }
-
-    #[test]
     fn a_search_sends_only_the_parameters_the_reader_named() {
         let client = FhirClient {
             root: "https://tx.example.org".to_owned(),
@@ -908,24 +887,6 @@ mod tests {
             ),
             "https://tx.example.org/r4/CodeSystem/animals/$subsumes?codeA=404684003&codeB=64572001",
             "an instance run names the system in the path and nowhere else"
-        );
-    }
-
-    #[test]
-    fn the_curl_line_asks_for_the_media_type_the_client_asks_for() {
-        assert_eq!(
-            curl_line("https://tx.example.org/r4b/metadata?mode=terminology"),
-            "curl -H 'Accept: application/fhir+json' 'https://tx.example.org/r4b/metadata?mode=terminology'",
-            "the line reproduces the request the browser made"
-        );
-    }
-
-    #[test]
-    fn a_quote_in_a_url_cannot_break_out_of_the_curl_line() {
-        assert_eq!(
-            shell_quote("a'b"),
-            r"'a'\''b'",
-            "the quote is closed, escaped, and reopened"
         );
     }
 
