@@ -2929,6 +2929,70 @@ const VS_CIRCLE_1: &str = "http://example.org/fhir/ValueSet/circle-1";
 /// The second half, which excludes the first.
 const VS_CIRCLE_2: &str = "http://example.org/fhir/ValueSet/circle-2";
 
+/// A canonical no world below holds.
+const VS_ABSENT: &str = "http://example.org/fhir/ValueSet/absent";
+
+/// A value set excluding a value set this server does not hold.
+const VS_BAD_EXCLUDE: &str = "http://example.org/fhir/ValueSet/bad-exclude";
+
+/// A world whose one value set excludes a value set nothing defines.
+fn unresolvable_exclude_world() -> World {
+    World::of(&[
+        (
+            "CodeSystem-two-version-1.json",
+            serde_json::json!({
+              "resourceType": "CodeSystem", "url": TWO_VERSION, "version": "1.0.0",
+              "name": "TwoVersion", "status": "active", "content": "complete",
+              "caseSensitive": true,
+              "concept": [
+                {"code": "code1", "display": "Display 1"},
+                {"code": "code2", "display": "Display 2"}
+              ]
+            }),
+        ),
+        (
+            "ValueSet-bad-exclude.json",
+            serde_json::json!({
+              "resourceType": "ValueSet", "url": VS_BAD_EXCLUDE, "version": "1.0",
+              "name": "BadExclude", "status": "active",
+              "compose": {
+                "include": [{"system": TWO_VERSION, "concept": [{"code": "code1"}]}],
+                "exclude": [{"valueSet": [VS_ABSENT]}]
+              }
+            }),
+        ),
+    ])
+}
+
+/// A value set whose own include names it.
+const VS_ITSELF: &str = "http://example.org/fhir/ValueSet/itself";
+
+/// A world holding one value set that references itself directly.
+fn self_referencing_world() -> World {
+    World::of(&[
+        (
+            "CodeSystem-two-version-1.json",
+            serde_json::json!({
+              "resourceType": "CodeSystem", "url": TWO_VERSION, "version": "1.0.0",
+              "name": "TwoVersion", "status": "active", "content": "complete",
+              "caseSensitive": true,
+              "concept": [{"code": "code1", "display": "Display 1"}]
+            }),
+        ),
+        (
+            "ValueSet-itself.json",
+            serde_json::json!({
+              "resourceType": "ValueSet", "url": VS_ITSELF, "version": "1.0",
+              "name": "Itself", "status": "active",
+              "compose": {"include": [
+                {"system": TWO_VERSION},
+                {"valueSet": [VS_ITSELF]}
+              ]}
+            }),
+        ),
+    ])
+}
+
 fn circular_world() -> World {
     let value_set = |url: &str, compose: serde_json::Value| {
         serde_json::json!({
@@ -2969,6 +3033,107 @@ fn circular_world() -> World {
     ])
 }
 
+// NOTE: the ecosystem's `default-valueset-version` suite answers one
+// unresolvable reference with an error from `$expand` and `result = false` from
+// `$validate-code` (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
+#[test]
+fn an_unresolvable_exclude_is_named_whether_or_not_an_include_held_the_code() {
+    let world = unresolvable_exclude_world();
+    let error = expand::expand(
+        &world.sources(),
+        &ExpandInput {
+            url: Some(VS_BAD_EXCLUDE.to_owned()),
+            ..ExpandInput::default()
+        },
+    )
+    .expect_err("an expansion has to evaluate every exclude");
+    assert!(
+        error.to_string().contains(VS_ABSENT),
+        "the refusal names what could not be resolved: `{error}`"
+    );
+
+    // `code1` is the code the include holds and `code2` is a code of the same
+    // system that it does not, so the two runs differ only in whether an
+    // include matched before the exclude was reached.
+    let validate = |code: &str| {
+        value_set_validate_code::validate_code(
+            &world.sources(),
+            &ValueSetValidateInput {
+                url: Some(VS_BAD_EXCLUDE.to_owned()),
+                coding: Some(CodingRef {
+                    system: Some(TWO_VERSION.to_owned()),
+                    code: Some(code.to_owned()),
+                    ..CodingRef::default()
+                }),
+                ..ValueSetValidateInput::default()
+            },
+        )
+        .expect("validate-code answers rather than refusing")
+    };
+    for code in ["code1", "code2"] {
+        let validation = validate(code);
+        assert!(
+            !validation.result,
+            "a definition this server cannot fully evaluate is not a membership: {validation:?}"
+        );
+        let named = validation
+            .issues
+            .iter()
+            .any(|issue| issue.kind == "not-found" && issue.text.contains(VS_ABSENT));
+        assert!(
+            named,
+            "`{code}` must name the value set the server could not resolve, so a client can tell \
+             a missing resource from a code that is genuinely out: {:?}",
+            validation.issues
+        );
+    }
+}
+
+// NOTE: a reference naming no version means the version the server resolves to
+// (<https://hl7.org/fhir/R4B/references.html#canonical>), so a bare reference
+// re-enters a value set stored with a version.
+#[test]
+fn a_value_set_that_references_itself_is_refused_and_named() {
+    let world = self_referencing_world();
+    let error = expand::expand(
+        &world.sources(),
+        &ExpandInput {
+            url: Some(VS_ITSELF.to_owned()),
+            ..ExpandInput::default()
+        },
+    )
+    .expect_err("a value set that reaches itself cannot be expanded");
+    let OperationError::ValueSetCyclic(reported) = &error else {
+        panic!("a cycle, not {error}");
+    };
+    assert!(
+        reported.contains(VS_ITSELF),
+        "the error names the value set that closed the loop: `{reported}`"
+    );
+
+    let error = value_set_validate_code::validate_code(
+        &world.sources(),
+        &ValueSetValidateInput {
+            url: Some(VS_ITSELF.to_owned()),
+            coding: Some(CodingRef {
+                system: Some(TWO_VERSION.to_owned()),
+                code: Some(String::from("code1")),
+                ..CodingRef::default()
+            }),
+            ..ValueSetValidateInput::default()
+        },
+    )
+    .expect_err("a value set that reaches itself cannot be validated against");
+    let OperationError::ValueSetCyclic(reported) = &error else {
+        panic!("a cycle, not {error}");
+    };
+    assert!(
+        reported.contains(VS_ITSELF),
+        "both operations name the same value set: `{reported}`"
+    );
+    assert_eq!(error.tx_issue_type(), "vs-invalid");
+}
+
 // NOTE: a value set that reaches itself cannot be evaluated, so both operations
 // refuse it with the ecosystem's `vs-invalid`
 // (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
@@ -2983,9 +3148,13 @@ fn a_cycle_through_an_exclude_refuses_both_expand_and_validate_code() {
         },
     )
     .expect_err("a cycle");
+    let OperationError::ValueSetCyclic(reported) = &error else {
+        panic!("a cycle, not {error}");
+    };
     assert!(
-        matches!(error, OperationError::ValueSetCyclic(_)),
-        "{error}"
+        reported.contains(VS_CIRCLE_1),
+        "the error names the value set the loop closed on, which is the one the \
+         request asked about: `{reported}`"
     );
     assert_eq!(error.issue_code(), "processing");
     assert_eq!(error.tx_issue_type(), "vs-invalid");

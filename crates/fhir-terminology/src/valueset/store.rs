@@ -185,7 +185,12 @@ impl<'a> Resolver<'a> {
         compose: &Compose,
         options: &Options,
     ) -> Result<Expansion, ComposeError> {
-        if self.active.borrow().iter().any(|active| active == url) {
+        if self
+            .active
+            .borrow()
+            .iter()
+            .any(|active| re_enters(active, url))
+        {
             return Err(ComposeError::Cycle(url.to_owned()));
         }
         self.active.borrow_mut().push(url.to_owned());
@@ -193,6 +198,28 @@ impl<'a> Resolver<'a> {
         self.active.borrow_mut().pop();
         result
     }
+}
+
+/// Whether `reference` names the value set an `active` chain entry names.
+///
+/// A chain entry is spelled the way its caller had it: a root as `url|version`,
+/// a reference as whatever the compose wrote. A reference naming no version
+/// means the version the server resolves to
+/// (<https://hl7.org/fhir/R4B/references.html#canonical>), so it re-enters an
+/// entry of the same url whatever version that entry carries, and a reference
+/// that does name one re-enters only that version.
+fn re_enters(active: &str, reference: &str) -> bool {
+    let split = |canonical: &str| match canonical.split_once('|') {
+        Some((url, version)) => (url.to_owned(), Some(version.to_owned())),
+        None => (canonical.to_owned(), None),
+    };
+    let (active_url, active_version) = split(active);
+    let (reference_url, reference_version) = split(reference);
+    active_url == reference_url
+        && match (active_version, reference_version) {
+            (Some(held), Some(asked)) => held == asked,
+            _ => true,
+        }
 }
 
 impl Resolver<'_> {
@@ -237,7 +264,7 @@ impl Resolver<'_> {
                     .active
                     .borrow()
                     .iter()
-                    .any(|active| active == referenced)
+                    .any(|active| re_enters(active, referenced))
                 {
                     return Err(ComposeError::Cycle(referenced.clone()));
                 }
@@ -270,7 +297,12 @@ impl Resolver<'_> {
         code: &str,
         language: Option<&str>,
     ) -> Result<Option<Item>, ComposeError> {
-        if self.active.borrow().iter().any(|active| active == url) {
+        if self
+            .active
+            .borrow()
+            .iter()
+            .any(|active| re_enters(active, url))
+        {
             return Err(ComposeError::Cycle(url.to_owned()));
         }
         self.active.borrow_mut().push(url.to_owned());
