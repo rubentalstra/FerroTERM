@@ -547,6 +547,8 @@
             "effectiveTime",
             "parent",
             "child",
+            "normalForm",
+            "normalFormTerse",
             "71234567106",
             "81234567108"
           ]
@@ -903,7 +905,7 @@
       ]
     }
   ],
-  "date": "2026-09-11T06:59:08.615282Z",
+  "date": "2026-09-11T18:51:58.953892Z",
   "expansion": {
     "hierarchical": false,
     "incomplete": false,

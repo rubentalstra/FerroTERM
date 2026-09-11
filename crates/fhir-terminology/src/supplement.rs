@@ -130,6 +130,21 @@ impl CodeSystemProvider for Supplemented {
         self.inner.unserved_properties()
     }
 
+    fn generated_properties(&self) -> &[&'static str] {
+        self.inner.generated_properties()
+    }
+
+    fn generated_property(
+        &self,
+        concept: Concept,
+        name: &str,
+    ) -> Result<Option<Property>, ProviderError> {
+        // A supplement adds designations and properties of its own and does
+        // not redefine the system's relationships, so a generated property is
+        // the supplemented system's answer unchanged.
+        self.inner.generated_property(concept, name)
+    }
+
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
         self.inner.locate(code)
     }

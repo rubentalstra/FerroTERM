@@ -857,6 +857,34 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
         false
     }
 
+    /// The property codes this provider generates on request.
+    ///
+    /// Each is answered by [`CodeSystemProvider::generated_property`] and only
+    /// where the request named it. The default generates none.
+    fn generated_properties(&self) -> &[&'static str] {
+        &[]
+    }
+
+    /// The property `name` of `concept`, generated rather than read.
+    ///
+    /// A property a request has to ask for by name, because generating it
+    /// costs more than reading one. `$lookup` names what it wants, and "if no
+    /// properties are specified, the server chooses what to return"
+    /// (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>, the
+    /// `property` parameter), so a request that names none is answered without
+    /// paying for these. The default generates none.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProviderError::Storage`] when the substrate fails.
+    fn generated_property(
+        &self,
+        _concept: Concept,
+        _name: &str,
+    ) -> Result<Option<Property>, ProviderError> {
+        Ok(None)
+    }
+
     /// The property codes this code system's specification defines that this
     /// server does not compute.
     ///

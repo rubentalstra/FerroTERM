@@ -19,6 +19,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 mod conceptmap;
 mod ecl;
 
+use concept_graph::attributes;
 use concept_graph::attributes::{Attributes, AttributesError};
 use concept_graph::csr::{Csr, CsrError};
 use concept_graph::identifiers::{Identifiers, IdentifiersError};
@@ -40,6 +41,7 @@ use serde::Deserialize;
 use crate::artifact::Source;
 use crate::compose::{Compose, ConceptRef, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
+use crate::normal_form;
 use crate::provider::{
     Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
     Designation, DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located,
@@ -79,13 +81,19 @@ pub const TEMPLATE_COPYRIGHT: &str = "This value set includes content from SNOME
 /// does not generate (<https://hl7.org/fhir/R4B/snomedct.html>, "SNOMED CT
 /// Properties").
 ///
-/// Both are the Necessary Normal Form expression of a concept. The page
-/// defines the property and not the generation, and the SNOMED CT normal form
-/// is built from the proximal primitive supertypes
-/// (<https://docs.snomed.org/>, the technical implementation guide's normal
-/// form section), which the served index does not materialize. `$lookup`
-/// refuses a `property` naming one rather than dropping it.
-pub const UNSERVED_PROPERTIES: [&str; 2] = ["normalForm", "normalFormTerse"];
+/// Every one the page defines is served, so a `property` this server refuses
+/// is one no SNOMED CT specification defines.
+pub const UNSERVED_PROPERTIES: [&str; 0] = [];
+
+/// The property carrying the normal form with terms.
+const NORMAL_FORM: &str = "normalForm";
+
+/// The property carrying it with concept ids only.
+const NORMAL_FORM_TERSE: &str = "normalFormTerse";
+
+/// The two the provider generates rather than reads
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, "SNOMED CT Properties").
+const GENERATED_PROPERTIES: [&str; 2] = [NORMAL_FORM, NORMAL_FORM_TERSE];
 
 /// The FHIR-defined SNOMED properties this provider serves, in output order
 /// (<https://hl7.org/fhir/R4B/snomedct.html>, the properties section).
@@ -357,6 +365,14 @@ impl SnomedProvider {
                 kind: *kind,
             })
             .collect();
+        // The two generated properties are declared so a client can discover
+        // them, and are answered only where a request names one.
+        properties.extend(GENERATED_PROPERTIES.map(|code| PropertyDefinition {
+            code: code.to_owned(),
+            uri: None,
+            description: None,
+            kind: PropertyKind::String,
+        }));
         properties.extend(keys.attributes.iter().map(|(_, sctid)| PropertyDefinition {
             code: sctid.clone(),
             uri: Some(format!("http://snomed.info/id/{sctid}")),
@@ -828,6 +844,119 @@ impl SnomedProvider {
         })
     }
 
+    /// Whether the concept is sufficiently defined by its conditions.
+    ///
+    /// The RF2 `definitionStatusId` decides it, which is the same field the
+    /// `sufficientlyDefined` property is derived from
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "SNOMED CT Properties").
+    fn is_defined(&self, ordinal: Ordinal) -> Result<bool, ProviderError> {
+        let stored = self.store.properties(ordinal).map_err(storage)?;
+        Ok(stored
+            .iter()
+            .filter(|(key, _)| *key == self.keys.definition_status)
+            .any(|(_, values)| {
+                values.iter().any(|value| {
+                    matches!(value, record::PropertyValue::Code(code) if *code == constants::DEFINED.to_string())
+                })
+            }))
+    }
+
+    /// The Necessary Normal Form of `concept`, with terms when `terms` asks.
+    ///
+    /// The expression is the concept's inferred view rendered, which the
+    /// release already holds: the focus concepts are its `is a` parents and
+    /// the attributes are its other inferred rows, so this is two point reads
+    /// and no walk (`crate::normal_form`).
+    ///
+    /// Returns `None` for a concept with no inferred parent, which is the root
+    /// of the hierarchy and nothing else.
+    fn normal_form(&self, concept: Concept, terms: bool) -> Result<Option<String>, ProviderError> {
+        let ordinal = Self::ordinal(concept);
+        // NOTE: the term is the display this server would answer with, which
+        // the grammar admits ("the term from any SNOMED CT description that is
+        // associated with the concept", the Compositional Grammar §5).
+        let reference =
+            |ordinal: Ordinal| -> Result<Option<normal_form::Reference>, ProviderError> {
+                let Some(code) = self
+                    .store
+                    .codes([ordinal])
+                    .map_err(storage)?
+                    .into_iter()
+                    .flatten()
+                    .next()
+                else {
+                    return Ok(None);
+                };
+                let term = if terms {
+                    self.choose_display(ordinal, None)?
+                } else {
+                    None
+                };
+                Ok(Some(normal_form::Reference {
+                    // A term carrying the grammar's own delimiter cannot be
+                    // written and no escape exists, so the reference drops it.
+                    term: term.filter(|term| !term.contains('|')),
+                    code,
+                }))
+            };
+
+        let mut focus = Vec::new();
+        for parent in self
+            .hierarchy
+            .graph
+            .is_a
+            .neighbours(ordinal)
+            .iter()
+            .copied()
+        {
+            if let Some(found) = reference(Ordinal::new(parent))? {
+                focus.push(found);
+            }
+        }
+
+        let mut attributes = Vec::new();
+        for row in self.attributes.rows(ordinal) {
+            let index = usize::try_from(row.kind).unwrap_or(usize::MAX);
+            let Some(kind) = self.attributes.types().get(index).map(u64::to_string) else {
+                continue;
+            };
+            let value = match row.value {
+                attributes::ValueRef::Concept(target) => match reference(target)? {
+                    Some(found) => normal_form::Value::Concept(found),
+                    None => continue,
+                },
+                attributes::ValueRef::Number(number) => {
+                    normal_form::Value::Number(number.to_owned())
+                }
+                attributes::ValueRef::String(text) => normal_form::Value::Text(text.to_owned()),
+            };
+            let kind = normal_form::Reference {
+                // An attribute type is a concept of the same system, so its
+                // term is read the way any other is, through the ordinal its
+                // identifier resolves to.
+                term: match self.store.ordinal(&kind).map_err(storage)? {
+                    Some(ordinal) if terms => self
+                        .choose_display(ordinal, None)?
+                        .filter(|term| !term.contains('|')),
+                    _ => None,
+                },
+                code: kind,
+            };
+            attributes.push(normal_form::Attribute {
+                group: row.group,
+                kind,
+                value,
+            });
+        }
+
+        Ok(normal_form::Expression {
+            defined: self.is_defined(ordinal)?,
+            focus,
+            attributes,
+        }
+        .render())
+    }
+
     /// The codes of `set`, sliced out of the concept column: a concept with
     /// hundreds of children costs one string per child and no search (#314).
     fn codes(
@@ -864,6 +993,30 @@ impl CodeSystemProvider for SnomedProvider {
 
     fn unserved_properties(&self) -> &[&'static str] {
         &UNSERVED_PROPERTIES
+    }
+
+    fn generated_properties(&self) -> &[&'static str] {
+        &GENERATED_PROPERTIES
+    }
+
+    fn generated_property(
+        &self,
+        concept: Concept,
+        name: &str,
+    ) -> Result<Option<Property>, ProviderError> {
+        let terms = match name {
+            NORMAL_FORM => true,
+            NORMAL_FORM_TERSE => false,
+            _ => return Ok(None),
+        };
+        let Some(expression) = self.normal_form(concept, terms)? else {
+            return Ok(None);
+        };
+        Ok(Some(Property {
+            code: name.to_owned(),
+            value: PropertyValue::String(expression),
+            ..Property::default()
+        }))
     }
 
     /// The language of the displays this provider returns, so a

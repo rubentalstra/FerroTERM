@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-11T06:59:08.626128Z",
+  "date": "2026-09-11T18:51:58.970377Z",
   "description": "Serves the FHIR R6 ballot (version 6.0.0-ballot5). Every behaviour grounded only in the ballot is re-verified against the published specification when it appears, and may change with it.",
   "extension": [
     {

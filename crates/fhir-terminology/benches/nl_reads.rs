@@ -161,6 +161,20 @@ fn reads(c: &mut Criterion) {
     group.bench_function("lookup", |b| {
         b.iter(|| lookup::lookup(&registry, &Invocation::Type, &lookup_request).expect("looks up"));
     });
+    // The generated normal form, which is the one property a request has to
+    // ask for by name because it costs more than a read. A deep concept is the
+    // subject, because the cost follows its inferred rows.
+    let normal_form_request = lookup::LookupInput {
+        system: Some(SCT.to_owned()),
+        code: Some(LEAF.to_owned()),
+        properties: vec![String::from("normalForm")],
+        ..lookup::LookupInput::default()
+    };
+    group.bench_function("lookup_normal_form", |b| {
+        b.iter(|| {
+            lookup::lookup(&registry, &Invocation::Type, &normal_form_request).expect("looks up")
+        });
+    });
     let validate_request = validate_code::ValidateCodeInput {
         url: Some(SCT.to_owned()),
         code: Some(FINDING.to_owned()),
