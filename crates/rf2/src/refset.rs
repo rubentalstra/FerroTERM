@@ -510,32 +510,347 @@ pub fn kind(path: &Path) -> Result<RefsetKind, Rf2Error> {
 }
 
 #[cfg(test)]
-mod kind_tests {
-    use super::RefsetKind;
+mod tests {
+    use super::*;
 
+    /// A tab-separated file, as a reader takes it.
+    fn file(rows: &[&str]) -> Vec<u8> {
+        format!("{}\n", rows.join("\n")).into_bytes()
+    }
+
+    /// One header row: the six member columns, then `additional`.
+    fn header(additional: &[&str]) -> String {
+        MEMBER_COLUMNS
+            .iter()
+            .copied()
+            .chain(additional.iter().copied())
+            .collect::<Vec<&str>>()
+            .join("\t")
+    }
+
+    /// The six member values every row below starts with.
+    const MEMBER_ROW: &str = "\
+b1e4e4a1-0000-4000-8000-000000000001\t20260101\t1\t900000000000207008\t\
+900000000000509007\t404684003";
+
+    /// The additional column names of one refset file, as `of_columns` reads
+    /// them.
     fn columns(names: &[&str]) -> Vec<String> {
         names.iter().map(|n| (*n).to_owned()).collect()
     }
 
-    /// The columns decide, whatever a derivative package called the file.
+    /// Reads `path` for a kind, over a file written for the test.
+    fn kind_of(header: &str) -> Result<RefsetKind, Rf2Error> {
+        let dir = tempfile::tempdir().expect("a directory to write the header into");
+        let path = dir
+            .path()
+            .join("der2_Refset_SimpleSnapshot_INT_20260101.txt");
+        std::fs::write(&path, file(&[header])).expect("the header is written");
+        kind(&path)
+    }
+
+    // NOTE: a reader identifies a reference set by the columns its descriptor
+    // declares rather than by position, because the layouts differ by type
+    // (<https://docs.snomed.org/snomed-ct-specifications/release-file-specification>).
     #[test]
     fn the_additional_columns_name_the_kind() {
+        // The language reference set adds `acceptabilityId`.
         assert_eq!(
             RefsetKind::of_columns(&columns(&["acceptabilityId"])),
             RefsetKind::Language
         );
+        // The OWL expression reference set adds `owlExpression`.
         assert_eq!(
             RefsetKind::of_columns(&columns(&["owlExpression"])),
             RefsetKind::OwlExpression
         );
+        // The module dependency reference set adds both effective times, and
+        // is the one kind no single column names.
         assert_eq!(
             RefsetKind::of_columns(&columns(&["sourceEffectiveTime", "targetEffectiveTime"])),
             RefsetKind::ModuleDependency
         );
         assert_eq!(
-            RefsetKind::of_columns(&columns(&["targetComponentId"])),
+            RefsetKind::of_columns(&columns(&["sourceEffectiveTime"])),
+            RefsetKind::Content,
+            "one of the two effective times is not the module dependency layout"
+        );
+        // Every other layout the build reads as content: association,
+        // attribute value, simple map, extended map, and the simple set with
+        // no additional column at all.
+        for additional in [
+            vec!["targetComponentId"],
+            vec!["valueId"],
+            vec!["mapTarget"],
+            vec![
+                "mapGroup",
+                "mapPriority",
+                "mapRule",
+                "mapAdvice",
+                "mapTarget",
+                "correlationId",
+                "mapCategoryId",
+            ],
+            vec![],
+        ] {
+            assert_eq!(
+                RefsetKind::of_columns(&columns(&additional)),
+                RefsetKind::Content,
+                "{additional:?} is a content layout"
+            );
+        }
+    }
+
+    #[test]
+    fn a_kind_is_read_from_the_header_of_a_real_file() {
+        assert_eq!(
+            kind_of(&header(&["acceptabilityId"])).expect("a language refset header"),
+            RefsetKind::Language
+        );
+        assert_eq!(
+            kind_of(&header(&[])).expect("a simple refset header"),
             RefsetKind::Content
         );
-        assert_eq!(RefsetKind::of_columns(&[]), RefsetKind::Content);
+    }
+
+    #[test]
+    fn a_header_that_does_not_start_with_the_member_columns_is_refused() {
+        let wrong = "id\teffectiveTime\tactive\tmoduleId\trefsetId\tconceptId";
+        let error = kind_of(wrong).expect_err("the sixth column is not a member column");
+        let Rf2Error::Header {
+            expected, actual, ..
+        } = error
+        else {
+            panic!("a header error, not {error}");
+        };
+        assert_eq!(expected, MEMBER_COLUMNS.map(str::to_owned).to_vec());
+        assert_eq!(
+            actual.last().map(String::as_str),
+            Some("conceptId"),
+            "the error carries what the file actually had"
+        );
+    }
+
+    #[test]
+    fn a_header_shorter_than_the_member_columns_is_refused() {
+        let error =
+            kind_of("id\teffectiveTime\tactive").expect_err("three columns is not a member");
+        assert!(matches!(error, Rf2Error::Header { .. }), "{error}");
+    }
+
+    #[test]
+    fn a_member_carries_its_additional_columns_typed_by_kind() {
+        let rows = file(&[
+            &header(&["mapGroup", "mapTarget", "correlationId"]),
+            &format!("{MEMBER_ROW}\t1\tA01.0\t447561005"),
+        ]);
+        let members: Vec<Member> = Members::new(
+            Path::new("der2_iRefset_TestSnapshot_INT_20260101.txt"),
+            rows.as_slice(),
+            &[FieldKind::Integer, FieldKind::String, FieldKind::Component],
+        )
+        .expect("the header names six member columns and three additional")
+        .collect::<Result<Vec<Member>, Rf2Error>>()
+        .expect("one member");
+        let [member] = members.as_slice() else {
+            panic!("one member, not {}", members.len());
+        };
+        assert!(member.active);
+        assert_eq!(
+            member.field("mapGroup"),
+            Some(&FieldValue::Integer(1)),
+            "an integer column is read as an integer"
+        );
+        assert_eq!(
+            member.field("mapTarget"),
+            Some(&FieldValue::String(String::from("A01.0"))),
+            "a string column keeps a value no identifier parser would accept"
+        );
+        assert!(
+            matches!(
+                member.field("correlationId"),
+                Some(&FieldValue::Component(_))
+            ),
+            "a component column is parsed as an identifier"
+        );
+        assert_eq!(
+            member.field("mapAdvice"),
+            None,
+            "a column this file does not have is absent rather than empty"
+        );
+    }
+
+    #[test]
+    fn a_file_with_more_columns_than_its_kinds_is_refused() {
+        let rows = file(&[&header(&["acceptabilityId", "extra"])]);
+        let error = Members::new(
+            Path::new("der2_cRefset_LanguageSnapshot-en_INT_20260101.txt"),
+            rows.as_slice(),
+            &[FieldKind::Component],
+        )
+        .expect_err("one kind cannot type two additional columns");
+        assert!(matches!(error, Rf2Error::Header { .. }), "{error}");
+    }
+
+    /// One member with the additional `fields` a view reads.
+    fn member_with(fields: Vec<(String, FieldValue)>) -> Member {
+        let rows = file(&[&header(&[]), MEMBER_ROW]);
+        let mut member = Members::new(
+            Path::new("der2_Refset_SimpleSnapshot_INT_20260101.txt"),
+            rows.as_slice(),
+            &[],
+        )
+        .expect("a simple refset header")
+        .next()
+        .expect("one member")
+        .expect("a member that parses");
+        member.fields = fields;
+        member
+    }
+
+    #[test]
+    fn a_view_reads_the_column_its_reference_set_type_declares() {
+        let language = member_with(vec![(
+            String::from("acceptabilityId"),
+            FieldValue::Component(Sctid::parse("900000000000548007").expect("an identifier")),
+        )]);
+        let view = LanguageMember::try_from(language).expect("a language member");
+        assert_eq!(view.acceptability_id.to_string(), "900000000000548007");
+    }
+
+    #[test]
+    fn a_view_over_a_column_the_file_does_not_have_names_the_column() {
+        let error = LanguageMember::try_from(member_with(Vec::new()))
+            .expect_err("a file with no additional column is not a language refset");
+        let ViewError::Field { column, found } = error else {
+            panic!("a field error, not {error}");
+        };
+        assert_eq!(column, "acceptabilityId");
+        assert_eq!(found, "absent", "the error says what was there instead");
+    }
+
+    #[test]
+    fn a_view_over_a_column_of_another_type_says_what_it_found() {
+        let error = LanguageMember::try_from(member_with(vec![(
+            String::from("acceptabilityId"),
+            FieldValue::String(String::from("preferred")),
+        )]))
+        .expect_err("an acceptability that is not a component reference");
+        let ViewError::Field { found, .. } = error else {
+            panic!("a field error, not {error}");
+        };
+        assert_eq!(found, "a string");
+    }
+    /// A component reference, for a column whose value is one.
+    fn sctid(value: &str) -> FieldValue {
+        FieldValue::Component(Sctid::parse(value).expect("an identifier"))
+    }
+
+    /// A member carrying `fields`, named by column.
+    fn with(fields: &[(&str, FieldValue)]) -> Member {
+        member_with(
+            fields
+                .iter()
+                .map(|(name, value)| ((*name).to_owned(), value.clone()))
+                .collect(),
+        )
+    }
+
+    // NOTE: each reference set type declares its own additional columns, so a
+    // view reads the columns of its type and nothing positional
+    // (<https://docs.snomed.org/snomed-ct-specifications/release-file-specification>).
+    #[test]
+    fn every_view_reads_the_columns_its_type_declares() {
+        let association =
+            AssociationMember::try_from(with(&[("targetComponentId", sctid("404684003"))]))
+                .expect("an association member");
+        assert_eq!(association.target_component_id.to_string(), "404684003");
+
+        let attribute =
+            AttributeValueMember::try_from(with(&[("valueId", sctid("900000000000486000"))]))
+                .expect("an attribute value member");
+        assert_eq!(attribute.value_id.to_string(), "900000000000486000");
+
+        let simple_map = SimpleMapMember::try_from(with(&[(
+            "mapTarget",
+            FieldValue::String(String::from("A01.0")),
+        )]))
+        .expect("a simple map member");
+        assert_eq!(simple_map.map_target, "A01.0");
+
+        let extended = ExtendedMapMember::try_from(with(&[
+            ("mapGroup", FieldValue::Integer(1)),
+            ("mapPriority", FieldValue::Integer(2)),
+            ("mapRule", FieldValue::String(String::from("TRUE"))),
+            (
+                "mapAdvice",
+                FieldValue::String(String::from("ALWAYS A01.0")),
+            ),
+            ("mapTarget", FieldValue::String(String::from("A01.0"))),
+            ("correlationId", sctid("447561005")),
+            ("mapCategoryId", sctid("447637006")),
+        ]))
+        .expect("an extended map member");
+        assert_eq!(extended.map_group, 1);
+        assert_eq!(extended.map_priority, 2);
+        assert_eq!(extended.map_advice, "ALWAYS A01.0");
+
+        let owl = OwlExpressionMember::try_from(with(&[(
+            "owlExpression",
+            FieldValue::String(String::from("SubClassOf(:404684003 :138875005)")),
+        )]))
+        .expect("an OWL expression member");
+        assert!(owl.owl_expression.starts_with("SubClassOf"));
+
+        let descriptor = DescriptorMember::try_from(with(&[
+            ("attributeDescription", sctid("449608002")),
+            ("attributeType", sctid("900000000000461009")),
+            ("attributeOrder", FieldValue::Integer(0)),
+        ]))
+        .expect("a descriptor member");
+        assert_eq!(descriptor.attribute_order, 0);
+
+        let description_type = DescriptionTypeMember::try_from(with(&[
+            ("descriptionFormat", sctid("900000000000540000")),
+            ("descriptionLength", FieldValue::Integer(255)),
+        ]))
+        .expect("a description type member");
+        assert_eq!(description_type.description_length, 255);
+    }
+
+    // NOTE: the module dependency times are string columns the view parses, so
+    // a value that is not a date is refused rather than carried
+    // (<https://docs.snomed.org/snomed-ct-specifications/release-file-specification>).
+    #[test]
+    fn the_module_dependency_view_parses_both_effective_times() {
+        let view = ModuleDependencyMember::try_from(with(&[
+            (
+                "sourceEffectiveTime",
+                FieldValue::String(String::from("20260101")),
+            ),
+            (
+                "targetEffectiveTime",
+                FieldValue::String(String::from("20250901")),
+            ),
+        ]))
+        .expect("a module dependency member");
+        assert_eq!(view.source_effective_time.to_string(), "20260101");
+        assert_eq!(view.target_effective_time.to_string(), "20250901");
+
+        let error = ModuleDependencyMember::try_from(with(&[
+            (
+                "sourceEffectiveTime",
+                FieldValue::String(String::from("not a date")),
+            ),
+            (
+                "targetEffectiveTime",
+                FieldValue::String(String::from("20250901")),
+            ),
+        ]))
+        .expect_err("a time that is not one");
+        let ViewError::Value { column, .. } = error else {
+            panic!("a value error, not {error}");
+        };
+        assert_eq!(column, "sourceEffectiveTime");
     }
 }
