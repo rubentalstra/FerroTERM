@@ -81,5 +81,27 @@
       "measured_us": 31,
       "claim": "the first page of an expansion costs the page, never the selection"
     }
+  ],
+  "served_comment": [
+    "The bar a served read holds across every code system, checked against the",
+    "committed record set rather than the synthetic edition, because it is about",
+    "what a real system answers with.",
+    "",
+    "A read costs a fixed amount plus the serialising of its answer, at a rate",
+    "that is the same on every system. A flat bar across systems is therefore",
+    "not a bar on the server's speed: it asks a 63 KB answer to serialise four",
+    "times faster than a 1.5 KB one, which is a bar on how much a system has to",
+    "say about a concept. So the bar has the shape the measurement has, and a",
+    "regression in either term fails it: a slower operation moves the fixed",
+    "part, a slower codec moves the rate (the decision on #512)."
+  ],
+  "served_bars": [
+    {
+      "operation": "lookup",
+      "fixed_us": 100,
+      "rate_ns_per_byte": 6.0,
+      "measured": "on 2026-09-08, natively: 862 B answered in 75 us, 7,368 B in 123 us, 26,725 B in 211 us, 63,134 B in 355 us, which is a fixed 70 us plus 4.5 ns per byte; the bar above carries headroom over that fit",
+      "claim": "a served read costs a fixed amount plus the serialising of its answer, at one rate on every code system"
+    }
   ]
 }

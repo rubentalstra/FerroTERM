@@ -103,6 +103,12 @@ struct Ingest {
 #[derive(Debug, Serialize)]
 struct Latency {
     status: u16,
+    /// The bytes the answer carried.
+    ///
+    /// A read costs a fixed amount plus the serialising of what it answers
+    /// with, so a latency without the size of its answer cannot say which of
+    /// the two moved (#512).
+    answer_bytes: usize,
     cold_ms: f64,
     p50_ms: f64,
     p95_ms: f64,
@@ -131,7 +137,7 @@ struct Record {
     method: &'static str,
 }
 
-const METHOD: &str = "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: `ps -o rss=` of the server process after ready and after the warm requests; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank); comparison: not run";
+const METHOD: &str = "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: `ps -o rss=` of the server process after ready and after the warm requests; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank), with the bytes the answer carried beside them; comparison: not run";
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -446,17 +452,18 @@ async fn time_requests(
                 String::from_utf8_lossy(&body)
             );
         }
-        Ok::<_, anyhow::Error>((status.as_u16(), started.elapsed()))
+        Ok::<_, anyhow::Error>((status.as_u16(), body.len(), started.elapsed()))
     };
-    let (status, cold) = once().await?;
+    let (status, answer_bytes, cold) = once().await?;
     let mut samples = Vec::with_capacity(warm);
     for _ in 0..warm {
-        let (_, elapsed) = once().await?;
+        let (_, _, elapsed) = once().await?;
         samples.push(elapsed);
     }
     samples.sort();
     Ok(Latency {
         status,
+        answer_bytes,
         cold_ms: millis(cold),
         p50_ms: millis(percentile(&samples, 50)),
         p95_ms: millis(percentile(&samples, 95)),
