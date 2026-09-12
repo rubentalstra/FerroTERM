@@ -12,8 +12,10 @@
 #![doc(test(attr(deny(warnings))))]
 
 pub mod banner;
+pub mod cli;
 pub mod config;
 pub mod elements;
+pub mod healthcheck;
 pub mod metrics;
 pub mod outcome;
 pub mod persistence;
@@ -45,9 +47,9 @@ use crate::state::AppState;
 
 /// Builds the HTTP application over `state`.
 ///
-/// `GET /health` answers `200 OK` while the process is up; every FHIR route
-/// lives under its version prefix. Any other path is an `OperationOutcome`
-/// `not-found`.
+/// `GET /health` answers `200 OK` while the process is up ([`healthcheck`] is
+/// the probe the container runs against it); every FHIR route lives under its
+/// version prefix. Any other path is an `OperationOutcome` `not-found`.
 pub fn router(state: Arc<AppState>) -> Router {
     router_with_bundle(state, ui::BUNDLE)
 }

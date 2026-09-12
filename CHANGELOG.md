@@ -13,6 +13,19 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- `ferroterm healthcheck`, a subcommand that sends one `GET /health` to the
+  server's own listen address and exits 0 on `200 OK`, 1 otherwise with the
+  reason on stderr. The distroless image has no shell or HTTP client, so this
+  is what its new `HEALTHCHECK` runs, and the shipped `compose.yaml` states the
+  same block: `docker compose up --wait` now waits for a serving instance, and
+  another service sequences itself after the server with
+  `depends_on: ferroterm: condition: service_healthy`, as the shipped `proxy`
+  service now does. Because the server binds only after every artifact is
+  open, a passing probe means the deployment answers terminology requests
+  (#565).
+
 ### Changed
 
 - The FHIR model now comes from crates.io. `fhir-types` and the generator that

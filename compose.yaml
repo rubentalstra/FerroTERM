@@ -28,8 +28,8 @@
 #
 # Hardening: the container drops every capability, refuses privilege
 # escalation, and runs a read-only root filesystem; the server writes nothing.
-# The image runs as uid 65532 and has no shell, so there is no HEALTHCHECK
-# here: probe GET /health from outside.
+# The image runs as uid 65532 and has no shell; the health probe is the binary
+# itself (`ferroterm healthcheck`), declared on the service below.
 
 services:
   ferroterm:
@@ -59,6 +59,17 @@ services:
         source: ${FERROTERM_INDEX_DIR:-./index}
         target: /data/index
         read_only: true
+    # The image declares the same probe (`ferroterm healthcheck`: one GET
+    # /health, exit 0 on 200). Stating it here is what lets another service
+    # wait on it with `condition: service_healthy`, as the proxy below does,
+    # and what `docker compose up --wait` waits for. A large edition on a slow
+    # disk raises start_period.
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/ferroterm", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
     read_only: true
     cap_drop:
       - ALL
@@ -134,8 +145,11 @@ services:
     volumes:
       - caddy-data:/data
       - caddy-config:/config
+    # Started once the server answers GET /health, so the first proxied request
+    # never meets a server still reading its index.
     depends_on:
-      - ferroterm
+      ferroterm:
+        condition: service_healthy
     cap_drop:
       - ALL
     # Binding 80 and 443 inside the container needs the one capability the

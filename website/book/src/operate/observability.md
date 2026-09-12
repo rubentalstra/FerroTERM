@@ -1,8 +1,37 @@
-# Metrics and request identifiers
+# Health, metrics, and request identifiers
 
-FerroTERM answers a Prometheus scrape at `GET /metrics` and names every request
-with an `X-Request-Id`. Neither is a FHIR interaction: both live off the FHIR
-base path, so a scrape is never mistaken for a terminology request.
+FerroTERM answers a health probe at `GET /health`, a Prometheus scrape at
+`GET /metrics`, and names every request with an `X-Request-Id`. None of these
+is a FHIR interaction: the routes live off the FHIR base path, so a probe or a
+scrape is never mistaken for a terminology request.
+
+## Health
+
+`GET /health` answers `200 OK` with an empty body. The server binds its
+listener only after every index and `CodeSystem` directory it was configured
+with is open, and refuses to start on a missing or damaged one, so an answer
+at all means the deployment serves what it was told to serve. There is no
+degraded state to report: a probe that gets a `200` may send terminology
+requests.
+
+The container image has no shell and no HTTP client, so the probe is a
+subcommand of the binary:
+
+```console
+$ ferroterm healthcheck
+$ ferroterm healthcheck --url http://127.0.0.1:8080/health
+```
+
+It sends one `GET /health`, waits at most three seconds, and exits 0 with no
+output on `200 OK`. Otherwise it exits 1 with the reason on stderr: `cannot
+reach`, `answered 404 Not Found`, or `did not answer within 3s`. Without
+`--url` it follows `FERROTERM_LISTEN`, on the loopback when the server listens
+on every interface, which is what the image sets. The image declares it as its
+`HEALTHCHECK` (every ten seconds, a five-second limit, a sixty-second start
+period for reading an edition), and the shipped `compose.yaml` states the same
+block, so `docker compose up --wait` and `condition: service_healthy` work.
+Kubernetes ignores the image's instruction and takes `GET /health` in its own
+probes.
 
 ## Scraping
 

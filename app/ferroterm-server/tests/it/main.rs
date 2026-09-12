@@ -21,6 +21,7 @@ mod ecosystem;
 mod elements;
 mod fixture;
 mod health;
+mod healthcheck;
 mod metadata;
 mod metrics;
 mod openehr;
