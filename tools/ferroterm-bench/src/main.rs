@@ -146,7 +146,7 @@ struct Record {
     method: &'static str,
 }
 
-const METHOD: &str = "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: `ps -o rss=` of the server process after ready and after the warm requests; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank), with the bytes the answer carried beside them; machine: the one-minute load average when the run started, because a busy machine is measured instead of the server; comparison: not run";
+const METHOD: &str = "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: the median of five readings of the server process after ready and after the warm requests, taken with `footprint` on macOS (`phys_footprint`, which counts the pages the kernel compressed away) and `ps -o rss=` elsewhere; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank), with the bytes the answer carried beside them; machine: the one-minute load average when the run started, because a busy machine is measured instead of the server; comparison: not run";
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -669,27 +669,28 @@ impl Server {
         )
     }
 
-    /// The resident set size of the server process, in bytes: the median of
+    /// The memory the server process holds, in bytes: the median of
     /// [`RSS_SAMPLES`] readings.
     ///
     /// One reading is a moment, and a moment on a machine that has just
     /// finished other work is not the figure a served edition holds. The
     /// median of several readings a fifth of a second apart is (#304).
+    ///
+    /// On macOS the figure is the physical footprint rather than the resident
+    /// set, because the two differ by more than an order of magnitude for an
+    /// idle server: the kernel compresses the pages of a process that stops
+    /// touching them, and `ps -o rss=` counts only what is resident and
+    /// uncompressed. One served edition read 379 MB and then 15 MB two seconds
+    /// later while holding the same structures, against a physical footprint
+    /// of 896 MB throughout. `footprint` reports the compressed pages as the
+    /// memory they are (#512).
     fn rss(&self) -> Option<u64> {
         let mut samples: Vec<u64> = Vec::with_capacity(RSS_SAMPLES);
         for sample in 0..RSS_SAMPLES {
             if sample > 0 {
                 std::thread::sleep(RSS_INTERVAL);
             }
-            let output = Command::new("ps")
-                .args(["-o", "rss=", "-p", &self.child.id().to_string()])
-                .output()
-                .ok()?;
-            let kilobytes = String::from_utf8_lossy(&output.stdout)
-                .trim()
-                .parse::<u64>()
-                .ok()?;
-            samples.push(kilobytes * 1024);
+            samples.push(memory_of(self.child.id())?);
         }
         samples.sort_unstable();
         // The middle of an odd-length list, which RSS_SAMPLES fixes.
@@ -769,6 +770,54 @@ fn machine() -> Machine {
     }
 }
 
+/// The memory process `pid` holds, in bytes.
+///
+/// macOS is asked for the physical footprint, which counts a page the kernel
+/// compressed; Linux is asked for the resident set, which is the same thing
+/// there.
+fn memory_of(pid: u32) -> Option<u64> {
+    if cfg!(target_os = "macos") {
+        let output = Command::new("footprint")
+            .args(["-p", &pid.to_string()])
+            .output()
+            .ok()?;
+        return physical_footprint(&String::from_utf8_lossy(&output.stdout));
+    }
+    let output = Command::new("ps")
+        .args(["-o", "rss=", "-p", &pid.to_string()])
+        .output()
+        .ok()?;
+    let kilobytes = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .parse::<u64>()
+        .ok()?;
+    Some(kilobytes * 1024)
+}
+
+/// The `phys_footprint` line of a `footprint` report, in bytes.
+///
+/// The tool writes it as a rounded quantity with its unit (`896 MB`), so the
+/// unit is read rather than assumed.
+fn physical_footprint(report: &str) -> Option<u64> {
+    let line = report
+        .lines()
+        .find(|line| line.trim_start().starts_with("phys_footprint:"))?;
+    let (_, value) = line.split_once(':')?;
+    let mut fields = value.split_whitespace();
+    let amount: f64 = fields.next()?.replace(',', "").parse().ok()?;
+    let scale = match fields.next()?.to_ascii_uppercase().as_str() {
+        "B" => 1.0,
+        "K" | "KB" => 1024.0,
+        "M" | "MB" => 1024.0 * 1024.0,
+        "G" | "GB" => 1024.0 * 1024.0 * 1024.0,
+        _ => return None,
+    };
+    // Rendered and re-read rather than cast, because `as` on a float is a
+    // silent truncation this workspace denies, and a footprint is a whole
+    // number of bytes either way.
+    format!("{:.0}", amount * scale).parse().ok()
+}
+
 /// The one-minute load average, from `uptime`.
 ///
 /// `getloadavg` needs `unsafe` or a platform crate, and the line `uptime`
@@ -811,7 +860,32 @@ fn dir_size(dir: &Path) -> anyhow::Result<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::first_load;
+    use super::{first_load, physical_footprint};
+
+    #[test]
+    fn the_physical_footprint_is_read_with_its_unit() {
+        let report =
+            "Auxiliary data:\n    phys_footprint: 896 MB\n    phys_footprint_peak: 896 MB\n";
+        assert_eq!(
+            physical_footprint(report),
+            Some(896 * 1024 * 1024),
+            "the unit is read rather than assumed"
+        );
+        assert_eq!(
+            physical_footprint("    phys_footprint: 1.5 GB\n"),
+            Some(1_610_612_736),
+            "a footprint is reported with a fraction once it passes a gigabyte"
+        );
+        assert_eq!(
+            physical_footprint("    phys_footprint: 512 KB\n"),
+            Some(512 * 1024)
+        );
+        assert_eq!(
+            physical_footprint("nothing about a footprint here"),
+            None,
+            "a record states no memory rather than a wrong figure"
+        );
+    }
 
     #[test]
     fn the_load_average_is_read_on_both_platforms() {
