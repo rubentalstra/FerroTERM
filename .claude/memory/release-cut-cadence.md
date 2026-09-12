@@ -1,6 +1,6 @@
 ---
 name: release-cut-cadence
-description: Cut the release the moment a milestone reaches zero open issues, and bump the version in EVERY place (README, landing page, book too); scripts/checks/versions.sh guards it since 2026-09-03
+description: Cut the release the moment a milestone empties, bump the version EVERYWHERE, create the next milestone for stragglers, close the milestone by hand, and sign and push the tag yourself when the owner asks (done for v0.1.3 on 2026-09-12)
 metadata:
   node_type: memory
   type: feedback
@@ -32,3 +32,19 @@ zero, the next unit of work is the release PR. In that PR, `git grep` the old
 version across the whole tree (excluding CHANGELOG.md and Cargo.lock) and run
 `scripts/checks/versions.sh` before opening it. See [[repo-merge-gates]] and
 [[milestone-autonomy]].
+
+**Update 2026-09-12 (v0.1.3):** the owner asked for the whole cut, tag
+included: "please cut the release for me please and close the milestone".
+`git tag -s v0.1.3 -m v0.1.3 <merge commit>` signed with the configured
+openpgp key without a prompt and `git push origin v0.1.3` started
+`release.yml`; nine jobs, 33 assets, about eleven minutes. Do the same when
+asked; otherwise hand the two commands over as `docs/release.md` says. Two
+things nothing automates: the stragglers need a NEW next milestone
+(`gh api -X POST repos/.../milestones -f title=vX.Y.Z`), and the emptied
+milestone is closed by hand (`gh api -X PATCH .../milestones/<n> -f
+state=closed`). Verify afterwards as a consumer: `gh attestation verify` on a
+tarball (signer `release-build.yml`) and on `oci://ghcr.io/...:X.Y.Z` (signer
+`release-image.yml`), and read the published image config through the GHCR
+API with an anonymous pull token when Docker should stay stopped. Checklist
+step 6 (fresh benchmark records) was skipped at v0.1.2 and v0.1.3 for want of
+a quiet machine; #512 carries it.
