@@ -68,16 +68,16 @@
             the cell says where.
           </p>
           <p>
-            The Snowstorm documentation was read on 5 September 2026, from the
+            The Snowstorm documentation was read on 12 September 2026, from the
             <code>master</code> branch of each repository. The current release
             on that date was
             <a href="https://github.com/IHTSDO/snowstorm/releases/tag/11.0.0" rel="noopener">Snowstorm 11.0.0</a>
             (2 September 2026) and
-            <a href="https://github.com/IHTSDO/snowstorm-lite/releases/tag/2.5.2" rel="noopener">Snowstorm Lite 2.5.2</a>
-            (20 July 2026). SNOMED International's
+            <a href="https://github.com/IHTSDO/snowstorm-lite/releases/tag/2.6.0" rel="noopener">Snowstorm Lite 2.6.0</a>
+            (9 September 2026). SNOMED International's
             <a href="https://www.implementation.snomed.org/terminology-services" rel="noopener">terminology services page</a>
             was read the same day. The FerroTERM column describes release
-            0.1.0.
+            0.1.2.
           </p>
           <p>
             Snowstorm Lite serves SNOMED CT and nothing else, by design. Rows
@@ -169,7 +169,7 @@
         <div class="prose prose-wide">
           <div class="table-wrap"><table class="compare">
             <thead>
-              <tr><th scope="col"></th><th scope="col">FerroTERM 0.1.0</th><th scope="col">Snowstorm</th><th scope="col">Snowstorm Lite</th></tr>
+              <tr><th scope="col"></th><th scope="col">FerroTERM 0.1.2</th><th scope="col">Snowstorm</th><th scope="col">Snowstorm Lite</th></tr>
             </thead>
             <tbody>
 
@@ -388,6 +388,30 @@
                 </td>
               </tr>
 
+              <tr>
+                <th scope="row">A web UI in the box</th>
+                <td>
+                  A viewer at <code>/ui</code>, served by the same binary and
+                  nothing to deploy separately. It is a FHIR client over the
+                  public API, so it runs <code>$lookup</code>,
+                  <code>$validate-code</code>, <code>$subsumes</code>,
+                  <code>$expand</code>, and <code>$translate</code> against
+                  whatever this deployment publishes.
+                  <span class="src"><a href="./docs/operate/viewer.html">The viewer</a></span>
+                </td>
+                <td>
+                  Not claimed in the documentation. Snowstorm provides the
+                  terminology server API for the SNOMED International Browser,
+                  which is a separate application.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm/blob/master/README.md" rel="noopener">README</a></span>
+                </td>
+                <td>
+                  A Dashboard at the server root, used to pull an edition
+                  through the syndication service and to administer the index.
+                  <span class="src"><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a></span>
+                </td>
+              </tr>
+
             </tbody>
           </table></div>
         </div>
@@ -403,7 +427,7 @@
         <div class="prose prose-wide">
           <div class="table-wrap"><table class="compare">
             <thead>
-              <tr><th scope="col"></th><th scope="col">FerroTERM 0.1.0</th><th scope="col">Snowstorm</th><th scope="col">Snowstorm Lite</th></tr>
+              <tr><th scope="col"></th><th scope="col">FerroTERM 0.1.2</th><th scope="col">Snowstorm</th><th scope="col">Snowstorm Lite</th></tr>
             </thead>
             <tbody>
 
@@ -430,8 +454,10 @@
                 <th scope="row">Memory each project asks for</th>
                 <td>
                   The sizing guide puts an edition on a 2 to 4 GB box with two
-                  cores; the committed record for the International edition
-                  shows 669 MB resident after the warm requests.
+                  cores. The resident figure that belongs beside it is being
+                  re-measured: the harness read it with <code>ps</code>, which does not
+                  count the pages macOS compresses, so every published figure
+                  understated what a served edition holds.
                   <span class="src"><a href="./docs/operate/hardware-sizing.html">Hardware sizing</a>, <a href="./benchmarks.html">benchmarks</a></span>
                 </td>
                 <td>
@@ -568,7 +594,7 @@
             <li>
               <strong>Both have years of production behind them.</strong>
               Snowstorm carries the SNOMED International Browser and the
-              Authoring Platform. FerroTERM is at release 0.1.0 and states its
+              Authoring Platform. FerroTERM is at release 0.1.2 and states its
               open items on its checklist.
             </li>
           </ul>
@@ -582,7 +608,7 @@
           <span class="eyebrow">Sources</span>
           <h2>Every document behind a cell</h2>
           <p>
-            Read on 5 September 2026 from the <code>master</code> branch of
+            Read on 12 September 2026 from the <code>master</code> branch of
             each repository.
           </p>
         </div>
@@ -596,7 +622,7 @@
             <li><a href="https://github.com/IHTSDO/snowstorm/blob/master/LICENSE.md" rel="noopener">LICENSE.md</a>: Apache 2.0.</li>
           </ul>
 
-          <h3>Snowstorm Lite, release 2.5.2 of 20 July 2026</h3>
+          <h3>Snowstorm Lite, release 2.6.0 of 9 September 2026</h3>
           <ul>
             <li><a href="https://github.com/IHTSDO/snowstorm-lite" rel="noopener">The repository</a> and its <a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/readme.md" rel="noopener">readme</a>: the use cases, the features, the limitations, ECL Core, the technical details, the quick start.</li>
             <li><a href="https://github.com/IHTSDO/snowstorm-lite/blob/master/CHANGELOG.md" rel="noopener">Changelog</a>: <code>CodeSystem $subsumes</code> in 2.3.0, <code>CodeSystem $validate-code</code> and the syndication dashboard in 2.5.0.</li>
@@ -609,7 +635,7 @@
             <li><a href="https://www.implementation.snomed.org/terminology-services" rel="noopener">Terminology services</a>: how SNOMED International describes both servers, including ECL v2.1 for Snowstorm and &ldquo;no need for Elasticsearch&rdquo; for Snowstorm Lite.</li>
           </ul>
 
-          <h3>FerroTERM, release 0.1.0</h3>
+          <h3>FerroTERM, release 0.1.2</h3>
           <ul>
             <li><a href="https://github.com/rubentalstra/FerroTERM#readme" rel="noopener">README</a> and the <a href="./docs/">book</a>: the API, the code systems, the languages, the deployment.</li>
             <li><a href="https://github.com/rubentalstra/FerroTERM/blob/main/docs/implementation.md" rel="noopener">implementation.md</a>: what is built and what is open, including multi-edition resolution.</li>

@@ -140,6 +140,44 @@
       </div>
     </section>
 
+    <!-- The viewer, served by the same binary at /ui -->
+    <section id="viewer">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">The viewer</span>
+          <h2>A web UI, out of the same binary</h2>
+          <p>
+            The server serves a viewer at <code>/ui</code>, and
+            <code>/</code> redirects onto it. Start the server and it is
+            already there; there is nothing else to deploy and no second
+            process to run.
+          </p>
+        </div>
+        <div class="prose">
+          <p>
+            It is a FHIR client and nothing more. It reaches the server over
+            the same public API any client uses, from the browser, same-origin,
+            so anything it does your own client can do. It depends on no other
+            crate in the workspace, which a check enforces.
+          </p>
+          <p>
+            <strong>Check a code</strong>, <strong>List a value set</strong>,
+            and <strong>Map a code</strong> run
+            <code>$lookup</code>, <code>$validate-code</code>,
+            <code>$subsumes</code>, <code>$expand</code>, and
+            <code>$translate</code>. Each control offers the code systems,
+            value sets, and concept maps this deployment publishes, with the
+            versions each canonical was published in beside it, so nothing
+            waits for a canonical to be typed. The overview reads a
+            twenty-system deployment as one sortable table.
+          </p>
+          <p>
+            <a href="./docs/operate/viewer.html">What the viewer does</a>
+          </p>
+        </div>
+      </div>
+    </section>
+
     <!-- One section per audience -->
     <section id="audiences" class="surface">
       <div class="wrap">
