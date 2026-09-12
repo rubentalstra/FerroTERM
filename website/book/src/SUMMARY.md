@@ -21,7 +21,7 @@
 - [Loading code systems](operate/loading-snomed.md)
 - [Hardware sizing](operate/hardware-sizing.md)
 - [Behind a reverse proxy](operate/reverse-proxy.md)
-- [Metrics and request identifiers](operate/observability.md)
+- [Health, metrics, and request identifiers](operate/observability.md)
 - [Verifying releases](operate/verifying-releases.md)
 
 # Integrate

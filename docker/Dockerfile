@@ -34,6 +34,16 @@ EXPOSE 8080/tcp
 # it does not read, so `runAsNonRoot: true` refuses a named USER.
 USER 65532:65532
 
+# The base has no shell and no HTTP client, so the probe is the binary itself:
+# one GET /health on the loopback (FERROTERM_LISTEN says where), exit 0 on
+# 200. The server binds only after every artifact is open, so healthy means it
+# answers terminology requests. The start period covers reading an edition
+# (the longest start in the committed records is 23 s); a slower disk or a
+# larger deployment raises it in the compose file. Kubernetes ignores this
+# instruction and keeps its own probes.
+HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=3 \
+  CMD ["/usr/local/bin/ferroterm", "healthcheck"]
+
 # Exec form: the binary is PID 1 and receives SIGTERM itself (there is no
 # shell to forward it); it stops gracefully on SIGTERM and SIGINT.
 ENTRYPOINT ["/usr/local/bin/ferroterm"]

@@ -50,6 +50,13 @@ filesystem. `FERROTERM_BIND_HOST`, `FERROTERM_PORT`, `FERROTERM_LOG_FORMAT`,
 `FERROTERM_DEFAULT_LANGUAGE`, and `RUST_LOG` are variables you set on the
 command line.
 
+The `ferroterm` service declares a health check, so `docker compose up --wait`
+returns once the server answers `GET /health`, and a service of your own waits
+for it with `depends_on: ferroterm: condition: service_healthy`. The shipped
+`proxy` service does exactly that. See
+[Health, metrics, and request identifiers](observability.md) for what the
+probe does.
+
 ## Run the container by hand
 
 The image is `ghcr.io/rubentalstra/ferroterm`, published for `linux/amd64` and
@@ -76,8 +83,11 @@ $ gh attestation verify oci://ghcr.io/rubentalstra/ferroterm:0.1.2 \
     --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-image.yml
 ```
 
-The image carries no `HEALTHCHECK`; in Kubernetes, point the readiness and
-liveness probes at `GET /health`, set `runAsNonRoot: true`,
+The image carries a `HEALTHCHECK` that runs `ferroterm healthcheck`: the
+binary probes `GET /health` on its own listen address, since there is no shell
+or `curl` to do it, so `docker inspect` reports the container's health and
+Compose can wait on it. Kubernetes ignores the image's `HEALTHCHECK`: point the
+readiness and liveness probes at `GET /health`, set `runAsNonRoot: true`,
 `readOnlyRootFilesystem: true`, and drop every capability. The server stops
 cleanly on `SIGTERM`.
 

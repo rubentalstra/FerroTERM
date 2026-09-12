@@ -5,21 +5,27 @@
 //! the artifacts (their summary is the first thing logged), bind, serve.
 #![expect(
     clippy::print_stderr,
-    reason = "a refused configuration is reported before any log subscriber exists"
+    reason = "a refused configuration and a failed health probe are reported before any log subscriber exists"
 )]
 
 use std::io::IsTerminal;
 use std::process::ExitCode;
 use std::sync::Arc;
 
+use clap::Parser;
+use ferroterm_server::cli::{Cli, Command};
 use ferroterm_server::config::{Config, INDEX_ENV, LISTEN_ENV, UI_ENV};
 use ferroterm_server::state::AppState;
 use ferroterm_server::telemetry::ResolvedFormat;
-use ferroterm_server::{banner, telemetry};
+use ferroterm_server::{banner, healthcheck, telemetry};
 use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    let cli = Cli::parse();
+    if let Some(Command::Healthcheck { url }) = cli.command {
+        return healthcheck_main(url).await;
+    }
     let config = match Config::from_env() {
         Ok(config) => config,
         Err(error) => {
@@ -39,6 +45,19 @@ async fn main() -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             tracing::error!(error = format!("{error:#}"), "cannot start");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// `ferroterm healthcheck`: silent on `200 OK`, the reason on stderr otherwise.
+async fn healthcheck_main(url: Option<String>) -> ExitCode {
+    let url = url.unwrap_or_else(healthcheck::url_from_env);
+    match healthcheck::probe(&url).await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            let error = anyhow::Error::from(error);
+            eprintln!("ferroterm healthcheck: {error:#}");
             ExitCode::FAILURE
         }
     }

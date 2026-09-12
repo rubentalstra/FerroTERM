@@ -320,10 +320,10 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | Claim | Evidence |
 |---|---|
 | Four registry systems served with no configuration | `app/ferroterm-server/src/state.rs:414-418` |
-| `GET /health` | `app/ferroterm-server/src/lib.rs:51`; `app/ferroterm-server/tests/it/health.rs::health_answers_ok` |
+| `GET /health` | `app/ferroterm-server/src/lib.rs:53`; `app/ferroterm-server/tests/it/health.rs::health_answers_ok` |
 | The image runs as numeric user `65532` on a distroless base, with `FERROTERM_LISTEN=0.0.0.0:8080` | `docker/Dockerfile:14,28,33` |
 | Tags are `<version>`, `<major.minor>`, and `latest` | `.github/workflows/release-image.yml:124-126`; `latest` comes from `docker/metadata-action`'s default flavour |
-| The image carries no `HEALTHCHECK` | `docker/Dockerfile` declares none |
+| The image carries a `HEALTHCHECK` running `ferroterm healthcheck`, which exits 0 against a serving instance and 1 against a stopped one | `docker/Dockerfile:36-45`; `app/ferroterm-server/src/healthcheck.rs`; `app/ferroterm-server/tests/it/healthcheck.rs` |
 | The server stops cleanly on `SIGTERM` | `app/ferroterm-server/src/main.rs` |
 | The server opens each index read-only, refuses to start on a missing or damaged one, and listens on `127.0.0.1:8080` | `app/ferroterm-server/src/config.rs:101`; `app/ferroterm-server/tests/it/config.rs` |
 | The nine environment variables and their defaults | `app/ferroterm-server/src/config.rs:8-40` and `telemetry.rs:20-22`; `app/ferroterm-server/tests/it/config.rs::the_environment_fills_the_config` |
