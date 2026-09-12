@@ -31,7 +31,8 @@ exist.
 | `ci.yml` (`ui-e2e` job) | the viewer's browser journeys: the Trunk bundle embedded in the server, the image built from `docker/Dockerfile`, and a digest-pinned headless Chromium driving it over WebDriver (`scripts/ui-e2e.sh`) | on workspace |
 | `differential.yml` | weekly: the request sample of `conformance/differential/` answered by FerroTERM and by Snowstorm over the same licensed edition (`scripts/checks/differential.sh`), an issue filed on divergence | when `SNOMED_RF2_URL` and `SNOWSTORM_URL` are set |
 
-Dependabot (`github-actions` + `cargo`) keeps `uses:` SHAs and crate pins current.
+Dependabot (`github-actions` + `cargo`) keeps `uses:` SHAs (the workflows and
+the composite action under `.github/actions`) and crate pins current.
 
 ## SLSA Build Level 3
 

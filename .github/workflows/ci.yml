@@ -53,9 +53,27 @@ jobs:
         # pinned commit really belongs to the repository named in front of it,
         # which it cannot do offline. --min-severity=low gates every actionable
         # tier and leaves the informational tier advisory.
+        #
+        # The online audit reaches GitHub once per pinned action, and a
+        # transient 5xx there surfaces as exit code 1, the tool-failure code
+        # (docs.zizmor.sh/usage). Only that code is retried: a clean run (0)
+        # and a finding (11 to 14) return on the first attempt, so the retry
+        # can never hide an audit result.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: zizmor --min-severity=low .github/workflows/
+        run: |
+          for attempt in 1 2 3; do
+            status=0
+            zizmor --min-severity=low .github/workflows/ || status=$?
+            if [ "$status" -ne 1 ]; then
+              exit "$status"
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::zizmor failed with a tool error (attempt ${attempt}/3); retrying"
+              sleep $((attempt * 15))
+            fi
+          done
+          exit 1
 
   # actionlint — the CORRECTNESS half of the pair: `${{ }}` expressions that
   # cannot evaluate, `needs:` naming a job that does not exist, unknown runner
