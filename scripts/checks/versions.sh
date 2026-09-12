@@ -171,14 +171,12 @@ if [[ -f LICENSE ]]; then
     [[ -n "$hit" ]] || continue
     bad "stale licence claim at $hit"; stale=1
   done < <(git grep -n -E 'SPDX-License-Identifier: (MIT|Apache-2\.0)|License-MIT|License-Apache|^license = "(MIT|Apache-2\.0)"|^license: (MIT|Apache-2\.0)|image\.licenses="?(MIT|Apache)' \
-    -- ':!scripts/checks/versions.sh' ':!tools/fhir-codegen/vendor' ':!crates/sct-ecl/vendor' ':!crates/fhir-types' ':!crates/rf2' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
-  # fhir-types and rf2 are the two crates published under Apache 2.0 (the
-  # owner's decision, #223); each carries the Apache text and says so.
-  for apache in crates/fhir-types crates/rf2; do
-    if ! grep -q '^license = "Apache-2.0"' "$apache/Cargo.toml" || ! grep -q 'Apache License' "$apache/LICENSE"; then
-      bad "$apache is not Apache-2.0 in its manifest and LICENSE"; stale=1
-    fi
-  done
+    -- ':!scripts/checks/versions.sh' ':!crates/sct-ecl/vendor' ':!crates/rf2' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
+  # rf2 is published under Apache 2.0 (the owner's decision, #223); it carries
+  # the Apache text and says so.
+  if ! grep -q '^license = "Apache-2.0"' crates/rf2/Cargo.toml || ! grep -q 'Apache License' crates/rf2/LICENSE; then
+    bad "crates/rf2 is not Apache-2.0 in its manifest and LICENSE"; stale=1
+  fi
   [[ "$stale" -eq 0 ]] && note "OK: the project's own files name BUSL-1.1"
 else
   note "no LICENSE yet — skipped"
@@ -217,15 +215,15 @@ fi
 # --- Published crates: metadata, lockstep line (.claude/rules/crates-publishing.md)
 echo "== published crates (crates/*/Cargo.toml <-> README, LICENSE, root requirements)"
 if ls crates/*/Cargo.toml >/dev/null 2>&1; then
-  line="$(awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' crates/fhir-types/Cargo.toml || true)"
+  line="$(awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' crates/rf2/Cargo.toml || true)"
   for manifest in crates/*/Cargo.toml; do
     dir="$(dirname "$manifest")"
     name="$(awk -F'"' '/^\[package\]/{p=1} p && /^name = /{print $2; exit}' "$manifest")"
     [[ -f "$dir/README.md" ]] || bad "$dir has no README.md (published crate)"
     [[ -f "$dir/LICENSE" ]] || bad "$dir has no LICENSE (published crate)"
     case "$dir" in
-      # the two Apache-2.0 crates carry the Apache text, checked above
-      crates/fhir-types|crates/rf2) ;;
+      # the Apache-2.0 crate carries the Apache text, checked above
+      crates/rf2) ;;
       *) cmp -s LICENSE "$dir/LICENSE" || bad "$dir/LICENSE differs from the root LICENSE" ;;
     esac
     grep -q '^publish = true' "$manifest" || bad "$manifest is not publish = true"
@@ -250,35 +248,32 @@ else
   note "no rust-toolchain.toml yet — skipped (lands with the workspace)"
 fi
 
-# --- Vendored FHIR package pins == docs/VERSIONS.md table ----------------------
-echo "== vendored FHIR package pins (PROVENANCE.md <-> docs/VERSIONS.md)"
-if [[ -d tools/fhir-codegen/vendor ]]; then
-  found=0
-  for prov in tools/fhir-codegen/vendor/*/PROVENANCE.md; do
-    [[ -f "$prov" ]] || continue
-    found=1
-    pkg="$(basename "$(dirname "$prov")")"
-    prov_ver="$(sed -nE 's/^- Version:[[:space:]]*//p' "$prov" | head -n1 | tr -d '[:space:]')"
-    # The second cell of the package's row in the docs/VERSIONS.md FHIR table.
-    pin_ver="$(awk -F'|' -v pkg="$pkg" '$2 ~ "^[[:space:]]*`" pkg "`" { v = $3; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); print v; exit }' docs/VERSIONS.md)"
-    pkg_json="tools/fhir-codegen/vendor/$pkg/package/package.json"
-    json_ver=""
-    [[ -f "$pkg_json" ]] && json_ver="$(sed -nE 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$pkg_json" | head -n1)"
-    if [[ -z "$prov_ver" ]]; then
-      bad "$prov has no '- Version:' line"
-    elif [[ -z "$pin_ver" ]]; then
-      bad "$pkg is vendored ($prov_ver) but has no row in the docs/VERSIONS.md FHIR table"
-    elif [[ "$prov_ver" != "$pin_ver" ]]; then
-      bad "$pkg: PROVENANCE.md says $prov_ver, docs/VERSIONS.md pins $pin_ver"
-    elif [[ -n "$json_ver" ]] && [[ "$json_ver" != "$prov_ver" ]]; then
-      bad "$pkg: package.json says $json_ver, PROVENANCE.md says $prov_ver"
-    else
-      note "OK: $pkg $prov_ver (PROVENANCE.md, package.json, and the pin table agree)"
-    fi
-  done
-  [[ "$found" -eq 1 ]] || note "vendor/ present but holds no PROVENANCE.md yet — skipped"
+# --- The FHIR model pin (docs/VERSIONS.md <-> Cargo.toml <-> Cargo.lock) ------
+# `fhir-types` is generated and published by the FerroBRIDGE repository and
+# consumed from crates.io, so this pin replaces the vendored-package check. The
+# requirement is a caret, so a newer 0.1.x release resolves into Cargo.lock on
+# its own (a Dependabot bump, a `cargo update`) and would otherwise change the
+# served FHIR model with nothing recording it. All three must name one version.
+echo "== FHIR model pin (docs/VERSIONS.md <-> Cargo.toml <-> Cargo.lock)"
+if [[ -f Cargo.toml ]] && [[ -f docs/VERSIONS.md ]] && [[ -f Cargo.lock ]]; then
+  req="$(sed -nE 's/^fhir-types = "([^"]+)".*/\1/p' Cargo.toml | head -n1)"
+  pin="$(awk -F'|' '$2 ~ /^[[:space:]]*`fhir-types`[[:space:]]*$/ { v = $3; gsub(/^[[:space:]]+/, "", v); split(v, w, /[[:space:]]/); print w[1]; exit }' docs/VERSIONS.md)"
+  locked="$(awk '$1 == "name" && $3 == "\"fhir-types\"" { hit = 1; next } hit && $1 == "version" { gsub(/"/, "", $3); print $3; exit }' Cargo.lock)"
+  if [[ -z "$req" ]]; then
+    bad "root Cargo.toml has no 'fhir-types = \"<version>\"' requirement"
+  elif [[ -z "$pin" ]]; then
+    bad "docs/VERSIONS.md has no \`fhir-types\` row"
+  elif [[ "$req" != "$pin" ]]; then
+    bad "root Cargo.toml requires fhir-types $req, docs/VERSIONS.md pins $pin"
+  elif [[ -z "$locked" ]]; then
+    bad "Cargo.lock records no fhir-types version"
+  elif [[ "$locked" != "$pin" ]]; then
+    bad "Cargo.lock resolves fhir-types $locked, docs/VERSIONS.md pins $pin; move the pin and the requirement with the lock"
+  else
+    note "OK: fhir-types $pin (the requirement, the lock, and the pin table agree)"
+  fi
 else
-  note "no vendored FHIR packages yet — skipped"
+  note "no Cargo.toml, Cargo.lock, or docs/VERSIONS.md yet — skipped"
 fi
 
 # --- the viewer tool pins (docs/VERSIONS.md <-> Trunk.toml <-> the workflows) ---

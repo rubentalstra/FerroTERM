@@ -144,8 +144,7 @@ ch12.3), and its integration tests import the lib.
   tail or hidden `fn main`, never `unwrap` (C-QUESTION-MARK; enforced by
   `#![doc(test(attr(deny(warnings))))]` on library roots). `no_run` for
   examples that would open a `redb` store or touch HTTP, `text` for non-code,
-  never `ignore`. The generated `fhir-types` crate keeps `doctest = false`
-  deliberately (generated doc text is not curated examples).
+  never `ignore`.
 
 ## Coverage is a mandate, not just pass rate
 

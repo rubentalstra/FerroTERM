@@ -34,4 +34,4 @@
 # Contribute
 
 - [Build and test](contribute/build-and-test.md)
-- [The codegen model](contribute/codegen.md)
+- [The FHIR model](contribute/codegen.md)

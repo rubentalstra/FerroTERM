@@ -133,7 +133,7 @@ chapters, and the Clippy book.
   `# Errors`/`# Panics` sections** (C-DOC, C-DEBUG, C-FAILURE):
   `missing_docs`, `missing_debug_implementations`, `missing_errors_doc` /
   `missing_panics_doc`. The generated `fhir-types` crate gets its docs from
-  the emitter; never hand-edit a `// @generated` file to document it.
+  its generator, which is not in this repository (`codegen.md`).
 - **Visibility is deliberate** (C-STRUCT-PRIVATE): private by default, scoped
   visibility only at real module boundaries, zero re-exports (every import
   names its defining module), `unreachable_pub` watched at CI. Struct fields

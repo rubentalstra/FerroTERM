@@ -51,7 +51,8 @@ Bootstrap the labels once with `scripts/gh/labels.sh`.
 - **Priority:** `P0` (critical, drop everything) / `P1` (high, current focus)
   / `P2` (normal) / `P3` (backlog).
 - **Domain/area:** `spec:FHIR` (the FHIR terminology wire), `spec:SNOMED`
-  (SNOMED CT / ECL / RF2 semantics), `codegen` (the `fhir-types` generator),
+  (SNOMED CT / ECL / RF2 semantics), `codegen` (the generated FHIR model and
+  its pin),
   `server` (the axum server), `viewer` (the Leptos web UI). Add more as the
   project grows; keep the set small and meaningful, and add them to
   `scripts/gh/labels.sh` in the same change so a fresh clone converges to the

@@ -4,15 +4,8 @@
 # every platform.
 * text=auto eol=lf
 
-# Vendored trees (machine-readable FHIR specs, test corpora) are exempt from
+# Vendored trees (test corpora, machine-readable grammars) are exempt from
 # GitHub language stats and collapse in diffs. Extend the list when a new
 # vendored tree lands (see .claude/rules/vendored-inputs.md).
 # vendor/** linguist-vendored
 # crates/*/vendor/** linguist-vendored
-tools/*/vendor/** linguist-vendored
-# The FHIR layer is emitted by fhir-codegen; every file under src/ is .
-crates/fhir-types/src/** linguist-generated
-
-# Vendored packages are stored byte for byte as HL7 publishes them: no line
-# ending normalization, so the tree matches the registry tarball exactly.
-tools/*/vendor/** -text

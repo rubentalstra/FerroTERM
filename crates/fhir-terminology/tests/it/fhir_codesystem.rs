@@ -534,23 +534,6 @@ fn lookup_name_is_the_code_system_name_then_the_title_then_the_url() {
     assert_eq!(lookup_cat(&registry_of(bare), &[]).name, ANIMALS);
 }
 
-#[test]
-fn the_vendored_hl7_terminology_package_loads() {
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tools/fhir-codegen/vendor/hl7.terminology/package");
-    let version = package_version(&dir)
-        .expect("reads")
-        .expect("declares a version");
-    let models = load_dir(&dir, version).expect("loads");
-    assert!(models.len() > 900, "{} code systems", models.len());
-    let mut built = 0;
-    for model in models {
-        FhirCodeSystem::new(model).expect("builds");
-        built += 1;
-    }
-    assert!(built > 900);
-}
-
 // NOTE: R5 `$lookup` declares `definition` as its own output
 // (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
 #[test]

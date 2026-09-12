@@ -1,41 +1,36 @@
 ---
-paths: ["scripts/vendor/*.sh", "tools/fhir-codegen/vendor/**", "crates/sct-ecl/vendor/**", "crates/**/tests/fixtures/**"]
+paths: ["scripts/vendor/*.sh", "crates/sct-ecl/vendor/**", "crates/**/data/**", "crates/**/tests/fixtures/**"]
 ---
 
-# Vendored inputs (FHIR packages) and the SNOMED content rule
+# Vendored inputs and the SNOMED content rule
 
 Two kinds of external material touch this repo, and they are handled
-oppositely: the FHIR packages are vendored verbatim as codegen input; SNOMED
-CT content is NEVER committed.
+oppositely: a machine-readable corpus is vendored verbatim; SNOMED CT content
+is NEVER committed. The HL7 FHIR packages are no longer among them: they are
+vendored by the FerroBRIDGE repository, which generates and publishes the
+`fhir-types` crate this one consumes (`codegen.md`).
 
-## FHIR packages: vendored verbatim, pinned, provenance-stamped
+## A vendored corpus: verbatim, pinned, provenance-stamped
 
-The pinned FHIR packages are the codegen input (`codegen.md`). Every one is:
+Every vendored tree is:
 
 - **Fetched by a committed `scripts/vendor/*.sh` script.** Never hand-download
-  into the tree, never hand-edit a vendored file, never paste a package in
+  into the tree, never hand-edit a vendored file, never paste a corpus in
   from a chat transcript. To refresh or extend: change the script, re-run it,
   commit the result.
-- **Vendored verbatim** under `tools/fhir-codegen/vendor/<package>/`,
-  byte-for-byte as HL7 publishes it.
-- **Stamped with a `PROVENANCE.md`** recording the source (the FHIR package
-  registry, <https://www.hl7.org/fhir/packages.html>), the exact package
-  version pin, the fetch date, and the upstream license (HL7 material under
-  its own terms), with the upstream `LICENSE`/`package.json` alongside.
+- **Vendored verbatim**, byte-for-byte as its publisher ships it.
+- **Stamped with a `PROVENANCE.md`** recording the source, the exact version
+  or commit pin, the fetch date, and the upstream licence, with the upstream
+  `LICENSE` alongside.
 
 | input | script | destination |
 |---|---|---|
-| `hl7.fhir.r4.core` 4.0.1 | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.fhir.r4.core/` |
-| `hl7.fhir.r4b.core` 4.3.0 | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.fhir.r4b.core/` |
-| `hl7.fhir.r5.core` 5.0.0 | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.fhir.r5.core/` |
-| `hl7.fhir.r6.core` 6.0.0-ballot5 | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.fhir.r6.core/` |
-| `hl7.terminology` (THO) | `scripts/vendor/fhir-packages.sh` | `tools/fhir-codegen/vendor/hl7.terminology/` |
 | The ECL grammar and example corpus (IHTSDO, Apache 2.0), tag pinned in `docs/VERSIONS.md` | `scripts/vendor/ecl-grammar.sh` | `crates/sct-ecl/vendor/` |
+| The IANA, CLDR, and UCUM registry data behind the registry code systems | `scripts/vendor/registries.sh` | `crates/fhir-terminology/data/` |
 
-The `PreToolUse` guard blocks a hand-edit of any file carrying an
-`// @generated` marker; the vendored packages are protected by discipline +
-review (a hand-edit of a vendored package is a defect to revert). A vendored
-input is not done until the drift check exercises it (`codegen.md`).
+A vendored tree is protected by discipline and review; a hand-edit of one is a
+defect to revert. The pins it names are checked against `docs/VERSIONS.md` by
+`scripts/checks/versions.sh`.
 
 ## SNOMED CT content is NEVER committed (licence-gated)
 

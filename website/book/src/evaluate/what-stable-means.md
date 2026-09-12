@@ -49,9 +49,9 @@ start. **Expect to rebuild your artifacts when you upgrade**, and plan the
 upgrade as build then switch, not switch then build. The
 [install page](../operate/install.md) has the order.
 
-**The `crates.io` crates.** `fhir-types`, `rf2`, `concept-graph`,
-`concept-store`, `designation-index`, `sct-ecl`, `fhir-terminology`, and the
-rest are published so other Rust projects can use them, on their own `0.x`
+**The `crates.io` crates.** `rf2`, `concept-graph`, `concept-store`,
+`designation-index`, `sct-ecl`, `fhir-terminology`, and the rest are
+published so other Rust projects can use them, on their own `0.x`
 line that moves with every change to their contents. They are pre-1.0 and
 their APIs change. The server's HTTP API is the stable surface; the crates are
 not it.

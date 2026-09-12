@@ -54,9 +54,18 @@ updates:
       semver-major-days: 14
     open-pull-requests-limit: 10
     groups:
-      # ONE weekly PR for every minor/patch bump; lockstep families (serde,
-      # axum/tower, ...) bump together inside it by construction. MAJORS stay
-      # individual — a semver major in shipped code is a real review.
+      # The FHIR model is a product surface, not a routine dependency: it is
+      # generated and published by the FerroBRIDGE repository, and a release
+      # changes the types this server serves. It gets its own pull request, and
+      # the versions guard fails that PR until docs/VERSIONS.md and the root
+      # requirement move with the lock. A group is matched in file order, so
+      # this one claims fhir-types before the catch-all below.
+      fhir-model:
+        patterns: ["fhir-types"]
+      # ONE weekly PR for every other minor/patch bump; lockstep families
+      # (serde, axum/tower, ...) bump together inside it by construction.
+      # MAJORS stay individual: a semver major in shipped code is a real
+      # review.
       cargo-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]

@@ -193,10 +193,11 @@ The short form:
   them at startup and answers from memory: subsumption is a bitmap test and a
   descendant set is a bitmap. Nothing is memory-mapped, because mapping a file
   takes `unsafe` and the workspace forbids it.
-- **FHIR is generated, never hand-written.** `crates/fhir-types` is
-  emitted from the pinned HL7 packages (R4 4.0.1, R4B 4.3.0, R5 5.0.0, R6
-  ballot 5, HL7 Terminology) so each version's operation surface is right by
-  construction; a drift check regenerates it in CI.
+- **FHIR is generated, never hand-written.** The model is the `fhir-types`
+  crate, emitted from the pinned HL7 packages (R4 4.0.1, R4B 4.3.0, R5 5.0.0,
+  R6 ballot 5, HL7 Terminology) so each version's operation surface is right by
+  construction. The FerroBRIDGE repository generates and publishes it; this one
+  consumes it from crates.io at a pinned version.
 - **The engine is code-system-neutral.** Providers own the semantics
   (`crates/fhir-terminology`); the operations talk to the seam.
 - **Supply chain.** Releases are built in a reusable workflow to SLSA Build
@@ -252,10 +253,9 @@ from it, to third parties as a hosted, managed, or embedded terminology
 service, and selling, sublicensing, or otherwise distributing it for a fee on
 its own or inside another product, need a commercial licence in every case.
 Each version becomes Apache License 2.0 four years after that version is
-published. Two crates are outside all of this: `fhir-types` (the FHIR types and
-operation contracts generated from HL7's own packages) and `rf2` (the SNOMED CT
-release file reader) are Apache 2.0 on crates.io, so any Rust project can use
-them without a licence conversation. The commercial licence starts with a short conversation with the
+published. One crate is outside all of this: `rf2` (the SNOMED CT release file
+reader) is Apache 2.0 on crates.io, so any Rust project can use it without a
+licence conversation. The commercial licence starts with a short conversation with the
 maintainer named in [MAINTAINERS.md](MAINTAINERS.md).
 
 The code systems are licensed separately: SNOMED CT by SNOMED International,

@@ -18,12 +18,11 @@ to get building.
 ## The workspace
 
 One Cargo workspace, Rust 1.98, edition 2024: `crates/*` are the libraries
-(`fhir-types` generated; `rf2`, `loinc`,
-`classification`, `rxnorm-rrf`, `icd11` the release
-readers; `concept-graph`, `concept-store`, `designation-index` the
-substrates; `fhir-terminology` the engine and providers), `app/ferroterm-server`
-is the axum server, and `tools/*` are the code generator, the offline build,
-and the synthetic test fixtures. Every crate carries a `CLAUDE.md` with its
+(`rf2`, `loinc`, `classification`, `rxnorm-rrf`, `icd11` the release readers;
+`concept-graph`, `concept-store`, `designation-index` the substrates;
+`fhir-terminology` the engine and providers), `app/ferroterm-server` is the
+axum server, and `tools/*` are the offline build and the synthetic test
+fixtures. Every crate carries a `CLAUDE.md` with its
 local discipline.
 
 ## The local gates
@@ -56,8 +55,9 @@ hand over local artifacts.
 
 ## The two layers
 
-- `crates/fhir-types` is generated from the vendored FHIR packages. Never
-  hand-edit a `// @generated` file. See [The codegen model](codegen.md).
+- The FHIR model is the generated `fhir-types` crate, taken from crates.io and
+  generated in another repository. Never re-model a FHIR shape locally. See
+  [The FHIR model](codegen.md).
 - Everything else is hand-written, idiomatic Rust, with the FHIR and SNOMED
   specifications as the authority: a conformance-facing test cites the spec
   clause it asserts, and a decision the specs leave open is marked as the

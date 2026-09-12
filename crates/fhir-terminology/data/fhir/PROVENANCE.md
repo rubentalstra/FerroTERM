@@ -1,10 +1,9 @@
 # Provenance: the FHIR core terminology bundles
 
-Generated, never hand-edited. `cargo run -p fhir-codegen -- terminology`
-rewrites every file here from the vendored core packages under
-`tools/fhir-codegen/vendor/`; `-- terminology --check` is the drift check CI
-runs. Change the emitter (`tools/fhir-codegen/src/terminology.rs`) and
-regenerate.
+Generated from the pinned HL7 FHIR core packages, never hand-edited. The
+generator and those packages left this repository with the FHIR model (#300),
+so nothing here regenerates the files; a refresh runs the generator that owns
+the packages and lands its output as a change to this directory.
 
 One directory per served FHIR version (`r4`, `r4b`, `r5`, `r6`), each holding
 `code-systems.json` and `value-sets.json`: a JSON array with one resource per
@@ -33,8 +32,8 @@ reads.
 ## Licence
 
 - Source packages: `hl7.fhir.r4.core` 4.0.1, `hl7.fhir.r4b.core` 4.3.0,
-  `hl7.fhir.r5.core` 5.0.0, `hl7.fhir.r6.core` 6.0.0-ballot5, each pinned and
-  stamped in its own `tools/fhir-codegen/vendor/*/PROVENANCE.md`.
+  `hl7.fhir.r5.core` 5.0.0, `hl7.fhir.r6.core` 6.0.0-ballot5, the versions
+  these bundles were generated from.
 - Upstream license: CC0-1.0 (the `license` field of each package's
   `package/package.json`), so the specification's own terminology is
   redistributable.

@@ -61,9 +61,9 @@ carries it. A comment describes the code as it IS.
 - Doc comments state the CURRENT contract only, with no history and no
   adjudication trail. Citations follow `spec-adherence.md` (the FHIR /
   SNOMED CT / ECL specs + official external docs only).
-- The generated `fhir-types` crate gets its docs FROM THE EMITTER: a doc
-  defect in a `// @generated` file is a `fhir-codegen` fix +
-  regeneration, never a hand-edit.
+- The `fhir-types` crate gets its docs from its generator, which lives in the
+  FerroBRIDGE repository: a doc defect there is fixed and released upstream,
+  never patched here (`codegen.md`).
 
 ## Annotation vocabulary (the only sanctioned markers)
 

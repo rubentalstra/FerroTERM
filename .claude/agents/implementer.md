@@ -23,15 +23,15 @@ Non-negotiables (violations are rejected at review):
 - **Spec adherence:** if the task is spec-facing, first read the FHIR /
   SNOMED CT / ECL spec sections named in your prompt (ask-by-returning if none
   were named and the behaviour is spec-visible). The parameter set a FHIR
-  version admits is exactly what its `OperationDefinition` in the vendored
-  package declares; the ECL grammar defines what parses. Never resolve a spec
+  version admits is exactly what its `OperationDefinition` declares; the ECL
+  grammar defines what parses. Never resolve a spec
   question from memory or from Snowstorm/Hermes behaviour; flag ambiguity back
   to the orchestrator via a `// NOTE:` and say so in your final message
   (`.claude/rules/spec-adherence.md`).
-- **Never hand-edit a `// @generated` file:** the FHIR crate `fhir-types` is
-  produced by `fhir-codegen`; change the emitter and regenerate. Never
-  shadow a generated shape with a hand-written type in a consumer
-  (`.claude/rules/codegen.md`).
+- **The FHIR model is generated elsewhere:** `fhir-types` comes from
+  crates.io, published by the FerroBRIDGE repository. Never shadow a generated
+  shape with a hand-written type in a consumer; a wrong or missing shape is a
+  generator fix upstream (`.claude/rules/codegen.md`).
 - **Consume the generated `fhir-types` types directly**; never re-model or
   re-serialize FHIR by hand. Use the pinned workspace crates (`dep.workspace =
   true`); never hand-roll what `axum`/`redb`/`roaring`/`fst`/`logos`/`csv`/etc.

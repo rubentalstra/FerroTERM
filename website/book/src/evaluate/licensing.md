@@ -48,14 +48,14 @@ Each version becomes Apache License 2.0 four years after that version is
 published. The clock runs per version, so the four years start at the release
 you are looking at rather than at the project.
 
-## The two crates that are Apache 2.0 today
+## The crate that is Apache 2.0 today
 
-`fhir-types` (the FHIR types and operation contracts generated from HL7's own
-packages) and `rf2` (the SNOMED CT release file reader) are published to
-crates.io under Apache License 2.0 rather than the Business Source License, so
-any Rust project can depend on them without a licence conversation. Every other
-published crate carries the Business Source License and states so in its own
-README.
+`rf2` (the SNOMED CT release file reader) is published to crates.io under
+Apache License 2.0 rather than the Business Source License, so any Rust project
+can depend on it without a licence conversation. Every other crate published
+from this repository carries the Business Source License and states so in its
+own README. The FHIR model FerroTERM builds on, `fhir-types`, is published
+under Apache 2.0 by the FerroBRIDGE repository.
 
 ## Starting a commercial licence
 

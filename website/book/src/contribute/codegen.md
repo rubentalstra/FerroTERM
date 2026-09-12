@@ -1,59 +1,40 @@
-# The codegen model
+# The FHIR model
 
-The FHIR layer of FerroTERM is generated, not hand-written. This page explains the
-model at the level a contributor needs. The mechanics live in the generator crate
-and its rules in the repository.
+The FHIR layer of FerroTERM is generated, not hand-written, and it is generated
+in another repository. This page explains what that means for a contributor.
 
 <!-- toc -->
 
-## Why generate the FHIR layer
+## Why the FHIR layer is generated
 
 HL7 publishes the whole FHIR type system and every operation as machine-readable
 `StructureDefinition` and `OperationDefinition` resources, in versioned packages.
-FerroTERM vendors the packages and generates per-version Rust modules from
-them. Each version's
-operation surface is then correct by construction: a parameter that R5 adds
-appears in the R5 module because the R5 package declares it.
+Rust modules are generated per version from those packages, so each version's
+operation surface is correct by construction: a parameter that R5 adds appears
+in the R5 module because the R5 package declares it.
 
-## The pinned inputs
+## Where it comes from
 
-The generator reads vendored, pinned FHIR packages:
+The model is the [`fhir-types`](https://crates.io/crates/fhir-types) crate. The
+[FerroBRIDGE](https://github.com/rubentalstra/FerroBRIDGE) repository vendors
+the pinned HL7 packages, runs the generator, and publishes the crate.
+FerroTERM depends on it from crates.io, at the version `docs/VERSIONS.md` pins
+and the root `Cargo.toml` requires. No HL7 package is vendored in this
+repository.
 
-| Package | Version |
-|---|---|
-| `hl7.fhir.r4.core` | 4.0.1 |
-| `hl7.fhir.r4b.core` | 4.3.0 |
-| `hl7.fhir.r5.core` | 5.0.0 |
-| `hl7.fhir.r6.core` | 6.0.0-ballot5 |
-| `hl7.terminology` | the HL7 Terminology release pinned in `docs/VERSIONS.md` |
+## The rules for a contributor
 
-The packages are vendored verbatim under `tools/fhir-codegen/vendor/`, each
-with a `PROVENANCE.md`, and fetched by a script. You never hand-edit a vendored
-package. Change the fetcher and re-run it.
-
-## The rules
-
-- **Never hand-edit a `// @generated` file.** To change the output, change the
-  generator (`tools/fhir-codegen`) or its override map, then regenerate.
-- **The generator emits the complete model within its declared closure.** A
-  terminology server touches a small root set of resources, so the generator's
-  root set is the terminology surface (`CodeSystem`, `ValueSet`, `ConceptMap`,
-  `Parameters`, `OperationOutcome`, `CapabilityStatement`,
-  `TerminologyCapabilities`, `Bundle`, and the terminology operations), and it
-  emits the complete transitive closure of the datatypes those roots reference. It
-  never trims inside that closure to quiet a diff, and it never adds a
-  hand-written shape outside it.
-- **A drift check regenerates in CI and fails on any diff**, so the generated
-  layer stays in step with the vendored inputs.
-
-## Regenerate
-
-```console
-$ cargo run -p fhir-codegen -- emit
-```
-
-Then run the drift check. If consuming code needs a shape the generated crate
-lacks, fix the emitter rather than shadowing it with a hand-written type.
+- **Consume the generated types directly.** Never re-model or re-serialize
+  FHIR by hand, and never shadow a generated shape with a local type, an
+  adapter layer, or a placeholder value.
+- **A shape that is wrong or missing is fixed upstream.** Open it on the
+  FerroBRIDGE tracker; the fix is a generator change there, released as a new
+  version of the crate, then taken here.
+- **Taking a new release moves three things in one change:** the requirement in
+  the root `Cargo.toml`, the pin row in `docs/VERSIONS.md`, and `Cargo.lock`.
+  `scripts/checks/versions.sh` fails when they disagree, so the served model
+  and the recorded pin cannot drift apart. Dependabot opens that pull request
+  by itself when a release lands.
 
 The generator design follows the sibling project
 [FerroEHR](https://github.com/rubentalstra/FerroEHR), which generates its openEHR

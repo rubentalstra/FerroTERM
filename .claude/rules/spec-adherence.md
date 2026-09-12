@@ -7,9 +7,10 @@ paths: ["crates/**", "app/**", "tools/**", "scripts/**"]
 The conformance authority for this project is the published specifications:
 the HL7 FHIR specification (per version) and the SNOMED CT / ECL
 specifications, not Snowstorm, not Hermes, not memory, not intuition. The
-FHIR type system and every operation are pinned as machine-readable packages
-under `tools/fhir-codegen/vendor/` (the codegen input;
-`vendored-inputs.md`); the normative text lives at the URLs cited below.
+FHIR type system and every operation reach this repository through the
+generated `fhir-types` crate, which the FerroBRIDGE repository emits from the
+pinned machine-readable HL7 packages (`codegen.md`); the normative text lives
+at the URLs cited below.
 
 ## Hard rules
 
@@ -22,17 +23,17 @@ under `tools/fhir-codegen/vendor/` (the codegen input;
     on the `CodeSystem` / `ValueSet` / `ConceptMap` resource
     (<http://hl7.org/fhir/R4/terminology-service.html>,
     <http://hl7.org/fhir/R5/terminology-module.html>, and the per-version
-    `OperationDefinition` in the vendored package). **The parameter set a
+    `OperationDefinition` the generated crate carries). **The parameter set a
     version admits is exactly what its `OperationDefinition` declares, plus
     the terminology ecosystem overlay:** R5's `$expand`
     `useSupplement`/`property`/`displayLanguage` appear where the spec has
     them and are absent where it does not. The overlay (the owner's decision
     on #154, 2026-09-03) adds, on every version, the parameters the ecosystem
-    requires (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>):
-    the R6 ones pre-adopted from the vendored R6 package, the ecosystem-only
-    ones declared in the generator (`tools/fhir-codegen/src/ecosystem.rs`),
-    each marked with its source in the generated descriptor. The overlay
-    extends a version's definition; it never contradicts it.
+    requires (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>): the
+    R6 ones pre-adopted from the R6 package, and the ecosystem-only ones the
+    generator declares, each marked with its source in the generated
+    descriptor. The overlay extends a version's definition; it never
+    contradicts it.
   - **ECL:** the SNOMED Expression Constraint Language specification
     (<https://docs.snomed.org/snomed-ct-specifications/snomed-ct-expression-constraint-language>)
     and its published ANTLR grammar

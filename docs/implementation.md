@@ -137,7 +137,8 @@ sequence, not a scope limit; the server serves every version.
 
 ## Engine and storage
 
-- [ ] `fhir-types` generated per version from the vendored packages; drift check
+- [ ] The generated `fhir-types` model consumed per version, at a pin the
+  version guard holds to the lock
 - [ ] CSR adjacency (is-a and per-attribute) and roaring transitive-closure
   bitmaps; resident at query time
 - [ ] `redb` persistence of the built artifacts

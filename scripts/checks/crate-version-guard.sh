@@ -22,7 +22,10 @@ head="${2:-HEAD}"
 
 changed="$(git diff --name-only "$base" "$head" --)"
 packaged=0
-if printf '%s\n' "$changed" | grep -qE '^crates/[a-z0-9-]+/(src/|data/|README\.md$|LICENSE$|Cargo\.toml$)'; then
+# A here-string, never a pipe: `grep -q` stops at the first match, and a writer
+# killed by SIGPIPE makes `set -o pipefail` report the whole test as false, so a
+# large diff would silently answer "nothing packaged changed".
+if grep -qE '^crates/[a-z0-9-]+/(src/|data/|README\.md$|LICENSE$|Cargo\.toml$)' <<<"$changed"; then
   packaged=1
 fi
 # Only the `[workspace.dependencies]` table renders into a packaged manifest;
@@ -31,11 +34,11 @@ fi
 workspace_dependencies() {
   awk '/^\[workspace\.dependencies\]/{p=1; next} /^\[/{p=0} p && /^[A-Za-z0-9_-]+[[:space:]]*=/{sub(/[[:space:]]*=.*/, ""); print}'
 }
-if [[ "$packaged" -eq 0 ]] && printf '%s\n' "$changed" | grep -qx 'Cargo.toml'; then
+if [[ "$packaged" -eq 0 ]] && grep -qx 'Cargo.toml' <<<"$changed"; then
   diff_names="$(git diff "$base" "$head" -- Cargo.toml | grep -E '^[+-][A-Za-z0-9_-]+[[:space:]]*=' | sed -E 's/^[+-]//; s/[[:space:]]*=.*//' | sort -u || true)"
   dependency_names="$( { git show "$head:Cargo.toml"; git show "$base:Cargo.toml"; } | workspace_dependencies)"
   for name in $diff_names; do
-    if ! printf '%s\n' "$dependency_names" | grep -qx "$name"; then
+    if ! grep -qx "$name" <<<"$dependency_names"; then
       continue
     fi
     if grep -lE "^${name}(\.workspace)?[[:space:]]*=" crates/*/Cargo.toml >/dev/null 2>&1; then
@@ -54,8 +57,8 @@ fi
 package_version() {
   awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}'
 }
-old_ver="$(git show "$base:crates/fhir-types/Cargo.toml" 2>/dev/null | package_version || true)"
-new_ver="$(package_version < crates/fhir-types/Cargo.toml)"
+old_ver="$(git show "$base:crates/rf2/Cargo.toml" 2>/dev/null | package_version || true)"
+new_ver="$(package_version < crates/rf2/Cargo.toml)"
 if [[ -n "$old_ver" ]] && [[ "$old_ver" = "$new_ver" ]]; then
   echo "::error::packaged content of crates/* changed but the crate version is still $new_ver. Bump every crates/*/Cargo.toml 'version' and every internal 'version =' requirement in the root Cargo.toml to the next 0.x, refresh Cargo.lock, or apply the 'no-crate-bump' label when the diff provably does not alter packaged bytes." >&2
   exit 1

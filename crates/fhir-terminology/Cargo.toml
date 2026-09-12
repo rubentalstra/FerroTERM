@@ -2,7 +2,7 @@
 [package]
 name = "fhir-terminology"
 description = "The FHIR terminology operations over the code system provider seam"
-version = "0.1.97"
+version = "0.1.98"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

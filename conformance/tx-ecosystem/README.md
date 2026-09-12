@@ -96,7 +96,7 @@ case at the end of this file. Each cluster below is the whole reason its cases
 fail.
 
 - **61 cases call `ValueSet/$compare`** (the `compare` and `related2` suites)
-  and answer 405. No `OperationDefinition` in the vendored `hl7.fhir.r4.core`,
+  and answer 405. No `OperationDefinition` in `hl7.fhir.r4.core`,
   `hl7.fhir.r4b.core`, `hl7.fhir.r5.core`, or `hl7.fhir.r6.core` declares a
   `compare` operation on any resource. It is a reference-server operation, 405
   is the right answer for an operation a version does not define, and the
@@ -278,7 +278,7 @@ collection of languages", so `zh` does not subsume `zh-min-nan`.
   `expand-all-versioned`, and `expand-exclude-enum` differ only on which of two
   entries with the same code comes first. The behaviour is carried by a
   `valueset-expansion-parameter` extension naming `versionsMatch`, which
-  appears nowhere in the vendored `hl7.fhir.r4.core` 4.0.1,
+  appears nowhere in `hl7.fhir.r4.core` 4.0.1,
   `hl7.fhir.r4b.core` 4.3.0, `hl7.fhir.r5.core` 5.0.0, or `hl7.fhir.r6.core`
   6.0.0-ballot5, and nowhere in the ecosystem IG outside these fixtures. No
   FHIR version prescribes the order of two `expansion.contains` entries

@@ -15,7 +15,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4.13"
 fhir-terminology = { path = "../crates/fhir-terminology" }
-fhir-types = { path = "../crates/fhir-types" }
+fhir-types = "0.1.98"
 rf2 = { path = "../crates/rf2" }
 sct-ecl = { path = "../crates/sct-ecl" }
 ferroterm-testkit = { path = "../tools/ferroterm-testkit" }

@@ -15,13 +15,12 @@ commits, PRs, issues) to `.claude/rules/writing-style.md`.
 
 ## The two layers (the FerroEHR split, applied to FHIR + SNOMED)
 
-- **`fhir-types` is GENERATED** from the vendored, machine-readable FHIR specs
-  (`StructureDefinition` and `OperationDefinition`, from the pinned
-  `hl7.fhir.*.core` packages). Treat every file marked `// @generated` as
-  off-limits. To change output, change the generator (`tools/fhir-codegen`)
-  and regenerate; never hand-edit generated code. The generator emits per-version
-  modules (R4/R4B/R5/R6) so the operation surface is correct per version by
-  construction.
+- **`fhir-types` is GENERATED, and generated elsewhere.** The crate carries the
+  per-version FHIR model (R4/R4B/R5/R6), emitted from the machine-readable HL7
+  packages, and the FerroBRIDGE repository owns both the generator and those
+  packages and publishes the crate to crates.io. FerroTERM depends on it from
+  the registry like any other crate, so the operation surface stays correct per
+  version by construction and nothing here is generated.
 - **The engine is HAND-WRITTEN** and is the product: the code-system-neutral
   disk-backed concept store, hierarchy graph, and `fst` and `roaring`
   designation index, the per-system loaders (SNOMED RF2 first), ECL
@@ -35,8 +34,6 @@ commits, PRs, issues) to `.claude/rules/writing-style.md`.
 tooling not shipped in the server. Every crate carries its own `CLAUDE.md` with
 crate-local discipline.
 
-- `crates/fhir-types`: generated per-version FHIR types and terminology operation
-  contracts (`// @generated`).
 - `crates/rf2`: SNOMED CT RF2 loader (inferred relationships, descriptions,
   refsets, transitive-closure file) and typed component model.
 - `crates/concept-graph`: the materialized hierarchy of a loaded code system.
@@ -61,8 +58,6 @@ crate-local discipline.
   (`cd app/ferroterm-viewer && trunk build --release --locked`), never by
   `cargo` alone, and its `dist/` is never committed. Designed in
   `docs/viewer.md`, tracked under issue #366.
-- `tools/fhir-codegen`: the generator, from vendored FHIR packages to
-  `fhir-types`.
 - `tools/ferroterm-build`: the offline build, from an RF2 release to the
   graph/store/text artifacts the server reads, once per edition.
 - `tools/ferroterm-testkit`: synthetic fixtures for the test suites (a
@@ -77,27 +72,24 @@ database and never live traversal on the hot path. Nothing in the substrates or
 the operations is SNOMED-specific; SNOMED semantics live in its loader, ECL,
 and its provider. See `docs/architecture.md` for the evidence.
 
-## Code generation: read this first
+## The FHIR model comes from crates.io
 
-The FHIR layer is generated. HL7 publishes the whole type system and every
-operation as machine-readable resources in versioned packages
-(`hl7.fhir.r4.core` 4.0.1, `hl7.fhir.r4b.core` 4.3.0, `hl7.fhir.r5.core` 5.0.0,
-`hl7.fhir.r6.core` 6.0.0-ballot5), plus `hl7.terminology` (THO). We vendor and pin
-those packages under `tools/fhir-codegen/vendor/` with a `PROVENANCE.md`
-per package, and generate `crates/fhir-types` from them. **R4B is the first
-generation implemented** (current stable R4-family release, a near-superset of
-R4); R5, R4, and R6 follow.
+The FHIR layer is generated, and the generator is not here. HL7 publishes the
+whole type system and every operation as machine-readable resources in
+versioned packages; the FerroBRIDGE repository
+(<https://github.com/rubentalstra/FerroBRIDGE>) vendors and pins those
+packages, generates the `fhir-types` crate from them, and publishes it. This
+repository takes the crate from crates.io, pinned in the root `Cargo.toml`
+`[workspace.dependencies]` and recorded in `docs/VERSIONS.md`.
 
-- **Regenerate:** `cargo run -p fhir-codegen -- emit` (types) and the
-  operation-contract emit; a `codegen-drift` check regenerates in CI and fails on
-  any diff.
-- **Never hand-edit a `// @generated` file.** Change the emitter or its override
-  map, then regenerate.
-- **The generator emits the complete model from the vendored inputs** within its
-  declared terminology root-set closure (see `codegen.md`). Never trim output to
-  quiet a diff or dodge a build error. If consuming code needs a shape the
-  generated crate lacks, fix the emitter; never shadow it with a hand-written
-  type.
+- **Consume the generated types directly.** Never re-model or re-serialize
+  FHIR by hand, and never shadow a generated shape with a local type.
+- **A wrong or missing shape is requested on the FerroBRIDGE tracker**, fixed
+  in the generator there, and taken here as a new release.
+- **Taking a new release moves three things in one change:** the requirement in
+  the root `Cargo.toml`, the pin row in `docs/VERSIONS.md`, and `Cargo.lock`.
+  `scripts/checks/versions.sh` fails when they disagree, and Dependabot opens
+  that pull request by itself.
 
 ## Tech stack (pinned in the manifests)
 
@@ -140,8 +132,7 @@ cargo fmt --all
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --document-private-items
 ```
 
-Regeneration and drift: `cargo run -p fhir-codegen -- emit`, then the drift
-check. Conformance is measured against Snowstorm as the reference server (see
+Conformance is measured against Snowstorm as the reference server (see
 `docs/architecture.md` §Verification).
 
 ## Conventions
@@ -149,9 +140,10 @@ check. Conformance is measured against Snowstorm as the reference server (see
 - Crate boundaries mirror the layers; dependencies point downward (app/tools
   depend on crates). Consume the generated `fhir-types` types directly; never
   re-model or re-serialize FHIR by hand.
-- Two disciplines by layer. `fhir-types` is generated (change the emitter,
-  regenerate, never hand-edit `// @generated`); everything else is idiomatic Rust
-  of our own design, with the FHIR/SNOMED specs as the authority.
+- Two disciplines by layer. `fhir-types` is generated and published by
+  FerroBRIDGE (a shape it lacks is a generator fix there); everything else is
+  idiomatic Rust of our own design, with the FHIR/SNOMED specs as the
+  authority.
 - `thiserror` in libraries, `anyhow` only in the binary. No `unwrap`/`expect`
   outside tests. No `use X as Y` import renaming; use direct names only.
 - Async-first: the server is I/O-bound; use idiomatic tokio/axum.
@@ -168,15 +160,16 @@ check. Conformance is measured against Snowstorm as the reference server (see
   docs.rs of a pinned crate). Never cite an internal markdown file as a design
   authority. Where no spec governs a decision (storage mechanics, the index
   format, infra), flag it: "no spec governs this, our own design".
-- **Never hand-edit a `// @generated` file.** Change `tools/fhir-codegen`
-  and regenerate.
+- **Never shadow a generated FHIR shape with a local type.** A missing or
+  wrong shape in `fhir-types` is a generator fix in FerroBRIDGE, released and
+  then consumed here.
 - **Never distribute SNOMED CT content.** SNOMED CT is licensed by SNOMED
   International; the repository ships no RF2 content and no derived edition data.
   A deployment brings its own licensed RF2 release. Test fixtures use shaped,
   synthetic content only, never real SNOMED concepts extracted from a release.
-- **The vendored FHIR packages are codegen input, vendored verbatim with
-  provenance** (a `PROVENANCE.md` per package, a `scripts/vendor/*.sh` fetcher).
-  Never hand-edit them; change the fetcher and re-run.
+- **A vendored corpus is verbatim, pinned, and provenance-stamped** (a
+  `PROVENANCE.md` beside it, a `scripts/vendor/*.sh` fetcher). Never hand-edit
+  one; change the fetcher and re-run.
 - **Comments follow RFC 505 and RFC 1574 with hard budgets:** line comments only,
   pending work is `// TODO(#N):`, a settled decision is `// NOTE:` (a citation and
   one sentence). No essays in code; the record lives on the issue/PR.
@@ -220,8 +213,9 @@ apply always. Read the relevant one before working in that area.
   crates.
 - `.claude/rules/snomed-terminology.md`: the SNOMED URI standard, implicit value
   sets and concept maps, ECL 2.2, RF2 handling, scoped to the SNOMED crates.
-- `.claude/rules/codegen.md`, `vendored-inputs.md`: the `fhir-types` generation
-  discipline and the vendored-input / SNOMED-content-never-committed rules.
+- `.claude/rules/codegen.md`, `vendored-inputs.md`: how the generated
+  `fhir-types` crate is consumed and the vendored-input /
+  SNOMED-content-never-committed rules.
 - `.claude/rules/ci-cd.md`, `ai-code-review.md`: the CI/CD and supply-chain
   discipline (SLSA L3, signed SBOM, pinned actions) and the advisory-Sonar
   policy.
@@ -233,9 +227,8 @@ apply always. Read the relevant one before working in that area.
 - `.claude/rules/issue-workflow.md`, `issue-relationships.md`, `project-board.md`:
   the tracker work-style.
 - Skills: `/spec-lookup` (find the authoritative spec answer in oracle order),
-  `/regen-codegen` (regenerate `fhir-types` and drift-check), `/next-task`,
-  `/phase-done`, `/phase-status` (the issue loop), `/leptos-lookup` and
-  `/ui-gates` (the viewer).
+  `/next-task`, `/phase-done`, `/phase-status` (the issue loop),
+  `/leptos-lookup` and `/ui-gates` (the viewer).
 - Agents: `spec-researcher`, `fhir-conformance-reviewer`, `implementer`,
   `leptos-reviewer`, `ui-implementer` (all on Opus 5).
 
@@ -258,5 +251,5 @@ tx.fhir.org) are behavioural oracles for spec-silent edge cases only.
 - `website/book`: the mdBook documentation site (`website/book/src`).
 - `website/landing`: the landing page.
 - The FHIR terminology module (per version) and the ECL specification are the
-  spec oracles; the pinned FHIR packages under `tools/fhir-codegen/vendor/`
-  are the codegen input.
+  spec oracles; the FHIR model itself is the `fhir-types` crate from
+  crates.io.

@@ -27,7 +27,6 @@ cd "$(dirname "$0")/../.."
 # Dependency order: a crate is uploaded only after every sibling it depends on
 # is on the index.
 readonly CRATES=(
-  fhir-types
   rf2
   concept-graph
   concept-store
@@ -46,7 +45,7 @@ readonly CRATES=(
 # The crate line moves in lockstep (.claude/rules/crates-publishing.md), so one
 # manifest answers for the set: the `[package]` table's own `version`.
 manifest_version() {
-  awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' crates/fhir-types/Cargo.toml
+  awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' crates/rf2/Cargo.toml
 }
 
 # cargo colours the status word, so "Uploaded" is followed by a reset sequence
