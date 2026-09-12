@@ -794,6 +794,21 @@ fn first_load(text: &str) -> Option<f64> {
         .ok()
 }
 
+/// The size of every file under `dir`, in bytes.
+fn dir_size(dir: &Path) -> anyhow::Result<u64> {
+    let mut total = 0;
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let metadata = entry.metadata()?;
+        total += if metadata.is_dir() {
+            dir_size(&entry.path())?
+        } else {
+            metadata.len()
+        };
+    }
+    Ok(total)
+}
+
 #[cfg(test)]
 mod tests {
     use super::first_load;
@@ -816,19 +831,4 @@ mod tests {
             "a record states no load rather than a wrong one"
         );
     }
-}
-
-/// The size of every file under `dir`, in bytes.
-fn dir_size(dir: &Path) -> anyhow::Result<u64> {
-    let mut total = 0;
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let metadata = entry.metadata()?;
-        total += if metadata.is_dir() {
-            dir_size(&entry.path())?
-        } else {
-            metadata.len()
-        };
-    }
-    Ok(total)
 }
