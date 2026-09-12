@@ -13,6 +13,8 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-12
+
 ### Added
 
 - The viewer has a design system, and every screen is drawn from it. Colour is named by role on `:root` and redefined once under `:root.dark`, so a theme decision is never taken per element; type is six steps, spacing four on an 8-point grid, and motion one duration. A screen names a role and a step and nothing else, which `scripts/checks/viewer-tokens.sh` enforces as its own CI job: a palette entry, a per-element `dark:` variant, a raw type size, an off-scale spacing value, or a bracketed value fails the build. The point is measurement rather than tidiness: a pairing defined once is checked once, and the WCAG 2.2 AA contrast pass covers every pairing the viewer draws in both themes and both densities.
@@ -728,7 +730,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.1.1
 [0.1.0]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.1.0
 [0.0.11]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.0.11

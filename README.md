@@ -28,7 +28,7 @@ The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration,
 so the first call needs nothing beyond Docker:
 
 ```console
-$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.1.1
+$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.1.2
 $ curl 'http://localhost:8080/r4b/CodeSystem/$lookup?system=http://unitsofmeasure.org&code=mg/dL'
 ```
 
@@ -132,7 +132,7 @@ The tracker's milestones are the roadmap:
 
 - **v0.1.0**: every public claim on the README, the site, and the book checked
   against the code and the recorded evidence before the cut.
-- **v0.1.1**: the open HL7 terminology ecosystem suite cases, and the read and
+- **v0.1.2**: the open HL7 terminology ecosystem suite cases, and the read and
   build paths measured against the latency and ingest bars.
 - **v0.2.0**: the differential check against the Nictiz Nationale
   Terminologieserver for the Dutch variants; the Snowstorm differential harness
