@@ -14,9 +14,17 @@ publish.workspace = true
 name = "ferroterm-bench"
 path = "src/main.rs"
 
+[[bin]]
+name = "ferroterm-residency"
+path = "src/bin/residency.rs"
+
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+concept-graph.workspace = true
+concept-store.workspace = true
+designation-index.workspace = true
+fhir-terminology.workspace = true
 jiff.workspace = true
 reqwest = { workspace = true, features = ["query"] }
 serde.workspace = true

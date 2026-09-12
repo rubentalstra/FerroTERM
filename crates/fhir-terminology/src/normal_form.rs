@@ -187,10 +187,9 @@ impl Expression {
         if !ungrouped.is_empty() {
             parts.push(rendered(&ungrouped).join(", "));
         }
-        // NOTE: a group number is co-membership and nothing else, and "there
-        // is no guarantee that they will be assigned sequentially" (the
-        // Release File Specification §4.2.3), so the groups are ordered by what
-        // they render to rather than by the number the release gave them.
+        // NOTE: "there is no guarantee that they will be assigned
+        // sequentially" (the Release File Specification §4.2.3), so groups sort
+        // by what they render to and not by their number.
         let mut written: Vec<String> = groups
             .into_iter()
             .map(|group| {
