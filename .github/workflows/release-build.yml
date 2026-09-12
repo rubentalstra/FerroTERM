@@ -76,7 +76,7 @@ jobs:
       # be linked from cached bytes this job did not build. A publishing lane
       # restores no cache — nothing a prior run could have poisoned may
       # influence the artifact it signs.
-      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
           target: ${{ inputs.target }}
