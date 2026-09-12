@@ -69,7 +69,11 @@ fi
 echo "$VALIDATOR_SHA256  $jar" | shasum -a 256 -c - >/dev/null
 
 suite=$work/suite
-if [[ ! -d "$suite/tests" ]]; then
+# A checkout counts only at the pinned commit and with the file the runner
+# opens first. The build cache prunes target/ on save and can restore this
+# directory as an empty skeleton, which a bare directory test accepts (#563).
+if [[ "$(git -C "$suite" rev-parse --verify HEAD 2>/dev/null || true)" != "$SUITE_COMMIT" \
+  || ! -f "$suite/tests/test-cases.json" ]]; then
   echo "fetching the suite at $SUITE_COMMIT"
   rm -rf "$suite"
   git init -q "$suite"
