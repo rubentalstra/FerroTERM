@@ -19,7 +19,8 @@ built once per release and read at startup. No JVM, no Elasticsearch, no
 database to run.
 
 [Five minutes to a running server](#five-minutes-to-a-running-server) ·
-[What it serves](#what-it-serves) · [The API](#the-api) ·
+[What it serves](#what-it-serves) · [The viewer](#the-viewer) ·
+[The API](#the-api) ·
 [Do you need a commercial licence?](#do-you-need-a-commercial-licence)
 
 ## Five minutes to a running server
@@ -88,6 +89,14 @@ Measured by the benchmark harness on one machine, one record per
 code system, warm p50 per operation; nothing here is typed by hand, and CI fails
 when the table drifts from the records under `bench/records/`.
 
+**These figures are older than the code.** The record set below was taken on
+2026-09-06 against 0.1.0, and the read path has been worked since: the two
+SNOMED editions and RxNorm all answer `$lookup` faster than the table says. A
+record taken on a machine that is not quiet measures the operating system
+rather than the server, so the set is retaken rather than refreshed in place,
+which is what [#512](https://github.com/rubentalstra/FerroTERM/issues/512)
+carries. Older true figures beat fresher wrong ones.
+
 <!-- bench-table:begin -->
 | Code system | Release | Concepts | Build | Peak build memory | Index on disk | Resident | `$lookup` | `$validate-code` | `$subsumes` | `$expand` (small) | `$expand` (large) | Search | Snowstorm |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -101,6 +110,32 @@ when the table drifts from the records under `bench/records/`.
 
 Warm p50 over 200 HTTP round trips on one machine (Apple M2, 17.18 GB, macos/aarch64), FerroTERM 0.1.0 serving FHIR R4B, taken 2026-09-06. The records are under `bench/records/`; the [benchmarks page](https://ferroterm.eu/benchmarks.html) has the method, the cold and tail latencies, and how to reproduce a record.
 <!-- bench-table:end -->
+
+## The viewer
+
+The same binary serves a web viewer at `/ui`, and `/` redirects onto it. Open
+`http://localhost:8080/ui` after the first command above and the server you just
+started is the one it reads.
+
+It is a FHIR client and nothing else: it reaches the server over the same public
+API any client uses, from the browser, same-origin. Anything it does, your own
+client can do.
+
+- **Check a code**, **List a value set**, and **Map a code** run
+  `$validate-code`, `$subsumes`, `$expand`, and `$translate`. Each control
+  offers the code systems, value sets, and concept maps this deployment
+  publishes, so nothing waits for a canonical to be typed, and a run puts every
+  parameter in the address, so it is a link you can send.
+- **The overview** is one table of what the deployment loaded, a row per served
+  version, leading with the name each code system was published under. It reads
+  a twenty-system deployment on one screen.
+- **The concept browser** walks a hierarchy with the keyboard, following the
+  ARIA tree view pattern, and offers only what the served version declares it
+  can do.
+
+It ships inside the binary, so there is nothing to deploy and no path reaches
+the filesystem. `FERROTERM_UI=off` removes the routes. The
+[viewer page](https://ferroterm.eu/docs/operate/viewer.html) has the screens.
 
 ## The API
 
@@ -120,23 +155,30 @@ reads, and `?url=` search of `CodeSystem`, `ValueSet`, and `ConceptMap`, with
 `ETag` and `If-Match`. Every failure is an `OperationOutcome`, never a bare
 500, and a terminology failure carries a `tx-issue-type` coding.
 
-Conformance is measured. CI runs the HL7 terminology ecosystem
-suite against every pull request and holds a committed pass list per served
-version (548 of the 670 general cases on R5, 546 on R4, 542 on R4B; the rest are
-features on the roadmap and fixture artefacts, listed by cluster on the
-tracker). Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept`.
+Conformance is measured rather than claimed. CI runs the HL7 terminology
+ecosystem suite against every pull request and holds a committed pass list per
+served version: **637 of the 670 general cases on R5, 635 on R4, and 628 on
+R4B**. A case that newly passes is added to the list in the change that earned
+it, and a case on the list that stops passing fails the build, so the figure
+only ratchets. What the remaining cases are waiting on is on the tracker,
+cluster by cluster: most are a parameter no published `OperationDefinition`
+declares, or a suite mode that pins an edition no release centre distributes.
+Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept`.
 
 ## What is next
 
-The tracker's milestones are the roadmap:
+v0.1.2 is the current release. The tracker's milestones are the roadmap, and
+the open issues under each are the worklist:
 
-- **v0.1.0**: every public claim on the README, the site, and the book checked
-  against the code and the recorded evidence before the cut.
-- **v0.1.2**: the open HL7 terminology ecosystem suite cases, and the read and
-  build paths measured against the latency and ingest bars.
-- **v0.2.0**: the differential check against the Nictiz Nationale
-  Terminologieserver for the Dutch variants; the Snowstorm differential harness
-  runs today.
+- **[v0.1.3](https://github.com/rubentalstra/FerroTERM/milestone/17)**: the
+  benchmark record set retaken on a quiet machine and the published table
+  re-rendered from it, the resident memory of a served edition accounted for
+  structure by structure, and the `x-caused-by-unknown-system` parameter the
+  terminology ecosystem requires but no `OperationDefinition` declares.
+- **[v0.3.0](https://github.com/rubentalstra/FerroTERM/milestone/16)**: the
+  differential check against the Nictiz Nationale Terminologieserver for the
+  Dutch variants (the Snowstorm differential harness runs today), and the
+  suite cases that are waiting on an upstream ruling rather than on work here.
 
 ## How it is built
 
@@ -146,9 +188,10 @@ The short form:
 - **Offline once, online from precomputed structures.** `ferroterm-build`
   turns a release into a `redb` store (concepts, designations, properties),
   a CSR is-a adjacency with roaring transitive-closure bitmaps
-  (`hierarchy.bin`), and an `fst` word index (`text.bin`). The server
-  memory-maps them read-only; subsumption is a bitmap test and a
-  descendant set is a bitmap.
+  (`hierarchy.bin`), and an `fst` word index (`text.bin`). The server reads
+  them at startup and answers from memory: subsumption is a bitmap test and a
+  descendant set is a bitmap. Nothing is memory-mapped, because mapping a file
+  takes `unsafe` and the workspace forbids it.
 - **FHIR is generated, never hand-written.** `crates/fhir-types` is
   emitted from the pinned HL7 packages (R4 4.0.1, R4B 4.3.0, R5 5.0.0, R6
   ballot 5, HL7 Terminology) so each version's operation surface is right by
