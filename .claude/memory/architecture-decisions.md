@@ -54,9 +54,12 @@ streams, 2026-09-02).
   licence-gated and NEVER committed (bring-your-own RF2); fixtures are
   shaped/synthetic.
 
-Crate plan (see `docs/architecture.md`): `fhir-types` (generated), `rf2`,
-`concept-graph`, `concept-store`, `designation-index`, `sct-ecl`, `fhir-terminology`,
-`app/ferroterm-server`, `tools/fhir-codegen`, `tools/ferroterm-build`.
+Crate plan (see `docs/architecture.md`): `rf2`, `concept-graph`,
+`concept-store`, `designation-index`, `sct-ecl`, `fhir-terminology`,
+`app/ferroterm-server`, `tools/ferroterm-build`, with the generated
+`fhir-types` consumed from crates.io. On 2026-09-12 (#300) that crate and its
+generator moved to the FerroBRIDGE repository, which vendors the HL7 packages
+and publishes the crate; nothing is generated here any more.
 
 Build sequence: (1) FHIR codegen → `fhir-types`, R4B first then R5/R4/R6;
 (2) RF2 + offline build →

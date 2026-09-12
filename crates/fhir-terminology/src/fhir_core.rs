@@ -6,8 +6,8 @@
 //! <https://hl7.org/fhir/R4B/terminologies-valuesets.html>), so a server that
 //! serves that version answers over them without a deployment supplying
 //! anything. The content is embedded as one bundle per version, generated from
-//! the vendored packages by `fhir-codegen`; the same code systems and value
-//! sets are served on the surface of the version that defines them.
+//! the core packages and committed under `data/fhir/`; the same code systems
+//! and value sets are served on the surface of the version that defines them.
 
 use std::sync::Arc;
 

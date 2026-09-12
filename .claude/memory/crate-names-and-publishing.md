@@ -9,7 +9,9 @@ On 2026-09-03 the owner renamed every `crates/*` member to what it is, for
 crates.io and FerroBRIDGE (#164, PR #167): `fhir-types` (was ferroterm-fhir),
 `rf2`, `concept-graph`, `concept-store`, `designation-index`, `sct-ecl`,
 `fhir-terminology`, `loinc`, `classification`, `dhd-thesaurus`, `gstandaard`,
-`labcodeset` (added 2026-09-04), `icd11`, `rxnorm-rrf`; the generator is `tools/fhir-codegen`. The server
+`labcodeset` (added 2026-09-04), `icd11`, `rxnorm-rrf`. On 2026-09-12 (#300)
+`fhir-types` and its generator moved to FerroBRIDGE, which publishes the crate
+from there; the set published here is the remaining thirteen. The server
 binary stays `ferroterm`; `ferroterm-build` and `ferroterm-testkit` stay
 unpublished. `snomed`, `snomed-rf2`, `snomed-ecl` are another project's
 active crates; `ecl`, `fhir`, `fhir-model`, `fhir-rs`, `rrf` are taken.

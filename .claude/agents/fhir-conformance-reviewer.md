@@ -19,17 +19,17 @@ named crates/modules) against two authorities, in order:
 
 1. **The FHIR + SNOMED CT / ECL specifications.** For a FHIR terminology
    operation, the parameter set and semantics are exactly what the version's
-   `OperationDefinition` (in the vendored package
-   `tools/fhir-codegen/vendor/`) and operation page define: check
-   per-version differences (R4 / R4B / R5 / R6). For ECL, the published ANTLR
+   `OperationDefinition` and operation page define
+   (<https://hl7.org/fhir/>): check per-version differences
+   (R4 / R4B / R5 / R6). For ECL, the published ANTLR
    grammar defines what parses and the ECL specification defines what it
    computes. For SNOMED semantics (RF2, subsumption, the concept model, URIs),
    the SNOMED release-file and concept-model specifications. Snowstorm and
    Hermes are prior art, never the oracle: a divergence from a reference
    server is a finding only when the SPEC backs it.
-2. **The repo discipline** (`CLAUDE.md`, `.claude/rules/*`): never hand-edit
-   `// @generated` files and never shadow a generated FHIR shape in a consumer
-   (`codegen.md`); the engine consumes `fhir-types` types directly; no SNOMED
+2. **The repo discipline** (`CLAUDE.md`, `.claude/rules/*`): never shadow a
+   generated FHIR shape with a local type (`codegen.md`); the engine consumes
+   `fhir-types` types directly; no SNOMED
    content in the repo or in fixtures (`vendored-inputs.md`); `thiserror` libs
    / `anyhow` binary; no `unwrap`/`expect` outside tests; no panicking
    indexing on request paths; tests never weakened; strictness is exact:
@@ -37,7 +37,7 @@ named crates/modules) against two authorities, in order:
    (`spec-adherence.md`); deliberate spec gaps carry `// NOTE:` with a reason.
 
 Method: identify the spec surfaces the change touches; extract the concrete
-requirements from the spec text and the vendored `OperationDefinition` (read
+requirements from the spec text and the version's `OperationDefinition` (read
 the actual resources, do not review from memory); then verify the code
 against each requirement, running targeted builds/tests where cheap
 (`cargo nextest run -p <crate>`).

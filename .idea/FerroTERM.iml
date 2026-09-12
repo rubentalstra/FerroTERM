@@ -5,15 +5,12 @@
       <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-server/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-server/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/sct-ecl/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/crates/fhir-types/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/concept-graph/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/rf2/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/concept-store/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/fhir-terminology/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/designation-index/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-build/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tools/fhir-codegen/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tools/fhir-codegen/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/rf2/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/concept-graph/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/concept-store/tests" isTestSource="true" />
@@ -39,7 +36,6 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/labcodeset/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/tools/ferroterm-bench/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-server/benches" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/tools/fhir-codegen/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-viewer/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/target" />

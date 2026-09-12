@@ -320,15 +320,17 @@ fn a_filter_code_is_declared_once_with_the_operators_of_both_declarations() {
     }
 }
 
-/// The operator codes the `filter-operator` code system of `package` defines,
-/// read from the vendored package the generator is pinned to.
-fn defined_operators(package: &str) -> Vec<String> {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
-        "../../tools/fhir-codegen/vendor/{package}/package/CodeSystem-filter-operator.json"
-    ));
-    let text = std::fs::read_to_string(&path).expect("reads the vendored code system");
-    let resource: Value = serde_json::from_str(&text).expect("parses");
-    resource
+/// The operator codes the version's `filter-operator` code system defines,
+/// read from the core bundle the server itself loads for that version.
+fn defined_operators(version: &str) -> Vec<String> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(format!("data/fhir/{version}/code-systems.json"));
+    let text = std::fs::read_to_string(&path).expect("reads the core bundle");
+    let bundle: Vec<Value> = serde_json::from_str(&text).expect("parses");
+    bundle
+        .iter()
+        .find(|system| system.get("url").and_then(Value::as_str) == Some(FILTER_OPERATOR))
+        .expect("the bundle carries the filter-operator code system")
         .get("concept")
         .and_then(Value::as_array)
         .expect("the code system enumerates its concepts")
@@ -338,13 +340,9 @@ fn defined_operators(package: &str) -> Vec<String> {
         .collect()
 }
 
-/// The vendored package each rendered version is generated from.
-const PACKAGES: [(&str, &str); 4] = [
-    ("r4", "hl7.fhir.r4.core"),
-    ("r4b", "hl7.fhir.r4b.core"),
-    ("r5", "hl7.fhir.r5.core"),
-    ("r6", "hl7.fhir.r6.core"),
-];
+/// The code system whose codes `ValueSet.compose.include.filter.op` is bound to
+/// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.compose.include.filter.op>).
+const FILTER_OPERATOR: &str = "http://hl7.org/fhir/filter-operator";
 
 #[test]
 fn no_version_advertises_a_filter_operator_its_own_value_set_does_not_define() {
@@ -356,12 +354,7 @@ fn no_version_advertises_a_filter_operator_its_own_value_set_does_not_define() {
     let dir = tempfile::tempdir().expect("tempdir");
     let summary = Summary::of(&served(dir.path()));
     for (version, statement) in rendered(&summary) {
-        let package = PACKAGES
-            .iter()
-            .find(|(rendered, _)| *rendered == version)
-            .expect("every rendered version names a package")
-            .1;
-        let defined = defined_operators(package);
+        let defined = defined_operators(version);
         for system in statement["codeSystem"].as_array().expect("codeSystem") {
             for entry in system["version"].as_array().expect("version") {
                 for filter in entry["filter"].as_array().into_iter().flatten() {
@@ -374,7 +367,7 @@ fn no_version_advertises_a_filter_operator_its_own_value_set_does_not_define() {
                     for operator in operators.iter().filter_map(Value::as_str) {
                         assert!(
                             defined.iter().any(|code| code == operator),
-                            "{version} advertises `{operator}`, which {package} does not define"
+                            "{version} advertises `{operator}`, which it does not define"
                         );
                     }
                 }

@@ -29,9 +29,9 @@ itself; that is a separate step the caller takes after seeing the plan.
      `app/`, `tools/`) rather than guessing paths; if the task names a spec
      surface, resolve it against `docs/architecture.md` (the crate map).
    - **Which mechanism** applies:
-     **FHIR wire layer** (`crates/fhir-types`) → **the code generator**:
-     change `tools/fhir-codegen`'s emitter and regenerate
-     (`/regen-codegen`), never hand-edit `// @generated`.
+     **FHIR wire layer** (the `fhir-types` crate) → **its generator, in the
+     FerroBRIDGE repository**: a wrong or missing shape is fixed and released
+     there, then taken here as a new version, never re-modelled locally.
      **SNOMED engine** (`rf2`/`concept-graph`/`concept-store`/`designation-index`/
      `sct-ecl`/`fhir-terminology`) or the server → idiomatic modern Rust of
      our own design, the FHIR/SNOMED/ECL specs as the authority (Snowstorm/
@@ -42,9 +42,8 @@ itself; that is a separate step the caller takes after seeing the plan.
      against, per `spec-adherence.md` / `/spec-lookup`. Doing the work starts
      by reading those.
    - **What "done" looks like** for this task specifically, the issue's
-     `## Acceptance criteria` checklist, plus what proves it: the codegen
-     drift check, the ECL grammar tests, or a Snowstorm/Hermes oracle
-     comparison.
+     `## Acceptance criteria` checklist, plus what proves it: the ECL grammar
+     tests, the conformance suite, or a Snowstorm/Hermes oracle comparison.
 3. **When work on the picked issue actually starts** (the plan is accepted and
    the session proceeds), move it to `In Progress` on the public roadmap board:
    `scripts/gh/project.sh status <n> in-progress`, the one manual board move

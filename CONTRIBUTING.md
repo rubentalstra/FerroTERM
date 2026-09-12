@@ -10,9 +10,10 @@ design; the architecture is recorded, with citations, in
 
 ## The two layers
 
-- `crates/fhir-types` is **generated** from the vendored machine-readable FHIR
-  specs. Never hand-edit a file marked `// @generated`; change the generator
-  (`tools/fhir-codegen`) and regenerate.
+- The FHIR model is the **generated** `fhir-types` crate, taken from
+  crates.io. Its generator and the machine-readable HL7 packages behind it live
+  in the FerroBRIDGE repository, so a missing or wrong shape is fixed and
+  released there, never re-modelled here.
 - The SNOMED engine (`rf2`, `concept-graph`, `concept-store`, `designation-index`,
   `sct-ecl`, `fhir-terminology`) and the server (`app/ferroterm-server`) are
   **hand-written**, modern idiomatic Rust; the FHIR and SNOMED specifications

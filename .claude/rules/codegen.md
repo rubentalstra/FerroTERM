@@ -1,95 +1,37 @@
----
-paths: ["crates/fhir-types/**", "tools/fhir-codegen/**"]
----
+# Generated code: consumed here, produced elsewhere
 
-# Code generation: the `fhir-types` discipline
+FerroTERM no longer generates a FHIR layer. The `fhir-types` crate and its
+generator moved to the FerroBRIDGE repository, which vendors the pinned HL7
+FHIR packages and publishes the crate to crates.io (#300). This repository
+depends on it like any other third-party crate, and nothing here emits Rust.
 
-The FHIR layer is GENERATED, not hand-written. HL7 publishes the whole type
-system and every operation as machine-readable `StructureDefinition` and
-`OperationDefinition` resources, in versioned packages. `crates/fhir-types` is
-produced deterministically from those packages by `tools/fhir-codegen`;
-the engine consumes the generated types as its FHIR model.
+## Consuming the model
 
-## The pipeline
+- **The FHIR model is `fhir-types` from crates.io**
+  (<https://docs.rs/fhir-types>), required by version in the root
+  `Cargo.toml` `[workspace.dependencies]` and taken by a crate with
+  `fhir-types.workspace = true`.
+- **Consume the generated types directly.** Never re-model or re-serialize
+  FHIR by hand, and never shadow a generated shape with a local type, a
+  duplicate model, an adapter layer, or a placeholder value. That silently
+  forks the FHIR model, which is the whole reason the model is generated.
+- **A wrong or missing shape is fixed upstream.** When engine code hits a
+  shape that is wrong or insufficient versus the FHIR specification
+  (<https://hl7.org/fhir/>), the fix is a generator change in FerroBRIDGE and
+  a release consumed here. A local workaround is forbidden while that lands;
+  on discovering an existing one, register its removal.
+- **Taking a new release moves three things in one change:** the requirement
+  in the root `Cargo.toml`, the pin row in `docs/VERSIONS.md`, and
+  `Cargo.lock`. `scripts/checks/versions.sh` fails when they disagree, and
+  Dependabot opens that pull request on its own (`.github/dependabot.yml`).
 
-vendored, pinned FHIR packages (`tools/fhir-codegen/vendor/`, verbatim,
-provenance-stamped, `vendored-inputs.md`) → `fhir-codegen` (loader +
-emitter) → `crates/fhir-types`, one module per version (R4 / R4B / R5 / R6).
+## The one generated artefact committed here
 
-- **Regenerate:** `cargo run -p fhir-codegen -- emit` (and the
-  operation-contract emit). A `codegen-drift` check re-runs the generator in
-  CI and fails on any diff, so the generated tree is always in sync with the
-  vendored packages + the current emitter.
-- **Pinned packages** (the versions the modules mirror): `hl7.fhir.r4.core`
-  4.0.1, `hl7.fhir.r4b.core` 4.3.0, `hl7.fhir.r5.core` 5.0.0,
-  `hl7.fhir.r6.core` 6.0.0-ballot5, plus `hl7.terminology`. Exact pins +
-  provenance live in each package's `PROVENANCE.md`; the fetcher is
-  `scripts/vendor/*.sh`.
+`crates/fhir-terminology/data/fhir/**` holds the FHIR core terminology
+bundles: generated from the same pinned HL7 packages, committed, and read at
+runtime. Never hand-edit a file there; `data/fhir/PROVENANCE.md` records how
+it was produced and what it may carry.
 
-## The hard rules
-
-- **Never hand-edit a `// @generated` file.** Every generated file starts with
-  a `// @generated … DO NOT EDIT` banner. To change output, edit the emitter
-  (or its override map), then regenerate, never the output. A doc defect, a
-  wrong field type, a missing variant in a generated file is a
-  `fhir-codegen` fix + regeneration.
-- **The emission scope is a DECLARED root-set closure, and it is emitted
-  COMPLETE, never trimmed inside that closure.** FerroTERM is a terminology
-  server, not a full FHIR server, so the generator does NOT emit all ~150
-  resources of each core package. The declared root set is the terminology
-  surface (`CodeSystem`, `ValueSet`, `ConceptMap`, `Parameters`,
-  `OperationOutcome`, `CapabilityStatement`, `TerminologyCapabilities`,
-  `Bundle`, plus the terminology `OperationDefinition`s), and the generator
-  emits the COMPLETE transitive closure of every datatype and primitive those
-  roots reference, per version, at its version-mirrored location. Within that
-  closure, completeness is absolute: never narrow a schema merge, prune a
-  referenced type, or suppress a "missing" generated file to quiet a diff or
-  dodge a build error. That is HIDING code that should exist. Widening or
-  narrowing the root SET is a deliberate, recorded decision (a new operation
-  or resource the server serves), never an ad-hoc per-file omission. A
-  generation-side defect discovered en route is FIXED in the generator in the
-  same change, not worked around.
-- **Fix the emitter, never the consumer.** When engine code hits a shape in
-  `fhir-types` that is wrong or insufficient versus the vendored package (a
-  missing field, a type too narrow, a per-version parameter absent), the fix
-  is a `fhir-codegen` emitter/override change + regeneration, NEVER a
-  shadow type, a duplicate model, an adapter/re-modeling layer, a placeholder
-  value, or a "temporary" local FHIR representation in the consumer. A
-  consumer-side workaround silently forks the FHIR model and defeats the whole
-  design. If the emitter fix is large, register a tracker issue. The
-  workaround is still forbidden; on discovering an existing workaround,
-  register its removal.
-- **Per-version correctness is by construction.** The generator emits per
-  FHIR version, so the operation surface and the parameter set are correct per
-  version from the `OperationDefinition`, never from a hand-written
-  conditional that can drift. A version difference the packages express is a
-  generated difference; if two versions genuinely coincide the emitter may
-  share, but the decision is the emitter's, driven by the inputs.
-- **XML is schema-driven, never a second hand-written codec.** The generator
-  emits, per version, `schema.rs`: every type's elements in definition order
-  with the kind the XML form needs (attribute, primitive and its value scalar,
-  complex, resource, XHTML, choice). The templated `xml.rs` converts between
-  FHIR XML and the JSON object model over that schema
-  (<https://hl7.org/fhir/R4B/xml.html>), so the JSON codec's strictness
-  governs both wires and a new element reaches XML by regeneration alone.
-- **The terminology ecosystem overlay is generator input, applied before
-  lowering.** `src/ecosystem.rs` names the R6 parameters pre-adopted into
-  every earlier version (their shape and documentation come from the vendored
-  R6 package) and declares the parameters the ecosystem alone defines
-  (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>). Every
-  overlaid field and descriptor parameter carries its `source`. Adding a
-  parameter to the overlay is a change to that module plus regeneration, never
-  a hand-written field in a consumer.
-- **The output is byte-deterministic.** The emitter iterates ordered
-  structures (`BTreeMap`/sorted vecs), so a regeneration with unchanged inputs
-  produces an identical tree, which is what makes the drift check meaningful
-  (`reliability.md` §Determinism).
-
-## Where the boundary sits
-
-`fhir-types` is the ONLY generated crate. Everything else (RF2 loading, the
-materialized graph, the store/text indexes, ECL, the terminology engine, the
-server) is hand-written idiomatic Rust of our own design (`rust-style.md`),
-consuming the generated FHIR types directly. The prior art for the generator
-itself is Helios `hfs` (MIT, Rust, machine-generates per-version FHIR
-modules); it is a client, not a server, and is read-only reference.
+Everything else in the tree is hand-written idiomatic Rust of our own design
+(`rust-style.md`), with the FHIR and SNOMED CT specifications as the
+authority.

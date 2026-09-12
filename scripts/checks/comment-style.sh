@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Comment-style guard (.claude/rules/comments.md — RFC 505 / RFC 1574).
 #
-# Checks HAND-WRITTEN .rs files (files carrying the `@generated` marker are
-# skipped — their comments are fixed in the fhir-codegen emitter):
+# Checks HAND-WRITTEN .rs files (a file carrying the `@generated` marker is
+# skipped: its comments come from a generator, not from this tree):
 #
 #   1. block comments      `/* … */` is banned; line comments only (RFC 505).
 #   2. TODO form           every TODO names its issue: `TODO(#NNNN):`.

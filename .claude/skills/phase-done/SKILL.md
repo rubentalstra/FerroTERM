@@ -32,9 +32,9 @@ and records, it does not decide the work is done on your behalf.
    checked against the FHIR/SNOMED/ECL specs (`/spec-lookup`) and, where
    applicable, against the Snowstorm/Hermes oracle. If that never happened,
    stop and say so; it is an unmet exit criterion in spirit.
-5. **Codegen drift gate:** if the work touched the FHIR layer, confirm
-   `/regen-codegen` was run and the drift check is clean (the generated crate
-   is in sync with the vendored packages, `// @generated` files unedited).
+5. **FHIR model pin:** if the work took a new `fhir-types` release, confirm
+   the root requirement, `docs/VERSIONS.md`, and `Cargo.lock` all name it
+   (`scripts/checks/versions.sh`).
 6. **Write the close narrative into the PR description:** what shipped, the key
    decisions with their spec citations, the gate results, and what was
    deliberately left out (with follow-up issue numbers). The PR description +
@@ -55,7 +55,7 @@ and records, it does not decide the work is done on your behalf.
 
 ## What this skill does not do
 
-It does not run `cargo build`, the test suite, or the codegen drift check to
-"check" the acceptance criteria for you; those must already have been run and
-have genuinely passed before this skill is invoked. If in doubt, run the
-relevant `cargo` command or `/regen-codegen` first.
+It does not run `cargo build` or the test suite to "check" the acceptance
+criteria for you; those must already have been run and have genuinely passed
+before this skill is invoked. If in doubt, run the relevant `cargo` command
+first.

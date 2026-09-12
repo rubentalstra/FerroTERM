@@ -28,10 +28,11 @@ the decision; never treat them as spec authority.
 
 ## Where to look
 
-- **Vendored specs (once present):** the FHIR packages under
-  `tools/fhir-codegen/vendor/` are the machine-readable contract
-  (`StructureDefinition`, `OperationDefinition`). Grep the operation/resource
-  name there for the served version.
+- **The machine-readable contract** (`StructureDefinition`,
+  `OperationDefinition`) reaches this repository through the generated
+  `fhir-types` crate; the packages it is emitted from are vendored in the
+  FerroBRIDGE repository. Read the served version's operation page for the
+  authoritative parameter set.
 - **The project rules** encode the distilled requirements with citations:
   `.claude/rules/fhir-terminology.md` (wire conformance) and
   `.claude/rules/snomed-terminology.md` (SNOMED URI / ECL / RF2). Start there,

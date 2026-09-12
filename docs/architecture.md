@@ -144,15 +144,15 @@ HL7 publishes the whole type system and every operation as machine-readable
 `StructureDefinition` and `OperationDefinition` resources, in versioned packages
 (`hl7.fhir.r4.core` 4.0.1, `hl7.fhir.r4b.core` 4.3.0, `hl7.fhir.r5.core` 5.0.0,
 `hl7.fhir.r6.core` 6.0.0 ballot), plus `hl7.terminology`
-(<https://www.hl7.org/fhir/packages.html>). FerroTERM vendors and pins those
-packages and generates per-version Rust modules from them
-(`tools/fhir-codegen`), so R5's extra `$expand` parameters
+(<https://www.hl7.org/fhir/packages.html>). Per-version Rust modules are
+generated from those pinned packages, so R5's extra `$expand` parameters
 (`useSupplement`, `property`, `displayLanguage`) appear where the spec has them
 and are absent where it does not
 (<http://hl7.org/fhir/R5/valueset-operation-expand.html>). This mirrors how the
-sibling project FerroEHR generates its openEHR model. Every generated file is
-marked `// @generated`; a drift check regenerates in CI and fails on any diff;
-the generator is never hand-edited. Versions are selected by a runtime wrapper,
+sibling project FerroEHR generates its openEHR model. The generator and the
+vendored packages live in the FerroBRIDGE repository, which publishes the model
+as the `fhir-types` crate; FerroTERM consumes it from crates.io at the version
+`docs/VERSIONS.md` pins (#300). Versions are selected by a runtime wrapper,
 so one server answers R4/R4B/R5/R6 callers at once. R6 is a ballot-tracking
 generation (publication expected around late 2026).
 
@@ -326,14 +326,14 @@ built once per edition and read into memory when the server opens the artifact.
 
 ## Workspace layout
 
-A single Cargo workspace. `fhir-types` is generated; the rest is hand-written;
-`fhir-codegen` and `ferroterm-build` are tooling. The substrate crates
+A single Cargo workspace. Every crate here is hand-written, over the generated
+`fhir-types` crate from crates.io; `ferroterm-build` is tooling. The substrate
+crates
 (`concept-store`, `concept-graph`, `designation-index`) are code-system-neutral; each
 code system adds a loader crate (`rf2` is the first) that feeds them.
 
 | Crate | Role | Kind |
 |---|---|---|
-| `crates/fhir-types` | Generated per-version FHIR types + terminology operation contracts (R4/R4B/R5/R6) | generated |
 | `crates/rf2` | SNOMED CT RF2 loader (inferred relationships, descriptions, refsets, transitive-closure file) + typed component model; the first code system loader | hand-written |
 | `crates/concept-graph` | The materialized hierarchy of a loaded code system: CSR adjacency (is-a + per-relationship-type) and roaring transitive-closure bitmaps; subsumption + ECL set algebra | hand-written |
 | `crates/concept-store` | The `redb`-backed columnar concept and designation store, one per code system version: point reads for `$lookup`/`$validate-code` | hand-written |
@@ -341,7 +341,6 @@ code system adds a loader crate (`rf2` is the first) that feeds them.
 | `crates/sct-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `concept-graph`) | hand-written |
 | `crates/fhir-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
 | `app/ferroterm-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
-| `tools/fhir-codegen` | The generator: vendored FHIR packages → `fhir-types` | tooling |
 | `tools/ferroterm-build` | The offline build: a code system release (RF2 first) → the graph/store/text artifacts the server reads, once per release | tooling |
 
 Dependencies point one way (app/tools → crates); nothing depends upward into the
@@ -401,8 +400,8 @@ vendored verbatim with provenance as codegen input.
   beside Snowstorm for spec-silent edge cases. Not a dependency: `unsafe`
   without `forbid`, build-time downloads, and SQL recursive-query subsumption.
 - **`rh-codegen`** (Rust, <https://github.com/reason-healthcare/rh>): FHIR
-  models generated from the same `hl7.fhir.*.core` packages this project
-  vendors; a second emitter to compare decisions against.
+  models generated from the same `hl7.fhir.*.core` packages `fhir-types` is
+  emitted from; a second emitter to compare decisions against.
 - **`octofhir-ucum`** (Rust, Apache-2.0): a UCUM parser tested against the
   official suite; the one crate shortlisted as a dependency, for the UCUM
   provider.

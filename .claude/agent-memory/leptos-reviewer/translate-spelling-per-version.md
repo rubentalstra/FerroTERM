@@ -6,10 +6,12 @@ metadata:
   type: reference
 ---
 
-Read first-hand from
-`tools/fhir-codegen/vendor/hl7.fhir.{r4,r4b,r5,r6}.core/package/OperationDefinition-ConceptMap-translate.json`
-(2026-09-07). Use this to check a viewer spelling table without re-deriving it,
-but re-read the JSON before calling a mismatch a defect.
+Read first-hand on 2026-09-07 from the `ConceptMap-translate`
+`OperationDefinition` of each core package (`hl7.fhir.{r4,r4b,r5,r6}.core`),
+which those packages left this repository with (#300); the published operation
+page is <https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>. Use
+this to check a viewer spelling table without re-deriving it, but re-read the
+definition before calling a mismatch a defect.
 
 **In (the request).**
 
@@ -35,7 +37,6 @@ element answered and never render one as the other.
 **Not in any of the four base definitions:** `match.noMap`,
 `match.sourceConcept`, `match.sourceComment`, `match.targetComment`, and the
 top-level `used-conceptmap`. Those reach the wire through the terminology
-ecosystem overlay (`tools/fhir-codegen/src/ecosystem.rs`, emitted into
-`crates/fhir-types/src/r6/operations/concept_map_translate.rs`), so a viewer
-reading them is correct and a reviewer checking only the vendored JSON will
-wrongly call them invented.
+ecosystem overlay the generator applies, emitted into the `fhir-types` R6
+`concept_map_translate` operation, so a viewer reading them is correct and a
+reviewer checking only the base definition will wrongly call them invented.

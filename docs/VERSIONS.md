@@ -46,19 +46,21 @@ mints a canonical from, and it is cited rather than pinned.
 
 ## FHIR
 
-Machine-generated per version from the vendored, pinned HL7 FHIR packages
-(`tools/fhir-codegen/vendor/`, once vendored, see
-`.claude/rules/vendored-inputs.md`). Each vendored package carries a
-`PROVENANCE.md`; the guard checks it against this table.
+The FHIR model is the `fhir-types` crate: generated from the machine-readable
+HL7 FHIR packages and published by the FerroBRIDGE repository
+(<https://github.com/rubentalstra/FerroBRIDGE>), which vendors and pins those
+packages. FerroTERM consumes the crate from crates.io like any other
+dependency, so no HL7 package is vendored here and a change to the model is
+requested on that repository's tracker.
 
 | Package | Pin | Notes |
 |---|---|---|
-| `hl7.fhir.r4b.core` | 4.3.0 | **first generation implemented** |
-| `hl7.fhir.r5.core` | 5.0.0 | |
-| `hl7.fhir.r4.core` | 4.0.1 | |
-| `hl7.fhir.r6.core` | 6.0.0-ballot5 | ballot-tracking generation (not GA); published on packages2.fhir.org |
-| `hl7.terminology` (THO) | 7.3.0 | terminology content moves here in R5/R6 |
+| `fhir-types` | 0.1.98 | from crates.io; the requirement lives in the root `Cargo.toml` `[workspace.dependencies]` |
 
+The requirement is a caret, so a later 0.1.x release resolves into `Cargo.lock`
+by itself. `scripts/checks/versions.sh` fails when the row above, the root
+requirement, and the lock disagree, so a new FHIR model reaches the build only
+in a change that moves the pin with it.
 
 ## SNOMED CT / ECL
 
@@ -72,7 +74,9 @@ Machine-generated per version from the vendored, pinned HL7 FHIR packages
 The authoritative, fully-pinned third-party crate set lives in the root
 `Cargo.toml` `[workspace.dependencies]`. This file
 does not duplicate crate versions; on any discrepancy, the manifest wins. Add a
-dependency to a crate with `dep.workspace = true`.
+dependency to a crate with `dep.workspace = true`. The one crate this file also
+names is `fhir-types` above, because it carries the served FHIR model and its
+version is a conformance fact, not a build detail.
 
 ## Viewer toolchain
 

@@ -9,4 +9,4 @@ FerroTERM's `[workspace.lints]` and `clippy.toml` mirror FerroEHR's (`~/Rustrove
 
 **Why:** the owner asked "do we allow unwrap in this repo?? our FerroEHR repo is very very strict ... we also need a very very strict code style" and, on finding FerroTERM's table looser, "update that immediately".
 
-**How to apply:** when a lint fights a legitimate case use a scoped `#[expect(lint, reason = "...")]`; a finding in `crates/fhir-types` is an emitter change in `tools/fhir-codegen/src/render.rs` (its crate-level allow list, with reasons) followed by a regeneration. When FerroEHR's table changes, port the change here in the same week. See [[repo-merge-gates]], [[gates-in-container]].
+**How to apply:** when a lint fights a legitimate case use a scoped `#[expect(lint, reason = "...")]`; a finding inside `fhir-types` is an emitter change in the FerroBRIDGE repository, released and then consumed here (#300). When FerroEHR's table changes, port the change here in the same week. See [[repo-merge-gates]], [[gates-in-container]].

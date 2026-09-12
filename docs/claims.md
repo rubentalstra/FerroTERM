@@ -81,8 +81,8 @@ claim, not a test that merely touches the area.
 |---|---|
 | `ferroterm-build` turns a release into a `redb` store, a CSR is-a adjacency with roaring closure bitmaps, and an `fst` word index | `tools/ferroterm-build/src/pipeline.rs`; `tools/ferroterm-build/tests/it/pipeline.rs::the_manifest_records_the_edition_and_the_counts` |
 | Subsumption is a bitmap test; a descendant set is a bitmap | `crates/concept-graph`; `crates/fhir-terminology/tests/it/snomed.rs::the_hierarchy_answers_subsumption_and_the_filters_from_the_closure` |
-| `crates/fhir-types` is emitted from the pinned HL7 packages (R4 4.0.1, R4B 4.3.0, R5 5.0.0, R6 ballot 5, HL7 Terminology) | Each `tools/fhir-codegen/vendor/*/PROVENANCE.md`, cross-checked against `docs/VERSIONS.md` by `scripts/checks/versions.sh` |
-| A drift check regenerates it in CI and fails on any diff | `.github/workflows/ci.yml` job `codegen-drift`, `cargo run --locked -p fhir-codegen -- emit --check`; `tools/fhir-codegen/src/emit.rs` returns `EmitError::Drift` |
+| The FHIR model is emitted from the pinned HL7 packages (R4 4.0.1, R4B 4.3.0, R5 5.0.0, R6 ballot 5, HL7 Terminology) | The generator and the vendored packages are in the FerroBRIDGE repository, named by the crate's `repository` metadata on crates.io; not verifiable from this repository (#300) |
+| FerroBRIDGE publishes the model and this repository consumes it at a pinned version | `Cargo.toml` `fhir-types = "0.1.98"`; `docs/VERSIONS.md` §FHIR; `scripts/checks/versions.sh` fails when the requirement, the pin row, and `Cargo.lock` disagree (`ci.yml` job `versions`) |
 | The engine is code-system-neutral; providers own the semantics | `crates/fhir-terminology/src/provider.rs:524` `CodeSystemProvider`, with 11 implementations |
 | Releases reach SLSA Build Level 3 in a reusable workflow | `.github/workflows/release-build.yml:31` and `release-image.yml:31` are `workflow_call`; the callers in `release.yml` are step-less, and the publishing lanes restore no cache |
 | Signed provenance | `actions/attest` steps in `release-build.yml:162-178` and `release-image.yml:209-240`; the envelope is validated in-line against `https://slsa.dev/provenance/v1` |
@@ -99,7 +99,7 @@ claim, not a test that merely touches the area.
 | The software is source-available under the Business Source License 1.1 | `LICENSE` (BSL 1.1 text, Licensor Ruben Talstra, Change License Apache 2.0), `NOTICE`, `Cargo.toml:14` `license = "BUSL-1.1"`; `scripts/checks/versions.sh` fails on a stale MIT or Apache claim |
 | No open-core tier: engine, server, and tools are in this repository under the one licence | All 14 `crates/*`, `app/ferroterm-server`, and `tools/*` are in this workspace; no private module |
 | Each version becomes Apache 2.0 four years after publication | `LICENSE:38` and the terms body ("This License applies separately for each version") |
-| `fhir-types` and `rf2` are Apache 2.0 on crates.io | `crates/fhir-types/Cargo.toml:8`, `crates/rf2/Cargo.toml:8`, each with its own Apache 2.0 `LICENSE` file |
+| `rf2` is Apache 2.0 on crates.io | `crates/rf2/Cargo.toml:8`, with its own Apache 2.0 `LICENSE` file |
 | The repository ships no SNOMED CT, LOINC, ICD, or RxNorm content | `git ls-files data` returns 10 `.gitkeep` files only; `.gitignore:29-31` |
 | UCUM and the IANA and Unicode registries are vendored under their own licences | `crates/fhir-terminology/data/ucum/`, `data/iana/`, `data/cldr/`, each recorded beside the data |
 
@@ -116,7 +116,7 @@ claim, not a test that merely touches the area.
 | The 20 code systems listed | `website/book/src/evaluate/code-systems.md` is the single source; `scripts/checks/code-systems.sh` fails when a row is missing from the README or the landing page |
 | Every code system reaches the operations through the same provider seam | `crates/fhir-terminology/src/provider.rs:524`; every provider implements it |
 | `$lookup`, `$validate-code`, `$subsumes`, `$expand`, `$translate` under `/r4`, `/r4b`, `/r5`, `/r6`, in JSON or XML | The route and XML tests listed under [The API](#the-api) above |
-| Each version's parameter set is generated from HL7's own packages | `tools/fhir-codegen`, `.github/workflows/ci.yml` job `codegen-drift` |
+| Each version's parameter set is generated from HL7's own packages | The `fhir-types` crate carries one operation module per version; `crates/fhir-terminology/tests/it/capabilities.rs::the_hierarchy_operators_r5_added_reach_the_r5_family_alone` asserts the per-version difference reaches the wire |
 | BUSL 1.1, Apache 2.0 four years after each version | `LICENSE`, `NOTICE` |
 | The JSON-LD `license` field | **WRONG.** See [L1](#l1) |
 
@@ -231,7 +231,7 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | Nederlandse Labcodeset, `--labcodeset` | `crates/fhir-terminology/tests/it/labcodeset.rs::the_built_resources_load_as_a_supplement_and_value_sets`; `tools/ferroterm-build/tests/it/labcodeset.rs::the_publication_builds_from_a_document_a_directory_or_a_zip` |
 | NHG ICPC-1 to SNOMED CT map | **NO EVIDENCE.** See [E5](#e5) |
 | FHIR `CodeSystem`, `ValueSet`, `ConceptMap` through `FERROTERM_CODESYSTEMS`, supplements included | `app/ferroterm-server/tests/it/config.rs::code_system_directories_load_and_supplements_apply`; `crates/fhir-terminology/tests/it/supplement.rs::a_supplement_layers_designations_and_properties_over_the_system` |
-| "HL7 Terminology's 900+ systems load this way" | `tools/fhir-codegen/vendor/hl7.terminology/package/` holds 928 `CodeSystem` resources (HL7 Terminology 7.3.0); `crates/fhir-terminology/tests/it/fhir_codesystem.rs::the_vendored_hl7_terminology_package_loads` asserts that more than 900 load into providers |
+| "HL7 Terminology's 900+ systems load this way" | `crates/fhir-terminology/src/fhir_codesystem/load.rs::load_dir` loads a package directory; `crates/fhir-terminology/tests/it/fhir_core.rs::every_version_bundle_loads` asserts more than 200 systems per version build into providers. The 928-resource HL7 Terminology corpus that carried the 900+ figure left with the vendored packages (#300), so that figure has no test behind it here |
 | The repository ships no code system content | `git ls-files data` returns 10 `.gitkeep` files |
 
 ### Benchmarks
@@ -252,7 +252,7 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | Snowstorm is Java on Elasticsearch; Snowstorm Lite is Lucene in about 500 MB; Ontoserver is Postgres plus Lucene; Hermes is a memory-mapped store plus Lucene | Their own documentation, cited on `website/landing/comparison.html` |
 | ECL, the SNOMED implicit value sets, the R4, R4B, R5, and R6 endpoints, and XML are served | The ECL, implicit value set, version, and XML tests above |
 | Conformance measured by the tx-ecosystem suite on every change | `.github/workflows/ci.yml` job `tx-ecosystem` |
-| A machine-generated FHIR layer across four versions | `tools/fhir-codegen`; `.github/workflows/ci.yml` job `codegen-drift` |
+| A machine-generated FHIR layer across four versions | The `fhir-types` crate's four version modules; the per-version route tests listed under [The API](#the-api) |
 | "637 MB on disk, 420 to 580 MB resident with two more systems loaded" | **NO EVIDENCE.** See [B4](#b4) |
 | "hierarchical expansion, persisted client resources, batch, `$closure`, and the SNOMED implicit concept maps" are on the roadmap | **WRONG.** See [S2](#s2) |
 
@@ -365,19 +365,18 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | An unpaged expansion beyond 1,000 members is refused with `too-costly` | `crates/fhir-terminology/src/operations/expand.rs:24,215` |
 | "a page of ten out of 133,736 descendants" | **WEAK.** See [B5](#b5) |
 
-### Build and test, The codegen model
+### Build and test, The FHIR model
 
 | Claim | Evidence |
 |---|---|
 | One Cargo workspace, Rust 1.98, edition 2024 | `rust-toolchain.toml:4` `channel = "1.98.0"`; `Cargo.toml:4` `resolver = "3"`, `edition = "2024"`, `rust-version = "1.98"`; enforced by the `msrv (cargo-hack)` job |
-| The crate list (`fhir-types`, `rf2`, `loinc`, `classification`, `rxnorm-rrf`, `icd11`, `concept-graph`, `concept-store`, `designation-index`, `fhir-terminology`) | `crates/` holds each of them |
+| The crate list (`rf2`, `loinc`, `classification`, `rxnorm-rrf`, `icd11`, `concept-graph`, `concept-store`, `designation-index`, `fhir-terminology`) | `crates/` holds each of them |
 | The local gates mirror CI | `.github/workflows/ci.yml`; `scripts/checks/comment-style.sh` |
 | `Cargo.lock` is committed and CI builds with `--locked` | `Cargo.lock`; the `--locked` flags in `ci.yml` |
 | The JVM runs in CI only | `.github/workflows/ci.yml` job `tx-ecosystem` |
 | Tests use shaped, synthetic content only | `tools/ferroterm-testkit/` writes the LOINC, ClaML, ICD-10-CM, RxNorm RRF, and ICD-11 cache fixtures; the SNOMED RF2 fixtures live in `crates/rf2/tests/it/fixture.rs` and `tools/ferroterm-build/tests/it/fixture.rs` |
-| The five vendored packages and their pins | Each `tools/fhir-codegen/vendor/*/PROVENANCE.md`, checked by `scripts/checks/versions.sh` |
-| The generator's root set and its transitive closure | `tools/fhir-codegen/src/` |
-| The drift check | `.github/workflows/ci.yml` job `codegen-drift` |
+| The FHIR model is generated in the FerroBRIDGE repository and consumed from crates.io | `Cargo.toml` `fhir-types = "0.1.98"`; `docs/VERSIONS.md` §FHIR |
+| The pin cannot drift from the build | `scripts/checks/versions.sh` "FHIR model pin" check over the requirement, the pin row, and `Cargo.lock`; `.github/workflows/ci.yml` job `versions` |
 
 ## Claims with no evidence
 

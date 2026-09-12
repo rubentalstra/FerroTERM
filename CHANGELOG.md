@@ -13,6 +13,22 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- The FHIR model now comes from crates.io. `fhir-types` and the generator that
+  emits it, with the five vendored HL7 packages behind it, moved to the
+  FerroBRIDGE repository, which publishes the crate; FerroTERM depends on it by
+  version like any other dependency (#300). Consumers of the crate are
+  unaffected: the same crate line continues on crates.io, published from
+  FerroBRIDGE, and the published 0.1.98 source is byte for byte what this
+  repository generated at 0.1.97. What leaves here is the generator, its
+  vendored input, the `codegen-drift` CI job, and the `fhir-types` entry of the
+  publish order. What replaces the drift job is a pin check:
+  `scripts/checks/versions.sh` fails when the requirement in `Cargo.toml`, the
+  row in `docs/VERSIONS.md`, and the version in `Cargo.lock` disagree, so a new
+  release reaches the build only in a change that records it, and Dependabot
+  opens that pull request on its own.
+
 ## [0.1.2] - 2026-09-12
 
 ### Added

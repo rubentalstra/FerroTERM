@@ -9,7 +9,7 @@ authority (`.claude/rules/fhir-terminology.md`, `snomed-terminology.md`).
   SNOMED"; a per-system behaviour (an implicit value set form, a filter, a
   property) is a provider capability the system declares.
 - Consume the generated `fhir-types` types directly; never re-model FHIR here.
-  A missing shape is a `fhir-codegen` fix (`.claude/rules/codegen.md`).
+  A missing shape is a generator fix upstream (`.claude/rules/codegen.md`).
 - One operation, one module; the parameter set an operation accepts is what
   the version's `OperationDefinition` declares, and a version difference is a
   generated difference, never a hand-written conditional.

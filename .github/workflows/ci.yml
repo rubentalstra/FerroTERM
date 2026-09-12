@@ -484,25 +484,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  codegen-drift:
-    name: codegen-drift
-    needs: detect
-    if: needs.detect.outputs.cargo == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-rust
-        with:
-          components: rustfmt
-      # Regenerates crates/fhir-types from the vendored packages in check mode and
-      # fails on any difference (.claude/rules/codegen.md).
-      - run: cargo run --locked -p fhir-codegen -- emit --check
-
   # The crate-line bump rule (.claude/rules/crates-publishing.md): a PR that
   # changes packaged content of a crates/* member bumps the lockstep crate
   # version in the same PR. The `no-crate-bump` label is the escape for a diff
@@ -689,7 +670,6 @@ jobs:
       - viewer-tokens
       - viewer
       - ui-e2e
-      - codegen-drift
       - crate-version-guard
       - publish-dry-run
       - msrv

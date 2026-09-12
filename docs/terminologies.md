@@ -34,7 +34,7 @@ engine. Each row is a tracker issue under the program issue.
 | Order | Code system | Why here | Provider shape |
 |---|---|---|---|
 | 1 | SNOMED CT | The hardest case: polyhierarchy, ECL, refsets, editions. Shapes the engine. Licensed data available for development. | `rf2` loader, ECL, SNOMED implicit forms |
-| 2 | FHIR `CodeSystem` resources (HL7 Terminology, custom systems, supplements) | Passes the tx-ecosystem `general` mode on its own (667 of 1,174 tests use synthetic FHIR code systems); carries every code system published as a FHIR resource. | Generic provider over the package loader already in `fhir-codegen` |
+| 2 | FHIR `CodeSystem` resources (HL7 Terminology, custom systems, supplements) | Passes the tx-ecosystem `general` mode on its own (667 of 1,174 tests use synthetic FHIR code systems); carries every code system published as a FHIR resource. | Generic provider over the FHIR package loader (`crates/fhir-terminology/src/fhir_codesystem/load.rs`) |
 | 3 | LOINC | Second most exercised system in the suite (2,152 references); the Dutch lab code set builds on it; the nl-NL linguistic variant exists. | CSV loader; parts hierarchy; the LOINC filters and `/vs/` implicit sets |
 | 4 | UCUM | 2,267 references in the suite; grammar-defined, so it proves the non-enumerable provider shape. | Expression parser over `ucum-essence.xml`; no store |
 | 5 | ICD-10 (WHO), ICD-10-NL, ICD-10-CM | The Dutch diagnosis classification; `classified-with` hierarchy proves the mono-hierarchy shape. | ClaML loader (WHO, NL), tab-delimited loader (CM) |

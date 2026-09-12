@@ -7,15 +7,14 @@ paths: ["crates/**/*.rs", "app/**/*.rs", "tools/**/*.rs"]
 Applies to hand-written `.rs`: the SNOMED engine and its crates
 (`rf2`, `concept-graph`, `concept-store`, `designation-index`, `sct-ecl`,
 `fhir-terminology`), the server (`ferroterm-server`), and the tooling
-(`fhir-codegen`, `ferroterm-build`). **The engine is modern idiomatic Rust
-of our own design, built on the generated `fhir-types` crate.** The FHIR and
-SNOMED CT / ECL specifications are the authority; Snowstorm, Ontoserver, and
-Hermes are prior art only.
+(`ferroterm-build`). **The engine is modern idiomatic Rust of our own design,
+built on the generated `fhir-types` crate.** The FHIR and SNOMED CT / ECL
+specifications are the authority; Snowstorm, Ontoserver, and Hermes are prior
+art only.
 
-**Generated files are off-limits.** The FHIR type + operation crate
-(`crates/fhir-types`) is produced by `fhir-codegen`; every
-`// @generated` file **must never be hand-edited**: change the emitter and
-regenerate (`cargo run -p fhir-codegen -- emit`). Full generation
+**The FHIR model is generated elsewhere and consumed here.** `fhir-types`
+comes from crates.io, published by the FerroBRIDGE repository; a shape that is
+wrong or missing is a generator fix there, never a local re-model. Full
 discipline: `codegen.md`.
 
 ## Build idiomatic, compiling, tested code
@@ -156,8 +155,8 @@ standing bar for hand-written code.
 ## Documentation (missing_docs is enforced workspace-wide)
 
 - Every public item carries a doc comment (rustc `missing_docs`; the
-  generated `fhir-types` crate gets its docs from the emitter; never
-  hand-edit `// @generated`). Shape, sections, and summary-line rules:
+  generated `fhir-types` crate gets its docs from its generator, upstream).
+  Shape, sections, and summary-line rules:
   `comments.md` (RFC 1574).
 - Intra-doc links (`[`Type`]`) resolve in the scope of the module where the
   item is DEFINED. `rustdoc::broken_intra_doc_links` is deny; the CI doc job
@@ -209,5 +208,4 @@ line). Reach for:
   context, Lucene analyzers): design the idiomatic Rust equivalent (the
   `redb` store, the `fst`+`roaring` index, tower middleware) or register it
   as its own tracker issue with a `// TODO(#NNNN):`.
-- Do not hand-edit generated code; do not re-model what `fhir-types`
-  provides.
+- Do not re-model what `fhir-types` provides.
