@@ -2,15 +2,19 @@
 
 # .github/dependabot.yml — automated dependency updates.
 #
-# Two ecosystems for now: the GitHub Actions the workflows in this directory
-# pin, and Cargo. The Cargo entry is harmless before any code lands (there is
-# no Cargo.toml to resolve yet) and activates by itself the moment the
-# workspace exists — no workflow edit needed when it does. The docker entry
-# bumps the digest-pinned base image of docker/Dockerfile.
+# Three ecosystems: the GitHub Actions that the workflows and the composite
+# actions in this directory pin, Cargo, and the digest-pinned base image of
+# docker/Dockerfile.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # "/" covers .github/workflows and a root action.yml only; a composite
+    # action under .github/actions is scanned only when its directory is
+    # listed (the Dependabot options reference, "directory"). The glob keeps
+    # every composite action in the same weekly group as the workflows.
+    directories:
+      - "/"
+      - "/.github/actions/*"
     labels:
       - "dependencies"
     schedule:

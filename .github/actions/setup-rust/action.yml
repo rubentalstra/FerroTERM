@@ -24,7 +24,7 @@ runs:
     # No `toolchain:` input: setup-rust-toolchain reads rust-toolchain.toml when
     # it is present, which is where the channel is pinned. Caching is built in
     # and keyed by the cache-key input.
-    - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+    - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
       with:
         components: ${{ inputs.components }}
         cache-key: ${{ inputs.cache-key }}
