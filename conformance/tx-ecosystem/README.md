@@ -24,7 +24,7 @@ above the suite's own. The `snomed`, `icd-11`, `tx.fhir.org`, `mimetypes`, and
 | `general` | `/r4b` | `passing.txt` | 628 of 670 | nothing | #353 |
 | `general` | `/r4` | `passing-r4.txt` | 635 of 670 | nothing | #353 |
 | `general` | `/r5` | `passing-r5.txt` | 637 of 670 | nothing | #353 |
-| `snomed` | `/r4b` | `passing-snomed.txt` | 1 of 170 | a SNOMED CT edition | #344, #352, #349 |
+| `snomed` | `/r4b` | `passing-snomed.txt` | 2 of 170 | a SNOMED CT edition | #344, #352, #349 |
 | `icd-11` | `/r4b` | `passing-icd-11.txt` | 44 of 52 | the three ICD-11 artifacts | #350, #349, #117 |
 | `tx.fhir.org` | `/r4b` | `passing-tx.fhir.org.txt` | 57 of 227 | a LOINC release | #420, #421, #305, #349 |
 | `tx.fhir.org` | `/r5` | `passing-r5-tx.fhir.org.txt` | 59 of 227 | a LOINC release | #420, #421, #305, #349 |
@@ -43,10 +43,15 @@ hand before a release and their lists are refreshed in the same change.
   (<https://hl7.org/fhir/R4B/terminologies-systems.html>), which the server does
   not hold yet (#435).
 - **`snomed`** needs a SNOMED CT artifact
-  (`--mode snomed --index <edition>`). It scores 1 of 170 whatever edition you
+  (`--mode snomed --index <edition>`). It scores 2 of 170 whatever edition you
   point it at, because every case pins the reference server's own edition
   (`http://snomed.info/xsct/31000003106/version/20250909`), which no release
-  centre distributes. #344 holds the evidence. Its 30 `$subsumes` cases reach
+  centre distributes. #344 holds the evidence. The second case that passes,
+  `snomed/subsumes-bad-version`, passes because it asserts the refusal of an
+  edition the server does not have, which is the state the other 168 are stuck
+  in. The suite's runner takes five parameters (`-output`, `-externals`,
+  `-filter`, `-modes`, `-api-key`) and none of them points the cases at another
+  edition, so there is no override to reach for (the suite's own `tests/readme.md`). Its 30 `$subsumes` cases reach
   the server now; 21 answer 404 on that pinned version and the other 9 differ
   on the code or the text of the outcome. Five of its cases also send a
   parameter no `OperationDefinition` declares (#349).
