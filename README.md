@@ -7,7 +7,8 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_FerroTERM&metric=alert_status)](https://sonarcloud.io/summary/overall?id=rubentalstra_FerroTERM)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=rubentalstra_FerroTERM&metric=coverage)](https://sonarcloud.io/summary/new_code?id=rubentalstra_FerroTERM)
 [![License: BUSL-1.1](https://img.shields.io/badge/License-BUSL--1.1-blue.svg)](LICENSE)
-[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/rubentalstra/FerroTERM?sort=semver)](https://github.com/rubentalstra/FerroTERM/releases/latest)
+[![GitHub Release](https://img.shields.io/github/release/rubentalstra/FerroTERM.svg?logo=github)](https://github.com/rubentalstra/FerroTERM/releases/latest)
+[![Image pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Frubentalstra%2FFerroTERM%2Fferroterm&query=downloadCount&label=image%20pulls&logo=github)](https://github.com/rubentalstra/FerroTERM/pkgs/container/ferroterm)
 
 [![tx-ecosystem R4](https://img.shields.io/endpoint?url=https%3A%2F%2Fferroterm.eu%2Fconformance%2Fr4.json)](https://ferroterm.eu/docs/evaluate/conformance.html)
 [![tx-ecosystem R4B](https://img.shields.io/endpoint?url=https%3A%2F%2Fferroterm.eu%2Fconformance%2Fr4b.json)](https://ferroterm.eu/docs/evaluate/conformance.html)
