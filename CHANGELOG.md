@@ -13,6 +13,8 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-09-12
+
 ### Added
 
 - `ferroterm healthcheck`, a subcommand that sends one `GET /health` to the
@@ -759,7 +761,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.1.1
 [0.1.0]: https://github.com/rubentalstra/FerroTERM/releases/tag/v0.1.0
