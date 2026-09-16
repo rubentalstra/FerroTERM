@@ -110,11 +110,13 @@ that table is in MAINTAINERS.md and is kept truthful.
 Recorded here so the questions do not have to be re-litigated in each pull
 request:
 
-- **No contributor licence agreement, and no copyright assignment.** You keep
-  your copyright; the licence is the Business Source License 1.1 for everyone,
-  the maintainer included, and every version becomes Apache 2.0 on its
-  Change Date.
-  This is a deliberate position, not an oversight.
+- **No copyright assignment, and one Licensor.** You keep your copyright; the
+  licence is the Business Source License 1.1 for everyone, the maintainer
+  included, and every version becomes Apache 2.0 on its Change Date. A
+  contribution grants the Licensor the relicensing right in
+  [CONTRIBUTING.md § Licensing of contributions](CONTRIBUTING.md#licensing-of-contributions),
+  recorded by the pull request checkbox, so the work stays one work under one
+  licensor. This is a deliberate position, not an oversight.
 - **No re-modelling of the FHIR type system or operations by hand.** The FHIR
   crate is generated from the machine-readable packages; a change goes into
   the generator.
