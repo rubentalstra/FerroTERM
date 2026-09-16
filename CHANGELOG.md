@@ -20,6 +20,12 @@ fresh link reference.
   `SPDX-FileCopyrightText` line names the company. The licence terms are
   unchanged, and maintainer credit stays a person.
 
+### Security
+
+- `rustls` moves to 0.23.45 for RUSTSEC-2026-0285, TLS 1.3 handshake
+  messages incorrectly accepted across encryption level boundaries (#576).
+  The lockfile moves; no source changes.
+
 ## [0.1.3] - 2026-09-12
 
 ### Added
