@@ -13,6 +13,13 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- The Licensor and copyright holder of the project's own work is Vernum
+  Projecten B.V. (#569). Every `Licensor:`, copyright and
+  `SPDX-FileCopyrightText` line names the company. The licence terms are
+  unchanged, and maintainer credit stays a person.
+
 ## [0.1.3] - 2026-09-12
 
 ### Added
