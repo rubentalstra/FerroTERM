@@ -21,3 +21,14 @@ on one canonical at one version from two directories).
 Open point: if tooling converges on `http://openehr.org/...`, the doc's
 "a producer mints under a domain it owns" line no longer describes practice.
 Re-check the thread before touching that section. See [[architecture-decisions]].
+
+Update 2026-09-12 (later): the owner posted reply #9 (namespaced shape, major
+version in URL, ac-code and cloned-node questions). Ian (#10) asked for an
+algorithmic scheme without hand slugs. A proposal and proof of concept were
+built in `~/Downloads/openehr-canonical-url-poc/` (README, derive.py,
+derive-rs, run.sh, out/results.md): `http://openehr.org/archetypes/{ihrid_ref}`
+plus `/cs`, `/vs`, `/vs/{ac or node code}`, `/vs/{node}/{sorted,codes}`;
+version in `.version`. Draft post: `~/Downloads/openehr-canonical-url-proposal.md`
+with a LINK-TO-POC-REPO placeholder; the owner decides where to publish the PoC.
+If the community adopts it, `docs/terminologies.md` and the testkit's
+`example.org` URLs need a follow-up issue.
