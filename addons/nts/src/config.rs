@@ -1,0 +1,240 @@
+//! Where the service is, and which of its content a run takes.
+//!
+//! The configuration carries no secret. It names where the credentials are
+//! read from ([`CredentialSource`]) and nothing more, so a configuration file
+//! can be committed, logged, and shown in a run record whole.
+
+use std::collections::BTreeSet;
+use std::path::PathBuf;
+
+use terminology_syndication::model::CategoryTerm;
+use terminology_syndication::select::Subscription;
+
+/// The base URL of the Nationale Terminologie Server.
+pub const NTS_BASE_URL: &str = "https://terminologieserver.nl";
+
+/// The path of the syndication feed under the base URL.
+pub const FEED_PATH: &str = "/synd/syndication.xml";
+
+/// The path of the SMART configuration document under the base URL.
+///
+/// The document is served beside the FHIR endpoint, which is where SMART App
+/// Launch places it: "the well-known URI `.well-known/smart-configuration` of
+/// the FHIR base URL"
+/// (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+pub const DISCOVERY_PATH: &str = "/fhir/.well-known/smart-configuration";
+
+/// The canonical identifiers of the systems the service publishes.
+///
+/// A subscription names systems by canonical identifier, which is what the
+/// feed puts in `ncts:contentItemIdentifier`.
+pub mod canonical {
+    /// SNOMED CT, the Netherlands edition.
+    ///
+    /// The SNOMED CT URI Standard gives an edition the URI
+    /// `http://snomed.info/sct/{moduleId}` and lists `11000146104` as the
+    /// Netherlands edition (<https://confluence.ihtsdotools.org/display/DOCURI>).
+    pub const SNOMED_CT_NL: &str = "http://snomed.info/sct/11000146104";
+
+    /// LOINC, whose canonical the FHIR specification fixes
+    /// (<https://hl7.org/fhir/R4/terminologies-systems.html>).
+    pub const LOINC: &str = "http://loinc.org";
+
+    /// UCUM, whose canonical the FHIR specification fixes
+    /// (<https://hl7.org/fhir/R4/terminologies-systems.html>).
+    pub const UCUM: &str = "http://unitsofmeasure.org";
+
+    /// ICD-10, whose canonical the FHIR specification fixes
+    /// (<https://hl7.org/fhir/R4/terminologies-systems.html>).
+    pub const ICD_10: &str = "http://hl7.org/fhir/sid/icd-10";
+
+    /// The canonicals a run subscribes to unless the configuration names its
+    /// own.
+    pub const DEFAULT: [&str; 4] = [SNOMED_CT_NL, LOINC, UCUM, ICD_10];
+}
+
+// TODO(#581): add the canonical identifiers the feed publishes for the
+// Nederlandse Labcodeset, the NHG tables, and the zib value sets, which are
+// readable only from the live listing.
+
+/// Where the add-on reads its credentials.
+///
+/// A credential never appears in the configuration body, so a deployment
+/// points at a file it mounts or at the process environment.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Deserialize)]
+#[serde(tag = "from", rename_all = "kebab-case", deny_unknown_fields)]
+pub enum CredentialSource {
+    /// The `FERROTERM_NTS_*` environment variables.
+    #[default]
+    Environment,
+    /// A JSON file holding the credential fields.
+    File {
+        /// The file to read.
+        path: PathBuf,
+    },
+}
+
+/// The add-on's configuration.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct NtsConfig {
+    /// The name a run record and a log line give this source.
+    pub name: String,
+    /// The service's base URL, without a trailing slash.
+    pub base_url: String,
+    /// The feed's address, when it is not [`FEED_PATH`] under the base URL.
+    pub feed_url: Option<String>,
+    /// Where the credentials are read from.
+    pub credentials: CredentialSource,
+    /// The canonical identifiers the run takes.
+    pub systems: BTreeSet<String>,
+    /// The category terms the run takes, as the feed writes them.
+    pub categories: BTreeSet<String>,
+}
+
+impl Default for NtsConfig {
+    fn default() -> Self {
+        Self {
+            name: String::from("nts"),
+            base_url: String::from(NTS_BASE_URL),
+            feed_url: None,
+            credentials: CredentialSource::Environment,
+            systems: canonical::DEFAULT
+                .iter()
+                .map(|&s| String::from(s))
+                .collect(),
+            categories: [
+                CategoryTerm::SnomedRf2Snapshot,
+                CategoryTerm::SnomedRf2All,
+                CategoryTerm::FhirCodeSystem,
+                CategoryTerm::FhirValueSet,
+                CategoryTerm::FhirConceptMap,
+                CategoryTerm::FhirBundle,
+            ]
+            .iter()
+            .map(|term| String::from(term.as_str()))
+            .collect(),
+        }
+    }
+}
+
+impl NtsConfig {
+    /// The address of the syndication feed.
+    #[must_use]
+    pub fn feed_url(&self) -> String {
+        self.feed_url
+            .clone()
+            .unwrap_or_else(|| format!("{}{FEED_PATH}", self.base_url.trim_end_matches('/')))
+    }
+
+    /// The address of the SMART configuration document.
+    #[must_use]
+    pub fn discovery_url(&self) -> String {
+        format!("{}{DISCOVERY_PATH}", self.base_url.trim_end_matches('/'))
+    }
+
+    /// The subscription the configuration describes.
+    #[must_use]
+    pub fn subscription(&self) -> Subscription {
+        let mut subscription = Subscription::new();
+        for canonical in &self.systems {
+            subscription = subscription.with_system(canonical.clone());
+        }
+        for term in &self.categories {
+            subscription = subscription.with_category(CategoryTerm::parse(term));
+        }
+        subscription
+    }
+
+    /// The category terms the source is expected to offer, in a stable order.
+    #[must_use]
+    pub fn yields(&self) -> Vec<CategoryTerm> {
+        self.categories
+            .iter()
+            .map(|term| CategoryTerm::parse(term))
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CredentialSource, NtsConfig, canonical};
+    use terminology_syndication::model::CategoryTerm;
+
+    #[test]
+    fn the_default_feed_is_the_service_listing() {
+        let config = NtsConfig::default();
+        assert_eq!(
+            config.feed_url(),
+            "https://terminologieserver.nl/synd/syndication.xml",
+            "the default feed is the one the service publishes"
+        );
+        assert_eq!(
+            config.discovery_url(),
+            "https://terminologieserver.nl/fhir/.well-known/smart-configuration",
+            "discovery sits beside the FHIR endpoint"
+        );
+    }
+
+    #[test]
+    fn another_base_url_moves_both_addresses() {
+        let config = NtsConfig {
+            base_url: String::from("https://apps.example.invalid/ontoserver/"),
+            ..NtsConfig::default()
+        };
+        assert_eq!(
+            config.feed_url(),
+            "https://apps.example.invalid/ontoserver/synd/syndication.xml",
+            "a second deployment is this add-on pointed elsewhere"
+        );
+        assert_eq!(
+            config.discovery_url(),
+            "https://apps.example.invalid/ontoserver/fhir/.well-known/smart-configuration",
+            "discovery follows the base URL"
+        );
+    }
+
+    #[test]
+    fn the_subscription_names_its_systems_by_canonical() {
+        let subscription = NtsConfig::default().subscription();
+        assert!(
+            subscription.systems.admits(canonical::SNOMED_CT_NL),
+            "the Netherlands edition is subscribed by default"
+        );
+        assert!(
+            !subscription
+                .systems
+                .admits("http://example.invalid/CodeSystem/other"),
+            "a system the configuration does not name is outside the subscription"
+        );
+        assert!(
+            subscription
+                .categories
+                .contains(&CategoryTerm::SnomedRf2Snapshot),
+            "the snapshot is what a build reads"
+        );
+        assert!(
+            !subscription.categories.contains(&CategoryTerm::BinaryIndex),
+            "the binary index is never subscribed"
+        );
+    }
+
+    #[test]
+    fn the_configuration_body_carries_no_secret() {
+        let config: NtsConfig = serde_json::from_str(
+            r#"{"name":"nts","credentials":{"from":"file","path":"/run/secrets/nts.json"}}"#,
+        )
+        .expect("the configuration reads");
+        assert_eq!(
+            config.credentials,
+            CredentialSource::File {
+                path: std::path::PathBuf::from("/run/secrets/nts.json")
+            }
+        );
+        let rejected = serde_json::from_str::<NtsConfig>(r#"{"password":"secret"}"#);
+        assert!(
+            rejected.is_err(),
+            "a credential field in the configuration body is refused"
+        );
+    }
+}

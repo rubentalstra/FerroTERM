@@ -46,7 +46,6 @@ fresh link reference.
   race-free; a child whose manifest the server cannot read refuses the reload
   and leaves the served set answering. Two releases of one system under a root
   are both served, and the greatest version stays the default.
-
 - `scripts/checks/addon-boundary.sh`, the guard that keeps `addons/*` optional
   (#582). A source add-on is code the sync service compiles in and nothing else
   links, so the check reads the declared workspace edges from `cargo metadata`
@@ -58,6 +57,21 @@ fresh link reference.
   bites. It runs in CI beside the viewer boundary, and
   `scripts/checks/comment-style.sh --all` now runs there as a job of its own
   rather than only in the per-edit hook.
+- `addons/nts`, the Nationale Terminologie Server source add-on and the first
+  member of the new `addons/*` tree (#581). It reads the token endpoint from the
+  service's SMART configuration document, logs in with the documented password
+  grant (or the client-credentials grant when a client secret is configured),
+  refreshes the access token inside a one-minute margin, and logs in again from
+  the stored credentials when the refresh is refused, so an unattended run on
+  any day needs no person. Credentials come from a file or the environment and
+  never from the configuration body, and no rendering of the configuration, the
+  credentials, or the source prints a secret. The subscription names systems by
+  canonical identifier: an entry outside it is reported as skipped, and a system
+  the service offers only as Ontoserver's binary index is reported as not
+  syndicable. A FHIR resource file whose `experimental` element is the string
+  `"true"` or `"false"` gets the boolean FHIR declares, with the correction
+  returned beside the file; a file that needs nothing lands byte-identical. The
+  add-on is verified against fixtures only until an account exists.
 
 ### Changed
 
