@@ -15,8 +15,8 @@ use fhir_terminology::snomed::{OpenError, SYSTEM, SnomedProvider};
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
     ALTERNATIVE, ANIMAL, CAT, CODES_MAP, COVERING, DOG, EDITION, FISH, FUR, GB_LANGUAGE_REFSET,
-    ICD10_MAP, LEGS, MODULE_CONCEPT, MODULE_DEPENDENCY, NL_LANGUAGE_REFSET, PETS,
-    POSSIBLY_EQUIVALENT_TO, REPLACED_BY, SAME_AS, SCHEME, TOP, VERSION, item, sctid,
+    ICD10_MAP, Item, LEGS, MODULE_CONCEPT, MODULE_DEPENDENCY, NL_LANGUAGE_REFSET, PETS,
+    POSSIBLY_EQUIVALENT_TO, REPLACED_BY, SAME_AS, SCHEME, TOP, VERSION, code, item, sctid,
 };
 
 fn provider() -> (tempfile::TempDir, SnomedProvider) {
@@ -68,7 +68,7 @@ fn locate_accepts_valid_sctids_only() {
         Some(sctid(item(CAT)).as_str())
     );
     // A well-formed SCTID the edition lacks, a wrong check digit, and text: absent, never an error.
-    assert!(p.locate(&sctid(4242)).expect("reads").is_none());
+    assert!(p.locate(&sctid(Item::raw(4242))).expect("reads").is_none());
     let mut wrong = sctid(item(CAT));
     wrong.pop();
     wrong.push('0');
@@ -146,7 +146,10 @@ fn properties_follow_the_snomed_on_fhir_list() {
     };
     assert_eq!(find("inactive"), [&PropertyValue::Boolean(false)]);
     assert_eq!(find("sufficientlyDefined"), [&PropertyValue::Boolean(true)]);
-    assert_eq!(find("moduleId"), [&PropertyValue::Code(sctid(99))]);
+    assert_eq!(
+        find("moduleId"),
+        [&PropertyValue::Code(sctid(Item::raw(99)))]
+    );
     assert_eq!(
         find("effectiveTime"),
         [&PropertyValue::String(String::from("20260101"))]
@@ -536,7 +539,7 @@ fn malformed_and_unknown_implicit_value_sets_are_refused() {
         "a concept that is not a reference set"
     );
     assert!(matches!(
-        p.implicit_value_set(&format!("{base}?fhir_vs=isa/{}", sctid(77)))
+        p.implicit_value_set(&format!("{base}?fhir_vs=isa/{}", sctid(Item::raw(77))))
             .expect("implicit"),
         Err(ProviderError::UnknownCode(_))
     ));
@@ -781,7 +784,7 @@ fn a_post_coordinated_expression_is_refused_for_the_grammar_not_as_an_unknown_co
     // NOTE: SNOMED CT Expressions in Compositional Grammar are valid codes
     // (<https://hl7.org/fhir/R4B/snomedct.html>, "Code"), so a server that will
     // not evaluate one says that instead of reporting an unknown concept.
-    let expression = format!("{}:{}={}", sctid(CAT), sctid(COVERING), sctid(FUR));
+    let expression = format!("{}:{}={}", code(CAT), code(COVERING), code(FUR));
     let input = lookup::LookupInput {
         system: Some(SYSTEM.to_owned()),
         code: Some(expression.clone()),

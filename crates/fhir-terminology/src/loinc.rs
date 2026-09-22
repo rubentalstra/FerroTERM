@@ -8,6 +8,7 @@
 //! hierarchy, and the implicit value sets `http://loinc.org/vs`,
 //! `http://loinc.org/vs/[LL id]`, and `http://loinc.org/vs/[part code]`.
 
+use crate::artifact::MANIFEST_FILE;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
@@ -32,8 +33,6 @@ use crate::provider::{
 
 /// The system URI.
 pub const SYSTEM: &str = "http://loinc.org";
-/// The manifest file of an artifact directory.
-pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest version this provider reads.
 pub const MANIFEST_VERSION: u32 = 2;
 

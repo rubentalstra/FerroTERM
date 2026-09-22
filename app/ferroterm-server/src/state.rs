@@ -1042,7 +1042,7 @@ impl AppState {
             .records
             .get(&key)
             .map_or(1, |held| held.version_id.saturating_add(1));
-        let last_modified = jiff::Timestamp::now().to_string();
+        let last_modified = fhir_terminology::clock::now().to_string();
         stamp(&mut resource, version_id, &last_modified);
         let record = Record {
             resource_type: resource_type.name().to_owned(),
@@ -1376,6 +1376,12 @@ fn artifacts_under(root: &Path) -> Result<Vec<PathBuf>, LoadError> {
 
 /// Opens the artifact directory `path` with the provider its manifest calls
 /// for: SNOMED CT, LOINC, and `RxNorm` by system, a classification by kind.
+///
+/// # Errors
+///
+/// A manifest that is missing, unreadable, or names a system no provider
+/// serves, and an artifact whose files fail to open, are `LoadError::Artifact`
+/// with the path and the cause.
 fn open_artifact(path: &Path, config: &Config) -> Result<Arc<dyn CodeSystemProvider>, LoadError> {
     let described = artifact::describe(path).map_err(|source| LoadError::Artifact {
         path: path.to_path_buf(),

@@ -8,6 +8,10 @@
 //! layout: our own design (`docs/architecture.md` decision 3).
 #![doc(test(attr(deny(warnings))))]
 
+/// The manifest file name inside an artifact directory: the one place the
+/// build tool writes it and every reader reads it from.
+pub const MANIFEST_FILE: &str = "manifest.json";
+
 pub mod builder;
 pub mod column;
 pub mod keys;

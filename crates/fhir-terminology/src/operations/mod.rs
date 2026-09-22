@@ -794,13 +794,14 @@ pub fn at(base: &str, leaf: &str) -> Option<String> {
     })
 }
 
-/// The warning and the status output an inactive concept earns.
+/// The `code-comment` warning for an active concept that is deprecated, with
+/// the `status` output it earns (the ecosystem's `DEPRECATED_CONCEPT_FOUND`);
+/// `None` otherwise.
 ///
-/// The ecosystem asks for a `code-comment` warning beside `inactive = true`,
-/// and for `status` when the system states one
-/// The `code-comment` warning for an active concept whose standards status is
-/// `deprecated`, with the `status` output it earns (the ecosystem's
-/// `DEPRECATED_CONCEPT_FOUND`); `None` otherwise.
+/// A provider states the deprecation through `Status::standards_status`,
+/// from the standards-status extension or from the standard concept
+/// properties (`status = deprecated`, a past `deprecated` or
+/// `deprecationDate`).
 #[must_use]
 pub fn deprecated_note(
     code: &str,
@@ -823,6 +824,10 @@ pub fn deprecated_note(
     ))
 }
 
+/// The warning and the status output an inactive concept earns.
+///
+/// The ecosystem asks for a `code-comment` warning beside `inactive = true`,
+/// and for `status` when the system states one
 /// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>, "Inactive Codes").
 #[must_use]
 pub fn inactive_note(

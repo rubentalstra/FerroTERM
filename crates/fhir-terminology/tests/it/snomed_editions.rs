@@ -20,7 +20,7 @@ use fhir_terminology::valueset::store::ValueSetStore;
 
 use ferroterm_testkit::snomed;
 use ferroterm_testkit::snomed::{
-    ANIMAL, BIRD, CAT, DOG, EDITION, PETS, SAME_AS_SCTID, VERSION, item, sctid,
+    ANIMAL, BIRD, CAT, DOG, EDITION, PETS, SAME_AS_SCTID, VERSION, code,
 };
 
 /// Both synthetic editions, in one registry, with the first as the default.
@@ -98,11 +98,6 @@ impl Editions {
             other => panic!("one version, not {other:?}"),
         }
     }
-}
-
-/// The code of the fixture concept at `ordinal`.
-fn code(ordinal: u32) -> String {
-    sctid(item(ordinal))
 }
 
 /// Every `fhir_vs` form of the FHIR SNOMED CT page, on `base`.

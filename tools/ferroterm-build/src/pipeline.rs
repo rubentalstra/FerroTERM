@@ -37,7 +37,7 @@ use serde_json::json;
 /// The store file name inside the output directory.
 pub const STORE_FILE: &str = "store.redb";
 /// The manifest file name inside the output directory.
-pub const MANIFEST_FILE: &str = "manifest.json";
+pub const MANIFEST_FILE: &str = concept_store::MANIFEST_FILE;
 /// The manifest layout this tool writes.
 pub const MANIFEST_VERSION: u32 = 2;
 /// The hierarchy artifact (`concept-graph`), beside the store.

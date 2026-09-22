@@ -25,7 +25,9 @@ const CODE: &str = "313782";
 
 fn artifact() -> Option<PathBuf> {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts/rxnorm");
-    dir.join("manifest.json").exists().then_some(dir)
+    dir.join(fhir_terminology::artifact::MANIFEST_FILE)
+        .exists()
+        .then_some(dir)
 }
 
 fn reads(c: &mut Criterion) {
