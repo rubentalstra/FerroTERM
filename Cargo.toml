@@ -2,7 +2,7 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/*", "app/*", "tools/*"]
+members = ["crates/*", "addons/*", "app/*", "tools/*"]
 # The fuzz targets build under nightly with sanitizers; the workspace stays on
 # the pinned stable toolchain (fuzz/README.md). The browser journeys are
 # excluded for a different reason, recorded in e2e/Cargo.toml: their WebDriver

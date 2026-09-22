@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: BUSL-1.1
+[package]
+name = "addon-nts"
+description = "The Nationale Terminologie Server source add-on for the FerroTERM sync service"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+# An add-on is compiled into the sync service and never uploaded, and the bare
+# name `nts` belongs to another project on crates.io.
+publish = false
+
+[dependencies]
+jiff.workspace = true
+# `form` carries the token request: OAuth 2 sends its parameters as
+# `application/x-www-form-urlencoded` (RFC 6749 §4.3.2).
+reqwest = { workspace = true, features = ["form"] }
+serde.workspace = true
+serde_json.workspace = true
+terminology-syndication.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["fs", "sync"] }
+tracing.workspace = true
+
+[dev-dependencies]
+sha2.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["fs", "sync", "rt-multi-thread", "macros"] }
+wiremock.workspace = true
+
+[lints]
+workspace = true

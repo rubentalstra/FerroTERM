@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:ncts="http://ns.electronichealth.net.au/ncts/syndication/asf/extensions/1.0.0"
+      xmlns:onto="http://ontoserver.csiro.au/syndication/">
+  <title>Synthetic Syndication Feed</title>
+  <link rel="self" type="application/atom+xml" href="https://example.invalid/synd/syndication.xml" length="0"/>
+  <id>urn:uuid:aaaaaaaa-0000-4000-8000-000000000000</id>
+  <generator version="1.0">Synthetic Terminology Server</generator>
+  <updated>2026-04-01T00:00:00Z</updated>
+  <ncts:atomSyndicationFormatProfile>http://ns.electronichealth.net.au/ncts/syndication/asf/profile/1.0.0</ncts:atomSyndicationFormatProfile>
+  <entry>
+    <title>Netherlands Edition 31 March 2026 (RF2 SNAPSHOT)</title>
+    <link rel="alternate" type="application/zip" href="https://example.invalid/content/edition-20260331-snapshot.zip" length="1024" ncts:sha256Hash="aa11bb22cc33dd44ee55ff6677889900aa11bb22cc33dd44ee55ff6677889900"/>
+    <category term="SCT_RF2_SNAPSHOT" label="SNOMED CT RF2 Snapshot" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:11111111-1111-4111-8111-111111111111</id>
+    <updated>2026-03-31T09:00:00Z</updated>
+    <published>2026-03-31T09:00:00Z</published>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/11000146104</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/11000146104/version/20260331</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>Netherlands Edition 31 March 2026 (index)</title>
+    <link rel="alternate" type="application/octet-stream" href="https://example.invalid/content/edition-20260331-index.bin" length="2048" ncts:sha256Hash="bb11bb22cc33dd44ee55ff6677889900aa11bb22cc33dd44ee55ff6677889900"/>
+    <category term="BINARY" label="Binary index" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:22222222-2222-4222-8222-222222222222</id>
+    <updated>2026-03-31T09:30:00Z</updated>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/11000146104</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/11000146104/version/20260331</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>Laboratory Codes 2.83 (index)</title>
+    <link rel="alternate" type="application/octet-stream" href="https://example.invalid/content/loinc-283-index.bin" length="512" ncts:sha256Hash="cc11bb22cc33dd44ee55ff6677889900aa11bb22cc33dd44ee55ff6677889900"/>
+    <category term="BINARY" label="Binary index" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:33333333-3333-4333-8333-333333333333</id>
+    <updated>2026-02-14T09:00:00Z</updated>
+    <ncts:contentItemIdentifier>http://loinc.org</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>2.83</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>Units of Measure 2026-01</title>
+    <link rel="alternate" type="application/fhir+json" href="https://example.invalid/content/CodeSystem-ucum.json" length="256" ncts:sha256Hash="dd11bb22cc33dd44ee55ff6677889900aa11bb22cc33dd44ee55ff6677889900"/>
+    <category term="FHIR_CodeSystem" label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:44444444-4444-4444-8444-444444444444</id>
+    <updated>2026-01-15T09:00:00Z</updated>
+    <ncts:contentItemIdentifier>http://unitsofmeasure.org</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>2026-01</ncts:contentItemVersion>
+    <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+  </entry>
+  <entry>
+    <title>A Value Set Nothing Subscribes To</title>
+    <link rel="alternate" type="application/fhir+json" href="https://example.invalid/content/ValueSet-other.json" length="128" ncts:sha256Hash="ee11bb22cc33dd44ee55ff6677889900aa11bb22cc33dd44ee55ff6677889900"/>
+    <category term="FHIR_ValueSet" label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:55555555-5555-4555-8555-555555555555</id>
+    <updated>2026-01-15T09:00:00Z</updated>
+    <ncts:contentItemIdentifier>https://example.invalid/fhir/ValueSet/other</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+    <onto:permission code="restricted.read"/>
+  </entry>
+</feed>

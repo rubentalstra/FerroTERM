@@ -52,14 +52,14 @@ case "$mode" in
   # not yet staged would still be listed — skip it rather than letting awk
   # fail on a missing path.
   while IFS= read -r f; do [[ -f "$f" ]] && files+=("$f"); done \
-    < <(git ls-files 'crates/*.rs' 'app/*.rs' 'tools/*.rs')
+    < <(git ls-files 'crates/*.rs' 'addons/*.rs' 'app/*.rs' 'tools/*.rs')
   ;;
 --diff)
   base="${2:?usage: --diff <base> [head]}"
   head="${3:-HEAD}"
   while IFS= read -r f; do
     [[ -f "$f" ]] && files+=("$f")
-  done < <(git diff --name-only "$base" "$head" -- 'crates/*.rs' 'app/*.rs' 'tools/*.rs')
+  done < <(git diff --name-only "$base" "$head" -- 'crates/*.rs' 'addons/*.rs' 'app/*.rs' 'tools/*.rs')
   ;;
 --files)
   shift

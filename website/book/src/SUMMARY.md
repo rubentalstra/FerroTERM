@@ -19,6 +19,7 @@
 - [The viewer](operate/viewer.md)
 - [Configuration](operate/configuration.md)
 - [Loading code systems](operate/loading-snomed.md)
+- [Syncing from a national terminology service](operate/sync.md)
 - [Hardware sizing](operate/hardware-sizing.md)
 - [Behind a reverse proxy](operate/reverse-proxy.md)
 - [Health, metrics, and request identifiers](operate/observability.md)
