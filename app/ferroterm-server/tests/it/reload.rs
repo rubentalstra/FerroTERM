@@ -381,3 +381,222 @@ fn an_unset_address_configures_no_admin_listener() {
         ferroterm_server::config::ADMIN_LISTEN_ENV
     );
 }
+/// The SNOMED CT system every index-root case below serves.
+const SNOMED: &str = "http://snomed.info/sct";
+
+/// The versions `GET /r4b/metadata?mode=terminology` names for `system`.
+async fn terminology_versions(router: &Router, system: &str) -> Vec<String> {
+    let (status, body) = get(router, "/r4b/metadata?mode=terminology").await;
+    assert_eq!(status, StatusCode::OK, "the statement answers");
+    body.get("codeSystem")
+        .and_then(Value::as_array)
+        .map(|systems| {
+            systems
+                .iter()
+                .filter(|entry| entry.get("uri").and_then(Value::as_str) == Some(system))
+                .filter_map(|entry| entry.get("version").and_then(Value::as_array))
+                .flatten()
+                .filter_map(|version| version.get("code").and_then(Value::as_str))
+                .map(ToOwned::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The two releases a root holds once both are in place.
+fn both_releases() -> Vec<String> {
+    vec![
+        String::from(ferroterm_testkit::snomed::VERSION),
+        ferroterm_testkit::snomed::later_version(),
+    ]
+}
+
+/// `$lookup` of the concept only the later release carries.
+fn bird_lookup() -> String {
+    let bird = ferroterm_testkit::snomed::sctid(ferroterm_testkit::snomed::item(
+        ferroterm_testkit::snomed::BIRD,
+    ));
+    format!("/r4b/CodeSystem/$lookup?system={SNOMED}&code={bird}")
+}
+
+/// A root under `dir` holding the first release as a child directory.
+fn root_with_first_release(dir: &std::path::Path) -> std::path::PathBuf {
+    let root = dir.join("index");
+    let first = root.join("20260101");
+    std::fs::create_dir_all(&first).expect("creates");
+    ferroterm_testkit::snomed::write(&first).expect("writes the edition");
+    root
+}
+
+/// The later release, written as a child of `root`.
+fn later_release_under(root: &std::path::Path) -> std::path::PathBuf {
+    let later = root.join("20260301");
+    std::fs::create_dir_all(&later).expect("creates");
+    ferroterm_testkit::snomed::write_later(&later).expect("writes the later release");
+    later
+}
+
+#[tokio::test]
+async fn an_index_root_serves_every_child_directory_that_holds_a_manifest() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = root_with_first_release(dir.path());
+    later_release_under(&root);
+    // A child the sync has not finished writing, and a file beside the
+    // releases: neither holds a manifest, so neither is an artifact.
+    std::fs::create_dir_all(root.join("incoming")).expect("creates");
+    std::fs::write(root.join("RETENTION"), b"two releases\n").expect("writes");
+
+    let serving = serving(Config {
+        index: vec![root],
+        ..Config::default()
+    });
+    let router = ferroterm_server::router(serving);
+
+    assert_eq!(
+        terminology_versions(&router, SNOMED).await,
+        both_releases(),
+        "both releases under the root are served"
+    );
+    let (status, body) = get(&router, &bird_lookup()).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "the greatest version is still the default: {body}"
+    );
+}
+
+#[tokio::test]
+async fn a_child_added_under_a_root_is_served_after_a_reload() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = root_with_first_release(dir.path());
+    let serving = serving(Config {
+        index: vec![root.clone()],
+        ..Config::default()
+    });
+    let router = ferroterm_server::router(serving.clone());
+    assert_eq!(
+        get(&router, &bird_lookup()).await.0,
+        StatusCode::BAD_REQUEST,
+        "the first release does not carry the concept"
+    );
+
+    // The release is written beside the root and renamed in, which is one
+    // atomic step
+    // (<https://pubs.opengroup.org/onlinepubs/9699919799/functions/rename.html>).
+    let staged = dir.path().join("staged");
+    std::fs::create_dir_all(&staged).expect("creates");
+    ferroterm_testkit::snomed::write_later(&staged).expect("writes the later release");
+    std::fs::rename(&staged, root.join("20260301")).expect("renames");
+    let served = serving.reload().expect("the new set builds");
+
+    assert!(
+        served
+            .iter()
+            .any(|system| system.version == ferroterm_testkit::snomed::later_version()),
+        "{served:?}"
+    );
+    assert_eq!(
+        terminology_versions(&router, SNOMED).await,
+        both_releases(),
+        "the swapped set is what metadata describes"
+    );
+    let (status, body) = get(&router, &bird_lookup()).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}
+
+#[tokio::test]
+async fn a_child_removed_from_a_root_leaves_the_served_set_after_a_reload() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = root_with_first_release(dir.path());
+    let later = later_release_under(&root);
+    let serving = serving(Config {
+        index: vec![root],
+        ..Config::default()
+    });
+    let router = ferroterm_server::router(serving.clone());
+    assert_eq!(get(&router, &bird_lookup()).await.0, StatusCode::OK);
+
+    std::fs::remove_dir_all(&later).expect("removes");
+    let served = serving.reload().expect("the new set builds");
+
+    assert!(
+        !served
+            .iter()
+            .any(|system| system.version == ferroterm_testkit::snomed::later_version()),
+        "{served:?}"
+    );
+    assert_eq!(
+        terminology_versions(&router, SNOMED).await,
+        vec![String::from(ferroterm_testkit::snomed::VERSION)],
+        "the retired release leaves the statement"
+    );
+    assert_eq!(
+        get(&router, &bird_lookup()).await.0,
+        StatusCode::BAD_REQUEST,
+        "and the concept it carried is served no more"
+    );
+}
+
+#[tokio::test]
+async fn a_child_without_a_manifest_is_ignored_until_the_manifest_lands() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = root_with_first_release(dir.path());
+    let serving = serving(Config {
+        index: vec![root.clone()],
+        ..Config::default()
+    });
+    let router = ferroterm_server::router(serving.clone());
+
+    // A child written in place with its manifest still to come: what a copy
+    // into the root looks like halfway through.
+    let half = later_release_under(&root);
+    let manifest = std::fs::read(half.join("manifest.json")).expect("reads");
+    std::fs::remove_file(half.join("manifest.json")).expect("removes");
+    serving.reload().expect("the new set builds");
+
+    assert_eq!(
+        terminology_versions(&router, SNOMED).await,
+        vec![String::from(ferroterm_testkit::snomed::VERSION)],
+        "the half-written child is passed over"
+    );
+    assert_eq!(
+        get(&router, &bird_lookup()).await.0,
+        StatusCode::BAD_REQUEST
+    );
+
+    std::fs::write(half.join("manifest.json"), manifest).expect("writes");
+    serving.reload().expect("the new set builds");
+
+    assert_eq!(
+        terminology_versions(&router, SNOMED).await,
+        both_releases(),
+        "and is served once its manifest is there"
+    );
+    assert_eq!(get(&router, &bird_lookup()).await.0, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn a_broken_child_under_a_root_refuses_the_reload_and_the_old_set_still_answers() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = root_with_first_release(dir.path());
+    let later = later_release_under(&root);
+    let serving = serving(Config {
+        index: vec![root],
+        ..Config::default()
+    });
+    let router = ferroterm_server::router(serving.clone());
+    let before = terminology_versions(&router, SNOMED).await;
+
+    std::fs::write(later.join("manifest.json"), b"{ not a manifest").expect("writes");
+    let refused = serving.reload().expect_err("a damaged child does not load");
+
+    let reason = format!("{refused}");
+    assert!(reason.contains("does not load"), "{reason}");
+    assert_eq!(
+        terminology_versions(&router, SNOMED).await,
+        before,
+        "the old set keeps answering"
+    );
+    let (status, body) = get(&router, &bird_lookup()).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}

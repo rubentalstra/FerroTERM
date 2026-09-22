@@ -40,13 +40,26 @@ pub struct Description {
     pub kind: Option<String>,
 }
 
+/// The file name of an artifact's manifest.
+///
+/// A directory holding one is an artifact; a directory holding none is either
+/// a root whose children are artifacts or a staging directory a build has not
+/// finished writing.
+pub const MANIFEST_FILE: &str = "manifest.json";
+
+/// Whether `dir` holds an artifact manifest.
+#[must_use]
+pub fn is_artifact(dir: &Path) -> bool {
+    dir.join(MANIFEST_FILE).is_file()
+}
+
 /// The system and kind of the artifact under `dir`, from its manifest.
 ///
 /// # Errors
 ///
 /// Returns [`ArtifactError`] when the manifest does not read or names no system.
 pub fn describe(dir: &Path) -> Result<Description, ArtifactError> {
-    let path = dir.join("manifest.json");
+    let path = dir.join(MANIFEST_FILE);
     let text = std::fs::read_to_string(&path).map_err(|source| ArtifactError::Io {
         path: path.clone(),
         source,
