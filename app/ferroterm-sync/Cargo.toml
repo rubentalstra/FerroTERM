@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: BUSL-1.1
+[package]
+name = "ferroterm-sync"
+description = "The FerroTERM synchronisation service: one way from a terminology syndication feed into a running FerroTERM"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# A thin main.rs over a testable lib.rs (.claude/rules/testing.md).
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "ferroterm-sync"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+clap.workspace = true
+jiff.workspace = true
+prometheus-client.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+terminology-syndication.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["fs", "io-util", "process", "sync", "time"] }
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["fs", "io-util", "process", "sync", "time"] }
+wiremock.workspace = true
+
+[lints]
+workspace = true
