@@ -9,7 +9,7 @@
 use axum::body::Body;
 use axum::response::{IntoResponse, Response};
 use fhir_types::codec::Object;
-use fhir_types::xml::Schemas;
+use fhir_types::schema::Schemas;
 use http::header::CONTENT_TYPE;
 use http::{HeaderMap, StatusCode};
 

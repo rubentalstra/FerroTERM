@@ -25,12 +25,13 @@ pub const VERSIONS: [&str; 4] = [
 ///
 /// # Errors
 ///
-/// Returns what the codec or the conversion refused, as text, and says so when
-/// `fhir_version` is not one this server serves.
+/// Returns the codec's refusal with its element path, what the conversion
+/// refused as text, and says so when `fhir_version` is not one this server
+/// serves.
 pub fn loaded_of(
     fhir_version: &str,
     object: &fhir_types::codec::Object,
-) -> Result<crate::scope::Loaded, String> {
+) -> Result<crate::scope::Loaded, ReadError> {
     if fhir_version == crate::r4::metadata::FHIR_VERSION {
         crate::r4::resources::model_of(object)
     } else if fhir_version == crate::r4b::metadata::FHIR_VERSION {
@@ -40,10 +41,22 @@ pub fn loaded_of(
     } else if fhir_version == crate::r6::metadata::FHIR_VERSION {
         crate::r6::resources::model_of(object)
     } else {
-        Err(format!(
+        Err(ReadError::Convert(format!(
             "`{fhir_version}` is not a FHIR version this server serves"
-        ))
+        )))
     }
+}
+
+/// Why a stored object does not read as a model this server serves.
+#[derive(Debug, thiserror::Error)]
+pub enum ReadError {
+    /// The codec refused the object: a shape or a primitive outside its
+    /// lexical form, with the element path.
+    #[error(transparent)]
+    Decode(fhir_types::codec::DecodeError),
+    /// The object decoded and the conversion to the model refused it.
+    #[error("{0}")]
+    Convert(String),
 }
 
 pub(crate) mod batch;

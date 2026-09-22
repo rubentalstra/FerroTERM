@@ -753,7 +753,6 @@
       "uri": "urn:ietf:bcp:13",
       "version": [
         {
-          "code": "",
           "compositional": true,
           "filter": [
             {
@@ -905,7 +904,7 @@
       ]
     }
   ],
-  "date": "2026-09-12T13:54:48.473627Z",
+  "date": "2026-09-22T22:57:38.735786Z",
   "expansion": {
     "hierarchical": false,
     "incomplete": false,

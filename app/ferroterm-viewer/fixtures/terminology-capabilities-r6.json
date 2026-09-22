@@ -797,8 +797,7 @@
           "property": [
             "base",
             "registered"
-          ],
-          "value": ""
+          ]
         }
       ]
     },
@@ -921,7 +920,7 @@
       ]
     }
   ],
-  "date": "2026-09-12T13:54:48.504808Z",
+  "date": "2026-09-22T22:57:38.751209Z",
   "description": "Serves the FHIR R6 ballot (version 6.0.0-ballot5). Every behaviour grounded only in the ballot is re-verified against the published specification when it appears, and may change with it.",
   "expansion": {
     "hierarchical": false,

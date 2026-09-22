@@ -2,7 +2,8 @@
 //! format on every route (<https://hl7.org/fhir/R4B/http.html#mime-type>).
 
 use ferroterm_testkit::fhir::{ANIMALS, VS_ALL, VS_PETS};
-use fhir_types::xml::{Schemas, from_xml, to_xml};
+use fhir_types::schema::Schemas;
+use fhir_types::xml::{from_xml, to_xml};
 use http::StatusCode;
 use serde_json::{Value, json};
 

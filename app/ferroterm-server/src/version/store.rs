@@ -19,7 +19,7 @@ use fhir_terminology::fhir_codesystem::model::CodeSystemModel;
 use fhir_terminology::provider::CodeSystemProvider;
 use fhir_terminology::valueset::model::ValueSetModel;
 use fhir_types::codec::{Object, expect_object};
-use fhir_types::xml::Schemas;
+use fhir_types::schema::Schemas;
 use http::header::{CONTENT_TYPE, ETAG, IF_MATCH, LAST_MODIFIED, LOCATION};
 use http::{HeaderMap, HeaderValue, StatusCode};
 
@@ -447,12 +447,19 @@ fn gone_or_missing(request: &Request<'_>, id: &str) -> Failure {
 pub(crate) fn persist_failure(error: &PersistError) -> Failure {
     let (status, code) = match error {
         PersistError::NotConfigured => (StatusCode::UNPROCESSABLE_ENTITY, "not-supported"),
-        PersistError::Convert { .. } | PersistError::Layer(_) => {
+        // NOTE: a resource that "failed basic FHIR validation rules", a shape or a
+        // primitive outside its lexical form, is a 400
+        // (<https://hl7.org/fhir/R4B/http.html#2.21.0.10.1>); 422 is for profiles and business rules.
+        PersistError::Decode { .. } | PersistError::Convert { .. } | PersistError::Layer(_) => {
             (StatusCode::BAD_REQUEST, "invalid")
         }
         PersistError::Store(_) => (StatusCode::INTERNAL_SERVER_ERROR, "exception"),
     };
-    Failure::new(status, code, error.to_string())
+    let failure = Failure::new(status, code, error.to_string());
+    match error {
+        PersistError::Decode { source, .. } => failure.at(source.path.clone()),
+        _ => failure,
+    }
 }
 
 /// The ids of the value sets the deployment loaded that `query` matches, the
@@ -933,7 +940,7 @@ macro_rules! store {
                 for record in crate::version::store::matches(state, resource_type, query)? {
                     let object = crate::version::store::rendered(&request, &record)?;
                     let resource = super::resources::resource_of(&object)
-                        .map_err(|reason| crate::version::store::rendering(&reason))?;
+                        .map_err(|reason| crate::version::store::rendering(&reason.to_string()))?;
                     entry.push(found(
                         &format!("{}/{}", resource_type.name(), record.id),
                         resource,

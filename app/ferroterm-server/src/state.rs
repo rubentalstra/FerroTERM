@@ -435,6 +435,19 @@ pub enum PersistError {
     /// The resource does not layer over the loaded state.
     #[error(transparent)]
     Layer(#[from] LayerError),
+    /// A stored resource does not decode as a resource of its FHIR version:
+    /// a shape the version does not define, or a primitive outside its
+    /// lexical form.
+    #[error("the persisted {resource_type}/{id} does not decode: {source}")]
+    Decode {
+        /// The resource type.
+        resource_type: String,
+        /// The logical id.
+        id: String,
+        /// The codec's refusal, with the element path.
+        #[source]
+        source: fhir_types::codec::DecodeError,
+    },
     /// A stored resource does not convert into a model this server serves.
     #[error("the persisted {resource_type}/{id} does not convert: {reason}")]
     Convert {
@@ -1141,13 +1154,21 @@ fn layered(
     }
     let mut layer = base.clone();
     for ((resource_type, id), record) in records {
-        let resource = crate::version::loaded_of(&record.fhir_version, &record.resource).map_err(
-            |reason| PersistError::Convert {
-                resource_type: resource_type.name().to_owned(),
-                id: id.clone(),
-                reason,
-            },
-        )?;
+        let resource =
+            crate::version::loaded_of(&record.fhir_version, &record.resource).map_err(|error| {
+                match error {
+                    crate::version::ReadError::Decode(source) => PersistError::Decode {
+                        resource_type: resource_type.name().to_owned(),
+                        id: id.clone(),
+                        source,
+                    },
+                    crate::version::ReadError::Convert(reason) => PersistError::Convert {
+                        resource_type: resource_type.name().to_owned(),
+                        id: id.clone(),
+                        reason,
+                    },
+                }
+            })?;
         layer.apply(&resource)?;
     }
     Ok(Arc::new(layer))

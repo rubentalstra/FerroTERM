@@ -152,6 +152,16 @@ fresh link reference.
 
 ### Changed
 
+- `fhir-types` 0.1.105 (#611). The generated codec now refuses a primitive
+  outside its lexical form at decode time, with the regex read per FHIR
+  version from the HL7 package (`structuredefinition-regex`): a `dateTime`
+  that is no date, a `code` with a leading space, a `uri` with whitespace. On
+  the write path a `POST` or `PUT` of such a resource answers `400 invalid`
+  with the element path in `issue.expression` (a resource that "failed basic
+  FHIR validation rules", <https://hl7.org/fhir/R4B/http.html>), and the
+  path names the resource type (`CodeSystem.date`). R4, R4B, and the R6
+  ballot require the timezone offset when a `dateTime` carries a time; R5
+  makes it optional, as the packages state.
 - Engine fixes, in one change: a concept property whose value element carries
   no value is a property the resource does not state, never an empty string, a
   zero, or `false`, and a concept or property without a code is refused as a

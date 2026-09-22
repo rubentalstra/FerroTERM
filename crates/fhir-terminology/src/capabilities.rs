@@ -318,7 +318,11 @@ macro_rules! r5_family_capabilities {
                             .collect(),
                         ..Default::default()
                     };
-                    r5_family_capabilities!(@version_code $flavour, entry, version.code.as_str().into());
+                    // NOTE: a FHIR `string` is never empty (<https://hl7.org/fhir/R4B/datatypes.html#string>),
+                    // so a system without a version declares no `version.code`.
+                    if !version.code.is_empty() {
+                        r5_family_capabilities!(@version_code $flavour, entry, version.code.as_str().into());
+                    }
                     entry
                 };
                 TerminologyCapabilities {
@@ -407,7 +411,8 @@ macro_rules! terminology_capabilities {
                                     extension: self::$module::declaration(
                                         version.artifact.as_ref(),
                                     ),
-                                    code: Some(version.code.as_str().into()),
+                                    code: (!version.code.is_empty())
+                                        .then(|| version.code.as_str().into()),
                                     is_default: Some(version.is_default.into()),
                                     compositional: Some(version.compositional.into()),
                                     language: common_languages(&version.languages)
