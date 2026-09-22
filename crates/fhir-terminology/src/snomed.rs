@@ -10,6 +10,7 @@
 //! store. Reads are point reads and bitmap lookups; nothing walks the graph
 //! per request.
 
+use crate::artifact::MANIFEST_FILE;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::io;
@@ -66,8 +67,6 @@ const FHIR_CM: &str = "fhir_cm";
 /// term (<http://snomed.org/scg>). A concept reference alone carries none of
 /// them, so their presence is what separates an expression from an SCTID.
 const SCG_OPERATORS: [char; 8] = ['+', ':', '=', '{', '}', ',', '|', '<'];
-/// The manifest file inside an artifact directory.
-pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest version this provider reads: the store beside the hierarchy
 /// and the designation index as their own files.
 pub const MANIFEST_VERSION: u32 = 2;

@@ -94,34 +94,35 @@ macro_rules! convert_code_system {
             use super::{PARENT, SUBSUMED_BY, note_parent, text};
             use crate::provider::{Designation, Property, PropertyValue};
 
-            fn property_value(value: &CodeSystemConceptPropertyValue) -> PropertyValue {
-                match value {
+            // NOTE: a primitive whose `value` is absent is legal FHIR
+            // (<https://hl7.org/fhir/R5/json.html#primitive>), so the property is one
+            // the resource does not state, never an empty string, a zero, or `false`.
+            fn property_value(value: &CodeSystemConceptPropertyValue) -> Option<PropertyValue> {
+                Some(match value {
                     CodeSystemConceptPropertyValue::Code(c) => {
-                        PropertyValue::Code(text(c.value.as_deref()).unwrap_or_default())
+                        PropertyValue::Code(text(c.value.as_deref())?)
                     }
                     CodeSystemConceptPropertyValue::Coding(c) => PropertyValue::Coding {
-                        system: text(c.system.as_ref().and_then(|s| s.value.as_deref()))
-                            .unwrap_or_default(),
-                        code: text(c.code.as_ref().and_then(|s| s.value.as_deref()))
-                            .unwrap_or_default(),
+                        system: text(c.system.as_ref().and_then(|s| s.value.as_deref()))?,
+                        code: text(c.code.as_ref().and_then(|s| s.value.as_deref()))?,
                         display: text(c.display.as_ref().and_then(|s| s.value.as_deref())),
                     },
                     CodeSystemConceptPropertyValue::String(s) => {
-                        PropertyValue::String(text(s.value.as_deref()).unwrap_or_default())
+                        PropertyValue::String(text(s.value.as_deref())?)
                     }
                     CodeSystemConceptPropertyValue::Integer(i) => {
-                        PropertyValue::Integer(i.value.map_or(0, i64::from))
+                        PropertyValue::Integer(i64::from(i.value?))
                     }
                     CodeSystemConceptPropertyValue::Boolean(b) => {
-                        PropertyValue::Boolean(b.value.unwrap_or(false))
+                        PropertyValue::Boolean(b.value?)
                     }
                     CodeSystemConceptPropertyValue::DateTime(d) => {
-                        PropertyValue::DateTime(text(d.value.as_deref()).unwrap_or_default())
+                        PropertyValue::DateTime(text(d.value.as_deref())?)
                     }
                     CodeSystemConceptPropertyValue::Decimal(d) => {
-                        PropertyValue::Decimal(text(d.value.as_deref()).unwrap_or_default())
+                        PropertyValue::Decimal(text(d.value.as_deref())?)
                     }
-                }
+                })
             }
 
             // NOTE: `structuredefinition-standards-status` on a concept or a designation
@@ -171,16 +172,25 @@ macro_rules! convert_code_system {
                 concepts: &[CodeSystemConcept],
                 enclosing: Option<&str>,
                 out: &mut Vec<ConceptEntry>,
-            ) {
+            ) -> Result<(), ModelError> {
                 for concept in concepts {
-                    let code = text(concept.code.value.as_deref()).unwrap_or_default();
+                    let code = text(concept.code.value.as_deref()).ok_or_else(|| {
+                        ModelError::ConceptCode {
+                            under: enclosing.map(str::to_owned),
+                        }
+                    })?;
                     let mut properties = Vec::new();
                     let mut parents: Vec<String> =
                         enclosing.map(str::to_owned).into_iter().collect();
                     for property in &concept.property {
-                        let property_code =
-                            text(property.code.value.as_deref()).unwrap_or_default();
-                        let value = property_value(&property.value);
+                        let property_code = text(property.code.value.as_deref()).ok_or_else(
+                            || ModelError::PropertyCode {
+                                concept: code.clone(),
+                            },
+                        )?;
+                        let Some(value) = property_value(&property.value) else {
+                            continue;
+                        };
                         if property_code == PARENT || property_code == SUBSUMED_BY {
                             note_parent(&mut parents, value.as_text());
                         }
@@ -201,15 +211,17 @@ macro_rules! convert_code_system {
                         properties,
                         parents,
                     });
-                    flatten(&concept.concept, Some(&code), out);
+                    flatten(&concept.concept, Some(&code), out)?;
                 }
+                Ok(())
             }
 
             /// Reduces a `CodeSystem` of this FHIR version to the model.
             ///
             /// # Errors
             ///
-            /// Returns [`ModelError`] for a resource without a `url`, an unknown
+            /// Returns [`ModelError`] for a resource without a `url`, a concept or a
+            /// property without a code, an unknown
             /// `content`, `hierarchyMeaning`, property type, or filter operator,
             /// a duplicated code, or a parent the resource does not define.
             pub fn convert(resource: &CodeSystem) -> Result<CodeSystemModel, ModelError> {
@@ -240,7 +252,7 @@ macro_rules! convert_code_system {
                     )?);
                 }
                 let mut concepts = Vec::new();
-                flatten(&resource.concept, None, &mut concepts);
+                flatten(&resource.concept, None, &mut concepts)?;
                 let flag = |value: &Option<fhir_types::$module::primitives::Boolean>, default: bool| {
                     value.as_ref().and_then(|b| b.value).unwrap_or(default)
                 };

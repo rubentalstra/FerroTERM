@@ -12,6 +12,7 @@
 //! served (`TTY`, `SAB`, `STY`, the `RXNORM` attributes, the relationships)
 //! are our own design.
 
+use crate::artifact::MANIFEST_FILE;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
@@ -36,8 +37,6 @@ use crate::provider::{
 
 /// The system URI.
 pub const SYSTEM: &str = "http://www.nlm.nih.gov/research/umls/rxnorm";
-/// The manifest file of an artifact directory.
-pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest version this provider reads.
 pub const MANIFEST_VERSION: u32 = 2;
 /// The properties with an inverted index, which are also the FHIR filters

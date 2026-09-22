@@ -88,7 +88,7 @@ fn local(c: &mut Criterion) {
     let built: Vec<std::path::PathBuf> = ["rxnorm", "nl"]
         .iter()
         .map(|name| root.join(name))
-        .filter(|dir| dir.join("manifest.json").exists())
+        .filter(|dir| dir.join(fhir_terminology::artifact::MANIFEST_FILE).exists())
         .collect();
     if built.is_empty() {
         eprintln!("no local artifacts: skipping the served read benchmarks");

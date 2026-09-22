@@ -15,6 +15,7 @@
 //! stem before it, else a new stem) are the suite's, recorded in its
 //! documentation; no FHIR specification governs them.
 
+use crate::artifact::MANIFEST_FILE;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::{PoisonError, RwLock};
@@ -43,8 +44,6 @@ use crate::registries::interned::Interned;
 
 /// The manifest `kind` of an artifact this provider opens.
 pub const KIND: &str = "icd11";
-/// The manifest file of an artifact directory.
-pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest version this provider reads.
 pub const MANIFEST_VERSION: u32 = 2;
 /// The designation use ordinal of the title.

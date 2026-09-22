@@ -8,8 +8,8 @@ use concept_graph::ordinal::Ordinal;
 use roaring::RoaringBitmap;
 
 use super::model::{
-    CHILD, CodeSystemModel, ConceptEntry, INACTIVE, NOT_SELECTABLE, PARENT, RETIRED,
-    RETIREMENT_DATE, STATUS,
+    CHILD, CodeSystemModel, ConceptEntry, DEPRECATED, DEPRECATION_DATE, INACTIVE, NOT_SELECTABLE,
+    PARENT, RETIRED, RETIREMENT_DATE, STATUS,
 };
 use crate::filter::Filter;
 use crate::provider::{
@@ -224,6 +224,7 @@ impl FhirCodeSystem {
         let mut flagged = false;
         let mut stated_retired = false;
         let mut retired_by_date = false;
+        let mut deprecated = false;
         let mut at: Option<jiff::Timestamp> = None;
         for property in &entry.properties {
             match (property.code.as_str(), &property.value) {
@@ -232,11 +233,16 @@ impl FhirCodeSystem {
                 // used", so no deprecation marker retires one
                 // (<https://hl7.org/fhir/R5/codesystem-concept-properties.html>).
                 (STATUS, PropertyValue::Code(status)) if status == RETIRED => stated_retired = true,
+                (STATUS, PropertyValue::Code(status)) if status == DEPRECATED => deprecated = true,
+                (DEPRECATED | DEPRECATION_DATE, PropertyValue::DateTime(date)) => {
+                    let now = *at.get_or_insert_with(crate::clock::now);
+                    deprecated = deprecated || retires_at(date, now);
+                }
                 (RETIREMENT_DATE, PropertyValue::DateTime(date)) => {
                     // NOTE: no FHIR/SNOMED spec governs this: our own design
                     // reads the date as at the request, once per concept, and
                     // a value that is no `dateTime` as a retirement in force.
-                    let now = *at.get_or_insert_with(jiff::Timestamp::now);
+                    let now = *at.get_or_insert_with(crate::clock::now);
                     retired_by_date = retired_by_date || retires_at(date, now);
                 }
                 (code, PropertyValue::Boolean(true)) if self.abstract_property(code) => {
@@ -258,8 +264,15 @@ impl FhirCodeSystem {
         } else {
             None
         };
+        // NOTE: a deprecation stated through the standard properties earns the
+        // standards-status extension's note and nothing more, the concept stays
+        // active (<https://hl7.org/fhir/R5/codesystem-concept-properties.html>).
+        let standards_status = entry
+            .standards_status
+            .clone()
+            .or_else(|| (deprecated && reason.is_none()).then(|| DEPRECATED.to_owned()));
         Status {
-            standards_status: entry.standards_status.clone(),
+            standards_status,
             active: reason.is_none(),
             inactive_reason: reason,
             abstract_concept,

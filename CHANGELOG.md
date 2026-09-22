@@ -123,6 +123,17 @@ fresh link reference.
 
 ### Changed
 
+- Engine fixes, in one change: a concept property whose value element carries
+  no value is a property the resource does not state, never an empty string, a
+  zero, or `false`, and a concept or property without a code is refused as a
+  defective resource (#610); a deprecation stated through the standard
+  concept properties (`status = deprecated`, a past `deprecated` or
+  `deprecationDate`) earns the `DEPRECATED_CONCEPT_FOUND` warning while the
+  concept stays active (#609); the wall clock is read through one accessor,
+  `fhir_terminology::clock::now`, with the panic contract recorded once (#612);
+  the manifest file name has one definition, in `concept-store` (#597); the
+  testkit's `sctid` takes a typed `Item`, so a bare ordinal no longer
+  compiles where an item number belongs (#594).
 - Repository hygiene, in one change: the `versions.sh` check reads the one
   published-crate list from `scripts/release/publish-crates.sh` and accepts a
   member declared unpublished with a reason; the ECL grammar and registry

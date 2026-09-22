@@ -181,7 +181,7 @@ macro_rules! metadata {
 
             /// The current time as a FHIR `dateTime` (RFC 3339, UTC).
             fn now() -> String {
-                jiff::Timestamp::now().to_string()
+                fhir_terminology::clock::now().to_string()
             }
 
             /// Handles `GET /metadata` (`mode` `full`, `normative`, or `terminology`).

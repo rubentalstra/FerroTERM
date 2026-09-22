@@ -72,6 +72,18 @@ pub enum ModelError {
     /// The resource has no `url`.
     #[error("the CodeSystem has no url")]
     NoUrl,
+    /// A concept carries no `code` (`CodeSystem.concept.code` is required).
+    #[error("a concept{} has no code", under.as_deref().map(|c| format!(" under `{c}`")).unwrap_or_default())]
+    ConceptCode {
+        /// The enclosing concept, when the concept is nested.
+        under: Option<String>,
+    },
+    /// A concept property carries no `code` (`CodeSystem.concept.property.code` is required).
+    #[error("concept `{concept}` has a property without a code")]
+    PropertyCode {
+        /// The concept.
+        concept: String,
+    },
     /// `content` is not one of the code system content modes.
     #[error("`{0}` is not a codesystem-content-mode")]
     Content(String),
@@ -234,6 +246,12 @@ pub(crate) fn designation_use(
 pub(crate) const INACTIVE: &str = "inactive";
 pub(crate) const STATUS: &str = "status";
 pub(crate) const RETIREMENT_DATE: &str = "retirementDate";
+/// The R4 `deprecated` date and the R5 `deprecationDate`, and the `status`
+/// value `deprecated`: a concept "deprecated but not inactive can still be
+/// used, but their use is discouraged"
+/// (<https://hl7.org/fhir/R5/codesystem-concept-properties.html>).
+pub(crate) const DEPRECATED: &str = "deprecated";
+pub(crate) const DEPRECATION_DATE: &str = "deprecationDate";
 pub(crate) const NOT_SELECTABLE: &str = "notSelectable";
 pub(crate) const PARENT: &str = "parent";
 pub(crate) const CHILD: &str = "child";

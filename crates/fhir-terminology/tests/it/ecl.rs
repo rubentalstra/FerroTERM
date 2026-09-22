@@ -5,8 +5,8 @@
 
 use ferroterm_testkit::snomed::{
     ANIMAL, CAT, CODES_MAP, COVERING, DOG, FISH, FUR, GB_LANGUAGE_REFSET, HISTORICAL, ICD10_MAP,
-    LEGS, MODULE_CONCEPT, MODULE_DEPENDENCY, NL_LANGUAGE_REFSET, PETS, SAME_AS_SCTID, SCHEME, TOP,
-    item, sctid,
+    Item, LEGS, MODULE_CONCEPT, MODULE_DEPENDENCY, NL_LANGUAGE_REFSET, PETS, SAME_AS_SCTID, SCHEME,
+    TOP, item, sctid,
 };
 use fhir_terminology::snomed::SnomedProvider;
 use sct_ecl::eval::{EvalError, evaluate};
@@ -601,14 +601,22 @@ fn concept_filters_read_the_concept_rows() {
     assert_eq!(
         set(
             &p,
-            &format!("<< {} {{{{ C moduleId = {} }}}}", c(ANIMAL), sctid(99))
+            &format!(
+                "<< {} {{{{ C moduleId = {} }}}}",
+                c(ANIMAL),
+                sctid(Item::raw(99))
+            )
         ),
         [ANIMAL, CAT, DOG]
     );
     assert!(
         set(
             &p,
-            &format!("<< {} {{{{ C moduleId != {} }}}}", c(ANIMAL), sctid(99))
+            &format!(
+                "<< {} {{{{ C moduleId != {} }}}}",
+                c(ANIMAL),
+                sctid(Item::raw(99))
+            )
         )
         .is_empty()
     );
@@ -667,7 +675,10 @@ fn member_filters_read_the_fields_of_the_rows() {
         .is_empty()
     );
     assert_eq!(
-        set(&p, &format!("^ {map} {{{{ M moduleId = {} }}}}", sctid(99))),
+        set(
+            &p,
+            &format!("^ {map} {{{{ M moduleId = {} }}}}", sctid(Item::raw(99)))
+        ),
         [CAT, DOG]
     );
     assert_eq!(

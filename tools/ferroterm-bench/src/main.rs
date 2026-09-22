@@ -171,7 +171,10 @@ fn main() -> anyhow::Result<()> {
                 .is_none_or(|only| system.name.contains(only))
         })
         .filter(|system| {
-            let present = system.artifact.join("manifest.json").exists();
+            let present = system
+                .artifact
+                .join(fhir_terminology::artifact::MANIFEST_FILE)
+                .exists();
             if !present {
                 eprintln!(
                     "{}: no artifact at {}; skipped",
@@ -275,8 +278,12 @@ async fn measure(
     machine: &Machine,
 ) -> anyhow::Result<Record> {
     let manifest: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(system.artifact.join("manifest.json"))
-            .with_context(|| format!("cannot read the manifest of {}", system.name))?,
+        &std::fs::read_to_string(
+            system
+                .artifact
+                .join(fhir_terminology::artifact::MANIFEST_FILE),
+        )
+        .with_context(|| format!("cannot read the manifest of {}", system.name))?,
     )?;
     let mut server = Server::start(&cli.server, &system.artifact, cli.port)?;
     let ready_seconds = server.wait_ready().await?;
@@ -296,7 +303,7 @@ async fn measure(
     let rss_warm_bytes = server.rss();
     server.stop();
     Ok(Record {
-        taken_at: jiff::Timestamp::now().to_string(),
+        taken_at: fhir_terminology::clock::now().to_string(),
         ferroterm_version: env!("CARGO_PKG_VERSION"),
         fhir: config.fhir.clone(),
         machine: Machine {
