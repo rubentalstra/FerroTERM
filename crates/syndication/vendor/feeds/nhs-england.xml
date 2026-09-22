@@ -1,0 +1,3860 @@
+<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:ncts="http://ns.electronichealth.net.au/ncts/syndication/asf/extensions/1.0.0" xmlns:onto="http://ontoserver.csiro.au/syndication/">
+    <title>release-candidate</title>
+    <link href="https://ontology.nhs.uk/production1/synd/syndication.xml" length="0" rel="self"/>
+    <link href="https://ontology.nhs.uk/production1/synd/syndication.xml" length="0" rel="alternate"/>
+    <updated>2026-09-21T03:43:15Z</updated>
+    <id>urn:uuid:03cba1b8-f753-3531-97d7-b9faa549019e</id>
+    <generator version="6.25.4">Ontoserver® 6.25.4, CSIRO</generator>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:6f0336a4-6af5-4d33-bd9d-2afbbb377432</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright � 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2026-05-13T13:47:45Z</updated>
+        <published>2026-05-13T13:47:45Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/6f0336a4-6af5-4d33-bd9d-2afbbb377432/artefact/ConceptMap-NICIP-OPCS-20260408.json" length="2609119" ncts:sha256Hash="a153ed92d5b2c5dd53eb0f0bd7c282c2689185007075e24ce259ce07762dffd0" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20260408</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:23c61cbd-db67-4b4a-9da5-840eed933735</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright � 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2026-05-13T13:47:43Z</updated>
+        <published>2026-05-13T13:47:43Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/23c61cbd-db67-4b4a-9da5-840eed933735/artefact/ConceptMap-NICIP-SNOMEDCT-20260408.json" length="1758146" ncts:sha256Hash="43e2566aba6c1490afb8596c2b3debc06cac18d8b2f4e44deec301f2294d0593" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20260408</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:444a074e-0308-401d-bdbb-7629c8f36452</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright � 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2026-05-13T13:47:41Z</updated>
+        <published>2026-05-13T13:47:41Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/444a074e-0308-401d-bdbb-7629c8f36452/artefact/4e74ef0a31252a59b790e78cae951244085450f78470993376d67ee735c209d5.json" length="3075377" ncts:sha256Hash="4e74ef0a31252a59b790e78cae951244085450f78470993376d67ee735c209d5" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20260408</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:3257dea0-7729-4e8d-9af0-6046cb6e2dd8</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2026-04-21T15:15:45Z</updated>
+        <published>2026-04-21T15:15:45Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/3257dea0-7729-4e8d-9af0-6046cb6e2dd8/artefact/ConceptMap_NICIP_OPCS_20250924.json" length="2597161" ncts:sha256Hash="cf84fa5d2d9596fa7a3ba583231fd6bf95d8212b3129ea371a889dac0d02d57a" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20250924</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:f26dc1b8-b3fd-40d3-ad46-6d3487433323</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2026-04-21T15:15:44Z</updated>
+        <published>2026-04-21T15:15:44Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/f26dc1b8-b3fd-40d3-ad46-6d3487433323/artefact/ConceptMap_NICIP_SNOMEDCT_20250924.json" length="1743974" ncts:sha256Hash="f456d17829b96ae4f2627922e7d60810aa1954d302862bac7e0a133617cde600" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20250924</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:1618c6b4-3af1-4893-a553-f2d12a5e71e3</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2026-04-21T15:15:43Z</updated>
+        <published>2026-04-21T15:15:43Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/1618c6b4-3af1-4893-a553-f2d12a5e71e3/artefact/567c6f0cf8055bee555d76d43baf6a24c964bd976681f8f9ae324cb2cd044762.json" length="3066634" ncts:sha256Hash="567c6f0cf8055bee555d76d43baf6a24c964bd976681f8f9ae324cb2cd044762" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20250924</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:7468b2af-4c03-425c-bee8-84b9aab68bc8</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2026-04-21T15:15:42Z</updated>
+        <published>2026-04-21T15:15:42Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/7468b2af-4c03-425c-bee8-84b9aab68bc8/artefact/ConceptMap_NICIP_OPCS_20250409.json" length="2531216" ncts:sha256Hash="6ada4aadbd0cb5368ae5bdaedf555036c0e54656dc65155a1c977d3427c55567" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20250409</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:13f0d212-4c36-4d22-bf6b-3b63bc46dab1</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2026-04-21T15:15:40Z</updated>
+        <published>2026-04-21T15:15:40Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/13f0d212-4c36-4d22-bf6b-3b63bc46dab1/artefact/ConceptMap_NICIP_SNOMEDCT_20250409.json" length="1702950" ncts:sha256Hash="a44175726b8a8fbb946f27de49d0d01632440beb31ea297349da277f2a731537" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20250409</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:831eca16-b1c6-4a53-ae31-7104a4c3ceaf</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2026-04-21T15:15:39Z</updated>
+        <published>2026-04-21T15:15:39Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/831eca16-b1c6-4a53-ae31-7104a4c3ceaf/artefact/46163bdec8bea93b786ade333ad0421bfd80e879e5068057bbf55b685f81c551.json" length="3053587" ncts:sha256Hash="46163bdec8bea93b786ade333ad0421bfd80e879e5068057bbf55b685f81c551" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20250409</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS OPCS-4.11</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:8773418d-9222-42ec-bc3c-5fd65e7eeb06</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-03-23T23:58:26Z</updated>
+        <published>2026-03-23T23:58:26Z</published>
+        <summary>NHS OPCS-4 FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/8773418d-9222-42ec-bc3c-5fd65e7eeb06/artefact/CodeSystem_OPCS_4_4.11.json" length="8193734" ncts:sha256Hash="4f66d17a9597d9bf4dfba6098fb4b2b9252bab51948c45f642782fab01c5e2b6" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://fhir.hl7.org.uk/CodeSystem/OPCS-4</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>4.11</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:d6df5a0d-e69c-4adc-a4bc-e9150c92a187</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-11-01T12:08:51Z</updated>
+        <published>2024-11-01T12:08:51Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/d6df5a0d-e69c-4adc-a4bc-e9150c92a187/artefact/ConceptMap_NICIP_OPCS_20240925.json" length="2517605" ncts:sha256Hash="6c9f1f5afe2d176fa1c4bc26dfaf220c43bb4af8e799b0ac21e6b0d67596076c" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240925</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:3c91d187-e8c6-4c12-b39e-06990c11dd56</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-11-01T12:08:49Z</updated>
+        <published>2024-11-01T12:08:49Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/3c91d187-e8c6-4c12-b39e-06990c11dd56/artefact/ConceptMap_NICIP_SNOMEDCT_20240925.json" length="1690164" ncts:sha256Hash="0976d068f063fb0423d93724d67f71dc85e02d106f2b6dce58e29539ddeb869b" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240925</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:cf7bec68-c0a1-47ab-a9bf-a83dd8dc37ae</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-11-01T12:08:48Z</updated>
+        <published>2024-11-01T12:08:48Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/cf7bec68-c0a1-47ab-a9bf-a83dd8dc37ae/artefact/b578844c8ec67f61533d436096d7c6022853d1669ce5d18f894815cce756cdcf.json" length="3040118" ncts:sha256Hash="b578844c8ec67f61533d436096d7c6022853d1669ce5d18f894815cce756cdcf" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240925</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:5dc29fdf-ab39-4a6d-95ef-55308734a508</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:40Z</updated>
+        <published>2024-09-05T10:10:40Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/5dc29fdf-ab39-4a6d-95ef-55308734a508/artefact/ConceptMap_NICIP_OPCS_20230412.json" length="2441676" ncts:sha256Hash="e1b658a683632cf8603504487d566aaec2cace13508005b7107911b2d636df65" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20230412</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:7b325ae0-f8b4-4883-b9ec-b33a6ba6fcf9</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:39Z</updated>
+        <published>2024-09-05T10:10:39Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/7b325ae0-f8b4-4883-b9ec-b33a6ba6fcf9/artefact/ConceptMap_NICIP_SNOMEDCT_20230412.json" length="1640857" ncts:sha256Hash="b7fbc2fa18a9223a627fdaff5a7769a1e874abf4c9e55c25e431e62b9b4b5f4e" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20230412</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:0c06066b-183d-4edd-817d-0c96488e07d5</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:38Z</updated>
+        <published>2024-09-05T10:10:38Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/0c06066b-183d-4edd-817d-0c96488e07d5/artefact/1b18b5ce83cdc54fe1ad161ab116f413c3ccb13b7d5ec6c7941bd7ec4037acf3.json" length="2986714" ncts:sha256Hash="1b18b5ce83cdc54fe1ad161ab116f413c3ccb13b7d5ec6c7941bd7ec4037acf3" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20230412</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:4f35e618-0f85-423e-bb3f-4ee50b1312d3</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:37Z</updated>
+        <published>2024-09-05T10:10:37Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/4f35e618-0f85-423e-bb3f-4ee50b1312d3/artefact/ConceptMap_NICIP_OPCS_20230927.json" length="2473322" ncts:sha256Hash="eafbde6fac04ba5528ddc0cfb1671368f347d00a4f80492c7a1eeeefc3ae15b5" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20230927</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:38473326-6ec7-4b2c-bf14-493ce122ce36</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:36Z</updated>
+        <published>2024-09-05T10:10:36Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/38473326-6ec7-4b2c-bf14-493ce122ce36/artefact/ConceptMap_NICIP_SNOMEDCT_20230927.json" length="1663217" ncts:sha256Hash="83408254c9e04a7660fb6948e64fc99a78cdc7e1221fd4c5e9048ed6c03a0d46" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20230927</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:9230c0a0-8a80-4097-bfc3-fa0c68d7be64</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:35Z</updated>
+        <published>2024-09-05T10:10:35Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/9230c0a0-8a80-4097-bfc3-fa0c68d7be64/artefact/2dbfa8c82519db77df41ea60d364fe7bbb88c3ec1f94e6ff7a085c6ebbd305e8.json" length="3014717" ncts:sha256Hash="2dbfa8c82519db77df41ea60d364fe7bbb88c3ec1f94e6ff7a085c6ebbd305e8" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20230927</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:9ac599e7-6992-4773-b9e8-233cab99ef8b</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:34Z</updated>
+        <published>2024-09-05T10:10:34Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/9ac599e7-6992-4773-b9e8-233cab99ef8b/artefact/ConceptMap_NICIP_OPCS_20220928.json" length="2436277" ncts:sha256Hash="27967907f629f5efe2b53e30be63d3c8f769e28a2bbaff041982e5f8843e3f03" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20220928</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:0209f776-45fd-4e20-bb71-69cfad04dcce</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:33Z</updated>
+        <published>2024-09-05T10:10:33Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/0209f776-45fd-4e20-bb71-69cfad04dcce/artefact/ConceptMap_NICIP_SNOMEDCT_20220928.json" length="1636896" ncts:sha256Hash="c850fa16843651e2ec14f3171fb78f4a5795f9684b2dd6a21839fbd12f7ec80c" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20220928</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:50c8b03c-efae-45bb-971d-0e4b9c9b2dec</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:32Z</updated>
+        <published>2024-09-05T10:10:32Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/50c8b03c-efae-45bb-971d-0e4b9c9b2dec/artefact/a9947aa29116da094dd71ec8128a89fc7c36ad0d66ff7f2cbe632a0af70eef93.json" length="2982162" ncts:sha256Hash="a9947aa29116da094dd71ec8128a89fc7c36ad0d66ff7f2cbe632a0af70eef93" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20220928</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:3011ef88-1b7d-4b7c-b7df-2543646b232a</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:30Z</updated>
+        <published>2024-09-05T10:10:30Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/3011ef88-1b7d-4b7c-b7df-2543646b232a/artefact/ConceptMap_NICIP_OPCS_20240410.json" length="2492532" ncts:sha256Hash="aabf58cd76ae2ab6bd22bd78a58d322d13a6b104a30431254e21a4ec48e858db" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240410</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:1196434e-c47c-486e-85cc-874e30bb7805</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:29Z</updated>
+        <published>2024-09-05T10:10:29Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/1196434e-c47c-486e-85cc-874e30bb7805/artefact/ConceptMap_NICIP_SNOMEDCT_20240410.json" length="1676338" ncts:sha256Hash="b9a3cce04e14687321a67e7e2cd1a2d9a8b91d3099b34292dd962567479ce8a8" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240410</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:62765b78-82e5-4d7f-99a4-8555b6fb3bc8</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2020+ Health and Social Care Information Centre.</rights>
+        <updated>2024-09-05T10:10:28Z</updated>
+        <published>2024-09-05T10:10:28Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/62765b78-82e5-4d7f-99a4-8555b6fb3bc8/artefact/e6d7002972d04528df9e7b26fa6d919c58df59b661b43846c5d2445ae397d22d.json" length="3026717" ncts:sha256Hash="e6d7002972d04528df9e7b26fa6d919c58df59b661b43846c5d2445ae397d22d" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240410</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>England Legally Restricted Patient Confidential Data  : HRG codes for clinical phenomena relating to gender recognition</title>
+        <category label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ValueSet"/>
+        <id>urn:uuid:d0ade0bf-2e14-4644-a83a-9fe42d70a356</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2023+ NHS England Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except in compliance with the License. You may obtain a copy of the License at  http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. HL7? FHIR? standard Copyright ? 2011+ HL7 The HL7? FHIR? standard is used under the FHIR license. You may obtain a copy of the FHIR license at  https://www.hl7.org/fhir/license.html.</rights>
+        <updated>2024-04-04T17:15:27Z</updated>
+        <published>2024-04-04T17:15:27Z</published>
+        <summary>A list of HRG codes that may form part of the electronic records concerning an individual that are held by NHS England Data Asset Owners but which the Gender Recognition Act 2004 makes illegal to share with third parties in patient identifiable form without explicit consent.</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/d0ade0bf-2e14-4644-a83a-9fe42d70a356/artefact/England_LRPCD_GenderRecognition_HRG_20240313.json" length="2307" ncts:sha256Hash="f951088aadcc3b275c85a362070c7712a17cd74a03d47180ef7e15330da0982f" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://fhir.nhs.uk/England/ValueSet/England-LRPCD-GenderRecognition-HRG</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240313</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>England Legally Restricted Patient Confidential Data  : HRG codes for clinical phenomena relating to assisted conception</title>
+        <category label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ValueSet"/>
+        <id>urn:uuid:348393ff-0bd1-47a7-b05f-6e80bdf1c9e1</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2023+ NHS England Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except in compliance with the License. You may obtain a copy of the License at  http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. HL7? FHIR? standard Copyright ? 2011+ HL7 The HL7? FHIR? standard is used under the FHIR license. You may obtain a copy of the FHIR license at  https://www.hl7.org/fhir/license.html.</rights>
+        <updated>2024-04-04T17:15:26Z</updated>
+        <published>2024-04-04T17:15:26Z</published>
+        <summary>A list of HRG codes that may form part of the electronic records concerning an individual that are held by NHS England Data Asset Owners but which the Human Fertilisation and Embryology Act 2008 makes illegal to share with third parties in patient identifiable form without explicit consent.</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/348393ff-0bd1-47a7-b05f-6e80bdf1c9e1/artefact/England_LRPCD_AssistedConception_HRG_20240124.json" length="3633" ncts:sha256Hash="62db337270b969cbe44760fa6d41a8f330eccbe82842a50f8b3b433d520590b9" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://fhir.nhs.uk/England/ValueSet/England-LRPCD-AssistedConception-HRG</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240124</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>England Legally Restricted Patient Confidential Data  : ICD10 codes for clinical phenomena relating to assisted conception</title>
+        <category label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ValueSet"/>
+        <id>urn:uuid:eb17c1d0-9f76-4ce7-8eed-4f0ac3997c9f</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2023+ NHS England Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except in compliance with the License. You may obtain a copy of the License at  http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. HL7? FHIR? standard Copyright ? 2011+ HL7 The HL7? FHIR? standard is used under the FHIR license. You may obtain a copy of the FHIR license at  https://www.hl7.org/fhir/license.html.</rights>
+        <updated>2024-04-04T17:15:25Z</updated>
+        <published>2024-04-04T17:15:25Z</published>
+        <summary>A list of ICD10 codes that may form part of the electronic records concerning an individual that are held by NHS England Data Asset Owners but which the Human Fertilisation and Embryology Act 2008 makes illegal to share with third parties in patient identifiable form without explicit consent.</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/eb17c1d0-9f76-4ce7-8eed-4f0ac3997c9f/artefact/England_LRPCD_AssistedConception_ICD10_20240125.json" length="5025" ncts:sha256Hash="5af5931389473aa9eb6e0b18b8f87006a9677796310d3645777ebaec2147c4fd" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://fhir.nhs.uk/England/ValueSet/England-LRPCD-AssistedConception-ICD10</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240125</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>England Legally Restricted Patient Confidential Data  : OPCS codes for clinical phenomena relating to assisted conception</title>
+        <category label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ValueSet"/>
+        <id>urn:uuid:c0cdc789-03ee-4222-bb58-a8bc5ed51ad5</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2023+ NHS England Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except in compliance with the License. You may obtain a copy of the License at  http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. HL7? FHIR? standard Copyright ? 2011+ HL7 The HL7? FHIR? standard is used under the FHIR license. You may obtain a copy of the FHIR license at  https://www.hl7.org/fhir/license.html.</rights>
+        <updated>2024-04-04T17:15:25Z</updated>
+        <published>2024-04-04T17:15:25Z</published>
+        <summary>A list of OPCS codes that may form part of the electronic records concerning an individual that are held by NHS England Data Asset Owners but which the Human Fertilisation and Embryology Act 2008 makes illegal to share with third parties in patient identifiable form without explicit consent.</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/c0cdc789-03ee-4222-bb58-a8bc5ed51ad5/artefact/England_LRPCD_AssistedConception_OPCS_20240123.json" length="6836" ncts:sha256Hash="be092a2b0fc64d1d9e552576e62773dbb9f7c99fb825a7ed8dd895b147d6af82" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://fhir.nhs.uk/England/ValueSet/England-LRPCD-AssistedConception-OPCS</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240123</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>England Legally Restricted Patient Confidential Data  : OPCS codes for clinical phenomena relating to gender recognition</title>
+        <category label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ValueSet"/>
+        <id>urn:uuid:30958351-c27f-4365-9f19-db085f0045a3</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2023+ NHS England Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except in compliance with the License. You may obtain a copy of the License at  http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. HL7? FHIR? standard Copyright ? 2011+ HL7 The HL7? FHIR? standard is used under the FHIR license. You may obtain a copy of the FHIR license at  https://www.hl7.org/fhir/license.html.</rights>
+        <updated>2024-04-04T17:15:24Z</updated>
+        <published>2024-04-04T17:15:24Z</published>
+        <summary>A list of OPCS codes that may form part of the electronic records concerning an individual that are held by NHS England Data Asset Owners but which the Gender Recognition Act 2004 makes illegal to share with third parties in patient identifiable form without explicit consent.</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/30958351-c27f-4365-9f19-db085f0045a3/artefact/England_LRPCD_GenderRecognition_OPCS_20240123.json" length="3154" ncts:sha256Hash="89c255d7eb0f74dcab479a80c15a626cd6c42bbef84b6a8a76ac08112236c280" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://fhir.nhs.uk/England/ValueSet/England-LRPCD-GenderRecognition-OPCS</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240123</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Health Resource Groups version 4+ CodeSystem</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:8a559858-1632-4c1a-a5e7-f162d496d074</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2023+ NHS England Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except in compliance with the License. You may obtain a copy of the License at  http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. HL7? FHIR? standard Copyright ? 2011+ HL7 The HL7? FHIR? standard is used under the FHIR license. You may obtain a copy of the FHIR license at  https://www.hl7.org/fhir/license.html.</rights>
+        <updated>2024-04-04T17:15:23Z</updated>
+        <published>2024-04-04T17:15:23Z</published>
+        <summary>Healthcare Resource Groups (HRGs) are standard groupings of clinically similar treatments which use comparable levels of healthcare resource. The Health Related Groups 4+ (HRG4+) CodeSystem is a shallow monoaxial classification of around 3000 categories, covering both procedures and diagnoses. The National Casemix Office maps completed episodes of hospital care to an HRG code based partly on the ICD and OPCS codings of that same episode. HRG codes are in turn mapped to the NHS Tarriff in order to determine a standard reimbursement for the episode.</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/8a559858-1632-4c1a-a5e7-f162d496d074/artefact/HRG_20231213.json" length="731236" ncts:sha256Hash="6f2f10460b0a9616ad2fb81da346b9b29d0d0b876701bf11226fd7cbb175484c" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://fhir.nhs.uk/England/CodeSystem/England-HRG4</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20231213</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>England Legally Restricted Patient Confidential Data  : ICD10 codes for clinical phenomena relating to gender recognition</title>
+        <category label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ValueSet"/>
+        <id>urn:uuid:03a3bc07-aa7a-4c24-a001-2483ec5b9c4c</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <rights>Copyright ? 2023+ NHS England Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except in compliance with the License. You may obtain a copy of the License at  http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. HL7? FHIR? standard Copyright ? 2011+ HL7 The HL7? FHIR? standard is used under the FHIR license. You may obtain a copy of the FHIR license at  https://www.hl7.org/fhir/license.html.</rights>
+        <updated>2024-04-04T17:15:23Z</updated>
+        <published>2024-04-04T17:15:23Z</published>
+        <summary>A list of ICD10 codes that may form part of the electronic records concerning an individual that are held by NHS England Data Asset Owners but which the Gender Recognition Act 2004 makes illegal to share with third parties in patient identifiable form without explicit consent.</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/03a3bc07-aa7a-4c24-a001-2483ec5b9c4c/artefact/England_LRPCD_GenderRecognition_ICD10_20240125.json" length="3053" ncts:sha256Hash="c6bac73142f6881bcda2e81847de7c82e3d0224baa007906b70ead176a06f99b" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://fhir.nhs.uk/England/ValueSet/England-LRPCD-GenderRecognition-ICD10</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20240125</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS OPCS-4.10</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:c9c107f3-3ec0-40e5-ac1f-4b54c1b239c6</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2023-03-31T21:50:10Z</updated>
+        <published>2023-03-31T21:50:10Z</published>
+        <summary>NHS OPCS-4 FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/c9c107f3-3ec0-40e5-ac1f-4b54c1b239c6/artefact/CodeSystem_OPCS_4_4.10.json" length="7783242" ncts:sha256Hash="9440c2b1196dfea700750f1f3244752c1dffd68114980cda31fd4d677248981b" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://fhir.hl7.org.uk/CodeSystem/OPCS-4</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>4.10</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>FHIR R4 Definitions - ConceptMaps</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:f3bed611-9c17-4ee2-9a1b-815d5af73272</id>
+        <updated>2021-10-20T16:56:24Z</updated>
+        <published>2021-10-20T16:56:24Z</published>
+        <summary>FHIR R4 Definitions - conceptmaps.json from https://www.hl7.org/fhir/definitions.json.zip extracted 13/10/2021</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/f3bed611-9c17-4ee2-9a1b-815d5af73272/artefact/conceptmaps_json" length="230472" ncts:sha256Hash="3b6a7e9f2a8e2d13fc1ffa1524ede726e8f9122d90fa8e4918de0b1f194d8048" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://hl7.org/fhir/ConceptMap</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>4.0.1</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>FHIR R4 Definitions - ValueSets</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:f80a66c8-2855-4a1a-b113-630fcb53a42f</id>
+        <updated>2021-10-20T16:56:23Z</updated>
+        <published>2021-10-20T16:56:23Z</published>
+        <summary>FHIR R4 Definitions - valuesets.json from https://www.hl7.org/fhir/definitions.json.zip extracted 13/10/2021</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/f80a66c8-2855-4a1a-b113-630fcb53a42f/artefact/valuesets_json" length="9319611" ncts:sha256Hash="8d8fd0894624163296aa84e93c47cbead9b805fd83ec22ac71d45b7e25a86758" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://hl7.org/fhir/ValueSet</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>4.0.1</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>FHIR R4 Definitions - CodeSystems</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:7cfc640d-50de-41d1-a18c-a2d0e3ca30c0</id>
+        <updated>2021-10-20T16:56:03Z</updated>
+        <published>2021-10-20T16:56:03Z</published>
+        <summary>FHIR R4 Definitions - v3-codesystems.json from https://www.hl7.org/fhir/definitions.json.zip extracted 13/10/2021</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/7cfc640d-50de-41d1-a18c-a2d0e3ca30c0/artefact/v3_codesystems_json" length="6937996" ncts:sha256Hash="b9e75b6586b61843042e543280a91adc1bdd4d8a2df3427e30fa5f404b004646" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://hl7.org/fhir/CodeSystem</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>4.0.1</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS Digital Data Dictionary</title>
+        <category label="FHIR Package" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Package"/>
+        <id>urn:uuid:5fcde806-7fe2-4a33-9d67-d7db07778092</id>
+        <updated>2021-02-10T10:03:00Z</updated>
+        <published>2021-02-10T10:03:00Z</published>
+        <summary>NHS Digital Data Dictionary</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/5fcde806-7fe2-4a33-9d67-d7db07778092/artefact/230162809f5db5566fd988670b1e1c9a3314c8ce558f3a22a268c189bea0c344_zip" length="634484" ncts:sha256Hash="230162809f5db5566fd988670b1e1c9a3314c8ce558f3a22a268c189bea0c344" rel="alternate" type="application/tar+gzip"/>
+        <ncts:contentItemIdentifier>uk.nhs.digital.dd</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Read Codes Version2 UNISCOT</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:0351c0f9-18e7-46ee-b845-e74830fb883a</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-02-03T23:17:36Z</updated>
+        <published>2021-02-03T23:17:36Z</published>
+        <summary>Read Codes Version2 UNISCOT FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/0351c0f9-18e7-46ee-b845-e74830fb883a/artefact/563f1b9480cda64c941ecfb0cec292c05e1ad70f84a96129defa5cff7566cc1a_json" length="34157961" ncts:sha256Hash="563f1b9480cda64c941ecfb0cec292c05e1ad70f84a96129defa5cff7566cc1a" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://read.info/readv2-scot</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20090401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Read Codes Version2 UNIFIED</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:31ae6af2-5ecd-4a6e-97a3-4f87183fdb78</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-02-03T23:15:40Z</updated>
+        <published>2021-02-03T23:15:40Z</published>
+        <summary>Read Codes Version2 UNIFIED FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/31ae6af2-5ecd-4a6e-97a3-4f87183fdb78/artefact/aee622d2d558d22a7b694c1fcb12481aa281d6fba564940f715650d1ba06f819_json" length="34164808" ncts:sha256Hash="aee622d2d558d22a7b694c1fcb12481aa281d6fba564940f715650d1ba06f819" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://read.info/readv2</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20090401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Read GP5SCOT</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:e41d3d00-95a3-4e05-a10a-553e32158943</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-02-03T23:13:42Z</updated>
+        <published>2021-02-03T23:13:42Z</published>
+        <summary>Read GP5SCOT FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/e41d3d00-95a3-4e05-a10a-553e32158943/artefact/140d442ed8a8562807b6f09633ca99024d76f062d875b4a771c3da585c35cc55_json" length="28926363" ncts:sha256Hash="140d442ed8a8562807b6f09633ca99024d76f062d875b4a771c3da585c35cc55" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://read.info/read-gp5-scot</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20090401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Read GP5</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:dc98e8ff-5c7b-499a-a535-b7d534cd07cd</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-02-03T23:12:12Z</updated>
+        <published>2021-02-03T23:12:12Z</published>
+        <summary>Read GP5 FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/dc98e8ff-5c7b-499a-a535-b7d534cd07cd/artefact/a4bc119e803fb03bed0113b8e11e722f888af975f741bb2104b2d976d52deb89_json" length="28971008" ncts:sha256Hash="a4bc119e803fb03bed0113b8e11e722f888af975f741bb2104b2d976d52deb89" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://read.info/read-gp5</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20090401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Read 4Byte GP4SCOT</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:8f2e518e-b24c-400f-8a9f-20afa5058af5</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-02-03T23:09:58Z</updated>
+        <published>2021-02-03T23:09:58Z</published>
+        <summary>Read 4Byte GP4SCOT FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/8f2e518e-b24c-400f-8a9f-20afa5058af5/artefact/11ff5e8cdd4386066176d3a789aa4dd62d8538dbe19ded9bbf3241a68012db52_json" length="12777367" ncts:sha256Hash="11ff5e8cdd4386066176d3a789aa4dd62d8538dbe19ded9bbf3241a68012db52" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://read.info/read-4byte-gp4-scot</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20090401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Read 4Byte GP4</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:8489a0ff-f352-4e32-9735-6db74224c024</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-02-03T23:07:51Z</updated>
+        <published>2021-02-03T23:07:51Z</published>
+        <summary>Read 4Byte GP4 FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/8489a0ff-f352-4e32-9735-6db74224c024/artefact/b855d619c32446463867993209812b1da7e0f233f157620f189cd38e0cd74844_json" length="12861890" ncts:sha256Hash="b855d619c32446463867993209812b1da7e0f233f157620f189cd38e0cd74844" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://read.info/read-4byte-gp4</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20090401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS OPCS-4</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:54701229-3959-4e02-b719-a1ec46a6b7de</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-01-26T09:39:09Z</updated>
+        <published>2021-01-26T09:39:09Z</published>
+        <summary>NHS OPCS-4 FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/54701229-3959-4e02-b719-a1ec46a6b7de/artefact/4b5f2b2785ed60bf10d18525cd3954d0b84eabeaf5229dab3da38b481fa65317_json" length="7693052" ncts:sha256Hash="4b5f2b2785ed60bf10d18525cd3954d0b84eabeaf5229dab3da38b481fa65317" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://fhir.hl7.org.uk/CodeSystem/OPCS-4</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>4.9</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS OPCS-4</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:88c0689d-e354-473b-a757-36d8c8761275</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-01-26T09:39:04Z</updated>
+        <published>2021-01-26T09:39:04Z</published>
+        <summary>NHS OPCS-4 FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/88c0689d-e354-473b-a757-36d8c8761275/artefact/4d1a1cf4c4366c0a4ec0a0767952e40a3096a703860e7fbd9c850d278b1e90ed_json" length="7515643" ncts:sha256Hash="4d1a1cf4c4366c0a4ec0a0767952e40a3096a703860e7fbd9c850d278b1e90ed" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://fhir.hl7.org.uk/CodeSystem/OPCS-4</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>4.8</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>ICD 10 UK</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:dd9e29e6-979d-4986-817d-2e4d5da55070</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-01-26T03:36:18Z</updated>
+        <published>2021-01-26T03:36:18Z</published>
+        <summary>ICD 10 UK FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/dd9e29e6-979d-4986-817d-2e4d5da55070/artefact/e51f8729cd1bcb30090984df987225053ed25b6d314fa83fae680fbe5e6fdfc3_json" length="9508541" ncts:sha256Hash="e51f8729cd1bcb30090984df987225053ed25b6d314fa83fae680fbe5e6fdfc3" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://hl7.org/fhir/sid/icd-10-uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>4.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>ICD 10 UK</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:cbb55315-222b-48fc-8bf9-3bed72ea0ba0</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2021-01-26T03:35:50Z</updated>
+        <published>2021-01-26T03:35:50Z</published>
+        <summary>ICD 10 UK FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/cbb55315-222b-48fc-8bf9-3bed72ea0ba0/artefact/ee0f9d205acda255a967642d33c0add88d45f9295db8fa82bdd26584bbb7ce3d_json" length="9541273" ncts:sha256Hash="ee0f9d205acda255a967642d33c0add88d45f9295db8fa82bdd26584bbb7ce3d" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://hl7.org/fhir/sid/icd-10-uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>5.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Human Phenotype Ontology 20201207</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:964d088e-e6c4-4081-bbe5-cf6c9cdc41ba</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-12-17T02:42:17Z</updated>
+        <published>2020-12-17T02:42:17Z</published>
+        <summary>Human Phenotype Ontology December 2020 release</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/964d088e-e6c4-4081-bbe5-cf6c9cdc41ba/artefact/hpo_20201207_json" length="14474672" ncts:sha256Hash="b8313a6fc875df6f45462ae32087887266c2f8e5e9eaafb6f63ba0bbc212c19e" rel="alternate" type="application/json"/>
+        <ncts:contentItemIdentifier>http://purl.obolibrary.org/obo/hp.owl</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20201207</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:226cc090-9c88-416e-8ffb-c2cf674bae65</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:10:23Z</updated>
+        <published>2020-11-26T23:10:23Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/226cc090-9c88-416e-8ffb-c2cf674bae65/artefact/ConceptMap_NICIP_OPCS_20190601_json" length="1122869" ncts:sha256Hash="0f5108046e8c8431e957ac76eb90bff14ac95e4c8df5547980de6f88da5ff1ce" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20190601</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:9f9faa9c-b00e-48a8-9cdc-f1e9a01c936e</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:10:22Z</updated>
+        <published>2020-11-26T23:10:22Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/9f9faa9c-b00e-48a8-9cdc-f1e9a01c936e/artefact/ConceptMap_NICIP_SNOMEDCT_20190601_json" length="1636836" ncts:sha256Hash="968adaa41d6e7382596d24821118c5ab29df9cf8de117df994cefbc88e3ae146" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20190601</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:8e915f8f-9871-4e2a-b0c6-d646b2e9bddc</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:10:20Z</updated>
+        <published>2020-11-26T23:10:20Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/8e915f8f-9871-4e2a-b0c6-d646b2e9bddc/artefact/CodeSystem_NICIP_20190601_json" length="2139035" ncts:sha256Hash="790b9812e92e3dee7b7e0567a01e33e4b14247369f1e927b432c0ffa35f15029" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20190601</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:4ccd9cca-4a22-45d6-8e9b-5699c2fa0822</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:10:10Z</updated>
+        <published>2020-11-26T23:10:10Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/4ccd9cca-4a22-45d6-8e9b-5699c2fa0822/artefact/ConceptMap_NICIP_OPCS_20200401_json" length="1122768" ncts:sha256Hash="d63f8e988d8af05a2b71399a5a0f6a2594f3fed5c0f27209b665fa017974fe28" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20200401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:b099de25-cd7b-4896-8ea8-d5fa1772c75a</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:10:09Z</updated>
+        <published>2020-11-26T23:10:09Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/b099de25-cd7b-4896-8ea8-d5fa1772c75a/artefact/ConceptMap_NICIP_SNOMEDCT_20200401_json" length="1636836" ncts:sha256Hash="2a38ff7efd810901bc745ced09cea15ee6bdf141f4ae07e10d0dc4693201b666" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20200401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:a400ba01-ff02-45fa-895f-9049faecf38b</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:10:08Z</updated>
+        <published>2020-11-26T23:10:08Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/a400ba01-ff02-45fa-895f-9049faecf38b/artefact/CodeSystem_NICIP_20200401_json" length="2139035" ncts:sha256Hash="d0a72970b381c8b5d9eb2927b00bfec2f5540317a7e7815e2f3ce66f37af3fc8" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20200401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:8ea45f9b-536b-4f6e-bc44-3fdb73ff9d82</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:09:59Z</updated>
+        <published>2020-11-26T23:09:59Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/8ea45f9b-536b-4f6e-bc44-3fdb73ff9d82/artefact/ConceptMap_NICIP_OPCS_20181001_json" length="1111918" ncts:sha256Hash="f2fec48f120170b09abd3c54e56eaad738ff318646edb57b6be050f104a42c4c" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20181001</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:e3588464-20dc-4a90-886a-c15316295d0d</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:09:57Z</updated>
+        <published>2020-11-26T23:09:57Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/e3588464-20dc-4a90-886a-c15316295d0d/artefact/ConceptMap_NICIP_SNOMEDCT_20181001_json" length="1620398" ncts:sha256Hash="90939c127b6a35d57c36d35381e67ec477f81474c5752963e971149c6b94c652" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20181001</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:caf89f8f-a2e2-4304-ae4b-aa5fa5e54f77</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:09:56Z</updated>
+        <published>2020-11-26T23:09:56Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/caf89f8f-a2e2-4304-ae4b-aa5fa5e54f77/artefact/CodeSystem_NICIP_20181001_json" length="2119375" ncts:sha256Hash="4be1f619fcbf3002224f1b2f477bfd84ef0c9bf76183f89022d29dfa8873724c" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20181001</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:1b4d7d3f-f4e5-48e0-bb17-291df7534ae7</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:09:46Z</updated>
+        <published>2020-11-26T23:09:46Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/1b4d7d3f-f4e5-48e0-bb17-291df7534ae7/artefact/ConceptMap_NICIP_OPCS_20180401_json" length="1098972" ncts:sha256Hash="1612ebe0dde45cfbc1a8d6629c5e1b8c60a615be8ea42c54285296cbf4df4752" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20180401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:116ca0ae-9f5f-4e12-a4cf-e783ac4893cc</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:09:45Z</updated>
+        <published>2020-11-26T23:09:45Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/116ca0ae-9f5f-4e12-a4cf-e783ac4893cc/artefact/ConceptMap_NICIP_SNOMEDCT_20180401_json" length="1599175" ncts:sha256Hash="8752b33e579c40777b3b558e9e5f2f6504a177eb0b6ceaa42534c7483190f343" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20180401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:a2e9bab8-648f-450b-9f52-3109c79d4f54</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:09:43Z</updated>
+        <published>2020-11-26T23:09:43Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/a2e9bab8-648f-450b-9f52-3109c79d4f54/artefact/CodeSystem_NICIP_20180401_json" length="2099758" ncts:sha256Hash="e5879075723c46538c402c5a7fa96398a25aae1c72673f30458d97d9c7a097ab" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20180401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to OPCS Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:ebf7b4c8-be68-42fe-a117-3c970a0f010c</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:08:49Z</updated>
+        <published>2020-11-26T23:08:49Z</published>
+        <summary>NHS NICIP to OPCS Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/ebf7b4c8-be68-42fe-a117-3c970a0f010c/artefact/ConceptMap_NICIP_OPCS_20171001_json" length="1085306" ncts:sha256Hash="c3add9567f9c67b4cddefcb19fdee12afbc7ed7dd84286d3fe18813db7cc431d" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-opcs</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20171001</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NHS NICIP to SNOMED CT Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:bdd1a9d1-4ee0-4a02-897d-6d0d06a54709</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:08:47Z</updated>
+        <published>2020-11-26T23:08:47Z</published>
+        <summary>NHS NICIP to SNOMED CT Map FHIR ConceptMap</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/bdd1a9d1-4ee0-4a02-897d-6d0d06a54709/artefact/ConceptMap_NICIP_SNOMEDCT_20171001_json" length="1580051" ncts:sha256Hash="be2079c4821cfab07e1a607619cd544a9122309d4366095aaa76c3114e66e86e" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/ConceptMap/nicip-sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20171001</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>NICIP</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:c96017fb-db19-4724-995d-96cfabe3aaeb</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-26T23:08:46Z</updated>
+        <published>2020-11-26T23:08:46Z</published>
+        <summary>NICIP FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/c96017fb-db19-4724-995d-96cfabe3aaeb/artefact/CodeSystem_NICIP_20171001_json" length="2078658" ncts:sha256Hash="0d817656dabc97f6ed2964f94005a91057eaeced1d2f39ae5882537b570697d5" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://digital.nhs.uk/fhir/CodeSystem/nicip</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20171001</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Unified Code for Units of Measure (UCUM) 20201106</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:fa9ff9e5-72f8-4209-8b04-aa4a5cd8a63e</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-11-06T05:40:11Z</updated>
+        <published>2020-11-06T05:40:11Z</published>
+        <summary>Fragment of the Unified Code for Units of Measure (UCUM) representing all the commonly used UCUM codes specified in the FHIR specification at https://www.hl7.org/fhir/valueset-ucum-common.html</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/fa9ff9e5-72f8-4209-8b04-aa4a5cd8a63e/artefact/ucum_20201106_json" length="93643" ncts:sha256Hash="fa522ecbfefd970374c117efd184054aad37313ab666583d6ec6940c9c98e005" rel="alternate" type="application/json"/>
+        <ncts:contentItemIdentifier>http://unitsofmeasure.org</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>2.1</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Read Code Clinical Term Version3</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:d7b6817b-ae11-47f8-ad23-27731313cffb</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-10-28T23:24:35Z</updated>
+        <published>2020-10-28T23:24:35Z</published>
+        <summary>Read Code Clinical Term Version3 FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/d7b6817b-ae11-47f8-ad23-27731313cffb/artefact/Code_System___CTV3___20180401_json" length="79481046" ncts:sha256Hash="14cb37e686ebbc4c894a5145579492e3acb8fcbd4386595531c8b0150e06140d" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://read.info/ctv3</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20180401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Read Code Clinical Term Version2</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:0de38553-b857-4eb0-9b98-2429c0cc6921</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2020-10-27T12:56:49Z</updated>
+        <published>2020-10-27T12:56:49Z</published>
+        <summary>Read Code Clinical Term Version2 FHIR CodeSystem</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/entry/0de38553-b857-4eb0-9b98-2429c0cc6921/artefact/CodeSystem_READV2_UNIFIED_20160401_json" length="92741120" ncts:sha256Hash="2ad3c0ae7e4f12381012df8efa05bdd74ab594da1afa1d815f95a4a0aa2be026" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>http://read.info/readv2</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>20160401</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260513_001_EXT_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 42.5.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:0289ef9a-9112-46e8-9c5b-672eee5dd20e</id>
+        <updated>2026-09-02T04:26:01Z</updated>
+        <published>2026-09-02T04:26:01Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/0289ef9a-9112-46e8-9c5b-672eee5dd20e/artefact/index-2.0.13.zip" length="2843532596" ncts:sha256Hash="5b776dd0ac27727e6d0d3a4a56a0ac2dec7b042caa17022c45e10027e69a2574" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20260826</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 42.4.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:2ab03c83-c276-46f5-9c2b-e578af437635</id>
+        <updated>2026-08-05T04:22:04Z</updated>
+        <published>2026-08-05T04:22:04Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/2ab03c83-c276-46f5-9c2b-e578af437635/artefact/index_2.0.13.zip" length="2858280388" ncts:sha256Hash="42c27cbeacf28dabaa1395b9cecef2924e5c90aaca094e33b38e979c8ee7646b" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20260729</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 42.3.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:ea9255cc-c675-4a8f-bbb8-671b7010af42</id>
+        <updated>2026-07-08T04:20:59Z</updated>
+        <published>2026-07-08T04:20:59Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/ea9255cc-c675-4a8f-bbb8-671b7010af42/artefact/index_2.0.13.zip" length="2853001872" ncts:sha256Hash="00c666677e6662983c6f6f176279ec26c73aaab5ea9085d33c99c6569ace14e4" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20260701</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 42.2.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:ee8d720a-e765-4722-8e48-f965596497bc</id>
+        <updated>2026-06-10T04:25:54Z</updated>
+        <published>2026-06-10T04:25:54Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/ee8d720a-e765-4722-8e48-f965596497bc/artefact/index_2.0.13.zip" length="2843218942" ncts:sha256Hash="eebfd8de7ca828fd64d30e7fb66a148c1d903850237ec938ac6be6b7cb0f6326" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20260603</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 42.1.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:9bd38c42-6c32-4b00-a0ab-f7c35fbae1e9</id>
+        <updated>2026-05-13T09:21:28Z</updated>
+        <published>2026-05-13T09:21:28Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/9bd38c42-6c32-4b00-a0ab-f7c35fbae1e9/artefact/index_2.0.13.zip" length="2849298896" ncts:sha256Hash="a202dad628c963f89e57932c42b9cb461ef93c05fc97d5f6960a9449967c03b7" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20260506</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 42.0.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:adf9242b-68ae-45ab-9829-f1724587b4cb</id>
+        <updated>2026-04-15T04:24:30Z</updated>
+        <published>2026-04-15T04:24:30Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/adf9242b-68ae-45ab-9829-f1724587b4cb/artefact/index_2.0.13.zip" length="2807113437" ncts:sha256Hash="95b0dbfa44ebc32c89003068fa2cf8adfd72972ff89b4437db70772830e1fe40" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20260408</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 41.6.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:056a9c04-7915-496f-a8fd-f2d4417e49fc</id>
+        <updated>2026-03-18T09:25:20Z</updated>
+        <published>2026-03-18T09:25:20Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/056a9c04-7915-496f-a8fd-f2d4417e49fc/artefact/index_2.0.13.zip" length="2802494497" ncts:sha256Hash="9d5af5109a5f37ca99ca4bd8f3e38c066499690e904d2fdf85673447453cc887" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20260311</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 41.5.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:04dad14c-7954-49fe-a07f-fb8a0d4f5aa0</id>
+        <updated>2026-02-18T04:24:02Z</updated>
+        <published>2026-02-18T04:24:02Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/04dad14c-7954-49fe-a07f-fb8a0d4f5aa0/artefact/index_2.0.13.zip" length="2799916787" ncts:sha256Hash="e0d4eb8b0b165d754dd6d1fb15f10ca2f5ef348bf8c73da0df2a521dfa5fb71e" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20260211</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 41.3.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:394552d7-bec6-4980-bd8f-7e7023caf3c0</id>
+        <updated>2025-12-24T04:25:29Z</updated>
+        <published>2025-12-24T04:25:29Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/394552d7-bec6-4980-bd8f-7e7023caf3c0/artefact/index_2.0.13.zip" length="2747471083" ncts:sha256Hash="2066de85e2abca8e57bd461f1dd0aa6151d8c19e1409c7a0c61b14e4e3fda156" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20251217</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 41.2.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:230946d3-65b6-4541-b3aa-058ae043ea4c</id>
+        <updated>2025-11-26T08:23:47Z</updated>
+        <published>2025-11-26T08:23:47Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/230946d3-65b6-4541-b3aa-058ae043ea4c/artefact/index_2.0.13.zip" length="2760289957" ncts:sha256Hash="fcff0c633f7537a2c05b5731a51b2840b7014a088ece9dedaed68b783a800b50" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20251119</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 41.1.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:cc059506-499d-461c-95fd-5b49b073bfc1</id>
+        <updated>2025-10-29T04:23:45Z</updated>
+        <published>2025-10-29T04:23:45Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/cc059506-499d-461c-95fd-5b49b073bfc1/artefact/index_2.0.13.zip" length="2757539760" ncts:sha256Hash="81c1f0ccf0ed3bec8b695d8c9b9fcaa1b15743b6a02112938bdc60b2edbc8686" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20251022</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 41.0.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13" term="BINARY"/>
+        <id>urn:uuid:62a47161-09f8-4d9f-b7b2-745daa3cd584</id>
+        <updated>2025-10-01T09:19:00Z</updated>
+        <published>2025-10-01T09:19:00Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/62a47161-09f8-4d9f-b7b2-745daa3cd584/artefact/index_2.0.13.zip" length="2755435064" ncts:sha256Hash="e67fdf116c1799e2d63b0ff0830e8306822e94fd9b61451556123d193b85ae67" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20250924</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 40.0.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.11" term="BINARY"/>
+        <id>urn:uuid:b33743d2-04f2-4eba-95b8-0a69f9020849</id>
+        <updated>2025-04-16T04:32:06Z</updated>
+        <published>2025-04-16T04:32:06Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/b33743d2-04f2-4eba-95b8-0a69f9020849/artefact/index_2.0.11.zip" length="2710879721" ncts:sha256Hash="d83ae85790ab652755f4b9d74bdd604f3d31b895b0aad4ebafcc86d4e9c0659a" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20250409</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Release 39.0.0</title>
+        <category label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.11" term="BINARY"/>
+        <id>urn:uuid:d762e885-d317-4c85-aaf0-5ddd1a2827d7</id>
+        <updated>2024-10-02T04:31:03Z</updated>
+        <published>2024-10-02T04:31:03Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/entry/d762e885-d317-4c85-aaf0-5ddd1a2827d7/artefact/index_2.0.11.zip" length="2559396591" ncts:sha256Hash="d16c190773431e15041812c4fdf1b1527fdedde970e1a4cc4e930027c0f5b7dc" rel="alternate" type="application/zip"/>
+        <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>http://snomed.info/sct/83821000000107/version/20240925</ncts:contentItemVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>SNOMED CT-UK Indexes for initial data load</title>
+            <id>urn:uuid:8c542677-e3db-4697-b072-a77c8e26db7b</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260826_001_SNOMED_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) history Concept Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:b1657afd-2f32-463b-819e-ae1748259722</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-21T03:43:15Z</updated>
+        <published>2026-09-21T03:43:15Z</published>
+        <summary>A FHIR ConceptMap representing the history of the Dictionary of medicines and devices (dm+d)</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/b1657afd-2f32-463b-819e-ae1748259722/artefact/ConceptMap-dmd-history202609.2.0.json" length="34151724" ncts:sha256Hash="dd66b05bd14ed3231c9e8fd9925586a63737440ffde25d6d535afe3bdbd9dace" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/history</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.2.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) to GTIN Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:b0048b2a-a759-45f5-a35a-b6529ea6a236</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-21T03:43:13Z</updated>
+        <published>2026-09-21T03:43:13Z</published>
+        <summary>A FHIR ConceptMap between the Dictionary of medicines and devices (dm+d) and GTIN (Global Trade Item Number), generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/b0048b2a-a759-45f5-a35a-b6529ea6a236/artefact/ConceptMap-dmd-gtin202609.2.0.json" length="37705261" ncts:sha256Hash="db82096f9d0283076c951dfa9d4a392b9c44835d94bb053ce2115e581b17b80a" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/gtin</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.2.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d)</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:6a08493e-ea13-42c7-8c20-80d8979b4f1e</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-21T03:43:10Z</updated>
+        <published>2026-09-21T03:43:10Z</published>
+        <summary>A FHIR CodeSystem rendering of the Dictionary of medicines and devices (dm+d) generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/6a08493e-ea13-42c7-8c20-80d8979b4f1e/artefact/225322a80b8f3b113fde2a0355ca90b1e0e422c6580adbe86b6d2403c292bc8f.json" length="400356272" ncts:sha256Hash="225322a80b8f3b113fde2a0355ca90b1e0e422c6580adbe86b6d2403c292bc8f" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.2.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Bundle-dmd-CodeSystems-202609.2.0</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:0d97d403-4586-4b55-bb7d-13ab0e1414eb</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-21T03:42:21Z</updated>
+        <published>2026-09-21T03:42:21Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/0d97d403-4586-4b55-bb7d-13ab0e1414eb/artefact/9739a480d10f0acd0ca84c850331650147d1f3890c6967427b08d5bc84a5f506.json" length="101501" ncts:sha256Hash="9739a480d10f0acd0ca84c850331650147d1f3890c6967427b08d5bc84a5f506" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>Bundle-dmd-CodeSystems-202609.2.0</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.2.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) history Concept Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:5081c08f-6312-4ed3-9164-265302c7f37d</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-14T03:05:22Z</updated>
+        <published>2026-09-14T03:05:22Z</published>
+        <summary>A FHIR ConceptMap representing the history of the Dictionary of medicines and devices (dm+d)</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/5081c08f-6312-4ed3-9164-265302c7f37d/artefact/ConceptMap_dmd_history202609.1.0.json" length="34147866" ncts:sha256Hash="c0c42d82a4971cc6886b81a94ae942625b4e12db935b6fac4a1e1484c5c41e4b" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/history</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.1.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) to GTIN Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:8f4f6a19-b5ee-4937-bf27-9e439b4fac35</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-14T03:05:19Z</updated>
+        <published>2026-09-14T03:05:19Z</published>
+        <summary>A FHIR ConceptMap between the Dictionary of medicines and devices (dm+d) and GTIN (Global Trade Item Number), generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/8f4f6a19-b5ee-4937-bf27-9e439b4fac35/artefact/ConceptMap_dmd_gtin202609.1.0.json" length="37678990" ncts:sha256Hash="09e3bdf730da41cc0e8ff056e824220dead20661f09a724420667bd632252603" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/gtin</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.1.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d)</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:a57df123-993a-457f-8bed-e460b89a5b1f</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-14T03:05:16Z</updated>
+        <published>2026-09-14T03:05:16Z</published>
+        <summary>A FHIR CodeSystem rendering of the Dictionary of medicines and devices (dm+d) generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/a57df123-993a-457f-8bed-e460b89a5b1f/artefact/8bb25fd30341a2040826196b56fcbef657ddf070a654bba589c0c2e839a9100d.json" length="400316010" ncts:sha256Hash="8bb25fd30341a2040826196b56fcbef657ddf070a654bba589c0c2e839a9100d" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.1.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Bundle-dmd-CodeSystems-202609.1.0</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:41c1218e-84b9-419f-8c36-c64eef293e81</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-14T03:04:25Z</updated>
+        <published>2026-09-14T03:04:25Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/41c1218e-84b9-419f-8c36-c64eef293e81/artefact/718025bb515895c413cf983832829778a6b465cd8b6b8ec03f10bdc2f94d9c15.json" length="101501" ncts:sha256Hash="718025bb515895c413cf983832829778a6b465cd8b6b8ec03f10bdc2f94d9c15" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>Bundle-dmd-CodeSystems-202609.1.0</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.1.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) history Concept Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:dbd71ad1-ff25-4f2c-b01f-251e03f262a2</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-07T03:04:52Z</updated>
+        <published>2026-09-07T03:04:52Z</published>
+        <summary>A FHIR ConceptMap representing the history of the Dictionary of medicines and devices (dm+d)</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/dbd71ad1-ff25-4f2c-b01f-251e03f262a2/artefact/ConceptMap_dmd_history202609.0.0.json" length="34142025" ncts:sha256Hash="a18253fb9534c8c98824a5c11c7c202c406fa9d48252542da8191f9182d6c092" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/history</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) to GTIN Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:1a561581-5154-4d24-87af-f975b018c05d</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-07T03:04:49Z</updated>
+        <published>2026-09-07T03:04:49Z</published>
+        <summary>A FHIR ConceptMap between the Dictionary of medicines and devices (dm+d) and GTIN (Global Trade Item Number), generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/1a561581-5154-4d24-87af-f975b018c05d/artefact/ConceptMap_dmd_gtin202609.0.0.json" length="37653137" ncts:sha256Hash="8b88b367d1a4d6528596c5eb93580854a3abeec6263ec2aebf025651739a7b75" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/gtin</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d)</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:2f0b9791-0f71-47d4-b380-f463263477c8</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-07T03:04:44Z</updated>
+        <published>2026-09-07T03:04:44Z</published>
+        <summary>A FHIR CodeSystem rendering of the Dictionary of medicines and devices (dm+d) generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/2f0b9791-0f71-47d4-b380-f463263477c8/artefact/0c37b7b36f52c18ba83a5c0a3a84ccd7c7bd46a8aca0771cf953a86603dee38d.json" length="400184016" ncts:sha256Hash="0c37b7b36f52c18ba83a5c0a3a84ccd7c7bd46a8aca0771cf953a86603dee38d" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Bundle-dmd-CodeSystems-202609.0.0</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:829fd52c-493f-4944-b529-6b75ca73056c</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-09-07T03:03:52Z</updated>
+        <published>2026-09-07T03:03:52Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/829fd52c-493f-4944-b529-6b75ca73056c/artefact/f610387d0e8338bb6a5323350cde70291454bee602f6c82cd229aa2328fbbeb7.json" length="101501" ncts:sha256Hash="f610387d0e8338bb6a5323350cde70291454bee602f6c82cd229aa2328fbbeb7" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>Bundle-dmd-CodeSystems-202609.0.0</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202609.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) history Concept Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:3384e4c3-0f88-4ba9-97c6-94fafdba478e</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-31T03:04:58Z</updated>
+        <published>2026-08-31T03:04:58Z</published>
+        <summary>A FHIR ConceptMap representing the history of the Dictionary of medicines and devices (dm+d)</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/3384e4c3-0f88-4ba9-97c6-94fafdba478e/artefact/ConceptMap_dmd_history202608.4.0.json" length="34119975" ncts:sha256Hash="f7014ffe91b182398292208f959e861525915db6d60f9a4b272da6f1ee23bbef" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/history</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.4.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) to GTIN Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:4b6969b1-0fee-4563-9769-848c403c1bd1</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-31T03:04:56Z</updated>
+        <published>2026-08-31T03:04:56Z</published>
+        <summary>A FHIR ConceptMap between the Dictionary of medicines and devices (dm+d) and GTIN (Global Trade Item Number), generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/4b6969b1-0fee-4563-9769-848c403c1bd1/artefact/ConceptMap_dmd_gtin202608.4.0.json" length="37588283" ncts:sha256Hash="38f162993f60fd6cbb016e035e199efd3d4e04bdd5a62c072936e4f2d8a99b31" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/gtin</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.4.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d)</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:6a45b836-9327-40c3-94eb-6e56b13c3794</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-31T03:04:52Z</updated>
+        <published>2026-08-31T03:04:52Z</published>
+        <summary>A FHIR CodeSystem rendering of the Dictionary of medicines and devices (dm+d) generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/6a45b836-9327-40c3-94eb-6e56b13c3794/artefact/d8f9e4a2f0e7c04a4dc84c3743ab48a49de91b62f31988b6cdb58ee3f4d181e6.json" length="399785059" ncts:sha256Hash="d8f9e4a2f0e7c04a4dc84c3743ab48a49de91b62f31988b6cdb58ee3f4d181e6" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.4.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Bundle-dmd-CodeSystems-202608.4.0</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:cff6ba60-da4d-4bc2-9bed-354ebb6bcb60</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-31T03:04:01Z</updated>
+        <published>2026-08-31T03:04:01Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/cff6ba60-da4d-4bc2-9bed-354ebb6bcb60/artefact/25f13278da4a91b5a4d19c42adb4ca0cc8e6b1d7a83a25b9bd5547fe55ba43aa.json" length="101501" ncts:sha256Hash="25f13278da4a91b5a4d19c42adb4ca0cc8e6b1d7a83a25b9bd5547fe55ba43aa" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>Bundle-dmd-CodeSystems-202608.4.0</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.4.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) history Concept Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:1f214310-ca41-4d65-b9c9-1328ffb8d579</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-24T03:05:55Z</updated>
+        <published>2026-08-24T03:05:55Z</published>
+        <summary>A FHIR ConceptMap representing the history of the Dictionary of medicines and devices (dm+d)</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/1f214310-ca41-4d65-b9c9-1328ffb8d579/artefact/ConceptMap_dmd_history202608.3.0.json" length="34107644" ncts:sha256Hash="7146421edea5bca7ebf37940866002426a67b20e6fd1763453228d2b9cfd83d9" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/history</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.3.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) to GTIN Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:714a52c0-e158-4d56-aa82-099fcabbad4f</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-24T03:05:53Z</updated>
+        <published>2026-08-24T03:05:53Z</published>
+        <summary>A FHIR ConceptMap between the Dictionary of medicines and devices (dm+d) and GTIN (Global Trade Item Number), generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/714a52c0-e158-4d56-aa82-099fcabbad4f/artefact/ConceptMap_dmd_gtin202608.3.0.json" length="37565295" ncts:sha256Hash="69d2cd5277a02f411f2e0bab1df88eda516019f8d904a2ff5e4a87a229eeab84" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/gtin</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.3.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d)</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:4c0a3ba2-e02c-4b6a-ae45-b6ff5d56aabb</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-24T03:05:49Z</updated>
+        <published>2026-08-24T03:05:49Z</published>
+        <summary>A FHIR CodeSystem rendering of the Dictionary of medicines and devices (dm+d) generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/4c0a3ba2-e02c-4b6a-ae45-b6ff5d56aabb/artefact/8c2cd642bb1c5ccfbcc7ee75f08605552b4ee33d08f6a5564126cf511b6e3734.json" length="399648880" ncts:sha256Hash="8c2cd642bb1c5ccfbcc7ee75f08605552b4ee33d08f6a5564126cf511b6e3734" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.3.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Bundle-dmd-CodeSystems-202608.3.0</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:031f5bc8-9e23-4b99-a390-d8aef2831c59</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-24T03:04:59Z</updated>
+        <published>2026-08-24T03:04:59Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/031f5bc8-9e23-4b99-a390-d8aef2831c59/artefact/1ff087711061a1b4ac791e2cf6b20900d4bf76523be4a0e3dbc6e43a78d66dca.json" length="101501" ncts:sha256Hash="1ff087711061a1b4ac791e2cf6b20900d4bf76523be4a0e3dbc6e43a78d66dca" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>Bundle-dmd-CodeSystems-202608.3.0</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.3.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) history Concept Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:40a00c9c-22ff-430d-a1a8-e1d2777132b5</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-17T03:01:23Z</updated>
+        <published>2026-08-17T03:01:23Z</published>
+        <summary>A FHIR ConceptMap representing the history of the Dictionary of medicines and devices (dm+d)</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/40a00c9c-22ff-430d-a1a8-e1d2777132b5/artefact/ConceptMap_dmd_history202608.2.0.json" length="34105048" ncts:sha256Hash="6ae680e5ac28d636c9fc3f7fdd2fe9fe59d197bf8231e3d8b327230443a1d088" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/history</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.2.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) to GTIN Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:44fd52dc-a2c0-45d2-af8f-adf309be4dde</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-17T03:01:21Z</updated>
+        <published>2026-08-17T03:01:21Z</published>
+        <summary>A FHIR ConceptMap between the Dictionary of medicines and devices (dm+d) and GTIN (Global Trade Item Number), generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/44fd52dc-a2c0-45d2-af8f-adf309be4dde/artefact/ConceptMap_dmd_gtin202608.2.0.json" length="37547347" ncts:sha256Hash="a5eb4c3111281528391b24394e1a8315fc235046354e4e9d0bdbbdb9359429f2" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/gtin</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.2.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d)</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:0c058e7f-eee5-40bb-9009-e61b4580cbe3</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-17T03:01:16Z</updated>
+        <published>2026-08-17T03:01:16Z</published>
+        <summary>A FHIR CodeSystem rendering of the Dictionary of medicines and devices (dm+d) generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/0c058e7f-eee5-40bb-9009-e61b4580cbe3/artefact/9540932c3a8f6911bce5720d3808bb4998629a17542ed4dfe67eac0f5072d1e2.json" length="399605760" ncts:sha256Hash="9540932c3a8f6911bce5720d3808bb4998629a17542ed4dfe67eac0f5072d1e2" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.2.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Bundle-dmd-CodeSystems-202608.2.0</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:e49e0c0d-aa6c-4f08-b89b-b8636f0ef286</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-17T03:00:24Z</updated>
+        <published>2026-08-17T03:00:24Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/e49e0c0d-aa6c-4f08-b89b-b8636f0ef286/artefact/6006cdcbf00ca1e1a9b7ae2b080475a054b7760c2b99f7f7a54fe233f80c9ef5.json" length="101411" ncts:sha256Hash="6006cdcbf00ca1e1a9b7ae2b080475a054b7760c2b99f7f7a54fe233f80c9ef5" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>Bundle-dmd-CodeSystems-202608.2.0</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.2.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) history Concept Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:d0db5ca0-167f-4fd2-b2bc-61cf00101308</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-10T03:39:54Z</updated>
+        <published>2026-08-10T03:39:54Z</published>
+        <summary>A FHIR ConceptMap representing the history of the Dictionary of medicines and devices (dm+d)</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/d0db5ca0-167f-4fd2-b2bc-61cf00101308/artefact/ConceptMap_dmd_history202608.1.0.json" length="34095363" ncts:sha256Hash="2d970dd36dd8b9121f8cee5567d07173aeb29d7c4cc6d2c7828d1ab732ae1003" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/history</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.1.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) to GTIN Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:46296c4f-f14a-49c4-af25-977ea32809b3</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-10T03:39:52Z</updated>
+        <published>2026-08-10T03:39:52Z</published>
+        <summary>A FHIR ConceptMap between the Dictionary of medicines and devices (dm+d) and GTIN (Global Trade Item Number), generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/46296c4f-f14a-49c4-af25-977ea32809b3/artefact/ConceptMap_dmd_gtin202608.1.0.json" length="37539470" ncts:sha256Hash="eba16743fea5c9db6fec7a8af3bc0a9de106f098d8047645de308216037f1ef5" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/gtin</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.1.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d)</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:4e2d498b-7985-4bb7-a0c8-973fdff07544</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-10T03:39:49Z</updated>
+        <published>2026-08-10T03:39:49Z</published>
+        <summary>A FHIR CodeSystem rendering of the Dictionary of medicines and devices (dm+d) generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/4e2d498b-7985-4bb7-a0c8-973fdff07544/artefact/2d35ee42d9d1acb9ca8ede659b54a75eff679d5aacb9b3c0ab4e81925fd3a932.json" length="399535051" ncts:sha256Hash="2d35ee42d9d1acb9ca8ede659b54a75eff679d5aacb9b3c0ab4e81925fd3a932" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.1.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Bundle-dmd-CodeSystems-202608.1.0</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:960c6477-3bea-40bf-93cf-58c2eee70855</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-10T03:38:58Z</updated>
+        <published>2026-08-10T03:38:58Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/960c6477-3bea-40bf-93cf-58c2eee70855/artefact/51665b2c5889cd04e80784089f19ca3686e3d008b8115213c7a4ac73b4c2b188.json" length="101411" ncts:sha256Hash="51665b2c5889cd04e80784089f19ca3686e3d008b8115213c7a4ac73b4c2b188" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>Bundle-dmd-CodeSystems-202608.1.0</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.1.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) history Concept Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:53f11840-92ad-4dcc-9259-2425c8c3a8d3</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-03T03:03:29Z</updated>
+        <published>2026-08-03T03:03:29Z</published>
+        <summary>A FHIR ConceptMap representing the history of the Dictionary of medicines and devices (dm+d)</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/53f11840-92ad-4dcc-9259-2425c8c3a8d3/artefact/ConceptMap_dmd_history202608.0.0.json" length="34079152" ncts:sha256Hash="23fa16d116bb72f5023a84a91ab3c75b2d43e9593a6533260d0fb4e67d1166d6" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/history</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d) to GTIN Map</title>
+        <category label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_ConceptMap"/>
+        <id>urn:uuid:cb98de09-7792-4a42-acd1-a3a97b250ce9</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-03T03:03:26Z</updated>
+        <published>2026-08-03T03:03:26Z</published>
+        <summary>A FHIR ConceptMap between the Dictionary of medicines and devices (dm+d) and GTIN (Global Trade Item Number), generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/cb98de09-7792-4a42-acd1-a3a97b250ce9/artefact/ConceptMap_dmd_gtin202608.0.0.json" length="37501761" ncts:sha256Hash="6ddbf4f906f90d2e902dc9214881ea9103ffcbbfd1b01fa386968c3795d3953f" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk/conceptmap/gtin</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Dictionary of medicines and devices (dm+d)</title>
+        <category label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_CodeSystem"/>
+        <id>urn:uuid:037afdb5-26bf-4b81-a3c9-e07c96b16849</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-03T03:03:22Z</updated>
+        <published>2026-08-03T03:03:22Z</published>
+        <summary>A FHIR CodeSystem rendering of the Dictionary of medicines and devices (dm+d) generated from the dm+d XML distribution</summary>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/037afdb5-26bf-4b81-a3c9-e07c96b16849/artefact/a5d9e733fdd6334f187b910a0eace9998403661629a04f7148dab9b642b9385f.json" length="399269225" ncts:sha256Hash="a5d9e733fdd6334f187b910a0eace9998403661629a04f7148dab9b642b9385f" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>https://dmd.nhs.uk</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Bundle-dmd-CodeSystems-202608.0.0</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:1e0ba90b-d1f8-4b8b-aac0-f0463358455a</id>
+        <author>
+            <email>ontoserver-support@csiro.au</email>
+            <name>AeHRC</name>
+            <uri>http://aehrc.com</uri>
+        </author>
+        <updated>2026-08-03T03:02:30Z</updated>
+        <published>2026-08-03T03:02:30Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/1e0ba90b-d1f8-4b8b-aac0-f0463358455a/artefact/8b6ef9b60523639960c4a7be33bd1d3299a3c07f6fa0c09ce02465a607e92d19.json" length="101411" ncts:sha256Hash="8b6ef9b60523639960c4a7be33bd1d3299a3c07f6fa0c09ce02465a607e92d19" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>Bundle-dmd-CodeSystems-202608.0.0</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>202608.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <entry>
+        <title>Bundle-dmd-ValueSets</title>
+        <category label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" term="FHIR_Bundle"/>
+        <id>urn:uuid:371a8e3f-b9b0-41d3-86ad-0cb43c2a101a</id>
+        <author>
+            <email>information.standards@nhs.net</email>
+            <name>NHS Digital</name>
+            <uri>https://ontology.nhs.uk</uri>
+        </author>
+        <updated>2022-01-14T13:57:56Z</updated>
+        <published>2022-01-14T13:57:56Z</published>
+        <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/entry/371a8e3f-b9b0-41d3-86ad-0cb43c2a101a/artefact/7ddf17595b6752641c82862fe340ae78eb9595788370e9aa2333af47e65af526.json" length="10613" ncts:sha256Hash="7ddf17595b6752641c82862fe340ae78eb9595788370e9aa2333af47e65af526" rel="alternate" type="application/fhir+json"/>
+        <ncts:contentItemIdentifier>Bundle-dmd-ValueSets-1.0.0</ncts:contentItemIdentifier>
+        <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+        <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+        <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+        <onto:permission code="restricted.read"/>
+        <source>
+            <title>NHS Digital data load feed</title>
+            <id>urn:uuid:b4484456-366a-4430-a8ae-56248003fc5a</id>
+            <link href="https://ontology.nhs.uk/syndication/feed/20260921_002_DMD_RC/syndication.xml" length="0" rel="alternate"/>
+        </source>
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+  </entry>
+    <ncts:atomSyndicationFormatProfile>http://ns.electronichealth.net.au/ncts/syndication/asf/profile/1.0.0</ncts:atomSyndicationFormatProfile>
+</feed>

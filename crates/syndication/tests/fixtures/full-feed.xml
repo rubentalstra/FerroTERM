@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:ncts="http://ns.electronichealth.net.au/ncts/syndication/asf/extensions/1.0.0"
+      xmlns:onto="http://ontoserver.csiro.au/syndication/"
+      xmlns:sct="http://snomed.info/syndication/sct-extension/1.0.0">
+  <title>Example Terminology Syndication Feed</title>
+  <link rel="self" type="application/atom+xml" href="https://example.invalid/synd/syndication.xml" length="0"/>
+  <id>urn:uuid:00000000-0000-4000-8000-000000000000</id>
+  <generator version="1.0">Example Terminology Server</generator>
+  <updated>2026-01-31T00:00:00Z</updated>
+  <ncts:atomSyndicationFormatProfile>http://ns.electronichealth.net.au/ncts/syndication/asf/profile/1.0.0</ncts:atomSyndicationFormatProfile>
+  <entry>
+    <title>Example Edition 31 January 2026 (RF2 SNAPSHOT)</title>
+    <link rel="alternate" type="application/zip" href="https://example.invalid/content/edition-20260131-snapshot.zip" length="1024" ncts:sha256Hash="AA11BB22CC33DD44EE55FF6677889900AA11BB22CC33DD44EE55FF6677889900"/>
+    <category term="SCT_RF2_SNAPSHOT" label="SNOMED CT RF2 Snapshot" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <author>
+      <name>Example Authority</name>
+      <uri>https://example.invalid</uri>
+      <email>help@example.invalid</email>
+    </author>
+    <id>urn:uuid:11111111-1111-4111-8111-111111111111</id>
+    <updated>2026-01-31T09:00:00Z</updated>
+    <published>2026-01-31T09:00:00Z</published>
+    <summary>An invented edition used to shape the fixture.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/11000001107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/11000001107/version/20260131</ncts:contentItemVersion>
+    <source>
+      <title>An upstream feed whose title is not this entry's</title>
+      <id>urn:uuid:99999999-9999-4999-8999-999999999999</id>
+      <link rel="alternate" href="https://example.invalid/synd/upstream.xml" length="0"/>
+    </source>
+  </entry>
+  <entry>
+    <title>Example Edition 31 January 2026 (RF2 DELTA)</title>
+    <link rel="alternate" type="application/zip" href="https://example.invalid/content/edition-20260131-delta.zip" length="16" ncts:sha256Hash="1111111111111111111111111111111111111111111111111111111111111111"/>
+    <category term="SCT_RF2_DELTA" label="SNOMED CT RF2 Delta" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:22222222-2222-4222-8222-222222222222</id>
+    <updated>2026-01-31T09:00:00Z</updated>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/11000001107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/11000001107/version/20260131</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>Example Edition 31 January 2026 (RF2 FULL)</title>
+    <link rel="alternate" type="application/zip" href="https://example.invalid/content/edition-20260131-full.zip" length="4096" ncts:sha256Hash="2222222222222222222222222222222222222222222222222222222222222222"/>
+    <category term="SCT_RF2_FULL" label="SNOMED CT RF2 Full" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:33333333-3333-4333-8333-333333333333</id>
+    <updated>2026-01-31T09:00:00Z</updated>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/11000001107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/11000001107/version/20260131</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>Example Extension 15 December 2025 v1.0</title>
+    <link rel="related" type="application/pdf" href="https://example.invalid/content/extension-20251215-notes.pdf" length="64" sct:md5Hash="00112233445566778899aabbccddeeff"/>
+    <link rel="alternate" type="application/zip" href="https://example.invalid/content/extension-20251215-all.zip" length="2048" sct:md5Hash="ffeeddccbbaa99887766554433221100"/>
+    <category term="SCT_RF2_ALL" label="SNOMED CT RF2 All" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:44444444-4444-4444-8444-444444444444</id>
+    <updated>2025-12-15T09:00:00Z</updated>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/21000001104</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/21000001104/version/20251215</ncts:contentItemVersion>
+    <sct:packageDependency>
+      <sct:editionDependency>http://snomed.info/sct/11000001107/version/20260131</sct:editionDependency>
+    </sct:packageDependency>
+  </entry>
+  <entry xmlns:asf="http://ns.electronichealth.net.au/ncts/syndication/asf/extensions/1.0.0">
+    <title>Example Laboratory Codes &amp; Units</title>
+    <category term="FHIR_CodeSystem" label="FHIR CodeSystem" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:55555555-5555-4555-8555-555555555555</id>
+    <updated>2026-01-20T09:00:00Z</updated>
+    <link rel="alternate" type="application/fhir+json" href="https://example.invalid/content/CodeSystem-example.json" length="512" asf:sha256Hash="3333333333333333333333333333333333333333333333333333333333333333" onto:validated="true"/>
+    <asf:contentItemIdentifier>https://example.invalid/fhir/CodeSystem/example</asf:contentItemIdentifier>
+    <asf:contentItemVersion>1.0.0</asf:contentItemVersion>
+    <asf:fhirVersion>4.0.1</asf:fhirVersion>
+    <onto:permission code="restricted.read"/>
+  </entry>
+  <entry>
+    <title>Example Value Set</title>
+    <category term="FHIR_ValueSet" label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:66666666-6666-4666-8666-666666666666</id>
+    <updated>2026-01-20T09:00:00Z</updated>
+    <link rel="alternate" type="application/fhir+json" href="https://example.invalid/content/ValueSet-example.json" length="256" ncts:sha256Hash="4444444444444444444444444444444444444444444444444444444444444444"/>
+    <ncts:contentItemIdentifier>https://example.invalid/fhir/ValueSet/example</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+    <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+  </entry>
+  <entry>
+    <title>Example Concept Map</title>
+    <category term="FHIR_ConceptMap" label="FHIR ConceptMap" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:77777777-7777-4777-8777-777777777777</id>
+    <updated>2026-01-20T09:00:00Z</updated>
+    <link rel="alternate" type="application/fhir+json" href="https://example.invalid/content/ConceptMap-example.json" length="256" ncts:sha256Hash="5555555555555555555555555555555555555555555555555555555555555555"/>
+    <ncts:contentItemIdentifier>https://example.invalid/fhir/ConceptMap/example</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+    <ncts:fhirVersion>4.0.1</ncts:fhirVersion>
+  </entry>
+  <entry>
+    <title>Example Terminology Bundle</title>
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:88888888-8888-4888-8888-888888888888</id>
+    <updated>2026-01-20T09:00:00Z</updated>
+    <link rel="alternate" type="application/fhir+json" href="https://example.invalid/content/Bundle-example.json" length="1024" ncts:sha256Hash="6666666666666666666666666666666666666666666666666666666666666666"/>
+    <ncts:contentItemIdentifier>https://example.invalid/fhir/Bundle/example</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>Example FHIR Package</title>
+    <category term="FHIR_Package" label="FHIR Package" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa</id>
+    <updated>2026-01-20T09:00:00Z</updated>
+    <link rel="alternate" type="application/tar+gzip" href="https://example.invalid/content/example.tgz" length="8192" ncts:sha256Hash="7777777777777777777777777777777777777777777777777777777777777777"/>
+    <ncts:contentItemIdentifier>https://example.invalid/fhir/package/example</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>Example Binary Index 2.0.13</title>
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.13"/>
+    <id>urn:uuid:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb</id>
+    <updated>2026-01-31T09:00:00Z</updated>
+    <link rel="alternate" type="application/zip" href="https://example.invalid/content/index-2.0.13.zip" length="65536" ncts:sha256Hash="8888888888888888888888888888888888888888888888888888888888888888"/>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/11000001107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/11000001107/version/20260131</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>Example Structure Definition</title>
+    <category term="FHIR_StructureDefinition" label="FHIR StructureDefinition" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:cccccccc-cccc-4ccc-8ccc-cccccccccccc</id>
+    <updated>2026-01-20T09:00:00Z</updated>
+    <link rel="alternate" type="application/fhir+json" href="https://example.invalid/content/StructureDefinition-example.json" length="128" ncts:sha256Hash="9999999999999999999999999999999999999999999999999999999999999999"/>
+    <ncts:contentItemIdentifier>https://example.invalid/fhir/StructureDefinition/example</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>Example Tabular Export</title>
+    <category term="EXAMPLE_TSV" label="Tabular export" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:dddddddd-dddd-4ddd-8ddd-dddddddddddd</id>
+    <updated>2026-01-20T09:00:00Z</updated>
+    <link rel="alternate" type="text/tab-separated-values" href="https://example.invalid/content/example.tsv" length="32" ncts:sha256Hash="abababababababababababababababababababababababababababababababab"/>
+    <ncts:contentItemIdentifier>https://example.invalid/tabular/example</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>Example Entry Without A Content Link</title>
+    <category term="FHIR_ValueSet" label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee</id>
+    <updated>2026-01-20T09:00:00Z</updated>
+    <link rel="related" type="application/pdf" href="https://example.invalid/content/notes.pdf" length="8"/>
+    <ncts:contentItemIdentifier>https://example.invalid/fhir/ValueSet/linkless</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+  </entry>
+</feed>

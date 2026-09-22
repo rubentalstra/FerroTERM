@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:ncts="http://ns.electronichealth.net.au/ncts/syndication/asf/extensions/1.0.0">
+  <title>Example Feed With A Malformed Length</title>
+  <id>urn:uuid:00000000-0000-4000-8000-00000000001f</id>
+  <updated>2026-01-31T00:00:00Z</updated>
+  <entry>
+    <title>Example Value Set</title>
+    <category term="FHIR_ValueSet" label="FHIR ValueSet" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0"/>
+    <id>urn:uuid:00000000-0000-4000-8000-0000000001ff</id>
+    <updated>2026-01-20T09:00:00Z</updated>
+    <link rel="alternate" type="application/fhir+json" href="https://example.invalid/content/ValueSet-example.json" length="a few bytes" ncts:sha256Hash="0000000000000000000000000000000000000000000000000000000000000000"/>
+    <ncts:contentItemIdentifier>https://example.invalid/fhir/ValueSet/example</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>1.0.0</ncts:contentItemVersion>
+  </entry>
+</feed>

@@ -28,6 +28,15 @@ fresh link reference.
   `ferroterm_reloads_total{outcome="ok"|"failed"}`, and
   `ferroterm_code_system_loaded` now describes the set being served rather than
   the set loaded at start.
+- `crates/syndication`, a client for the Atom syndication dialect national
+  terminology services publish (#580). It reads a feed with the NCTS Atom
+  Syndication Format extensions into a typed model, keeps a category term it
+  does not name rather than dropping it, decides what a run takes (snapshot
+  only, the binary index refused by name, Ontoserver's newer-date replace
+  rule), and streams one content item to a file with its SHA-256 or MD5
+  verified before it counts as fetched. The `Source` trait is the seam a
+  service add-on implements, with the listing and the download authenticating
+  separately. The crate names no country, operator, or code system.
 
 ### Changed
 
