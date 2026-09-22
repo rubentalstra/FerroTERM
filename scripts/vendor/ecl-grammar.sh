@@ -6,7 +6,7 @@
 # its example corpus (.claude/rules/vendored-inputs.md). It reads the ECL pin
 # from docs/VERSIONS.md (the tag of the IHTSDO grammar repository), downloads
 # that tag's archive, copies the syntax files, the examples, the licence, and
-# the README verbatim into crates/ferroterm-ecl/vendor/, and writes a
+# the README verbatim into crates/sct-ecl/vendor/, and writes a
 # PROVENANCE.md beside them. Re-running with an unchanged pin reproduces the
 # same tree (only the fetch date in PROVENANCE.md moves).
 #
@@ -19,7 +19,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 
 repo="https://github.com/IHTSDO/snomed-expression-constraint-language"
-dest="crates/ferroterm-ecl/vendor"
+dest="crates/sct-ecl/vendor"
 pins="docs/VERSIONS.md"
 
 die() { printf 'ecl-grammar: %s\n' "$*" >&2; exit 1; }
@@ -58,7 +58,7 @@ cat > "$dest/PROVENANCE.md" <<PROV
 - Contents: \`syntax/\` (the ANTLR grammar \`ECL.g4\` and the ABNF forms) and
   \`examples/\` (the valid example corpus), copied verbatim; \`README.md\`.
 
-The parser in \`crates/ferroterm-ecl\` mirrors \`syntax/ECL.g4\` rule for
+The parser in \`crates/sct-ecl\` mirrors \`syntax/ECL.g4\` rule for
 rule; the corpus is the parse-conformance fixture. Never hand-edit these
 files; change the pin in \`docs/VERSIONS.md\` and re-run the script.
 PROV

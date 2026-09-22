@@ -90,6 +90,18 @@ fresh link reference.
 
 ### Changed
 
+- Repository hygiene, in one change: the `versions.sh` check reads the one
+  published-crate list from `scripts/release/publish-crates.sh` and accepts a
+  member declared unpublished with a reason; the ECL grammar and registry
+  fetchers write to the renamed crate paths again, vendored trees are
+  `linguist-vendored`, and `scripts/checks/vendor-dests.sh` fails when a
+  fetcher's destination is missing; every workspace member is named in the
+  repo map and the architecture table, kept so by `scripts/checks/repo-map.sh`;
+  `docs/claims.md` cites symbols and tests instead of line numbers, kept so by
+  `scripts/checks/claims.sh`; the install page and `compose.yaml` mount an
+  index root; zizmor moves to 1.30.1 with its `self-repository` audit ignored
+  by recorded reason while actionlint rejects the `$/` form; and the review
+  rule names GitHub's Copilot code-scanning lane as advisory.
 - The server binary carries no HTTP client, and a guard keeps it that way
   (#585). The WHO ICD-API walker is the one client in the workspace and now
   sits behind the `icd11` crate's `api` feature, which only the offline build

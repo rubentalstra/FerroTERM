@@ -171,7 +171,7 @@ if [[ -f LICENSE ]]; then
     [[ -n "$hit" ]] || continue
     bad "stale licence claim at $hit"; stale=1
   done < <(git grep -n -E 'SPDX-License-Identifier: (MIT|Apache-2\.0)|License-MIT|License-Apache|^license = "(MIT|Apache-2\.0)"|^license: (MIT|Apache-2\.0)|image\.licenses="?(MIT|Apache)' \
-    -- ':!scripts/checks/versions.sh' ':!crates/sct-ecl/vendor' ':!crates/rf2' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
+    -- ':!scripts/checks/versions.sh' ':!crates/sct-ecl/vendor' ':!crates/rf2/LICENSE' ':!crates/rf2/Cargo.toml' ':!crates/rf2/README.md' ':!website/book/mermaid.min.js' ':!CHANGELOG.md' || true)
   # rf2 is published under Apache 2.0 (the owner's decision, #223); it carries
   # the Apache text and says so.
   if ! grep -q '^license = "Apache-2.0"' crates/rf2/Cargo.toml || ! grep -q 'Apache License' crates/rf2/LICENSE; then
@@ -216,9 +216,23 @@ fi
 echo "== published crates (crates/*/Cargo.toml <-> README, LICENSE, root requirements)"
 if ls crates/*/Cargo.toml >/dev/null 2>&1; then
   line="$(awk -F'"' '/^\[package\]/{p=1} p && /^version = /{print $2; exit}' crates/rf2/Cargo.toml || true)"
+  # The one published list is the CRATES array of scripts/release/publish-crates.sh
+  # (dependency order for the upload). A crates/* member is published when it
+  # is in that list; a member outside it must say `publish = false` and carry
+  # a `# NOTE: unpublished:` reason line, so a forgotten member and a held-out
+  # member can never look alike.
+  published="$(awk '/^readonly CRATES=\(/{p=1; next} p && /^\)/{exit} p {gsub(/^[ \t]+|[ \t]+$/, ""); if ($0 != "") print}' scripts/release/publish-crates.sh)"
+  for name in $published; do
+    [[ -f "crates/$name/Cargo.toml" ]] || bad "publish-crates.sh lists $name, which is not a crates/* member"
+  done
   for manifest in crates/*/Cargo.toml; do
     dir="$(dirname "$manifest")"
     name="$(awk -F'"' '/^\[package\]/{p=1} p && /^name = /{print $2; exit}' "$manifest")"
+    if ! grep -qx "$name" <<<"$published"; then
+      grep -q '^publish = false' "$manifest" || bad "$manifest is not in publish-crates.sh and does not say publish = false"
+      grep -q '^# NOTE: unpublished:' "$manifest" || bad "$manifest is unpublished without a '# NOTE: unpublished:' reason"
+      continue
+    fi
     [[ -f "$dir/README.md" ]] || bad "$dir has no README.md (published crate)"
     [[ -f "$dir/LICENSE" ]] || bad "$dir has no LICENSE (published crate)"
     case "$dir" in
@@ -234,7 +248,7 @@ if ls crates/*/Cargo.toml >/dev/null 2>&1; then
     grep -qE "^${name} = \{ path = \"crates/${name}\", version = \"${line}\" \}" Cargo.toml \
       || bad "root Cargo.toml does not require $name at $line"
   done
-  note "OK: every published crate has README, LICENSE, publish = true, and sits on the $line line"
+  note "OK: every crate in publish-crates.sh has README, LICENSE, publish = true, and sits on the $line line; every other member is declared unpublished"
 else
   note "no crates/*/Cargo.toml yet — skipped"
 fi

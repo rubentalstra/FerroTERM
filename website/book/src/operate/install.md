@@ -35,12 +35,16 @@ $ docker compose up
 The `build` service runs `ferroterm-build` from the same image with the zip
 mounted read-only and writes the index to `./index` (or `FERROTERM_INDEX_DIR`);
 the Snapshot is unpacked to the container's tmpfs and gone with it. It sits
-under the `build` profile, so `docker compose up` never starts it. To serve an
-index you built elsewhere, or several (the variable takes `:`-separated
-directories inside the container), skip the first command and point at it:
+under the `build` profile, so `docker compose up` never starts it. To serve
+indexes you built elsewhere, skip the first command and point the variable at
+an index root: a directory whose child directories are the artifacts, one per
+release. A root is the layout the sync service writes (one child per release,
+renamed into place when complete), so a deployment that starts with a root
+needs no re-layout when the sync is added later. A single artifact directory
+is accepted too (see [Configuration](configuration.md#index-roots)).
 
 ```console
-$ FERROTERM_INDEX_DIR=/path/to/ferroterm-index docker compose up
+$ FERROTERM_INDEX_DIR=/srv/ferroterm/index docker compose up
 ```
 
 The file pulls the image of the release it shipped with, mounts the index
@@ -67,12 +71,13 @@ a numeric non-root user (`65532`), and the listen address preset to
 
 ```console
 $ docker run --rm -p 8080:8080 \
-    -v /path/to/ferroterm-index:/data/index:ro \
+    -v /srv/ferroterm/index:/data/index:ro \
     -e FERROTERM_INDEX=/data/index \
     ghcr.io/rubentalstra/ferroterm:0.1.3
 ```
 
-Mount the index read-only. The server writes nothing while serving, so the
+Mount the index root read-only; each child directory under it is one
+artifact. The server writes nothing while serving, so the
 container runs with a read-only root filesystem. Tags are `<version>`,
 `<major.minor>`, and `latest`; a deployment pins the digest and verifies its
 provenance first (see [Verifying releases](verifying-releases.md)):
@@ -88,7 +93,8 @@ binary probes `GET /health` on its own listen address, since there is no shell
 or `curl` to do it, so `docker inspect` reports the container's health and
 Compose can wait on it. Kubernetes ignores the image's `HEALTHCHECK`: point the
 readiness and liveness probes at `GET /health`, set `runAsNonRoot: true`,
-`readOnlyRootFilesystem: true`, and drop every capability. The server stops
+`readOnlyRootFilesystem: true`, drop every capability, and mount the index
+root (not a single artifact) read-only at the path `FERROTERM_INDEX` names. The server stops
 cleanly on `SIGTERM`.
 
 ## Run the binary
@@ -102,7 +108,7 @@ $ gh release download v0.1.3 -R rubentalstra/FerroTERM -p 'ferroterm-v0.1.3-x86_
 $ gh attestation verify ferroterm-v0.1.3-x86_64-unknown-linux-musl.tar.gz -R rubentalstra/FerroTERM \
     --signer-workflow rubentalstra/FerroTERM/.github/workflows/release-build.yml
 $ tar xzf ferroterm-v0.1.3-x86_64-unknown-linux-musl.tar.gz
-$ FERROTERM_INDEX=/path/to/ferroterm-index ./ferroterm
+$ FERROTERM_INDEX=/srv/ferroterm/index ./ferroterm
 ```
 
 The server opens each index read-only, refuses to start on a missing or

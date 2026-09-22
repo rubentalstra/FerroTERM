@@ -77,3 +77,12 @@ the repository. Neither lane restores a build cache (`ci-cd.md`).
 pre-1.0 dependencies that appear in a published crate's public API (`redb`,
 `roaring`, `fst`, `winnow`, `logos`, `jiff`) are adjudicated on #164 before the
 first publish, and again whenever the line graduates past `0.x`.
+
+## The one published list
+
+The `CRATES` array in `scripts/release/publish-crates.sh` is the published
+list, in upload order. `scripts/checks/versions.sh` reads it: a `crates/*`
+member in the list needs README, LICENSE, `publish = true`, and the lockstep
+version; a member outside it must say `publish = false` and carry a
+`# NOTE: unpublished: <reason>` line in its manifest. A name in the list with
+no member, or a member in neither state, fails the check.

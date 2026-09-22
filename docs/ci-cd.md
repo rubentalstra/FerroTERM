@@ -27,6 +27,7 @@ exist.
 | `ci.yml` (`viewer-boundary` job) | the viewer's resolved dependency closure links no workspace crate (`scripts/checks/viewer-boundary.sh`) | on workspace |
 | `ci.yml` (`no-client-in-server` job) | the server binary's resolved dependency tree carries no HTTP client, so a deployment can refuse it every outbound route (`scripts/checks/no-client-in-server.sh`) | on workspace |
 | `ci.yml` (`addon-boundary` job) | only `app/ferroterm-sync` links an `addons/*` crate, and an add-on links the syndication client and the leaf crates the script names (`scripts/checks/addon-boundary.sh`, run with `--self-test` first) | on workspace |
+| `ci.yml` (`tree-guards` job) | every `scripts/vendor/*.sh` fetcher writes into the tree (`vendor-dests.sh`), every workspace member is named in the repo map and the architecture table (`repo-map.sh`), and every evidence citation in `docs/claims.md` resolves to a symbol or a test and names no line number (`claims.sh`) | always |
 | `ci.yml` (`comment-style` job) | the RFC 505 / RFC 1574 comment budgets over every hand-written `.rs` file (`scripts/checks/comment-style.sh --all`), the sweep the per-edit hook cannot give | now |
 | `ci.yml` (`bench-bars` job) | the four operations timed over a generated edition, each median compared to the claim in `bench/bars.json` (`scripts/checks/bench-bars.sh`) | on workspace |
 | `fuzz.yml` | weekly: every parser a client or a release reaches, fed arbitrary bytes under `cargo-fuzz` on nightly (`fuzz/README.md`) | weekly |

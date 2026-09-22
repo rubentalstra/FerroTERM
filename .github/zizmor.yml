@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: BUSL-1.1
+# zizmor configuration (docs.zizmor.sh/configuration). Only findings with a
+# recorded reason are ignored here; everything else fails the workflow-audit
+# job at --min-severity=low.
+rules:
+  # zizmor 1.30 asks for GitHub's self-repository form (`uses: $/...`) for
+  # in-repo actions and reusable workflows. actionlint 1.7.12, the newest
+  # release and the one workflow-lint pins, rejects that form as an invalid
+  # action reference, so the tree keeps `./...` until actionlint accepts `$/`.
+  # Both lints run in CI; this ignore is what keeps them agreeing. Remove it,
+  # and rewrite the calls, when actionlint parses the self-repository form.
+  self-repository:
+    ignore:
+      - ci.yml
+      - differential.yml
+      - docs.yml
+      - release.yml
