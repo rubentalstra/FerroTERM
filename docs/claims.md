@@ -97,7 +97,7 @@ claim, not a test that merely touches the area.
 | Claim | Evidence |
 |---|---|
 | The software is source-available under the Business Source License 1.1 | `LICENSE` (BSL 1.1 text, Licensor Vernum Projecten B.V., Change License Apache 2.0), `NOTICE`, `Cargo.toml:14` `license = "BUSL-1.1"`; `scripts/checks/versions.sh` fails on a stale MIT or Apache claim |
-| No open-core tier: engine, server, and tools are in this repository under the one licence | All 14 `crates/*`, `app/ferroterm-server`, and `tools/*` are in this workspace; no private module |
+| No open-core tier: engine, server, and tools are in this repository under the one licence | All 14 `crates/*`, `addons/*`, `app/ferroterm-server`, and `tools/*` are in this workspace; no private module |
 | Each version becomes Apache 2.0 four years after publication | `LICENSE:38` and the terms body ("This License applies separately for each version") |
 | `rf2` is Apache 2.0 on crates.io | `crates/rf2/Cargo.toml:8`, with its own Apache 2.0 `LICENSE` file |
 | The repository ships no SNOMED CT, LOINC, ICD, or RxNorm content | `git ls-files data` returns 10 `.gitkeep` files only; `.gitignore:29-31` |

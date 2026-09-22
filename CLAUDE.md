@@ -30,9 +30,9 @@ commits, PRs, issues) to `.claude/rules/writing-style.md`.
 
 ## Repo map (a single Cargo workspace)
 
-`crates/*` = libraries, `app/*` = the server binary, `tools/*` = dev/codegen
-tooling not shipped in the server. Every crate carries its own `CLAUDE.md` with
-crate-local discipline.
+`crates/*` = libraries, `addons/*` = source add-ons for the sync service,
+`app/*` = the server binary, `tools/*` = dev/codegen tooling not shipped in the
+server. Every crate carries its own `CLAUDE.md` with crate-local discipline.
 
 - `crates/rf2`: SNOMED CT RF2 loader (inferred relationships, descriptions,
   refsets, transitive-closure file) and typed component model.
@@ -53,6 +53,12 @@ crate-local discipline.
   with its NCTS extensions, entry selection, checksum-verified download, and
   the `Source` seam each service add-on implements. Country-neutral and
   code-system-neutral.
+- `addons/*`: the source add-ons the sync service compiles in, one per national
+  terminology service. Each depends on `crates/terminology-syndication` and the
+  leaf crates the guard names, never on the server, the viewer, or another
+  add-on; only `app/ferroterm-sync` links an add-on, and nothing else in the
+  workspace may. `scripts/checks/addon-boundary.sh` enforces both directions.
+  None is published.
 - `app/ferroterm-server`: the `axum` HTTP server (FHIR endpoints, content
   negotiation, runtime version routing).
 - `app/ferroterm-viewer`: the Leptos web UI, client-side rendered and served by

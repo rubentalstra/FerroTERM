@@ -47,6 +47,18 @@ fresh link reference.
   and leaves the served set answering. Two releases of one system under a root
   are both served, and the greatest version stays the default.
 
+- `scripts/checks/addon-boundary.sh`, the guard that keeps `addons/*` optional
+  (#582). A source add-on is code the sync service compiles in and nothing else
+  links, so the check reads the declared workspace edges from `cargo metadata`
+  and fails when a member outside `app/ferroterm-sync` depends on an add-on, or
+  when an add-on depends on a workspace crate other than
+  `crates/terminology-syndication` and the leaf crates it names by hand. A dev
+  dependency is test scaffolding and stays legal. `--self-test` judges synthetic
+  metadata, so a tree whose every real edge is legal still shows the guard
+  bites. It runs in CI beside the viewer boundary, and
+  `scripts/checks/comment-style.sh --all` now runs there as a job of its own
+  rather than only in the per-edit hook.
+
 ### Changed
 
 - The server binary carries no HTTP client, and a guard keeps it that way
