@@ -38,7 +38,7 @@ claim, not a test that merely touches the area.
 
 | Claim | Evidence |
 |---|---|
-| The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration | Registered unconditionally at `app/ferroterm-server/src/state.rs:414-418`; data vendored under `crates/fhir-terminology/data/` |
+| The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration | Registered unconditionally at `app/ferroterm-server/src/state.rs:507-527`; data vendored under `crates/fhir-terminology/data/` |
 | `ghcr.io/rubentalstra/ferroterm:0.1.3` is the current image tag | `Cargo.toml` `version = "0.1.3"`, `compose.yaml:36`; enforced by `scripts/checks/versions.sh` and by the tag check in `.github/workflows/release.yml` job `plan` |
 | The UCUM `$lookup` answers name, version 2.2, display, and the `canonical` property | `crates/fhir-terminology/tests/it/ucum.rs::the_provider_locates_describes_and_filters_expressions` |
 | `ferroterm-build` ships in the image and in every release tarball | `docker/Dockerfile` copies both binaries; `.github/workflows/release-build.yml:109` tars `ferroterm` and `ferroterm-build` |
@@ -58,7 +58,7 @@ claim, not a test that merely touches the area.
 
 | Claim | Evidence |
 |---|---|
-| R4 under `/r4`, R4B under `/r4b`, R5 under `/r5`, R6 ballot under `/r6` | `app/ferroterm-server/src/lib.rs:49-63`; `app/ferroterm-server/tests/it/ecosystem.rs` drives all four (`VERSIONS`) |
+| R4 under `/r4`, R4B under `/r4b`, R5 under `/r5`, R6 ballot under `/r6` | `app/ferroterm-server/src/lib.rs:72-75`; `app/ferroterm-server/tests/it/ecosystem.rs` drives all four (`VERSIONS`) |
 | `CodeSystem/$lookup` | `app/ferroterm-server/src/version/mod.rs` router; `app/ferroterm-server/tests/it/operations.rs::lookup_by_get_and_post` |
 | `CodeSystem/$validate-code` | `app/ferroterm-server/tests/it/operations.rs::validate_code_at_type_and_instance_level` |
 | `CodeSystem/$subsumes` | `app/ferroterm-server/tests/it/operations.rs::subsumes_at_type_and_instance_level` |
@@ -319,14 +319,14 @@ Per system, the loader flag, the provider, and the test that exercises it:
 
 | Claim | Evidence |
 |---|---|
-| Four registry systems served with no configuration | `app/ferroterm-server/src/state.rs:414-418` |
-| `GET /health` | `app/ferroterm-server/src/lib.rs:53`; `app/ferroterm-server/tests/it/health.rs::health_answers_ok` |
+| Four registry systems served with no configuration | `app/ferroterm-server/src/state.rs:507-527` |
+| `GET /health` | `app/ferroterm-server/src/lib.rs:71`; `app/ferroterm-server/tests/it/health.rs::health_answers_ok` |
 | The image runs as numeric user `65532` on a distroless base, with `FERROTERM_LISTEN=0.0.0.0:8080` | `docker/Dockerfile:14,28,33` |
 | Tags are `<version>`, `<major.minor>`, and `latest` | `.github/workflows/release-image.yml:124-126`; `latest` comes from `docker/metadata-action`'s default flavour |
 | The image carries a `HEALTHCHECK` running `ferroterm healthcheck`, which exits 0 against a serving instance and 1 against a stopped one | `docker/Dockerfile:36-45`; `app/ferroterm-server/src/healthcheck.rs`; `app/ferroterm-server/tests/it/healthcheck.rs` |
 | The server stops cleanly on `SIGTERM` | `app/ferroterm-server/src/main.rs` |
-| The server opens each index read-only, refuses to start on a missing or damaged one, and listens on `127.0.0.1:8080` | `app/ferroterm-server/src/config.rs:101`; `app/ferroterm-server/tests/it/config.rs` |
-| The nine environment variables and their defaults | `app/ferroterm-server/src/config.rs:8-40` and `telemetry.rs:20-22`; `app/ferroterm-server/tests/it/config.rs::the_environment_fills_the_config` |
+| The server opens each index read-only, refuses to start on a missing or damaged one, and listens on `127.0.0.1:8080` | `app/ferroterm-server/src/config.rs:122`; `app/ferroterm-server/tests/it/config.rs` |
+| The ten environment variables and their defaults | `app/ferroterm-server/src/config.rs:8-53` and `telemetry.rs:20-22`; `app/ferroterm-server/tests/it/config.rs::the_environment_fills_the_config` |
 | A supplement whose system is not loaded refuses the start | `app/ferroterm-server/tests/it/config.rs::a_supplement_without_its_system_refuses_to_start` |
 | The `CodeSystem` id shapes (`snomed.info-sct-<module>-version-<date>`, and the system-and-version form), and that the id addresses the instance | `app/ferroterm-server/src/state.rs`; `app/ferroterm-server/tests/it/metadata.rs`; `app/ferroterm-server/tests/it/code_system.rs::every_loaded_code_system_reads_at_the_id_the_server_names_it_by` |
 | `FERROTERM_SECURITY_SERVICE` admits only the `restful-security-service` codes | `app/ferroterm-server/src/config.rs::a_security_service_list_admits_only_the_codes_the_value_set_defines` |
@@ -339,10 +339,10 @@ Per system, the loader flag, the provider, and the test that exercises it:
 
 | Claim | Evidence |
 |---|---|
-| `GET /metrics` answers a Prometheus scrape | `app/ferroterm-server/src/lib.rs:56,137`; `app/ferroterm-server/tests/it/metrics.rs::the_scrape_carries_the_loaded_systems_and_the_answered_requests` |
-| The three metrics and their labels | `app/ferroterm-server/src/metrics.rs::the_exposition_carries_the_recorded_series` |
+| `GET /metrics` answers a Prometheus scrape | `app/ferroterm-server/src/lib.rs:76,192`; `app/ferroterm-server/tests/it/metrics.rs::the_scrape_carries_the_loaded_systems_and_the_answered_requests` |
+| The four metrics and their labels | `app/ferroterm-server/src/metrics.rs::the_exposition_carries_the_recorded_series` |
 | `route` is the matched route, never the URI | `app/ferroterm-server/src/request_log.rs`; `app/ferroterm-server/tests/it/metrics.rs::a_refusal_is_counted_under_its_own_status` |
-| The duration buckets start at half a millisecond and double | `app/ferroterm-server/src/metrics.rs:94` `exponential_buckets(0.000_5, 2.0, 12)` |
+| The duration buckets start at half a millisecond and double | `app/ferroterm-server/src/metrics.rs:128` `exponential_buckets(0.000_5, 2.0, 12)` |
 | Every response carries `X-Request-Id`, echoed from the client | `app/ferroterm-server/tests/it/metrics.rs::every_response_carries_a_request_id_and_echoes_the_client_s` |
 | An id that is empty, over 128 characters, or not printable ASCII is replaced | `app/ferroterm-server/src/request_log.rs:27-37`. Only the over-128 case is tested (`::an_unusable_request_id_is_replaced_rather_than_echoed`) |
 | The scrape carries no code system content and no request bodies, and is not authenticated | `app/ferroterm-server/src/metrics.rs`; the server authenticates nobody |
@@ -497,7 +497,7 @@ English either.
 (`website/book/src/evaluate/what-ferroterm-is.md`) and **"The server mounts the
 R4B module today"**, with the diagram label **"FHIR terminology API (R4B
 today)"** (`website/book/src/evaluate/architecture.md`). All four versions are
-mounted (`app/ferroterm-server/src/lib.rs:49-63`) and exercised on all four
+mounted (`app/ferroterm-server/src/lib.rs:72-75`) and exercised on all four
 (`app/ferroterm-server/tests/it/ecosystem.rs`). The architecture page
 contradicts itself inside one sentence: "The server mounts the R4B module
 today; the R4, R5, and R6 modules are served under `/r4`, `/r5`, and `/r6`."
@@ -613,7 +613,7 @@ separately exercised.
 `icpc1`, or the ConceptMap URL in any Rust source, test, fixture, or script.
 The repository holds only `data/nhg/.gitkeep`. The generic `ConceptMap`
 directory mechanism that the row describes does exist and is tested
-(`app/ferroterm-server/src/state.rs:903-951`;
+(`app/ferroterm-server/src/state.rs:1180-1224`;
 `crates/fhir-terminology/tests/it/concept_map.rs::the_store_loads_both_maps_with_the_r5_shapes_reduced`),
 including the `"experimental": "false"` refusal the loading page documents, but
 nothing substantiates this specific map. Of the twenty rows in the code systems

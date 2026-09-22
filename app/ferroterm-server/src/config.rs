@@ -6,6 +6,13 @@ use crate::telemetry::{FILTER_ENV, FORMAT_ENV, FormatError, LogFormat};
 
 /// The environment variable naming the socket address to listen on.
 pub const LISTEN_ENV: &str = "FERROTERM_LISTEN";
+/// The environment variable naming the socket address the admin listener binds.
+///
+/// The admin listener serves `POST /reload` and nothing else, on an address of
+/// its own so the FHIR surface never carries it. Unset means no admin listener
+/// and `SIGHUP` as the only reload trigger. It authenticates nobody, like the
+/// rest of the server, so a deployment keeps it on an internal address.
+pub const ADMIN_LISTEN_ENV: &str = "FERROTERM_ADMIN_LISTEN";
 /// The environment variable listing the artifact directories to serve,
 /// separated by the platform's path separator (`:` on Unix).
 pub const INDEX_ENV: &str = "FERROTERM_INDEX";
@@ -66,6 +73,9 @@ pub const SECURITY_SERVICE_SYSTEM: &str =
 pub struct Config {
     /// The socket address to bind.
     pub listen: String,
+    /// The socket address the admin listener binds; `None` when the deployment
+    /// names none and the server serves no admin surface.
+    pub admin_listen: Option<String>,
     /// The artifact directories to load, each one code system version.
     pub index: Vec<PathBuf>,
     /// The directories of FHIR `CodeSystem` resources to load.
@@ -110,6 +120,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             listen: String::from("127.0.0.1:8080"),
+            admin_listen: None,
             index: Vec::new(),
             code_systems: Vec::new(),
             resources: None,
@@ -134,6 +145,9 @@ impl Config {
         let defaults = Self::default();
         Ok(Self {
             listen: std::env::var(LISTEN_ENV).unwrap_or(defaults.listen),
+            admin_listen: std::env::var(ADMIN_LISTEN_ENV)
+                .ok()
+                .filter(|address| !address.trim().is_empty()),
             index: std::env::var_os(INDEX_ENV)
                 .map(|value| std::env::split_paths(&value).collect())
                 .unwrap_or_default(),

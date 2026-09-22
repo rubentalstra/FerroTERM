@@ -7,6 +7,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Body;
 use ferroterm_server::config::Config;
+use ferroterm_server::reload::Serving;
 use ferroterm_server::state::AppState;
 use ferroterm_server::ui::Asset;
 use http::{Request, Response, StatusCode, header};
@@ -31,15 +32,16 @@ static BUNDLE: &[Asset] = &[
 
 /// A server with no artifacts, serving `BUNDLE` when `viewer` is on.
 fn app(viewer: bool) -> Router {
-    ferroterm_server::router_with_bundle(state(viewer), BUNDLE)
+    ferroterm_server::router_with_bundle(serving(viewer), BUNDLE)
 }
 
-fn state(viewer: bool) -> Arc<AppState> {
+fn serving(viewer: bool) -> Serving {
     let config = Config {
         viewer,
         ..Config::default()
     };
-    Arc::new(AppState::load(&config).expect("a server without artifacts loads"))
+    let state = Arc::new(AppState::load(&config).expect("a server without artifacts loads"));
+    Serving::new(config, state)
 }
 
 async fn get(router: &Router, uri: &str) -> Response<Body> {
@@ -204,7 +206,7 @@ async fn the_viewer_switched_off_removes_the_routes_and_restores_the_root() {
 
 #[tokio::test]
 async fn a_binary_carrying_no_bundle_serves_no_viewer() {
-    let app = ferroterm_server::router_with_bundle(state(true), &[]);
+    let app = ferroterm_server::router_with_bundle(serving(true), &[]);
     let response = get(&app, "/ui/").await;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     let body: serde_json::Value = serde_json::from_slice(&body_of(response).await).expect("json");
@@ -213,8 +215,8 @@ async fn a_binary_carrying_no_bundle_serves_no_viewer() {
 
 #[tokio::test]
 async fn an_asset_is_neither_logged_nor_measured() {
-    let state = state(true);
-    let app = ferroterm_server::router_with_bundle(Arc::clone(&state), BUNDLE);
+    let serving = serving(true);
+    let app = ferroterm_server::router_with_bundle(serving, BUNDLE);
     for uri in ["/ui/", "/ui/ferroterm-viewer-0123456789abcdef.js"] {
         assert_eq!(get(&app, uri).await.status(), StatusCode::OK, "{uri}");
     }

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Body;
 use ferroterm_server::config::Config;
+use ferroterm_server::reload::Serving;
 use ferroterm_server::state::AppState;
 use http::{Request, Response, StatusCode};
 use serde_json::Value;
@@ -14,7 +15,7 @@ use tower::ServiceExt;
 pub(crate) struct Server {
     _dir: Arc<tempfile::TempDir>,
     config: Config,
-    pub(crate) state: Arc<AppState>,
+    pub(crate) serving: Serving,
 }
 
 impl Server {
@@ -29,7 +30,8 @@ impl Server {
             base_url: Some(base.to_owned()),
             ..server.config.clone()
         };
-        server.state = Arc::new(AppState::load(&config).expect("loads"));
+        let state = Arc::new(AppState::load(&config).expect("loads"));
+        server.serving = Serving::new(config.clone(), state);
         server.config = config;
         server
     }
@@ -66,17 +68,27 @@ impl Server {
             code_systems: vec![fhir],
             ..Config::default()
         };
+        Self::assembled(Arc::new(dir), config)
+    }
+
+    /// The state `config` names, held the way the binary holds it.
+    fn assembled(dir: Arc<tempfile::TempDir>, config: Config) -> Self {
         let state = Arc::new(AppState::load(&config).expect("loads"));
         Self {
-            _dir: Arc::new(dir),
+            _dir: dir,
+            serving: Serving::new(config.clone(), state),
             config,
-            state,
         }
+    }
+
+    /// The set the server answers from now.
+    pub(crate) fn state(&self) -> Arc<AppState> {
+        self.serving.current()
     }
 
     /// The `CodeSystem` instance id the server addresses `url` by.
     pub(crate) fn instance_id_of(&self, url: &str) -> String {
-        self.state
+        self.state()
             .instances()
             .find(|(_, served, _)| *served == url)
             .map_or_else(|| panic!("{url} is loaded"), |(id, _, _)| id.to_owned())
@@ -91,15 +103,10 @@ impl Server {
         let Self {
             _dir: dir,
             config,
-            state,
+            serving,
         } = self;
-        drop(state);
-        let state = Arc::new(AppState::load(&config).expect("reloads"));
-        Self {
-            _dir: dir,
-            config,
-            state,
-        }
+        drop(serving);
+        Self::assembled(dir, config)
     }
 
     /// A server holding one archetype's local terminology and nothing else.
@@ -123,12 +130,7 @@ impl Server {
             code_systems: vec![derived, elsewhere],
             ..Config::default()
         };
-        let state = Arc::new(AppState::load(&config).expect("loads"));
-        Self {
-            _dir: Arc::new(dir),
-            config,
-            state,
-        }
+        Self::assembled(Arc::new(dir), config)
     }
 
     fn start_with(resources: bool, persists: bool) -> Self {
@@ -143,12 +145,7 @@ impl Server {
             resources: persists.then(|| dir.path().join("resources.redb")),
             ..Config::default()
         };
-        let state = Arc::new(AppState::load(&config).expect("loads"));
-        Self {
-            _dir: Arc::new(dir),
-            config,
-            state,
-        }
+        Self::assembled(Arc::new(dir), config)
     }
 
     /// Any request, answered as the raw response so a test can read its headers.
@@ -166,12 +163,12 @@ impl Server {
     }
 
     pub(crate) fn router(&self) -> Router {
-        ferroterm_server::router(Arc::clone(&self.state))
+        ferroterm_server::router(self.serving.clone())
     }
 
     /// The `CodeSystem` instance id of the synthetic edition.
     pub(crate) fn snomed_id(&self) -> String {
-        self.state
+        self.state()
             .instances()
             .next()
             .map(|(id, _, _)| id.to_owned())

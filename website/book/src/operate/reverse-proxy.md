@@ -114,6 +114,17 @@ the terminology surface reads, and the only writes are the resource endpoints
 and `$closure`, which a deployment enables by naming `FERROTERM_RESOURCES` and
 can leave unset.
 
+## The admin listener stays behind the proxy
+
+`FERROTERM_ADMIN_LISTEN` binds a second listener that serves `POST /reload`
+and nothing else, and it authenticates nobody
+([Configuration](configuration.md#reloading-the-served-set)). Bind it to
+`127.0.0.1` or an address on your internal network, publish only the FHIR
+listener through the proxy, and reach the reload from the host or from the
+orchestration that writes the new artifacts. A deployment that puts the admin
+address behind the same public proxy hands anyone a way to make the server
+re-read its disks.
+
 ## Rate limits and timeouts
 
 The proxy is the place for both. An expansion of a large implicit value set is

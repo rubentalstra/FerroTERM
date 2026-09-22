@@ -65,8 +65,8 @@ macro_rules! surface {
 
         /// This version declares no `$closure`, so its router adds no route for it.
         fn closure_route(
-            router: axum::Router<std::sync::Arc<crate::state::AppState>>,
-        ) -> axum::Router<std::sync::Arc<crate::state::AppState>> {
+            router: axum::Router<crate::reload::Serving>,
+        ) -> axum::Router<crate::reload::Serving> {
             router
         }
 
@@ -79,8 +79,8 @@ macro_rules! surface {
 
         /// The `$closure` route of a version that declares the operation.
         fn closure_route(
-            router: axum::Router<std::sync::Arc<crate::state::AppState>>,
-        ) -> axum::Router<std::sync::Arc<crate::state::AppState>> {
+            router: axum::Router<crate::reload::Serving>,
+        ) -> axum::Router<crate::reload::Serving> {
             router.route("/$closure", axum::routing::post(closure::closure))
         }
 
@@ -97,7 +97,7 @@ macro_rules! surface {
         crate::version::operations::operations!($fhir);
 
         /// The routes of this version, nested under its root by the crate router.
-        pub fn router() -> axum::Router<std::sync::Arc<crate::state::AppState>> {
+        pub fn router() -> axum::Router<crate::reload::Serving> {
             use axum::routing::{get, post};
             lookup_instance_route(closure_route(axum::Router::new())
                 .route("/", post(batch::batch))
@@ -195,8 +195,8 @@ macro_rules! surface {
         /// the R6 ballot do, R4 and R4B do not
         /// (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
         fn lookup_instance_route(
-            router: axum::Router<std::sync::Arc<crate::state::AppState>>,
-        ) -> axum::Router<std::sync::Arc<crate::state::AppState>> {
+            router: axum::Router<crate::reload::Serving>,
+        ) -> axum::Router<crate::reload::Serving> {
             if fhir_types::$fhir::operations::code_system_lookup::CODE_SYSTEM_LOOKUP.instance {
                 router.route(
                     "/CodeSystem/{id}/$lookup",

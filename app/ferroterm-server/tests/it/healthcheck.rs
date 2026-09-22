@@ -2,7 +2,6 @@
 
 use std::net::SocketAddr;
 use std::process::{Command, Output};
-use std::sync::Arc;
 use std::time::Duration;
 
 use ferroterm_server::config::LISTEN_ENV;
@@ -26,8 +25,8 @@ async fn serve() -> Result<Served, Box<dyn std::error::Error>> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let address = listener.local_addr()?;
     let (stop, stopped) = oneshot::channel::<()>();
-    let state = Arc::clone(&server.state);
-    let task = tokio::spawn(ferroterm_server::serve_until(listener, state, async {
+    let serving = server.serving.clone();
+    let task = tokio::spawn(ferroterm_server::serve_until(listener, serving, async {
         let _stop_or_dropped = stopped.await;
     }));
     Ok(Served {

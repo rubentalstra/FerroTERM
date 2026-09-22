@@ -30,6 +30,7 @@ mod persisted;
 mod r4;
 mod r5;
 mod r6;
+mod reload;
 mod scope;
 mod shutdown;
 mod telemetry;

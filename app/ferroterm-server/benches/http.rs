@@ -18,6 +18,7 @@ use std::sync::Arc;
 use axum::body::Body;
 use criterion::{Criterion, criterion_group, criterion_main};
 use ferroterm_server::config::Config;
+use ferroterm_server::reload::Serving;
 use ferroterm_server::state::AppState;
 use http::Request;
 use tower::ServiceExt;
@@ -45,7 +46,7 @@ fn requests(c: &mut Criterion) {
 
     // The router is built once, as the binary builds it, and cloned per
     // request because `oneshot` consumes the service.
-    let built = ferroterm_server::router(Arc::clone(&state));
+    let built = ferroterm_server::router(Serving::new(config.clone(), Arc::clone(&state)));
     let answer = |uri: &str| {
         let router = built.clone();
         let request = Request::get(uri).body(Body::empty()).expect("request");
@@ -110,7 +111,7 @@ fn local(c: &mut Criterion) {
         .enable_all()
         .build()
         .expect("runtime");
-    let router = ferroterm_server::router(Arc::clone(&state));
+    let router = ferroterm_server::router(Serving::new(config.clone(), Arc::clone(&state)));
     let answer = |uri: &str| {
         let router = router.clone();
         let request = Request::get(uri).body(Body::empty()).expect("request");
