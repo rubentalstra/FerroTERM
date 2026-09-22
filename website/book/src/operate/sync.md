@@ -268,8 +268,21 @@ An unattended run on any day needs no person.
 
 ### The first run
 
+Two scripts in `scripts/live/` run the first hops on your own machine and
+never in CI, because both need your personal licensed account:
+`scripts/live/nts-feed.sh` reads the feed with your credentials and reports,
+per system, whether the service publishes it as an RF2 archive, as FHIR
+resources, or only as Ontoserver's binary index; `scripts/live/sync-e2e.sh`
+builds the binaries from the checkout, starts the server on an empty index
+root, runs the sync once, and shows the run record and what the server serves
+afterwards. Both take the `FERROTERM_NTS_*` variables and print no secret.
+The FerroEHR hop follows: point its quickstart overlay at the server the
+second script started and commit a composition whose binding names a code the
+run made available.
+
 1. Get the account, accept the terms, and confirm which systems your licences
-   unlock.
+   unlock. Run `scripts/live/nts-feed.sh` to see the feed as your account sees
+   it.
 2. Put the credentials where the add-on reads them, and keep them out of the
    configuration file.
 3. Subscribe by canonical identifier. The defaults are the SNOMED CT
@@ -292,4 +305,5 @@ An unattended run on any day needs no person.
 The add-on is verified against fixtures only. Nobody has run it against the
 live feed, because that needs an account, so the entry formats each system
 arrives in, RF2 or a FHIR resource or the binary index, are not yet known.
-Issue #581 stays open until a first real run confirms them.
+Issue #602 stays open until `scripts/live/sync-e2e.sh` has run once with a
+real account and its record is attached there.
