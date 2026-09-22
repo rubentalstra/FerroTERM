@@ -1,0 +1,1037 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:ncts="http://ns.electronichealth.net.au/ncts/syndication/asf/extensions/1.0.0">
+  <title>National Clinical Terminology Service Syndication Feed</title>
+  <link rel="alternate" type="application/atom+xml" href="https://api.healthterminologies.gov.au/syndication/v1/syndication.xml" />
+  <id>urn:uuid:e39958d4-380e-4252-8707-6afeff8b7911</id>
+  <generator>Australian Digital Health Agency</generator>
+  <updated>2026-08-30T12:00:00Z</updated>
+  <ncts:atomSyndicationFormatProfile>http://ns.electronichealth.net.au/ncts/syndication/asf/profile/1.0.0</ncts:atomSyndicationFormatProfile>
+  <entry>
+    <title>SPIA FHIR Bundle (STU3) 30 November 2019</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/spia-fhir-bundle-stu3/20191130/spia-fhir-bundle-stu3-20191130.json" length="610912" ncts:sha256Hash="d7765e3c77a1bd70b0e080681faff9bb7a9a2ab2ca15d9de57847572b2922d44" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:2c466218-337c-3367-95d9-57f65cd1a572</id>
+    <rights>Copyright 2019 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2020-08-23T23:37:17Z</updated>
+    <published>2020-08-23T23:37:17Z</published>
+    <summary>The SPIA FHIR Bundle contains set of FHIR terminology resources based on the Standards for Pathology Informatics in Australia (SPIA) resources developed and owned by the RCPA.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/spia-fhir-bundle-stu3</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/spia-fhir-bundle-stu3/version/20191130</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 March 2026 (RF2 FULL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260331/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260331-FULL.zip" length="470106583" ncts:sha256Hash="11abd3048fc1eecc931a1c3a54252b26b8023759cc2b20b0e80912aa275a2f34" />
+    <category term="SCT_RF2_FULL" label="SNOMED CT RF2 Full" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:8d0fbb68-e8dc-3820-a3fb-f7445d0d08ef</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260331</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 March 2026 (RF2 SNAPSHOT)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260331/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260331-SNAPSHOT.zip" length="405135987" ncts:sha256Hash="9740ecc617066cc49064ce0dca997a6faab6a3f20951c4d7fe29db707e0caa4b" />
+    <category term="SCT_RF2_SNAPSHOT" label="SNOMED CT RF2 Snapshot" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:e09a4132-a6ba-370a-86b8-01ca695796f1</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260331</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 March 2026 (RF2 ALL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260331/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260331-ALL.zip" length="875242383" ncts:sha256Hash="5156265dee16b9036f6e26f9211f4fdcaab8ebd58751829aabd8b76877c7f8bb" />
+    <category term="SCT_RF2_ALL" label="SNOMED CT RF2 Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:65a6d737-1e0b-3925-932f-905995f4d754</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260331</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release CSV File 31 March 2026</title>
+    <link rel="alternate" type="text/csv" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260331/amt-20260331.csv" length="23876397" ncts:sha256Hash="36ecbd2fabe49dc0915868937b7ccb6f4114d776b9771a35d1235183e7a06c5d" />
+    <category term="AMT_CSV" label="Australian Medicines Terminology, Comma Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/csv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:ba991959-05c7-3a72-be9a-1d7eb3984216</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>The CSV (Comma Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The CSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/csv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/csv/900062011000036108/version/20260331</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release TSV File 31 March 2026</title>
+    <link rel="alternate" type="text/tab-separated-values" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260331/amt-20260331.tsv" length="23012397" ncts:sha256Hash="6da2922e937b8a547e7befebf54e980251132efbfce5ed71fac5ab7ab96632a4" />
+    <category term="AMT_TSV" label="Australian Medicines Terminology, Tab Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/tsv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:c2a85255-27f6-3bc5-9353-c79f5438bcb0</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>The TSV (Tab Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The TSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/tsv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/tsv/900062011000036108/version/20260331</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (STU3) 31 March 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-stu3/20260331/fhir-resource-bundle-stu3-20260331.json" length="9118150" ncts:sha256Hash="b30cc7cb2689d6c106dd8e491ac0a304ad9ae80fbe73da79a511766b7397d1f3" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:2a50fd0a-0932-31f2-8ecc-9dfaab764cc7</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3/version/20260331</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (R4) 31 March 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-r4/20260331/fhir-resource-bundle-r4-20260331.json" length="8292347" ncts:sha256Hash="50840c21f7e4ec7a36a4976929c868cbda545d5fc5831a8e446a826389e91f2e" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:b4b56711-1eef-3e29-9121-3112bd9d6144</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4/version/20260331</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+    <ncts:fhirVersion>4.0</ncts:fhirVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 March 2026 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/2/0/15/http_c_fs_fssnomed_dotinfo_fssct/32506021000036107_20260331/http_c_fs_fssnomed_dotinfo_fssct-32506021000036107_20260331.zip" length="1823821786" ncts:sha256Hash="611bcad7cebebfafa9e47c2f45d0ed554fa21318f658124d248355c3aaed2653" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.15" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:2d5e89ab-c615-349f-9b72-b2cdb01eaf79</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>Binary Index of the SNOMED CT Australian Extension 31 March 2026 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260331</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU Reference Set FHIR Bundle 31 March 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/sctau-refset-bundle/20260331/sctau-refset-bundle-20260331.json" length="523432" ncts:sha256Hash="7741d679334228415db231b764e8d7dbd359d50c0231c6b8e2af0fc58642c355" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:c2fd19fe-34f6-3106-9a3c-0d4dfa0d5105</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>The SNOMED CT-AU Reference Set FHIR Bundle contains metadata for the Reference Sets available in the SNOMED CT-AU edition.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle/version/20260331</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 30 April 2026 (RF2 FULL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260430/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260430-FULL.zip" length="475145860" ncts:sha256Hash="1d6db4e8a41858e7110a49736a01fe321ef668ac6a5d47d286799652e34d2f4c" />
+    <category term="SCT_RF2_FULL" label="SNOMED CT RF2 Full" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:4b62285c-8a78-317e-9ece-05117fabcacd</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-04-29T12:00:00Z</updated>
+    <published>2026-04-29T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260430</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 30 April 2026 (RF2 SNAPSHOT)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260430/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260430-SNAPSHOT.zip" length="406639991" ncts:sha256Hash="1bbf5c3c460a99e670c8925f315c3d6bec68b90eaf2a7e8ea017cac2884e4135" />
+    <category term="SCT_RF2_SNAPSHOT" label="SNOMED CT RF2 Snapshot" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:f4fdce87-e2c4-3690-83a1-2a9fdb657ae2</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-04-29T12:00:00Z</updated>
+    <published>2026-04-29T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260430</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 30 April 2026 (RF2 ALL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260430/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260430-ALL.zip" length="881785664" ncts:sha256Hash="864a7726b8878ba96e15ae23185bc3c0571e27d6af8017eac01c1cff8e759c68" />
+    <category term="SCT_RF2_ALL" label="SNOMED CT RF2 Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:a5b28c5c-47bf-3cb8-80ec-27451ceeeef6</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-04-29T12:00:00Z</updated>
+    <published>2026-04-29T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260430</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release CSV File 30 April 2026</title>
+    <link rel="alternate" type="text/csv" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260430/amt-20260430.csv" length="24007568" ncts:sha256Hash="6498155c26e7318916e94c41c83f56d35643db751cb8e099b7c807a914e43726" />
+    <category term="AMT_CSV" label="Australian Medicines Terminology, Comma Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/csv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:7dd7ef4f-cc5f-3951-a43a-59a0dcc98fe5</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-04-29T12:00:00Z</updated>
+    <published>2026-04-29T12:00:00Z</published>
+    <summary>The CSV (Comma Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The CSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/csv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/csv/900062011000036108/version/20260430</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release TSV File 30 April 2026</title>
+    <link rel="alternate" type="text/tab-separated-values" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260430/amt-20260430.tsv" length="23138720" ncts:sha256Hash="77700be92a1035a2239db5e293bed92214940bc0ca1e1953f586c12a96c830ec" />
+    <category term="AMT_TSV" label="Australian Medicines Terminology, Tab Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/tsv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:c5ab0fb0-11db-35bc-acc9-384f1e6f579c</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-04-29T12:00:00Z</updated>
+    <published>2026-04-29T12:00:00Z</published>
+    <summary>The TSV (Tab Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The TSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/tsv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/tsv/900062011000036108/version/20260430</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (STU3) 30 April 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-stu3/20260430/fhir-resource-bundle-stu3-20260430.json" length="9118151" ncts:sha256Hash="22168f74903250bb15c452deda1df9338d2e9cfd7032bd882f2a5d415cc8cf3c" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:709b45b1-f084-3d40-b329-7df4650e7679</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-04-29T12:00:00Z</updated>
+    <published>2026-04-29T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3/version/20260430</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (R4) 30 April 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-r4/20260430/fhir-resource-bundle-r4-20260430.json" length="8302061" ncts:sha256Hash="151488e2e21e4ab8136119c5f4190238e67385cea5c64a4f2f9a9e2475e14dd1" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:a56305a7-142e-326f-ad10-d914666326fc</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-04-29T12:00:00Z</updated>
+    <published>2026-04-29T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4/version/20260430</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+    <ncts:fhirVersion>4.0</ncts:fhirVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 30 April 2026 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/2/0/15/http_c_fs_fssnomed_dotinfo_fssct/32506021000036107_20260430/http_c_fs_fssnomed_dotinfo_fssct-32506021000036107_20260430.zip" length="1801909511" ncts:sha256Hash="100c1e2d3b14930c1c7b88c6570c050fbe04fecde4a90648185500f4572d45a0" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.15" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:141ee531-5248-3e44-9444-c6d8f8dae51c</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-04-29T12:00:00Z</updated>
+    <published>2026-04-29T12:00:00Z</published>
+    <summary>Binary Index of the SNOMED CT Australian Extension 30 April 2026 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260430</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU Reference Set FHIR Bundle 30 April 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/sctau-refset-bundle/20260430/sctau-refset-bundle-20260430.json" length="525099" ncts:sha256Hash="74d6587524e47218372a9407ee67b73c9c2c6c8a5aab6a101af54aa8f5eac7fd" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:65827503-efd9-3723-ad9a-4569669c773d</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-04-29T12:00:00Z</updated>
+    <published>2026-04-29T12:00:00Z</published>
+    <summary>The SNOMED CT-AU Reference Set FHIR Bundle contains metadata for the Reference Sets available in the SNOMED CT-AU edition.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle/version/20260430</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 May 2026 (RF2 FULL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260531/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260531-FULL.zip" length="476423147" ncts:sha256Hash="0cb78155d8279752b1de8461b4ee1fccfcdf98b8df5f52d7d97e37041841f4ba" />
+    <category term="SCT_RF2_FULL" label="SNOMED CT RF2 Full" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:0324df22-0cd2-3929-8899-ea6020f90bc0</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-05-30T12:00:00Z</updated>
+    <published>2026-05-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260531</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 May 2026 (RF2 SNAPSHOT)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260531/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260531-SNAPSHOT.zip" length="407855050" ncts:sha256Hash="74222b225132b8d69790af757ab936fc9a47b2acb362a96472653f5f8eae4de0" />
+    <category term="SCT_RF2_SNAPSHOT" label="SNOMED CT RF2 Snapshot" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:91ba9584-0470-39f6-92c1-4f52761ca737</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-05-30T12:00:00Z</updated>
+    <published>2026-05-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260531</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 May 2026 (RF2 ALL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260531/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260531-ALL.zip" length="884278010" ncts:sha256Hash="663aa9fb8b452f3522f5005041bf22270467181425df7e3a8917aff623a23e44" />
+    <category term="SCT_RF2_ALL" label="SNOMED CT RF2 Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:7ede173d-135a-3306-962c-73729c5b9e4e</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-05-30T12:00:00Z</updated>
+    <published>2026-05-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260531</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release CSV File 31 May 2026</title>
+    <link rel="alternate" type="text/csv" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260531/amt-20260531.csv" length="24124909" ncts:sha256Hash="1c29b912a54528b0c04a3045668fa06d71208cdbb5f11a9de528452eb8b47d75" />
+    <category term="AMT_CSV" label="Australian Medicines Terminology, Comma Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/csv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:b857ae4c-7823-3a25-b284-7ff70f302993</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-05-30T12:00:00Z</updated>
+    <published>2026-05-30T12:00:00Z</published>
+    <summary>The CSV (Comma Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The CSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/csv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/csv/900062011000036108/version/20260531</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release TSV File 31 May 2026</title>
+    <link rel="alternate" type="text/tab-separated-values" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260531/amt-20260531.tsv" length="23252205" ncts:sha256Hash="58e9b756e5039963599ecac413760e81b05672818e1300ffe2c9a8d48095a49e" />
+    <category term="AMT_TSV" label="Australian Medicines Terminology, Tab Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/tsv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:a082206c-ab84-3e49-89db-479c211f2da9</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-05-30T12:00:00Z</updated>
+    <published>2026-05-30T12:00:00Z</published>
+    <summary>The TSV (Tab Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The TSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/tsv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/tsv/900062011000036108/version/20260531</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (STU3) 31 May 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-stu3/20260531/fhir-resource-bundle-stu3-20260531.json" length="9118151" ncts:sha256Hash="b54e2441d00529f4eb2a4ec90969159947c53431266f5a6b0b8907ffcf169c98" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:cdc902bd-05e2-300c-9d8b-41a1aa1142d8</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-05-30T12:00:00Z</updated>
+    <published>2026-05-30T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3/version/20260531</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (R4) 31 May 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-r4/20260531/fhir-resource-bundle-r4-20260531.json" length="8308771" ncts:sha256Hash="815b6bafa328c5633553e61e536326ce4e59316cf107fd96ad4b560fdf9f4d5c" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:297f4122-1239-3a68-9084-be9d1527334c</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-05-30T12:00:00Z</updated>
+    <published>2026-05-30T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4/version/20260531</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+    <ncts:fhirVersion>4.0</ncts:fhirVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 May 2026 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/2/0/15/http_c_fs_fssnomed_dotinfo_fssct/32506021000036107_20260531/http_c_fs_fssnomed_dotinfo_fssct-32506021000036107_20260531.zip" length="1817562304" ncts:sha256Hash="383b27839ae4031143ffe15b00ad46c63df93aebd56515240ee0552cf0880cc6" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.15" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:1df06a2e-c1f0-37be-a191-ff380c62324b</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-05-30T12:00:00Z</updated>
+    <published>2026-05-30T12:00:00Z</published>
+    <summary>Binary Index of the SNOMED CT Australian Extension 31 May 2026 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260531</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU Reference Set FHIR Bundle 31 May 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/sctau-refset-bundle/20260531/sctau-refset-bundle-20260531.json" length="531508" ncts:sha256Hash="aac05ab4030b5f6b0c23a9d836a0fc9f0e5cf9487776be52393e786869e4fde8" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:58887188-6128-35c2-9d03-ca2478ad16d1</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-05-30T12:00:00Z</updated>
+    <published>2026-05-30T12:00:00Z</published>
+    <summary>The SNOMED CT-AU Reference Set FHIR Bundle contains metadata for the Reference Sets available in the SNOMED CT-AU edition.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle/version/20260531</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 30 June 2026 (RF2 FULL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260630/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260630-FULL.zip" length="477598125" ncts:sha256Hash="38cbebdd1c4d346f8b72116e39517abc8cb8288c4ca04eca60016866a21de39d" />
+    <category term="SCT_RF2_FULL" label="SNOMED CT RF2 Full" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:d07d727a-3c4f-300d-aaf7-3ad85d246baa</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-06-29T12:00:00Z</updated>
+    <published>2026-06-29T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260630</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 30 June 2026 (RF2 SNAPSHOT)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260630/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260630-SNAPSHOT.zip" length="408955121" ncts:sha256Hash="1333536dd87089a3c5eb17910219946322db0bf1ee84bc9a27edfc3354cf8cff" />
+    <category term="SCT_RF2_SNAPSHOT" label="SNOMED CT RF2 Snapshot" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:b16a57eb-64ba-3cf4-aa46-41fdc4244f29</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-06-29T12:00:00Z</updated>
+    <published>2026-06-29T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260630</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 30 June 2026 (RF2 ALL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260630/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260630-ALL.zip" length="886553059" ncts:sha256Hash="352fb7296def1ab42d885534ffcc041d5f6b991ea9c355eb12cd71a53a90e390" />
+    <category term="SCT_RF2_ALL" label="SNOMED CT RF2 Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:07b36cc8-4615-3860-8ad0-f77ca6f9ce7c</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-06-29T12:00:00Z</updated>
+    <published>2026-06-29T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260630</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release CSV File 30 June 2026</title>
+    <link rel="alternate" type="text/csv" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260630/amt-20260630.csv" length="24258619" ncts:sha256Hash="93493ecf4f5eb29a57e2e7d64be20b3f3e9b334945e448a818382ed3c300a18a" />
+    <category term="AMT_CSV" label="Australian Medicines Terminology, Comma Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/csv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:196061d3-37fe-3255-ad9e-8be996ba6bcd</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-06-29T12:00:00Z</updated>
+    <published>2026-06-29T12:00:00Z</published>
+    <summary>The CSV (Comma Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The CSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/csv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/csv/900062011000036108/version/20260630</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release TSV File 30 June 2026</title>
+    <link rel="alternate" type="text/tab-separated-values" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260630/amt-20260630.tsv" length="23381131" ncts:sha256Hash="17397d8a1fa65d57d58cd2e9fcb39c29b9b51d3d5df3f5dd77d668781f3fd5e3" />
+    <category term="AMT_TSV" label="Australian Medicines Terminology, Tab Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/tsv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:73140c08-138e-3cc9-a41f-d85ab2bd1847</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-06-29T12:00:00Z</updated>
+    <published>2026-06-29T12:00:00Z</published>
+    <summary>The TSV (Tab Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The TSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/tsv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/tsv/900062011000036108/version/20260630</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (STU3) 30 June 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-stu3/20260630/fhir-resource-bundle-stu3-20260630.json" length="9118150" ncts:sha256Hash="5ab89dcb0bf907c662fec14c320803fb4da4d5359f0db9bd7d45990f9ade4ce3" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:84fb8696-8967-3028-83b8-6c3cd7bc9d2e</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-06-29T12:00:00Z</updated>
+    <published>2026-06-29T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3/version/20260630</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (R4) 30 June 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-r4/20260630/fhir-resource-bundle-r4-20260630.json" length="8313089" ncts:sha256Hash="93317f1ff44a6b98a7ff8b73d2ee621ce525de06e3a75d72e29e7607062e5340" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:0d2adcc4-892e-3e3e-ad80-5ccbe873d1f0</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-06-29T12:00:00Z</updated>
+    <published>2026-06-29T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4/version/20260630</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+    <ncts:fhirVersion>4.0</ncts:fhirVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 30 June 2026 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/2/0/15/http_c_fs_fssnomed_dotinfo_fssct/32506021000036107_20260630/http_c_fs_fssnomed_dotinfo_fssct-32506021000036107_20260630.zip" length="1802515929" ncts:sha256Hash="36a252061d2cabc72aa738f61b9d7290947adecbc13ac64de6015091195882d9" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.15" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:f55692c3-e10f-3efb-bccb-76af0188a73b</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-06-29T12:00:00Z</updated>
+    <published>2026-06-29T12:00:00Z</published>
+    <summary>Binary Index of the SNOMED CT Australian Extension 30 June 2026 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260630</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU Reference Set FHIR Bundle 30 June 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/sctau-refset-bundle/20260630/sctau-refset-bundle-20260630.json" length="534743" ncts:sha256Hash="3f978f7205ece8d5d36777241adb1ac475ba043ee8d51a83475b9207fa0e3244" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:c2ae6428-366b-3695-82b4-8dbc9aed09dc</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-06-29T12:00:00Z</updated>
+    <published>2026-06-29T12:00:00Z</published>
+    <summary>The SNOMED CT-AU Reference Set FHIR Bundle contains metadata for the Reference Sets available in the SNOMED CT-AU edition.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle/version/20260630</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 July 2026 (RF2 FULL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260731/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260731-FULL.zip" length="478945129" ncts:sha256Hash="63b95a82a1f5db9614838f093c75640fb0f306e344cb3daf2564d59f8419d060" />
+    <category term="SCT_RF2_FULL" label="SNOMED CT RF2 Full" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:f093fbdd-f50f-344c-a4c2-239ff5f7b77e</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-07-30T12:00:00Z</updated>
+    <published>2026-07-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260731</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 July 2026 (RF2 SNAPSHOT)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260731/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260731-SNAPSHOT.zip" length="410242442" ncts:sha256Hash="7d6dc79e67eea9b7993f532381a28b8cf9717df4a8d82c4aedb3876f92478789" />
+    <category term="SCT_RF2_SNAPSHOT" label="SNOMED CT RF2 Snapshot" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:e2df43ba-96dd-3a27-851d-0c3c822193cb</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-07-30T12:00:00Z</updated>
+    <published>2026-07-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260731</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 July 2026 (RF2 ALL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260731/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260731-ALL.zip" length="889187356" ncts:sha256Hash="62802e7f68d8f6374dfcd2b565642f4e15f872389e1c7be5c8825037d843e26b" />
+    <category term="SCT_RF2_ALL" label="SNOMED CT RF2 Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:aa90c3d3-3ca3-3184-9bce-500d7e17d6a3</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-07-30T12:00:00Z</updated>
+    <published>2026-07-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260731</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release CSV File 31 July 2026</title>
+    <link rel="alternate" type="text/csv" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260731/amt-20260731.csv" length="24382522" ncts:sha256Hash="559cd19954299316e3b746fe4d8995a3a4810a4066104bf6340fff13f916f5c1" />
+    <category term="AMT_CSV" label="Australian Medicines Terminology, Comma Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/csv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:bc67d617-e1dd-311c-8814-a4b3d9f95310</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-07-30T12:00:00Z</updated>
+    <published>2026-07-30T12:00:00Z</published>
+    <summary>The CSV (Comma Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The CSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/csv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/csv/900062011000036108/version/20260731</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release TSV File 31 July 2026</title>
+    <link rel="alternate" type="text/tab-separated-values" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260731/amt-20260731.tsv" length="23500730" ncts:sha256Hash="1096b4126a0a89aab4ba6e41919fa9f0104679f6edb608b02fa1c2fe8ea03720" />
+    <category term="AMT_TSV" label="Australian Medicines Terminology, Tab Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/tsv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:fcab3f3b-ce1d-37a8-9e7d-6f8a8b813563</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-07-30T12:00:00Z</updated>
+    <published>2026-07-30T12:00:00Z</published>
+    <summary>The TSV (Tab Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The TSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/tsv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/tsv/900062011000036108/version/20260731</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (STU3) 31 July 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-stu3/20260731/fhir-resource-bundle-stu3-20260731.json" length="9118155" ncts:sha256Hash="77fe9a9778185c79961aa523f1ac443958308a4a6036dc638270652dbeb64cfb" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:76ab75dd-fd31-32ce-b8cd-b90138e79dae</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-07-30T12:00:00Z</updated>
+    <published>2026-07-30T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3/version/20260731</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (R4) 31 July 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-r4/20260731/fhir-resource-bundle-r4-20260731.json" length="8340307" ncts:sha256Hash="a4a6df87ccd6fd4a7d1d12b2a2174404e67f63ac6e474f3dc8bbfe343a89317c" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:f2166f37-c07e-388c-b2e4-054be07b11f5</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-07-30T12:00:00Z</updated>
+    <published>2026-07-30T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4/version/20260731</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+    <ncts:fhirVersion>4.0</ncts:fhirVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 July 2026 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/2/0/15/http_c_fs_fssnomed_dotinfo_fssct/32506021000036107_20260731/http_c_fs_fssnomed_dotinfo_fssct-32506021000036107_20260731.zip" length="1736180602" ncts:sha256Hash="baab7d23fcc00fff66803cfe78d7988f302cd0cec7c109f5ae992a8bcb14568d" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.15" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:710d00ae-6e27-3b57-a5ba-6ce14539f19c</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-07-30T12:00:00Z</updated>
+    <published>2026-07-30T12:00:00Z</published>
+    <summary>Binary Index of the SNOMED CT Australian Extension 31 July 2026 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260731</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU Reference Set FHIR Bundle 31 July 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/sctau-refset-bundle/20260731/sctau-refset-bundle-20260731.json" length="538065" ncts:sha256Hash="c654222292cf4924d43089c24c404a3d97c1f2260a03da992c95429bb0164fbe" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:fca99be9-7393-3979-8566-eba21076b9ec</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-07-30T12:00:00Z</updated>
+    <published>2026-07-30T12:00:00Z</published>
+    <summary>The SNOMED CT-AU Reference Set FHIR Bundle contains metadata for the Reference Sets available in the SNOMED CT-AU edition.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle/version/20260731</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 August 2026 (RF2 FULL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260831/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260831-FULL.zip" length="479974161" ncts:sha256Hash="c573c5c5ea64c4d5a0175adb7f0aaa7fb73f8e684c3223e62b6eb0f1eec6f330" />
+    <category term="SCT_RF2_FULL" label="SNOMED CT RF2 Full" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:575bf6c1-b4e9-3a03-bc07-90ee4ca4d9f7</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-08-30T12:00:00Z</updated>
+    <published>2026-08-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260831</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 August 2026 (RF2 SNAPSHOT)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260831/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260831-SNAPSHOT.zip" length="411222213" ncts:sha256Hash="ced08cdda64fe65252a23e4bac73c329c23425641395ff0a8e1a4180bf512ad6" />
+    <category term="SCT_RF2_SNAPSHOT" label="SNOMED CT RF2 Snapshot" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:123aacc2-f399-3360-9186-be41a6dbd548</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-08-30T12:00:00Z</updated>
+    <published>2026-08-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260831</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 August 2026 (RF2 ALL)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/snomedct-au/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107/20260831/NCTS_SCT_RF2_DISTRIBUTION_32506021000036107-20260831-ALL.zip" length="891196159" ncts:sha256Hash="9c2a841aefbd1318680680594ff8e8ffebdaad199b7a205ebce6f39bf052752e" />
+    <category term="SCT_RF2_ALL" label="SNOMED CT RF2 Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:8750e2b5-88db-3fb8-a429-dcc221055c31</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-08-30T12:00:00Z</updated>
+    <published>2026-08-30T12:00:00Z</published>
+    <summary>SNOMED CT-AU is the Australian extension to the Systematized Nomenclature of Medicine, Clinical Terms (SNOMED CT), incorporating all Australian-developed terminology including the Australian Medicines Terminology (AMT) along with the core international data. SNOMED CT-AU provides local variations and customisations of terms relevant to the Australian healthcare sector for implementation in Australian clinical IT systems.</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct/32506021000036107</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260831</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release CSV File 31 August 2026</title>
+    <link rel="alternate" type="text/csv" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260831/amt-20260831.csv" length="24493064" ncts:sha256Hash="c12273c105893ed63d42fe77921147d2f8e9ba2a7e16721a0dbf4a48f54fc200" />
+    <category term="AMT_CSV" label="Australian Medicines Terminology, Comma Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/csv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:bf47128a-0c3f-310a-8c19-ca1d3017f22a</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-08-30T12:00:00Z</updated>
+    <published>2026-08-30T12:00:00Z</published>
+    <summary>The CSV (Comma Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The CSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/csv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/csv/900062011000036108/version/20260831</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>AMT Release TSV File 31 August 2026</title>
+    <link rel="alternate" type="text/tab-separated-values" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/amt/20260831/amt-20260831.tsv" length="23607256" ncts:sha256Hash="f74688484858546deaf61dbdef6391bd9960ede5b0fb4dad170bf0d66c85f880" />
+    <category term="AMT_TSV" label="Australian Medicines Terminology, Tab Separated Values" scheme="http://amt.healthterminologies.gov.au/syndication/tsv/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:bc7a2259-8a6f-370f-94e2-fb00dd0854f4</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-08-30T12:00:00Z</updated>
+    <published>2026-08-30T12:00:00Z</published>
+    <summary>The TSV (Tab Separated Values) distribution of AMT provides a flattened version of AMT medications. It aggregates each of the related concepts of an AMT medication, into a de-normalised form, for simpler integration. The TSV format forgoes the SNOMED CT structures and assumes a preferred language dialect of "en-AU".</summary>
+    <ncts:contentItemIdentifier>http://amt.info/tsv</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://amt.info/tsv/900062011000036108/version/20260831</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (STU3) 31 August 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-stu3/20260831/fhir-resource-bundle-stu3-20260831.json" length="9118146" ncts:sha256Hash="5fb7a2bb6e62670ccf6a418fa3f3c57caceb17cfeb0fbe6010d6799b67895562" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:7837604c-7401-3734-81d2-581066b13402</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-08-30T12:00:00Z</updated>
+    <published>2026-08-30T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-stu3/version/20260831</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>NCTS FHIR Bundle (R4) 31 August 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/fhir-resource-bundle-r4/20260831/fhir-resource-bundle-r4-20260831.json" length="8449803" ncts:sha256Hash="1a93f313cdc3220a323dc33b90722a638d3dbf4c22fb47da5e9a2587d5c7d738" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:232d0220-4b3d-3176-9de6-93d90725e351</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-08-30T12:00:00Z</updated>
+    <published>2026-08-30T12:00:00Z</published>
+    <summary>The NCTS FHIR Bundle contains the collection of all FHIR terminology resources available in the National Terminology Server.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/fhir-resource-bundle-r4/version/20260831</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+    <ncts:fhirVersion>4.0</ncts:fhirVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 August 2026 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/2/0/15/http_c_fs_fssnomed_dotinfo_fssct/32506021000036107_20260831/http_c_fs_fssnomed_dotinfo_fssct-32506021000036107_20260831.zip" length="1740895462" ncts:sha256Hash="d4cc70cf297b1c336e1854f49258f2c49d39b3d4bffc87b75248fe09cd3d0221" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/2.0.15" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:79b39946-db6e-3344-8762-a465f1c4ce1c</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2026-08-30T12:00:00Z</updated>
+    <published>2026-08-30T12:00:00Z</published>
+    <summary>Binary Index of the SNOMED CT Australian Extension 31 August 2026 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20260831</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU Reference Set FHIR Bundle 31 August 2026</title>
+    <link rel="alternate" type="application/fhir+json" href="https://api.healthterminologies.gov.au/syndication/v1/au/gov/ehealthterminology/sctau-refset-bundle/20260831/sctau-refset-bundle-20260831.json" length="538082" ncts:sha256Hash="f891d9a5ce534a8d916e7dff60922d51baa5d13c026c97596bfa0af6cffa6782" />
+    <category term="FHIR_Bundle" label="FHIR Bundle" scheme="http://ns.electronichealth.net.au/ncts/syndication/asf/scheme/1.0.0" />
+    <author>
+      <name>Australian Digital Health Agency</name>
+      <uri>http://www.digitalhealth.gov.au</uri>
+      <email>help@digitalhealth.gov.au</email>
+    </author>
+    <id>urn:uuid:aeaf7b7e-cf59-316c-8edb-4ab53062978f</id>
+    <rights>Copyright 2026 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency.</rights>
+    <updated>2026-08-30T12:00:00Z</updated>
+    <published>2026-08-30T12:00:00Z</published>
+    <summary>The SNOMED CT-AU Reference Set FHIR Bundle contains metadata for the Reference Sets available in the SNOMED CT-AU edition.</summary>
+    <ncts:contentItemIdentifier>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>https://healthterminologies.gov.au/fhir/Bundle/sctau-refset-bundle/version/20260831</ncts:contentItemVersion>
+    <ncts:bundleInterpretation>batch</ncts:bundleInterpretation>
+  </entry>
+  <entry>
+    <title>SNOMED CT-AU 31 August 2024 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/1/7/3/http_c_fs_fssnomed_dotinfo_fssct/32506021000036107_20240831/http_c_fs_fssnomed_dotinfo_fssct-32506021000036107_20240831.zip" length="821099179" ncts:sha256Hash="0f37b7b490e215ac0ed754ec5a77a42be04fbfe81a090d56130d62df270c6943" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/rf2/1.7.3" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:da117883-fb12-3035-ae6f-79383fb48e0c</id>
+    <rights>Copyright 2024 Australian Digital Health Agency. This content contains information which is protected by copyright. All Rights Reserved. No part of this work may be reproduced or used in any form or by any means - graphic, electronic, or mechanical, including photocopying, recording, taping, or information storage and retrieval systems - without the permission of the Australian Digital Health Agency. IHTSDO (SNOMED CT) This material includes SNOMED Clinical Terms (TM) (SNOMED CT (R)) which is used by permission of the International Health Terminology Standards Development Organisation (IHTSDO). All rights reserved. SNOMED CT (R) was originally created by The College of American Pathologists. "SNOMED" and "SNOMED CT" are registered trademarks of the IHTSDO, (http://www.ihtsdo.org/).</rights>
+    <updated>2024-09-29T12:00:00Z</updated>
+    <published>2024-08-26T01:14:30Z</published>
+    <summary>Binary Index of the SNOMED CT Australian Extension 31 August 2024 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://snomed.info/sct</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>http://snomed.info/sct/32506021000036107/version/20240831</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>LOINC 2.81 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/2/0/7/http_c_fs_fsloinc_dotorg/2.81/http_c_fs_fsloinc_dotorg-2.81.zip" length="306117268" ncts:sha256Hash="21fa7c52eb4b6b9ea7935933a276115cfe3f467d127e57712e46f2ff7ed5b0d5" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/loinc/2.0.7" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:1a9c731c-0549-3ae1-b822-dcd97e3fe2f3</id>
+    <rights>This product includes all, or a portion of, or is derived from content from LOINC that is subject to a license from Regenstrief Institute, Inc. Your use of LOINC content also is subject to this license, a copy of which is available https://loinc.org/license/. The current complete LOINC distribution is available for download at http://loinc.org. The LOINC Table and LOINC codes are copyright (C) 1995-2026, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee. The LOINC Table, LOINC Table Core, LOINC Panels and Forms File, LOINC Answer File, LOINC Part File, LOINC Group File, LOINC Document Ontology File, LOINC Hierarchies, LOINC Linguistic Variants File, LOINC/RSNA Radiology Playbook, LOINC/IEEE Medical Device Code Mapping Table, LOINC Display Name File, LOINC Consumer Name File, and LOINC Change Snapshot File are copyright (C) 1995-2026, Regenstrief Institute, Inc. All rights reserved. THE LOINC TABLE (IN ALL FORMATS), LOINC TABLE CORE, LOINC PANELS AND FORMS FILE, LOINC ANSWER FILE, LOINC PART FILE, LOINC GROUP FILE, LOINC DOCUMENT ONTOLOGY FILE, LOINC HIERARCHIES, LOINC LINGUISTIC VARIANTS FILE, LOINC/RSNA RADIOLOGY PLAYBOOK, LOINC/IEEE MEDICAL DEVICE CODE MAPPING TABLE, LOINC DISPLAY NAME FILE, LOINC CONSUMER NAME FILE, AND LOINC CHANGE SNAPSHOT FILE ARE PROVIDED "AS IS." ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. LOINC(R) is a registered United States trademark of Regenstrief Institute, Inc. A small portion of LOINC content may include content (e.g., survey instruments) that is subject to copyrights owned by third parties. Such content has been mapped to LOINC terms under applicable copyright and terms of use. Notice of such third-party copyright and license terms would need to be included if such content is included.</rights>
+    <updated>2026-01-30T12:00:00Z</updated>
+    <published>2025-08-30T12:00:00Z</published>
+    <summary>Binary Index of Logical Observation Identifiers Names and Codes 2.81 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://loinc.org</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>2.81</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>LOINC 2.82 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/2/0/7/http_c_fs_fsloinc_dotorg/2.82/http_c_fs_fsloinc_dotorg-2.82.zip" length="329225750" ncts:sha256Hash="d55faea4252b2e1a434a7653c7c8d2296b14090c095c987931033a1aba0f9db8" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/loinc/2.0.7" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:f1834dab-47e2-386f-b41d-8152f88e6186</id>
+    <rights>This product includes all, or a portion of, or is derived from content from LOINC that is subject to a license from Regenstrief Institute, Inc. Your use of LOINC content also is subject to this license, a copy of which is available https://loinc.org/license/. The current complete LOINC distribution is available for download at http://loinc.org. The LOINC Table and LOINC codes are copyright (C) 1995-2026, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee. The LOINC Table, LOINC Table Core, LOINC Panels and Forms File, LOINC Answer File, LOINC Part File, LOINC Group File, LOINC Document Ontology File, LOINC Hierarchies, LOINC Linguistic Variants File, LOINC/RSNA Radiology Playbook, LOINC/IEEE Medical Device Code Mapping Table, LOINC Display Name File, LOINC Consumer Name File, and LOINC Change Snapshot File are copyright (C) 1995-2026, Regenstrief Institute, Inc. All rights reserved. THE LOINC TABLE (IN ALL FORMATS), LOINC TABLE CORE, LOINC PANELS AND FORMS FILE, LOINC ANSWER FILE, LOINC PART FILE, LOINC GROUP FILE, LOINC DOCUMENT ONTOLOGY FILE, LOINC HIERARCHIES, LOINC LINGUISTIC VARIANTS FILE, LOINC/RSNA RADIOLOGY PLAYBOOK, LOINC/IEEE MEDICAL DEVICE CODE MAPPING TABLE, LOINC DISPLAY NAME FILE, LOINC CONSUMER NAME FILE, AND LOINC CHANGE SNAPSHOT FILE ARE PROVIDED "AS IS." ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. LOINC(R) is a registered United States trademark of Regenstrief Institute, Inc. A small portion of LOINC content may include content (e.g., survey instruments) that is subject to copyrights owned by third parties. Such content has been mapped to LOINC terms under applicable copyright and terms of use. Notice of such third-party copyright and license terms would need to be included if such content is included.</rights>
+    <updated>2026-03-30T12:00:00Z</updated>
+    <published>2026-03-30T12:00:00Z</published>
+    <summary>Binary Index of Logical Observation Identifiers Names and Codes 2.82 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://loinc.org</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>2.82</ncts:contentItemVersion>
+  </entry>
+  <entry>
+    <title>LOINC 2.74 (Ontoserver Binary Index)</title>
+    <link rel="alternate" type="application/zip" href="https://api.healthterminologies.gov.au/syndication/v1/au/csiro/ontoserver/BINARY/1/7/1/http_c_fs_fsloinc_dotorg/2.74/http_c_fs_fsloinc_dotorg-2.74.zip" length="74056413" ncts:sha256Hash="9f7ae3b9e52addf744ace0db49bbc6f89010d5730524edb51cecb8590d83ed73" />
+    <category term="BINARY" label="Binary Index" scheme="http://ontoserver.csiro.au/syndication/loinc/1.7.1" />
+    <author>
+      <name>Ontoserver</name>
+      <uri>http://ontoserver.csiro.au</uri>
+      <email>enquiries@aehrc.com</email>
+    </author>
+    <id>urn:uuid:67be7951-1995-3a67-ad50-22d90c3c2969</id>
+    <rights>This product includes all, or a portion of, or is derived from content from LOINC that is subject to a license from Regenstrief Institute, Inc. Your use of LOINC content also is subject to this license, a copy of which is available https://loinc.org/license/. The current complete LOINC distribution is available for download at http://loinc.org. The LOINC Table and LOINC codes are copyright (C) 1995-2026, Regenstrief Institute, Inc. and the Logical Observation Identifiers Names and Codes (LOINC) Committee. The LOINC Table, LOINC Table Core, LOINC Panels and Forms File, LOINC Answer File, LOINC Part File, LOINC Group File, LOINC Document Ontology File, LOINC Hierarchies, LOINC Linguistic Variants File, LOINC/RSNA Radiology Playbook, LOINC/IEEE Medical Device Code Mapping Table, LOINC Display Name File, LOINC Consumer Name File, and LOINC Change Snapshot File are copyright (C) 1995-2026, Regenstrief Institute, Inc. All rights reserved. THE LOINC TABLE (IN ALL FORMATS), LOINC TABLE CORE, LOINC PANELS AND FORMS FILE, LOINC ANSWER FILE, LOINC PART FILE, LOINC GROUP FILE, LOINC DOCUMENT ONTOLOGY FILE, LOINC HIERARCHIES, LOINC LINGUISTIC VARIANTS FILE, LOINC/RSNA RADIOLOGY PLAYBOOK, LOINC/IEEE MEDICAL DEVICE CODE MAPPING TABLE, LOINC DISPLAY NAME FILE, LOINC CONSUMER NAME FILE, AND LOINC CHANGE SNAPSHOT FILE ARE PROVIDED "AS IS." ANY EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. LOINC(R) is a registered United States trademark of Regenstrief Institute, Inc. A small portion of LOINC content may include content (e.g., survey instruments) that is subject to copyrights owned by third parties. Such content has been mapped to LOINC terms under applicable copyright and terms of use. Notice of such third-party copyright and license terms would need to be included if such content is included.</rights>
+    <updated>2026-01-30T12:00:00Z</updated>
+    <published>2024-08-26T01:14:30Z</published>
+    <summary>Binary Index of Logical Observation Identifiers Names and Codes 2.74 for use with Ontoserver</summary>
+    <ncts:contentItemIdentifier>http://loinc.org</ncts:contentItemIdentifier>
+    <ncts:contentItemVersion>2.74</ncts:contentItemVersion>
+  </entry>
+</feed>

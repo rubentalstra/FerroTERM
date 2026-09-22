@@ -340,6 +340,7 @@ code system adds a loader crate (`rf2` is the first) that feeds them.
 | `crates/designation-index` | The `fst` + roaring designation search index (prefix, language and use filter, term-length sort) | hand-written |
 | `crates/sct-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `concept-graph`) | hand-written |
 | `crates/fhir-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
+| `crates/terminology-syndication` | The Atom terminology syndication client: the feed model and its NCTS extensions, entry selection, checksum-verified download, and the `Source` seam each service add-on implements | hand-written |
 | `app/ferroterm-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
 | `tools/ferroterm-build` | The offline build: a code system release (RF2 first) → the graph/store/text artifacts the server reads, once per release | tooling |
 

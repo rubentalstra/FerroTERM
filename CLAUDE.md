@@ -49,6 +49,10 @@ crate-local discipline.
 - `crates/fhir-terminology`: the engine. `$lookup`/`$validate-code`/`$expand`/
   `$subsumes`/`$translate` over the code system provider seam, dispatched per
   FHIR version.
+- `crates/terminology-syndication`: the Atom terminology syndication client. The feed model
+  with its NCTS extensions, entry selection, checksum-verified download, and
+  the `Source` seam each service add-on implements. Country-neutral and
+  code-system-neutral.
 - `app/ferroterm-server`: the `axum` HTTP server (FHIR endpoints, content
   negotiation, runtime version routing).
 - `app/ferroterm-viewer`: the Leptos web UI, client-side rendered and served by

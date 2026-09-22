@@ -57,6 +57,11 @@ rayon = "1.12.0"
 zip = { version = "8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 # The UCUM essence (unit definitions) is XML.
 quick-xml = "0.42.0"
+# Content digests. A syndication feed advertises a SHA-256 for a content item,
+# and the MLDS feed advertises an MD5; both versions were checked against
+# crates.io on 2026-09-22.
+sha2 = "0.11.0"
+md-5 = "0.11.0"
 # Serde and formats.
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }
@@ -99,19 +104,20 @@ fhir-types = "0.1.98"
 # Workspace-internal crates. The `crates/*` members carry the published crate
 # line (lockstep, bumped with their packaged content, never the product
 # version); the tools stay on the workspace version.
-rf2 = { path = "crates/rf2", version = "0.1.99" }
-loinc = { path = "crates/loinc", version = "0.1.99" }
-classification = { path = "crates/classification", version = "0.1.99" }
-dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.99" }
-gstandaard = { path = "crates/gstandaard", version = "0.1.99" }
-labcodeset = { path = "crates/labcodeset", version = "0.1.99" }
-icd11 = { path = "crates/icd11", version = "0.1.99" }
-rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.99" }
-concept-graph = { path = "crates/concept-graph", version = "0.1.99" }
-concept-store = { path = "crates/concept-store", version = "0.1.99" }
-designation-index = { path = "crates/designation-index", version = "0.1.99" }
-sct-ecl = { path = "crates/sct-ecl", version = "0.1.99" }
-fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.99" }
+rf2 = { path = "crates/rf2", version = "0.1.100" }
+loinc = { path = "crates/loinc", version = "0.1.100" }
+classification = { path = "crates/classification", version = "0.1.100" }
+dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.100" }
+gstandaard = { path = "crates/gstandaard", version = "0.1.100" }
+labcodeset = { path = "crates/labcodeset", version = "0.1.100" }
+icd11 = { path = "crates/icd11", version = "0.1.100" }
+rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.100" }
+concept-graph = { path = "crates/concept-graph", version = "0.1.100" }
+concept-store = { path = "crates/concept-store", version = "0.1.100" }
+designation-index = { path = "crates/designation-index", version = "0.1.100" }
+sct-ecl = { path = "crates/sct-ecl", version = "0.1.100" }
+fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.100" }
+terminology-syndication = { path = "crates/terminology-syndication", version = "0.1.100" }
 # Path-only, with no `version`: cargo then strips the dev-dependency from a
 # packaged crates/* manifest instead of looking it up on crates.io.
 ferroterm-testkit = { path = "tools/ferroterm-testkit" }
