@@ -135,7 +135,7 @@ async fn a_search_without_criteria_lists_every_loaded_code_system() {
     let server = Server::start_with_every_loader();
     let (status, body) = server.get("/r4b/CodeSystem").await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    let loaded = u64::try_from(server.state.instances().count()).expect("fits");
+    let loaded = u64::try_from(server.state().instances().count()).expect("fits");
     assert_eq!(
         body["total"].as_u64(),
         Some(loaded),

@@ -13,6 +13,22 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- The server reloads the served set without a restart (#578). `SIGHUP` and
+  `POST /reload` both make it read `FERROTERM_INDEX` and `FERROTERM_CODESYSTEMS`
+  again, open everything read-only, and swap the whole registry; a request in
+  flight finishes on the set it started on. `POST /reload` is served by an admin
+  listener bound to `FERROTERM_ADMIN_LISTEN`, which serves nothing else and is
+  absent when the variable is unset; the FHIR listener answers `/reload` with
+  the `not-found` `OperationOutcome` any unknown path answers. A reload that
+  meets an artifact it cannot open leaves the served set untouched, logs the
+  reason, and answers the admin request with a `500` naming it.
+  `FERROTERM_RESOURCES` is carried over rather than reopened. `/metrics` gains
+  `ferroterm_reloads_total{outcome="ok"|"failed"}`, and
+  `ferroterm_code_system_loaded` now describes the set being served rather than
+  the set loaded at start.
+
 ### Changed
 
 - The Licensor and copyright holder of the project's own work is Vernum

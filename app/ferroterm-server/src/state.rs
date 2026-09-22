@@ -371,13 +371,15 @@ pub struct AppState {
     /// form, replaced whole by every write.
     persisted: RwLock<Persisted>,
     /// The durable store of the persisted resources, when the deployment
-    /// configured one.
-    store: Option<ResourceStore>,
+    /// configured one. A reload carries it over: `redb` holds the file for as
+    /// long as the handle lives, so the store is opened once per process
+    /// (<https://docs.rs/redb/latest/redb/struct.Database.html>).
+    store: Option<Arc<ResourceStore>>,
     /// `ValueSet` instance id to (url, version).
     value_set_instances: BTreeMap<String, (String, Option<String>)>,
     /// `ConceptMap` instance id to (url, version).
     concept_map_instances: BTreeMap<String, (String, Option<String>)>,
-    caches: Caches,
+    caches: Arc<Caches>,
     /// `CodeSystem` instance id to (system, version).
     instances: BTreeMap<String, (String, String)>,
     /// The directory each version was loaded from.
@@ -442,6 +444,22 @@ struct Loaded {
     provider: Arc<dyn CodeSystemProvider>,
 }
 
+/// What a rebuilt state takes over from the state it replaces.
+///
+/// The write store, the metrics, and the `$cache-control` caches outlive one
+/// served set: reopening the store would meet `redb`'s own file lock, and a
+/// counter or a cache handle that restarted with the set would lie to a
+/// scrape and to a client holding an id.
+#[derive(Debug, Default)]
+struct Carried {
+    /// The live write store, when the state being replaced opened one.
+    store: Option<Arc<ResourceStore>>,
+    /// The metrics registry a scrape reads.
+    metrics: Option<Arc<crate::metrics::Metrics>>,
+    /// The caches `$cache-control` started.
+    caches: Option<Arc<Caches>>,
+}
+
 impl AppState {
     /// Loads every artifact and every `CodeSystem` directory `config` names
     /// into a registry, supplements applied to the systems they name.
@@ -452,6 +470,32 @@ impl AppState {
     /// a system that is not loaded, or two sources serve the same system
     /// version. A server never starts on a bad index.
     pub fn load(config: &Config) -> Result<Self, LoadError> {
+        Self::build(config, Carried::default())
+    }
+
+    /// The same configuration read again into a fresh state, carrying this
+    /// state's write store, metrics, and caches.
+    ///
+    /// The caller swaps the result in; this state keeps answering until it
+    /// does, and until the last request holding it finishes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LoadError`] exactly as [`AppState::load`] does. The failure
+    /// leaves this state untouched, because nothing has been swapped.
+    pub fn reloaded(&self, config: &Config) -> Result<Self, LoadError> {
+        Self::build(
+            config,
+            Carried {
+                store: self.store.clone(),
+                metrics: Some(Arc::clone(&self.metrics)),
+                caches: Some(Arc::clone(&self.caches)),
+            },
+        )
+    }
+
+    /// The state `config` names, built over what `carried` hands on.
+    fn build(config: &Config, carried: Carried) -> Result<Self, LoadError> {
         let mut loaded = Vec::new();
         for path in &config.index {
             loaded.push(Loaded {
@@ -509,6 +553,12 @@ impl AppState {
             registry.register_supplement(target, supplement);
         }
         let mut state = Self::from_registry(registry);
+        if let Some(metrics) = carried.metrics {
+            state.metrics = metrics;
+        }
+        if let Some(caches) = carried.caches {
+            state.caches = caches;
+        }
         state.paths = paths;
         state
             .security_services
@@ -536,15 +586,18 @@ impl AppState {
         state.base.value_sets = value_sets;
         state.base.concept_maps = concept_maps;
         state.core = core_terminology()?;
-        if let Some(path) = &config.resources {
-            state.store =
-                Some(
-                    ResourceStore::open(path).map_err(|source| LoadError::Resources {
+        state.store = match carried.store {
+            Some(store) => Some(store),
+            None => match &config.resources {
+                Some(path) => Some(Arc::new(ResourceStore::open(path).map_err(|source| {
+                    LoadError::Resources {
                         path: path.clone(),
                         source: Box::new(source),
-                    })?,
-                );
-        }
+                    }
+                })?)),
+                None => None,
+            },
+        };
         state.reload_persisted().map_err(LoadError::Persisted)?;
         state.seed_metrics();
         Ok(state)
@@ -603,7 +656,7 @@ impl AppState {
             store: None,
             value_set_instances: BTreeMap::new(),
             concept_map_instances: BTreeMap::new(),
-            caches: Caches::default(),
+            caches: Arc::new(Caches::default()),
             instances,
             paths: BTreeMap::new(),
             software_version: env!("CARGO_PKG_VERSION"),
@@ -634,11 +687,11 @@ impl AppState {
         self
     }
 
-    /// Declares every loaded code system version to the metrics registry.
+    /// Declares every loaded code system version to the metrics registry,
+    /// dropping the versions a previous set declared.
     fn seed_metrics(&self) {
-        for (_, url, version) in self.instances() {
-            self.metrics.loaded(url, version);
-        }
+        self.metrics
+            .serving(self.instances().map(|(_, url, version)| (url, version)));
     }
 
     /// The metrics of this server, for the scrape endpoint and the request

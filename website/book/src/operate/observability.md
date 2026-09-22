@@ -47,12 +47,22 @@ The exposition is the text format Prometheus reads, with every metric under the
 | `ferroterm_http_requests_total` | counter | `method`, `route`, `status` | the requests answered |
 | `ferroterm_http_request_duration_seconds` | histogram | `method`, `route`, `status` | how long each took |
 | `ferroterm_code_system_loaded` | gauge | `system`, `version` | one per code system version loaded |
+| `ferroterm_reloads_total` | counter | `outcome` (`ok`, `failed`) | the reloads of the served set |
 
 `route` is the matched route, `/r4b/CodeSystem/$lookup`, never the URI, so the
 series count stays bounded no matter how many codes clients ask about. The
 duration buckets start at half a millisecond and double, which brackets the
 bars the engine is held to: a point read under a millisecond, a page of an
 expansion under ten.
+
+`ferroterm_code_system_loaded` describes the set the server answers from now:
+a [reload](configuration.md#reloading-the-served-set) that drops a version
+drops its series, and one that adds a version adds one. Both `outcome` series
+of `ferroterm_reloads_total` start at zero, so
+`increase(ferroterm_reloads_total{outcome="failed"}[1h]) > 0` is an alert you
+can write before the first reload happens. A failed reload means the server is still
+answering from the old set and the content on disk did not open; the
+`the served set was not reloaded` log line carries the reason.
 
 A scrape configuration is one job:
 

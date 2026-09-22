@@ -2,9 +2,10 @@
 //!
 //! The library holds the whole run path so integration tests can drive it:
 //! [`config::Config`] names the artifacts, [`state::AppState`] loads them into
-//! a registry, [`router`] builds the `axum` application over that state, and
-//! [`serve`] runs it on a bound listener until the process is asked to stop.
-//! `main.rs` only reads the environment and calls in.
+//! a registry, [`reload::Serving`] holds that state and swaps it on a reload,
+//! [`router`] builds the `axum` application over it, and [`serve`] runs it on a
+//! bound listener until the process is asked to stop. `main.rs` only reads the
+//! environment and calls in.
 //!
 //! Every served FHIR version has its own path prefix (`/r4`, `/r4b`, `/r5`), and within it
 //! the resource and operation URLs the FHIR REST API defines
@@ -23,6 +24,7 @@ pub mod r4;
 pub mod r4b;
 pub mod r5;
 pub mod r6;
+pub mod reload;
 // The build script is the only caller: it `include!`s this source rather than
 // linking the library it builds, so the module is compiled here for its tests.
 #[cfg(test)]
@@ -43,26 +45,28 @@ use axum::routing::get;
 use http::StatusCode;
 use tokio::net::TcpListener;
 
+use crate::reload::Serving;
 use crate::state::AppState;
 
-/// Builds the HTTP application over `state`.
+/// Builds the HTTP application over `serving`.
 ///
 /// `GET /health` answers `200 OK` while the process is up ([`healthcheck`] is
 /// the probe the container runs against it); every FHIR route lives under its
-/// version prefix. Any other path is an `OperationOutcome` `not-found`.
-pub fn router(state: Arc<AppState>) -> Router {
-    router_with_bundle(state, ui::BUNDLE)
+/// version prefix. Any other path is an `OperationOutcome` `not-found`, and
+/// that includes `/reload`, which only the admin listener serves.
+pub fn router(serving: Serving) -> Router {
+    router_with_bundle(serving, ui::BUNDLE)
 }
 
-/// Builds the HTTP application over `state`, serving `bundle` as the viewer.
+/// Builds the HTTP application over `serving`, serving `bundle` as the viewer.
 ///
 /// The viewer is mounted when the deployment asked for it and this binary
 /// carries a bundle; otherwise `/` and `/ui` are the `OperationOutcome`
 /// `not-found` every other unknown path answers. Taking the bundle as an
 /// argument is what lets a test drive the viewer routes without the release
 /// build's `dist/`.
-pub fn router_with_bundle(state: Arc<AppState>, bundle: &'static [ui::Asset]) -> Router {
-    let viewer = state.serves_viewer() && !bundle.is_empty();
+pub fn router_with_bundle(serving: Serving, bundle: &'static [ui::Asset]) -> Router {
+    let viewer = serving.current().serves_viewer() && !bundle.is_empty();
     let mut app = Router::new()
         .route("/health", get(health))
         .nest("/r4", r4::router())
@@ -76,7 +80,7 @@ pub fn router_with_bundle(state: Arc<AppState>, bundle: &'static [ui::Asset]) ->
     let app = app
         .fallback(outcome::not_found)
         .layer(axum::middleware::from_fn_with_state(
-            Arc::clone(&state),
+            serving.clone(),
             request_log::log,
         ));
     // NOTE: axum applies a layer only to the routes already added, so merging
@@ -87,7 +91,7 @@ pub fn router_with_bundle(state: Arc<AppState>, bundle: &'static [ui::Asset]) ->
     } else {
         app
     };
-    app.with_state(state)
+    app.with_state(serving)
 }
 
 /// Serves [`router`] on an already-bound listener until the process receives
@@ -100,8 +104,8 @@ pub fn router_with_bundle(state: Arc<AppState>, bundle: &'static [ui::Asset]) ->
 /// # Errors
 ///
 /// Returns the I/O error from accepting connections or serving them.
-pub async fn serve(listener: TcpListener, state: Arc<AppState>) -> std::io::Result<()> {
-    serve_until(listener, state, shutdown_signal()).await
+pub async fn serve(listener: TcpListener, serving: Serving) -> std::io::Result<()> {
+    serve_until(listener, serving, shutdown_signal()).await
 }
 
 /// Serves [`router`] on an already-bound listener until `shutdown` completes,
@@ -112,13 +116,36 @@ pub async fn serve(listener: TcpListener, state: Arc<AppState>) -> std::io::Resu
 /// Returns the I/O error from accepting connections or serving them.
 pub async fn serve_until<F>(
     listener: TcpListener,
-    state: Arc<AppState>,
+    serving: Serving,
     shutdown: F,
 ) -> std::io::Result<()>
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    axum::serve(listener, router(state))
+    axum::serve(listener, router(serving))
+        .with_graceful_shutdown(shutdown)
+        .await
+}
+
+/// Serves the admin application ([`reload::router`]) on an already-bound
+/// listener until `shutdown` completes.
+///
+/// The admin listener carries `POST /reload` and nothing of the FHIR surface,
+/// and it authenticates nobody, so a deployment binds it to an address only
+/// its operators reach.
+///
+/// # Errors
+///
+/// Returns the I/O error from accepting connections or serving them.
+pub async fn serve_admin_until<F>(
+    listener: TcpListener,
+    serving: Serving,
+    shutdown: F,
+) -> std::io::Result<()>
+where
+    F: Future<Output = ()> + Send + 'static,
+{
+    axum::serve(listener, reload::router(serving))
         .with_graceful_shutdown(shutdown)
         .await
 }

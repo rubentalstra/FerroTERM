@@ -14,10 +14,11 @@ use std::sync::Arc;
 
 use clap::Parser;
 use ferroterm_server::cli::{Cli, Command};
-use ferroterm_server::config::{Config, INDEX_ENV, LISTEN_ENV, UI_ENV};
+use ferroterm_server::config::{ADMIN_LISTEN_ENV, Config, INDEX_ENV, LISTEN_ENV, UI_ENV};
+use ferroterm_server::reload::Serving;
 use ferroterm_server::state::AppState;
 use ferroterm_server::telemetry::ResolvedFormat;
-use ferroterm_server::{banner, healthcheck, telemetry};
+use ferroterm_server::{banner, healthcheck, reload, telemetry};
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -106,9 +107,36 @@ async fn run(config: Config) -> anyhow::Result<()> {
         .await
         .with_context(|| format!("binding {} (set {LISTEN_ENV} to change it)", config.listen))?;
     tracing::info!(listen = %config.listen, base = "/r4b", "listening");
-    ferroterm_server::serve(listener, Arc::new(state))
-        .await
-        .context("serving HTTP")?;
+    let admin = match &config.admin_listen {
+        Some(address) => {
+            let bound = TcpListener::bind(address).await.with_context(|| {
+                format!(
+                    "binding the admin listener on {address} (set {ADMIN_LISTEN_ENV} to change it)"
+                )
+            })?;
+            tracing::info!(listen = %address, route = "/reload", "listening for admin requests");
+            Some(bound)
+        }
+        None => None,
+    };
+    let serving = Serving::new(config, Arc::new(state));
+    // NOTE: dropping the handle detaches the task, which then runs until the
+    // process ends (<https://docs.rs/tokio/latest/tokio/task/struct.JoinHandle.html>).
+    let _hangup = tokio::spawn(reload::on_hangup(serving.clone()));
+    match admin {
+        Some(admin) => {
+            let fhir = ferroterm_server::serve(listener, serving.clone());
+            let admin = ferroterm_server::serve_admin_until(
+                admin,
+                serving,
+                ferroterm_server::shutdown_signal(),
+            );
+            let ((), ()) = tokio::try_join!(fhir, admin).context("serving HTTP")?;
+        }
+        None => ferroterm_server::serve(listener, serving)
+            .await
+            .context("serving HTTP")?,
+    }
     tracing::info!("ferroterm stopped");
     Ok(())
 }
