@@ -12,7 +12,7 @@ at most 1,000 members without `count` and asks for paging beyond that
 
 | Variable | Meaning | Default |
 |---|---|---|
-| `FERROTERM_INDEX` | The artifact directories to serve, one per code system version (a SNOMED CT edition, a LOINC release, an ICD-10 classification, an RxNorm release, or one of the three ICD-11 code systems; the manifest says which), separated by the platform's path separator (`:` on Linux). Each holds the `store.redb`, `hierarchy.bin`, `text.bin`, and `manifest.json` that `ferroterm-build` wrote. The server opens them read-only and refuses to start when one is missing, damaged, or duplicates another's system version. | none (the server starts with no code systems) |
+| `FERROTERM_INDEX` | The artifact directories to serve, one per code system version (a SNOMED CT edition, a LOINC release, an ICD-10 classification, an RxNorm release, or one of the three ICD-11 code systems; the manifest says which), separated by the platform's path separator (`:` on Linux). Each holds the `store.redb`, `hierarchy.bin`, `text.bin`, and `manifest.json` that `ferroterm-build` wrote. The server opens them read-only and refuses to start when one is missing, damaged, or duplicates another's system version. A path that holds no `manifest.json` of its own is an index root: every child directory that holds one is an artifact, and the server lists the root again on every reload (see [Index roots](#index-roots)). | none (the server starts with no code systems) |
 | `FERROTERM_CODESYSTEMS` | Directories of FHIR `CodeSystem` resources to serve, separated by the platform's path separator: a FHIR package's `package/` directory (HL7 Terminology, for example) or a directory of `CodeSystem` JSON files. Files are read in the FHIR version the directory's `package.json` declares, or as R4B when there is none. A resource with `content = supplement` is applied to the system it `supplements` and is not served as an instance; the server refuses to start when that system is not loaded. `ValueSet` resources in the same directories are served by `url` and `version` for `ValueSet/$expand` and `ValueSet/$validate-code` (without a version, the greatest version answers). | none |
 | `FERROTERM_RESOURCES` | The database file holding the `CodeSystem`, `ValueSet`, and `ConceptMap` resources clients write through the REST API, and the closure tables `$closure` maintains. The server creates the file when it does not exist, serves every resource in it exactly as it serves one from `FERROTERM_CODESYSTEMS`, and loads them again after a restart. A deployment that names no file refuses every write with a `422` and declares no write interaction in its capability statement. | none (the server persists nothing) |
 | `FERROTERM_LISTEN` | The socket address to bind. | `127.0.0.1:8080` (the container image sets `0.0.0.0:8080`) |
@@ -68,8 +68,10 @@ directory the running server is reading corrupts what it reads. A directory in
 `FERROTERM_CODESYSTEMS` is different: add or remove a resource file in it, and
 the reload picks up the change.
 
-Adding or removing a whole artifact path means changing `FERROTERM_INDEX`,
-which the process reads once at start, so that still takes a restart.
+Adding or removing an artifact PATH means changing `FERROTERM_INDEX`, which
+the process reads once at start, so that still takes a restart. Adding or
+removing a release inside an index root does not, because a reload lists every
+root again.
 
 The admin listener carries `POST /reload` and nothing else, answers `404` to
 anything else, and authenticates nobody. Bind it to a loopback or internal
@@ -78,6 +80,43 @@ leave it out of the reverse proxy that publishes the FHIR surface (see
 [Behind a reverse proxy](reverse-proxy.md)). The FHIR listener never serves
 `/reload`: that path is the `not-found` `OperationOutcome` any unknown path
 answers.
+
+## Index roots
+
+The server reads each path in `FERROTERM_INDEX` in one of two ways:
+
+- **An artifact path** holds a `manifest.json` of its own. The server opens
+  that directory as one code system version.
+- **An index root** holds no `manifest.json`. The server lists it and opens
+  every child directory that holds one, in the order their names sort. A child
+  without a manifest is passed over, as is a file beside the children.
+
+```text
+/srv/ferroterm/snomed-nl/        FERROTERM_INDEX names this root
+    20260331/                    an artifact: the release in production
+    20260930/                    an artifact: the release that followed it
+    .incoming-20261031/          no manifest yet, so the server passes it over
+```
+
+Every reload lists the roots again, so a release directory that appeared since
+the last scan is opened and one that disappeared is dropped. That is what lets
+a synchronisation job publish a release beside the running one and keep the
+previous release for a rollback. Both are served, and a request that names no
+version still resolves to the greatest one, so publishing a release is what
+promotes it. A retired release keeps answering until you remove its directory
+and reload.
+
+Write a release into a root in two steps: build or download it into a directory
+outside the root, then rename it in. `rename` is one atomic step
+(<https://pubs.opengroup.org/onlinepubs/9699919799/functions/rename.html>), so
+a reload sees the new directory whole or not at all. The manifest is the marker
+that makes the directory an artifact, and `ferroterm-build` writes it after
+everything else, so a build straight into a root is picked up only once it has
+finished.
+
+A root that holds no artifact serves nothing and logs `the index root holds no
+artifact`. A path that names nothing at all still refuses the start, and a
+reload that meets one keeps the old set answering.
 
 ## A refused artifact stops the start
 
@@ -101,7 +140,9 @@ open refuses the whole swap: the server keeps serving the set it already had,
 logs `the served set was not reloaded` with the reason, counts
 `ferroterm_reloads_total{outcome="failed"}`, and answers the admin request
 with a `500` naming the artifact. A half-applied release never reaches a
-client.
+client. A child directory under an index root is an artifact like any other
+here: once it holds a manifest the server cannot read, it refuses the reload
+rather than serving the root without it.
 
 ## The registry systems
 

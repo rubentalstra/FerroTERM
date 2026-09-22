@@ -95,6 +95,15 @@ pub enum LoadError {
         #[source]
         source: ArtifactError,
     },
+    /// A configured index root does not list.
+    #[error("cannot list the index root at {path}")]
+    Root {
+        /// The directory.
+        path: PathBuf,
+        /// The cause.
+        #[source]
+        source: std::io::Error,
+    },
     /// An artifact serves a system this server has no provider for.
     #[error("the artifact at {path} serves `{system}`, which this server cannot open")]
     UnknownArtifact {
@@ -497,11 +506,9 @@ impl AppState {
     /// The state `config` names, built over what `carried` hands on.
     fn build(config: &Config, carried: Carried) -> Result<Self, LoadError> {
         let mut loaded = Vec::new();
-        for path in &config.index {
-            loaded.push(Loaded {
-                path: path.clone(),
-                provider: open_artifact(path, config)?,
-            });
+        for path in artifact_paths(&config.index)? {
+            let provider = open_artifact(&path, config)?;
+            loaded.push(Loaded { path, provider });
         }
         // NOTE: the registry systems ship with the server, so a validator finds BCP 47,
         // BCP 13, UCUM, and ISO 3166 without configuration
@@ -1307,6 +1314,64 @@ pub fn instance_id(url: &str, version: &str) -> String {
     }
     let trimmed = id.trim_end_matches('-');
     trimmed.chars().take(64).collect()
+}
+
+/// The artifact directories the configured index paths name.
+///
+/// A path holding a manifest is one artifact, and so is a path that is no
+/// directory at all, which keeps a path naming nothing a refused start. A
+/// directory holding no manifest is a root: the child directories that hold
+/// one are its artifacts, in the order their names sort, and a child that
+/// holds none is passed over.
+///
+/// No FHIR or SNOMED specification governs this: our own design.
+///
+/// # Errors
+///
+/// Returns [`LoadError::Root`] when a root does not list.
+fn artifact_paths(index: &[PathBuf]) -> Result<Vec<PathBuf>, LoadError> {
+    let mut out = Vec::new();
+    for path in index {
+        if !path.is_dir() || artifact::is_artifact(path) {
+            out.push(path.clone());
+            continue;
+        }
+        let children = artifacts_under(path)?;
+        if children.is_empty() {
+            tracing::warn!(root = %path.display(), "the index root holds no artifact");
+        }
+        out.extend(children);
+    }
+    Ok(out)
+}
+
+/// The child directories of `root` that hold a manifest, sorted by path.
+///
+/// # Errors
+///
+/// Returns [`LoadError::Root`] when the directory does not list.
+fn artifacts_under(root: &Path) -> Result<Vec<PathBuf>, LoadError> {
+    let entries = std::fs::read_dir(root).map_err(|source| LoadError::Root {
+        path: root.to_path_buf(),
+        source,
+    })?;
+    let mut out = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|source| LoadError::Root {
+            path: root.to_path_buf(),
+            source,
+        })?;
+        let child = entry.path();
+        // NOTE: a directory a build is still writing carries no manifest yet, so staging
+        // beside the root and renaming into it races with no reload: our own design.
+        if artifact::is_artifact(&child) {
+            out.push(child);
+        }
+    }
+    // `read_dir` yields entries in whatever order the filesystem holds them
+    // (<https://doc.rust-lang.org/std/fs/fn.read_dir.html>), so the order is ours to set.
+    out.sort();
+    Ok(out)
 }
 
 /// Opens the artifact directory `path` with the provider its manifest calls

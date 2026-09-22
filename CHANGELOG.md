@@ -37,6 +37,15 @@ fresh link reference.
   verified before it counts as fetched. The `Source` trait is the seam a
   service add-on implements, with the listing and the download authenticating
   separately. The crate names no country, operator, or code system.
+- A path in `FERROTERM_INDEX` may name an index root as well as a single
+  artifact (#592). A path holding no `manifest.json` is a root, and every child
+  directory that holds one is opened as an artifact. The server lists the roots
+  again on every reload, so a release directory that appeared is opened and one
+  that disappeared is dropped, without a restart. A child without a manifest is
+  passed over, which makes the stage-then-rename step a synchronisation job uses
+  race-free; a child whose manifest the server cannot read refuses the reload
+  and leaves the served set answering. Two releases of one system under a root
+  are both served, and the greatest version stays the default.
 
 ### Changed
 
