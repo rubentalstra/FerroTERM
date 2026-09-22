@@ -268,10 +268,16 @@ async fn no_rendering_of_the_source_carries_a_secret() {
     let clock = support::TestClock::at("2026-09-22T09:00:00Z");
     let source = support::source(&server, support::confidential_account(), clock);
     let rendered = format!("{source:?}");
-    for secret in ["a-client-secret", "a-password", "an-account"] {
+    // The failure message names which credential leaked and never prints it
+    // or the rendering, because either would write the secret into the output.
+    for (named, secret) in [
+        ("the client secret", "a-client-secret"),
+        ("the password", "a-password"),
+        ("the account name", "an-account"),
+    ] {
         assert!(
             !rendered.contains(secret),
-            "the source rendering carries {secret}: {rendered}"
+            "the source rendering carries {named}"
         );
     }
     let token = bearer(&source).await;

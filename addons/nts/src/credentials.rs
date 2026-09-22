@@ -194,15 +194,15 @@ mod tests {
         let rendered = format!("{:?}", filled());
         assert!(
             !rendered.contains("a-client-secret"),
-            "the client secret must never be rendered: {rendered}"
+            "the client secret must never be rendered"
         );
         assert!(
             !rendered.contains("a-password"),
-            "the password must never be rendered: {rendered}"
+            "the password must never be rendered"
         );
         assert!(
             !rendered.contains("an-account"),
-            "the account name must never be rendered: {rendered}"
+            "the account name must never be rendered"
         );
         assert!(
             rendered.contains("client_credentials=true"),
