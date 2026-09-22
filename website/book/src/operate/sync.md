@@ -128,6 +128,10 @@ served, the run record says how many items wait, and `POST /activate` puts them
 in front of the server when you are ready. What is staged survives a restart,
 and a later run does not build it again.
 
+An activation is not a synchronisation run: it gets its own run record, and it
+leaves the schedule where it was, so the next scheduled run still starts at its
+own time.
+
 ## What a new release did to your own content
 
 A release can retire a code your own value set enumerates, remove it, or leave
