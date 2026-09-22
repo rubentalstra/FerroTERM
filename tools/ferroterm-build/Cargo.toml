@@ -26,7 +26,7 @@ gstandaard.workspace = true
 labcodeset.workspace = true
 fhir-types.workspace = true
 concept-graph.workspace = true
-icd11.workspace = true
+icd11 = { workspace = true, features = ["api"] }
 rxnorm-rrf.workspace = true
 loinc.workspace = true
 rayon.workspace = true

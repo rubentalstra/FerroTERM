@@ -1,13 +1,18 @@
 //! ICD-11 from the WHO ICD-API.
 //!
-//! [`api`] walks a local deployment of the ICD-API and caches every entity of
-//! a linearization (or the Foundation) as the JSON the API serves, per
-//! language; [`cache`] reads such a cache back into [`entity::Entity`]
-//! records; [`expression`] parses postcoordination expressions. The system
-//! URIs are THO's (<https://terminology.hl7.org/CodeSystem-ICD11MMS.html>) and
-//! the test cases of the HL7 terminology ecosystem IG name the other two.
+//! `api`, behind the `api` feature, walks a local deployment of the ICD-API
+//! and caches every entity of a linearization (or the Foundation) as the JSON
+//! the API serves, per language; [`cache`] reads such a cache back into
+//! [`entity::Entity`] records; [`expression`] parses postcoordination
+//! expressions. The system URIs are THO's
+//! (<https://terminology.hl7.org/CodeSystem-ICD11MMS.html>) and the test cases
+//! of the HL7 terminology ecosystem IG name the other two.
+//!
+//! The walker is the only part that speaks HTTP, and only the offline build
+//! reaches it, so the feature is off by default.
 #![doc(test(attr(deny(warnings))))]
 
+#[cfg(feature = "api")]
 pub mod api;
 pub mod cache;
 pub mod entity;

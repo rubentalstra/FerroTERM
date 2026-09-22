@@ -49,6 +49,13 @@ fresh link reference.
 
 ### Changed
 
+- The server binary carries no HTTP client, and a guard keeps it that way
+  (#585). The WHO ICD-API walker is the one client in the workspace and now
+  sits behind the `icd11` crate's `api` feature, which only the offline build
+  tool enables, so `reqwest` leaves the server's dependency tree.
+  `scripts/checks/no-client-in-server.sh` reads that tree on every pull request
+  and fails when a client reaches it. The health probe keeps its loopback
+  `GET /health`, which speaks to the server's own listener.
 - The Licensor and copyright holder of the project's own work is Vernum
   Projecten B.V. (#569). Every `Licensor:`, copyright and
   `SPDX-FileCopyrightText` line names the company. The licence terms are

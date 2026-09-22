@@ -364,6 +364,25 @@ jobs:
       - uses: ./.github/actions/setup-rust
       - run: bash scripts/checks/viewer-boundary.sh
 
+  # The server answers requests and reads its indexes; it connects to nothing,
+  # so its dependency tree carries no HTTP client. The ICD-API walker is the one
+  # client in the workspace and sits behind the icd11 crate's `api` feature,
+  # which only the offline build tool turns on.
+  no-client-in-server:
+    name: no-client-in-server
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - run: bash scripts/checks/no-client-in-server.sh
+
   # A screen names a role and a step from the token layer, never a palette
   # entry. The palette is measured once by the accessibility battery, and a
   # colour written into a screen escapes that measurement silently.
@@ -710,6 +729,7 @@ jobs:
       - cargo-deny
       - viewer-boundary
       - viewer-tokens
+      - no-client-in-server
       - viewer
       - ui-e2e
       - crate-version-guard

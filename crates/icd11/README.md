@@ -8,6 +8,9 @@ reads such a cache back into typed entity records; and parses postcoordination
 expressions. The system URIs are those of HL7's terminology repository. The
 crate ships no ICD-11 content.
 
+The walker is the only part that speaks HTTP and sits behind the `api` feature,
+off by default, so reading a cache pulls in no HTTP client.
+
 ## Where it sits
 
 `icd11` is one crate of [FerroTERM](https://github.com/rubentalstra/FerroTERM),
