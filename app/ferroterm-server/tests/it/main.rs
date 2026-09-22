@@ -33,6 +33,7 @@ mod r6;
 mod reload;
 mod scope;
 mod shutdown;
+mod smart;
 mod telemetry;
 mod translate;
 mod ui;

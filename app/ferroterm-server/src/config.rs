@@ -10,8 +10,8 @@ pub const LISTEN_ENV: &str = "FERROTERM_LISTEN";
 ///
 /// The admin listener serves `POST /reload` and nothing else, on an address of
 /// its own so the FHIR surface never carries it. Unset means no admin listener
-/// and `SIGHUP` as the only reload trigger. It authenticates nobody, like the
-/// rest of the server, so a deployment keeps it on an internal address.
+/// and `SIGHUP` as the only reload trigger. Without [`OIDC_ISSUER_ENV`] it
+/// authenticates nobody, so a deployment keeps it on an internal address.
 pub const ADMIN_LISTEN_ENV: &str = "FERROTERM_ADMIN_LISTEN";
 /// The environment variable listing the artifact directories to serve,
 /// separated by the platform's path separator (`:` on Unix).
@@ -45,6 +45,26 @@ pub const SECURITY_SERVICE_ENV: &str = "FERROTERM_SECURITY_SERVICE";
 /// learns where to send the next request
 /// (<https://hl7.org/fhir/R4B/capabilitystatement-definitions.html#CapabilityStatement.implementation.url>).
 pub const BASE_URL_ENV: &str = "FERROTERM_BASE_URL";
+/// The environment variable naming the OpenID Connect issuer to trust.
+///
+/// Set, the server reads the issuer's discovery document and its key set at
+/// start, publishes `[base]/.well-known/smart-configuration` derived from that
+/// document, and requires a SMART bearer token on every write and on the admin
+/// listener (<https://hl7.org/fhir/smart-app-launch/conformance.html>). Unset,
+/// the server asks for no token and the whole surface answers as before.
+pub const OIDC_ISSUER_ENV: &str = "FERROTERM_OIDC_ISSUER";
+/// The environment variable naming the audience every token must carry.
+///
+/// A deployment that names one refuses a token minted for another resource
+/// server (RFC 7519 §4.1.3); one that names none accepts any audience, and the
+/// issuer check still bounds the token.
+pub const OIDC_AUDIENCE_ENV: &str = "FERROTERM_OIDC_AUDIENCE";
+/// The environment variable naming the scope the admin listener requires.
+///
+/// Its value is one scope string, compared verbatim against the scopes the
+/// token grants. No specification governs the admin surface, so the name is
+/// the deployment's own.
+pub const OIDC_ADMIN_SCOPE_ENV: &str = "FERROTERM_OIDC_ADMIN_SCOPE";
 /// The environment variable switching the viewer on or off.
 ///
 /// It reads `on` or `off` (`true`/`false`, `1`/`0`, and `yes`/`no` are taken
@@ -96,6 +116,14 @@ pub struct Config {
     /// The base URL clients reach this server at, without a version prefix
     /// and without a trailing slash; `None` when the deployment names none.
     pub base_url: Option<String>,
+    /// The OpenID Connect issuer whose tokens gate the writes; `None` when the
+    /// deployment names none and the server asks for no token.
+    pub oidc_issuer: Option<String>,
+    /// The audience every token must carry; `None` when the deployment names
+    /// none.
+    pub oidc_audience: Option<String>,
+    /// The scope the admin listener requires, compared verbatim.
+    pub oidc_admin_scope: String,
     /// Whether the server mounts the viewer under `/ui`.
     pub viewer: bool,
 }
@@ -129,6 +157,9 @@ impl Default for Config {
             log_filter: String::from(crate::telemetry::DEFAULT_FILTER),
             security_services: Vec::new(),
             base_url: None,
+            oidc_issuer: None,
+            oidc_audience: None,
+            oidc_admin_scope: String::from("ferroterm/admin"),
             viewer: true,
         }
     }
@@ -165,6 +196,19 @@ impl Config {
             base_url: std::env::var(BASE_URL_ENV)
                 .ok()
                 .and_then(|url| base_url_of(&url)),
+            oidc_issuer: std::env::var(OIDC_ISSUER_ENV).ok().and_then(|url| {
+                let trimmed = url.trim().trim_end_matches('/');
+                (!trimmed.is_empty()).then(|| trimmed.to_owned())
+            }),
+            oidc_audience: std::env::var(OIDC_AUDIENCE_ENV)
+                .ok()
+                .map(|audience| audience.trim().to_owned())
+                .filter(|audience| !audience.is_empty()),
+            oidc_admin_scope: std::env::var(OIDC_ADMIN_SCOPE_ENV)
+                .ok()
+                .map(|scope| scope.trim().to_owned())
+                .filter(|scope| !scope.is_empty())
+                .unwrap_or(defaults.oidc_admin_scope),
             viewer: viewer(defaults.viewer)?,
         })
     }

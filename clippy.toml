@@ -28,5 +28,7 @@ disallowed-types = [
 
 # Product, family, and specification names are words, not code, in
 # documentation. WebDriver is the W3C protocol the browser journeys speak
-# (https://www.w3.org/TR/webdriver2/).
-doc-valid-idents = ["FerroTERM", "FerroEHR", "RESTful", "WebDriver", ".."]
+# (https://www.w3.org/TR/webdriver2/); OpenID Connect is the specification the
+# SMART bearer gate discovers its issuer through
+# (https://openid.net/specs/openid-connect-discovery-1_0.html).
+doc-valid-idents = ["FerroTERM", "FerroEHR", "OpenID", "RESTful", "WebDriver", ".."]

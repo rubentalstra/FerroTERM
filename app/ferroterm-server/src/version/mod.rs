@@ -102,6 +102,13 @@ macro_rules! surface {
             lookup_instance_route(closure_route(axum::Router::new())
                 .route("/", post(batch::batch))
                 .route("/metadata", get(metadata::metadata))
+                // SMART App Launch puts the discovery document at
+                // `[base]/.well-known/smart-configuration`
+                // (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+                .route(
+                    "/.well-known/smart-configuration",
+                    get(crate::smart::configuration),
+                )
                 .route("/$versions", get(system::versions))
                 .route("/$cache-control", post(system::cache_control))
                 .route(

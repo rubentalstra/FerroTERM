@@ -336,7 +336,7 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | `FERROTERM_SECURITY_SERVICE` admits only the `restful-security-service` codes | `app/ferroterm-server/src/config.rs::a_security_service_list_admits_only_the_codes_the_value_set_defines` |
 | `FERROTERM_BASE_URL` becomes `implementation.url` per version | `app/ferroterm-server/src/config.rs::a_base_url_loses_its_trailing_slashes_and_an_empty_one_is_unset`; `app/ferroterm-server/src/version/metadata.rs` |
 | The log fields, and that bodies and free text are never logged | `app/ferroterm-server/src/request_log.rs` |
-| The server binary carries no HTTP client and makes no outbound connection | `scripts/checks/no-client-in-server.sh`, the `no-client-in-server` CI job; the ICD-API walker sits behind the `icd11` crate's `api` feature, which only `tools/ferroterm-build` enables |
+| The server binary carries no HTTP client, and makes no outbound connection unless `FERROTERM_OIDC_ISSUER` names one | `scripts/checks/no-client-in-server.sh`, the `no-client-in-server` CI job; the ICD-API walker sits behind the `icd11` crate's `api` feature, which only `tools/ferroterm-build` enables. With an issuer configured the server reads that issuer's discovery document and JWKS over `hyper-util` plus `hyper-rustls` (`app/ferroterm-server/src/smart/discovery.rs`) |
 | `compose.yaml` carries a `proxied` profile with Caddy | `compose.yaml` |
 | `FERROTERM_BIND_HOST` and `FERROTERM_PORT` | Compose variables (`compose.yaml:40`), not read by the server. The install page names them inside its Compose section, which is correct |
 
@@ -350,7 +350,7 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | The duration buckets start at half a millisecond and double | `app/ferroterm-server/src/metrics.rs::new` (`exponential_buckets(0.000_5, 2.0, 12)`) |
 | Every response carries `X-Request-Id`, echoed from the client | `app/ferroterm-server/tests/it/metrics.rs::every_response_carries_a_request_id_and_echoes_the_client_s` |
 | An id that is empty, over 128 characters, or not printable ASCII is replaced | `app/ferroterm-server/src/request_log.rs::request_id`. Only the over-128 case is tested (`::an_unusable_request_id_is_replaced_rather_than_echoed`) |
-| The scrape carries no code system content and no request bodies, and is not authenticated | `app/ferroterm-server/src/metrics.rs`; the server authenticates nobody |
+| The scrape carries no code system content and no request bodies, and is not authenticated | `app/ferroterm-server/src/metrics.rs`; `/metrics` is outside the SMART gate, which covers the write routes and the admin listener only |
 
 ### Verifying releases
 

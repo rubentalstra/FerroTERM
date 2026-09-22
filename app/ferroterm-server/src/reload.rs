@@ -37,6 +37,8 @@ struct Inner {
     /// Held for the length of one rebuild, so two triggers arriving together
     /// open the artifacts once and swap once.
     rebuilding: Mutex<()>,
+    /// The SMART bearer gate, when the deployment configured an issuer.
+    smart: Option<Arc<crate::smart::Smart>>,
 }
 
 /// One code system version the served set carries.
@@ -59,16 +61,34 @@ pub enum ReloadError {
 }
 
 impl Serving {
-    /// The set `state`, reloaded from `config` on request.
+    /// The set `state`, reloaded from `config` on request, with no SMART gate.
     #[must_use]
     pub fn new(config: Config, state: Arc<AppState>) -> Self {
+        Self::with_smart(config, state, None)
+    }
+
+    /// The set `state`, gated by `smart` when the deployment configured an
+    /// issuer.
+    #[must_use]
+    pub fn with_smart(
+        config: Config,
+        state: Arc<AppState>,
+        smart: Option<Arc<crate::smart::Smart>>,
+    ) -> Self {
         Self {
             inner: Arc::new(Inner {
                 current: RwLock::new(state),
                 config,
                 rebuilding: Mutex::new(()),
+                smart,
             }),
         }
+    }
+
+    /// The SMART bearer gate, when the deployment configured one.
+    #[must_use]
+    pub fn smart(&self) -> Option<Arc<crate::smart::Smart>> {
+        self.inner.smart.clone()
     }
 
     /// The set as of now.
@@ -146,14 +166,25 @@ impl FromRef<Serving> for Arc<AppState> {
     }
 }
 
+impl FromRef<Serving> for Option<Arc<crate::smart::Smart>> {
+    fn from_ref(serving: &Serving) -> Self {
+        serving.smart()
+    }
+}
+
 /// The admin application over `serving`: `POST /reload` and nothing else.
 ///
 /// The FHIR listener never carries these routes, so a client of the
-/// terminology API cannot reach them.
+/// terminology API cannot reach them. A deployment that configured a SMART
+/// issuer requires the admin scope on every route here.
 pub fn router(serving: Serving) -> Router {
     Router::new()
         .route("/reload", post(reload))
         .fallback(unknown)
+        .layer(axum::middleware::from_fn_with_state(
+            serving.smart(),
+            crate::smart::guard::admin,
+        ))
         .with_state(serving)
 }
 

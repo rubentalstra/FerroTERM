@@ -31,6 +31,7 @@ pub mod reload;
 mod release_date;
 pub mod request_log;
 pub mod scope;
+pub mod smart;
 pub mod state;
 pub mod telemetry;
 pub mod ui;
@@ -67,12 +68,15 @@ pub fn router(serving: Serving) -> Router {
 /// build's `dist/`.
 pub fn router_with_bundle(serving: Serving, bundle: &'static [ui::Asset]) -> Router {
     let viewer = serving.current().serves_viewer() && !bundle.is_empty();
+    // The gate sits inside each version's router, so the path it reads is the
+    // one under the version prefix that `nest` leaves.
+    let gate = || axum::middleware::from_fn_with_state(serving.smart(), smart::guard::writes);
     let mut app = Router::new()
         .route("/health", get(health))
-        .nest("/r4", r4::router())
-        .nest("/r4b", r4b::router())
-        .nest("/r5", r5::router())
-        .nest("/r6", r6::router())
+        .nest("/r4", r4::router().layer(gate()))
+        .nest("/r4b", r4b::router().layer(gate()))
+        .nest("/r5", r5::router().layer(gate()))
+        .nest("/r6", r6::router().layer(gate()))
         .route("/metrics", get(metrics_scrape));
     if viewer {
         app = app.route("/", get(ui::root));
@@ -130,9 +134,9 @@ where
 /// Serves the admin application ([`reload::router`]) on an already-bound
 /// listener until `shutdown` completes.
 ///
-/// The admin listener carries `POST /reload` and nothing of the FHIR surface,
-/// and it authenticates nobody, so a deployment binds it to an address only
-/// its operators reach.
+/// The admin listener carries `POST /reload` and nothing of the FHIR surface.
+/// Without [`config::OIDC_ISSUER_ENV`] it authenticates nobody, so a deployment
+/// binds it to an address only its operators reach.
 ///
 /// # Errors
 ///
