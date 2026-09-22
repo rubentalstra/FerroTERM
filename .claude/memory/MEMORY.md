@@ -28,3 +28,4 @@
 - [openEHR archetype canonical thread](openehr-archetype-canonical-thread.md), the owner's 2026-09-12 discourse thread on the canonical URL of an archetype-local value set; Seref's answer backs the opaque-canonical stance of #547, Ian mints under openehr.org
 - [Forum replies short and plain](forum-replies-short-plain.md), anything the owner posts as themself stays near 100 to 150 words with none of the AI-tell words or hedges; a 408-word draft was rejected hard on 2026-09-12
 - [NTS sync program](nts-sync-program.md), owner decisions 2026-09-22: separate ferroterm-sync service, addons/ named after the service (nts first), native scheduler no cron, one way, v0.1.4 reserved for it and the old items moved to v0.1.5
+- [PR body licence checkbox](pr-body-licence-checkbox.md), every PR body follows .github/PULL_REQUEST_TEMPLATE.md with the licensing box ticked or contribution-licence-guard fails; owner flagged 2026-09-22
