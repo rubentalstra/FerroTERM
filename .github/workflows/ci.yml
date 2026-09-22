@@ -197,9 +197,11 @@ jobs:
         with:
           persist-credentials: false
       # Every Dockerfile in the tree, under the .hadolint.yaml configuration.
+      # The pattern carries a suffix so the per-image recipes beside the server
+      # one (docker/Dockerfile.sync) are linted too.
       - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
         with:
-          dockerfile: Dockerfile
+          dockerfile: Dockerfile*
           recursive: true
           config: .hadolint.yaml
 
