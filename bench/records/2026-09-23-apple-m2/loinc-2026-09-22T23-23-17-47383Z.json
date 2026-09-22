@@ -1,0 +1,90 @@
+{
+  "taken_at": "2026-09-22T23:23:17.47383Z",
+  "ferroterm_version": "0.1.4",
+  "fhir": "r4b",
+  "machine": {
+    "os": "macos",
+    "arch": "aarch64",
+    "cpu": "Apple M2",
+    "memory_bytes": 17179869184,
+    "container": false,
+    "load_average_1m": 7.34
+  },
+  "system": "LOINC",
+  "system_uri": "http://loinc.org",
+  "system_version": "2.83",
+  "concepts": 257266,
+  "artifact_bytes": 309612922,
+  "ingest": {
+    "seconds": 8.148881459,
+    "peak_rss_bytes": 2538487808,
+    "release": "data/loinc/Loinc_2.83.zip"
+  },
+  "ready_seconds": 0.310155166,
+  "rss_open_bytes": 438304768,
+  "rss_warm_bytes": 440401920,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "answer_bytes": 7368,
+        "cold_ms": 1.350458,
+        "p50_ms": 0.135792,
+        "p95_ms": 0.17441700000000002,
+        "p99_ms": 0.189708,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "answer_bytes": 285,
+        "cold_ms": 0.094291,
+        "p50_ms": 0.056417,
+        "p95_ms": 0.06995799999999999,
+        "p99_ms": 0.077459,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-small",
+      {
+        "status": 200,
+        "answer_bytes": 624,
+        "cold_ms": 2.794625,
+        "p50_ms": 0.126083,
+        "p95_ms": 0.144541,
+        "p99_ms": 0.160084,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-large",
+      {
+        "status": 200,
+        "answer_bytes": 114467,
+        "cold_ms": 10.001208,
+        "p50_ms": 7.229083,
+        "p95_ms": 7.899292000000001,
+        "p99_ms": 8.769916,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "search",
+      {
+        "status": 200,
+        "answer_bytes": 2891,
+        "cold_ms": 3.607917,
+        "p50_ms": 0.282917,
+        "p95_ms": 0.309625,
+        "p99_ms": 0.338625,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: the median of five readings of the server process after ready and after the warm requests, taken with `footprint` on macOS (`phys_footprint`, which counts the pages the kernel compressed away) and `ps -o rss=` elsewhere; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank), with the bytes the answer carried beside them; machine: the one-minute load average when the run started, because a busy machine is measured instead of the server; comparison: not run"
+}

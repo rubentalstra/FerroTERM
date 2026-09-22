@@ -43,7 +43,7 @@ claim, not a test that merely touches the area.
 | Claim | Evidence |
 |---|---|
 | The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration | Registered unconditionally at `app/ferroterm-server/src/state.rs::build`; data vendored under `crates/fhir-terminology/data/` |
-| `ghcr.io/rubentalstra/ferroterm:0.1.3` is the current image tag | `Cargo.toml` `version = "0.1.3"`, `compose.yaml:36`; enforced by `scripts/checks/versions.sh` and by the tag check in `.github/workflows/release.yml` job `plan` |
+| `ghcr.io/rubentalstra/ferroterm:0.1.4` is the current image tag | `Cargo.toml` `version = "0.1.4"`, `compose.yaml:36`; enforced by `scripts/checks/versions.sh` and by the tag check in `.github/workflows/release.yml` job `plan` |
 | The UCUM `$lookup` answers name, version 2.2, display, and the `canonical` property | `crates/fhir-terminology/tests/it/ucum.rs::the_provider_locates_describes_and_filters_expressions` |
 | `ferroterm-build` ships in the image and in every release tarball | `docker/Dockerfile` copies both binaries; `.github/workflows/release-build.yml:109` tars `ferroterm` and `ferroterm-build` |
 | The release attaches a `compose.yaml` with a `build` profile | `compose.yaml:77-98` (`profiles: [build]`, entrypoint `ferroterm-build`, the zip bind-mounted `read_only: true`, output to `${FERROTERM_INDEX_DIR:-./index}`); attached by `.github/workflows/release.yml:179` |
@@ -365,7 +365,7 @@ Per system, the loader flag, the provider, and the test that exercises it:
 | Claim | Evidence |
 |---|---|
 | Resident memory is mostly the memory-mapped index the kernel has paged in | The `redb`, `fst`, and roaring files are memory-mapped; the `rss_open` and `rss_warm` fields of every record |
-| Peak build memory is several times the finished index | The records: SNOMED NL 3.03 GB peak build against 864 MB on disk |
+| Peak build memory is several times the finished index | The records: SNOMED NL 3.88 GB peak build against 864 MB on disk (`bench/records/2026-09-23-apple-m2/`) |
 | Both directions of the closure are stored | `crates/concept-graph` |
 | An unpaged expansion beyond 1,000 members is refused with `too-costly` | `crates/fhir-terminology/src/operations/expand.rs::EXPANSION_LIMIT` |
 | "a page of ten out of 133,736 descendants" | **WEAK.** See [B5](#b5) |
@@ -417,8 +417,8 @@ record", which now reads as the published one.
 <a id="b4"></a>**B4. "637 MB on disk, 420 to 580 MB resident with two more
 systems loaded"** (`website/book/src/evaluate/comparison.md:40`, the FerroTERM
 row of the side-by-side table). No committed record holds 637 MB on disk for
-any system: the SNOMED figures across the three sets are 486, 498, 626, 668,
-679, and 864 MB. No record measures a server with more than one code system
+any system: the SNOMED figures across the four sets are 486, 498, 559, 626,
+668, 679, and 864 MB. No record measures a server with more than one code system
 loaded, so the resident range has no source at all.
 
 <a id="b5"></a>**B5. "a page of ten out of 133,736 descendants"**

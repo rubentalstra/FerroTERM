@@ -1,0 +1,114 @@
+{
+  "taken_at": "2026-09-22T23:23:13.36281Z",
+  "ferroterm_version": "0.1.4",
+  "fhir": "r4b",
+  "machine": {
+    "os": "macos",
+    "arch": "aarch64",
+    "cpu": "Apple M2",
+    "memory_bytes": 17179869184,
+    "container": false,
+    "load_average_1m": 7.34
+  },
+  "system": "SNOMED CT (International edition)",
+  "system_uri": "http://snomed.info/sct",
+  "system_version": "http://snomed.info/sct/900000000000207008/version/20260901",
+  "concepts": 535502,
+  "artifact_bytes": 558891202,
+  "ingest": {
+    "seconds": 14.115484792,
+    "peak_rss_bytes": 3062267904,
+    "release": "data/snomed/SnomedCT_InternationalRF2_PRODUCTION_20260901T120000Z.zip"
+  },
+  "ready_seconds": 0.512213,
+  "rss_open_bytes": 940572672,
+  "rss_warm_bytes": 942669824,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "answer_bytes": 25764,
+        "cold_ms": 2.278375,
+        "p50_ms": 0.216791,
+        "p95_ms": 0.300584,
+        "p99_ms": 0.34912499999999996,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "answer_bytes": 321,
+        "cold_ms": 0.093084,
+        "p50_ms": 0.065583,
+        "p95_ms": 0.077083,
+        "p99_ms": 0.085917,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "subsumes",
+      {
+        "status": 200,
+        "answer_bytes": 85,
+        "cold_ms": 0.580917,
+        "p50_ms": 0.059084,
+        "p95_ms": 0.076292,
+        "p99_ms": 0.08762500000000001,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-small",
+      {
+        "status": 200,
+        "answer_bytes": 14424,
+        "cold_ms": 0.888791,
+        "p50_ms": 0.215125,
+        "p95_ms": 0.239084,
+        "p99_ms": 0.273333,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "expand-large",
+      {
+        "status": 200,
+        "answer_bytes": 108847,
+        "cold_ms": 2.155208,
+        "p50_ms": 1.697458,
+        "p95_ms": 1.840041,
+        "p99_ms": 1.9185,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "search",
+      {
+        "status": 200,
+        "answer_bytes": 2746,
+        "cold_ms": 1.32775,
+        "p50_ms": 0.353375,
+        "p95_ms": 0.422041,
+        "p99_ms": 0.488375,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "translate",
+      {
+        "status": 200,
+        "answer_bytes": 1417,
+        "cold_ms": 0.768,
+        "p50_ms": 0.210333,
+        "p95_ms": 0.25549999999999995,
+        "p99_ms": 0.275791,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: the median of five readings of the server process after ready and after the warm requests, taken with `footprint` on macOS (`phys_footprint`, which counts the pages the kernel compressed away) and `ps -o rss=` elsewhere; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank), with the bytes the answer carried beside them; machine: the one-minute load average when the run started, because a busy machine is measured instead of the server; comparison: not run"
+}
