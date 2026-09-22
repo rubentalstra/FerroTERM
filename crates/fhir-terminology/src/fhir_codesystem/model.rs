@@ -233,11 +233,16 @@ pub(crate) fn designation_use(
 /// (<https://hl7.org/fhir/R4B/codesystem-concept-properties.html>).
 pub(crate) const INACTIVE: &str = "inactive";
 pub(crate) const STATUS: &str = "status";
+pub(crate) const RETIREMENT_DATE: &str = "retirementDate";
 pub(crate) const NOT_SELECTABLE: &str = "notSelectable";
 pub(crate) const PARENT: &str = "parent";
 pub(crate) const CHILD: &str = "child";
 /// HL7 Terminology's v3 systems express the hierarchy as `subsumedBy`.
 pub(crate) const SUBSUMED_BY: &str = "subsumedBy";
+/// The `status` value that retires a concept, the one of the four typical
+/// values that ends a concept's life
+/// (<https://hl7.org/fhir/R5/codesystem-concept-properties.html>).
+pub(crate) const RETIRED: &str = "retired";
 
 /// The `CodeSystem` resource a provider serves: the one it was built from when
 /// it holds one, else the metadata picture of what it declares.

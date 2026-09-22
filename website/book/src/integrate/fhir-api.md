@@ -206,6 +206,47 @@ sees one loaded from `FERROTERM_CODESYSTEMS`, on every served version.
 A deployment that names no database refuses every write with a `422` and
 declares no write interaction in its capability statement.
 
+## Concept status on local content
+
+A code you author has a lifecycle, and FHIR keeps it in two places. The
+resource's own standing is `CodeSystem.status`, so a system you are still
+drafting is a `draft` CodeSystem; no version defines a per-concept `draft`. A
+single concept states its standing in the standard concept properties
+(<https://hl7.org/fhir/R5/codesystem-concept-properties.html>):
+
+| Property | Type | What the server reads |
+|---|---|---|
+| `inactive` | boolean | `true` makes the concept inactive |
+| `status` | code | `retired` makes the concept inactive; `active`, `experimental`, `deprecated`, and any other value leave it active |
+| `retirementDate` | dateTime | a date the request is behind makes the concept inactive |
+| `deprecated`, `deprecationDate` | dateTime | returned as written, and the concept stays active |
+
+R4 and R4B define `inactive` and `deprecated`, and R5 adds the rest. A
+persisted resource is stored as it arrived, so the R5 properties are data on
+every version prefix and are read the same way on R4, R4B, R5, and R6.
+
+Deprecated is not inactive: the specification says concepts "that are
+deprecated but not inactive can still be used, but their use is discouraged".
+Mark a concept `inactive`, or give it a `status` of `retired`, when it must
+stop being chosen.
+
+Three points no FHIR specification settles, which the server decides for
+itself. Any marker that says inactive wins, so `inactive = false` beside a
+`status` of `retired` reads as inactive. A `retirementDate` is compared against
+the time of the request, and a value that is not a readable `dateTime` reads as
+a retirement already in force, so a typo never leaves a retired code active. A
+`retirementDate` of `2026` or `2026-03` takes effect at the start of the period
+it names.
+
+Retire a concept rather than delete it. An inactive concept keeps answering:
+`$expand` with `activeOnly=true` leaves it out, `activeOnly=false` lists it
+with `contains.inactive = true`, `$validate-code` answers `result = true` with
+`inactive = true` and a warning, and `$lookup` returns the properties as
+written. Removing the concept from the resource instead makes every record that
+already carries the code fail validation. The `status` output of
+`$validate-code` reports a status only where the resource stated one, so a
+concept retired by a date alone answers `inactive` with no `status`.
+
 ## SNOMED CT implicit concept maps
 
 `ConceptMap/$translate` answers `url=http://snomed.info/sct?fhir_cm=[sctid]`,

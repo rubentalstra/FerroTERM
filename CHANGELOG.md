@@ -28,6 +28,21 @@ fresh link reference.
   `ferroterm_reloads_total{outcome="ok"|"failed"}`, and
   `ferroterm_code_system_loaded` now describes the set being served rather than
   the set loaded at start.
+- A concept of a `CodeSystem` resource the server loaded or a client persisted
+  is inactive when its standard concept properties say so (#584). `inactive =
+  true`, a `status` of `retired`, and a `retirementDate` the request is behind
+  each retire the concept; `deprecated`, a `deprecationDate`, and a `status` of
+  `deprecated` leave it active, because the specification says a concept that is
+  deprecated but not inactive can still be used
+  (<https://hl7.org/fhir/R5/codesystem-concept-properties.html>). `$expand` with
+  `activeOnly=true` then leaves the concept out and `activeOnly=false` lists it
+  with `contains.inactive = true`, `$validate-code` answers `result = true` with
+  `inactive = true`, and `$lookup` returns the properties as written. The R5
+  property set is data on every version prefix, so the answers match on R4, R4B,
+  R5, and R6. Where two markers disagree the one that says inactive wins, a
+  `retirementDate` that is not a readable `dateTime` reads as a retirement
+  already in force, and the `status` output of `$validate-code` reports a status
+  only where the resource stated one.
 - `crates/terminology-syndication`, a client for the Atom syndication dialect
   national terminology services publish (#580). It reads a feed with the NCTS Atom
   Syndication Format extensions into a typed model, keeps a category term it
