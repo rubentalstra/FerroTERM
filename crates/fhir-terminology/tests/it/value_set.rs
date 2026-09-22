@@ -92,6 +92,10 @@ impl World {
         }
     }
 
+    pub(crate) fn registry(&self) -> &Registry {
+        &self.registry
+    }
+
     pub(crate) fn concept_maps(&self) -> &ConceptMapStore {
         &self.concept_maps
     }

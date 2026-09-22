@@ -14,6 +14,7 @@ mod capabilities;
 mod classification;
 mod compose;
 mod concept_map;
+mod concept_status;
 mod ecl;
 mod fhir_codesystem;
 mod fhir_core;
