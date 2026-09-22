@@ -60,6 +60,8 @@ label storage      d4c5f9 "The store, graph, text index, and redb persistence."
 label infra        bfdadc "CI/CD, supply chain, and deployment."
 label website      f9d0c4 "The docs site (website/book) and landing page."
 label viewer       e6c3a5 "The Leptos web UI (app/ferroterm-viewer)."
+label sync         c2e0c6 "The synchronisation service (app/ferroterm-sync)."
+label addon        d4c5f9 "A source add-on for the sync service (addons/*)."
 
 echo "== workflow / meta labels =="
 label dependencies 0366d6 "Dependency updates (used by Dependabot)."

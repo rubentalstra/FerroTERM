@@ -37,6 +37,16 @@ pub struct Cli {
 pub enum Command {
     /// Performs one run and exits.
     RunOnce,
+    /// Asks the running service for `GET /health` and exits 0 on `200 OK`.
+    ///
+    /// The image has no shell and no HTTP client, so this is its HEALTHCHECK
+    /// command. Without `--url` the probe follows the configured listen
+    /// address, on the loopback when the service listens on every interface.
+    Healthcheck {
+        /// The URL to probe instead of the one the configuration implies.
+        #[arg(long, value_name = "URL")]
+        url: Option<String>,
+    },
 }
 
 /// A service that could not start.
@@ -127,6 +137,19 @@ pub async fn serve(path: &std::path::Path) -> Result<(), StartError> {
 pub async fn run_once(path: &std::path::Path) -> Result<RunRecord, StartError> {
     let service = service(path)?;
     Ok(service.run(Trigger::RunOnce).await)
+}
+
+/// The address the health probe reads, from `url` or the configuration.
+///
+/// # Errors
+///
+/// Returns [`StartError::Config`] when no address was given and the
+/// configuration does not read.
+pub fn health_url(path: &std::path::Path, url: Option<String>) -> Result<String, StartError> {
+    match url {
+        Some(url) => Ok(url),
+        None => Ok(crate::healthcheck::url_for(Config::load(path)?.listen)),
+    }
 }
 
 /// Installs the log subscriber.

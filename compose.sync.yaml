@@ -1,0 +1,93 @@
+# SPDX-License-Identifier: BUSL-1.1
+# The synchronisation service, beside the server, over one volume. This is an
+# overlay on compose.yaml, never a file of its own:
+#
+#   docker compose -f compose.yaml -f compose.sync.yaml up
+#
+# What it changes about the server: the admin listener is turned on, because
+# that is how the sync asks for a reload, and the server reads its index and
+# its managed resources from the volume the sync writes.
+#
+# What you provide is one directory and one configuration file. The directory
+# holds everything the two services share:
+#
+#   <data>/index         the built releases the server serves
+#   <data>/codesystems   the FHIR resources the server serves
+#   <data>/staging       what a run downloads and builds
+#   <data>/records       one JSON record per run
+#   <data>/state         what the service remembers between runs
+#
+#   FERROTERM_SYNC_DATA=/srv/ferroterm FERROTERM_SYNC_CONFIG=/srv/sync.toml \
+#     docker compose -f compose.yaml -f compose.sync.yaml up
+#
+# One directory on one filesystem is the point: a run stages a release and then
+# renames it into the index root, and a rename only works inside one
+# filesystem. The server mounts the two directories it reads as read-only; the
+# sync mounts the whole tree writable and runs as the same uid 65532.
+#
+# Neither admin listener authenticates anybody. Both stay on the compose
+# network here, and neither is published; keep it that way, or put them behind
+# something that does authenticate.
+
+services:
+  ferroterm:
+    environment:
+      # The listener that serves POST /reload, which is what the sync calls.
+      # It is reachable as `ferroterm:8081` inside the compose network and is
+      # published nowhere.
+      FERROTERM_ADMIN_LISTEN: 0.0.0.0:8081
+      FERROTERM_CODESYSTEMS: /data/codesystems
+    volumes:
+      - type: bind
+        source: ${FERROTERM_SYNC_DATA:-./data}/index
+        target: /data/index
+        read_only: true
+      - type: bind
+        source: ${FERROTERM_SYNC_DATA:-./data}/codesystems
+        target: /data/codesystems
+        read_only: true
+
+  sync:
+    image: ghcr.io/rubentalstra/ferroterm-sync:${FERROTERM_VERSION:-0.1.3}
+    container_name: ferroterm-sync
+    restart: unless-stopped
+    environment:
+      RUST_LOG: ${RUST_LOG:-info}
+      # The credentials a source add-on reads. Put them in a file the
+      # deployment mounts, or set them here from your own secret store; the
+      # configuration file never carries a secret.
+      FERROTERM_NTS_USERNAME: ${FERROTERM_NTS_USERNAME:-}
+      FERROTERM_NTS_PASSWORD: ${FERROTERM_NTS_PASSWORD:-}
+      FERROTERM_NTS_CLIENT_ID: ${FERROTERM_NTS_CLIENT_ID:-}
+      FERROTERM_NTS_CLIENT_SECRET: ${FERROTERM_NTS_CLIENT_SECRET:-}
+    volumes:
+      - type: bind
+        source: ${FERROTERM_SYNC_DATA:-./data}
+        target: /data
+      - type: bind
+        source: ${FERROTERM_SYNC_CONFIG:-./sync.toml}
+        target: /etc/ferroterm/sync.toml
+        read_only: true
+    # The service asks the server to reload, so it starts once the server
+    # answers GET /health.
+    depends_on:
+      ferroterm:
+        condition: service_healthy
+    # The image declares the same probe (`ferroterm-sync healthcheck`: one GET
+    # /health on the admin listener, exit 0 on 200).
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/ferroterm-sync", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    # A build unpacks a release into the container's temporary directory, so
+    # /tmp is a tmpfs sized for one edition; nothing else is written outside
+    # the data volume.
+    tmpfs:
+      - /tmp:size=4g
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

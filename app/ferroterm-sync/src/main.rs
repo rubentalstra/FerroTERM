@@ -15,13 +15,39 @@ use ferroterm_sync::record::Outcome;
 #[tokio::main]
 async fn main() -> ExitCode {
     let cli = Cli::parse();
+    match &cli.command {
+        Some(Command::Healthcheck { url }) => healthcheck(&cli, url.clone()).await,
+        Some(Command::RunOnce) => logged(run_once(&cli)).await,
+        None => logged(serve(&cli)).await,
+    }
+}
+
+/// Installs the log subscriber and then runs `command`.
+async fn logged(command: impl Future<Output = ExitCode>) -> ExitCode {
     if let Err(error) = ferroterm_sync::cli::init_logging() {
         eprintln!("ferroterm-sync: cannot start: {error}");
         return ExitCode::FAILURE;
     }
-    match cli.command {
-        Some(Command::RunOnce) => run_once(&cli).await,
-        None => serve(&cli).await,
+    command.await
+}
+
+/// `ferroterm-sync healthcheck`: silent on `200 OK`, the reason otherwise.
+async fn healthcheck(cli: &Cli, url: Option<String>) -> ExitCode {
+    let url = match ferroterm_sync::cli::health_url(&cli.config, url) {
+        Ok(url) => url,
+        Err(error) => {
+            let error = anyhow::Error::from(error);
+            eprintln!("ferroterm-sync healthcheck: {error:#}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match ferroterm_sync::healthcheck::probe(&url).await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            let error = anyhow::Error::from(error);
+            eprintln!("ferroterm-sync healthcheck: {error:#}");
+            ExitCode::FAILURE
+        }
     }
 }
 

@@ -48,6 +48,22 @@ else
   note "no compose.yaml yet — skipped"
 fi
 
+# --- compose.sync.yaml image tag default == the workspace version -------------
+echo "== sync image tag (compose.sync.yaml <-> Cargo.toml)"
+if [[ -f compose.sync.yaml ]] && [[ -f Cargo.toml ]]; then
+  sync_ver="$(grep -m1 'image: ghcr.io/rubentalstra/ferroterm-sync:' compose.sync.yaml | sed -E 's/.*:-([^}]*)\}.*/\1/' | tr -d '[:space:]' || true)"
+  cargo_ver_s="$(awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/[" ]/,""); sub(/^version=/,""); print; exit}' Cargo.toml || true)"
+  if [[ -z "$sync_ver" ]]; then
+    bad "compose.sync.yaml has no ghcr.io/rubentalstra/ferroterm-sync image tag default"
+  elif [[ "$sync_ver" != "$cargo_ver_s" ]]; then
+    bad "compose.sync.yaml image tag default ($sync_ver) != Cargo.toml workspace version ($cargo_ver_s)"
+  else
+    note "OK: the sync overlay pulls $sync_ver"
+  fi
+else
+  note "no compose.sync.yaml yet — skipped"
+fi
+
 # --- CITATION.cff version == root Cargo.toml [workspace.package] version -------
 echo "== product version (CITATION.cff <-> Cargo.toml)"
 cff_ver=""
@@ -107,7 +123,7 @@ if [[ -f Cargo.toml ]]; then
         bad "stale version $found (current is $current) at ${hit%:*}"
         stale=1
       fi
-    done < <(git grep -n -o -E '(^|[^0-9.])0\.0\.[0-9]+([^0-9.]|$)' -- README.md CITATION.cff compose.yaml docs website/landing website/book/src \
+    done < <(git grep -n -o -E '(^|[^0-9.])0\.0\.[0-9]+([^0-9.]|$)' -- README.md CITATION.cff compose.yaml compose.sync.yaml docs website/landing website/book/src \
       | sed -E 's/^([^:]+:[0-9]+):.*[^0-9.]?(0\.0\.[0-9]+).*$/\1:\2/' \
       | drop_rendered_benchmarks || true)
     [[ "$stale" -eq 0 ]] && note "OK: every release mention is $current or a later milestone"
@@ -133,7 +149,7 @@ if [[ -n "${current:-}" ]]; then
     bad "names release ${hit##*:} where the current one is $current at ${hit%:*}"
     named=1
   done < <(git grep -n -o -E "(ferroterm:|ferroterm-v|release download v)0\.[0-9]+\.[0-9]+" \
-    -- README.md compose.yaml docs website/landing website/book/src \
+    -- README.md compose.yaml compose.sync.yaml docs website/landing website/book/src \
     | sed -E "s/^([^:]+:[0-9]+):.*[^0-9.]([0-9]+\.[0-9]+\.[0-9]+)$/\1:\2/" \
     | grep -v ":${current}$" || true)
   [[ "$named" -eq 0 ]] && note "OK: every image tag, download, and attestation names $current"
