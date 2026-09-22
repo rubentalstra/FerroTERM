@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: BUSL-1.1
+[package]
+name = "ferroterm-sync"
+description = "The FerroTERM synchronisation service: one way from a terminology syndication feed into a running FerroTERM"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# A thin main.rs over a testable lib.rs (.claude/rules/testing.md).
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "ferroterm-sync"
+path = "src/main.rs"
+
+[dependencies]
+# The source add-ons this build reads a service through. Only this crate may
+# depend on `addons/*` (scripts/checks/addon-boundary.sh).
+addon-nts.workspace = true
+anyhow.workspace = true
+axum.workspace = true
+clap.workspace = true
+jiff = { workspace = true, features = ["serde"] }
+prometheus-client.workspace = true
+# `query` carries the operation parameters: the revalidation reads the FHIR
+# API with `$validate-code` and `$expand` as GET requests.
+reqwest = { workspace = true, features = ["query"] }
+serde.workspace = true
+serde_json.workspace = true
+terminology-syndication.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["fs", "io-util", "process", "sync", "time"] }
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+sha2.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["fs", "io-util", "process", "sync", "time", "rt-multi-thread", "macros"] }
+tower = { workspace = true, features = ["util"] }
+wiremock.workspace = true
+
+[lints]
+workspace = true

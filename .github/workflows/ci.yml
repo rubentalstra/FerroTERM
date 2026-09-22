@@ -202,6 +202,13 @@ jobs:
           dockerfile: Dockerfile
           recursive: true
           config: .hadolint.yaml
+      # A recipe with a suffix is named on its own: the recursive pattern above
+      # matches the name exactly, and a wildcard would also catch a
+      # `.dockerignore` beside one, which is not a Dockerfile.
+      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: docker/Dockerfile.sync
+          config: .hadolint.yaml
 
   # versions — the version-drift guard. Runs NOW, before any Rust exists:
   # scripts/checks/versions.sh compares every present config file against

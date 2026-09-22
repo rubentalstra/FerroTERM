@@ -15,6 +15,39 @@ fresh link reference.
 
 ### Added
 
+- `app/ferroterm-sync`, the synchronisation service: one way from a terminology
+  syndication feed into a running server (#579). It runs beside the server and
+  never inside it. On a schedule (`every = "24h"`, `at = "03:00"` in a
+  configured zone, no cron), on `POST /run`, or as `ferroterm-sync run-once`,
+  it lists each configured source, takes what the deployment does not hold yet,
+  and puts it through one of two lanes: an RF2 archive is built by
+  `ferroterm-build` into a staging directory and renamed into the index root as
+  a new release beside the previous one, and a FHIR resource is written into
+  the managed resource directory with its service's corrections applied. It
+  then asks the server to reload. `activation = "manual"` stops after staging
+  and waits for `POST /activate`. Retention keeps the newest releases per code
+  system and removes the rest only after a reload succeeded; nothing else is
+  ever deleted, and the server's own write store is never touched. A build that
+  fails or a reload the server refuses leaves the served set exactly as it was,
+  rolling back what the run had moved, and still fires the webhook. Every run
+  writes one JSON record (what the feed offered, what was taken, what was left
+  behind and why, the builds, the activation, the reload replies, retention,
+  and the errors), served with the metrics and the manual triggers on the
+  service's own admin listener. The Nictiz NTS add-on is registered as the
+  `nts` source kind. `docker/Dockerfile.sync` carries the service and the
+  builder on the same distroless base, and `compose.sync.yaml` runs it beside
+  the server over one volume with the server's admin listener turned on.
+- The sync service revalidates the deployment's own content after a release is
+  activated (#583). With `fhir_base_url` set it reads every locally authored
+  `ValueSet` and `ConceptMap` over the server's public FHIR API, with
+  `ValueSet/$validate-code` and `ValueSet/$expand` and their `activeOnly`
+  parameter, and writes into the run record every local code the new release
+  made inactive, removed, or left outside the value set it was included
+  through, each with its system, its code, and the release that changed it. A
+  run that finds nothing says so. The finding count travels in the webhook
+  summary, and `/metrics` carries `ferroterm_sync_revalidation_findings` as a
+  gauge per locally authored resource. The check reports and never edits local
+  content.
 - The server reloads the served set without a restart (#578). `SIGHUP` and
   `POST /reload` both make it read `FERROTERM_INDEX` and `FERROTERM_CODESYSTEMS`
   again, open everything read-only, and swap the whole registry; a request in

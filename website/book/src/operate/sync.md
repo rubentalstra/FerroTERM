@@ -7,9 +7,219 @@ on a schedule, takes what you subscribed to, builds or stages it, and asks the
 server to reload. It runs beside the server and never inside it, and it moves
 content in one direction only.
 
-This chapter is a stub. The service, its schedule, its activation modes, and
-its run records are built under issue #579, and the full chapter arrives with
-it. What follows is the part you can already read: the first source add-on.
+## What one run does
+
+1. It reads each configured feed and compares what it offers with what you
+   already serve: the releases under your index root, the resources in your
+   managed directory, and the ledger of what the service itself put there.
+2. It takes the entries you subscribed to that you do not hold yet, streams
+   each one to the staging directory, and refuses any whose digest does not
+   match what the feed advertised.
+3. An RF2 archive goes through `ferroterm-build` into a staging directory and
+   is renamed into the index root as a new release beside the previous one. A
+   FHIR resource is written as a file in the managed resource directory,
+   corrected first when its service needs a correction.
+4. It asks the server to reload, then prunes the releases retention no longer
+   keeps and tells the server about that too.
+5. It writes one JSON record of everything above and posts a summary to your
+   webhook, whether the run worked or not.
+
+A run that fails leaves the served set exactly as it was. A build that fails
+never reaches the index root, and a reload the server refuses is rolled back,
+including a resource file the run had replaced. Nothing is deleted except by
+retention, and the server's own write store (`FERROTERM_RESOURCES`) is never
+touched.
+
+## Running it
+
+The service ships as its own image, carrying `ferroterm-sync` and
+`ferroterm-build`, and the Compose overlay runs it beside the server over one
+volume:
+
+```bash
+FERROTERM_SYNC_DATA=/srv/ferroterm FERROTERM_SYNC_CONFIG=/srv/sync.toml \
+  docker compose -f compose.yaml -f compose.sync.yaml up
+```
+
+One directory on one filesystem holds `index/`, `codesystems/`, `staging/`,
+`records/`, and `state/`. That is not a convenience: a run stages a release and
+then renames it into the index root, and a rename works only inside one
+filesystem. The server mounts `index/` and `codesystems/` read-only; the sync
+mounts the whole tree and writes to it as uid 65532.
+
+The overlay also sets `FERROTERM_ADMIN_LISTEN` on the server, because
+`POST /reload` on that listener is how the sync asks for the new release to be
+served.
+
+`ferroterm-sync run-once` performs a single run and exits, which is what a
+first run and a cron-style deployment use.
+
+## Configuration
+
+One TOML file, `/etc/ferroterm/sync.toml` unless `--config` says otherwise.
+Every key is optional and falls back to the value below; a key the service does
+not know is refused at start-up rather than ignored.
+
+| Key | Default | What it names |
+|---|---|---|
+| `listen` | `127.0.0.1:8181` | the service's own admin listener |
+| `server_admin_url` | `http://127.0.0.1:8081` | the server's admin listener, which serves `POST /reload` |
+| `fhir_base_url` | none | the server's FHIR base, which the revalidation reads |
+| `index_root` | `/data/index` | the index root the server reads |
+| `resources` | `/data/codesystems` | the managed resource directory the server reads |
+| `staging` | `/data/staging` | where a run downloads and builds |
+| `records` | `/data/records` | one JSON record per run |
+| `state` | `/data/state` | what the service remembers between runs |
+| `retention` | `2` | release directories kept per code system |
+| `activation` | `auto` | `auto` or `manual` |
+| `webhook_url` | none | where one JSON summary per run is posted |
+| `timezone` | `UTC` | the zone a daily schedule is read in |
+| `build_command` | `ferroterm-build` | the offline build, on `PATH` or by path |
+
+A `[[source]]` entry names the add-on that reads a service and carries that
+add-on's own block:
+
+```toml
+server_admin_url = "http://ferroterm:8081"
+fhir_base_url = "http://ferroterm:8080/r4b"
+index_root = "/data/index"
+resources = "/data/codesystems"
+staging = "/data/staging"
+records = "/data/records"
+state = "/data/state"
+retention = 2
+activation = "auto"
+timezone = "Europe/Amsterdam"
+
+[schedule]
+at = "03:00"
+
+[[source]]
+kind = "nts"
+
+[source.config]
+systems = ["http://snomed.info/sct/11000146104", "http://loinc.org"]
+```
+
+The file carries no credential. A source add-on reads its credentials from a
+file or from the environment, so this file is safe to commit and safe to show.
+
+## The schedule
+
+Two shapes, and no cron syntax:
+
+- `every = "24h"` measures from the end of the last run.
+- `at = "03:00"` is a time of day in `timezone`.
+
+With both, the earlier due time wins. With neither, the service runs only when
+you ask it to. The end of the last run is written to the state directory, so a
+restart between two runs does not replay the run that already happened: a
+service that ran at 03:00 and restarts at 04:00 is next due at 03:00 the
+following day. A window the service was down for is due at once.
+
+A run also starts on `POST /run` on the admin listener, and as
+`ferroterm-sync run-once`.
+
+## Activation
+
+In `auto` the run renames what it built into the index root and asks the server
+to reload, in the same run. In `manual` the run stops after staging: nothing is
+served, the run record says how many items wait, and `POST /activate` puts them
+in front of the server when you are ready. What is staged survives a restart,
+and a later run does not build it again.
+
+An activation is not a synchronisation run: it gets its own run record, and it
+leaves the schedule where it was, so the next scheduled run still starts at its
+own time.
+
+## What a new release did to your own content
+
+A release can retire a code your own value set enumerates, remove it, or leave
+it outside the value set it was included through. After a release is activated
+the service revalidates every locally authored `ValueSet` and `ConceptMap`
+against the set now being served and writes what it found into the run record.
+
+It reports and never edits. A finding is a decision for a terminologist, and
+the service changes nothing in your content, ever.
+
+Set `fhir_base_url` to the server's FHIR base, such as
+`http://ferroterm:8080/r4b`, to turn the check on. Without it the run record
+says the check did not run. The check reads the server's public FHIR API,
+`ValueSet/$validate-code` and `ValueSet/$expand`, both with `activeOnly`, so it
+sees exactly what any client sees:
+
+- a code that is still a member but is no longer active is `inactive`;
+- a code the code system no longer carries is `absent`;
+- a code that is still in the code system and no longer falls inside the value
+  set is `outside-value-set`.
+
+Each finding names the resource, the system, the code, and the release this run
+activated for that system. A run that finds nothing says so in one sentence,
+and that sentence and the finding count travel in the webhook summary.
+`/metrics` carries `ferroterm_sync_revalidation_findings` as a gauge per
+locally authored resource, so a resource that is clean reads zero rather than
+disappearing.
+
+The check reads the first 1000 codes of a resource and expands at most 1000
+members, which keeps one run bounded; a larger resource is noted in the log.
+
+## Retention
+
+After a successful reload the service keeps the newest `retention` release
+directories per code system and removes the rest, then asks the server to
+reload once more so the removed release leaves the served set. A release that
+is still there is what you roll back to, so keep at least two. A retention of
+`0` removes nothing. Each run record says what was removed, how many bytes it
+held, and how many bytes the index root uses afterwards.
+
+Retention judges only directories that carry a `manifest.json`, so a build in
+progress is never touched, and it groups them by the code system edition the
+manifest names.
+
+## The admin listener
+
+The service binds `listen` and serves six routes:
+
+| Route | What it does |
+|---|---|
+| `POST /run` | performs one run and answers its summary when the run has finished |
+| `POST /activate` | puts what is staged in front of the server |
+| `GET /runs` | the runs this service performed, newest first |
+| `GET /runs/{id}` | one whole run record |
+| `GET /metrics` | the Prometheus exposition |
+| `GET /health` | `200` while the process is up |
+
+It authenticates nobody, exactly like the server's admin listener. Keep it on
+an internal network, and never publish it. The Compose overlay leaves both
+listeners unpublished, reachable only inside the compose network.
+
+`/metrics` carries `ferroterm_sync_runs_total{outcome="ok"|"failed"}`,
+`ferroterm_sync_last_run_timestamp_seconds`,
+`ferroterm_sync_entries_taken_total`, `ferroterm_sync_bytes_staged_total`,
+`ferroterm_sync_index_bytes`, and `ferroterm_sync_revalidation_findings` per
+locally authored resource.
+
+## What a run record contains
+
+One JSON file per run under `records`, named by the run identifier, which sorts
+by time. It carries:
+
+- the trigger, the start and end, the duration, and the outcome;
+- per source: the feed address, how many entries it offered, what was taken
+  (with the bytes, the download time, the build time, and the corrections that
+  were applied), and what was left behind with the reason for each one, such as
+  a system you did not subscribe to, a release you already serve, a delta
+  rather than a snapshot, or Ontoserver's binary index;
+- the activation: the mode, what reached the server, what is still staged, what
+  the server answered to each reload, and whether the run was rolled back;
+- the revalidation: how many locally authored resources were read and how many
+  codes were checked, one sentence saying what it found, and a line per local
+  code the release made inactive, removed, or left outside its value set;
+- what retention removed and how many bytes the index root uses;
+- every error, in the order it happened.
+
+The same summary is what the webhook receives: one POST per run end, on success
+and on failure. A delivery that fails is logged and never fails the run.
 
 ## NTS (Nationale Terminologie Server)
 

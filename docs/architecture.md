@@ -349,6 +349,7 @@ code system adds a loader crate (`rf2` is the first) that feeds them.
 | `crates/labcodeset` | Nederlandse Labcodeset publication (labconcepts XML) reader | hand-written |
 | `crates/terminology-syndication` | The Atom terminology syndication client: the feed model and its NCTS extensions, entry selection, checksum-verified download, and the `Source` seam each service add-on implements | hand-written |
 | `app/ferroterm-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
+| `app/ferroterm-sync` | The synchronisation service: the schedule, the two lanes, activation, retention, and the run records; the one member that links an add-on | hand-written |
 | `addons/nts` | The Nationale Terminologieserver (NTS) source add-on for the sync service: the Nictiz feed, its Keycloak grants, its subscription, and the NL fix-ups; depends on `terminology-syndication` only | hand-written |
 | `app/ferroterm-viewer` | The Leptos web UI, client-side rendered and served by the server as static assets; a pure FHIR client that links no workspace crate | hand-written |
 | `tools/ferroterm-build` | The offline build: a code system release (RF2 first) → the graph/store/text artifacts the server reads, once per release | tooling |

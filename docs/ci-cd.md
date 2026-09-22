@@ -22,7 +22,7 @@ exist.
 | `release-build.yml` | reusable SLSA Build L3 lane: build + SBOM + keyless attest | on tag |
 | `release.yml` | `v*` orchestrator: draft → per-arch build → image → verify assets → publish last | on tag |
 | `release-image.yml` | reusable SLSA Build L3 lane: the distroless static image from the attested musl binaries, pushed to GHCR with provenance and SBOM attestations on the index and on each platform manifest | on tag |
-| `ci.yml` (`hadolint` job) | `hadolint` over `docker/Dockerfile` | now |
+| `ci.yml` (`hadolint` job) | `hadolint` over every `Dockerfile` in the tree, plus `docker/Dockerfile.sync` by name | now |
 | `ci.yml` (`viewer` job) | the viewer's WebAssembly lane: `cargo fmt` and `leptosfmt --check` over `app/ferroterm-viewer`, `cargo clippy --target wasm32-unknown-unknown -D warnings`, `cargo nextest run -p ferroterm-viewer`, `trunk build --release --locked`, and the recorded bundle size (`scripts/checks/bundle-size.sh`) | on workspace |
 | `ci.yml` (`viewer-boundary` job) | the viewer's resolved dependency closure links no workspace crate (`scripts/checks/viewer-boundary.sh`) | on workspace |
 | `ci.yml` (`no-client-in-server` job) | the server binary's resolved dependency tree carries no HTTP client, so a deployment can refuse it every outbound route (`scripts/checks/no-client-in-server.sh`) | on workspace |

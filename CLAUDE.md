@@ -68,6 +68,11 @@ server. Every crate carries its own `CLAUDE.md` with crate-local discipline.
   None is published.
 - `app/ferroterm-server`: the `axum` HTTP server (FHIR endpoints, content
   negotiation, runtime version routing).
+- `app/ferroterm-sync`: the synchronisation service, one way from a terminology
+  syndication feed into a running server. The schedule, the RF2 and FHIR lanes,
+  activation, retention, the run records, and its own admin listener. The one
+  member that may link an `addons/*` crate. Designed in
+  `website/book/src/operate/sync.md`, tracked under issue #579.
 - `app/ferroterm-viewer`: the Leptos web UI, client-side rendered and served by
   the one server binary as static assets. A pure FHIR client over HTTP that
   depends on no other crate in the workspace, which
