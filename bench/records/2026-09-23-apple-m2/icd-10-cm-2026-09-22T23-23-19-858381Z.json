@@ -1,0 +1,66 @@
+{
+  "taken_at": "2026-09-22T23:23:19.858381Z",
+  "ferroterm_version": "0.1.4",
+  "fhir": "r4b",
+  "machine": {
+    "os": "macos",
+    "arch": "aarch64",
+    "cpu": "Apple M2",
+    "memory_bytes": 17179869184,
+    "container": false,
+    "load_average_1m": 7.34
+  },
+  "system": "ICD-10-CM",
+  "system_uri": "http://hl7.org/fhir/sid/icd-10-cm",
+  "system_version": "2026",
+  "concepts": 98827,
+  "artifact_bytes": 43804157,
+  "ingest": {
+    "seconds": 1.5132646250000001,
+    "peak_rss_bytes": 359284736,
+    "release": "--icd10cm data/icd10cm/tables.zip --icd10cm data/icd10cm/tabular-order.zip"
+  },
+  "ready_seconds": 0.206506917,
+  "rss_open_bytes": 91226112,
+  "rss_warm_bytes": 91226112,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "answer_bytes": 1489,
+        "cold_ms": 1.1568340000000001,
+        "p50_ms": 0.104542,
+        "p95_ms": 0.14550000000000002,
+        "p99_ms": 0.160083,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "answer_bytes": 304,
+        "cold_ms": 0.12095900000000001,
+        "p50_ms": 0.060041000000000004,
+        "p95_ms": 0.091584,
+        "p99_ms": 0.128708,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "subsumes",
+      {
+        "status": 200,
+        "answer_bytes": 85,
+        "cold_ms": 0.070083,
+        "p50_ms": 0.057666,
+        "p95_ms": 0.070334,
+        "p99_ms": 0.093292,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: the median of five readings of the server process after ready and after the warm requests, taken with `footprint` on macOS (`phys_footprint`, which counts the pages the kernel compressed away) and `ps -o rss=` elsewhere; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank), with the bytes the answer carried beside them; machine: the one-minute load average when the run started, because a busy machine is measured instead of the server; comparison: not run"
+}

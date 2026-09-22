@@ -1,0 +1,66 @@
+{
+  "taken_at": "2026-09-22T23:23:22.144431Z",
+  "ferroterm_version": "0.1.4",
+  "fhir": "r4b",
+  "machine": {
+    "os": "macos",
+    "arch": "aarch64",
+    "cpu": "Apple M2",
+    "memory_bytes": 17179869184,
+    "container": false,
+    "load_average_1m": 7.34
+  },
+  "system": "ICD-10-NL",
+  "system_uri": "http://hl7.org/fhir/sid/icd-10-nl",
+  "system_version": "2021",
+  "concepts": 42769,
+  "artifact_bytes": 20749580,
+  "ingest": {
+    "seconds": 0.88052375,
+    "peak_rss_bytes": 220774400,
+    "release": "data/icd10/20241128 ICD-10-2021v3.1C.zip"
+  },
+  "ready_seconds": 0.10354825,
+  "rss_open_bytes": 66060288,
+  "rss_warm_bytes": 66060288,
+  "latency": [
+    [
+      "lookup",
+      {
+        "status": 200,
+        "answer_bytes": 862,
+        "cold_ms": 0.800625,
+        "p50_ms": 0.096292,
+        "p95_ms": 0.148708,
+        "p99_ms": 0.172208,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "validate-code",
+      {
+        "status": 200,
+        "answer_bytes": 287,
+        "cold_ms": 0.118167,
+        "p50_ms": 0.060208,
+        "p95_ms": 0.092458,
+        "p99_ms": 0.097083,
+        "warm_requests": 200
+      }
+    ],
+    [
+      "subsumes",
+      {
+        "status": 200,
+        "answer_bytes": 85,
+        "cold_ms": 0.080542,
+        "p50_ms": 0.0635,
+        "p95_ms": 0.074792,
+        "p99_ms": 0.079083,
+        "warm_requests": 200
+      }
+    ]
+  ],
+  "comparison": null,
+  "method": "ingest: wall time around ferroterm-build as a child process, peak resident memory from /usr/bin/time; ready: from spawning ferroterm until GET /health answers 200; rss: the median of five readings of the server process after ready and after the warm requests, taken with `footprint` on macOS (`phys_footprint`, which counts the pages the kernel compressed away) and `ps -o rss=` elsewhere; latency: HTTP round trips from this process on the same machine, the first request of an operation cold, percentiles over the warm requests that follow (nearest-rank), with the bytes the answer carried beside them; machine: the one-minute load average when the run started, because a busy machine is measured instead of the server; comparison: not run"
+}
