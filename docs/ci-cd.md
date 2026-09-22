@@ -25,6 +25,7 @@ exist.
 | `ci.yml` (`hadolint` job) | `hadolint` over `docker/Dockerfile` | now |
 | `ci.yml` (`viewer` job) | the viewer's WebAssembly lane: `cargo fmt` and `leptosfmt --check` over `app/ferroterm-viewer`, `cargo clippy --target wasm32-unknown-unknown -D warnings`, `cargo nextest run -p ferroterm-viewer`, `trunk build --release --locked`, and the recorded bundle size (`scripts/checks/bundle-size.sh`) | on workspace |
 | `ci.yml` (`viewer-boundary` job) | the viewer's resolved dependency closure links no workspace crate (`scripts/checks/viewer-boundary.sh`) | on workspace |
+| `ci.yml` (`no-client-in-server` job) | the server binary's resolved dependency tree carries no HTTP client, so a deployment can refuse it every outbound route (`scripts/checks/no-client-in-server.sh`) | on workspace |
 | `ci.yml` (`bench-bars` job) | the four operations timed over a generated edition, each median compared to the claim in `bench/bars.json` (`scripts/checks/bench-bars.sh`) | on workspace |
 | `fuzz.yml` | weekly: every parser a client or a release reaches, fed arbitrary bytes under `cargo-fuzz` on nightly (`fuzz/README.md`) | weekly |
 | `ci.yml` (`tx-ecosystem` job) | the HL7 terminology ecosystem suite (`general` mode) against a release build through the FHIR Validator's `txTests`, gated by the committed pass list `conformance/tx-ecosystem/passing.txt` (`scripts/checks/tx-ecosystem.sh`) | on workspace |

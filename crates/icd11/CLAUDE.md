@@ -13,6 +13,10 @@ ICD-11 are the authority, with THO's ICD-11 page for identity.
   together and forbids passing on derived content; the cache and the built
   artifacts stay local, and fixtures are shaped like the API's JSON with
   invented entities.
+- The `api` module walks a deployment and is the only part that speaks HTTP, so
+  it sits behind the `api` cargo feature, off by default and enabled only by
+  `tools/ferroterm-build`. The server binary carries no HTTP client, which
+  `scripts/checks/no-client-in-server.sh` measures.
 - Postcoordination expressions are parsed here (`&` values on a stem, `/`
   between cluster members, ICF's `.` for qualifiers, the URI form); their
   validation against the axes needs the built hierarchy and lives in the

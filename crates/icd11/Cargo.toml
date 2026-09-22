@@ -2,7 +2,7 @@
 [package]
 name = "icd11"
 description = "ICD-11 entities from the WHO ICD-API local deployment, cached and read"
-version = "0.1.101"
+version = "0.1.102"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -18,14 +18,23 @@ categories = ["parser-implementations", "science"]
 publish = true
 include = ["src/**", "README.md", "LICENSE"]
 
+[features]
+# The ICD-API walker, and with it the HTTP client. Only the offline build tool
+# talks to a deployment, so the feature is off by default and the server binary
+# links no HTTP client (scripts/checks/no-client-in-server.sh).
+api = ["dep:reqwest"]
+
 [dependencies]
-reqwest = { workspace = true, features = ["blocking"] }
+reqwest = { workspace = true, features = ["blocking"], optional = true }
 serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 ferroterm-testkit.workspace = true
 tempfile.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
 
 [lints]
 workspace = true

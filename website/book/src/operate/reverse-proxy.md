@@ -22,6 +22,21 @@ sometimes a display, and the log line carries only the `system`, `url`,
 bodies, and response bodies are never logged, so a proxy log is the only place a
 `filter=` term can appear. Keep proxy access logs to the same standard.
 
+## The server connects to nothing
+
+The server binary carries no HTTP client, so a deployment can refuse it every
+outbound route and it still answers every request. The indexes are files it
+opens read-only, and the one socket it opens itself is the health probe: a
+`GET /health` to its own listener over loopback, because the image has no shell
+to run a probe with. Fetching a release from a terminology service happens
+outside the server, on a machine of your choosing, and the server reads the
+artifacts that run writes.
+
+`scripts/checks/no-client-in-server.sh` is the evidence. The
+`no-client-in-server` job in `.github/workflows/ci.yml` runs it on every pull
+request, reading the binary's resolved dependency tree and failing when an HTTP
+client reaches it.
+
 ## The quickstart, proxied
 
 `compose.yaml` carries a `proxied` profile: Caddy in front, the server on the
