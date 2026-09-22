@@ -1,4 +1,4 @@
-# syndication
+# terminology-syndication
 
 A client for the Atom syndication dialect terminology services publish.
 
@@ -15,11 +15,13 @@ authorized.
 
 ## Where it sits
 
-`syndication` is one crate of [FerroTERM](https://github.com/rubentalstra/FerroTERM),
-a pure-Rust FHIR terminology server for SNOMED CT, LOINC, and other clinical
-code systems. The crates are published so other projects can reuse them; the
-API is pre-1.0 and moves with the FerroTERM release train. Documentation:
-<https://docs.rs/syndication>.
+`terminology-syndication` is one crate of
+[FerroTERM](https://github.com/rubentalstra/FerroTERM), a pure-Rust FHIR
+terminology server for SNOMED CT, LOINC, and other clinical code systems. The
+crates are published so other projects can reuse them; the API is pre-1.0 and
+moves with the FerroTERM release train. The Rust module path is
+`terminology_syndication`. Documentation:
+<https://docs.rs/terminology-syndication>.
 
 ## Licence
 

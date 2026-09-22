@@ -117,7 +117,7 @@ concept-store = { path = "crates/concept-store", version = "0.1.100" }
 designation-index = { path = "crates/designation-index", version = "0.1.100" }
 sct-ecl = { path = "crates/sct-ecl", version = "0.1.100" }
 fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.100" }
-syndication = { path = "crates/syndication", version = "0.1.100" }
+terminology-syndication = { path = "crates/terminology-syndication", version = "0.1.100" }
 # Path-only, with no `version`: cargo then strips the dev-dependency from a
 # packaged crates/* manifest instead of looking it up on crates.io.
 ferroterm-testkit = { path = "tools/ferroterm-testkit" }

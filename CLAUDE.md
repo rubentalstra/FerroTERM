@@ -49,7 +49,7 @@ crate-local discipline.
 - `crates/fhir-terminology`: the engine. `$lookup`/`$validate-code`/`$expand`/
   `$subsumes`/`$translate` over the code system provider seam, dispatched per
   FHIR version.
-- `crates/syndication`: the Atom terminology syndication client. The feed model
+- `crates/terminology-syndication`: the Atom terminology syndication client. The feed model
   with its NCTS extensions, entry selection, checksum-verified download, and
   the `Source` seam each service add-on implements. Country-neutral and
   code-system-neutral.

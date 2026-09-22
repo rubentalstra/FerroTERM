@@ -26,12 +26,6 @@ cd "$(dirname "$0")/../.."
 
 # Dependency order: a crate is uploaded only after every sibling it depends on
 # is on the index.
-#
-# crates/syndication is absent on purpose: the crates.io name `syndication` is
-# taken (https://crates.io/crates/syndication), so the member cannot be
-# uploaded under it. The owner picks a registry name on #580 before it joins
-# this list; until then the member is built, tested, and versioned in lockstep
-# like the rest.
 readonly CRATES=(
   rf2
   concept-graph
@@ -45,6 +39,7 @@ readonly CRATES=(
   labcodeset
   icd11
   rxnorm-rrf
+  terminology-syndication
   fhir-terminology
 )
 

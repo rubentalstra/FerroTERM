@@ -3436,23 +3436,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "syndication"
-version = "0.1.100"
-dependencies = [
- "jiff",
- "md-5",
- "quick-xml",
- "reqwest",
- "serde",
- "sha2 0.11.0",
- "tempfile",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
- "wiremock",
-]
-
-[[package]]
 name = "synstructure"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3506,6 +3489,23 @@ dependencies = [
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "terminology-syndication"
+version = "0.1.100"
+dependencies = [
+ "jiff",
+ "md-5",
+ "quick-xml",
+ "reqwest",
+ "serde",
+ "sha2 0.11.0",
+ "tempfile",
+ "thiserror 2.0.20",
+ "tokio",
+ "tracing",
+ "wiremock",
 ]
 
 [[package]]

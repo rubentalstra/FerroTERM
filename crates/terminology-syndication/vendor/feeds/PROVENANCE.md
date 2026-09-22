@@ -24,21 +24,18 @@ entries, not the digest, when judging whether a refresh brought new content.
 |---|---|---|---|---|---|
 | `ncts.xml` | <https://api.healthterminologies.gov.au/syndication/v1/syndication.xml> | Australian Digital Health Agency, National Clinical Terminology Service | 2026-09-22 | 123151 | `1d05b5bf93867b12689215935418a64c0b860ff50176f9f61a9ba66b412d3b19` |
 | `nhs-england.xml` | <https://ontology.nhs.uk/production1/synd/syndication.xml> | NHS England, Ontology Server | 2026-09-22 | 185402 | `e7bd2a7f6aaf345515d8d40cd819d0b54d3751650518a30069dbdbb597742a13` |
-| `mlds.xml` | <https://mlds.ihtsdotools.org/api/feed> | SNOMED International, Member Licensing and Distribution Service | 2026-09-22 | 367490 | `b01319f746f896b32fb4972b65a7e4956ad1663cbe3df5d418d784dd54614670` |
+| `mlds.xml` | <https://mlds.ihtsdotools.org/api/feed> | SNOMED International, Member Licensing and Distribution Service | 2026-09-22 | 367490 | `6b2f18add2f6b2cbec4f8c184ab6fb38f15a80a255cdea08063dd8e7ce158333` |
 
 ## What is not vendored, and why
 
-This section names services so the gap in the corpus is legible. It is a record
-of what was fetched and what could not be, and the crate's own code
-(`crates/syndication/src/`) names no operator, country, or code system.
+The gap in the corpus is recorded by address, so a later refresh knows what was
+tried. The crate itself (`crates/terminology-syndication/src/`) names no
+operator, country, or code system.
 
-- The New Zealand Health Terminology Service listing
-  (<https://nzhts.digital.health.nz/synd/syndication.xml>) is open, and about
-  4 MB of it is one FHIR ValueSet entry after another. The corpus buys no
-  parser coverage for that weight, so it stays out of the tree.
-- The Nictiz Nationale Terminologie Server
-  (<https://terminologieserver.nl/synd/syndication.xml>) and the Belgian
-  federal terminology server
-  (<https://apps.health.belgium.be/ontoserver/synd/syndication.xml>) both answer
+- <https://nzhts.digital.health.nz/synd/syndication.xml> is open, and about 4 MB
+  of it is one FHIR ValueSet entry after another. The corpus buys no parser
+  coverage for that weight, so it stays out of the tree.
+- <https://terminologieserver.nl/synd/syndication.xml> and
+  <https://apps.health.belgium.be/ontoserver/synd/syndication.xml> both answer
   `401` with a `WWW-Authenticate: Bearer` challenge on the listing itself, so
   neither is vendorable without an account.

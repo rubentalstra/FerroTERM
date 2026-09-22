@@ -1,4 +1,4 @@
-# syndication
+# terminology-syndication
 
 The terminology syndication client. Hand-written; the Atom Syndication Format
 (RFC 4287, <https://www.rfc-editor.org/rfc/rfc4287>) and the NCTS extensions

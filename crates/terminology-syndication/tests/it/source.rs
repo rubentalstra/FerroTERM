@@ -4,8 +4,8 @@
 //! use: a bearer challenge on the listing itself, a public listing whose
 //! downloads are challenged, an open service, and affiliate credentials.
 
-use syndication::model::{CategoryTerm, Checksum, ContentLink, LinkRel};
-use syndication::source::{Authorization, Source, SourceError};
+use terminology_syndication::model::{CategoryTerm, Checksum, ContentLink, LinkRel};
+use terminology_syndication::source::{Authorization, Source, SourceError};
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 

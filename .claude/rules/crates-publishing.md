@@ -7,14 +7,14 @@ paths: ["crates/**", "scripts/release/**", ".github/workflows/publish-crates.yml
 The `crates/*` members are published on crates.io under plain names
 (`rf2`, `concept-graph`, `concept-store`, `designation-index`,
 `sct-ecl`, `fhir-terminology`, `loinc`, `classification`, `dhd-thesaurus`,
-`gstandaard`, `labcodeset`, `icd11`, `rxnorm-rrf`; the owner's decision on #164,
-2026-09-03, `labcodeset` added 2026-09-04)
+`gstandaard`, `labcodeset`, `icd11`, `rxnorm-rrf`, `terminology-syndication`;
+the owner's decision on #164, 2026-09-03, `labcodeset` added 2026-09-04,
+`terminology-syndication` added 2026-09-22)
 so other projects can depend on them. The server (`app/*`) and the tools
-(`tools/*`) are never published. `crates/syndication` is the one member with no
-upload lane yet: the crates.io name `syndication` belongs to another project
-(<https://crates.io/crates/syndication>), so the owner picks a registry name on
-#580 before it joins `scripts/release/publish-crates.sh`. It carries the same
-metadata and the same lockstep version as every other member. Every member is BUSL-1.1 except `rf2`, which
+(`tools/*`) are never published. The syndication client is the one member whose
+crates.io name is not its plain one: `syndication` belongs to another project
+(<https://crates.io/crates/syndication>), so the owner's decision on #580 names
+it `terminology-syndication`, and the directory matches the package. Every member is BUSL-1.1 except `rf2`, which
 is Apache 2.0 (the owner's decision on #223, 2026-09-04) so the RF2 reader
 stays usable by any Rust project. `fhir-types` left this line with the FHIR
 model (#300) and is published by the FerroBRIDGE repository. Published versions are immutable, so version

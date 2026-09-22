@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: BUSL-1.1
 # scripts/vendor/syndication-feeds.sh
 #
-# Vendors the public terminology syndication listings the `syndication` parser
-# is tested against (.claude/rules/vendored-inputs.md). Each listing is fetched
-# verbatim into crates/syndication/vendor/feeds/ and a PROVENANCE.md is written
-# beside them with the URL, the fetch date, the SHA-256, and the byte size.
+# Vendors the public terminology syndication listings the
+# `terminology-syndication` parser is tested against
+# (.claude/rules/vendored-inputs.md). Each listing is fetched
+# verbatim into crates/terminology-syndication/vendor/feeds/ and a
+# PROVENANCE.md is written beside them with the URL, the fetch date, the
+# SHA-256, and the byte size.
 #
 # Run it by hand to refresh the corpus and commit the result. It is never run
 # in CI: an operator republishes its listing on its own cadence, so an
@@ -19,7 +21,7 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 
-dest="crates/syndication/vendor/feeds"
+dest="crates/terminology-syndication/vendor/feeds"
 mkdir -p "$dest"
 
 die() { printf 'syndication-feeds: %s\n' "$*" >&2; exit 1; }
@@ -92,18 +94,15 @@ HEADER
 
 ## What is not vendored, and why
 
-This section names services so the gap in the corpus is legible. It is a record
-of what was fetched and what could not be, and the crate's own code
-(`crates/syndication/src/`) names no operator, country, or code system.
+The gap in the corpus is recorded by address, so a later refresh knows what was
+tried. The crate itself (`crates/terminology-syndication/src/`) names no
+operator, country, or code system.
 
-- The New Zealand Health Terminology Service listing
-  (<https://nzhts.digital.health.nz/synd/syndication.xml>) is open, and about
-  4 MB of it is one FHIR ValueSet entry after another. The corpus buys no
-  parser coverage for that weight, so it stays out of the tree.
-- The Nictiz Nationale Terminologie Server
-  (<https://terminologieserver.nl/synd/syndication.xml>) and the Belgian
-  federal terminology server
-  (<https://apps.health.belgium.be/ontoserver/synd/syndication.xml>) both answer
+- <https://nzhts.digital.health.nz/synd/syndication.xml> is open, and about 4 MB
+  of it is one FHIR ValueSet entry after another. The corpus buys no parser
+  coverage for that weight, so it stays out of the tree.
+- <https://terminologieserver.nl/synd/syndication.xml> and
+  <https://apps.health.belgium.be/ontoserver/synd/syndication.xml> both answer
   `401` with a `WWW-Authenticate: Bearer` challenge on the listing itself, so
   neither is vendorable without an account.
 FOOTER

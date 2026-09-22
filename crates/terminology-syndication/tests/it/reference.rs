@@ -4,8 +4,8 @@
 //! `list` and `fetch` as the trait provides them, so the tests exercise the
 //! seam an add-on actually sits on.
 
-use syndication::model::CategoryTerm;
-use syndication::source::{Authorization, BoxFuture, Source, SourceError};
+use terminology_syndication::model::CategoryTerm;
+use terminology_syndication::source::{Authorization, BoxFuture, Source, SourceError};
 
 /// A source configured with fixed credentials, pointed at a mock server.
 #[derive(Debug)]

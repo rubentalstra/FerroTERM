@@ -8,8 +8,8 @@
 
 use std::collections::BTreeMap;
 
-use syndication::model::{CategoryTerm, Checksum, Entry, Feed};
-use syndication::parse;
+use terminology_syndication::model::{CategoryTerm, Checksum, Entry, Feed};
+use terminology_syndication::parse;
 
 use crate::fixtures;
 

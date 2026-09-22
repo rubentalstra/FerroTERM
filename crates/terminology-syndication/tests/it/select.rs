@@ -1,8 +1,8 @@
 //! The selection rules over the synthetic feed.
 
-use syndication::model::{CategoryTerm, Feed};
-use syndication::parse;
-use syndication::select::{self, Holdings, SkipReason, Subscription, Systems};
+use terminology_syndication::model::{CategoryTerm, Feed};
+use terminology_syndication::parse;
+use terminology_syndication::select::{self, Holdings, SkipReason, Subscription, Systems};
 
 use crate::fixtures;
 

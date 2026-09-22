@@ -1,8 +1,8 @@
 //! Streaming a content item to disk with its digest verified.
 
 use crate::digest::{md5_of, sha256_of};
-use syndication::download::{self, DownloadError};
-use syndication::model::Checksum;
+use terminology_syndication::download::{self, DownloadError};
+use terminology_syndication::model::Checksum;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 

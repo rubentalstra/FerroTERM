@@ -1,15 +1,15 @@
 //! Reading the synthetic Atom documents into the typed model.
 
-use syndication::model::{CategoryTerm, Checksum, LinkRel, SnomedRelease};
-use syndication::parse::{self, ParseError};
+use terminology_syndication::model::{CategoryTerm, Checksum, LinkRel, SnomedRelease};
+use terminology_syndication::parse::{self, ParseError};
 
 use crate::fixtures;
 
-fn full_feed() -> syndication::model::Feed {
+fn full_feed() -> terminology_syndication::model::Feed {
     parse::feed(&fixtures::synthetic("full-feed.xml")).expect("the fixture is a well-formed feed")
 }
 
-fn entry(title: &str) -> syndication::model::Entry {
+fn entry(title: &str) -> terminology_syndication::model::Entry {
     full_feed()
         .entries
         .into_iter()
@@ -47,7 +47,7 @@ fn every_named_category_term_is_read_from_the_feed() {
     let terms: Vec<CategoryTerm> = full_feed()
         .entries
         .iter()
-        .map(syndication::model::Entry::term)
+        .map(terminology_syndication::model::Entry::term)
         .collect();
     for named in CategoryTerm::NAMED {
         assert!(

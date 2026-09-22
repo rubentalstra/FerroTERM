@@ -13,4 +13,4 @@
 # A vendored listing is stored byte-for-byte as its publisher serves it, so the
 # line-ending normalization above must not touch it: one service serves CRLF,
 # and rewriting it would change the bytes the provenance stamp records.
-crates/syndication/vendor/feeds/*.xml -text
+crates/terminology-syndication/vendor/feeds/*.xml -text
