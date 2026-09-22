@@ -45,3 +45,5 @@ Two cautions learned the hard way:
   blocks it, and the pieces run fine separately.
 
 Related: [[auto-merge-follow-ups]], [[repo-merge-gates]].
+
+**Caveat (2026-09-22):** the merge of a PR is not proof the agent is done. On 2026-09-22 a worktree was removed on the merge signal while its agent was still committing a CodeQL fix, and the edit was lost. Remove a worktree only after the agent's final hand-back says nothing is outstanding, or after a message to it confirms so.
