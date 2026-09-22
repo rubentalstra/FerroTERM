@@ -37,3 +37,15 @@ weaken a test because a finding suggested it.
 
 CodeQL (security) runs separately (`.github/workflows/codeql.yml`) and is also
 advisory here until a precision case is made to gate on it.
+
+## The third lane: GitHub's Copilot code scanning ("Code scanning AI findings")
+
+A check named "Code scanning AI findings" (`github-advanced-security`) runs
+on pull requests. It is GitHub's Copilot code-scanning service, enabled in the
+repository's Code security settings, not a workflow in this tree. It is
+advisory like the other two lanes and gates no merge. Since 2026-09-22 it
+fails on every pull request with a service error from GitHub's side (`CAPIError:
+400 The requested model is not supported`) and reports no alert; a failure
+with that text is noise, not a finding. The owner decides in the repository
+settings whether the lane stays; the workflows and guards here are unchanged
+either way.

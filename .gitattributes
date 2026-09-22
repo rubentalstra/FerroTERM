@@ -7,10 +7,10 @@
 # Vendored trees (test corpora, machine-readable grammars) are exempt from
 # GitHub language stats and collapse in diffs. Extend the list when a new
 # vendored tree lands (see .claude/rules/vendored-inputs.md).
-# vendor/** linguist-vendored
-# crates/*/vendor/** linguist-vendored
+crates/*/vendor/** linguist-vendored
+addons/*/vendor/** linguist-vendored
 
 # A vendored listing is stored byte-for-byte as its publisher serves it, so the
 # line-ending normalization above must not touch it: one service serves CRLF,
 # and rewriting it would change the bytes the provenance stamp records.
-crates/terminology-syndication/vendor/feeds/*.xml -text
+crates/terminology-syndication/vendor/feeds/*.xml -text -diff

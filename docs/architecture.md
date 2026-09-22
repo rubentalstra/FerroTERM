@@ -340,9 +340,20 @@ code system adds a loader crate (`rf2` is the first) that feeds them.
 | `crates/designation-index` | The `fst` + roaring designation search index (prefix, language and use filter, term-length sort) | hand-written |
 | `crates/sct-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `concept-graph`) | hand-written |
 | `crates/fhir-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
+| `crates/loinc` | LOINC release loader and typed row model | hand-written |
+| `crates/classification` | ClaML and ICD-10-CM tabular readers into one classification model (ICD-10 family, ICPC-2) | hand-written |
+| `crates/icd11` | ICD-11 entities from the WHO ICD-API local deployment, cached and read; the API walker sits behind the `api` feature the build tool enables | hand-written |
+| `crates/rxnorm-rrf` | RxNorm Rich Release Format reader and typed row model | hand-written |
+| `crates/dhd-thesaurus` | DHD Diagnosethesaurus and Verrichtingenthesaurus delivery reader | hand-written |
+| `crates/gstandaard` | G-Standaard (Z-Index) product ladder reader: GPK, PRK, HPK, and article files | hand-written |
+| `crates/labcodeset` | Nederlandse Labcodeset publication (labconcepts XML) reader | hand-written |
 | `crates/terminology-syndication` | The Atom terminology syndication client: the feed model and its NCTS extensions, entry selection, checksum-verified download, and the `Source` seam each service add-on implements | hand-written |
 | `app/ferroterm-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
+| `addons/nts` | The Nationale Terminologieserver (NTS) source add-on for the sync service: the Nictiz feed, its Keycloak grants, its subscription, and the NL fix-ups; depends on `terminology-syndication` only | hand-written |
+| `app/ferroterm-viewer` | The Leptos web UI, client-side rendered and served by the server as static assets; a pure FHIR client that links no workspace crate | hand-written |
 | `tools/ferroterm-build` | The offline build: a code system release (RF2 first) → the graph/store/text artifacts the server reads, once per release | tooling |
+| `tools/ferroterm-testkit` | Synthetic fixtures for the test suites, a shaped edition written the way the build writes it; a dev-dependency only, never shipped | tooling |
+| `tools/ferroterm-bench` | The benchmark harness: ingest, footprint, and latency of every served code system into reproducible records | tooling |
 
 Dependencies point one way (app/tools/addons → crates); nothing depends upward
 into the server.

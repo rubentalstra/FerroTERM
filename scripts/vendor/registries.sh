@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fetches the public registries the registry code systems are built from,
-# verbatim, into crates/ferroterm-terminology/data/, and rewrites the
+# verbatim, into crates/fhir-terminology/data/, and rewrites the
 # provenance stamp. Re-run to refresh; commit the result.
 #
 #   scripts/vendor/registries.sh
@@ -14,7 +14,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
-data=crates/ferroterm-terminology/data
+data=crates/fhir-terminology/data
 mkdir -p "$data/iana/media-types" "$data/cldr"
 
 CLDR_REF=${CLDR_REF:-main}

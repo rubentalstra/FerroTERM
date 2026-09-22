@@ -49,7 +49,7 @@ jobs:
           persist-credentials: false
       - uses: taiki-e/install-action@3f74d7c16a4242f1c95561e98edc25d36adb4375 # v2.87.12
         with:
-          tool: zizmor@1.29.0
+          tool: zizmor@1.30.1
       - name: Audit .github/workflows
         # GH_TOKEN enables the ONLINE audits: impostor-commit verifies that a
         # pinned commit really belongs to the repository named in front of it,
@@ -66,7 +66,7 @@ jobs:
         run: |
           for attempt in 1 2 3; do
             status=0
-            zizmor --min-severity=low .github/workflows/ || status=$?
+            zizmor --config .github/zizmor.yml --min-severity=low .github/workflows/ || status=$?
             if [ "$status" -ne 1 ]; then
               exit "$status"
             fi
@@ -166,6 +166,26 @@ jobs:
   # dockerfile-lint — hadolint over the container recipe. The image copies a
   # prebuilt binary onto a digest-pinned base, so the rules that matter are
   # the pinned FROM, the numeric non-root USER, and the exec-form ENTRYPOINT.
+  # The tree guards: every vendor fetcher writes into the tree, every
+  # workspace member is named in the repo map and the architecture table, and
+  # every evidence citation in docs/claims.md resolves to a symbol or a test.
+  tree-guards:
+    name: tree-guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: vendor-dests
+        run: bash scripts/checks/vendor-dests.sh
+      - name: repo-map
+        run: bash scripts/checks/repo-map.sh
+      - name: claims
+        run: bash scripts/checks/claims.sh
+
   dockerfile-lint:
     name: hadolint
     runs-on: ubuntu-latest
@@ -754,6 +774,7 @@ jobs:
       - workflow-lint
       - shellcheck
       - comment-style
+      - tree-guards
       - dockerfile-lint
       - versions
       - brand
