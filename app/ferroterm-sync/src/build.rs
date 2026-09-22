@@ -135,6 +135,7 @@ fn clipped(text: &str) -> String {
 }
 
 #[cfg(test)]
+#[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::{build_rf2, clipped};
 

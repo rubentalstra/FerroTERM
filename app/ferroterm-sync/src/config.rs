@@ -208,6 +208,7 @@ impl Config {
 }
 
 #[cfg(test)]
+#[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::{Activation, Config};
 

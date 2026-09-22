@@ -122,6 +122,9 @@ designation-index = { path = "crates/designation-index", version = "0.1.103" }
 sct-ecl = { path = "crates/sct-ecl", version = "0.1.103" }
 fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.103" }
 terminology-syndication = { path = "crates/terminology-syndication", version = "0.1.103" }
+# The source add-ons. Path-only and never published; only app/ferroterm-sync
+# may take one (scripts/checks/addon-boundary.sh).
+addon-nts = { path = "addons/nts" }
 # Path-only, with no `version`: cargo then strips the dev-dependency from a
 # packaged crates/* manifest instead of looking it up on crates.io.
 ferroterm-testkit = { path = "tools/ferroterm-testkit" }

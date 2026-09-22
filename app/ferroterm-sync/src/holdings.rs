@@ -135,6 +135,7 @@ fn field(value: &serde_json::Value, name: &str) -> Option<String> {
 }
 
 #[cfg(test)]
+#[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::holdings;
     use crate::state::Held;

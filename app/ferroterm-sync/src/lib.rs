@@ -17,23 +17,23 @@
 //! The modules follow one run: [`config`] is the file that describes the
 //! deployment, [`schedule`] and [`clock`] say when a run starts, [`state`]
 //! remembers what already happened, [`holdings`] reads what is already served,
-//! [`build`] and [`resource`] are the two lanes, [`activate`] puts a staged
-//! release in front of the server, [`retention`] prunes what it replaced,
-//! [`record`] writes down what happened, and [`admin`] serves that record,
-//! [`metrics`], and the manual triggers.
+//! [`source`] is the add-on seam, [`build`] is the RF2 lane, [`activate`] puts
+//! a staged release in front of the server, [`retention`] prunes what it
+//! replaced, [`record`] writes down what happened, and [`admin`] serves that
+//! record, [`metrics`], and the manual triggers.
 #![doc(test(attr(deny(warnings))))]
 
 pub mod activate;
 pub mod admin;
 pub mod build;
-pub mod clock;
 pub mod cli;
+pub mod clock;
 pub mod config;
 pub mod holdings;
 pub mod metrics;
+pub mod naming;
 pub mod record;
 pub mod reload;
-pub mod resource;
 pub mod retention;
 pub mod run;
 pub mod schedule;

@@ -54,7 +54,7 @@ pub struct Staged {
     /// The lane that produced it.
     pub lane: Lane,
     /// Where the item sits while it waits.
-    pub staged: PathBuf,
+    pub path: PathBuf,
     /// Where it goes when it is activated.
     pub target: PathBuf,
     /// Where the file it replaces is kept until the reload succeeds.
@@ -194,6 +194,7 @@ fn partial_path(path: &Path) -> PathBuf {
 }
 
 #[cfg(test)]
+#[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::State;
 
@@ -209,8 +210,10 @@ mod tests {
     fn the_state_survives_a_write_and_a_read() -> Result<(), Box<dyn core::error::Error>> {
         let dir = tempfile::tempdir()?;
         let path = dir.path().join("sub").join("state.json");
-        let mut state = State::default();
-        state.last_run = Some("2026-09-22T03:00:00Z".parse()?);
+        let mut state = State {
+            last_run: Some("2026-09-22T03:00:00Z".parse()?),
+            ..State::default()
+        };
         state.hold(
             "http://snomed.info/sct/11000146104",
             "http://snomed.info/sct/11000146104/version/20260930",

@@ -6,10 +6,10 @@
 //! The admin listener serves the directory at `/runs`, so an operator reads a
 //! run without reading the log.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// How a run ended.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Outcome {
     /// Everything the run attempted worked.
@@ -480,6 +480,7 @@ pub fn identifier(started: jiff::Timestamp, sequence: u64) -> String {
 }
 
 #[cfg(test)]
+#[expect(clippy::panic_in_result_fn, reason = "test assertions")]
 mod tests {
     use super::{RecordStore, RunRecord, Trigger, identifier, is_identifier};
 

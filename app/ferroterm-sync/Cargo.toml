@@ -19,10 +19,13 @@ name = "ferroterm-sync"
 path = "src/main.rs"
 
 [dependencies]
+# The source add-ons this build reads a service through. Only this crate may
+# depend on `addons/*` (scripts/checks/addon-boundary.sh).
+addon-nts.workspace = true
 anyhow.workspace = true
 axum.workspace = true
 clap.workspace = true
-jiff.workspace = true
+jiff = { workspace = true, features = ["serde"] }
 prometheus-client.workspace = true
 reqwest.workspace = true
 serde.workspace = true
