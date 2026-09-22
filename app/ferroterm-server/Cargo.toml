@@ -33,8 +33,10 @@ fhir-types.workspace = true
 fhir-terminology.workspace = true
 concept-graph.workspace = true
 http.workspace = true
+hyper-rustls.workspace = true
 hyper-util.workspace = true
 jiff.workspace = true
+jsonwebtoken.workspace = true
 redb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -46,11 +48,16 @@ tracing-subscriber.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+base64.workspace = true
 criterion.workspace = true
 ferroterm-testkit.workspace = true
+# The SMART tests stand up an issuer and mint tokens for it, so they generate a
+# signing key and publish it as a JWK instead of committing one.
+ring.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["io-util", "sync", "time"] }
 tower = { workspace = true, features = ["util"] }
+wiremock.workspace = true
 
 [[bench]]
 name = "http"

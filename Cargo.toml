@@ -42,6 +42,10 @@ tower-http = "0.7.1"
 hyper = "1.11.1"
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-legacy", "http1", "tokio"] }
 http = "1.5.0"
+# TLS for the only outbound call the server makes: the OIDC issuer's discovery
+# document and its JWKS, over the `hyper-util` client the health probe already
+# uses. Checked against crates.io on 2026-09-22.
+hyper-rustls = "0.27.10"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "signal"] }
 # Regular-expression filters (`regex` in ValueSet.compose.include.filter.op).
 regex = "1.13.1"
@@ -69,6 +73,12 @@ serde_json = { version = "1.0.151", features = ["raw_value"] }
 # none, so the writer half of the crate stays out. Checked against crates.io on
 # 2026-09-22.
 toml = { version = "1.1.6", default-features = false, features = ["std", "parse", "serde"] }
+# Bearer-token validation for the optional SMART App Launch gate: an RFC 7519
+# JWT verified against the issuer's RFC 7517 JWKS. The `aws_lc_rs` backend is
+# the one `rustls` already resolves to; the pure-Rust backend would add the
+# `rsa` crate, which carries an unresolved RustSec advisory. Checked against
+# crates.io on 2026-09-22.
+jsonwebtoken = { version = "11.1.0", default-features = false, features = ["aws_lc_rs"] }
 # Errors.
 thiserror = "2.0.20"
 anyhow = "1.0.104"
@@ -97,6 +107,10 @@ insta = { version = "1.48.0", features = ["json"] }
 proptest = "1.11.0"
 reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls"] }
 wiremock = "0.6.5"
+# The test issuer generates its own signing key and publishes it as a JWK, so
+# no private key is committed. Checked against crates.io on 2026-09-22.
+ring = "0.17.14"
+base64 = "0.23.1"
 criterion = "0.8.2"
 divan = "0.1.21"
 tempfile = "3.27.0"

@@ -41,6 +41,7 @@ macro_rules! metadata {
 
             use crate::outcome::Failure;
             use crate::config::{SECURITY_SERVICES, SECURITY_SERVICE_SYSTEM};
+            use crate::smart::{OAUTH_URIS, SMART_ON_FHIR, Smart};
             use crate::state::AppState;
 
             /// The FHIR version this surface serves.
@@ -49,11 +50,15 @@ macro_rules! metadata {
             /// the terminology ecosystem requires a server to populate
             /// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>, Metadata).
             ///
-            /// The deployment declares it (`FERROTERM_SECURITY_SERVICE`); the server itself
-            /// authenticates nobody, and the binding is extensible, so a deployment that
-            /// declares none says so in text.
-            fn security(state: &AppState) -> CapabilityStatementRestSecurity {
-                let declared = state.security_services();
+            /// The deployment declares it (`FERROTERM_SECURITY_SERVICE`), and a deployment
+            /// that configured a SMART issuer adds `SMART-on-FHIR` and the `oauth-uris`
+            /// extension; the binding is extensible, so a deployment that declares none
+            /// and configured no issuer says so in text.
+            fn security(state: &AppState, smart: Option<&Smart>) -> CapabilityStatementRestSecurity {
+                let mut declared: Vec<String> = state.security_services().to_vec();
+                if smart.is_some() && !declared.iter().any(|code| code == SMART_ON_FHIR) {
+                    declared.push(SMART_ON_FHIR.to_owned());
+                }
                 let service = if declared.is_empty() {
                     CodeableConcept {
                         text: Some(
@@ -80,7 +85,43 @@ macro_rules! metadata {
                     }
                 };
                 CapabilityStatementRestSecurity {
+                    extension: smart.map(oauth_uris).into_iter().collect(),
                     service: vec![service],
+                    ..Default::default()
+                }
+            }
+
+            /// The `oauth-uris` extension: the issuer's `authorize` and `token` endpoints.
+            ///
+            /// SMART App Launch declares `token` and `authorize` as SHALL and the rest as
+            /// SHOULD, each a `valueUri` sub-extension
+            /// (<https://hl7.org/fhir/smart-app-launch/1.0.0/conformance/index.html>).
+            /// The current release deprecates this in favour of the discovery document,
+            /// which this server also serves.
+            ///
+            /// `authorize` is absent when the issuer publishes no authorization
+            /// endpoint, which is what a Backend Services issuer is; the discovery
+            /// document says the same thing, so the two agree.
+            fn oauth_uris(smart: &Smart) -> Extension {
+                let uri = |name: &str, value: &str| Extension {
+                    url: name.to_owned(),
+                    value: Some(ExtensionValue::Uri(value.into())),
+                    ..Default::default()
+                };
+                let mut parts = vec![uri("token", smart.token_endpoint())];
+                for (name, endpoint) in [
+                    ("authorize", smart.authorize_endpoint()),
+                    ("register", smart.register_endpoint()),
+                    ("introspect", smart.introspect_endpoint()),
+                    ("revoke", smart.revoke_endpoint()),
+                ] {
+                    if let Some(endpoint) = endpoint {
+                        parts.push(uri(name, endpoint));
+                    }
+                }
+                Extension {
+                    url: OAUTH_URIS.to_owned(),
+                    extension: parts,
                     ..Default::default()
                 }
             }
@@ -187,6 +228,7 @@ macro_rules! metadata {
             /// Handles `GET /metadata` (`mode` `full`, `normative`, or `terminology`).
             pub async fn metadata(
                 State(state): State<Arc<AppState>>,
+                State(smart): State<Option<Arc<Smart>>>,
                 headers: http::HeaderMap,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
@@ -200,7 +242,9 @@ macro_rules! metadata {
                     .map_or("full", |(_, value)| value.as_str());
                 let encoded = match mode {
                     "terminology" => terminology_capabilities(&state).to_json(),
-                    "full" | "normative" => capability_statement(&state).to_json(),
+                    "full" | "normative" => {
+                        capability_statement(&state, smart.as_deref()).to_json()
+                    }
                     other => {
                         return Failure::new(
                             StatusCode::BAD_REQUEST,
@@ -362,7 +406,7 @@ macro_rules! metadata {
 
             /// The `CapabilityStatement` (`kind = instance`) of this server.
             #[must_use]
-            pub fn capability_statement(state: &AppState) -> CapabilityStatement {
+            pub fn capability_statement(state: &AppState, smart: Option<&Smart>) -> CapabilityStatement {
 
                 // NOTE: the ecosystem runner reads these features to know what a server
                 // accepts (<https://build.fhir.org/ig/HL7/fhir-tx-ecosystem-ig/requirements.html>).
@@ -407,7 +451,7 @@ macro_rules! metadata {
                     }),
                     rest: vec![CapabilityStatementRest {
                         mode: "server".into(),
-                        security: Some(security(state)),
+                        security: Some(security(state, smart)),
                         // NOTE: `batch` is a system interaction, the one this server answers at
                         // its root (<https://hl7.org/fhir/R4B/http.html#transaction>).
                         interaction: vec![CapabilityStatementRestInteraction {

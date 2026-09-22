@@ -48,6 +48,35 @@ fresh link reference.
   summary, and `/metrics` carries `ferroterm_sync_revalidation_findings` as a
   gauge per locally authored resource. The check reports and never edits local
   content.
+- Optional SMART App Launch bearer validation over the write routes and the
+  admin listener (#586). `FERROTERM_OIDC_ISSUER` turns it on: the server reads
+  the issuer's OpenID Connect discovery document and its JWKS before it binds,
+  refuses to start with the reason when either does not answer, and then
+  requires an OAuth 2.0 bearer token on `POST`, `PUT`, and `DELETE` of
+  `CodeSystem`, `ValueSet`, and `ConceptMap` on every served FHIR version, on
+  `POST [base]/$closure`, and on every admin-listener route. The scope for a
+  route is the SMART version 2
+  one (`system/CodeSystem.c` to create, `.u` to update, `.d` to delete, the
+  combined `cud` and `cruds` forms accepted), and the version 1 `.write` and
+  `.*` forms are accepted as the specification maps them
+  (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>);
+  `FERROTERM_OIDC_ADMIN_SCOPE` names the scope the admin listener requires. A
+  request with no token answers `401` with a `WWW-Authenticate: Bearer`
+  challenge, a token that does not verify answers `401` with
+  `error="invalid_token"`, and a token without the scope answers `403` with
+  `error="insufficient_scope"`, each with an `OperationOutcome` (RFC 6750 §3).
+  The signature is checked against the issuer's JWKS with an asymmetric
+  algorithm only, and `iss`, `exp`, and `nbf` are required, as is `aud` when
+  `FERROTERM_OIDC_AUDIENCE` names one; a `typ` header that names a kind other
+  than an access token is refused (RFC 8725 §3.1, §3.8, §3.9, §3.12). A token
+  naming a key the server has not read refreshes the key set, at most once a
+  minute. The issuer URL is `https`, and a cleartext one is refused unless its
+  host is the loopback.
+  `[base]/.well-known/smart-configuration` is served per version from the
+  issuer's document, and the capability statements declare `SMART-on-FHIR` with
+  the `oauth-uris` extension
+  (<https://hl7.org/fhir/smart-app-launch/conformance.html>). The read surface
+  stays open, and a deployment that names no issuer behaves exactly as before.
 - The server reloads the served set without a restart (#578). `SIGHUP` and
   `POST /reload` both make it read `FERROTERM_INDEX` and `FERROTERM_CODESYSTEMS`
   again, open everything read-only, and swap the whole registry; a request in

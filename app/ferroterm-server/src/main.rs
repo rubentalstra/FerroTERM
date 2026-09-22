@@ -14,8 +14,11 @@ use std::sync::Arc;
 
 use clap::Parser;
 use ferroterm_server::cli::{Cli, Command};
-use ferroterm_server::config::{ADMIN_LISTEN_ENV, Config, INDEX_ENV, LISTEN_ENV, UI_ENV};
+use ferroterm_server::config::{
+    ADMIN_LISTEN_ENV, Config, INDEX_ENV, LISTEN_ENV, OIDC_ISSUER_ENV, UI_ENV,
+};
 use ferroterm_server::reload::Serving;
+use ferroterm_server::smart::Smart;
 use ferroterm_server::state::AppState;
 use ferroterm_server::telemetry::ResolvedFormat;
 use ferroterm_server::{banner, healthcheck, reload, telemetry};
@@ -103,6 +106,19 @@ async fn run(config: Config) -> anyhow::Result<()> {
             tracing::info!(base = ferroterm_server::ui::MOUNT, "serving the viewer");
         }
     }
+    // The issuer is read before the listener binds, so a server that cannot
+    // check a token never answers on a surface it has declared protected.
+    let smart = Smart::start(&config)
+        .await
+        .with_context(|| format!("reading the OIDC issuer named by {OIDC_ISSUER_ENV}"))?
+        .map(Arc::new);
+    if let Some(smart) = &smart {
+        tracing::info!(
+            issuer = smart.issuer(),
+            token_endpoint = smart.token_endpoint(),
+            "requiring a SMART bearer token on the write routes"
+        );
+    }
     let listener = TcpListener::bind(&config.listen)
         .await
         .with_context(|| format!("binding {} (set {LISTEN_ENV} to change it)", config.listen))?;
@@ -119,7 +135,7 @@ async fn run(config: Config) -> anyhow::Result<()> {
         }
         None => None,
     };
-    let serving = Serving::new(config, Arc::new(state));
+    let serving = Serving::with_smart(config, Arc::new(state), smart);
     // NOTE: dropping the handle detaches the task, which then runs until the
     // process ends (<https://docs.rs/tokio/latest/tokio/task/struct.JoinHandle.html>).
     let _hangup = tokio::spawn(reload::on_hangup(serving.clone()));

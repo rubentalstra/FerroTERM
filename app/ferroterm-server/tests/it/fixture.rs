@@ -133,6 +133,48 @@ impl Server {
         Self::assembled(Arc::new(dir), config)
     }
 
+    /// The edition with a resource database and a SMART gate over its writes.
+    ///
+    /// `audience` and `admin_scope` stay unset when the test names none, which
+    /// is what an unset environment variable gives; everything else is what
+    /// [`Server::start_persisting`] loads.
+    pub(crate) async fn start_persisting_with_smart(
+        issuer: &str,
+        audience: Option<&str>,
+        admin_scope: Option<&str>,
+    ) -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        ferroterm_testkit::snomed::write(dir.path()).expect("writes the edition");
+        let fhir = dir.path().join("fhir");
+        std::fs::create_dir_all(&fhir).expect("creates");
+        ferroterm_testkit::fhir::write_code_systems(&fhir).expect("writes the resources");
+        let config = Config {
+            index: vec![dir.path().to_path_buf()],
+            code_systems: vec![fhir],
+            resources: Some(dir.path().join("resources.redb")),
+            oidc_issuer: Some(issuer.to_owned()),
+            oidc_audience: audience.map(str::to_owned),
+            oidc_admin_scope: admin_scope
+                .map_or_else(|| Config::default().oidc_admin_scope, str::to_owned),
+            ..Config::default()
+        };
+        let smart = ferroterm_server::smart::Smart::start(&config)
+            .await
+            .expect("the issuer answers")
+            .map(Arc::new);
+        let state = Arc::new(AppState::load(&config).expect("loads"));
+        Self {
+            _dir: Arc::new(dir),
+            serving: Serving::with_smart(config.clone(), state, smart),
+            config,
+        }
+    }
+
+    /// The admin application, which the second listener serves.
+    pub(crate) fn admin_router(&self) -> Router {
+        ferroterm_server::reload::router(self.serving.clone())
+    }
+
     fn start_with(resources: bool, persists: bool) -> Self {
         let dir = tempfile::tempdir().expect("tempdir");
         ferroterm_testkit::snomed::write(dir.path()).expect("writes the edition");
