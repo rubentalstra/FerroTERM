@@ -36,6 +36,7 @@ pub mod naming;
 pub mod record;
 pub mod reload;
 pub mod retention;
+pub mod revalidate;
 pub mod run;
 pub mod schedule;
 pub mod source;

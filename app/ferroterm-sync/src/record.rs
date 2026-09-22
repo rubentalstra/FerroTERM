@@ -169,6 +169,64 @@ pub struct ActivationReport {
     pub error: Option<String>,
 }
 
+/// What a new release did to a code a local resource names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FindingKind {
+    /// The code is still in the code system and is no longer active.
+    Inactive,
+    /// The code is no longer in the code system at all.
+    Absent,
+    /// The code is still there and no longer falls inside the value set it was
+    /// included through.
+    OutsideValueSet,
+}
+
+impl FindingKind {
+    /// The kind's name, as a record writes it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Inactive => "inactive",
+            Self::Absent => "absent",
+            Self::OutsideValueSet => "outside-value-set",
+        }
+    }
+}
+
+/// One local code a new release changed.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+pub struct Finding {
+    /// The locally authored resource that names the code.
+    pub resource: String,
+    /// The code system the code comes from.
+    pub system: String,
+    /// The code itself.
+    pub code: String,
+    /// What the release did to it.
+    pub kind: FindingKind,
+    /// The release this run activated for that system, when it activated one.
+    pub release: Option<String>,
+}
+
+/// What revalidating the deployment's own resources found.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+pub struct Revalidation {
+    /// How many locally authored resources were read.
+    pub resources: usize,
+    /// The locally authored resources that were checked, in the order they
+    /// were read.
+    pub checked_resources: Vec<String>,
+    /// How many codes were checked.
+    pub checked: usize,
+    /// The local codes the release changed.
+    pub findings: Vec<Finding>,
+    /// What the check found, in one sentence.
+    pub statement: String,
+    /// Why the check did not run, when it did not.
+    pub skipped: Option<String>,
+}
+
 /// One release directory retention removed.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub struct Pruned {
@@ -201,6 +259,8 @@ pub struct RunRecord {
     pub activation: ActivationReport,
     /// What retention removed.
     pub retention: Vec<Pruned>,
+    /// What revalidating the deployment's own resources found.
+    pub revalidation: Revalidation,
     /// How many bytes the index root holds after the run.
     pub bytes_used: u64,
     /// How many bytes the run staged.
@@ -225,6 +285,7 @@ impl RunRecord {
             sources: Vec::new(),
             activation: ActivationReport::default(),
             retention: Vec::new(),
+            revalidation: Revalidation::default(),
             bytes_used: 0,
             bytes_staged: 0,
             entries_taken: 0,
@@ -281,6 +342,8 @@ impl RunRecord {
             activated: self.activation.activated.len(),
             bytes_staged: self.bytes_staged,
             bytes_used: self.bytes_used,
+            revalidation_findings: self.revalidation.findings.len(),
+            revalidation: self.revalidation.statement.clone(),
             errors: self.errors.clone(),
         }
     }
@@ -311,6 +374,10 @@ pub struct Summary {
     pub bytes_staged: u64,
     /// How many bytes the index root holds after the run.
     pub bytes_used: u64,
+    /// How many local codes the activated release changed.
+    pub revalidation_findings: usize,
+    /// What revalidating the deployment's own resources found, in one sentence.
+    pub revalidation: String,
     /// Everything that went wrong.
     pub errors: Vec<String>,
 }

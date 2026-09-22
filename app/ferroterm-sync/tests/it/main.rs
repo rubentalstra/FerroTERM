@@ -19,5 +19,6 @@ mod failure;
 mod lanes;
 mod manual;
 mod retention;
+mod revalidation;
 mod schedule;
 mod support;

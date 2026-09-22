@@ -56,6 +56,7 @@ pub enum ServiceError {
 #[derive(Debug)]
 pub struct Service {
     config: Config,
+    client: reqwest::Client,
     plan: Plan,
     sources: Vec<ConfiguredSource>,
     clock: Arc<dyn Clock>,
@@ -93,10 +94,11 @@ impl Service {
         let webhook = config
             .webhook_url
             .as_deref()
-            .map(|url| Webhook::new(client, url));
+            .map(|url| Webhook::new(client.clone(), url));
         let records = RecordStore::new(config.records.clone());
         Ok(Self {
             config,
+            client,
             plan,
             sources,
             clock,
@@ -505,7 +507,43 @@ impl Service {
                 version: one.item.version.clone(),
             });
         }
+        self.revalidate(record).await;
         self.prune(record).await;
+    }
+
+    /// Checks the deployment's own value sets and maps against the new set.
+    ///
+    /// The release is served by the time this runs, so a check that cannot be
+    /// performed is reported in the record rather than failing the run: the
+    /// finding list is a report for a terminologist, and the service never
+    /// edits local content.
+    async fn revalidate(&self, record: &mut RunRecord) {
+        let Some(base_url) = self.config.fhir_base_url.as_deref() else {
+            record.revalidation.skipped = Some(String::from(
+                "no fhir_base_url is configured, so local resources were not revalidated",
+            ));
+            return;
+        };
+        let client = crate::revalidate::FhirClient::new(self.client.clone(), base_url);
+        match crate::revalidate::revalidate(&client, &record.activation.activated).await {
+            Ok(report) => {
+                for finding in &report.findings {
+                    tracing::warn!(
+                        resource = finding.resource,
+                        system = finding.system,
+                        code = finding.code,
+                        kind = finding.kind.as_str(),
+                        "the activated release changed a local code"
+                    );
+                }
+                record.revalidation = report;
+            }
+            Err(error) => {
+                let text = reason(&error);
+                tracing::warn!(error = text, "the local resources were not revalidated");
+                record.revalidation.skipped = Some(text);
+            }
+        }
     }
 
     /// Keeps the configured number of releases and reloads when it removed any.

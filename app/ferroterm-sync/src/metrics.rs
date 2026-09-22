@@ -26,6 +26,13 @@ impl EncodeLabelValue for Outcome {
     }
 }
 
+/// The labels of one locally authored resource that was revalidated.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
+pub struct Local {
+    /// The resource, as its run record names it.
+    pub resource: String,
+}
+
 /// The metrics of one running service.
 #[derive(Debug)]
 pub struct Metrics {
@@ -35,6 +42,7 @@ pub struct Metrics {
     entries_taken: Counter,
     bytes_staged: Counter,
     index_bytes: Gauge,
+    revalidation: Family<Local, Gauge>,
 }
 
 impl Default for Metrics {
@@ -82,6 +90,12 @@ impl Metrics {
             let series = runs.get_or_create(&Run { outcome });
             drop(series);
         }
+        let revalidation = Family::<Local, Gauge>::default();
+        registry.register(
+            "revalidation_findings",
+            "The local codes the last run's release changed, per locally authored resource",
+            revalidation.clone(),
+        );
         Self {
             registry,
             runs,
@@ -89,6 +103,7 @@ impl Metrics {
             entries_taken,
             bytes_staged,
             index_bytes,
+            revalidation,
         }
     }
 
@@ -105,6 +120,32 @@ impl Metrics {
         self.bytes_staged.inc_by(record.bytes_staged);
         self.index_bytes
             .set(i64::try_from(record.bytes_used).unwrap_or(i64::MAX));
+        self.revalidated(record);
+    }
+
+    /// Declares the findings of the last revalidation, one series per resource.
+    ///
+    /// A run that revalidated nothing leaves the series of the run before it
+    /// in place, because the last run that did check is what an operator wants
+    /// to see; a run that did check replaces them all.
+    fn revalidated(&self, record: &RunRecord) {
+        if record.revalidation.resources == 0 {
+            return;
+        }
+        self.revalidation.clear();
+        for resource in &record.revalidation.checked_resources {
+            let findings = record
+                .revalidation
+                .findings
+                .iter()
+                .filter(|finding| &finding.resource == resource)
+                .count();
+            self.revalidation
+                .get_or_create(&Local {
+                    resource: resource.clone(),
+                })
+                .set(i64::try_from(findings).unwrap_or(i64::MAX));
+        }
     }
 
     /// The exposition text a scrape reads.

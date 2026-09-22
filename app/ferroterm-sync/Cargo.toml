@@ -27,7 +27,9 @@ axum.workspace = true
 clap.workspace = true
 jiff = { workspace = true, features = ["serde"] }
 prometheus-client.workspace = true
-reqwest.workspace = true
+# `query` carries the operation parameters: the revalidation reads the FHIR
+# API with `$validate-code` and `$expand` as GET requests.
+reqwest = { workspace = true, features = ["query"] }
 serde.workspace = true
 serde_json.workspace = true
 terminology-syndication.workspace = true

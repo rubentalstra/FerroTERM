@@ -64,6 +64,7 @@ not know is refused at start-up rather than ignored.
 |---|---|---|
 | `listen` | `127.0.0.1:8181` | the service's own admin listener |
 | `server_admin_url` | `http://127.0.0.1:8081` | the server's admin listener, which serves `POST /reload` |
+| `fhir_base_url` | none | the server's FHIR base, which the revalidation reads |
 | `index_root` | `/data/index` | the index root the server reads |
 | `resources` | `/data/codesystems` | the managed resource directory the server reads |
 | `staging` | `/data/staging` | where a run downloads and builds |
@@ -80,6 +81,7 @@ add-on's own block:
 
 ```toml
 server_admin_url = "http://ferroterm:8081"
+fhir_base_url = "http://ferroterm:8080/r4b"
 index_root = "/data/index"
 resources = "/data/codesystems"
 staging = "/data/staging"
@@ -126,6 +128,37 @@ served, the run record says how many items wait, and `POST /activate` puts them
 in front of the server when you are ready. What is staged survives a restart,
 and a later run does not build it again.
 
+## What a new release did to your own content
+
+A release can retire a code your own value set enumerates, remove it, or leave
+it outside the value set it was included through. After a release is activated
+the service revalidates every locally authored `ValueSet` and `ConceptMap`
+against the set now being served and writes what it found into the run record.
+
+It reports and never edits. A finding is a decision for a terminologist, and
+the service changes nothing in your content, ever.
+
+Set `fhir_base_url` to the server's FHIR base, such as
+`http://ferroterm:8080/r4b`, to turn the check on. Without it the run record
+says the check did not run. The check reads the server's public FHIR API,
+`ValueSet/$validate-code` and `ValueSet/$expand`, both with `activeOnly`, so it
+sees exactly what any client sees:
+
+- a code that is still a member but is no longer active is `inactive`;
+- a code the code system no longer carries is `absent`;
+- a code that is still in the code system and no longer falls inside the value
+  set is `outside-value-set`.
+
+Each finding names the resource, the system, the code, and the release this run
+activated for that system. A run that finds nothing says so in one sentence,
+and that sentence and the finding count travel in the webhook summary.
+`/metrics` carries `ferroterm_sync_revalidation_findings` as a gauge per
+locally authored resource, so a resource that is clean reads zero rather than
+disappearing.
+
+The check reads the first 1000 codes of a resource and expands at most 1000
+members, which keeps one run bounded; a larger resource is noted in the log.
+
 ## Retention
 
 After a successful reload the service keeps the newest `retention` release
@@ -158,8 +191,9 @@ listeners unpublished, reachable only inside the compose network.
 
 `/metrics` carries `ferroterm_sync_runs_total{outcome="ok"|"failed"}`,
 `ferroterm_sync_last_run_timestamp_seconds`,
-`ferroterm_sync_entries_taken_total`, `ferroterm_sync_bytes_staged_total`, and
-`ferroterm_sync_index_bytes`.
+`ferroterm_sync_entries_taken_total`, `ferroterm_sync_bytes_staged_total`,
+`ferroterm_sync_index_bytes`, and `ferroterm_sync_revalidation_findings` per
+locally authored resource.
 
 ## What a run record contains
 
@@ -174,6 +208,9 @@ by time. It carries:
   rather than a snapshot, or Ontoserver's binary index;
 - the activation: the mode, what reached the server, what is still staged, what
   the server answered to each reload, and whether the run was rolled back;
+- the revalidation: how many locally authored resources were read and how many
+  codes were checked, one sentence saying what it found, and a line per local
+  code the release made inactive, removed, or left outside its value set;
 - what retention removed and how many bytes the index root uses;
 - every error, in the order it happened.
 

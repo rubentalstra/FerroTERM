@@ -68,6 +68,11 @@ pub struct Config {
     /// The base address of the server's admin listener, which serves
     /// `POST /reload`.
     pub server_admin_url: String,
+    /// The FHIR base of the server, such as `http://127.0.0.1:8080/r4b`.
+    ///
+    /// It is what the revalidation reads after a release is activated. With
+    /// no address the check does not run and the run record says so.
+    pub fhir_base_url: Option<String>,
     /// The index root the server reads, one directory per built release.
     pub index_root: PathBuf,
     /// The managed resource directory the server reads FHIR resources from.
@@ -99,6 +104,7 @@ impl Default for Config {
         Self {
             listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8181),
             server_admin_url: String::from("http://127.0.0.1:8081"),
+            fhir_base_url: None,
             index_root: PathBuf::from("/data/index"),
             resources: PathBuf::from("/data/codesystems"),
             staging: PathBuf::from("/data/staging"),

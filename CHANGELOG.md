@@ -37,6 +37,17 @@ fresh link reference.
   `nts` source kind. `docker/Dockerfile.sync` carries the service and the
   builder on the same distroless base, and `compose.sync.yaml` runs it beside
   the server over one volume with the server's admin listener turned on.
+- The sync service revalidates the deployment's own content after a release is
+  activated (#583). With `fhir_base_url` set it reads every locally authored
+  `ValueSet` and `ConceptMap` over the server's public FHIR API, with
+  `ValueSet/$validate-code` and `ValueSet/$expand` and their `activeOnly`
+  parameter, and writes into the run record every local code the new release
+  made inactive, removed, or left outside the value set it was included
+  through, each with its system, its code, and the release that changed it. A
+  run that finds nothing says so. The finding count travels in the webhook
+  summary, and `/metrics` carries `ferroterm_sync_revalidation_findings` as a
+  gauge per locally authored resource. The check reports and never edits local
+  content.
 - The server reloads the served set without a restart (#578). `SIGHUP` and
   `POST /reload` both make it read `FERROTERM_INDEX` and `FERROTERM_CODESYSTEMS`
   again, open everything read-only, and swap the whole registry; a request in
