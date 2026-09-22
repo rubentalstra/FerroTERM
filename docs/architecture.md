@@ -344,8 +344,27 @@ code system adds a loader crate (`rf2` is the first) that feeds them.
 | `app/ferroterm-server` | The `axum` HTTP server: FHIR endpoints, content negotiation, runtime version routing | hand-written |
 | `tools/ferroterm-build` | The offline build: a code system release (RF2 first) → the graph/store/text artifacts the server reads, once per release | tooling |
 
-Dependencies point one way (app/tools → crates); nothing depends upward into the
-server.
+Dependencies point one way (app/tools/addons → crates); nothing depends upward
+into the server.
+
+### The service and add-on layer
+
+No spec governs this, our own design. Taking content from a national
+terminology service runs beside the server, never inside it: `app/ferroterm-sync`
+fetches on a schedule, builds and stages what it took, and asks the server to
+reload, while the server keeps the read path. Every service it can read from is
+an add-on under `addons/*` implementing the `Source` seam
+`crates/terminology-syndication` declares, so a new service is a new crate and
+one registration line.
+
+The boundary that keeps that layer optional has two directions. An add-on
+depends on `crates/terminology-syndication` and the leaf crates the guard names
+explicitly, never on the engine, the server, the viewer, or another add-on; and
+only `app/ferroterm-sync` links an add-on, so the workspace still builds and
+serves with every add-on removed. `scripts/checks/addon-boundary.sh` reads the
+declared workspace edges from `cargo metadata` and fails on either direction,
+the way `scripts/checks/viewer-boundary.sh` holds the viewer to its FHIR-client
+boundary.
 
 ## Verification
 

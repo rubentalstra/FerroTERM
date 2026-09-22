@@ -1,5 +1,5 @@
 ---
-paths: ["crates/**", "app/**", "tools/**"]
+paths: ["crates/**", "addons/**", "app/**", "tools/**"]
 ---
 
 # Testing discipline

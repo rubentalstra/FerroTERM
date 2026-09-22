@@ -1,5 +1,5 @@
 ---
-paths: ["crates/**/*.rs", "app/**/*.rs", "tools/**/*.rs"]
+paths: ["crates/**/*.rs", "addons/**/*.rs", "app/**/*.rs", "tools/**/*.rs"]
 ---
 
 # Comments & documentation (RFC 505 + RFC 1574)

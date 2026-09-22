@@ -146,6 +146,23 @@ jobs:
           } | { grep -zc . >/dev/null && xargs -0 -r shellcheck --severity=style; } \
             || echo "no shell files to check"
 
+  # comment-style: the RFC 505 / RFC 1574 comment budgets over every
+  # hand-written .rs file. The per-edit hook runs the same script on the files
+  # it just touched, which says nothing about a file an editor changed outside
+  # the hook, so the whole tree is swept here. It reads the checkout and needs
+  # no toolchain, which is why it sits in tier 1.
+  comment-style:
+    name: comment-style
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/checks/comment-style.sh --all
+
   # dockerfile-lint — hadolint over the container recipe. The image copies a
   # prebuilt binary onto a digest-pinned base, so the rules that matter are
   # the pinned FROM, the numeric non-root USER, and the exec-form ENTRYPOINT.
@@ -382,6 +399,26 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-rust
       - run: bash scripts/checks/no-client-in-server.sh
+
+  # An add-on is code the sync service compiles in and nothing else links, so
+  # the tree stays whole when an add-on is dropped and one add-on never reaches
+  # into another. The self-test runs first: it judges synthetic metadata, so it
+  # says the guard still bites on a tree where every real edge is legal.
+  addon-boundary:
+    name: addon-boundary
+    needs: detect
+    if: needs.detect.outputs.cargo == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - run: bash scripts/checks/addon-boundary.sh --self-test
+      - run: bash scripts/checks/addon-boundary.sh
 
   # A screen names a role and a step from the token layer, never a palette
   # entry. The palette is measured once by the accessibility battery, and a
@@ -716,6 +753,7 @@ jobs:
       - workflow-audit
       - workflow-lint
       - shellcheck
+      - comment-style
       - dockerfile-lint
       - versions
       - brand
@@ -728,6 +766,7 @@ jobs:
       - doc
       - cargo-deny
       - viewer-boundary
+      - addon-boundary
       - viewer-tokens
       - no-client-in-server
       - viewer
