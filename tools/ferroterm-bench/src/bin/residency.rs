@@ -129,7 +129,11 @@ struct Measurement {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    if !cli.artifact.join("manifest.json").is_file() {
+    if !cli
+        .artifact
+        .join(fhir_terminology::artifact::MANIFEST_FILE)
+        .is_file()
+    {
         bail!("{} holds no manifest.json", cli.artifact.display());
     }
     // Every structure is held until the reading is taken, because a value the

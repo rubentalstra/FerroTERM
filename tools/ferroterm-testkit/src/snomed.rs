@@ -39,10 +39,32 @@ pub const GB_REFSET: &str = "900000000000508004";
 /// The Dutch language reference set (a published SCTID, metadata only).
 pub const NL_REFSET: &str = "31000146106";
 
+/// An item number in the invented namespace, what [`sctid`] turns into a code.
+///
+/// [`item`] derives one from an ordinal, [`Item::raw`] names one directly (a
+/// module or a reference set the fixture numbers by hand), so a bare ordinal
+/// can never reach [`sctid`] by mistake.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Item(u32);
+
+impl Item {
+    /// The item with this number, as the fixture numbers it.
+    #[must_use]
+    pub const fn raw(number: u32) -> Self {
+        Self(number)
+    }
+}
+
 /// A concept identifier in the invented namespace.
 #[must_use]
-pub fn sctid(item: u32) -> String {
-    with_check_digit(&format!("{item}{NAMESPACE}10"))
+pub fn sctid(item: Item) -> String {
+    with_check_digit(&format!("{}{NAMESPACE}10", item.0))
+}
+
+/// The concept identifier of the concept at `ordinal`: `sctid(item(ordinal))`.
+#[must_use]
+pub fn code(ordinal: u32) -> String {
+    sctid(item(ordinal))
 }
 
 /// The root concept.
@@ -109,10 +131,10 @@ pub const POSSIBLY_EQUIVALENT_TO_SCTID: &str = "900000000000523009";
 /// The published SCTID of the ALTERNATIVE association reference set.
 pub const ALTERNATIVE_SCTID: &str = "900000000000530003";
 
-/// The item number behind each ordinal, so `sctid(item(CAT))` is the cat's code.
+/// The item behind each ordinal, so `sctid(item(CAT))` is the cat's code.
 #[must_use]
-pub fn item(ordinal: u32) -> u32 {
-    ordinal + 1
+pub const fn item(ordinal: u32) -> Item {
+    Item(ordinal + 1)
 }
 
 /// (refset ordinal, acceptability ordinal).
@@ -259,7 +281,7 @@ struct Shape<'a> {
 /// The edition URI of the second synthetic edition ([`write_second`]).
 #[must_use]
 pub fn second_edition() -> String {
-    format!("http://snomed.info/sct/{}", sctid(SECOND_MODULE))
+    format!("http://snomed.info/sct/{}", sctid(Item::raw(SECOND_MODULE)))
 }
 
 /// The edition version URI of the second synthetic edition.
@@ -343,7 +365,7 @@ pub fn write_second(dir: &Path) -> Result<(), FixtureError> {
     reason = "one synthetic edition, read top to bottom"
 )]
 fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
-    let module = sctid(99);
+    let module = sctid(Item::raw(99));
     let fsn = 0;
     let syn = 1;
     let (gb, nl) = (0, 1);
@@ -990,7 +1012,7 @@ fn write_shape(dir: &Path, shape: &Shape<'_>) -> Result<(), FixtureError> {
     });
     let text = serde_json::to_string_pretty(&manifest)
         .map_err(|e| FixtureError::Io(std::io::Error::other(e)))?;
-    std::fs::write(dir.join("manifest.json"), text)?;
+    std::fs::write(dir.join(concept_store::MANIFEST_FILE), text)?;
     Ok(())
 }
 /// The item number of the refset-only package's module concept.
@@ -1071,8 +1093,8 @@ pub fn write_refset_package(dir: &Path, package: &Package<'_>) -> Result<(), Fix
 
 /// The package's two concepts and their descriptions.
 fn write_package_terminology(dir: &Path) -> Result<(), FixtureError> {
-    let module = sctid(PACKAGE_MODULE);
-    let refset = sctid(PACKAGE_REFSET);
+    let module = sctid(Item::raw(PACKAGE_MODULE));
+    let refset = sctid(Item::raw(PACKAGE_REFSET));
     let s = |v: &[&str]| v.iter().map(|x| (*x).to_owned()).collect::<Vec<String>>();
     let fsn = constants::FULLY_SPECIFIED_NAME.to_string();
     let synonym = constants::SYNONYM.to_string();
@@ -1155,8 +1177,8 @@ fn write_package_terminology(dir: &Path) -> Result<(), FixtureError> {
 /// The package's language reference set, simple reference set, and module
 /// dependency rows.
 fn write_package_refsets(dir: &Path, package: &Package<'_>) -> Result<(), FixtureError> {
-    let module = sctid(PACKAGE_MODULE);
-    let refset = sctid(PACKAGE_REFSET);
+    let module = sctid(Item::raw(PACKAGE_MODULE));
+    let refset = sctid(Item::raw(PACKAGE_REFSET));
     let s = |v: &[&str]| v.iter().map(|x| (*x).to_owned()).collect::<Vec<String>>();
     let accept = |item: u32| {
         s(&[

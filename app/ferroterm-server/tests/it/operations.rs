@@ -1,7 +1,7 @@
 //! The `CodeSystem` operations over HTTP: GET and POST, type and instance level,
 //! and every refusal as an `OperationOutcome`.
 
-use ferroterm_testkit::snomed::{ANIMAL, CAT, DOG, FISH, VERSION, item, sctid};
+use ferroterm_testkit::snomed::{ANIMAL, CAT, DOG, FISH, Item, VERSION, item, sctid};
 use http::StatusCode;
 use serde_json::json;
 
@@ -140,7 +140,7 @@ async fn lookup_refusals_on_the_wire() {
     let (status, body) = server
         .get(&format!(
             "/r4b/CodeSystem/$lookup?system={SCT}&code={}",
-            sctid(4242)
+            sctid(Item::raw(4242))
         ))
         .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -326,7 +326,7 @@ async fn subsumes_at_type_and_instance_level() {
     let (status, body) = server
         .get(&format!(
             "/r4b/CodeSystem/$subsumes?system={SCT}&codeA={cat}&codeB={}",
-            sctid(4242)
+            sctid(Item::raw(4242))
         ))
         .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);

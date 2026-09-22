@@ -9,6 +9,8 @@
 
 use std::path::Path;
 
+use crate::snomed::Item;
+
 use concept_graph::attributes::Attributes;
 use concept_graph::closure::Closure;
 use concept_graph::csr::Csr;
@@ -93,7 +95,7 @@ const fn refset(concepts: u32) -> u32 {
 pub fn write(dir: &Path, concepts: u32) -> Result<(), FixtureError> {
     // An edition holds at least the root concept.
     let concepts = concepts.max(1);
-    let module = sctid(99);
+    let module = sctid(Item::raw(99));
     let (fsn, syn) = (0, 1);
     let (gb, nl) = (0, 1);
     let preferred = 0;
@@ -328,6 +330,6 @@ pub fn write(dir: &Path, concepts: u32) -> Result<(), FixtureError> {
     });
     let rendered = serde_json::to_string_pretty(&manifest)
         .map_err(|e| FixtureError::Io(std::io::Error::other(e)))?;
-    std::fs::write(dir.join("manifest.json"), rendered)?;
+    std::fs::write(dir.join(concept_store::MANIFEST_FILE), rendered)?;
     Ok(())
 }

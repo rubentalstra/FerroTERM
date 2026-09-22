@@ -10,6 +10,7 @@
 //! `kind`, `usage`, `valid`, and every note kind as properties and filters,
 //! and the title in the requested language as the display.
 
+use crate::artifact::MANIFEST_FILE;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
@@ -32,8 +33,6 @@ use crate::provider::{
 
 /// The manifest `kind` of an artifact this provider opens.
 pub const KIND: &str = "classification";
-/// The manifest file of an artifact directory.
-pub const MANIFEST_FILE: &str = "manifest.json";
 /// The manifest version this provider reads.
 pub const MANIFEST_VERSION: u32 = 2;
 /// The designation use ordinal of the title.

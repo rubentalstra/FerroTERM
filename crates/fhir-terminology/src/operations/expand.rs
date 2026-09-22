@@ -260,7 +260,7 @@ pub fn expand(
     Ok(ExpansionOutcome {
         include_definition: input.include_definition.unwrap_or(false),
         identifier: format!("urn:uuid:{}", uuid::Uuid::new_v4()),
-        timestamp: jiff::Timestamp::now().to_string(),
+        timestamp: crate::clock::now().to_string(),
         total: expansion.total,
         offset: (input.offset.is_some() || input.count.is_some()).then_some(offset),
         parameters: {

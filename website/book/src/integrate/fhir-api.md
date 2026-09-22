@@ -219,6 +219,7 @@ single concept states its standing in the standard concept properties
 | `inactive` | boolean | `true` makes the concept inactive |
 | `status` | code | `retired` makes the concept inactive; `active`, `experimental`, `deprecated`, and any other value leave it active |
 | `retirementDate` | dateTime | a date the request is behind makes the concept inactive |
+| `deprecated`, `deprecationDate` | dateTime | a date the request is behind marks the concept deprecated: it stays active and `$validate-code` adds the `DEPRECATED_CONCEPT_FOUND` warning, the same note the standards-status extension earns; `status = deprecated` does the same |
 | `deprecated`, `deprecationDate` | dateTime | returned as written, and the concept stays active |
 
 R4 and R4B define `inactive` and `deprecated`, and R5 adds the rest. A

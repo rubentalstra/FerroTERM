@@ -5,6 +5,7 @@ use fhir_terminology::operations::expand::{Contains, ExpandInput};
 use fhir_terminology::operations::value_set_validate_code::ValueSetValidateInput;
 use fhir_terminology::operations::{Invocation, expand, lookup, validate_code};
 use fhir_terminology::provider::{Concept, PropertyValue};
+use fhir_types::codec::Json;
 
 use crate::value_set::World;
 
@@ -389,5 +390,129 @@ fn the_inactive_set_is_every_marked_concept() {
             "retired-status",
             "retired-unreadable"
         ]
+    );
+}
+
+// A concept "deprecated but not inactive can still be used, but their use is
+// discouraged" (<https://hl7.org/fhir/R5/codesystem-concept-properties.html>),
+// so the standard properties earn the same deprecation note the
+// standards-status extension does, and nothing more.
+#[test]
+fn a_deprecation_stated_through_the_standard_properties_earns_the_deprecation_note() {
+    let world = world();
+    for code in ["deprecated-status", "deprecated-date", "deprecation-date"] {
+        let request = ValueSetValidateInput {
+            url: Some(LIFECYCLE_SET.to_owned()),
+            system: Some(LIFECYCLE.to_owned()),
+            code: Some(code.to_owned()),
+            ..ValueSetValidateInput::default()
+        };
+        let outcome = fhir_terminology::operations::value_set_validate_code::validate_code(
+            &world.sources(),
+            &request,
+        )
+        .expect("validates");
+        assert!(outcome.result, "{code} is valid: {outcome:?}");
+        assert_ne!(outcome.inactive, Some(true), "{code} stays active");
+        assert_eq!(outcome.status.as_deref(), Some("deprecated"), "{code}");
+        assert!(
+            outcome.issues.iter().any(|issue| {
+                issue.message == fhir_terminology::operations::MessageId::DeprecatedConceptFound
+                    && issue.severity == "warning"
+            }),
+            "{code} earns DEPRECATED_CONCEPT_FOUND: {:?}",
+            outcome.issues
+        );
+    }
+    let (inactive, _) = standing(&world, "active");
+    assert!(!inactive);
+}
+
+/// A primitive whose `value` is absent is legal FHIR when the element carries
+/// extensions (<https://hl7.org/fhir/R5/json.html#primitive>).
+fn absent(kind: &str) -> serde_json::Value {
+    serde_json::json!({
+        "code": kind,
+        format!("_value{}", kind_element(kind)): {
+            "extension": [{
+                "url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason",
+                "valueCode": "unknown"
+            }]
+        }
+    })
+}
+
+fn kind_element(kind: &str) -> &'static str {
+    match kind {
+        "status" => "Code",
+        "inactive" => "Boolean",
+        "retirementDate" => "DateTime",
+        _ => "String",
+    }
+}
+
+// `CodeSystem.concept.property.value[x]` is required, and a value element
+// present without a `value` states nothing: the property is absent, never an
+// empty string, a zero, or `false` (`.claude/rules/reliability.md`).
+#[test]
+fn a_property_value_without_a_value_is_no_property_and_never_a_default() {
+    let mut system = lifecycle();
+    system["concept"] = serde_json::json!([
+        {"code": "bare", "display": "Bare",
+         "property": [absent("status"), absent("inactive"), absent("retirementDate")]}
+    ]);
+    let world = World::of(&[("CodeSystem-lifecycle.json", system)]);
+    let provider = world
+        .registry()
+        .resolve(LIFECYCLE, None)
+        .expect("resolves")
+        .provider;
+    let located = provider.locate("bare").expect("reads").expect("defined");
+    let properties = provider.properties(located.concept).expect("reads");
+    let codes: Vec<&str> = properties.iter().map(|p| p.code.as_str()).collect();
+    assert!(
+        !codes.contains(&"status") && !codes.contains(&"retirementDate"),
+        "an absent value states no property: {codes:?}"
+    );
+    let status = provider.status(located.concept).expect("reads");
+    assert!(
+        status.active,
+        "an absent `inactive` is not `false` read as active by accident, and not `true`"
+    );
+    assert!(
+        !properties
+            .iter()
+            .any(|p| p.code == "inactive" && p.value != PropertyValue::Boolean(false)),
+        "the derived `inactive` is the only one answered: {properties:?}"
+    );
+}
+
+// `CodeSystem.concept.code` is 1..1 (<https://hl7.org/fhir/R4B/codesystem.html>):
+// a concept whose code has no value is a defective resource, refused with a
+// typed error rather than stored under an empty code.
+#[test]
+fn a_concept_whose_code_has_no_value_is_refused() {
+    let mut system = lifecycle();
+    system["concept"] = serde_json::json!([
+        {"_code": {"extension": [{
+            "url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason",
+            "valueCode": "unknown"}]},
+         "display": "Nameless"}
+    ]);
+    let parsed: fhir_types::codec::Value =
+        serde_json::from_str(&system.to_string()).expect("the document parses");
+    let resource = fhir_types::r4b::code_system::CodeSystem::from_json(
+        parsed.as_object().expect("object"),
+        &mut fhir_types::codec::Path::root("CodeSystem"),
+    )
+    .expect("an R4B CodeSystem");
+    let error = fhir_terminology::fhir_codesystem::convert::r4b::convert(&resource)
+        .expect_err("a concept without a code is refused");
+    assert!(
+        matches!(
+            error,
+            fhir_terminology::fhir_codesystem::model::ModelError::ConceptCode { under: None }
+        ),
+        "{error:?}"
     );
 }

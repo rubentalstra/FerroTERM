@@ -45,7 +45,7 @@ pub struct Description {
 /// A directory holding one is an artifact; a directory holding none is either
 /// a root whose children are artifacts or a staging directory a build has not
 /// finished writing.
-pub const MANIFEST_FILE: &str = "manifest.json";
+pub const MANIFEST_FILE: &str = concept_store::MANIFEST_FILE;
 
 /// Whether `dir` holds an artifact manifest.
 #[must_use]

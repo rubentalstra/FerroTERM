@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use concept_graph::members::Memberships;
 use concept_store::store::{Store, Vocabulary};
 use ferroterm_build::pipeline;
-use ferroterm_testkit::snomed::{PACKAGE_MODULE, PACKAGE_REFSET, Package, sctid};
+use ferroterm_testkit::snomed::{Item, PACKAGE_MODULE, PACKAGE_REFSET, Package, sctid};
 use serde_json::Value;
 
 use crate::fixture::{self, DATE, GB_LANGUAGE_REFSET, concept};
@@ -61,11 +61,11 @@ fn the_packages_concepts_and_reference_set_join_the_edition() {
     );
     let store = Store::open(&report.store).expect("store opens");
     let module = store
-        .ordinal(&sctid(PACKAGE_MODULE))
+        .ordinal(&sctid(Item::raw(PACKAGE_MODULE)))
         .expect("read")
         .expect("the package's module resolves");
     let refset = store
-        .ordinal(&sctid(PACKAGE_REFSET))
+        .ordinal(&sctid(Item::raw(PACKAGE_REFSET)))
         .expect("read")
         .expect("the package's reference set resolves");
     assert!(store.concept(module).expect("read").expect("module").active);
@@ -91,7 +91,7 @@ fn the_packages_concepts_and_reference_set_join_the_edition() {
             .expect("json");
     assert_eq!(
         manifest["layered"],
-        serde_json::json!([{ "module": sctid(PACKAGE_MODULE), "version": DATE }])
+        serde_json::json!([{ "module": sctid(Item::raw(PACKAGE_MODULE)), "version": DATE }])
     );
 }
 
@@ -108,7 +108,7 @@ fn the_packages_members_are_the_editions_concepts() {
             .as_slice(),
     )
     .expect("reads");
-    let refset: u64 = sctid(PACKAGE_REFSET).parse().expect("number");
+    let refset: u64 = sctid(Item::raw(PACKAGE_REFSET)).parse().expect("number");
     let members = memberships
         .members(refset)
         .expect("the package's reference set is served");
