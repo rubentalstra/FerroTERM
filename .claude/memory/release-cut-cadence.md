@@ -50,3 +50,5 @@ step 6 (fresh benchmark records) was skipped at v0.1.2 and v0.1.3 for want of
 a quiet machine; #512 carries it.
 
 - After every FerroTERM release, open the FerroEHR pull request that moves its FerroTERM image pin (quickstart overlay and the `adl2_vetdf_ferroterm` test) to the new tag and digest; the owner asked for this on 2026-09-22, first for v0.1.4. The step is in `docs/release.md` §After the tag.
+
+- v0.1.4 (2026-09-23): cut from a git worktree. The worktree has no `data/` or `artifacts/` (ignored, main clone only), and `data/*/.gitkeep` dirs are tracked, so do not symlink over them; run `ferroterm-bench` from the main clone with `--config`, `--out`, `--server`, `--build` pointing at the worktree. `cargo build --locked` fails right after the version bump until `cargo update -w` follows the lock. In zsh `status` is read-only; never use it as a variable name in a Bash call.
