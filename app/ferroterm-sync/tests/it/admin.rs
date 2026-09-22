@@ -128,6 +128,102 @@ async fn a_manual_run_answers_its_summary_and_shows_on_runs() {
 }
 
 #[tokio::test]
+async fn activate_serves_what_a_manual_mode_run_staged() {
+    let mut harness = Harness::new().await;
+    harness.config.activation = ferroterm_sync::config::Activation::Manual;
+    harness
+        .publish(&[Entry::rf2(
+            "11000146104",
+            "20260930",
+            "2026-09-30T09:00:00Z",
+        )])
+        .await;
+    harness.reloads_with(200).await;
+    harness.accepts_webhooks().await;
+    let service = harness.service(
+        vec![harness.source()],
+        TestClock::new("2026-10-01T03:00:00Z", 0),
+    );
+    let router = ferroterm_sync::admin::router(service);
+
+    let (_, staged) = json(
+        &router,
+        Request::post("/run")
+            .body(Body::empty())
+            .expect("a request"),
+    )
+    .await;
+    assert_eq!(staged["activated"], 0, "the run staged and stopped");
+
+    let (status, activation) = json(
+        &router,
+        Request::post("/activate")
+            .body(Body::empty())
+            .expect("a request"),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK, "the activation answers");
+    assert_eq!(
+        activation["activated"], 1,
+        "and put the staged release in front of the server: {activation}"
+    );
+    assert!(
+        harness
+            .index_root()
+            .join("snomed-11000146104-20260930")
+            .is_dir(),
+        "which is what the index root now holds"
+    );
+}
+
+#[tokio::test]
+async fn a_failed_run_shows_on_runs_and_on_metrics() {
+    let mut harness = Harness::new().await;
+    harness.config.build_command = crate::support::failing_build(harness.dir.path());
+    harness
+        .publish(&[Entry::rf2(
+            "11000146104",
+            "20260930",
+            "2026-09-30T09:00:00Z",
+        )])
+        .await;
+    harness.reloads_with(200).await;
+    harness.accepts_webhooks().await;
+    let service = harness.service(
+        vec![harness.source()],
+        TestClock::new("2026-10-01T03:00:00Z", 0),
+    );
+    let router = ferroterm_sync::admin::router(service);
+
+    let (_, summary) = json(
+        &router,
+        Request::post("/run")
+            .body(Body::empty())
+            .expect("a request"),
+    )
+    .await;
+    assert_eq!(summary["outcome"], "failed", "the run failed: {summary}");
+
+    let (_, runs) = json(
+        &router,
+        Request::get("/runs")
+            .body(Body::empty())
+            .expect("a request"),
+    )
+    .await;
+    assert_eq!(
+        runs[0]["outcome"], "failed",
+        "the failure is on the listing: {runs}"
+    );
+    let text = scrape(&router).await;
+    assert!(
+        text.contains("ferroterm_sync_runs_total{outcome=\"failed\"} 1"),
+        "and on the scrape: {text}"
+    );
+}
+
+#[tokio::test]
 async fn health_answers_and_an_unknown_route_does_not() {
     let harness = Harness::new().await;
     let service = harness.service(
