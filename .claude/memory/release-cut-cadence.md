@@ -48,3 +48,5 @@ tarball (signer `release-build.yml`) and on `oci://ghcr.io/...:X.Y.Z` (signer
 API with an anonymous pull token when Docker should stay stopped. Checklist
 step 6 (fresh benchmark records) was skipped at v0.1.2 and v0.1.3 for want of
 a quiet machine; #512 carries it.
+
+- After every FerroTERM release, open the FerroEHR pull request that moves its FerroTERM image pin (quickstart overlay and the `adl2_vetdf_ferroterm` test) to the new tag and digest; the owner asked for this on 2026-09-22, first for v0.1.4. The step is in `docs/release.md` §After the tag.
