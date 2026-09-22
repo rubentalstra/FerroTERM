@@ -145,9 +145,13 @@ macro_rules! resources {
             ///
             /// # Errors
             ///
-            /// Returns what the codec or the conversion refused, as text.
-            pub fn model_of(object: &fhir_types::codec::Object) -> Result<Loaded, String> {
-                loaded(resource_of(object)?).map_err(|failure| failure.diagnostics)
+            /// Returns the codec's refusal with its element path, or what the
+            /// conversion refused, as text.
+            pub fn model_of(
+                object: &fhir_types::codec::Object,
+            ) -> Result<Loaded, crate::version::ReadError> {
+                let resource = resource_of(object).map_err(crate::version::ReadError::Decode)?;
+                loaded(resource).map_err(|failure| crate::version::ReadError::Convert(failure.diagnostics))
             }
 
             /// `object` read as a resource of this version and written back.
@@ -159,19 +163,26 @@ macro_rules! resources {
             pub fn round_trip(
                 object: &fhir_types::codec::Object,
             ) -> Result<fhir_types::codec::Object, String> {
-                fhir_types::codec::Json::to_json(&resource_of(object)?)
-                    .map_err(|error| error.to_string())
+                let resource = resource_of(object).map_err(|error| error.to_string())?;
+                fhir_types::codec::Json::to_json(&resource).map_err(|error| error.to_string())
             }
 
             /// `object` read as a resource of this version.
             ///
             /// # Errors
             ///
-            /// Returns what the codec refused, as text.
-            pub fn resource_of(object: &fhir_types::codec::Object) -> Result<Resource, String> {
-                let mut path = fhir_types::codec::Path::root("Resource");
+            /// Returns what the codec refused, with the element path.
+            pub fn resource_of(
+                object: &fhir_types::codec::Object,
+            ) -> Result<Resource, fhir_types::codec::DecodeError> {
+                // The path names the resource type the object states, so an
+                // `expression` reads `CodeSystem.date`, not the enum's `Resource`.
+                let root = object
+                    .get("resourceType")
+                    .and_then(fhir_types::codec::Value::as_str)
+                    .unwrap_or("Resource");
+                let mut path = fhir_types::codec::Path::root(root);
                 fhir_types::codec::Json::from_json(object, &mut path)
-                    .map_err(|error| error.to_string())
             }
 
             fn loaded(resource: Resource) -> Result<Loaded, Failure> {

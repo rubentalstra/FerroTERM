@@ -27,6 +27,7 @@ mod metrics;
 mod openehr;
 mod operations;
 mod persisted;
+mod primitives;
 mod r4;
 mod r5;
 mod r6;

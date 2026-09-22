@@ -206,6 +206,20 @@ sees one loaded from `FERROTERM_CODESYSTEMS`, on every served version.
 A deployment that names no database refuses every write with a `422` and
 declares no write interaction in its capability statement.
 
+## Primitive lexical forms on local content
+
+A resource you write is decoded by the generated FHIR model of the version
+you send it to, and since `fhir-types` 0.1.105 that decode checks every
+primitive against the regex its FHIR package publishes for the type
+(<https://hl7.org/fhir/R5/datatypes.html#primitive>). A `date` of
+`yesterday`, a `valueDateTime` of `2001-6`, a `url` with a space, or a
+`status` with a leading space answers `400` with an `OperationOutcome` whose
+`issue.code` is `invalid` and whose `issue.expression` names the element
+(`CodeSystem.date`). The versions differ where their packages differ: R4,
+R4B, and the R6 ballot require a timezone offset once a `dateTime` carries a
+time, R5 leaves it optional. Nothing is stored that the version's own codec
+refuses, so a later read never meets a value it cannot parse.
+
 ## Concept status on local content
 
 A code you author has a lifecycle, and FHIR keeps it in two places. The

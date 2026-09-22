@@ -55,8 +55,6 @@ fn lifecycle() -> serde_json::Value {
          "property": [{"code": "status", "valueCode": "retired"}]},
         {"code": "retired-date", "display": "Retired by date",
          "property": [{"code": "retirementDate", "valueDateTime": PAST}]},
-        {"code": "retired-unreadable", "display": "Retired on no readable date",
-         "property": [{"code": "retirementDate", "valueDateTime": "yesterday"}]},
         {"code": "retiring", "display": "Retiring later",
          "property": [{"code": "retirementDate", "valueDateTime": FUTURE}]},
         {"code": "flagged-and-retired", "display": "Flagged and retired",
@@ -140,11 +138,6 @@ fn each_inactivity_marker_retires_its_concept_and_names_its_reason() {
         standing(&world, "retired-date"),
         (true, Some(String::from("inactive"))),
         "a retirementDate the request is behind retires the concept"
-    );
-    assert_eq!(
-        standing(&world, "retired-unreadable"),
-        (true, Some(String::from("inactive"))),
-        "text that names no date to wait for retires the concept"
     );
     assert_eq!(
         standing(&world, "retiring"),
@@ -231,11 +224,10 @@ fn expand_keeps_every_inactive_concept_and_flags_it_when_active_only_is_off() {
             "flagged",
             "flagged-and-retired",
             "retired-date",
-            "retired-status",
-            "retired-unreadable"
+            "retired-status"
         ]
     );
-    assert_eq!(contains.len(), 13, "{:?}", codes(&contains));
+    assert_eq!(contains.len(), 12, "{:?}", codes(&contains));
 }
 
 // "Inactive is not invalid": `$validate-code` answers `result = true` with the
@@ -257,13 +249,7 @@ fn validate_code_calls_an_inactive_concept_valid_and_says_it_is_inactive() {
         )
         .expect("validates")
     };
-    for code in [
-        "flagged",
-        "retired-status",
-        "retired-date",
-        "retired-unreadable",
-        "contradiction",
-    ] {
+    for code in ["flagged", "retired-status", "retired-date", "contradiction"] {
         let outcome = validated(code);
         assert!(outcome.result, "{code} is valid: {outcome:?}");
         assert_eq!(outcome.inactive, Some(true), "{code}");
@@ -387,8 +373,7 @@ fn the_inactive_set_is_every_marked_concept() {
             "flagged",
             "flagged-and-retired",
             "retired-date",
-            "retired-status",
-            "retired-unreadable"
+            "retired-status"
         ]
     );
 }
