@@ -38,8 +38,10 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 
 [dev-dependencies]
+sha2.workspace = true
 tempfile.workspace = true
-tokio = { workspace = true, features = ["fs", "io-util", "process", "sync", "time"] }
+tokio = { workspace = true, features = ["fs", "io-util", "process", "sync", "time", "rt-multi-thread", "macros"] }
+tower = { workspace = true, features = ["util"] }
 wiremock.workspace = true
 
 [lints]
