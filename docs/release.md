@@ -52,5 +52,11 @@ environment's required reviewer.
    the signer workflow (`docs/ci-cd.md`).
 2. **Post the board status update** with what shipped and what the next
    milestone targets (`.claude/rules/project-board.md`).
-3. **A bad cut is a new patch version**, never a retag: the platform freezes a
+3. **The FerroEHR pin follows.** FerroEHR's quickstart overlay
+   (`docker-compose.terminology.yml` in that repository) and its
+   `adl2_vetdf_ferroterm` test pin the FerroTERM image by tag and digest. Open
+   the pull request there that moves both to the release just cut, with the
+   image digest read from GHCR after the image lane finishes. The owner asked
+   for this on 2026-09-22, starting with v0.1.4.
+4. **A bad cut is a new patch version**, never a retag: the platform freezes a
    published release.
