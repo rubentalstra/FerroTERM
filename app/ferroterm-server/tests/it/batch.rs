@@ -255,3 +255,51 @@ async fn the_capability_statement_declares_the_batch_interaction() {
         .collect();
     assert_eq!(modes, ["batch"]);
 }
+
+// The bearer gate of #586 wraps the write routes, and `POST [base]` is open:
+// that only holds because a batch entry can never reach a write. This pins the
+// invariant so an arm added to `version/batch.rs` cannot open a bypass silently.
+#[tokio::test]
+async fn a_batch_entry_never_reaches_a_write() {
+    let server = Server::start_persisting();
+    let system = json!({
+        "resourceType": "CodeSystem",
+        "url": "http://ferroterm.test/CodeSystem/smuggled",
+        "status": "active",
+        "content": "complete",
+        "concept": [{"code": "a"}]
+    });
+    let entry = |method: &str, url: &str, resource: Option<&Value>| {
+        let mut held = json!({"request": {"method": method, "url": url}});
+        if let Some(resource) = resource {
+            held["resource"] = resource.clone();
+        }
+        held
+    };
+    let (status, body) = server
+        .post(
+            "/r4b",
+            &batch(&[
+                entry("PUT", "CodeSystem/smuggled", Some(&system)),
+                entry("POST", "CodeSystem", Some(&system)),
+                entry("DELETE", "CodeSystem/smuggled", None),
+                entry("PATCH", "CodeSystem/smuggled", Some(&system)),
+            ]),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let refused = statuses(&body);
+    assert_eq!(refused.len(), 4, "{body}");
+    for (index, entry_status) in refused.iter().enumerate() {
+        assert!(
+            entry_status.starts_with("405") || entry_status.starts_with("400"),
+            "entry {index} was answered {entry_status}, not refused: {body}"
+        );
+    }
+    let (status, _) = server.get("/r4b/CodeSystem/smuggled").await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "nothing was written through the batch"
+    );
+}
