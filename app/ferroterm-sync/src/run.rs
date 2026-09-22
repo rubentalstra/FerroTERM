@@ -206,7 +206,7 @@ impl Service {
             .as_str()
             .clone_into(&mut record.activation.mode);
         record.activation.staged = state.pending.len();
-        self.close(&mut state, &mut record).await;
+        self.close(&mut state, &mut record, trigger).await;
         drop(state);
         drop(running);
         record
@@ -239,7 +239,7 @@ impl Service {
             .as_str()
             .clone_into(&mut record.activation.mode);
         record.activation.staged = state.pending.len();
-        self.close(&mut state, &mut record).await;
+        self.close(&mut state, &mut record, Trigger::Activate).await;
         drop(state);
         drop(running);
         record
@@ -582,9 +582,13 @@ impl Service {
     }
 
     /// Closes the run: the state, the record, the metrics, and the webhook.
-    async fn close(&self, state: &mut State, record: &mut RunRecord) {
+    async fn close(&self, state: &mut State, record: &mut RunRecord, trigger: Trigger) {
         let finished = self.clock.now();
-        state.last_run = Some(finished);
+        // NOTE: an activation is not a synchronisation run, so it never moves
+        // the schedule (no spec governs this: our own design).
+        if trigger != Trigger::Activate {
+            state.last_run = Some(finished);
+        }
         if let Err(error) = state.write(&self.config.state_file()) {
             let text = reason(&error);
             tracing::error!(error = text, "the state was not written");

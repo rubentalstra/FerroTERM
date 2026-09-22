@@ -75,6 +75,36 @@ async fn manual_activation_stages_without_serving() {
 }
 
 #[tokio::test]
+async fn an_activation_does_not_move_the_schedule() {
+    let mut harness = Harness::new().await;
+    harness.config.activation = Activation::Manual;
+    harness.config.schedule = crate::support::every("24h");
+    harness
+        .publish(&[Entry::rf2(
+            "11000146104",
+            "20260930",
+            "2026-09-30T09:00:00Z",
+        )])
+        .await;
+    harness.reloads_with(200).await;
+    harness.accepts_webhooks().await;
+    let clock = TestClock::new("2026-10-01T03:00:00Z", 0);
+    let service = harness.service(vec![harness.source()], clock);
+    let run = service.run(Trigger::RunOnce).await;
+    let due = service.next_due().await.expect("computable");
+
+    let activation = service.activate().await;
+
+    assert_eq!(activation.outcome, Outcome::Ok, "the activation worked");
+    assert_eq!(
+        service.next_due().await.expect("computable"),
+        due,
+        "an activation is not a run, so the next run stays a day after {}",
+        run.finished
+    );
+}
+
+#[tokio::test]
 async fn a_staged_release_is_not_fetched_again() {
     let mut harness = Harness::new().await;
     harness.config.activation = Activation::Manual;
