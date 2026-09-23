@@ -11,6 +11,24 @@ use http::{Request, Response, StatusCode};
 use serde_json::Value;
 use tower::ServiceExt;
 
+/// What a test's SMART gate is configured with.
+///
+/// Every member but the issuer stays unset when a test names none, which is
+/// what an unset environment variable gives.
+#[derive(Debug, Default)]
+pub(crate) struct SmartSetup {
+    /// `FERROTERM_OIDC_ISSUER`, the issuer whose tokens the gate accepts.
+    pub(crate) issuer: String,
+    /// `FERROTERM_OIDC_AUDIENCE`.
+    pub(crate) audience: Option<String>,
+    /// `FERROTERM_OIDC_ADMIN_SCOPE`.
+    pub(crate) admin_scope: Option<String>,
+    /// `FERROTERM_VIEWER_CLIENT_ID`.
+    pub(crate) viewer_client_id: Option<String>,
+    /// `FERROTERM_BASE_URL`, the address clients reach this server at.
+    pub(crate) base_url: Option<String>,
+}
+
 /// The edition in a temporary directory, loaded the way the binary loads it.
 pub(crate) struct Server {
     _dir: Arc<tempfile::TempDir>,
@@ -153,6 +171,25 @@ impl Server {
         admin_scope: Option<&str>,
         viewer_client_id: Option<&str>,
     ) -> Self {
+        Self::start_persisting_with_smart_setup(SmartSetup {
+            issuer: issuer.to_owned(),
+            audience: audience.map(str::to_owned),
+            admin_scope: admin_scope.map(str::to_owned),
+            viewer_client_id: viewer_client_id.map(str::to_owned),
+            ..SmartSetup::default()
+        })
+        .await
+    }
+
+    /// The same server, configured by `setup`.
+    pub(crate) async fn start_persisting_with_smart_setup(setup: SmartSetup) -> Self {
+        let SmartSetup {
+            issuer,
+            audience,
+            admin_scope,
+            viewer_client_id,
+            base_url,
+        } = setup;
         let dir = tempfile::tempdir().expect("tempdir");
         ferroterm_testkit::snomed::write(dir.path()).expect("writes the edition");
         let fhir = dir.path().join("fhir");
@@ -162,11 +199,11 @@ impl Server {
             index: vec![dir.path().to_path_buf()],
             code_systems: vec![fhir],
             resources: Some(dir.path().join("resources.redb")),
-            oidc_issuer: Some(issuer.to_owned()),
-            oidc_audience: audience.map(str::to_owned),
-            oidc_admin_scope: admin_scope
-                .map_or_else(|| Config::default().oidc_admin_scope, str::to_owned),
-            viewer_client_id: viewer_client_id.map(str::to_owned),
+            base_url,
+            oidc_issuer: Some(issuer),
+            oidc_audience: audience,
+            oidc_admin_scope: admin_scope.unwrap_or_else(|| Config::default().oidc_admin_scope),
+            viewer_client_id,
             ..Config::default()
         };
         let smart = ferroterm_server::smart::Smart::start(&config)

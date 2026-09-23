@@ -476,7 +476,7 @@ macro_rules! metadata {
             fn endpoint(state: &AppState) -> Option<String> {
                 state
                     .base_url()
-                    .map(|base| format!("{base}/{}", stringify!($fhir)))
+                    .map(|base| crate::version::endpoint(base, stringify!($fhir)))
             }
 
             /// The `TerminologyCapabilities` of this server, from the loaded providers.

@@ -21,6 +21,27 @@ pub const VERSIONS: [&str; 4] = [
     crate::r6::metadata::FHIR_VERSION,
 ];
 
+/// The path segment each served version answers under, in the order [`router`]
+/// nests them.
+///
+/// FHIR fixes no path for a version, so the prefix is this server's own
+/// design; what it produces is one FHIR base per version
+/// (<https://hl7.org/fhir/R4B/http.html#root>).
+///
+/// [`router`]: crate::router
+pub const SEGMENTS: [&str; 4] = ["r4", "r4b", "r5", "r6"];
+
+/// The FHIR base a client reaches the version served under `segment` at.
+///
+/// This is the one derivation of a version's base: a capability statement
+/// publishes it as `implementation.url`
+/// (<https://hl7.org/fhir/R4B/capabilitystatement-definitions.html#CapabilityStatement.implementation.url>),
+/// and the SMART gate accepts it as a token audience.
+#[must_use]
+pub fn endpoint(base: &str, segment: &str) -> String {
+    format!("{base}/{segment}")
+}
+
 /// The model of a resource stored as a JSON object of `fhir_version`.
 ///
 /// # Errors

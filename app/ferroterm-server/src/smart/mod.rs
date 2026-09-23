@@ -119,6 +119,32 @@ fn only(advertised: &[String], options: &[&str]) -> Vec<String> {
         .collect()
 }
 
+/// The audiences a token may name for this deployment, in the order they are
+/// derived.
+///
+/// A client sends "the FHIR server's base URL" as `aud`
+/// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), and this server
+/// serves one FHIR base per version, so an issuer that mints the claim from
+/// that request hands a reader who signed in on `/r5` a different audience
+/// from one who signed in on `/r4b`. Every served version's base is accepted,
+/// with and without the trailing slash a client may send, beside the audience
+/// the deployment names in `FERROTERM_OIDC_AUDIENCE`.
+///
+/// An empty result is a deployment that named neither, which checks no
+/// audience at all.
+fn audiences(config: &Config) -> Vec<String> {
+    let mut accepted = Vec::new();
+    if let Some(base) = config.base_url.as_deref() {
+        for segment in crate::version::SEGMENTS {
+            let endpoint = crate::version::endpoint(base, segment);
+            accepted.push(format!("{endpoint}/"));
+            accepted.push(endpoint);
+        }
+    }
+    accepted.extend(config.oidc_audience.clone());
+    accepted
+}
+
 /// A start the issuer refused.
 #[derive(Debug, thiserror::Error)]
 pub enum StartError {
@@ -176,8 +202,9 @@ struct Claims {
 pub struct Smart {
     /// The issuer's discovery document, read at start.
     metadata: IssuerMetadata,
-    /// The audience every token must carry, when the deployment names one.
-    audience: Option<String>,
+    /// The audiences a token may carry, empty when this deployment checks
+    /// none. See [`audiences`].
+    audiences: Vec<String>,
     /// The scope the admin listener requires, compared verbatim.
     admin_scope: String,
     /// The OAuth client the viewer signs in as, when the deployment registered
@@ -227,7 +254,7 @@ impl Smart {
             .unwrap_or_else(|| String::from("FerroTERM"));
         Ok(Some(Self {
             metadata,
-            audience: config.oidc_audience.clone(),
+            audiences: audiences(config),
             admin_scope: config.oidc_admin_scope.clone(),
             viewer_client_id: config.viewer_client_id.clone(),
             realm,
@@ -460,16 +487,18 @@ impl Smart {
         // RFC 8725 §3.8: a claim the crate checks only when it is present is no
         // check at all, so `iss` is required outright.
         validation.required_spec_claims.insert(String::from("iss"));
-        match &self.audience {
-            Some(audience) => {
-                validation.set_audience(&[audience.as_str()]);
-                // RFC 8725 §3.9: a token whose audience is absent is rejected
-                // just as one whose audience is another recipient.
-                validation.required_spec_claims.insert(String::from("aud"));
-            }
+        if self.audiences.is_empty() {
             // RFC 7519 §4.1.3 leaves `aud` optional; a deployment that names
             // none accepts any, and the issuer check still bounds the token.
-            None => validation.validate_aud = false,
+            validation.validate_aud = false;
+        } else {
+            // NOTE: RFC 7519 §4.1.3 has the recipient identify itself with a
+            // value in `aud`, which the crate reads over the string form and
+            // the array form alike (<https://docs.rs/jsonwebtoken/11.1.0/jsonwebtoken/struct.Validation.html>).
+            validation.set_audience(&self.audiences);
+            // RFC 8725 §3.9: a token whose audience is absent is rejected
+            // just as one whose audience is another recipient.
+            validation.required_spec_claims.insert(String::from("aud"));
         }
         let data = decode::<Claims>(token, &key, &validation)
             .map_err(|error| Refusal::invalid_token(&self.realm, &error.to_string()))?;
@@ -706,7 +735,8 @@ pub async fn configuration(
 mod tests {
     use http::HeaderMap;
 
-    use super::{bearer, quoted};
+    use super::{audiences, bearer, quoted};
+    use crate::config::Config;
 
     #[test]
     fn a_bearer_credential_is_read_whatever_the_case_of_its_scheme() {
@@ -726,5 +756,40 @@ mod tests {
     fn a_challenge_parameter_cannot_carry_a_quote_or_a_backslash() {
         assert_eq!(quoted(r#"a"b\c"#), "abc");
         assert_eq!(quoted("plain"), "plain");
+    }
+
+    // The `aud` a client sends is the FHIR base it is talking to
+    // (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), and this
+    // server has one per version.
+    #[test]
+    fn every_served_version_base_is_an_audience_beside_the_configured_one() {
+        let accepted = audiences(&Config {
+            base_url: Some(String::from("https://tx.example.org")),
+            oidc_audience: Some(String::from("ferroterm")),
+            ..Config::default()
+        });
+        for segment in crate::version::SEGMENTS {
+            let base = format!("https://tx.example.org/{segment}");
+            assert!(accepted.contains(&base), "{base}: {accepted:?}");
+            assert!(accepted.contains(&format!("{base}/")), "{base}/");
+        }
+        assert!(
+            accepted.contains(&String::from("ferroterm")),
+            "the configured audience stays accepted: {accepted:?}"
+        );
+        assert!(
+            !accepted.contains(&String::from("https://tx.example.org")),
+            "the root serves no FHIR base: {accepted:?}"
+        );
+    }
+
+    #[test]
+    fn a_deployment_naming_no_base_and_no_audience_checks_none() {
+        assert!(audiences(&Config::default()).is_empty());
+        let only_configured = audiences(&Config {
+            oidc_audience: Some(String::from("ferroterm")),
+            ..Config::default()
+        });
+        assert_eq!(only_configured, vec![String::from("ferroterm")]);
     }
 }

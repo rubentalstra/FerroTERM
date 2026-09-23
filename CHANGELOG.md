@@ -33,6 +33,19 @@ fresh link reference.
   less at its peak.
 
 
+- The SMART gate accepts the FHIR base of every served version as the token
+  audience, not one configured value alone (#650). A SMART client sends the
+  FHIR base it is talking to as `aud`
+  (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), and this server
+  publishes one base per version, so an issuer minting the claim from that
+  request handed a reader who signed in on `/r5` a token the gate refused
+  wherever the operator had named the `/r4b` base. The accepted set is now
+  every version's base derived from `FERROTERM_BASE_URL`, with and without a
+  trailing slash, plus `FERROTERM_OIDC_AUDIENCE` when it is set, and a token
+  whose `aud` holds any of them passes, the string form and the array form
+  alike (RFC 7519 §4.1.3). Setting `FERROTERM_BASE_URL` therefore turns the
+  audience check on: a deployment that names neither variable still checks no
+  audience, as before.
 - `code_challenge_methods_supported` in the served SMART configuration is
   always `["S256"]` (#632). "SMART servers SHALL support the `S256`
   `code_challenge_method` and SHALL NOT support the `plain` method"

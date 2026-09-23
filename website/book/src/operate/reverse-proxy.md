@@ -150,8 +150,8 @@ of its own: your authorization server does that, and FerroTERM only reads its
 public metadata.
 
 ```
+FERROTERM_BASE_URL=https://tx.example.org
 FERROTERM_OIDC_ISSUER=https://auth.example.org/realms/tx
-FERROTERM_OIDC_AUDIENCE=https://tx.example.org
 FERROTERM_OIDC_ADMIN_SCOPE=ferroterm/admin
 ```
 
@@ -209,10 +209,36 @@ discovery document claims `permission-v1` and not `permission-v2`, which names
 the granular syntax. Grant an unnarrowed scope.
 
 The token itself is an ordinary JWT signed by the issuer. The server checks the
-signature against the JWKS, `iss`, `exp`, `nbf`, `aud` when you configured one,
-and the `typ` header when the issuer sets one: a token typed as something other
-than an access token (an ID token, for example) is refused rather than spent
-here.
+signature against the JWKS, `iss`, `exp`, `nbf`, the audience as described
+below, and the `typ` header when the issuer sets one: a token typed as
+something other than an access token (an ID token, for example) is refused
+rather than spent here.
+
+### The audience a token carries
+
+A SMART client sends "the FHIR server's base URL" as the `aud` parameter of its
+authorization request (<https://hl7.org/fhir/smart-app-launch/app-launch.html>),
+and this server publishes one FHIR base per version, so a reader who signs in
+on `/r5` and one who signs in on `/r4b` get tokens with different audiences
+from an issuer that mints the claim from that request. Both are this server.
+
+The accepted set is therefore every served version's base derived from
+`FERROTERM_BASE_URL`, with and without a trailing slash, plus
+`FERROTERM_OIDC_AUDIENCE` when you set it. With
+`FERROTERM_BASE_URL=https://tx.example.org` the server accepts
+`https://tx.example.org/r4`, `/r4b`, `/r5`, and `/r6` under that host. A token
+passes when its `aud` holds any of them, which RFC 7519 §4.1.3 asks of a
+recipient identifying itself, and the claim may be a string or an array. A
+token for any other audience is refused with `401` and `error="invalid_token"`,
+and so is a token with no `aud` at all (RFC 8725 §3.9).
+
+The root URL is not in the set: the server serves no FHIR base there. Name it
+in `FERROTERM_OIDC_AUDIENCE` when your issuer mints it anyway.
+
+With neither variable set the server checks no audience, and the issuer check
+alone bounds the token. Set `FERROTERM_BASE_URL` in any deployment behind a
+proxy: it is what the capability statements publish, and it is what makes the
+audience check real.
 
 A server-to-server client obtains its token through SMART Backend Services,
 which is the flow a sync service uses
