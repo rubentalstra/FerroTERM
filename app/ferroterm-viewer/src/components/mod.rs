@@ -22,6 +22,7 @@ pub(crate) mod mark;
 pub(crate) mod reading;
 pub(crate) mod runs;
 pub(crate) mod shell;
+pub(crate) mod sign_in;
 pub(crate) mod spinner;
 pub(crate) mod state;
 pub(crate) mod system_table;

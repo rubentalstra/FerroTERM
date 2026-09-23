@@ -9,6 +9,7 @@
 
 pub(crate) mod about;
 pub(crate) mod browse;
+pub(crate) mod callback;
 pub(crate) mod code_system;
 pub(crate) mod concept_maps;
 pub(crate) mod evidence;

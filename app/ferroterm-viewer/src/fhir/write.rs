@@ -1,0 +1,371 @@
+//! Writing a resource: what a write sends, what it answers, and how a refusal
+//! reads.
+//!
+//! The server carries create, update, delete, and `_history` on `CodeSystem`,
+//! `ValueSet`, and `ConceptMap` (<https://hl7.org/fhir/R4B/http.html>). An
+//! update states the version it is replacing in `If-Match`, so two readers
+//! editing the same resource cannot silently overwrite each other
+//! (<https://hl7.org/fhir/R4B/http.html#concurrency>).
+
+use http::StatusCode;
+use serde::Deserialize;
+
+use crate::fhir::error::FhirError;
+
+/// The resource elements the viewer reads back off a write or a history read.
+///
+/// The viewer never mirrors a whole FHIR resource; these are the elements a
+/// screen shows and the one an update needs.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub(crate) struct StoredResource {
+    /// `resourceType`, mandatory in FHIR JSON
+    /// (<https://hl7.org/fhir/R4B/json.html>).
+    #[serde(default)]
+    #[serde(rename = "resourceType")]
+    pub(crate) resource_type: Option<String>,
+    /// `id`, the logical id the server assigned.
+    #[serde(default)]
+    pub(crate) id: Option<String>,
+    /// `meta`, which carries the version an update has to state.
+    #[serde(default)]
+    pub(crate) meta: Option<Meta>,
+    /// `url`, the canonical the resource was published under.
+    #[serde(default)]
+    pub(crate) url: Option<String>,
+    /// `name`, the computer-friendly name.
+    #[serde(default)]
+    pub(crate) name: Option<String>,
+    /// `title`, the name written for a person.
+    #[serde(default)]
+    pub(crate) title: Option<String>,
+}
+
+/// The `Resource.meta` elements the viewer reads.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub(crate) struct Meta {
+    /// `meta.versionId`, the version an `If-Match` states
+    /// (<https://hl7.org/fhir/R4B/http.html#concurrency>).
+    #[serde(default)]
+    #[serde(rename = "versionId")]
+    pub(crate) version_id: Option<String>,
+    /// `meta.lastUpdated`, when the server last changed the resource.
+    #[serde(default)]
+    #[serde(rename = "lastUpdated")]
+    pub(crate) last_updated: Option<String>,
+}
+
+impl StoredResource {
+    /// The version an update of this resource states in `If-Match`.
+    pub(crate) fn version_id(&self) -> Option<&str> {
+        self.meta.as_ref()?.version_id.as_deref()
+    }
+}
+
+/// The `history` `Bundle` a `_history` read answers
+/// (<https://hl7.org/fhir/R4B/http.html#history>).
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub(crate) struct History {
+    /// `Bundle.total`, the number of versions the server counted.
+    pub(crate) total: Option<u32>,
+    /// `Bundle.entry`, one per version, most recent first.
+    pub(crate) entry: Vec<HistoryEntry>,
+}
+
+/// One version in a history `Bundle`.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub(crate) struct HistoryEntry {
+    /// The resource as it stood at that version; absent for a delete
+    /// (<https://hl7.org/fhir/R4B/http.html#history>).
+    pub(crate) resource: Option<StoredResource>,
+    /// `entry.request`, which names the interaction that made the version.
+    pub(crate) request: Option<HistoryRequest>,
+}
+
+/// The `entry.request` elements a history entry carries.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub(crate) struct HistoryRequest {
+    /// `POST`, `PUT`, or `DELETE`.
+    pub(crate) method: Option<String>,
+}
+
+impl History {
+    /// The key a row is drawn under: the version, or the position when the
+    /// server sent none.
+    ///
+    /// A history row needs a stable, data-derived key, and `meta.versionId` is
+    /// that key wherever the server states one.
+    pub(crate) fn keys(&self) -> Vec<String> {
+        self.entry
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| {
+                entry
+                    .resource
+                    .as_ref()
+                    .and_then(StoredResource::version_id)
+                    .map_or_else(|| format!("entry-{index}"), str::to_owned)
+            })
+            .collect()
+    }
+}
+
+/// What a write answered, beyond the resource itself.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(crate) struct Written {
+    /// The resource the server echoed, when it echoed one.
+    pub(crate) resource: Option<StoredResource>,
+    /// The `ETag` the server answered, which is the version to state next
+    /// (<https://hl7.org/fhir/R4B/http.html#concurrency>).
+    pub(crate) etag: Option<String>,
+    /// The `Location` a create answers, naming where the resource now lives.
+    pub(crate) location: Option<String>,
+}
+
+impl Written {
+    /// The version the next update of this resource states in `If-Match`.
+    ///
+    /// The `ETag` is preferred over `meta.versionId`, because it is what the
+    /// server just committed to and what `If-Match` is compared against.
+    pub(crate) fn version_id(&self) -> Option<&str> {
+        self.etag
+            .as_deref()
+            .map(strong_tag_of)
+            .or_else(|| self.resource.as_ref().and_then(StoredResource::version_id))
+    }
+}
+
+/// The version inside a weak or strong entity tag.
+///
+/// FHIR states the version as a weak `ETag` (`W/"2"`), so the quotes and the
+/// weakness marker are stripped back to the version
+/// (<https://hl7.org/fhir/R4B/http.html#concurrency>).
+fn strong_tag_of(etag: &str) -> &str {
+    etag.trim().trim_start_matches("W/").trim_matches('"')
+}
+
+/// The `If-Match` header value for a resource at `version_id`.
+pub(crate) fn if_match(version_id: &str) -> String {
+    format!("W/\"{version_id}\"")
+}
+
+/// Why a write did not happen, in the terms a screen acts on.
+///
+/// The screens branch on this rather than on a status number or a message
+/// substring, and every variant keeps the server's own `OperationOutcome` in
+/// the error it was read from.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum Refusal {
+    /// `401`: no token, or one the server would not take. The held token is
+    /// dropped and the reader is offered sign-in again (RFC 6750 §3.1).
+    SignInRequired,
+    /// `403`: the token is good and carries no scope for this write.
+    NotPermitted,
+    /// `412`: the resource moved on since it was read
+    /// (<https://hl7.org/fhir/R4B/http.html#concurrency>).
+    ConcurrentEdit,
+    /// `409`, `422`, and every other refusal the server explains in its
+    /// outcome.
+    Rejected,
+    /// Nothing answered, or the answer did not parse.
+    NoAnswer,
+}
+
+impl Refusal {
+    /// How `error` reads to a screen.
+    pub(crate) fn of(error: &FhirError) -> Self {
+        match error.status() {
+            Some(StatusCode::UNAUTHORIZED) => Self::SignInRequired,
+            Some(StatusCode::FORBIDDEN) => Self::NotPermitted,
+            Some(StatusCode::PRECONDITION_FAILED) => Self::ConcurrentEdit,
+            Some(_other) => Self::Rejected,
+            None => Self::NoAnswer,
+        }
+    }
+
+    /// Whether the held token is spent and has to be dropped.
+    pub(crate) fn drops_the_token(self) -> bool {
+        matches!(self, Self::SignInRequired)
+    }
+
+    /// The sentence the viewer adds beside the server's own outcome.
+    ///
+    /// The server's wording is rendered verbatim either way; this says what
+    /// the reader can do about it, which the outcome does not.
+    pub(crate) fn what_to_do(self) -> &'static str {
+        match self {
+            Self::SignInRequired => "Sign in again to make this change.",
+            Self::NotPermitted => "This account does not carry the permission for this change.",
+            Self::ConcurrentEdit => {
+                "Someone else changed this resource since it was opened. Reload it and apply the change again."
+            }
+            Self::Rejected => "The server refused the change, in its own words below.",
+            Self::NoAnswer => "The server did not answer. The request is below, to retry by hand.",
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fhir::outcome::OperationOutcome;
+
+    /// A refusal carrying `status`, as the client builds one.
+    fn refused(status: StatusCode) -> FhirError {
+        FhirError::Refused {
+            url: String::from("https://tx.example.org/r4b/CodeSystem/x"),
+            status,
+            outcome: OperationOutcome::default(),
+        }
+    }
+
+    #[test]
+    fn every_refusal_a_write_can_meet_reads_as_its_own_variant() {
+        for (status, expected) in [
+            (StatusCode::UNAUTHORIZED, Refusal::SignInRequired),
+            (StatusCode::FORBIDDEN, Refusal::NotPermitted),
+            (StatusCode::PRECONDITION_FAILED, Refusal::ConcurrentEdit),
+            (StatusCode::CONFLICT, Refusal::Rejected),
+            (StatusCode::UNPROCESSABLE_ENTITY, Refusal::Rejected),
+        ] {
+            assert_eq!(Refusal::of(&refused(status)), expected, "{status}");
+        }
+    }
+
+    #[test]
+    fn only_an_unauthorized_answer_drops_the_token() {
+        assert!(Refusal::of(&refused(StatusCode::UNAUTHORIZED)).drops_the_token());
+        for status in [
+            StatusCode::FORBIDDEN,
+            StatusCode::PRECONDITION_FAILED,
+            StatusCode::CONFLICT,
+        ] {
+            assert!(
+                !Refusal::of(&refused(status)).drops_the_token(),
+                "{status} leaves a working token alone"
+            );
+        }
+    }
+
+    #[test]
+    fn a_transport_failure_is_no_answer_rather_than_a_refusal() {
+        let error = FhirError::Transport {
+            url: String::from("https://tx.example.org/r4b/CodeSystem"),
+            message: String::from("network error"),
+        };
+        assert_eq!(Refusal::of(&error), Refusal::NoAnswer);
+        assert!(!Refusal::of(&error).drops_the_token());
+    }
+
+    #[test]
+    fn every_refusal_tells_the_reader_what_to_do_next() {
+        for refusal in [
+            Refusal::SignInRequired,
+            Refusal::NotPermitted,
+            Refusal::ConcurrentEdit,
+            Refusal::Rejected,
+            Refusal::NoAnswer,
+        ] {
+            assert!(
+                !refusal.what_to_do().is_empty(),
+                "{refusal:?} renders as nothing"
+            );
+        }
+    }
+
+    #[test]
+    fn the_if_match_header_is_the_weak_tag_fhir_states() {
+        assert_eq!(if_match("3"), "W/\"3\"");
+    }
+
+    #[test]
+    fn the_etag_the_server_answered_is_the_version_the_next_update_states() {
+        let written = Written {
+            resource: Some(StoredResource {
+                meta: Some(Meta {
+                    version_id: Some(String::from("1")),
+                    last_updated: None,
+                }),
+                ..StoredResource::default()
+            }),
+            etag: Some(String::from("W/\"2\"")),
+            location: None,
+        };
+        assert_eq!(
+            written.version_id(),
+            Some("2"),
+            "the ETag is what If-Match is compared against"
+        );
+    }
+
+    #[test]
+    fn a_write_that_answered_no_etag_falls_back_to_the_resource() {
+        let written = Written {
+            resource: Some(StoredResource {
+                meta: Some(Meta {
+                    version_id: Some(String::from("7")),
+                    last_updated: None,
+                }),
+                ..StoredResource::default()
+            }),
+            etag: None,
+            location: None,
+        };
+        assert_eq!(written.version_id(), Some("7"));
+        assert_eq!(Written::default().version_id(), None);
+    }
+
+    #[test]
+    fn a_strong_tag_reads_as_its_version_too() {
+        assert_eq!(strong_tag_of("W/\"12\""), "12");
+        assert_eq!(strong_tag_of("\"12\""), "12");
+        assert_eq!(strong_tag_of(" W/\"12\" "), "12");
+    }
+
+    #[test]
+    fn a_history_row_is_keyed_by_its_version_and_never_by_its_position() {
+        let history = History {
+            total: Some(2),
+            entry: vec![
+                HistoryEntry {
+                    resource: Some(StoredResource {
+                        meta: Some(Meta {
+                            version_id: Some(String::from("2")),
+                            last_updated: None,
+                        }),
+                        ..StoredResource::default()
+                    }),
+                    request: Some(HistoryRequest {
+                        method: Some(String::from("PUT")),
+                    }),
+                },
+                HistoryEntry {
+                    resource: None,
+                    request: Some(HistoryRequest {
+                        method: Some(String::from("DELETE")),
+                    }),
+                },
+            ],
+        };
+        let keys = history.keys();
+        assert_eq!(keys.first().map(String::as_str), Some("2"));
+        assert_eq!(
+            keys.get(1).map(String::as_str),
+            Some("entry-1"),
+            "a deleted version carries no resource, so the position is the only key left"
+        );
+    }
+
+    #[test]
+    fn a_resource_the_server_echoed_states_the_version_to_send_back() {
+        let resource: StoredResource = serde_json::from_str(
+            r#"{"resourceType":"CodeSystem","id":"colours","meta":{"versionId":"4","lastUpdated":"2026-09-23T10:00:00Z"},"url":"https://terminology.example/colours"}"#,
+        )
+        .expect("the server's own answer parses");
+        assert_eq!(resource.version_id(), Some("4"));
+        assert_eq!(resource.resource_type.as_deref(), Some("CodeSystem"));
+        assert_eq!(resource.id.as_deref(), Some("colours"));
+    }
+}

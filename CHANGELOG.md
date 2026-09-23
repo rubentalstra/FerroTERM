@@ -15,6 +15,31 @@ fresh link reference.
 
 ### Added
 
+- The viewer signs a person in with SMART App Launch and gains a write client
+  (#633). Where the deployment sets `FERROTERM_OIDC_ISSUER` and
+  `FERROTERM_VIEWER_CLIENT_ID`, the server publishes the client as
+  `ferroterm_viewer_client_id` in its `.well-known/smart-configuration`
+  (RFC 8414 §2 admits the extra member), and the top bar gains a **Sign in**
+  control. The viewer is a public client performing a standalone launch
+  (<https://hl7.org/fhir/smart-app-launch/app-launch.html>): a PKCE verifier
+  from the browser's own crypto with an `S256` challenge (RFC 7636), a `state`
+  checked on return (RFC 6749 §10.12), the code exchanged at the token endpoint
+  with the verifier and no client secret, and `/ui/callback` as the redirect
+  address to register. The access token is held in memory for the life of the
+  tab: never `localStorage`, never a cookie, so closing the tab signs out.
+  Signing out drops the token and revokes it where the issuer publishes a
+  `revocation_endpoint` (RFC 7009). The viewer reads the granted scopes the way
+  the server's gate reads them, so it offers only what the server would allow,
+  and a deployment that publishes no issuer shows no sign-in and no edit
+  control anywhere.
+- The FHIR client gains create, update with `If-Match` from the resource's
+  version, delete, and `_history`, each presenting the bearer when one is held
+  and each reading the server's own `OperationOutcome` into a typed refusal the
+  editor screens render: `401` as sign-in required, `403` as no permission,
+  `412` as a concurrent edit
+  (<https://hl7.org/fhir/R4B/http.html#concurrency>). Nothing writes yet; the
+  screens that call this seam are #631.
+
 - The SMART write gate accepts `user/` scopes beside the `system/` ones, so a
   person signed in to an interactive client can write (#632). `user/` is "data
   that a user can access" and `system/` is a client authorized in its own

@@ -199,6 +199,29 @@ here changes what another reader sees.
 
 ![The About screen, with the version comparison open and the evidence and settings panes below it](img/viewer/about.png)
 
+## Signing in
+
+The viewer is read-only until you configure an identity provider. Set
+`FERROTERM_OIDC_ISSUER` and `FERROTERM_VIEWER_CLIENT_ID`
+([Configuration](configuration.md)), and the top bar gains a **Sign in**
+control. Without both, the control does not exist and neither does any edit
+control.
+
+The viewer is a public client: it holds no secret and signs in with the
+authorization code flow with PKCE against the issuer your server publishes in
+`[base]/.well-known/smart-configuration`
+(<https://hl7.org/fhir/smart-app-launch/app-launch.html>). Register the
+redirect address `https://your-server/ui/callback` with the identity provider,
+under the client id you set in `FERROTERM_VIEWER_CLIENT_ID`, and allow the
+scopes `openid`, `fhirUser`, `user/CodeSystem.cud`, `user/ValueSet.cud`, and
+`user/ConceptMap.cud`. A role that gets none of the three `user/` scopes reads
+the server and changes nothing.
+
+The access token stays in the browser tab's memory. It is never written to
+`localStorage` and never put in a cookie, so closing the tab signs out. Signing
+out drops the token and, where your issuer publishes a `revocation_endpoint`,
+revokes it there (RFC 7009).
+
 ## About these screenshots
 
 Each image is a capture of a running server, taken by a browser driven through

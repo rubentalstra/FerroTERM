@@ -33,6 +33,10 @@ pub(crate) struct CapabilityStatement {
     rest: Vec<Rest>,
 }
 
+/// The `restful-security-service` code a SMART server declares
+/// (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+const SMART_ON_FHIR: &str = "SMART-on-FHIR";
+
 /// One `CapabilityStatement.rest`.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 struct Rest {
@@ -42,6 +46,32 @@ struct Rest {
     /// `rest.operation`, the operations this root answers at its own root.
     #[serde(default)]
     operation: Vec<RestOperation>,
+    /// `rest.security`, where a root names the authentication in front of it.
+    security: Option<Security>,
+}
+
+/// `CapabilityStatement.rest.security`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+struct Security {
+    /// `security.service`, as codes of the FHIR `restful-security-service`
+    /// value set (<https://hl7.org/fhir/R4B/valueset-restful-security-service.html>).
+    #[serde(default)]
+    service: Vec<SecurityService>,
+}
+
+/// One `security.service`, read for the codes it carries.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+struct SecurityService {
+    /// The codings that name the service.
+    #[serde(default)]
+    coding: Vec<ServiceCoding>,
+}
+
+/// One coding of `security.service`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+struct ServiceCoding {
+    /// The code itself.
+    code: Option<String>,
 }
 
 /// One `CapabilityStatement.rest.resource`.
@@ -112,6 +142,27 @@ impl CapabilityStatement {
             (Some(fhir), None) => Some(format!("FHIR {fhir}")),
             (None, software) => software,
         }
+    }
+
+    /// Whether this root declares SMART App Launch in front of it.
+    ///
+    /// A SMART server declares `SMART-on-FHIR` in
+    /// `CapabilityStatement.rest.security.service` and serves its discovery
+    /// document at `[base]/.well-known/smart-configuration`
+    /// (<https://hl7.org/fhir/smart-app-launch/conformance.html>). Asking the
+    /// statement first is what keeps the viewer from probing a deployment that
+    /// configured no issuer for a document it does not serve.
+    pub(crate) fn declares_smart(&self) -> bool {
+        self.rest.iter().any(|rest| {
+            rest.security.iter().any(|security| {
+                security.service.iter().any(|service| {
+                    service
+                        .coding
+                        .iter()
+                        .any(|coding| coding.code.as_deref() == Some(SMART_ON_FHIR))
+                })
+            })
+        })
     }
 
     /// The name of the running software, with its version where it gave one.
@@ -203,6 +254,36 @@ mod tests {
 
     fn parse(json: &str) -> CapabilityStatement {
         serde_json::from_str(json).expect("the fixture is valid JSON")
+    }
+
+    #[test]
+    fn a_root_that_declares_smart_is_the_one_asked_for_a_discovery_document() {
+        // <https://hl7.org/fhir/smart-app-launch/conformance.html>: a SMART
+        // server names `SMART-on-FHIR` in `rest.security.service`.
+        let declared = parse(
+            r#"{"resourceType":"CapabilityStatement","rest":[{"mode":"server",
+                "security":{"service":[{"coding":[
+                  {"system":"http://terminology.hl7.org/CodeSystem/restful-security-service",
+                   "code":"SMART-on-FHIR"}]}]}}]}"#,
+        );
+        assert!(declared.declares_smart());
+    }
+
+    #[test]
+    fn a_root_that_declares_another_service_or_none_is_not_asked() {
+        for json in [
+            r#"{"resourceType":"CapabilityStatement"}"#,
+            r#"{"resourceType":"CapabilityStatement","rest":[{"mode":"server"}]}"#,
+            r#"{"resourceType":"CapabilityStatement","rest":[{"mode":"server",
+                "security":{"service":[{"coding":[{"code":"Basic"}]}]}}]}"#,
+            r#"{"resourceType":"CapabilityStatement","rest":[{"mode":"server",
+                "security":{"service":[{"text":"OAuth of some kind"}]}}]}"#,
+        ] {
+            assert!(
+                !parse(json).declares_smart(),
+                "probing this root would put a 404 in every reader's console: {json}"
+            );
+        }
     }
 
     #[test]

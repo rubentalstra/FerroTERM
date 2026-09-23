@@ -96,6 +96,10 @@ pub(crate) const BUTTON_DISABLED: &str = "inline-flex items-center gap-tight rou
                                           border-line px-default py-tight text-small font-medium \
                                           text-faint";
 
+/// A callout for something that failed, in the words that came back.
+pub(crate) const CALLOUT_DANGER: &str = "rounded-md border border-danger-soft-fg/30 \
+                                         bg-danger-soft p-default text-danger-soft-fg";
+
 /// A standing notice about the answer being shown.
 pub(crate) const NOTICE: &str = "border border-warn-soft-fg/30 bg-warn-soft text-small \
                                  text-warn-soft-fg";

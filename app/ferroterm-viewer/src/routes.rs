@@ -36,6 +36,9 @@ pub(crate) const TRANSLATE_PATH: &str = "translate";
 /// The path the command bar sends what a reader typed to.
 pub(crate) const FIND_PATH: &str = "find";
 
+/// The path the identity provider redirects a sign-in back to.
+pub(crate) const CALLBACK_PATH: &str = "callback";
+
 /// The About screen's path below the base.
 pub(crate) const ABOUT_PATH: &str = "about";
 
@@ -143,9 +146,10 @@ pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
         Some(VALUE_SETS_PATH) => Some(VALUE_SETS_PATH),
         Some(CONCEPT_MAPS_PATH) => Some(CONCEPT_MAPS_PATH),
         Some(TRANSLATE_PATH) => Some(TRANSLATE_PATH),
-        // The command bar is on every screen rather than in the sidebar, so
-        // the screen it opens marks no entry.
-        Some(FIND_PATH) => None,
+        // The command bar is on every screen rather than in the sidebar, and
+        // the sign-in callback is a place the issuer sends a reader through,
+        // so neither marks an entry.
+        Some(FIND_PATH | CALLBACK_PATH) => None,
         // The three panes are one screen and one sidebar entry, and the
         // addresses they had still open the pane they named.
         Some(ABOUT_PATH | VERSIONS_PATH | EVIDENCE_PATH | SETTINGS_PATH) => Some(ABOUT_PATH),
