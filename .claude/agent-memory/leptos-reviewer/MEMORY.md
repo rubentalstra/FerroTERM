@@ -111,3 +111,5 @@ FerroEHR's `default-style-guard-untracked-blindspot` describes
 repository. Nothing in it transfers.
 - [One-shot async in a resource re-runs on the way out](one-shot-async-in-a-resource-reruns-on-the-way-out.md), a code exchange or any side effect belongs in spawn_local, never in a Resource (#647)
 - [ScopedFuture tracks inside the async block](scopedfuture-tracks-inside-the-async-block.md), a signal read after an await re-subscribes the resource; read inputs first or get_untracked (#647)
+- [A form built inside the resource closure](form-built-inside-the-resource-closure.md), creating the form signal in the reading closure ties everything typed to every OTHER signal that closure reads (#634)
+- [A narrow model plus a whole-resource PUT](narrow-model-whole-resource-put.md), an update replaces the resource in full, so every element the form does not model is deleted silently (#634)

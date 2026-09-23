@@ -10,6 +10,8 @@ mod auth;
 mod comparison;
 mod components;
 mod density;
+#[cfg(feature = "editor")]
+mod editor;
 mod evidence;
 mod fhir;
 mod find;

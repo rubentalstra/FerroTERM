@@ -531,7 +531,8 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | Value sets | `/ui/valuesets` | `GET /{v}/ValueSet` search and read, with a link into the expansion runner |
 | Concept maps | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read, with a link into the translate runner |
 | About this server | `/ui/about` | three tabs: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |
-| Signing in | `/ui/callback` | `GET /{v}/.well-known/smart-configuration`, then the issuer's token endpoint. Not a place a reader goes: the identity provider sends them through it |
+| Edit a code system | `/ui/editor/codesystem` | `GET /{v}/CodeSystem?url=` for the resource, `GET /{v}/metadata?mode=terminology` for whether an artifact backs it, `ValueSet/$expand` for the codes its coded controls offer, then `POST`/`PUT` with `If-Match` and `CodeSystem/$validate-code` on what the save retired. In the editor bundle only |
+| Signing in | `/ui/editor/callback` | `GET /{v}/.well-known/smart-configuration`, then the issuer's token endpoint. Not a place a reader goes: the identity provider sends them through it |
 
 `/ui/versions`, `/ui/evidence` and `/ui/settings` were screens of their own and
 now redirect to the About tab they named, so a link written before the merge
@@ -554,8 +555,10 @@ code. The concept browser is not in it: it browses one code system, so it is
 reached from that system's row on the overview rather than from an address
 that names none. Each group is a `const` table read in render order, so the order is data
 and one function draws every entry, and each group's label is its list's
-accessible name through `aria-labelledby`. Below the `md` breakpoint the
-sidebar is hidden until the top bar's toggle opens it.
+accessible name through `aria-labelledby`. The editor bundle's Publish group
+carries one entry more, the authoring screen, which is the only place either
+sidebar differs. Below the `md` breakpoint the sidebar is hidden until the top
+bar's toggle opens it.
 
 **The top bar and the sidebar stay put, and the screen scrolls under them.**
 The shell is one viewport tall and only the main pane scrolls, so the command
@@ -579,7 +582,58 @@ the address, so a run is already a URL and the list holds links and nothing
 else: a remembered run is re-run when a reader returns to it and can never show
 a stale answer beside a live one. Twelve are kept, in `localStorage` alone.
 
+### The code system editor
+
+**One screen, whether the code system is local or built.** A `CodeSystem` a
+person wrote through the REST API and one this deployment built from a release
+open the same form; what differs is whether it is editable, and that is three
+facts off the wire rather than anything the bundle assumes:
+
+- the served root's `TerminologyCapabilities` declares no
+  `terminology-artifact` extension behind it, because an artifact is read at
+  startup and has no write path;
+- the server states a `meta.versionId` for the resource, which is what an
+  update states in `If-Match`
+  (<https://hl7.org/fhir/R4B/http.html#concurrency>);
+- the token in hand carries `CodeSystem` with the letter the change needs.
+
+A form that is read-only says which of the three is missing, so a reader is
+never left guessing whether the screen is broken.
+
+**The form is the resource.** The metadata (`url`, `version`, `status`,
+`content`, `caseSensitive`), the properties the system declares, and the
+concepts with their designations and property values
+(<https://hl7.org/fhir/R4B/codesystem.html>). Every coded control offers what
+the served root expands the element's own value set to, so a version that
+admits another code offers it without a new build; nothing is compiled in.
+
+**A concept is retired, never deleted.** A published code keeps meaning what
+it meant, so the lifecycle control moves a concept between the four states the
+standard `status` property names and writes exactly the properties that state
+implies: `status` always, `inactive` where the state means it, and the one
+date the state carries
+(<https://hl7.org/fhir/R5/codesystem-concept-properties.html>). A deprecated
+concept is dated and stays usable; a retired one is flagged inactive. The
+editor declares those four properties on every save, because a property value
+means nothing until the system declares it. After a save that retired
+something, the screen runs `CodeSystem/$validate-code` on it and shows what
+came back, which is the server agreeing rather than the form claiming.
+
+**Every write is the whole resource, with `If-Match`.** A `412` is shown as
+what it is, a change someone else made since the form was opened, with a
+control that reloads it. Every refusal renders the server's own
+`OperationOutcome` whole and announces its text in the screen's one live
+region.
+
 ### Signing in
+
+**The sign-in is in the editor bundle.** A token lives in the page that holds
+it, and a page load ends it, so signing in on `/ui` and then opening
+`/ui/editor` would sign the person out on the way. The reader bundle's control
+is a link into the editor bundle, drawn where the served root's capability
+statement declares `SMART-on-FHIR`; the sign-in itself, the callback, and
+every edit control are the editor bundle's. The redirect address a deployment
+registers with its identity provider is therefore `{base}/ui/editor/callback`.
 
 **The viewer signs a person in only where the server publishes an issuer.**
 The server's own `[base]/.well-known/smart-configuration` names the
@@ -624,7 +678,7 @@ control the server would refuse.
 | Role | Scopes the identity provider grants | What the viewer draws |
 |---|---|---|
 | Reader | none of the write scopes | every screen, no edit control, no sign-in needed |
-| Terminologist | `user/CodeSystem.cud`, `user/ValueSet.cud`, `user/ConceptMap.cud`, or the subset granted | the edit controls, once the editor screens land, for the types the granted subset covers |
+| Terminologist | `user/CodeSystem.cud`, `user/ValueSet.cud`, `user/ConceptMap.cud`, or the subset granted | in the editor bundle, the edit controls for the types the granted subset covers |
 | Operator | the admin scope (`FERROTERM_OIDC_ADMIN_SCOPE`) | nothing extra: the admin listener is its own surface, not a screen |
 
 National content carries no edit control under any role: the built indexes open

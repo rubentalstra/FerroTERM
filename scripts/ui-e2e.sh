@@ -256,12 +256,10 @@ if [[ -z "$base_url" ]]; then
   echo "== the two viewer bundles"
   # `locked = true` in Trunk.toml already refuses a stale lock file; the flag
   # says so at the call site too. The editor bundle is the same crate built
-  # with its feature on, into its own directory and under its own mount; the
-  # `e2e` feature with it is the seam the write journeys hold a token through,
-  # and no release build passes it.
+  # with its feature on, into its own directory and under its own mount.
   (cd app/ferroterm-viewer && trunk build --release --locked)
   (cd app/ferroterm-viewer &&
-    trunk build --release --locked --features editor,e2e \
+    trunk build --release --locked --features editor \
       --dist dist-editor --public-url /ui/editor/)
 
   # The image base is distroless/static, which carries no dynamic loader, so a
@@ -389,6 +387,8 @@ if [[ -z "$base_url" ]]; then
     --env "FERROTERM_OIDC_ISSUER=$issuer_url" \
     --env "FERROTERM_VIEWER_CLIENT_ID=$VIEWER_CLIENT_ID" \
     --env SSL_CERT_FILE=/run/issuer/ca.pem \
+    --env FERROTERM_RESOURCES=/run/state/resources.redb \
+    --tmpfs /run/state:mode=1777 \
     --volume "$root/e2e/fixtures/codesystems:/fixtures/codesystems:ro" \
     --volume "$issuer_ca:/run/issuer/ca.pem:ro" \
     --publish "127.0.0.1:$signed_in_port:8080" "$SERVER_IMAGE" >/dev/null

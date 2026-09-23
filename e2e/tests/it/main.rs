@@ -27,6 +27,7 @@
 
 mod accessibility;
 mod docs_shots;
+mod editor;
 mod harness;
 mod sign_in;
 mod signed_in;

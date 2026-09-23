@@ -24,10 +24,6 @@ path = "src/main.rs"
 # The authoring screens, and the router base they are served under.
 editor = []
 
-# A test-only seam the browser journeys use to hold a token before #649 lands
-# the signed-in journey. No release build enables it.
-e2e = []
-
 # The evidence screen states figures the repository already commits, so the
 # build script reads those files and emits the document the bundle carries.
 # A build dependency runs on the host and never reaches the browser, so the

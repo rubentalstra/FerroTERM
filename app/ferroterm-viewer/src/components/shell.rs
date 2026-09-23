@@ -7,6 +7,7 @@
 use leptos::ev::SubmitEvent;
 use leptos::html::Input;
 use leptos::prelude::*;
+use leptos_router::MatchNestedRoutes;
 use leptos_router::NavigateOptions;
 use leptos_router::components::Route;
 use leptos_router::components::Routes;
@@ -41,6 +42,8 @@ use crate::pages::translate::TranslatePage;
 use crate::pages::validate::ValidatePage;
 use crate::pages::value_sets::ValueSetsPage;
 use crate::routes::ABOUT_PATH;
+#[cfg(feature = "editor")]
+use crate::routes::CODE_SYSTEM_EDITOR_PATH;
 use crate::routes::CONCEPT_MAPS_PATH;
 use crate::routes::EXPAND_PATH;
 use crate::routes::FIND_PATH;
@@ -91,9 +94,21 @@ const RUN: [NavItem; 3] = [
 ];
 
 /// The screens that list what this server publishes.
+#[cfg(not(feature = "editor"))]
 const PUBLISH: [NavItem; 2] = [
     NavItem(VALUE_SETS_PATH, "Value sets", icon::VALUE_SETS),
     NavItem(CONCEPT_MAPS_PATH, "Concept maps", icon::CONCEPT_MAPS),
+];
+
+/// The screens that list what this server publishes, and the one that writes.
+///
+/// Only the editor bundle carries the authoring screen, so only that bundle's
+/// sidebar leads to it.
+#[cfg(feature = "editor")]
+const PUBLISH: [NavItem; 3] = [
+    NavItem(VALUE_SETS_PATH, "Value sets", icon::VALUE_SETS),
+    NavItem(CONCEPT_MAPS_PATH, "Concept maps", icon::CONCEPT_MAPS),
+    NavItem(CODE_SYSTEM_EDITOR_PATH, "Edit a code system", icon::EDIT),
 ];
 
 /// The one screen about this server and this viewer, rather than about a code.
@@ -316,6 +331,28 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     .into_any()
 }
 
+/// The authoring route, which only the editor bundle carries.
+///
+/// A transparent component returns the routing value itself rather than a
+/// view, which is what a `<Routes>` child has to be
+/// (<https://docs.rs/leptos/0.8/leptos/attr.component.html>). In the reader
+/// bundle it returns `()`, which matches nothing and adds no arm to the
+/// router's dispatcher, so the reader's route table does not grow.
+#[component(transparent)]
+#[expect(
+    unreachable_pub,
+    reason = "the leptos component macro emits a pub props type, and a binary crate has no reachable public API"
+)]
+pub(crate) fn EditorRoute() -> impl MatchNestedRoutes + Clone {
+    #[cfg(feature = "editor")]
+    {
+        view! { <Route path=path!("/codesystem") view=|| crate::pages::editor::EditorPage().into_any() /> }
+        .into_inner()
+    }
+    #[cfg(not(feature = "editor"))]
+    {}
+}
+
 /// Sends an address a pane used to have to the pane it named.
 ///
 /// A replacing navigation rather than a push, so the browser's back button
@@ -385,6 +422,7 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/valuesets") view=|| ValueSetsPage().into_any() />
             <Route path=path!("/find") view=|| FindPage().into_any() />
             <Route path=path!("/callback") view=|| CallbackPage().into_any() />
+            <EditorRoute />
             // The three panes were three screens. A link written then still
             // opens the pane it named, which is the fragment each carries.
             <Route path=path!("/versions") view=|| moved_to("about-versions-heading").into_any() />

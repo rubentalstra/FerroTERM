@@ -4,6 +4,8 @@
 //! is a client of this server's public API and nothing else. No component
 //! calls `fetch`, and no second client exists.
 
+#[cfg(feature = "editor")]
+pub(crate) mod authoring;
 pub(crate) mod capability;
 pub(crate) mod code_system;
 pub(crate) mod concept;
@@ -20,9 +22,12 @@ pub(crate) mod translate;
 pub(crate) mod validation;
 pub(crate) mod value_set;
 pub(crate) mod version;
+// TODO(#637): the history reader has no caller until the history and restore
+// screen lands, and nothing in this module has one at all in a bundle built
+// without the `editor` feature.
 #[expect(
     dead_code,
-    reason = "the write seam's callers are the editor screens of #631"
+    reason = "the seam is wider than the screens that have landed on it"
 )]
 pub(crate) mod write;
 
@@ -625,11 +630,12 @@ impl FhirClient {
 /// The server carries these interactions on `CodeSystem`, `ValueSet`, and
 /// `ConceptMap` (<https://hl7.org/fhir/R4B/http.html>), gated on a SMART scope
 /// where the deployment configured an issuer.
-// TODO(#631): the editor screens are the callers; until they land the seam has
-// none, and the expectation below reports itself the moment that changes.
+// TODO(#637): `delete`, `history`, and `history_url` have no caller until the
+// history and restore screen lands, and no bundle carries the editor screens
+// unless it was built with the `editor` feature.
 #[expect(
     dead_code,
-    reason = "the write seam's callers are the editor screens of #631"
+    reason = "the seam is wider than the screens that have landed on it"
 )]
 impl FhirClient {
     /// The address a create posts to.
@@ -804,6 +810,59 @@ impl FhirClient {
     }
 }
 
+/// The reads the authoring screens make, which no reading screen needs.
+#[cfg(feature = "editor")]
+impl FhirClient {
+    /// Reads the `CodeSystem` one root holds for a canonical, for authoring.
+    ///
+    /// The search is the same RESTful interaction the detail screen makes
+    /// (<https://hl7.org/fhir/R4B/http.html#search>), and the resource comes
+    /// back as the server sent it. An update replaces the whole resource
+    /// (<https://hl7.org/fhir/R4B/http.html#update>), so an element the editor
+    /// does not draw still has to reach the server again, which a typed read
+    /// of the elements it does draw could not carry.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. A root
+    /// that holds no such code system answers `Ok(None)`, which is a different
+    /// answer from a read that failed.
+    pub(crate) async fn authored(
+        &self,
+        version: FhirVersion,
+        system: &str,
+    ) -> Result<Option<serde_json::Value>, FhirError> {
+        let url = self.code_system_search_url(version, system);
+        let answer: authoring::AuthoredSearch = self.get_json(&url).await?;
+        Ok(answer.first())
+    }
+
+    /// The codes one value set expands to, in the order the server sent them.
+    ///
+    /// The editor's coded controls offer what the served root says the element
+    /// admits rather than a list compiled into the bundle, so a root whose
+    /// FHIR version admits another code offers it without a new build.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn value_set_codes(
+        &self,
+        version: FhirVersion,
+        canonical: &str,
+    ) -> Result<Vec<expansion::ConceptRow>, FhirError> {
+        let request = ExpandRequest {
+            url: canonical.to_owned(),
+            ..ExpandRequest::default()
+        };
+        let expanded = self.expand(version, &request).await?;
+        Ok(expanded
+            .expansion()
+            .map(|expansion| expansion.concepts)
+            .unwrap_or_default())
+    }
+}
+
 impl FhirClient {
     /// Sends a FHIR JSON `GET` and decodes the resource it answers.
     async fn get_json<T: DeserializeOwned>(&self, url: &str) -> Result<T, FhirError> {
@@ -850,9 +909,12 @@ impl FhirClient {
 }
 
 /// Adds the bearer credential to `request`, when one is held (RFC 6750 §2.1).
-#[expect(
-    dead_code,
-    reason = "the write seam's callers are the editor screens of #631"
+#[cfg_attr(
+    not(feature = "editor"),
+    expect(
+        dead_code,
+        reason = "only the editor bundle carries a screen that writes"
+    )
 )]
 fn bearing(
     request: gloo_net::http::RequestBuilder,
@@ -895,6 +957,13 @@ pub(crate) async fn exchange_code(
 /// Returns the variant of [`FhirError`] describing what went wrong. RFC 7009
 /// §2.2 makes revoking a token the issuer does not know a success, so a refusal
 /// here is the issuer's own and is reported rather than hidden.
+#[cfg_attr(
+    not(feature = "editor"),
+    expect(
+        dead_code,
+        reason = "only the editor bundle starts a sign-in and reads the token one holds"
+    )
+)]
 pub(crate) async fn revoke(sign_in: &SignIn, token: &str) -> Result<(), FhirError> {
     let Some(endpoint) = sign_in.revocation_endpoint.as_deref() else {
         return Ok(());

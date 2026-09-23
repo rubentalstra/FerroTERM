@@ -511,8 +511,7 @@ jobs:
           leptosfmt --check app/ferroterm-viewer/src
       # Both feature sets, because the crate ships as two bundles and the
       # reader's build is the one a feature-gated screen could break without
-      # anyone noticing. `--all-features` also turns on `e2e`, the test-only
-      # seam, so the lint bar covers it too; no release build enables it.
+      # anyone noticing.
       - name: Clippy on the target the crate ships to
         run: |
           set -euo pipefail

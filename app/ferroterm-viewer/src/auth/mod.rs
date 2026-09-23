@@ -13,7 +13,24 @@
 //! shortest life a bearer credential can have while the reader is still using
 //! it. Closing the tab signs out.
 
+#[cfg_attr(
+    not(feature = "editor"),
+    expect(
+        dead_code,
+        reason = "only the editor bundle starts a sign-in and reads the token one holds"
+    )
+)]
 pub(crate) mod pkce;
+// The tests beside these items exercise them, so the expectation holds in the
+// reader bundle and not in its test build, which is what the `not(test)` is
+// for.
+#[cfg_attr(
+    all(not(feature = "editor"), not(test)),
+    expect(
+        dead_code,
+        reason = "only the editor bundle starts a sign-in and reads the token one holds"
+    )
+)]
 pub(crate) mod scopes;
 
 use leptos::prelude::*;
@@ -56,6 +73,13 @@ pub(crate) struct Access {
     pub(crate) identity: Option<Identity>,
 }
 
+#[cfg_attr(
+    not(feature = "editor"),
+    expect(
+        dead_code,
+        reason = "only the editor bundle starts a sign-in and reads the token one holds"
+    )
+)]
 impl Access {
     /// Reads a token response into what the viewer holds.
     ///
@@ -96,6 +120,13 @@ impl Default for Session {
     }
 }
 
+#[cfg_attr(
+    not(feature = "editor"),
+    expect(
+        dead_code,
+        reason = "only the editor bundle starts a sign-in and reads the token one holds"
+    )
+)]
 impl Session {
     /// A session holding no token.
     pub(crate) fn new() -> Self {
@@ -204,6 +235,13 @@ pub(crate) enum SignInError {
 ///
 /// Returns [`SignInError::Pkce`] when the browser refuses the random draw or
 /// the digest.
+#[cfg_attr(
+    not(feature = "editor"),
+    expect(
+        dead_code,
+        reason = "only the editor bundle starts a sign-in and reads the token one holds"
+    )
+)]
 pub(crate) async fn begin(
     sign_in: &SignIn,
     redirect_uri: &str,

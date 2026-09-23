@@ -48,6 +48,27 @@ pub(crate) const FIND_PATH: &str = "find";
 /// The path the identity provider redirects a sign-in back to.
 pub(crate) const CALLBACK_PATH: &str = "callback";
 
+/// The code system editor's path below the base, in the editor bundle.
+#[cfg(feature = "editor")]
+pub(crate) const CODE_SYSTEM_EDITOR_PATH: &str = "codesystem";
+
+/// Where the server mounts the editor bundle, for the reader bundle to link to.
+///
+/// It is a whole address rather than a route of this bundle: the two bundles
+/// are two documents, and the link between them is a page load.
+#[cfg(not(feature = "editor"))]
+pub(crate) const EDITOR_BASE: &str = "/ui/editor";
+
+/// The link that opens the editor bundle on the same served FHIR version.
+#[cfg(not(feature = "editor"))]
+pub(crate) fn editor_link(version: FhirVersion) -> String {
+    let mut url = RequestUrl::new();
+    for segment in EDITOR_BASE.split('/').filter(|segment| !segment.is_empty()) {
+        url = url.segment(segment);
+    }
+    url.query(VERSION_PARAM, version.segment()).render("")
+}
+
 /// The About screen's path below the base.
 pub(crate) const ABOUT_PATH: &str = "about";
 
@@ -163,6 +184,8 @@ pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
         Some(EXPAND_PATH) => Some(EXPAND_PATH),
         Some(VALIDATE_PATH) => Some(VALIDATE_PATH),
         Some(VALUE_SETS_PATH) => Some(VALUE_SETS_PATH),
+        #[cfg(feature = "editor")]
+        Some(CODE_SYSTEM_EDITOR_PATH) => Some(CODE_SYSTEM_EDITOR_PATH),
         Some(CONCEPT_MAPS_PATH) => Some(CONCEPT_MAPS_PATH),
         Some(TRANSLATE_PATH) => Some(TRANSLATE_PATH),
         // The command bar is on every screen rather than in the sidebar, and
