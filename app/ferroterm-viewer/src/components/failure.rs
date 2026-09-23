@@ -6,6 +6,7 @@ use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::fhir::error::FhirError;
 use crate::fhir::outcome::OperationOutcome;
+use crate::styles;
 
 /// Shows why a request failed, with the server's `OperationOutcome` verbatim.
 ///
@@ -96,10 +97,7 @@ pub(crate) fn Failure(
     .into_any();
 
     view! {
-        <div
-            role="alert"
-            class="rounded-md border border-danger-soft-fg/30 bg-danger-soft p-default text-danger-soft-fg"
-        >
+        <div role="alert" class=styles::CALLOUT_DANGER>
             {heading}
             {reported}
             {evidence}

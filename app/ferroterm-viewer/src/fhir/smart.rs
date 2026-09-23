@@ -252,6 +252,10 @@ pub(crate) fn identity_of(id_token: &str) -> Option<Identity> {
 }
 
 /// The bytes `text` encodes, in base64url without padding (RFC 4648 §5).
+#[expect(
+    clippy::expect_used,
+    reason = "the mask below leaves eight bits, which is what a byte holds"
+)]
 fn base64url_decode(text: &str) -> Option<Vec<u8>> {
     let mut out = Vec::with_capacity(text.len());
     let mut block = 0_u32;
@@ -273,7 +277,7 @@ fn base64url_decode(text: &str) -> Option<Vec<u8>> {
         if filled >= 8 {
             filled -= 8;
             let byte = (block >> filled) & 0xff;
-            out.push(u8::try_from(byte).unwrap_or_default());
+            out.push(u8::try_from(byte).expect("eight masked bits should fit in a byte"));
         }
     }
     Some(out)

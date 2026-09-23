@@ -124,18 +124,19 @@ fn verifier_from(bytes: &[u8]) -> String {
 fn base64url(bytes: &[u8]) -> String {
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
-        let mut block = 0_u32;
+        // The group is accumulated as a `usize`, so the six-bit slice below is
+        // already the table index and no conversion can fail.
+        let mut block = 0_usize;
         for (index, byte) in chunk.iter().enumerate() {
             // Each byte fills one of the three octets of a 24-bit group, most
             // significant first (RFC 4648 §4).
-            block |= u32::from(*byte) << (16 - 8 * index);
+            block |= usize::from(*byte) << (16 - 8 * index);
         }
         // A group of n input bytes yields n + 1 output characters, which is
         // what dropping the padding means (RFC 4648 §5).
         for index in 0..=chunk.len() {
             let sextet = (block >> (18 - 6 * index)) & 0b0011_1111;
-            let position = usize::try_from(sextet).unwrap_or_default();
-            if let Some(letter) = BASE64URL.get(position) {
+            if let Some(letter) = BASE64URL.get(sextet) {
                 out.push(char::from(*letter));
             }
         }

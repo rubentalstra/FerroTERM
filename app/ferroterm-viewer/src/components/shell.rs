@@ -376,22 +376,22 @@ pub(crate) fn Shell() -> impl IntoView {
 
     let screens = view! {
         <Routes fallback=NotFoundPage>
-            <Route path=path!("/") view=OverviewPage />
-            <Route path=path!("/browse") view=BrowsePage />
-            <Route path=path!("/expand") view=ExpandPage />
-            <Route path=path!("/validate") view=ValidatePage />
-            <Route path=path!("/about") view=AboutPage />
-            <Route path=path!("/systems/:url") view=CodeSystemPage />
-            <Route path=path!("/conceptmaps") view=ConceptMapsPage />
-            <Route path=path!("/translate") view=TranslatePage />
-            <Route path=path!("/valuesets") view=ValueSetsPage />
-            <Route path=path!("/find") view=FindPage />
-            <Route path=path!("/callback") view=CallbackPage />
+            <Route path=path!("/") view=|| OverviewPage().into_any() />
+            <Route path=path!("/browse") view=|| BrowsePage().into_any() />
+            <Route path=path!("/expand") view=|| ExpandPage().into_any() />
+            <Route path=path!("/validate") view=|| ValidatePage().into_any() />
+            <Route path=path!("/about") view=|| AboutPage().into_any() />
+            <Route path=path!("/systems/:url") view=|| CodeSystemPage().into_any() />
+            <Route path=path!("/conceptmaps") view=|| ConceptMapsPage().into_any() />
+            <Route path=path!("/translate") view=|| TranslatePage().into_any() />
+            <Route path=path!("/valuesets") view=|| ValueSetsPage().into_any() />
+            <Route path=path!("/find") view=|| FindPage().into_any() />
+            <Route path=path!("/callback") view=|| CallbackPage().into_any() />
             // The three panes were three screens. A link written then still
             // opens the pane it named, which is the fragment each carries.
-            <Route path=path!("/versions") view=|| moved_to("about-versions-heading") />
-            <Route path=path!("/evidence") view=|| moved_to("about-evidence-heading") />
-            <Route path=path!("/settings") view=|| moved_to("about-settings-heading") />
+            <Route path=path!("/versions") view=|| moved_to("about-versions-heading").into_any() />
+            <Route path=path!("/evidence") view=|| moved_to("about-evidence-heading").into_any() />
+            <Route path=path!("/settings") view=|| moved_to("about-settings-heading").into_any() />
         </Routes>
     }
     .into_any();

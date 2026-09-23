@@ -8,6 +8,7 @@
 //! that deployment, which is what these journeys drive.
 
 use thirtyfour::prelude::*;
+use thirtyfour::stringmatch::StringMatch;
 
 use crate::harness::Journey;
 use crate::harness::server;
@@ -92,7 +93,7 @@ async fn the_callback_says_there_is_no_sign_in_to_complete() {
             let said = journey
                 .text_becoming(
                     By::Css(OUTCOME),
-                    "no sign-in",
+                    StringMatch::new("no sign-in").partial(),
                     "the callback to report that this server publishes none",
                 )
                 .await;

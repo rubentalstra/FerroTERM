@@ -563,6 +563,34 @@ impl FhirClient {
             .render(&self.root)
     }
 
+    /// What a sign-in against this root needs, when it offers one.
+    ///
+    /// The capability statement is asked first, because SMART names
+    /// `SMART-on-FHIR` in `rest.security.service` and serves its discovery
+    /// document only where it does
+    /// (<https://hl7.org/fhir/smart-app-launch/conformance.html>). A
+    /// deployment that configured no issuer serves no document, and probing
+    /// for one would put a `404` in every reader's browser console.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. A root
+    /// that offers no sign-in answers `Ok(None)`, which is a different answer
+    /// from a read that failed.
+    pub(crate) async fn sign_in_offer(
+        &self,
+        version: FhirVersion,
+    ) -> Result<Option<SignIn>, FhirError> {
+        // The two reads are boxed so this future holds a pointer to each
+        // rather than both state machines inlined into it.
+        let statement = Box::pin(self.capability_statement(version)).await?;
+        if !statement.declares_smart() {
+            return Ok(None);
+        }
+        let document = Box::pin(self.smart_configuration(version)).await?;
+        Ok(document.sign_in())
+    }
+
     /// The address the served version's SMART discovery document sits at.
     ///
     /// SMART puts the document under the FHIR base of the server it describes,

@@ -580,7 +580,7 @@ control the server would refuse.
 | Role | Scopes the identity provider grants | What the viewer draws |
 |---|---|---|
 | Reader | none of the write scopes | every screen, no edit control, no sign-in needed |
-| Terminologist | `user/CodeSystem.cud`, `user/ValueSet.cud`, `user/ConceptMap.cud`, or the subset granted | the edit controls for the types the granted subset covers |
+| Terminologist | `user/CodeSystem.cud`, `user/ValueSet.cud`, `user/ConceptMap.cud`, or the subset granted | the edit controls, once the editor screens land, for the types the granted subset covers |
 | Operator | the admin scope (`FERROTERM_OIDC_ADMIN_SCOPE`) | nothing extra: the admin listener is its own surface, not a screen |
 
 National content carries no edit control under any role: the built indexes open

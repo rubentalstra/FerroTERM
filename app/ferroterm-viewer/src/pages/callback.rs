@@ -3,9 +3,10 @@
 //! The screen reads `code` and `state` off the address, checks the state
 //! against the one this browser sent (RFC 6749 §10.12), exchanges the code for
 //! a token, and returns the reader to the overview. A refusal renders here, in
-//! the issuer's own words.
+//! the words that came back.
 
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos_meta::Title;
 use leptos_router::NavigateOptions;
 use leptos_router::hooks::use_navigate;
@@ -17,9 +18,11 @@ use crate::auth::Returned;
 use crate::auth::Session;
 use crate::auth::SignInError;
 use crate::auth::complete;
+use crate::components::failure::Failure;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
-use crate::fhir::smart::SmartConfiguration;
+use crate::fhir::error::FhirError;
+use crate::fhir::version::FhirVersion;
 use crate::routes::OVERVIEW_PATH;
 use crate::routes::ui_link;
 use crate::styles;
@@ -38,17 +41,28 @@ struct CallbackQuery {
 }
 
 /// How the sign-in ended.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 enum Ending {
     /// The token is held, and the reader is on their way back.
     Done,
     /// The sign-in did not complete, with what to tell the reader.
     Failed {
-        /// The viewer's own sentence.
+        /// The viewer's own sentence, which the live region announces.
         message: String,
-        /// The issuer's `error_description`, when it sent one.
-        detail: Option<String>,
+        /// Whatever came back beyond it, rendered below.
+        detail: Detail,
     },
+}
+
+/// What a screen can show beyond the one sentence it announces.
+#[derive(Clone, Debug)]
+enum Detail {
+    /// Nothing came back beyond the sentence itself.
+    None,
+    /// The issuer's own `error_description` (RFC 6749 §4.1.2.1).
+    Said(String),
+    /// A request that failed, with the status, the address, and the body.
+    Read(Box<FhirError>),
 }
 
 /// Finishes the sign-in the shell started.
@@ -64,81 +78,108 @@ pub(crate) fn CallbackPage() -> impl IntoView {
     let navigate = StoredValue::new(use_navigate());
     let query = use_query::<CallbackQuery>();
 
-    let exchange = LocalResource::new({
-        let client = client.clone();
-        move || {
-            let client = client.clone();
-            let returned = query.with(read_returned);
-            let version = version.get();
-            async move {
-                let document = client.smart_configuration(version).await;
-                let Some(sign_in) = document.as_ref().ok().and_then(SmartConfiguration::sign_in)
-                else {
-                    return Ending::Failed {
-                        message: String::from(
-                            "This server publishes no sign-in, so there is nothing to complete.",
-                        ),
-                        detail: None,
-                    };
-                };
-                match complete(&sign_in, &client.redirect_uri(), &returned).await {
-                    Ok(access) => {
-                        session.hold(access);
-                        Ending::Done
-                    }
-                    Err(error) => Ending::Failed {
-                        message: error.to_string(),
-                        detail: detail_of(&error),
+    let ending: RwSignal<Option<Ending>> = RwSignal::new(None);
+    // NOTE: an authorization code is spent once
+    // (<https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2>), so the exchange
+    // runs once here rather than as a resource a navigation could re-run.
+    let returned = query.with_untracked(read_returned);
+    let selected = version.get_untracked();
+    let target = ui_link(OVERVIEW_PATH, selected);
+    spawn_local(async move {
+        let reached = finish(&client, selected, &returned, session).await;
+        let done = matches!(reached, Ending::Done);
+        ending.set(Some(reached));
+        if done {
+            navigate.with_value(|navigate| {
+                navigate(
+                    &target,
+                    NavigateOptions {
+                        resolve: false,
+                        // The callback address carries a spent code, so the
+                        // back button must not land the reader on it again.
+                        replace: true,
+                        ..NavigateOptions::default()
                     },
-                }
-            }
+                );
+            });
         }
     });
 
-    // Sending the reader on is a navigation, which is the outside world and
-    // what an Effect is for. It writes no signal: the screen below reads the
-    // same resource for itself.
-    Effect::new(move |_| {
-        let done = exchange.with(|ending| ending.as_ref() == Some(&Ending::Done));
-        if !done {
-            return;
-        }
-        let target = ui_link(OVERVIEW_PATH, version.get());
-        navigate.with_value(|navigate| {
-            navigate(
-                &target,
-                NavigateOptions {
-                    resolve: false,
-                    // The callback address carries a spent code, so the back
-                    // button must not land the reader on it again.
-                    replace: true,
-                    ..NavigateOptions::default()
-                },
-            );
-        });
-    });
-
-    let report = move || {
-        exchange.with(|ending| match ending {
-            None => view! { <p class=styles::MUTED>"Completing the sign-in"</p> }.into_any(),
-            Some(Ending::Done) => view! { <p class=styles::MUTED>"Signed in"</p> }.into_any(),
-            Some(Ending::Failed { message, detail }) => refused(message, detail.as_deref()),
+    let announced = move || {
+        ending.with(|reached| match reached {
+            None => String::from("Completing the sign-in"),
+            Some(Ending::Done) => String::from("Signed in"),
+            Some(Ending::Failed { message, .. }) => message.clone(),
         })
     };
+    let detail = move || {
+        ending.with(|reached| match reached {
+            None | Some(Ending::Done) => ().into_any(),
+            Some(Ending::Failed { detail, .. }) => drawn(detail),
+        })
+    };
+
+    let outcome = view! {
+        <p id="sign-in-outcome" aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
+            {announced}
+        </p>
+    }
+    .into_any();
+    let back = view! {
+        <p class="mt-default">
+            <a class=styles::LINK href=move || ui_link(OVERVIEW_PATH, version.get())>
+                "Back to the overview"
+            </a>
+        </p>
+    }
+    .into_any();
 
     view! {
         <Title text="Signing in" />
         <section class="mx-auto max-w-2xl">
             <h1 class=styles::PAGE_TITLE>"Signing in"</h1>
-            <div id="sign-in-outcome" aria-live="polite" class="mt-default">
-                {report}
-            </div>
-            <p class="mt-default">
-                <a class=styles::LINK href=move || ui_link(OVERVIEW_PATH, version.get())>
-                    "Back to the overview"
-                </a>
-            </p>
+            {outcome}
+            <div class="mt-default">{detail}</div>
+            {back}
         </section>
+    }
+}
+
+/// Completes the sign-in, or says what stopped it.
+async fn finish(
+    client: &FhirClient,
+    version: FhirVersion,
+    returned: &Returned,
+    session: Session,
+) -> Ending {
+    // The awaits are boxed so this future holds a pointer to each read rather
+    // than every state machine inlined into one.
+    let offer = match Box::pin(client.sign_in_offer(version)).await {
+        Ok(offer) => offer,
+        Err(error) => {
+            return Ending::Failed {
+                message: String::from("This server could not be asked where to sign in."),
+                detail: Detail::Read(Box::new(error)),
+            };
+        }
+    };
+    let Some(sign_in) = offer else {
+        return Ending::Failed {
+            message: String::from(
+                "This server publishes no sign-in, so there is nothing to complete.",
+            ),
+            detail: Detail::None,
+        };
+    };
+    match Box::pin(complete(&sign_in, &client.redirect_uri(), returned)).await {
+        Ok(access) => {
+            session.hold(access);
+            Ending::Done
+        }
+        Err(error) => Ending::Failed {
+            message: error.to_string(),
+            detail: detail_of(&error),
+        },
     }
 }
 
@@ -158,33 +199,39 @@ fn read_returned(query: &Result<CallbackQuery, ParamsError>) -> Returned {
     )
 }
 
-/// The issuer's own sentence about a refusal, when it sent one.
-fn detail_of(error: &SignInError) -> Option<String> {
+/// What came back beyond the sentence, for the reader to act on.
+fn detail_of(error: &SignInError) -> Detail {
     match error {
-        SignInError::Refused { description, .. } => description.clone(),
+        SignInError::Refused { description, .. } => description
+            .as_deref()
+            .map_or(Detail::None, |said| Detail::Said(said.to_owned())),
+        // RFC 6749 §5.2 is the token endpoint's own refusal, which carries no
+        // `OperationOutcome`, so the body itself is the evidence and the
+        // failure view is what renders it.
+        SignInError::Exchange(refusal) => Detail::Read(Box::new(refusal.clone())),
         SignInError::Pkce(_)
         | SignInError::NoCode
         | SignInError::StateMismatch
-        | SignInError::NoVerifier
-        | SignInError::Exchange(_) => None,
+        | SignInError::NoVerifier => Detail::None,
     }
 }
 
-/// A sign-in that did not complete, with whatever the issuer said about it.
-fn refused(message: &str, detail: Option<&str>) -> AnyView {
-    let said = detail.map(str::to_owned);
-    let shown = said.clone();
-    let sentence = message.to_owned();
-    view! {
-        <div
-            role="alert"
-            class="rounded-md border border-danger-soft-fg/30 bg-danger-soft p-default text-danger-soft-fg"
-        >
-            <p class="font-medium">{sentence}</p>
-            <Show when=move || said.is_some() fallback=|| ()>
-                <p class="mt-tight text-small">{shown.clone()}</p>
-            </Show>
-        </div>
+/// The detail, drawn the way its kind is drawn everywhere else.
+fn drawn(detail: &Detail) -> AnyView {
+    match detail {
+        Detail::None => ().into_any(),
+        Detail::Said(said) => {
+            let words = said.clone();
+            view! {
+                <div role="alert" class=styles::CALLOUT_DANGER>
+                    <p>{words}</p>
+                </div>
+            }
+            .into_any()
+        }
+        Detail::Read(error) => {
+            let error = (**error).clone();
+            view! { <Failure error=Signal::stored(error) /> }.into_any()
+        }
     }
-    .into_any()
 }

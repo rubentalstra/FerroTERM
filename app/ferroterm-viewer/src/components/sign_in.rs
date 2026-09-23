@@ -16,7 +16,6 @@ use crate::auth::scopes::Letter;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
 use crate::fhir::smart::SignIn;
-use crate::fhir::smart::SmartConfiguration;
 use crate::fhir::version::FhirVersion;
 use crate::styles;
 
@@ -37,7 +36,16 @@ const REPORT_ID: &str = "sign-in-report";
 ///
 /// The discovery document is read per served version, because the sign-in is
 /// against the server root the reader is looking through and the `aud` of the
-/// authorization request is that root.
+/// authorization request is that root. The offer is read without a suspense
+/// boundary, because there is no fallback to flash: an unread root draws no
+/// control, and a refetch keeps the last value until the next one resolves
+/// (<https://docs.rs/reactive_graph/0.2/reactive_graph/computed/struct.AsyncDerived.html>).
+///
+/// The report is a live region that is in the document whether or not it has
+/// anything to say, because a region inserted along with its first message is
+/// not announced (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>). It is an
+/// inline element, because a screen's own announcement is the paragraph the
+/// accessibility pass reads and this is chrome.
 #[component]
 #[expect(
     unreachable_pub,
@@ -50,20 +58,20 @@ pub(crate) fn SignInControl() -> impl IntoView {
     let report = RwSignal::new(String::new());
 
     let reader = client.clone();
-    let configuration = LocalResource::new(move || {
+    let offer = LocalResource::new(move || {
         let reader = reader.clone();
-        async move { reader.smart_configuration(version.get()).await }
+        async move { reader.sign_in_offer(version.get()).await }
     });
 
-    // A refusal here is the ordinary answer of a deployment that configured no
-    // issuer, so it renders as no control rather than as an error: nothing the
-    // reader can act on, and nothing they asked for.
+    // A root that offers no sign-in draws no control rather than an error, and
+    // so does one that could not be read: there is nothing the reader can act
+    // on here, and the screens reading the same root report the failure.
     let offered = move || {
-        configuration.with(|answered| {
+        offer.with(|answered| {
             answered
                 .as_ref()
-                .and_then(|result| result.as_ref().ok())
-                .and_then(SmartConfiguration::sign_in)
+                .and_then(|read| read.as_ref().ok().cloned())
+                .flatten()
         })
     };
 
@@ -80,35 +88,48 @@ pub(crate) fn SignInControl() -> impl IntoView {
 
     view! {
         <div class="flex items-center gap-default">
-            <Transition fallback=|| ()>{control}</Transition>
-            <p id=REPORT_ID aria-live="polite" class=format!("{} empty:hidden", styles::HINT)>
+            {control} <span id=REPORT_ID aria-live="polite" class=styles::HINT>
                 {move || report.get()}
-            </p>
+            </span>
         </div>
     }
 }
 
 /// The control a reader who is not signed in sees.
+///
+/// The control disables itself the moment it is pressed, because a second
+/// press would draw a second verifier over the first and the redirect that
+/// came back would then fail its own state check. The press is local state and
+/// an event listener rather than an `Action`, because nothing renders the
+/// result: the page leaves for the identity provider.
 fn signed_out(
     client: FhirClient,
     version: Signal<FhirVersion>,
     sign_in: SignIn,
     report: RwSignal<String>,
 ) -> AnyView {
+    let leaving = RwSignal::new(false);
     let start = move |_| {
+        if leaving.get() {
+            return;
+        }
+        leaving.set(true);
         let sign_in = sign_in.clone();
         let redirect_uri = client.redirect_uri();
         let audience = client.version_base(version.get());
         report.set(String::from("Opening the identity provider"));
         spawn_local(async move {
-            match begin(&sign_in, &redirect_uri, &audience).await {
+            match Box::pin(begin(&sign_in, &redirect_uri, &audience)).await {
                 Ok(address) => leave_for(&address, report),
-                Err(error) => report.set(error.to_string()),
+                Err(error) => {
+                    leaving.set(false);
+                    report.set(error.to_string());
+                }
             }
         });
     };
     view! {
-        <button type="button" class=styles::BUTTON on:click=start>
+        <button type="button" class=styles::BUTTON disabled=move || leaving.get() on:click=start>
             "Sign in"
         </button>
     }
@@ -150,9 +171,7 @@ fn signed_in(session: Session, sign_in: SignIn, report: RwSignal<String>) -> Any
         });
     };
     view! {
-        <span class=styles::BADGE_OK title=editable>
-            {who}
-        </span>
+        <span class=styles::BADGE_OK>{who}</span>
         <span class=styles::HINT>{editable}</span>
         <button type="button" class=styles::BUTTON on:click=out>
             "Sign out"

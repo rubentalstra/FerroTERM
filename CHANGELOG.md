@@ -34,11 +34,11 @@ fresh link reference.
   control anywhere.
 - The FHIR client gains create, update with `If-Match` from the resource's
   version, delete, and `_history`, each presenting the bearer when one is held
-  and each surfacing the server's own `OperationOutcome` as a typed refusal: a
-  `401` drops the held token and offers sign-in again, a `403` says the account
-  carries no permission, a `412` says another reader changed the resource
-  first (<https://hl7.org/fhir/R4B/http.html#concurrency>). No screen writes
-  yet; the editor screens are #631.
+  and each reading the server's own `OperationOutcome` into a typed refusal the
+  editor screens render: `401` as sign-in required, `403` as no permission,
+  `412` as a concurrent edit
+  (<https://hl7.org/fhir/R4B/http.html#concurrency>). Nothing writes yet; the
+  screens that call this seam are #631.
 
 - The SMART write gate accepts `user/` scopes beside the `system/` ones, so a
   person signed in to an interactive client can write (#632). `user/` is "data

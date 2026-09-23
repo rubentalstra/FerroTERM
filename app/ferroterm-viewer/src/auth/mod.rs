@@ -234,21 +234,29 @@ pub(crate) async fn complete(
     let verifier = storage::session_read(VERIFIER_KEY);
     storage::session_remove(STATE_KEY);
     storage::session_remove(VERIFIER_KEY);
-    if let Some(error) = returned.error.as_deref() {
-        return Err(SignInError::Refused {
-            error: error.to_owned(),
-            description: returned.error_description.clone(),
-        });
-    }
-    // RFC 6749 §10.12: the value has to be the one this browser sent, and an
-    // absent expectation is a mismatch rather than a pass.
-    if expected.is_none() || expected.as_deref() != returned.state.as_deref() {
-        return Err(SignInError::StateMismatch);
+    if let Some(refusal) = refusal_of(expected.as_deref(), returned) {
+        return Err(refusal);
     }
     let code = returned.code.as_deref().ok_or(SignInError::NoCode)?;
     let verifier = verifier.ok_or(SignInError::NoVerifier)?;
     let answer = crate::fhir::exchange_code(sign_in, code, redirect_uri, &verifier).await?;
     Ok(Access::of(&answer, now()))
+}
+
+/// Why this redirect cannot be spent, when it cannot.
+///
+/// RFC 6749 §4.1.2.1 sends `state` back on a refusal as well, and §10.12 makes
+/// the comparison the cross-site request forgery check, so it runs before
+/// anything else the redirect carried is read, let alone rendered. An absent
+/// expectation is a mismatch rather than a pass.
+fn refusal_of(expected: Option<&str>, returned: &Returned) -> Option<SignInError> {
+    if expected.is_none() || expected != returned.state.as_deref() {
+        return Some(SignInError::StateMismatch);
+    }
+    returned.error.as_deref().map(|error| SignInError::Refused {
+        error: error.to_owned(),
+        description: returned.error_description.clone(),
+    })
 }
 
 /// What the issuer sent back to the callback address.
@@ -367,5 +375,43 @@ mod tests {
         // check firing, so the caller branches on the variant.
         let error = SignInError::StateMismatch;
         assert!(matches!(error, SignInError::StateMismatch));
+    }
+
+    #[test]
+    fn a_refusal_that_carries_no_state_never_reaches_the_screen() {
+        // RFC 6749 section 4.1.2.1 sends `state` back on a refusal too, so a
+        // redirect anyone could have linked a reader to is refused before its
+        // `error_description` is read, let alone rendered.
+        let returned = Returned {
+            error: Some(String::from("access_denied")),
+            error_description: Some(String::from("anything a stranger wrote")),
+            ..Returned::default()
+        };
+        assert_eq!(
+            checked(None, &returned),
+            Some(SignInError::StateMismatch.to_string()),
+            "the state check runs before the error branch"
+        );
+    }
+
+    #[test]
+    fn a_refusal_that_carries_the_state_this_browser_sent_is_the_issuer_s() {
+        let returned = Returned {
+            state: Some(String::from("sent")),
+            error: Some(String::from("access_denied")),
+            error_description: Some(String::from("the user cancelled")),
+            ..Returned::default()
+        };
+        assert_eq!(
+            checked(Some("sent"), &returned),
+            Some(String::from(
+                "the identity provider refused the sign-in: access_denied"
+            ))
+        );
+    }
+
+    /// What [`refusal_of`] answers for `expected` and `returned`, as a message.
+    fn checked(expected: Option<&str>, returned: &Returned) -> Option<String> {
+        refusal_of(expected, returned).map(|error| error.to_string())
     }
 }
