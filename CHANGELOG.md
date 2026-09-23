@@ -24,7 +24,9 @@ fresh link reference.
   that its rules are those of the relationship file. A current edition ships
   only inferred rows, so a build of one produces the same artifacts as before;
   an edition published before 2018 and an extension that ships other rows no
-  longer put them into a concept definition.
+  longer put them into a concept definition. The build counts every row it
+  leaves out and prints the count, so a release whose relationships sit
+  outside the inferred view never builds a thin hierarchy in silence.
 
 ### Changed
 

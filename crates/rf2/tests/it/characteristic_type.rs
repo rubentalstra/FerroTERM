@@ -118,9 +118,11 @@ fn a_concrete_value_file_yields_only_its_inferred_rows() {
 }
 
 #[test]
-fn a_malformed_row_survives_the_filter_as_an_error() {
+fn a_malformed_row_the_filter_would_drop_is_still_an_error() {
+    // The qualifying row is the fourth, and its destination is corrupted, so a
+    // reader that filtered before parsing would report success.
     let mut rows = rows(&fixture::concept(1), fixture::IS_A);
-    if let Some(field) = rows.first_mut().and_then(|row| row.get_mut(8)) {
+    if let Some(field) = rows.get_mut(3).and_then(|row| row.get_mut(5)) {
         *field = String::from("not-an-sctid");
     }
     let text = file(Relationship::COLUMNS, &rows);
@@ -132,5 +134,35 @@ fn a_malformed_row_survives_the_filter_as_an_error() {
     assert!(
         outcome.is_err(),
         "a row the reader cannot parse is never silently dropped"
+    );
+}
+
+#[test]
+fn a_characteristic_type_outside_the_enumeration_is_left_out_and_counted() {
+    // Appendix E.5 lists the values a release uses; a concept outside it is
+    // neither the inferred view nor something to guess at.
+    let mut rows = rows(&fixture::concept(1), fixture::IS_A);
+    if let Some(field) = rows.get_mut(1).and_then(|row| row.get_mut(8)) {
+        *field = fixture::concept(4);
+    }
+    let text = file(Relationship::COLUMNS, &rows);
+    let mut inferred =
+        Rows::<_, Relationship>::new(Path::new("sct2_Relationship_Snapshot.txt"), text.as_bytes())
+            .expect("header matches")
+            .inferred();
+    let kept: Vec<Relationship> = inferred
+        .by_ref()
+        .collect::<Result<_, _>>()
+        .expect("rows parse");
+    assert_eq!(
+        kept.iter()
+            .map(|r| r.characteristic_type_id)
+            .collect::<Vec<_>>(),
+        vec![constants::INFERRED]
+    );
+    assert_eq!(
+        inferred.skipped(),
+        4,
+        "the reader reports every row it left out, so an empty hierarchy is never unexplained"
     );
 }

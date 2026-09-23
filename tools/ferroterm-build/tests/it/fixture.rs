@@ -379,6 +379,20 @@ pub(crate) fn write_release(root: &Path) {
                 ADDITIONAL,
                 EXISTENTIAL,
             ]),
+            // A qualifying row may name a concept the edition does not define,
+            // since it is no part of the definition the edition carries.
+            s(&[
+                &relationship(12),
+                DATE,
+                "1",
+                &module,
+                &dog,
+                &concept(50),
+                "0",
+                IS_A,
+                QUALIFYING,
+                EXISTENTIAL,
+            ]),
         ],
     );
     write(

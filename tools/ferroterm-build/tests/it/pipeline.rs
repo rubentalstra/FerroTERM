@@ -221,6 +221,10 @@ fn a_row_outside_the_inferred_view_defines_nothing() {
         report.attributes, 2,
         "the additional and the qualifying concrete row are not attributes"
     );
+    assert_eq!(
+        report.skipped_relationships, 4,
+        "the build says how many rows it left out rather than dropping them quietly"
+    );
 
     let store = Store::open(&report.store).expect("store opens");
     let animal = store.ordinal(&concept(2)).expect("read").expect("animal");
@@ -252,6 +256,11 @@ fn a_row_outside_the_inferred_view_defines_nothing() {
     assert!(
         property(dog, &concept(8)).is_none(),
         "the qualifying concrete value is not a property"
+    );
+    assert!(
+        store.ordinal(&concept(50)).expect("read").is_none(),
+        "the qualifying row's destination stays outside the edition, and the \
+         build does not refuse it"
     );
 }
 

@@ -6,15 +6,23 @@ use clap::Parser;
 fn main() -> anyhow::Result<()> {
     let cli = ferroterm_build::Cli::parse();
     match ferroterm_build::run(&cli)? {
-        ferroterm_build::Report::Snomed(report) => println!(
-            "{}: {} concepts, {} designations, {} is-a edges, {} words, written to {}",
-            report.version_uri,
-            report.concepts,
-            report.designations,
-            report.is_a_edges,
-            report.words,
-            cli.out.display()
-        ),
+        ferroterm_build::Report::Snomed(report) => {
+            println!(
+                "{}: {} concepts, {} designations, {} is-a edges, {} words, written to {}",
+                report.version_uri,
+                report.concepts,
+                report.designations,
+                report.is_a_edges,
+                report.words,
+                cli.out.display()
+            );
+            if report.skipped_relationships > 0 {
+                println!(
+                    "{} relationship rows left out: outside 900000000000011006 |Inferred relationship|",
+                    report.skipped_relationships
+                );
+            }
+        }
         ferroterm_build::Report::Labcodeset(report) => println!(
             "Labcodeset {}: {} active concepts, {} retired, {} ordinal value sets, written to {}",
             report.release,

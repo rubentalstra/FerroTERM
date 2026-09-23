@@ -97,12 +97,17 @@ impl CharacteristicTyped for ConcreteRelationship {
 impl<R: Read, T: Component + CharacteristicTyped> Rows<R, T> {
     /// Narrows the file to the rows that define their source concept.
     ///
-    /// Only `900000000000011006 |Inferred relationship|` is part of a concept
-    /// definition, so a hierarchy or an attribute value built from a
-    /// relationship file reads the rows through this adapter.
+    /// A row is admitted only when it carries
+    /// `900000000000011006 |Inferred relationship|`, so a hierarchy or an
+    /// attribute value built from a relationship file reads the rows through
+    /// this adapter. Every other row is left out and counted by
+    /// [`InferredRows::skipped`].
     #[must_use]
     pub fn inferred(self) -> InferredRows<R, T> {
-        InferredRows { rows: self }
+        InferredRows {
+            rows: self,
+            skipped: 0,
+        }
     }
 }
 
@@ -112,18 +117,33 @@ impl<R: Read, T: Component + CharacteristicTyped> Rows<R, T> {
 #[derive(Debug)]
 pub struct InferredRows<R: Read, T: Component + CharacteristicTyped> {
     rows: Rows<R, T>,
+    skipped: u64,
+}
+
+impl<R: Read, T: Component + CharacteristicTyped> InferredRows<R, T> {
+    /// How many rows the adapter has left out so far.
+    ///
+    /// A caller that reads a whole file reports this, so a release whose
+    /// relationships sit outside the inferred view is visible rather than a
+    /// hierarchy that came out empty for no stated reason.
+    #[must_use]
+    pub fn skipped(&self) -> u64 {
+        self.skipped
+    }
 }
 
 impl<R: Read, T: Component + CharacteristicTyped> Iterator for InferredRows<R, T> {
     type Item = Result<T, Rf2Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // NOTE: of the appendix E.5 enumeration only |Inferred relationship|
+        // defines the concept, and E.5 records that no released relationship
+        // carries the |Defining relationship| supertype, so that goes too.
         loop {
-            // NOTE: a stated, qualifying, or additional row is not part of the
-            // definition of its source concept (release file specification
-            // appendix E.5).
             match self.rows.next()? {
-                Ok(row) if row.characteristic_type_id() != constants::INFERRED => {}
+                Ok(row) if row.characteristic_type_id() != constants::INFERRED => {
+                    self.skipped = self.skipped.saturating_add(1);
+                }
                 row => return Some(row),
             }
         }
@@ -242,7 +262,7 @@ pub struct Relationship {
     pub relationship_group: u32,
     /// The attribute, for example `Is a`.
     pub type_id: ConceptId,
-    /// The characteristic type; only `Inferred relationship` defines the concept.
+    /// The characteristic type, from the appendix E.5 enumeration.
     pub characteristic_type_id: ConceptId,
     /// The modifier.
     pub modifier_id: ConceptId,
@@ -341,7 +361,7 @@ pub struct ConcreteRelationship {
     pub relationship_group: u32,
     /// The attribute.
     pub type_id: ConceptId,
-    /// The characteristic type; only `Inferred relationship` defines the concept.
+    /// The characteristic type, from the appendix E.5 enumeration.
     pub characteristic_type_id: ConceptId,
     /// The modifier.
     pub modifier_id: ConceptId,
