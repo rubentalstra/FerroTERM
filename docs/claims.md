@@ -36,7 +36,7 @@ claim, not a test that merely touches the area.
 | Pure Rust, no `unsafe` | `Cargo.toml` `[workspace.lints.rust]` `unsafe_code = "forbid"`; every member carries `[lints] workspace = true` |
 | No JVM in the server | The only JVM is the FHIR Validator in CI: `.github/workflows/ci.yml` job `tx-ecosystem`, `actions/setup-java`; `docker/Dockerfile` ships two Rust binaries on a distroless static base |
 | No Elasticsearch, no database to run | No `elastic`, `postgres`, `sqlx`, `diesel`, `mysql`, or `mongodb` entry in `Cargo.lock`; storage is `redb`, declared in the root `Cargo.toml` |
-| Served from a memory-mapped index | `tools/ferroterm-build/src/pipeline.rs` writes `store.redb`, `hierarchy.bin`, `text.bin`, `manifest.json`; the server opens them read-only in `app/ferroterm-server/src/state.rs` |
+| Served from a memory-mapped index | `tools/ferroterm-build/src/pipeline.rs` writes `store.redb` with its `store.*.col` columns, `hierarchy.bin`, `text.bin`, `manifest.json`; the server opens them read-only in `app/ferroterm-server/src/state.rs` |
 | Serves SNOMED CT, LOINC, ICD-10, ICD-11, RxNorm, UCUM, and any FHIR `CodeSystem` | See [Code systems served](#code-systems-served) below, per system |
 
 ### The quickstart

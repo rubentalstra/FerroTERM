@@ -201,11 +201,16 @@ microsecond-subsumption goal. So at startup the server reads the closure into a
 `Vec<RoaringBitmap>` for the ancestor and descendant closures), and subsumption
 is then a membership test against the resident bitmap. The dense columns,
 addressed by ordinal, are read in at open for the same reason: the concepts,
-the displays, the properties, and the acceptabilities. The designation text
-stays in the `redb` file, one row per concept, and is point-read through the
-engine's page cache on `$lookup`; a column of it measured 239 MB resident per
-SNOMED edition against a read that already costs three microseconds. This is
-how Hermes reaches tens-of-microseconds subsumption, realized in pure Rust.
+the displays, the properties, and the acceptabilities. Each is its own file
+beside the database (`store.concepts.col` and its three siblings), read once
+into the structure it is served from; held in `redb` a column arrived twice,
+as the value the database materialized and as the copy the store served from,
+and the first cost a Dutch edition 168 MB of resident memory for the life of
+the process. The designation text stays in the `redb` file, one row per
+concept, and is point-read through the engine's page cache on `$lookup`; a
+column of it measured 239 MB resident per SNOMED edition against a read that
+already costs three microseconds. This is how Hermes reaches
+tens-of-microseconds subsumption, realized in pure Rust.
 
 Footprint: the transitive closure is tens of millions of ancestor/descendant
 pairs (both directions are stored: subsumption needs one, ECL returns each set

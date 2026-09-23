@@ -15,7 +15,7 @@ A code system release is turned into served structures once, by
 ```mermaid
 graph TD
     R["A release (RF2, LOINC, ClaML, RRF, the ICD-API cache, ...)"] --> BUILD["ferroterm-build, once per release"]
-    BUILD --> IDX["store.redb + hierarchy.bin + text.bin + manifest.json"]
+    BUILD --> IDX["store.redb + its column files + hierarchy.bin + text.bin + manifest.json"]
     IDX --> SRV["ferroterm, read-only, loaded at startup"]
     SRV --> API["FHIR terminology API (R4B today)"]
 ```
@@ -45,12 +45,14 @@ produces.
 
 Every code system builds into files with the same names and the same meanings,
 so the server opens each by its manifest and nothing downstream knows which
-file format it came from. Three are always written; a system with a hierarchy
-adds a fourth, and several add files of their own:
+file format it came from. The store with its four columns, the word index, and
+the manifest are always written; a system with a hierarchy adds one more, and
+several add files of their own:
 
 | File | Holds |
 |---|---|
-| `store.redb` | concepts, designations with language and use, typed properties, the vocabularies; a pure-Rust, disk-backed, ACID embedded engine |
+| `store.redb` | the designations with their language and use, the code index, the vocabularies; a pure-Rust, disk-backed, ACID embedded engine |
+| `store.concepts.col`, `store.displays.col`, `store.properties.col`, `store.acceptability.col` | the dense columns the store reads at open, one record per concept, each addressed by ordinal |
 | `hierarchy.bin` | the CSR is-a adjacency and the roaring closure bitmaps, for a system that has a hierarchy; RxNorm has none and writes none |
 | `text.bin` | the `fst` word dictionary and roaring postings of every designation, by language |
 | `manifest.json` | the system, version, languages, counts, and the files above |

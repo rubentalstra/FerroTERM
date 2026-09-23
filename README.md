@@ -189,9 +189,10 @@ The design, with its citations, is [`docs/architecture.md`](docs/architecture.md
 The short form:
 
 - **Offline once, online from precomputed structures.** `ferroterm-build`
-  turns a release into a `redb` store (concepts, designations, properties),
-  a CSR is-a adjacency with roaring transitive-closure bitmaps
-  (`hierarchy.bin`), and an `fst` word index (`text.bin`). The server reads
+  turns a release into a `redb` store with its dense columns (concepts,
+  designations, properties), a CSR is-a adjacency with roaring
+  transitive-closure bitmaps (`hierarchy.bin`), and an `fst` word index
+  (`text.bin`). The server reads
   them at startup and answers from memory: subsumption is a bitmap test and a
   descendant set is a bitmap. Nothing is memory-mapped, because mapping a file
   takes `unsafe` and the workspace forbids it.
