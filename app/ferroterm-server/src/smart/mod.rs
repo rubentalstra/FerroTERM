@@ -68,8 +68,12 @@ const ALGORITHMS: [Algorithm; 9] = [
     Algorithm::EdDSA,
 ];
 
+/// The grant the authorization code flow of a standalone launch runs on
+/// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>).
+const AUTHORIZATION_CODE: &str = "authorization_code";
+
 /// The grant types the SMART discovery document names as its options.
-const GRANT_TYPES: [&str; 2] = ["authorization_code", "client_credentials"];
+const GRANT_TYPES: [&str; 2] = [AUTHORIZATION_CODE, "client_credentials"];
 
 /// The client authentication methods the SMART discovery document names as its
 /// options.
@@ -79,11 +83,17 @@ const TOKEN_ENDPOINT_AUTH_METHODS: [&str; 3] = [
     "private_key_jwt",
 ];
 
-/// The PKCE method the SMART discovery document requires.
+/// The PKCE methods the SMART discovery document publishes.
 ///
-/// `plain` is a SHALL NOT in the same list, so it is never carried through even
-/// when the issuer advertises it.
+/// "SMART servers SHALL support the `S256` `code_challenge_method` and SHALL
+/// NOT support the `plain` method", so the list is this one whatever the issuer
+/// advertises; `S256` is the SHA-256 challenge of RFC 7636 §4.2
+/// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>).
 const CODE_CHALLENGE_METHODS: [&str; 1] = ["S256"];
+
+/// The scope an issuer advertises when it mints an identity token
+/// (<https://openid.net/specs/openid-connect-core-1_0.html>, §3.1.2.1).
+const OPENID: &str = "openid";
 
 /// The members of `advertised` that `options` admits, in the order `options`
 /// fixes them.
@@ -249,18 +259,48 @@ impl Smart {
         self.metadata.revocation_endpoint.as_deref()
     }
 
+    /// Whether the issuer runs the authorization code flow a standalone launch
+    /// needs (<https://hl7.org/fhir/smart-app-launch/app-launch.html>).
+    fn standalone_launch(&self) -> bool {
+        self.metadata.authorization_endpoint.is_some()
+            && self
+                .metadata
+                .grant_types_supported
+                .iter()
+                .any(|grant| grant == AUTHORIZATION_CODE)
+    }
+
+    /// Whether the issuer offers the OpenID Connect profile the
+    /// `sso-openid-connect` capability rests on.
+    fn openid_connect(&self) -> bool {
+        self.metadata
+            .scopes_supported
+            .iter()
+            .any(|scope| scope == OPENID)
+    }
+
     /// The SMART capabilities this deployment offers, sorted.
     ///
-    /// Each is read off the issuer's own document: a capability is claimed only
-    /// where the issuer advertises what it rests on
+    /// The scope syntaxes are this server's own; every other capability is read
+    /// off the issuer's document and claimed only where the issuer advertises
+    /// what it rests on
     /// (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
     #[must_use]
     pub fn capabilities(&self) -> Vec<String> {
         let methods = &self.metadata.token_endpoint_auth_methods_supported;
-        // NOTE: `permission-v2` names the granular search-parameter syntax this
-        // server refuses rather than evaluates, so it is not claimed
+        // NOTE: `permission-v2` is exemplified only by the search-parameter
+        // syntax this server refuses, so withholding it is our own reading
         // (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
-        let mut out = vec![String::from("permission-v1")];
+        let mut out = vec![
+            String::from("permission-v1"),
+            String::from("permission-user"),
+        ];
+        if self.standalone_launch() {
+            out.push(String::from("launch-standalone"));
+        }
+        if self.openid_connect() {
+            out.push(String::from("sso-openid-connect"));
+        }
         if methods.iter().any(|method| method == "private_key_jwt") {
             out.push(String::from("client-confidential-asymmetric"));
         }
@@ -280,18 +320,21 @@ impl Smart {
     /// The `.well-known/smart-configuration` document of this deployment.
     ///
     /// The members are the issuer's, with `capabilities` derived from what the
-    /// issuer advertises; `token_endpoint`, `grant_types_supported`, and
-    /// `capabilities` are the required ones
-    /// (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+    /// issuer advertises; `token_endpoint`, `grant_types_supported`,
+    /// `capabilities`, and `code_challenge_methods_supported` are the required
+    /// ones (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
     #[must_use]
     pub fn configuration(&self) -> serde_json::Value {
         let mut document = serde_json::Map::new();
         let mut put = |name: &str, value: serde_json::Value| {
             document.insert(name.to_owned(), value);
         };
-        // NOTE: `issuer` is conditional on the `sso-openid-connect` capability
-        // and otherwise omitted, which this server never claims
+        // NOTE: `issuer` is required where `sso-openid-connect` is claimed and
+        // omitted otherwise
         // (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+        if self.openid_connect() {
+            put("issuer", self.metadata.issuer.as_str().into());
+        }
         put("jwks_uri", self.metadata.jwks_uri.as_str().into());
         put(
             "token_endpoint",
@@ -302,13 +345,16 @@ impl Smart {
             only(&self.metadata.grant_types_supported, &GRANT_TYPES).into(),
         );
         put("capabilities", self.capabilities().into());
+        // NOTE: the member is required and `S256` is a SHALL in it, so the
+        // server states its own PKCE support rather than the issuer's list
+        // (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
         put(
             "code_challenge_methods_supported",
-            only(
-                &self.metadata.code_challenge_methods_supported,
-                &CODE_CHALLENGE_METHODS,
-            )
-            .into(),
+            CODE_CHALLENGE_METHODS
+                .iter()
+                .map(|method| (*method).to_owned())
+                .collect::<Vec<_>>()
+                .into(),
         );
         for (name, endpoint) in [
             ("authorization_endpoint", self.authorize_endpoint()),
@@ -324,8 +370,18 @@ impl Smart {
             &self.metadata.token_endpoint_auth_methods_supported,
             &TOKEN_ENDPOINT_AUTH_METHODS,
         );
+        // NOTE: the server SHALL support every scope it lists here, so a scope
+        // the write gate refuses is dropped from the issuer's list
+        // (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+        let advertised = self
+            .metadata
+            .scopes_supported
+            .iter()
+            .filter(|scope| scopes::serves(scope))
+            .cloned()
+            .collect();
         for (name, values) in [
-            ("scopes_supported", self.metadata.scopes_supported.clone()),
+            ("scopes_supported", advertised),
             (
                 "response_types_supported",
                 self.metadata.response_types_supported.clone(),
@@ -413,14 +469,17 @@ impl Smart {
                 }
                 Err(Refusal::forbidden(
                     &self.realm,
-                    &permission.scope_for(resource),
+                    &permission.scopes_for(resource),
                 ))
             }
             Need::Admin => {
                 if granted.contains(&self.admin_scope) {
                     return Ok(());
                 }
-                Err(Refusal::forbidden(&self.realm, &self.admin_scope))
+                Err(Refusal::forbidden(
+                    &self.realm,
+                    std::slice::from_ref(&self.admin_scope),
+                ))
             }
         }
     }
@@ -501,18 +560,31 @@ impl Refusal {
         }
     }
 
-    /// The token verified and carries no scope for the route (RFC 6750 §3.1,
-    /// `insufficient_scope`).
+    /// The token verified and carries none of the scopes the route accepts
+    /// (RFC 6750 §3.1, `insufficient_scope`).
+    ///
+    /// The optional `scope` attribute is sent only where one scope opens the
+    /// route: RFC 6750 §3 reads it as "the required scope of the access token",
+    /// a space-delimited set the client would have to hold in full (RFC 6749
+    /// §3.3), so alternatives are named in the outcome instead.
     #[must_use]
-    fn forbidden(realm: &str, wanted: &str) -> Self {
+    fn forbidden(realm: &str, wanted: &[String]) -> Self {
+        let named = wanted
+            .iter()
+            .map(|scope| format!("`{scope}`"))
+            .collect::<Vec<_>>()
+            .join(" or ");
+        let attribute = match wanted {
+            [one] => format!(", scope=\"{}\"", quoted(one)),
+            _ => String::new(),
+        };
         Self {
             status: StatusCode::FORBIDDEN,
             code: "forbidden",
-            diagnostics: format!("the bearer token carries no `{wanted}` scope"),
+            diagnostics: format!("the bearer token carries no {named} scope"),
             challenge: format!(
-                "Bearer realm=\"{}\", error=\"insufficient_scope\", scope=\"{}\"",
-                quoted(realm),
-                quoted(wanted)
+                "Bearer realm=\"{}\", error=\"insufficient_scope\"{attribute}",
+                quoted(realm)
             ),
         }
     }

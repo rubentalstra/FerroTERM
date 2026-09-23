@@ -180,10 +180,10 @@ The scope for a route is the SMART version 2 one
 
 | Route | Scope that grants it |
 |---|---|
-| `POST /r4b/CodeSystem` | `system/CodeSystem.c` |
-| `PUT /r4b/ValueSet/{id}` | `system/ValueSet.u` |
-| `DELETE /r4b/ConceptMap/{id}` | `system/ConceptMap.d` |
-| `POST /r4b/$closure` | `system/ConceptMap.u` |
+| `POST /r4b/CodeSystem` | `system/CodeSystem.c` or `user/CodeSystem.c` |
+| `PUT /r4b/ValueSet/{id}` | `system/ValueSet.u` or `user/ValueSet.u` |
+| `DELETE /r4b/ConceptMap/{id}` | `system/ConceptMap.d` or `user/ConceptMap.d` |
+| `POST /r4b/$closure` | `system/ConceptMap.u` or `user/ConceptMap.u` |
 | Any admin-listener route | the `FERROTERM_OIDC_ADMIN_SCOPE` value |
 
 SMART names no scope for `$closure`, so that last row is our own reading: the
@@ -191,9 +191,17 @@ operation maintains a stored `ConceptMap`
 (<https://hl7.org/fhir/R4B/conceptmap-operation-closure.html>), and no
 specification governs the admin listener at all.
 
+Both compartments open the same routes. `system/` is a client authorized in
+its own right, which is what a sync service or a reporting client presents;
+`user/` is a person acting through an interactive client, which is what the
+editor presents. `patient/` is refused: a terminology server holds no patient
+record, so a patient-compartment scope selects nothing here. The served
+`scopes_supported` drops what the gate refuses, so it never advertises a scope
+the server would answer 403 to.
+
 The combined forms work as the specification defines them, so
-`system/CodeSystem.cud` and `system/*.cruds` both grant a create, and the
-version 1 `system/CodeSystem.write` and `system/CodeSystem.*` are accepted for
+`user/CodeSystem.cud` and `user/*.cruds` both grant a create, and the
+version 1 `user/CodeSystem.write` and `user/CodeSystem.*` are accepted for
 compatibility. A scope narrowed by search parameters
 (`system/CodeSystem.cud?url=…`) grants nothing: the server does not evaluate
 the restriction, so it refuses rather than widening it. That is why the
@@ -206,18 +214,37 @@ and the `typ` header when the issuer sets one: a token typed as something other
 than an access token (an ID token, for example) is refused rather than spent
 here.
 
-A client obtains its token through SMART Backend Services, which is the flow a
-sync service or an editor uses
+A server-to-server client obtains its token through SMART Backend Services,
+which is the flow a sync service uses
 (<https://hl7.org/fhir/smart-app-launch/backend-services.html>):
-`client_credentials` with `private_key_jwt`, the scopes above, and the token
-presented as `Authorization: Bearer`. What comes back on a refusal follows
-RFC 6750 §3:
+`client_credentials` with `private_key_jwt`, the `system/` scopes above, and
+the token presented as `Authorization: Bearer`.
+
+A browser client holds no secret, so it runs the standalone launch as a public
+client: the authorization code flow with PKCE
+(<https://hl7.org/fhir/smart-app-launch/app-launch.html>), `user/` scopes, and
+the token kept in memory. It reads where to send the person from
+`[base]/.well-known/smart-configuration`, which publishes
+`authorization_endpoint`, `token_endpoint`, and
+`code_challenge_methods_supported`. That last member is always `["S256"]`:
+"SMART servers SHALL support the `S256` `code_challenge_method` and SHALL NOT
+support the `plain` method", and `S256` is the SHA-256 challenge of RFC 7636
+§4.2. A `plain` your issuer advertises is dropped.
+The `capabilities` array states what the deployment offers: `permission-user`
+and `permission-v1` are this server's own, and `launch-standalone`,
+`client-public`, `client-confidential-symmetric`,
+`client-confidential-asymmetric`, and `sso-openid-connect` are claimed only
+where your issuer's document backs them. Register the browser client with your
+issuer for `token_endpoint_auth_method: none`, and grant it `openid` too when
+you want the person's identity in an `id_token`.
+
+What comes back on a refusal follows RFC 6750 §3:
 
 | Situation | Answer |
 |---|---|
 | No token | `401`, `WWW-Authenticate: Bearer realm="…"`, an `OperationOutcome` with `login` |
 | Expired, malformed, wrong issuer, wrong audience, wrong signature | `401` with `error="invalid_token"` |
-| Valid token, no scope for the route | `403` with `error="insufficient_scope"` and the scope it wanted |
+| Valid token, no scope for the route | `403` with `error="insufficient_scope"`, and the outcome naming every scope that opens the route |
 
 Key rotation needs nothing from you. A token naming a `kid` the server has not
 read makes it fetch the JWKS again, at most once a minute, so publishing the
