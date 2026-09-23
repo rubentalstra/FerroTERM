@@ -10,8 +10,7 @@ use std::path::PathBuf;
 
 use concept_store::tables;
 use redb::{
-    ReadOnlyDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
-    TableHandle,
+    ReadOnlyDatabase, ReadableDatabase, ReadableTableMetadata, TableDefinition, TableHandle,
 };
 
 fn local_artifact() -> Option<PathBuf> {
@@ -55,19 +54,17 @@ fn the_local_artifact_footprint_by_table() {
     let txn = db.begin_read().expect("read txn");
     report(&txn, tables::META);
     report(&txn, tables::CODES);
-    report(&txn, tables::COLUMNS);
     report(&txn, tables::DESIGNATIONS);
     report(&txn, tables::PROPERTY_KEYS);
     report(&txn, tables::DESIGNATION_USES);
     report(&txn, tables::LANGUAGE_REFSETS);
     report(&txn, tables::ACCEPTABILITIES);
-    // The columns are read into memory when the store opens, so each one's
+    // The columns are read into memory when the store opens, so each file's
     // size is what it adds to a served edition's resident memory.
-    let columns = txn.open_table(tables::COLUMNS).expect("table opens");
-    for entry in columns.iter().expect("iterates") {
-        let (name, bytes) = entry.expect("row");
-        let len = u64::try_from(bytes.value().len()).expect("a column length fits u64");
-        println!("column {:<14} resident {:>7} MiB", name.value(), mib(len));
+    for name in tables::COLUMNS {
+        let file = concept_store::column::Column::file(&path, name);
+        let len = std::fs::metadata(&file).expect("the column file").len();
+        println!("column {:<14} resident {:>7} MiB", name, mib(len));
     }
 }
 

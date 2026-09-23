@@ -99,6 +99,25 @@ fn the_implicit_descendants_value_set_holds_the_whole_edition() {
 }
 
 #[test]
+fn a_served_edition_holds_one_copy_of_each_column_it_read() {
+    // The residual a served edition carries over its counted structures was
+    // the columns arriving twice, as the value the database materialized and
+    // as the copy the store served from (#641). A column read from its own
+    // file is its file, less the count word the reader consumes.
+    let (dir, p) = provider();
+    let store = dir.path().join("store.redb");
+    for (column, bytes) in p.footprint().store_columns {
+        let file = concept_store::column::Column::file(&store, column);
+        let size = std::fs::metadata(&file).expect("the column file").len();
+        assert_eq!(
+            usize::try_from(size).expect("a column file fits usize"),
+            bytes + 4,
+            "the {column} column holds its file and nothing beside it"
+        );
+    }
+}
+
+#[test]
 fn every_structure_of_a_served_edition_reports_what_it_holds() {
     let (_dir, p) = provider();
     let held = p.footprint();

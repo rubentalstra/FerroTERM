@@ -1,9 +1,10 @@
 //! Read-only access to a built artifact.
 //!
 //! Every method is a point read: one position or one key, one record, decoded
-//! with a typed error. Ordinal-keyed data is answered from a dense column read
-//! at open; the designation text is point-read from the database, one row per
-//! concept. Scans belong to the offline build, never to a request path.
+//! with a typed error. Ordinal-keyed data is answered from a dense column, read
+//! at open from its own file beside the database; the designation text is
+//! point-read from the database, one row per concept. Scans belong to the
+//! offline build, never to a request path.
 //!
 //! Opening takes one read snapshot and keeps the two tables a request path
 //! reads open on it, so a lookup costs one descent rather than a transaction,
@@ -53,11 +54,13 @@ pub enum StoreError {
         /// The layout this build reads.
         expected: &'static str,
     },
-    /// A packed column is not the layout this build reads.
-    #[error("the {column} column does not read")]
+    /// A column's side file is missing or is not the layout this build reads.
+    #[error("the {column} column does not read from {path}")]
     Column {
         /// The column name.
         column: String,
+        /// The side file it was read from.
+        path: PathBuf,
         /// The underlying error.
         #[source]
         source: ColumnError,
@@ -79,7 +82,7 @@ pub enum StoreError {
 ///
 // NOTE: redb's default is a gibibyte
 // (<https://docs.rs/redb/4.2.0/redb/struct.Builder.html#method.set_cache_size>),
-// so the columns read once at open would stay cached for the process's life.
+// which a store answering designation rows at random would fill and hold.
 const CACHE_BYTES: usize = 64 << 20;
 
 /// An opened artifact.
@@ -129,10 +132,13 @@ macro_rules! open_table {
 impl Store {
     /// Opens the artifact at `path` read-only and checks its layout version.
     ///
+    /// The four dense columns are read from their own files beside `path`, so
+    /// each one arrives at the address it is served from.
+    ///
     /// # Errors
     ///
     /// Returns [`StoreError`] when the file cannot be opened, is not an
-    /// artifact of this layout, or a table is missing.
+    /// artifact of this layout, or a table or a column file is missing.
     pub fn open(path: &Path) -> Result<Self, StoreError> {
         let db = redb::Builder::new()
             .set_cache_size(CACHE_BYTES)
@@ -152,15 +158,16 @@ impl Store {
                 expected: tables::LAYOUT_VERSION,
             });
         }
-        let columns = open_table!(txn, tables::COLUMNS)?;
         let column = |name: &str| -> Result<Column, StoreError> {
-            let Some(bytes) = columns.get(name)? else {
-                return Ok(Column::default());
-            };
-            Column::read(bytes.value()).map_err(|source| StoreError::Column {
+            let file = Column::file(path, name);
+            let failed = |source| StoreError::Column {
                 column: name.to_owned(),
+                path: file.clone(),
                 source,
-            })
+            };
+            let mut reader = concept_graph::read::buffered(&file)
+                .map_err(|source| failed(ColumnError::Io(source)))?;
+            Column::read_from(&mut reader).map_err(failed)
         };
         let concepts = column(tables::COLUMN_CONCEPTS)?;
         let displays = column(tables::COLUMN_DISPLAYS)?;

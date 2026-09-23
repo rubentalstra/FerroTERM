@@ -33,7 +33,7 @@ container image.
 ```mermaid
 graph LR
     REL["A release you are licensed for"] --> BUILD["ferroterm-build (offline)"]
-    BUILD --> IDX["index: store.redb + hierarchy.bin + text.bin + manifest.json"]
+    BUILD --> IDX["index: store.redb + its column files + hierarchy.bin + text.bin + manifest.json"]
     IDX --> SRV["ferroterm (read-only)"]
 ```
 

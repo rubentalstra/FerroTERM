@@ -82,7 +82,8 @@ enum Structure {
     Refsets,
     /// `identifiers.bin`: the alternate identifier table.
     Identifiers,
-    /// `store.redb`: the concept and designation store, opened not read.
+    /// `store.redb` with its column files: the columns are read at open and
+    /// the designation text stays in the database.
     Store,
     /// Everything a served edition loads, through the provider that serves it.
     Edition,
@@ -99,9 +100,32 @@ impl Structure {
             Self::Attributes => Some("attributes.bin"),
             Self::Refsets => Some("refsets.bin"),
             Self::Identifiers => Some("identifiers.bin"),
-            Self::Store => Some("store.redb"),
+            Self::Store => Some(STORE_FILE),
         }
     }
+
+    /// The bytes on disk this structure was read from, over every file of it.
+    fn serialized_bytes(self, dir: &Path) -> Option<u64> {
+        let bytes = |path: PathBuf| std::fs::metadata(path).ok().map(|meta| meta.len());
+        let own = bytes(dir.join(self.file()?))?;
+        if self != Self::Store {
+            return Some(own);
+        }
+        Some(
+            concept_store::tables::COLUMNS
+                .iter()
+                .filter_map(|name| bytes(column_file(dir, name)))
+                .fold(own, u64::saturating_add),
+        )
+    }
+}
+
+/// The store file inside an artifact directory.
+const STORE_FILE: &str = "store.redb";
+
+/// The side file of one store column inside an artifact directory.
+fn column_file(dir: &Path, name: &str) -> PathBuf {
+    concept_store::column::Column::file(&dir.join(STORE_FILE), name)
 }
 
 /// The order the provider loads the structures in, for the cumulative mode.
@@ -160,10 +184,7 @@ fn main() -> anyhow::Result<()> {
     let measurement = Measurement {
         structure: wanted,
         artifact: cli.artifact.display().to_string(),
-        serialized_bytes: wanted
-            .file()
-            .and_then(|name| std::fs::metadata(cli.artifact.join(name)).ok())
-            .map(|meta| meta.len()),
+        serialized_bytes: wanted.serialized_bytes(&cli.artifact),
         resident_bytes: ferroterm_bench::memory::median_of_process(std::process::id()),
     };
     println!("{}", serde_json::to_string(&measurement)?);
@@ -177,7 +198,7 @@ struct Line {
     /// The structure, as a reader of the accounting names it.
     structure: &'static str,
     /// The file it was read from, where it is one file.
-    file: Option<&'static str>,
+    file: Option<String>,
     /// That file's size on disk.
     serialized_bytes: Option<u64>,
     /// What the structure reports it holds in memory.
@@ -195,6 +216,8 @@ struct Report {
     total_size_in_bytes: u64,
     /// What the process holds, measured after the load.
     footprint_bytes: Option<u64>,
+    /// How long opening the edition took, in seconds.
+    open_seconds: f64,
     /// The footprint less the structures: the allocator's retained pages, the
     /// `redb` page cache, the binary, and the runtime.
     residual_bytes: Option<i64>,
@@ -203,36 +226,46 @@ struct Report {
 }
 
 /// How the report's figures are taken, beside every one of them.
-const METHOD: &str = "size_in_bytes: each structure's own count of the heap its allocations hold, at their capacity; footprint: the median of five readings of this process after the load, from `footprint`'s phys_footprint on macOS and `ps -o rss=` elsewhere; residual: the footprint less the structures. No FHIR or SNOMED CT specification governs a benchmark: the accounting is this project's own design.";
+const METHOD: &str = "size_in_bytes: each structure's own count of the heap its allocations hold, at their capacity; footprint: the median of five readings of this process after the load, from `footprint`'s phys_footprint on macOS and `ps -o rss=` elsewhere; residual: the footprint less the structures; open_seconds: the wall time of the one provider open this report measures, from a monotonic clock. No FHIR or SNOMED CT specification governs a benchmark: the accounting is this project's own design.";
 
 /// Prints what every structure of the artifact at `dir` holds.
 fn report(dir: &Path) -> anyhow::Result<()> {
+    let started = std::time::Instant::now();
     let provider = fhir_terminology::snomed::SnomedProvider::open(dir, "en")
         .context("cannot open the edition")?;
+    let open_seconds = started.elapsed().as_secs_f64();
     let held = provider.footprint();
     let mut structures = Vec::new();
-    let mut line = |structure: &'static str, file: Option<&'static str>, bytes: usize| {
+    let mut line = |structure: &'static str, file: Option<String>, bytes: usize| {
         structures.push(Line {
-            structure,
-            file,
             serialized_bytes: file
+                .as_ref()
                 .and_then(|name| std::fs::metadata(dir.join(name)).ok())
                 .map(|meta| meta.len()),
+            structure,
+            file,
             size_in_bytes: u64::try_from(bytes).unwrap_or(u64::MAX),
         });
     };
+    let named = |name: &str| Some(name.to_owned());
     for (column, bytes) in held.store_columns {
-        line(column, None, bytes);
+        let file = column_file(dir, column);
+        line(
+            column,
+            file.file_name()
+                .map(|name| name.to_string_lossy().into_owned()),
+            bytes,
+        );
     }
-    line("is-a adjacency", Some("hierarchy.bin"), held.is_a);
-    line("closure bitmaps", Some("hierarchy.bin"), held.closure);
+    line("is-a adjacency", named("hierarchy.bin"), held.is_a);
+    line("closure bitmaps", named("hierarchy.bin"), held.closure);
     line("child adjacency", None, held.children);
-    line("text index", Some("text.bin"), held.text);
-    line("member tables", Some("members.bin"), held.member_tables);
-    line("attribute rows", Some("attributes.bin"), held.attributes);
+    line("text index", named("text.bin"), held.text);
+    line("member tables", named("members.bin"), held.member_tables);
+    line("attribute rows", named("attributes.bin"), held.attributes);
     line("attribute inverted index", None, held.attributes_inverted);
-    line("memberships", Some("refsets.bin"), held.memberships);
-    line("identifiers", Some("identifiers.bin"), held.identifiers);
+    line("memberships", named("refsets.bin"), held.memberships);
+    line("identifiers", named("identifiers.bin"), held.identifiers);
     let total: u64 = structures.iter().map(|line| line.size_in_bytes).sum();
     let measured = ferroterm_bench::memory::median_of_process(std::process::id());
     let report = Report {
@@ -240,6 +273,7 @@ fn report(dir: &Path) -> anyhow::Result<()> {
         structures,
         total_size_in_bytes: total,
         footprint_bytes: measured,
+        open_seconds,
         residual_bytes: measured.map(|bytes| {
             i64::try_from(bytes)
                 .unwrap_or(i64::MAX)

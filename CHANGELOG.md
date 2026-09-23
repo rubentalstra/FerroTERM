@@ -13,6 +13,25 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- **The artifact layout moves to 7, so every index must be rebuilt with the
+  `ferroterm-build` of this version** (#641). A server refuses an artifact of
+  another layout with the error naming both versions, and an older server
+  refuses this one the same way; nothing reads the other's files. The store's
+  four dense columns (concepts, preferred displays, properties, acceptability)
+  are now their own files beside `store.redb`, named `store.concepts.col` and
+  its three siblings, and the server reads each one into the structure it
+  serves from. Held in the database a column arrived twice, as the value
+  `redb` materialized and as the copy the store served from, and the pages of
+  the first stayed with the process. Measured on an Apple M2 with
+  `ferroterm-residency --report`, a served edition's footprint falls from
+  783.3 MB to 615.5 MB (Netherlands 20260630) and from 619.7 MB to 519.0 MB
+  (International 20260901), with the unattributed remainder down from 222.8 MB
+  to 55.1 MB and from 150.3 MB to 49.6 MB. The artifact is smaller on disk as
+  well, 863.8 MB to 689.5 MB for the Dutch edition, and the build holds 0.7 GB
+  less at its peak.
+
 ### Added
 
 - The viewer signs a person in with SMART App Launch and gains a write client

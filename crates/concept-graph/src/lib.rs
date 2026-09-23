@@ -17,6 +17,7 @@ pub mod identifiers;
 pub mod members;
 pub mod ordinal;
 pub mod persist;
+pub mod read;
 pub mod refsets;
 pub mod relations;
 pub mod subsumption;
