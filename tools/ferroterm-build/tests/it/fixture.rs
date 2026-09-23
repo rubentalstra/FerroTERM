@@ -34,6 +34,8 @@ const FSN: &str = "900000000000003001";
 const SYNONYM: &str = "900000000000013009";
 const CASE_INSENSITIVE: &str = "900000000000448009";
 const INFERRED: &str = "900000000000011006";
+const QUALIFYING: &str = "900000000000225001";
+const ADDITIONAL: &str = "900000000000227009";
 const EXISTENTIAL: &str = "900000000000451002";
 const PREFERRED: &str = "900000000000548007";
 const ACCEPTABLE: &str = "900000000000549004";
@@ -351,6 +353,46 @@ pub(crate) fn write_release(root: &Path) {
                 INFERRED,
                 EXISTENTIAL,
             ]),
+            // A qualifying is-a and an additional attribute: neither defines
+            // the dog, so neither reaches the hierarchy or its properties.
+            s(&[
+                &relationship(9),
+                DATE,
+                "1",
+                &module,
+                &dog,
+                &top,
+                "0",
+                IS_A,
+                QUALIFYING,
+                EXISTENTIAL,
+            ]),
+            s(&[
+                &relationship(10),
+                DATE,
+                "1",
+                &module,
+                &dog,
+                &concept(7),
+                "1",
+                &concept(6),
+                ADDITIONAL,
+                EXISTENTIAL,
+            ]),
+            // A qualifying row may name a concept the edition does not define,
+            // since it is no part of the definition the edition carries.
+            s(&[
+                &relationship(12),
+                DATE,
+                "1",
+                &module,
+                &dog,
+                &concept(50),
+                "0",
+                IS_A,
+                QUALIFYING,
+                EXISTENTIAL,
+            ]),
         ],
     );
     write(
@@ -371,18 +413,33 @@ pub(crate) fn write_release(root: &Path) {
             "modifierId",
         ],
         // A concrete value: the cat has four legs (concept 8 is the attribute type).
-        &[s(&[
-            &relationship(8),
-            DATE,
-            "1",
-            &module,
-            &cat,
-            "#4",
-            "2",
-            &concept(8),
-            INFERRED,
-            EXISTENTIAL,
-        ])],
+        &[
+            s(&[
+                &relationship(8),
+                DATE,
+                "1",
+                &module,
+                &cat,
+                "#4",
+                "2",
+                &concept(8),
+                INFERRED,
+                EXISTENTIAL,
+            ]),
+            // A qualifying concrete value: it does not define the dog either.
+            s(&[
+                &relationship(11),
+                DATE,
+                "1",
+                &module,
+                &dog,
+                "#9",
+                "2",
+                &concept(8),
+                QUALIFYING,
+                EXISTENTIAL,
+            ]),
+        ],
     );
     let language_header = [
         "id",

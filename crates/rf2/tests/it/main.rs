@@ -12,6 +12,7 @@
     reason = "test assertions and one long synthetic fixture"
 )]
 
+mod characteristic_type;
 mod fixture;
 mod local_edition;
 mod release;

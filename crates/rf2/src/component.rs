@@ -6,6 +6,7 @@
 
 use std::io::Read;
 
+use crate::constants;
 use crate::id::{ConceptId, DescriptionId, ModuleId, RelationshipId, Sctid};
 use crate::reader::{FieldError, Record, Rf2Error, Rf2Reader};
 use crate::time::EffectiveTime;
@@ -66,6 +67,85 @@ impl<R: Read, T: Component> Iterator for Rows<R, T> {
             Ok(Some(record)) => Some(T::from_record(&record)),
             Ok(None) => None,
             Err(e) => Some(Err(e)),
+        }
+    }
+}
+
+/// A row carrying the RF2 `characteristicTypeId` column.
+///
+/// The relationship and concrete value files both carry it, and the
+/// enumeration behind it says which rows define their source concept
+/// (release file specification appendix E.5,
+/// <https://docs.snomed.org/snomed-ct-specifications/snomed-ct-release-file-specification/appendices/appendix-e-concept-enumerations/e5-concept-enumerations-for-characteristictypeid.md>).
+pub trait CharacteristicTyped {
+    /// The characteristic type of this row.
+    fn characteristic_type_id(&self) -> ConceptId;
+}
+
+impl CharacteristicTyped for Relationship {
+    fn characteristic_type_id(&self) -> ConceptId {
+        self.characteristic_type_id
+    }
+}
+
+impl CharacteristicTyped for ConcreteRelationship {
+    fn characteristic_type_id(&self) -> ConceptId {
+        self.characteristic_type_id
+    }
+}
+
+impl<R: Read, T: Component + CharacteristicTyped> Rows<R, T> {
+    /// Narrows the file to the rows that define their source concept.
+    ///
+    /// A row is admitted only when it carries
+    /// `900000000000011006 |Inferred relationship|`, so a hierarchy or an
+    /// attribute value built from a relationship file reads the rows through
+    /// this adapter. Every other row is left out and counted by
+    /// [`InferredRows::skipped`].
+    #[must_use]
+    pub fn inferred(self) -> InferredRows<R, T> {
+        InferredRows {
+            rows: self,
+            skipped: 0,
+        }
+    }
+}
+
+/// The rows of a relationship file whose characteristic type is
+/// `900000000000011006 |Inferred relationship|`, as [`Rows::inferred`] selects
+/// them.
+#[derive(Debug)]
+pub struct InferredRows<R: Read, T: Component + CharacteristicTyped> {
+    rows: Rows<R, T>,
+    skipped: u64,
+}
+
+impl<R: Read, T: Component + CharacteristicTyped> InferredRows<R, T> {
+    /// How many rows the adapter has left out so far.
+    ///
+    /// A caller that reads a whole file reports this, so a release whose
+    /// relationships sit outside the inferred view is visible rather than a
+    /// hierarchy that came out empty for no stated reason.
+    #[must_use]
+    pub fn skipped(&self) -> u64 {
+        self.skipped
+    }
+}
+
+impl<R: Read, T: Component + CharacteristicTyped> Iterator for InferredRows<R, T> {
+    type Item = Result<T, Rf2Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // NOTE: of the appendix E.5 enumeration only |Inferred relationship|
+        // defines the concept, and E.5 records that no released relationship
+        // carries the |Defining relationship| supertype, so that goes too.
+        loop {
+            match self.rows.next()? {
+                Ok(row) if row.characteristic_type_id() != constants::INFERRED => {
+                    self.skipped = self.skipped.saturating_add(1);
+                }
+                row => return Some(row),
+            }
         }
     }
 }
@@ -182,7 +262,7 @@ pub struct Relationship {
     pub relationship_group: u32,
     /// The attribute, for example `Is a`.
     pub type_id: ConceptId,
-    /// Inferred, stated, or additional.
+    /// The characteristic type, from the appendix E.5 enumeration.
     pub characteristic_type_id: ConceptId,
     /// The modifier.
     pub modifier_id: ConceptId,
@@ -281,7 +361,7 @@ pub struct ConcreteRelationship {
     pub relationship_group: u32,
     /// The attribute.
     pub type_id: ConceptId,
-    /// Inferred, stated, or additional.
+    /// The characteristic type, from the appendix E.5 enumeration.
     pub characteristic_type_id: ConceptId,
     /// The modifier.
     pub modifier_id: ConceptId,

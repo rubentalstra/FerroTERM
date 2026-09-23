@@ -196,6 +196,8 @@ pub struct Report {
     pub refsets: u64,
     /// Active attribute relationships (every inferred relationship that is not is-a).
     pub attributes: u64,
+    /// Relationship rows left out, those outside the inferred view.
+    pub skipped_relationships: u64,
     /// Active reference set member rows kept with their fields.
     pub member_rows: u64,
     /// Alternate identifiers.
@@ -290,6 +292,7 @@ pub fn build(rf2: &Path, refsets: &[PathBuf], out: &Path) -> Result<Report, Erro
         is_a_edges: written.is_a_edges,
         refsets: u64::try_from(loaded.memberships.len()).unwrap_or(u64::MAX),
         attributes: u64::try_from(attribute_graph.edges()).unwrap_or(u64::MAX),
+        skipped_relationships: loaded.relationships.skipped,
         member_rows: loaded.member_tables.total(),
         identifiers: u64::try_from(loaded.identifiers.len()).unwrap_or(u64::MAX),
         words: written.words,
@@ -642,6 +645,8 @@ struct Relationships {
     attributes: BTreeMap<(Ordinal, ConceptId), Vec<record::PropertyValue>>,
     /// Every attribute row with its role group, for the graph.
     edges: Vec<(Ordinal, u32, ConceptId, attributes::Value)>,
+    /// Rows the inferred view left out, whatever their characteristic type.
+    skipped: u64,
 }
 
 impl Relationships {
@@ -679,14 +684,15 @@ fn ordinal_of_concept(
         })
 }
 
-/// Reads one RF2 relationship file: an active is-a row becomes a hierarchy
-/// edge, every other one an attribute value on its source.
+/// Reads one RF2 relationship file: an active inferred is-a row becomes a
+/// hierarchy edge, every other one an attribute value on its source.
 fn read_relationship_file(
     path: &Path,
     ordinals: &BTreeMap<ConceptId, Ordinal>,
     out: &mut Relationships,
 ) -> Result<(), Error> {
-    for relationship in Rows::<_, Relationship>::open(path)? {
+    let mut rows = Rows::<_, Relationship>::open(path)?.inferred();
+    for relationship in rows.by_ref() {
         let relationship = relationship?;
         if !relationship.base.active {
             continue;
@@ -697,6 +703,9 @@ fn read_relationship_file(
         if relationship.type_id == constants::IS_A {
             out.is_a.push((source, destination));
         } else {
+            // NOTE: the FHIR SNOMED CT page says a concept model attribute
+            // relationship becomes a property and is silent on
+            // characteristicTypeId, so the inferred view is our own design.
             out.attributes
                 .entry((source, relationship.type_id))
                 .or_default()
@@ -709,17 +718,19 @@ fn read_relationship_file(
             ));
         }
     }
+    out.skipped = out.skipped.saturating_add(rows.skipped());
     Ok(())
 }
 
-/// Reads one RF2 concrete-value relationship file: every active row is an
-/// attribute whose value is a number or a string.
+/// Reads one RF2 concrete-value relationship file: every active inferred row
+/// is an attribute whose value is a number or a string.
 fn read_concrete_relationship_file(
     path: &Path,
     ordinals: &BTreeMap<ConceptId, Ordinal>,
     out: &mut Relationships,
 ) -> Result<(), Error> {
-    for relationship in Rows::<_, ConcreteRelationship>::open(path)? {
+    let mut rows = Rows::<_, ConcreteRelationship>::open(path)?.inferred();
+    for relationship in rows.by_ref() {
         let relationship = relationship?;
         if !relationship.base.active {
             continue;
@@ -749,6 +760,7 @@ fn read_concrete_relationship_file(
             edge,
         ));
     }
+    out.skipped = out.skipped.saturating_add(rows.skipped());
     Ok(())
 }
 
@@ -788,6 +800,7 @@ fn read_relationships(
             out.attributes.entry(key).or_default().extend(values);
         }
         out.edges.extend(part.edges);
+        out.skipped = out.skipped.saturating_add(part.skipped);
     }
     out.is_a.par_sort_unstable();
     out.is_a.dedup();

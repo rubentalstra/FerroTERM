@@ -13,6 +13,21 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Fixed
+
+- The RF2 relationship reader admits only rows whose `characteristicTypeId` is
+  `900000000000011006 |Inferred relationship|` (#545). A qualifying or an
+  additional row "is not part of the definition of the concept" (release file
+  specification, appendix E.5), so neither reaches the hierarchy, the concept's
+  attribute properties, ECL refinement, or the normal form. The concrete value
+  file carries the same column and gets the same filter, since §4.2.6 states
+  that its rules are those of the relationship file. A current edition ships
+  only inferred rows, so a build of one produces the same artifacts as before;
+  an edition published before 2018 and an extension that ships other rows no
+  longer put them into a concept definition. The build counts every row it
+  leaves out and prints the count, so a release whose relationships sit
+  outside the inferred view never builds a thin hierarchy in silence.
+
 ### Changed
 
 - The eleven latency bars in `bench/bars.json` are tightened from the flat
