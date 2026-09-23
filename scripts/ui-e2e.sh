@@ -5,6 +5,8 @@
 #
 #   scripts/ui-e2e.sh
 #   scripts/ui-e2e.sh --base-url URL --webdriver URL
+#   scripts/ui-e2e.sh --base-url URL --webdriver URL \
+#     --signed-in-base-url URL --issuer URL
 #   scripts/ui-e2e.sh --docs-shots
 #
 # The battery must not change a tracked file. The documentation capture pass is
@@ -18,6 +20,27 @@
 # from docker/Dockerfile the way the release lane stages it, and runs that
 # image and a pinned Chromium beside it on a private container network. The
 # journeys then run against the image the project actually ships.
+#
+# The signed-in journeys need a second deployment, because a server either
+# configures an identity provider or does not and the read-only journeys assert
+# the second shape. The managed mode starts that second server itself, beside a
+# stub identity provider over TLS whose certificate authority it installs in
+# both containers. In the manual mode you start the pair yourself and name them
+# with --signed-in-base-url and --issuer; without them those journeys skip and
+# say so. On a laptop that is:
+#
+#   cargo run --manifest-path e2e/Cargo.toml --bin stub-issuer -- \
+#     --listen 0.0.0.0:18443 --issuer https://localhost:18443 \
+#     --public https://host.docker.internal:18443 \
+#     --name localhost --name host.docker.internal \
+#     --ca /tmp/e2e/ca.pem --serve-name ferroterm-smart --serve-dir /tmp/e2e/certs
+#
+# then a server with FERROTERM_OIDC_ISSUER=https://localhost:18443,
+# FERROTERM_BASE_URL=https://ferroterm-smart, a viewer client id, and
+# SSL_CERT_FILE=/tmp/e2e/ca.pem; a Caddy container aliased ferroterm-smart
+# serving /tmp/e2e/certs in front of it; and the browser container started with
+# the authority as a Chromium policy. --issuer is the address the BROWSER
+# reaches the issuer at, which is the --public one.
 #
 # With --base-url and --webdriver it builds and starts nothing and drives what
 # you already have. Both are required together, because a browser that cannot
@@ -60,6 +83,32 @@ readonly SERVER_IMAGE="ferroterm-ui-e2e:local"
 # The name the browser addresses the server by on the private network.
 readonly SERVER_HOST="ferroterm"
 
+# The name the browser addresses the second deployment by: the one with a SMART
+# issuer configured, which the signed-in journeys drive. One server cannot be
+# both, because the read-only journeys assert that a deployment without an
+# issuer offers no sign-in.
+#
+# It is a TLS terminator in front of the server, the way a deployment runs one,
+# because a browser gives `crypto.subtle` to a secure context alone
+# (https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) and
+# the PKCE verifier is drawn with it.
+readonly SIGNED_IN_HOST="ferroterm-smart"
+
+# The name that terminator forwards to, which nothing else addresses.
+readonly SIGNED_IN_ORIGIN_HOST="ferroterm-origin"
+
+# The terminator, pinned by digest, and the same image compose.yaml puts in
+# front of a proxied deployment.
+readonly PROXY_IMAGE="docker.io/library/caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648"
+
+# The name both containers address the stub identity provider by. It runs on
+# the host, so each container reaches it through the host gateway, and the
+# certificate is issued for this name.
+readonly ISSUER_HOST="issuer"
+
+# The OAuth client the second server publishes for the viewer to present.
+readonly VIEWER_CLIENT_ID="ferroterm-viewer-e2e"
+
 # Seconds to wait for the server container to answer /health, and for the
 # browser container to report itself ready.
 readonly READY_TIMEOUT=120
@@ -84,11 +133,15 @@ readonly FAILURES_DIR="$root/target/ui-e2e-failures"
 base_url=""
 webdriver=""
 docs_shots=""
+signed_in_base_url=""
+issuer_url=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --base-url) base_url=$2; shift 2 ;;
     --webdriver) webdriver=$2; shift 2 ;;
     --docs-shots) docs_shots=1; shift ;;
+    --signed-in-base-url) signed_in_base_url=$2; shift 2 ;;
+    --issuer) issuer_url=$2; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -96,6 +149,18 @@ done
 if { [[ -n "$base_url" ]] && [[ -z "$webdriver" ]]; } ||
    { [[ -z "$base_url" ]] && [[ -n "$webdriver" ]]; }; then
   echo "ui-e2e: --base-url and --webdriver are given together or not at all" >&2
+  exit 2
+fi
+
+if { [[ -n "$signed_in_base_url" ]] && [[ -z "$issuer_url" ]]; } ||
+   { [[ -z "$signed_in_base_url" ]] && [[ -n "$issuer_url" ]]; }; then
+  echo "ui-e2e: --signed-in-base-url and --issuer are given together or not at all" >&2
+  exit 2
+fi
+
+if [[ -z "$base_url" ]] && [[ -n "$signed_in_base_url" ]]; then
+  echo "ui-e2e: --signed-in-base-url belongs to the manual mode; the managed mode" >&2
+  echo "  starts its own issuer and its own second server." >&2
   exit 2
 fi
 
@@ -131,11 +196,43 @@ free_port() {
 
 network=""
 server=""
+signed_in=""
+proxy=""
 browser=""
+issuer_pid=""
+issuer_dir=""
 cleanup() {
   [[ -z "$browser" ]] || docker rm -f "$browser" >/dev/null 2>&1 || true
+  [[ -z "$proxy" ]] || docker rm -f "$proxy" >/dev/null 2>&1 || true
+  [[ -z "$signed_in" ]] || docker rm -f "$signed_in" >/dev/null 2>&1 || true
   [[ -z "$server" ]] || docker rm -f "$server" >/dev/null 2>&1 || true
   [[ -z "$network" ]] || docker network rm "$network" >/dev/null 2>&1 || true
+  [[ -z "$issuer_pid" ]] || kill "$issuer_pid" >/dev/null 2>&1 || true
+  [[ -z "$issuer_dir" ]] || rm -rf "$issuer_dir"
+}
+
+# Waits until the container named $1 answers /health on the published port $2.
+#
+# A container that exits before it is ready is reported with its own log,
+# because a server that refused its configuration says why there and nowhere
+# else.
+await_health() {
+  local container=$1 port=$2 waited
+  echo "== waiting for $container on 127.0.0.1:$port"
+  for waited in $(seq 1 "$((READY_TIMEOUT * 5))"); do
+    if [[ "$(docker inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" != true ]]; then
+      echo "ui-e2e: $container exited before it was ready (after $waited probes)" >&2
+      docker logs "$container" >&2 || true
+      return 1
+    fi
+    if curl -sf "http://127.0.0.1:$port/health" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.2
+  done
+  echo "ui-e2e: $container did not answer /health within ${READY_TIMEOUT}s" >&2
+  docker logs "$container" >&2 || true
+  return 1
 }
 
 if [[ -z "$base_url" ]]; then
@@ -220,25 +317,7 @@ if [[ -z "$base_url" ]]; then
     --env FERROTERM_CODESYSTEMS=/fixtures/codesystems \
     --volume "$root/e2e/fixtures/codesystems:/fixtures/codesystems:ro" \
     --publish "127.0.0.1:$server_port:8080" "$SERVER_IMAGE" >/dev/null
-  echo "== waiting for the server on 127.0.0.1:$server_port"
-  ready=""
-  for _ in $(seq 1 "$((READY_TIMEOUT * 5))"); do
-    if [[ "$(docker inspect -f '{{.State.Running}}' "$server" 2>/dev/null)" != true ]]; then
-      echo "ui-e2e: the server container exited before it was ready" >&2
-      docker logs "$server" >&2 || true
-      exit 1
-    fi
-    if curl -sf "http://127.0.0.1:$server_port/health" >/dev/null 2>&1; then
-      ready=1
-      break
-    fi
-    sleep 0.2
-  done
-  if [[ -z "$ready" ]]; then
-    echo "ui-e2e: the server did not answer /health within ${READY_TIMEOUT}s" >&2
-    docker logs "$server" >&2 || true
-    exit 1
-  fi
+  await_health "$server" "$server_port"
   # A binary built without a bundle serves no /ui route, and the journeys would
   # then fail on a missing element rather than on the missing bundle.
   curl -sf "http://127.0.0.1:$server_port/ui/" >/dev/null 2>&1 || {
@@ -247,13 +326,120 @@ if [[ -z "$base_url" ]]; then
     exit 1
   }
 
+  # The identity provider the signed-in journeys sign in to: a stub over TLS,
+  # because the server refuses a non-loopback issuer over plain HTTP. It runs
+  # on the host, and both containers reach it through the host gateway under
+  # the name its certificate is issued for.
+  echo "== the stub identity provider"
+  cargo build --manifest-path e2e/Cargo.toml --locked --bin stub-issuer
+  issuer_dir="$(mktemp -d)"
+  issuer_ca="$issuer_dir/ca.pem"
+  issuer_port="$(free_port 18443)"
+  issuer_url="https://$ISSUER_HOST:$issuer_port"
+  # The same authority issues the terminator's certificate, so installing one
+  # authority in the browser covers the issuer and the viewer alike.
+  "$root/e2e/target/debug/stub-issuer" --listen "0.0.0.0:$issuer_port" \
+    --issuer "$issuer_url" --name "$ISSUER_HOST" --ca "$issuer_ca" \
+    --serve-name "$SIGNED_IN_HOST" --serve-dir "$issuer_dir/certs" &
+  issuer_pid=$!
+  ready=""
+  for _ in $(seq 1 "$((READY_TIMEOUT * 5))"); do
+    if [[ -s "$issuer_ca" ]] &&
+       curl -sf --cacert "$issuer_ca" --resolve "$ISSUER_HOST:$issuer_port:127.0.0.1" \
+         "$issuer_url/.well-known/openid-configuration" >/dev/null 2>&1; then
+      ready=1
+      break
+    fi
+    sleep 0.2
+  done
+  if [[ -z "$ready" ]]; then
+    echo "ui-e2e: the stub issuer did not answer its discovery document" >&2
+    exit 1
+  fi
+
+  # The second server: the same image, configured to ask for a token. The
+  # first one configures no issuer, and the read-only journeys assert that it
+  # offers no sign-in, so the two deployments cannot be one container.
+  #
+  # SSL_CERT_FILE is what makes the container trust the run's own authority:
+  # the server reads its roots through rustls-native-certs, which takes that
+  # variable over the platform store
+  # (https://docs.rs/rustls-native-certs/0.8/rustls_native_certs/).
+  signed_in="$run-signed-in"
+  signed_in_base_url="https://$SIGNED_IN_HOST"
+  signed_in_port="$(free_port 8180)"
+  docker run --detach --name "$signed_in" --network "$network" \
+    --network-alias "$SIGNED_IN_ORIGIN_HOST" \
+    --add-host "$ISSUER_HOST:host-gateway" \
+    --env FERROTERM_UI=on --env FERROTERM_LOG_FORMAT=json \
+    --env FERROTERM_CODESYSTEMS=/fixtures/codesystems \
+    --env "FERROTERM_BASE_URL=$signed_in_base_url" \
+    --env "FERROTERM_OIDC_ISSUER=$issuer_url" \
+    --env "FERROTERM_VIEWER_CLIENT_ID=$VIEWER_CLIENT_ID" \
+    --env SSL_CERT_FILE=/run/issuer/ca.pem \
+    --volume "$root/e2e/fixtures/codesystems:/fixtures/codesystems:ro" \
+    --volume "$issuer_ca:/run/issuer/ca.pem:ro" \
+    --publish "127.0.0.1:$signed_in_port:8080" "$SERVER_IMAGE" >/dev/null
+  await_health "$signed_in" "$signed_in_port"
+
+  # The TLS in front of it, with the certificate the issuer's own authority
+  # signed. `auto_https off` keeps Caddy from reaching for a public authority
+  # it could never reach (https://caddyserver.com/docs/caddyfile/options).
+  echo "== the TLS terminator in front of the signed-in server"
+  cat > "$issuer_dir/Caddyfile" <<CADDY
+{
+	admin off
+	auto_https off
+}
+
+https://$SIGNED_IN_HOST {
+	tls /certs/cert.pem /certs/key.pem
+	reverse_proxy $SIGNED_IN_ORIGIN_HOST:8080
+}
+CADDY
+  proxy="$run-proxy"
+  proxy_port="$(free_port 8543)"
+  docker run --detach --name "$proxy" --network "$network" \
+    --network-alias "$SIGNED_IN_HOST" \
+    --volume "$issuer_dir/Caddyfile:/etc/caddy/Caddyfile:ro" \
+    --volume "$issuer_dir/certs:/certs:ro" \
+    --publish "127.0.0.1:$proxy_port:443" "$PROXY_IMAGE" >/dev/null
+  echo "== waiting for the terminator on 127.0.0.1:$proxy_port"
+  ready=""
+  for _ in $(seq 1 "$((READY_TIMEOUT * 5))"); do
+    if curl -sf --cacert "$issuer_ca" \
+      --resolve "$SIGNED_IN_HOST:$proxy_port:127.0.0.1" \
+      "https://$SIGNED_IN_HOST:$proxy_port/health" >/dev/null 2>&1; then
+      ready=1
+      break
+    fi
+    sleep 0.2
+  done
+  if [[ -z "$ready" ]]; then
+    echo "ui-e2e: the TLS terminator did not answer within ${READY_TIMEOUT}s" >&2
+    docker logs "$proxy" >&2 || true
+    exit 1
+  fi
+
+  # The browser trusts the same authority through an enterprise policy, which
+  # is how Chromium takes a certificate authority without a user profile
+  # (https://chromeenterprise.google/policies/#CACertificates). The two paths
+  # are the policy directories of the Chromium and the Chrome packaging; a
+  # directory the image does not use is simply never read.
+  issuer_policy="$issuer_dir/ca-policy.json"
+  printf '{"CACertificates": ["%s"]}\n' \
+    "$(grep -v CERTIFICATE "$issuer_ca" | tr -d '\n')" > "$issuer_policy"
+
   # Chromium needs more than the default 64 MB /dev/shm; without this it
   # crashes on a page of any size
   # (https://developer.chrome.com/docs/chromium/headless).
   webdriver_port="$(free_port 4444)"
   docker run --detach --name "$browser" --network "$network" --shm-size 2g \
+    --add-host "$ISSUER_HOST:host-gateway" \
     --env "SE_NODE_MAX_SESSIONS=$BROWSER_SESSIONS" \
     --env SE_NODE_OVERRIDE_MAX_SESSIONS=true \
+    --volume "$issuer_policy:/etc/chromium/policies/managed/ferroterm-e2e-ca.json:ro" \
+    --volume "$issuer_policy:/etc/opt/chrome/policies/managed/ferroterm-e2e-ca.json:ro" \
     --publish "127.0.0.1:$webdriver_port:4444" "$BROWSER_IMAGE" >/dev/null
   echo "== waiting for the browser on 127.0.0.1:$webdriver_port"
   ready=""
@@ -285,6 +471,11 @@ rm -rf "$FAILURES_DIR"
 mkdir -p "$FAILURES_DIR"
 
 echo "== the journeys, against $base_url through $webdriver"
+if [[ -n "$signed_in_base_url" ]]; then
+  echo "   and the signed-in ones against $signed_in_base_url through $issuer_url"
+else
+  echo "   the signed-in journeys skip: nothing names a deployment with an issuer"
+fi
 # The journeys live outside the workspace, for the reason e2e/Cargo.toml
 # records, so they are run by manifest path rather than by package.
 #
@@ -294,6 +485,8 @@ echo "== the journeys, against $base_url through $webdriver"
 FERROTERM_UI_E2E_BASE_URL="$base_url" \
   FERROTERM_UI_E2E_WEBDRIVER="$webdriver" \
   FERROTERM_UI_E2E_FAILURES="$FAILURES_DIR" \
+  FERROTERM_UI_E2E_SIGNED_IN_BASE_URL="$signed_in_base_url" \
+  FERROTERM_UI_E2E_ISSUER="$issuer_url" \
   cargo nextest run --manifest-path e2e/Cargo.toml --locked \
     --test-threads "$BROWSER_SESSIONS" \
     -E 'binary(it) - test(/^docs_shots::/)'
