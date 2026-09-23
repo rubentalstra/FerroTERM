@@ -39,8 +39,23 @@ never a bare 500. A terminology failure adds a `details.coding` from
 `http://hl7.org/fhir/tools/CodeSystem/tx-issue-type` (`invalid-code`,
 `not-found`, `vs-invalid`, `too-costly`, and the rest); a refusal at the wire
 layer, such as an unreadable id or a failed precondition, carries the status
-and the text without one. The parameter set of each operation is exactly what the R4B
-`OperationDefinition` declares; a parameter another version defines is refused.
+and the text without one. The parameter set of each operation is what the
+served version's `OperationDefinition` declares, plus the parameters the HL7
+terminology ecosystem requires of every server
+(<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>); a parameter outside
+that set is refused.
+
+A `$validate-code` against a code system the server does not hold answers `200`
+with `result = false` and one `x-caused-by-unknown-system` per missing system,
+so a validator can tell its user which resources to load. The value is a
+canonical, `url` on its own or `url|version` when the request pinned a version
+the server does not serve. `CodeSystem/$validate-code` names the system the
+request asked for. `ValueSet/$validate-code` names a system the value set
+itself selects from; a system the request brings that the value set never
+selects from is reported as `x-unknown-system` instead, because the value set
+is not the cause. Neither name is declared by any `OperationDefinition`, so
+both come from the ecosystem overlay and are marked as such in the
+`CapabilityStatement`.
 
 ## Value sets
 
