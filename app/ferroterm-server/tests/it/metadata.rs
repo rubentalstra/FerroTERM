@@ -109,6 +109,26 @@ async fn the_capability_statements_state_the_configured_base_url() {
     );
 }
 
+/// Every segment the derivation names is served, and states that base.
+///
+/// The SMART gate accepts these same bases as a token audience
+/// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), so a segment in
+/// the list that no router serves would be an audience for nothing.
+#[tokio::test]
+async fn the_endpoint_of_every_served_segment_is_the_one_the_router_answers() {
+    let base = "https://tx.example.org/fhir";
+    let server = Server::start_with_base_url(base);
+    for segment in ferroterm_server::version::SEGMENTS {
+        let (status, body) = server.get(&format!("/{segment}/metadata")).await;
+        assert_eq!(status, StatusCode::OK, "{segment}: {body}");
+        assert_eq!(
+            body["implementation"]["url"],
+            ferroterm_server::version::endpoint(base, segment),
+            "{segment}: {body}"
+        );
+    }
+}
+
 /// The canonical of the artifact declaration, and its two sub-extensions.
 const ARTIFACT: &str = "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact";
 

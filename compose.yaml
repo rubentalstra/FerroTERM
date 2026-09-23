@@ -49,7 +49,8 @@ services:
       FERROTERM_LOG_FORMAT: ${FERROTERM_LOG_FORMAT:-pretty}
       FERROTERM_DEFAULT_LANGUAGE: ${FERROTERM_DEFAULT_LANGUAGE:-en}
       # The URL clients reach this server at, when a proxy sits in front: it
-      # becomes `CapabilityStatement.implementation.url`, per version.
+      # becomes `CapabilityStatement.implementation.url`, per version, and it
+      # is what the SMART gate accepts as a token audience.
       FERROTERM_BASE_URL: ${FERROTERM_BASE_URL:-}
       # The authentication the proxy enforces, declared in the capability
       # statement (`OAuth`, `SMART-on-FHIR`, `Basic`, `Certificates`, ...).
@@ -123,7 +124,9 @@ services:
   #
   # FERROTERM_BASE_URL is what makes `CapabilityStatement.implementation.url`
   # correct: the server answers on an address it never sees, so it states the
-  # one clients use. Set it to the same scheme and host as the proxy.
+  # one clients use. Set it to the same scheme and host as the proxy. With a
+  # SMART issuer configured it is also the token audience the write routes
+  # accept, one FHIR base per served version.
   #
   # The proxy is the place for authentication and rate limiting: the server has
   # neither, and `FERROTERM_SECURITY_SERVICE` only declares what you put in

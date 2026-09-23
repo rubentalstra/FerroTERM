@@ -17,6 +17,12 @@ pub const BASE_URL_ENV: &str = "FERROTERM_UI_E2E_BASE_URL";
 /// Names the WebDriver endpoint the journeys drive the browser through.
 pub const WEBDRIVER_ENV: &str = "FERROTERM_UI_E2E_WEBDRIVER";
 
+/// Names the second server, the one with a SMART issuer configured.
+pub const SIGNED_IN_BASE_URL_ENV: &str = "FERROTERM_UI_E2E_SIGNED_IN_BASE_URL";
+
+/// Names the stub identity provider that second server trusts.
+pub const ISSUER_ENV: &str = "FERROTERM_UI_E2E_ISSUER";
+
 /// The WebDriver endpoint used when [`WEBDRIVER_ENV`] is unset.
 const DEFAULT_WEBDRIVER: &str = "http://127.0.0.1:4444";
 
@@ -70,6 +76,40 @@ pub fn server() -> Option<String> {
             println!(
                 "skipped: {BASE_URL_ENV} is unset, so there is no served viewer to drive. \
                  scripts/ui-e2e.sh sets it, and the ui-e2e CI job always runs that."
+            );
+            None
+        }
+    }
+}
+
+/// A deployment that asks a reader to sign in, and the issuer it trusts.
+#[derive(Clone, Debug)]
+pub struct SignedIn {
+    /// The server under test, as a URL without a trailing slash.
+    pub base: String,
+    /// The stub identity provider, as a URL without a trailing slash.
+    pub issuer: String,
+}
+
+/// The signed-in deployment, or `None` when nothing names one.
+///
+/// It is a second server beside the one [`server`] names: that one configures
+/// no issuer, which is the deployment the read-only journeys drive, and a
+/// server cannot be both at once.
+pub fn signed_in() -> Option<SignedIn> {
+    // An empty value is what the harness script passes when it started no
+    // issuer, and `var` answers that as a value rather than as absent.
+    let named = |variable| std::env::var(variable).ok().filter(|set| !set.is_empty());
+    match (named(SIGNED_IN_BASE_URL_ENV), named(ISSUER_ENV)) {
+        (Some(base), Some(issuer)) => Some(SignedIn {
+            base: base.trim_end_matches('/').to_owned(),
+            issuer: issuer.trim_end_matches('/').to_owned(),
+        }),
+        _absent => {
+            println!(
+                "skipped: {SIGNED_IN_BASE_URL_ENV} and {ISSUER_ENV} are unset, so there is no \
+                 signed-in deployment to drive. scripts/ui-e2e.sh sets both in its managed mode, \
+                 and the ui-e2e CI job always runs that."
             );
             None
         }

@@ -102,6 +102,18 @@ workspace would make the test run write FHIR JSON in a key order the shipped
 server does not. The job therefore also runs the formatting and clippy passes
 that crate would otherwise miss.
 
+A sign-in cannot be driven against that one deployment, because a server either
+names an identity provider or does not and the read-only journeys assert the
+second shape. The script starts a second server beside it, a stub identity
+provider from `e2e/src/bin/stub_issuer.rs`, and a TLS terminator in front of
+the pair: the server refuses a non-loopback issuer over plain HTTP, and a
+browser gives `crypto.subtle` to a secure context alone, so both legs are
+`https`. The authority is generated per run and never committed. The server
+container takes it through `SSL_CERT_FILE`, which is how
+`rustls-native-certs` is told where its roots are, and the browser takes it
+through Chromium's `CACertificates` enterprise policy, so no certificate check
+is turned off anywhere.
+
 A failing journey leaves the page it failed on. The harness writes a
 screenshot and the whole document into `target/ui-e2e-failures`, and the job
 uploads that directory as the `ui-e2e-failure` artifact when the run fails, so

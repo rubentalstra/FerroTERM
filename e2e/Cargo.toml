@@ -19,17 +19,51 @@ license = "BUSL-1.1"
 # (https://doc.rust-lang.org/cargo/reference/workspaces.html).
 [workspace]
 
-# The only target: one integration-test binary, one module per journey topic.
+# One integration-test binary, one module per journey topic.
 [[test]]
 name = "it"
 path = "tests/it/main.rs"
+
+# The identity provider the signed-in journeys sign in to. It is a test double
+# and never a product binary, which is why it lives here rather than in the
+# workspace.
+[[bin]]
+name = "stub-issuer"
+path = "src/bin/stub_issuer.rs"
+
+[dependencies]
+base64 = "0.22.1"
+form_urlencoded = "1.2.2"
+hyper = { version = "1.11.1", features = ["http1", "server"] }
+hyper-util = { version = "0.1.20", default-features = false, features = [
+  "tokio",
+] }
+http-body-util = "0.1.5"
+jiff = "0.2.35"
+jsonwebtoken = { version = "11.1.0", default-features = false, features = [
+  "aws_lc_rs",
+] }
+rcgen = "0.14.10"
+ring = "0.17.14"
+rustls = "0.23.43"
+serde_json = "1.0.151"
+# rcgen states a certificate's validity as `time::OffsetDateTime`, so the one
+# place this crate reads a wall clock outside `jiff` is the conversion into it
+# (https://docs.rs/rcgen/0.14/rcgen/struct.CertificateParams.html).
+time = { version = "0.3.45", default-features = false, features = ["std"] }
+tokio = { version = "1.53.1", features = [
+  "macros",
+  "net",
+  "rt-multi-thread",
+  "time",
+] }
+tokio-rustls = "0.26.5"
 
 [dev-dependencies]
 thirtyfour = { version = "0.37.5", default-features = false, features = [
   "reqwest",
   "rustls",
 ] }
-tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "time"] }
 
 # The workspace lint table cannot be inherited across the exclusion, so the
 # core of the bar is spelled here; the root clippy.toml still applies, because

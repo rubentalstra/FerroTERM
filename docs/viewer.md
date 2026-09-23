@@ -716,6 +716,24 @@ built except the `ui-e2e` job:
   (<https://doc.rust-lang.org/cargo/reference/features.html#feature-unification>),
   so holding it inside the workspace would make the test run write FHIR JSON
   in a key order the shipped server does not.
+- **A second deployment, for the journeys that sign in.** A server either names
+  an identity provider or does not, and the read-only journeys assert what the
+  second shape offers, so the signed-in ones drive a server of their own.
+  `scripts/ui-e2e.sh` starts it beside a stub identity provider
+  (`e2e/src/bin/stub_issuer.rs`) and a TLS terminator, both over `https`: the
+  server refuses a non-loopback issuer over plain HTTP
+  (`app/ferroterm-server/src/smart/discovery.rs`), and a browser gives
+  `crypto.subtle`, which draws the PKCE verifier, to a secure context alone
+  (<https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts>).
+  The authority is generated at run start and installed in both: in the server
+  container through `SSL_CERT_FILE`, which is where `rustls-native-certs`
+  reads its roots from
+  (<https://docs.rs/rustls-native-certs/0.8/rustls_native_certs/>), and in the
+  browser through the `CACertificates` enterprise policy
+  (<https://chromeenterprise.google/policies/#CACertificates>). Nothing turns
+  a certificate check off. Each journey opens the issuer's `/profile` address
+  first, which is how it chooses whether its sign-in is granted the write
+  scopes, and tags itself so the revocations it reads back are its own.
 - **The release lane.** The bundle is architecture-independent, so it is built
   once and embedded into each per-architecture binary before
   `release-build.yml` attests it. No new image, no new attestation subject,

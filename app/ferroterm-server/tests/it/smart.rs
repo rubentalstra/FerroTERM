@@ -24,7 +24,7 @@ use tower::ServiceExt;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use crate::fixture::{self, Server};
+use crate::fixture::{self, Server, SmartSetup};
 
 const COLOURS: &str = "http://ferroterm.test/CodeSystem/colours";
 
@@ -1100,4 +1100,163 @@ async fn the_capability_statement_declares_the_service_and_the_oauth_uris() {
             Some(json!(format!("{base}/introspect")))
         );
     }
+}
+
+/// The address a proxy reaches the server at in the audience tests.
+const PROXIED: &str = "https://tx.example.org";
+
+/// A server behind [`PROXIED`] whose gate takes `audience` from the
+/// environment.
+async fn proxied(issuer: &str, audience: Option<&str>) -> Server {
+    Server::start_persisting_with_smart_setup(SmartSetup {
+        audience: audience.map(str::to_owned),
+        base_url: Some(String::from(PROXIED)),
+        ..SmartSetup::for_issuer(issuer)
+    })
+    .await
+}
+
+/// The claims of a write token for `issuer` carrying `audience` as `aud`.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "serde_json assigns the member on the object `claims` returns"
+)]
+fn claims_for(issuer: &str, audience: Value) -> Value {
+    let mut payload = claims(issuer, "system/CodeSystem.cud", 300);
+    payload["aud"] = audience;
+    payload
+}
+
+/// A `PUT` of the colours code system on `version` carrying `token`.
+async fn put_colours_on(server: &Server, version: &str, token: &str) -> http::Response<Body> {
+    let uri = format!("/{version}/CodeSystem/colours");
+    put_with(server, &uri, &colours(), Some(token)).await
+}
+
+// SMART has a client send the FHIR base as `aud`
+// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), and this server
+// serves one base per version, so a token minted on one version writes on
+// every other.
+#[tokio::test]
+async fn a_token_for_one_version_base_writes_on_every_served_version() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = proxied(&mock.uri(), None).await;
+
+    let signed_in_on_r5 = key.sign(&claims_for(&mock.uri(), json!(format!("{PROXIED}/r5"))));
+    let response = put_colours_on(&server, "r5", &signed_in_on_r5).await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let response = put_colours_on(&server, "r4b", &signed_in_on_r5).await;
+    assert!(
+        response.status().is_success(),
+        "the same reader writes on another version: {}",
+        response.status()
+    );
+
+    // A client that kept the trailing slash of the base names the same server.
+    let with_slash = key.sign(&claims_for(&mock.uri(), json!(format!("{PROXIED}/r4b/"))));
+    let response = put_colours_on(&server, "r4b", &with_slash).await;
+    assert!(response.status().is_success(), "{}", response.status());
+}
+
+// RFC 7519 §4.1.3: `aud` may be an array, and the recipient identifies itself
+// with a value in it.
+#[tokio::test]
+async fn an_array_audience_with_one_matching_member_passes() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = proxied(&mock.uri(), None).await;
+
+    let several = json!(["https://elsewhere.example.org", format!("{PROXIED}/r4b")]);
+    let token = key.sign(&claims_for(&mock.uri(), several));
+    let response = put_colours(&server, Some(&token)).await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+}
+
+// RFC 8725 §3.9: a token another resource server is the audience of is not
+// this server's to spend.
+#[tokio::test]
+async fn an_audience_naming_another_server_is_refused() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = proxied(&mock.uri(), Some("ferroterm")).await;
+
+    for foreign in [
+        json!("https://elsewhere.example.org/r4b"),
+        json!(["https://elsewhere.example.org/r4b", "another-server"]),
+    ] {
+        let token = key.sign(&claims_for(&mock.uri(), foreign.clone()));
+        let response = put_colours(&server, Some(&token)).await;
+        let sent = challenge(&response);
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{foreign}");
+        assert!(sent.contains("error=\"invalid_token\""), "{sent}");
+    }
+
+    // The audience the deployment named outright stays accepted beside the
+    // version bases.
+    let configured = key.sign(&claims_for(&mock.uri(), json!("ferroterm")));
+    let response = put_colours(&server, Some(&configured)).await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+}
+
+// RFC 8725 §3.9: a claim checked only when present is no check, so a token
+// with no `aud` is refused wherever a base URL names the accepted set. The
+// root is no FHIR base of this server, so it is refused with it.
+#[tokio::test]
+async fn a_token_with_no_audience_or_the_root_as_one_is_refused() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = proxied(&mock.uri(), None).await;
+
+    let mut without = claims(&mock.uri(), "system/CodeSystem.cud", 300);
+    without.as_object_mut().expect("an object").remove("aud");
+    let response = put_colours(&server, Some(&key.sign(&without))).await;
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "no `aud`");
+
+    let root = key.sign(&claims_for(&mock.uri(), json!(PROXIED)));
+    let response = put_colours(&server, Some(&root)).await;
+    assert_eq!(
+        response.status(),
+        StatusCode::UNAUTHORIZED,
+        "the root serves no FHIR base"
+    );
+}
+
+// The admin listener serves no FHIR interaction, so a base URL is not an
+// audience for it: naming one leaves that surface as it was.
+#[tokio::test]
+async fn the_admin_listener_does_not_take_a_version_base_as_its_audience() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = proxied(&mock.uri(), None).await;
+    let admin = server.admin_router();
+
+    let mut payload = claims_for(&mock.uri(), json!("an-audience-of-its-own"));
+    payload["scope"] = json!("ferroterm/admin");
+    let request = Request::post("/reload")
+        .header(AUTHORIZATION, format!("Bearer {}", key.sign(&payload)))
+        .body(Body::empty())
+        .expect("request");
+    let response = admin.oneshot(request).await.expect("the admin answers");
+    assert_eq!(
+        response.status(),
+        StatusCode::OK,
+        "a base URL alone does not start checking the admin audience"
+    );
+}
+
+// RFC 7519 §4.1.3 leaves `aud` optional: a deployment that names neither a
+// base nor an audience checks none, and the issuer bounds the token.
+#[tokio::test]
+async fn a_deployment_naming_no_base_and_no_audience_checks_no_audience() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = Server::start_persisting_with_smart(&mock.uri(), None, None).await;
+
+    let elsewhere = key.sign(&claims_for(
+        &mock.uri(),
+        json!("https://elsewhere.example.org/r4b"),
+    ));
+    let response = put_colours(&server, Some(&elsewhere)).await;
+    assert_eq!(response.status(), StatusCode::CREATED);
 }

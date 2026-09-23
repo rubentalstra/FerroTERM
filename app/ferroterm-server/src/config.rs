@@ -44,6 +44,11 @@ pub const SECURITY_SERVICE_ENV: &str = "FERROTERM_SECURITY_SERVICE";
 /// this value as `implementation.url`, per version, so a client that reads one
 /// learns where to send the next request
 /// (<https://hl7.org/fhir/R4B/capabilitystatement-definitions.html#CapabilityStatement.implementation.url>).
+///
+/// It is also what the SMART gate accepts as a token audience: every served
+/// version's base under this URL, which is what a client sends as `aud`
+/// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>). Setting it
+/// therefore turns the audience check on for the write routes.
 pub const BASE_URL_ENV: &str = "FERROTERM_BASE_URL";
 /// The environment variable naming the OpenID Connect issuer to trust.
 ///
@@ -53,11 +58,13 @@ pub const BASE_URL_ENV: &str = "FERROTERM_BASE_URL";
 /// listener (<https://hl7.org/fhir/smart-app-launch/conformance.html>). Unset,
 /// the server asks for no token and the whole surface answers as before.
 pub const OIDC_ISSUER_ENV: &str = "FERROTERM_OIDC_ISSUER";
-/// The environment variable naming the audience every token must carry.
+/// The environment variable naming one more audience a token may carry.
 ///
-/// A deployment that names one refuses a token minted for another resource
-/// server (RFC 7519 §4.1.3); one that names none accepts any audience, and the
-/// issuer check still bounds the token.
+/// The write routes accept it beside every served version's base derived from
+/// [`BASE_URL_ENV`], and the admin listener accepts it alone. A token whose
+/// `aud` holds none of them is refused (RFC 7519 §4.1.3). A deployment that
+/// names neither this nor a base URL checks no audience, and the issuer check
+/// alone bounds the token.
 pub const OIDC_AUDIENCE_ENV: &str = "FERROTERM_OIDC_AUDIENCE";
 /// The environment variable naming the scope the admin listener requires.
 ///
@@ -129,8 +136,8 @@ pub struct Config {
     /// The OpenID Connect issuer whose tokens gate the writes; `None` when the
     /// deployment names none and the server asks for no token.
     pub oidc_issuer: Option<String>,
-    /// The audience every token must carry; `None` when the deployment names
-    /// none.
+    /// One more audience a token may carry, beside the version bases derived
+    /// from `base_url`; `None` when the deployment names none.
     pub oidc_audience: Option<String>,
     /// The scope the admin listener requires, compared verbatim.
     pub oidc_admin_scope: String,

@@ -74,6 +74,9 @@ exceptions = [
   { allow = ["BUSL-1.1"], crate = "ferroterm-build" },
   { allow = ["BUSL-1.1"], crate = "ferroterm-bench" },
   { allow = ["BUSL-1.1"], crate = "ferroterm-testkit" },
+  # The browser journeys are their own workspace, so this entry is read only
+  # when `cargo deny check` runs inside `e2e/`.
+  { allow = ["BUSL-1.1"], crate = "ferroterm-e2e" },
 ]
 
 [bans]
