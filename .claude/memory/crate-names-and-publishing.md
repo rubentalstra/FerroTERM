@@ -36,3 +36,5 @@ the owner's step (#168): repository `rubentalstra/FerroTERM`, workflows
 `::loinc::`, `::icd11::`, `::classification::` paths exist because same-named
 modules live in `fhir-terminology`, `ferroterm-build`, and the testkit. See
 [[multi-version-program]], [[release-cut-cadence]].
+
+- A NEW crate cannot be created by the Trusted Publishing lane: crates.io answers `403 Trusted Publishing tokens do not support creating new crates. Publish the crate manually, first` (v0.1.4 cut, 2026-09-23, `terminology-syndication`). Before the tag that first ships a new `crates/*` member, the owner publishes it once by hand (`cargo publish -p <crate> --locked`) and adds the GitHub Trusted Publisher on crates.io (repo, `release.yml`, environment `crates-io`); the lane then carries every later version. A `crates.io` job that fails on this leaves the other crates published and the verify step reporting a split.
