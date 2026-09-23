@@ -15,6 +15,35 @@ fresh link reference.
 
 ### Changed
 
+- The eleven latency bars in `bench/bars.json` are tightened from the flat
+  millisecond to a round number three to six times over the slowest median the
+  bench has shown, so a regression fails `scripts/checks/bench-bars.sh` in CI
+  instead of being noticed in a record months later (#304). A `$lookup` that
+  got twenty times slower passed the old bar. The headroom covers both
+  machines that run the check: this laptop and the shared runner of the
+  `bench-bars` job, whose medians differ by up to 1.5x between runner
+  instances.
+- The served `$lookup` bar keeps its per-byte shape and its coefficients,
+  `100 µs + 6.0 ns/byte`, confirmed against
+  `bench/records/2026-09-23-apple-m2/`, the first committed set that carries
+  the size of each answer (#512). Fitted over its seven code systems, a
+  `$lookup` costs a fixed 97.6 µs plus 4.61 ns per byte, and all seven hold
+  the bar: RxNorm's 387.7 µs for 63,134 bytes is the largest answer rather
+  than the slowest read, since SNOMED CT International pays 216.8 µs for
+  25,764 bytes at the same rate. The fixed term measured 70 µs on 2026-09-08
+  and 97.6 µs here with the rate unchanged, which leaves the smallest answers
+  4% under the bar; the bar is not raised for it, and the 28 µs is #628.
+- The published record set states the condition of the machine it was taken
+  on: `bench/records/2026-09-23-apple-m2/README.md` and the benchmarks chapter
+  say what ran during the run and what did not, and that the resident and
+  peak-build figures are the server's and the build tool's own processes
+  rather than the machine's (#512).
+- `docs/claims.md` is refreshed against the 2026-09-23 set. The five benchmark
+  claims that had no evidence behind them are gone: the container wording they
+  flagged has been replaced on the README and the benchmarks page, and the
+  resident and footprint figures on the comparison pages now come from that
+  set, read with `footprint` so the pages macOS compresses are counted.
+
 - `terminology-syndication` is not published on crates.io (the owner's
   decision, 2026-09-23): it says `publish = false` and sits outside the
   release lane's crate list, consumed inside the workspace by the sync service
