@@ -3,7 +3,10 @@
 The disk-backed concept store. Hand-written; no spec governs the on-disk
 layout (our own design, `docs/architecture.md` decision 3). `redb` owns the
 file I/O and its page cache, and maps nothing: it has had no memory-mapped
-backend since 0.14.0 dropped one that could not be proven sound.
+backend since 0.14.0 dropped one that could not be proven sound. The cache is
+capped at 64 MiB rather than redb's default gibibyte, because the columns are
+read once when the store opens and never again, and the default kept their
+pages for the life of the process (#322).
 
 Ordinal-keyed data is a dense column read into memory when the store opens
 (concepts, displays, properties, acceptability): a dense key already says

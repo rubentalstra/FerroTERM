@@ -122,20 +122,20 @@ fhir-types = "0.1.105"
 # Workspace-internal crates. The `crates/*` members carry the published crate
 # line (lockstep, bumped with their packaged content, never the product
 # version); the tools stay on the workspace version.
-rf2 = { path = "crates/rf2", version = "0.1.106" }
-loinc = { path = "crates/loinc", version = "0.1.106" }
-classification = { path = "crates/classification", version = "0.1.106" }
-dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.106" }
-gstandaard = { path = "crates/gstandaard", version = "0.1.106" }
-labcodeset = { path = "crates/labcodeset", version = "0.1.106" }
-icd11 = { path = "crates/icd11", version = "0.1.106" }
-rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.106" }
-concept-graph = { path = "crates/concept-graph", version = "0.1.106" }
-concept-store = { path = "crates/concept-store", version = "0.1.106" }
-designation-index = { path = "crates/designation-index", version = "0.1.106" }
-sct-ecl = { path = "crates/sct-ecl", version = "0.1.106" }
-fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.106" }
-terminology-syndication = { path = "crates/terminology-syndication", version = "0.1.106" }
+rf2 = { path = "crates/rf2", version = "0.1.107" }
+loinc = { path = "crates/loinc", version = "0.1.107" }
+classification = { path = "crates/classification", version = "0.1.107" }
+dhd-thesaurus = { path = "crates/dhd-thesaurus", version = "0.1.107" }
+gstandaard = { path = "crates/gstandaard", version = "0.1.107" }
+labcodeset = { path = "crates/labcodeset", version = "0.1.107" }
+icd11 = { path = "crates/icd11", version = "0.1.107" }
+rxnorm-rrf = { path = "crates/rxnorm-rrf", version = "0.1.107" }
+concept-graph = { path = "crates/concept-graph", version = "0.1.107" }
+concept-store = { path = "crates/concept-store", version = "0.1.107" }
+designation-index = { path = "crates/designation-index", version = "0.1.107" }
+sct-ecl = { path = "crates/sct-ecl", version = "0.1.107" }
+fhir-terminology = { path = "crates/fhir-terminology", version = "0.1.107" }
+terminology-syndication = { path = "crates/terminology-syndication", version = "0.1.107" }
 # The source add-ons. Path-only and never published; only app/ferroterm-sync
 # may take one (scripts/checks/addon-boundary.sh).
 addon-nts = { path = "addons/nts" }

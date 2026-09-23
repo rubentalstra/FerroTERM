@@ -97,3 +97,30 @@ fn the_implicit_descendants_value_set_holds_the_whole_edition() {
     );
     assert_eq!(expansion.items.len(), 10, "the page is the count asked for");
 }
+
+#[test]
+fn every_structure_of_a_served_edition_reports_what_it_holds() {
+    let (_dir, p) = provider();
+    let held = p.footprint();
+    for (column, bytes) in held.store_columns {
+        assert!(bytes > 0, "the {column} column holds bytes");
+    }
+    for (name, bytes) in [
+        ("is-a adjacency", held.is_a),
+        ("closure bitmaps", held.closure),
+        ("child adjacency", held.children),
+        ("text index", held.text),
+        ("member tables", held.member_tables),
+        ("attribute rows", held.attributes),
+        ("memberships", held.memberships),
+    ] {
+        assert!(bytes > 0, "the {name} holds bytes");
+    }
+    // The generated edition states no attribute relationships and no alternate
+    // identifiers, so those two structures are empty by construction.
+    assert_eq!(
+        held.attributes_inverted, 0,
+        "no attribute type, so no inverted index"
+    );
+    assert_eq!(held.identifiers, 0, "the edition states no alternate ids");
+}

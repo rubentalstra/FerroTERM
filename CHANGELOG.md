@@ -76,6 +76,50 @@ fresh link reference.
   carries a non-empty `grant_types_supported`, which SMART makes required, and
   the capability list names the client type that issuer actually accepts.
 - The eleven latency bars in `bench/bars.json` are tightened from the flat
+- A served SNOMED edition holds a third less memory. The Dutch edition reads
+  818 MB resident warm against 1.14 GB, and the International edition 654 MB
+  against 942 MB, measured with the same harness on the same artifacts (#322).
+  Two changes carry it. A provider no longer reads a side file whole before
+  parsing it, so `hierarchy.bin`, `text.bin`, `members.bin`, `attributes.bin`,
+  and `refsets.bin` are assembled through a buffered reader and the file never
+  sits in memory beside the structure it becomes. And the `redb` page cache is
+  capped at 64 MiB: its default is a gibibyte, and the dense columns are read
+  once when the store opens and never again, so the default kept their pages
+  for the life of the process. Every other served system gains too, from
+  RxNorm's 132 MB to 109 MB down to ICD-10-NL's 66 MB to 64 MB. The published
+  record set still carries the older figures: the machine could not give a
+  measurement while this landed, so re-rendering the table is #642.
+- The resident memory of a served edition is accounted for structure by
+  structure, each figure counted from the structure's own allocations rather
+  than inferred from a total (#322). `concept-graph`, `designation-index`, and
+  `concept-store` answer `size_in_bytes` per structure,
+  `SnomedProvider::footprint` collects them, and
+  `ferroterm-residency --report` prints the accounting beside the process
+  footprint so the remainder is named rather than left as a gap. The Dutch
+  edition counts 560.4 MB of structure against a 782.2 MB process, and the
+  book's hardware-sizing chapter carries the table. The two ends of the
+  remainder are the capped page cache and the pages the allocator keeps from
+  copying each column out of the database, which is #641.
+- The fixed per-request cost of `$lookup` is the loopback round trip, not the
+  server (#628). Three `served/*_lookup` benches now span 862 bytes to 63,134
+  bytes in one process, and fitted over them a `$lookup` costs 11.9 µs plus
+  3.74 ns per byte, against 97.6 µs plus 4.61 ns per byte over a socket in a
+  record. Two new benches split the 11.9 µs: `fixed/axum_floor` puts routing
+  at 0.7 µs and `fixed/served_floor` puts the request log, the metrics sample,
+  and the request identifier at 1.2 µs on top, with the SMART gate adding
+  0.7 µs when no issuer is configured. The 28 µs the fixed term appeared to
+  gain since 2026-09-08 does not reproduce: the server built from that tree
+  and the server built from this one, run by the same harness over the same
+  artifact in six alternating passes, read a median 104.7 µs and 83.1 µs for
+  the same 862-byte answer. The served bar stays at `100 µs + 6.0 ns/byte`,
+  and the two new `fixed/` bars gate the part the server controls.
+- `ferroterm-bench` and `ferroterm-residency` read a process's memory from one
+  module. `ferroterm-residency` had its own reader over `ps -o rss=`, which on
+  macOS counts only the pages that are resident and uncompressed, so the
+  `resident_bytes` it wrote understated a served edition by an order of
+  magnitude; both binaries now use `footprint`'s `phys_footprint` there (#322).
+
+- The latency bars in `bench/bars.json` are tightened from the flat
   millisecond to a round number three to six times over the slowest median the
   bench has shown, so a regression fails `scripts/checks/bench-bars.sh` in CI
   instead of being noticed in a record months later (#304). A `$lookup` that
@@ -92,7 +136,8 @@ fresh link reference.
   than the slowest read, since SNOMED CT International pays 216.8 µs for
   25,764 bytes at the same rate. The fixed term measured 70 µs on 2026-09-08
   and 97.6 µs here with the rate unchanged, which leaves the smallest answers
-  4% under the bar; the bar is not raised for it, and the 28 µs is #628.
+  4% under the bar; the bar is not raised for it, and the 28 µs was taken to
+  #628, which found it in the machine rather than the code (below).
 - The published record set states the condition of the machine it was taken
   on: `bench/records/2026-09-23-apple-m2/README.md` and the benchmarks chapter
   say what ran during the run and what did not, and that the resident and

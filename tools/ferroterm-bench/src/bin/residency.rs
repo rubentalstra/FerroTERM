@@ -10,29 +10,26 @@
 //! a second load reuses what the first freed. The caller runs this once per
 //! structure and the reader adds them up.
 //!
-//! The resident figure comes from `ps`, which is how every other measurement
-//! in this repository reads it; a process cannot read its own resident set
-//! without `unsafe` or a platform crate, and the workspace forbids `unsafe`.
+//! The resident figure comes from `ferroterm_bench::memory`, which is how
+//! every other measurement in this repository reads it; a process cannot read
+//! its own memory without `unsafe` or a platform crate, and the workspace
+//! forbids `unsafe`.
+//!
+//! `--report` answers the other half of the question. It loads everything a
+//! served edition holds, in one process, and prints what each structure
+//! reports it holds, from the structures' own `size_in_bytes`, beside the
+//! process footprint. The difference between the sum and the footprint is the
+//! residual, which the caller names rather than leaves as a gap.
 #![allow(
     clippy::print_stdout,
     reason = "a measurement binary reports on stdout, which is what its caller reads"
 )]
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use anyhow::{Context, bail};
 use clap::Parser;
 use serde::Serialize;
-
-/// How many resident readings one measurement takes.
-///
-/// An odd count, so the median is a reading rather than an average of two
-/// (`ferroterm-bench`'s own sampler, #304).
-const SAMPLES: usize = 5;
-
-/// How long between two readings.
-const INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
 
 #[derive(Parser)]
 #[command(
@@ -43,8 +40,12 @@ struct Cli {
     #[arg(long)]
     artifact: PathBuf,
     /// Which structure to load, or `baseline` to load none.
+    #[arg(long, required_unless_present = "report", conflicts_with = "report")]
+    structure: Option<Structure>,
+    /// Loads everything a served edition holds and prints what each structure
+    /// reports it holds, beside the process footprint.
     #[arg(long)]
-    structure: Structure,
+    report: bool,
     /// Loads every structure up to and including this one, in the order the
     /// provider loads them, rather than this one alone.
     ///
@@ -52,7 +53,7 @@ struct Cli {
     /// the same moment. Cumulative peaks do: the difference between loading
     /// through one structure and through the one before it is what that
     /// structure costs with everything before it already resident.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "report")]
     cumulative: bool,
 }
 
@@ -136,32 +137,118 @@ fn main() -> anyhow::Result<()> {
     {
         bail!("{} holds no manifest.json", cli.artifact.display());
     }
+    if cli.report {
+        return report(&cli.artifact);
+    }
+    let Some(wanted) = cli.structure else {
+        bail!("name a structure with --structure, or ask for --report");
+    };
     // Every structure is held until the reading is taken, because a value the
     // compiler can see is dead is a value the allocator may already have back.
     let held = if cli.cumulative {
         let mut held = Vec::new();
         for structure in LOAD_ORDER {
             held.push(load(&cli.artifact, structure)?);
-            if structure == cli.structure {
+            if structure == wanted {
                 break;
             }
         }
         held
     } else {
-        vec![load(&cli.artifact, cli.structure)?]
+        vec![load(&cli.artifact, wanted)?]
     };
     let measurement = Measurement {
-        structure: cli.structure,
+        structure: wanted,
         artifact: cli.artifact.display().to_string(),
-        serialized_bytes: cli
-            .structure
+        serialized_bytes: wanted
             .file()
             .and_then(|name| std::fs::metadata(cli.artifact.join(name)).ok())
             .map(|meta| meta.len()),
-        resident_bytes: resident(),
+        resident_bytes: ferroterm_bench::memory::median_of_process(std::process::id()),
     };
     println!("{}", serde_json::to_string(&measurement)?);
     drop(held);
+    Ok(())
+}
+
+/// What one structure of the edition holds, as the report prints it.
+#[derive(Serialize)]
+struct Line {
+    /// The structure, as a reader of the accounting names it.
+    structure: &'static str,
+    /// The file it was read from, where it is one file.
+    file: Option<&'static str>,
+    /// That file's size on disk.
+    serialized_bytes: Option<u64>,
+    /// What the structure reports it holds in memory.
+    size_in_bytes: u64,
+}
+
+/// The whole accounting of one artifact.
+#[derive(Serialize)]
+struct Report {
+    /// The artifact measured.
+    artifact: String,
+    /// One line per structure, in the order the provider loads them.
+    structures: Vec<Line>,
+    /// The structures added up.
+    total_size_in_bytes: u64,
+    /// What the process holds, measured after the load.
+    footprint_bytes: Option<u64>,
+    /// The footprint less the structures: the allocator's retained pages, the
+    /// `redb` page cache, the binary, and the runtime.
+    residual_bytes: Option<i64>,
+    /// How every figure here was taken.
+    method: &'static str,
+}
+
+/// How the report's figures are taken, beside every one of them.
+const METHOD: &str = "size_in_bytes: each structure's own count of the heap its allocations hold, at their capacity; footprint: the median of five readings of this process after the load, from `footprint`'s phys_footprint on macOS and `ps -o rss=` elsewhere; residual: the footprint less the structures. No FHIR or SNOMED CT specification governs a benchmark: the accounting is this project's own design.";
+
+/// Prints what every structure of the artifact at `dir` holds.
+fn report(dir: &Path) -> anyhow::Result<()> {
+    let provider = fhir_terminology::snomed::SnomedProvider::open(dir, "en")
+        .context("cannot open the edition")?;
+    let held = provider.footprint();
+    let mut structures = Vec::new();
+    let mut line = |structure: &'static str, file: Option<&'static str>, bytes: usize| {
+        structures.push(Line {
+            structure,
+            file,
+            serialized_bytes: file
+                .and_then(|name| std::fs::metadata(dir.join(name)).ok())
+                .map(|meta| meta.len()),
+            size_in_bytes: u64::try_from(bytes).unwrap_or(u64::MAX),
+        });
+    };
+    for (column, bytes) in held.store_columns {
+        line(column, None, bytes);
+    }
+    line("is-a adjacency", Some("hierarchy.bin"), held.is_a);
+    line("closure bitmaps", Some("hierarchy.bin"), held.closure);
+    line("child adjacency", None, held.children);
+    line("text index", Some("text.bin"), held.text);
+    line("member tables", Some("members.bin"), held.member_tables);
+    line("attribute rows", Some("attributes.bin"), held.attributes);
+    line("attribute inverted index", None, held.attributes_inverted);
+    line("memberships", Some("refsets.bin"), held.memberships);
+    line("identifiers", Some("identifiers.bin"), held.identifiers);
+    let total: u64 = structures.iter().map(|line| line.size_in_bytes).sum();
+    let measured = ferroterm_bench::memory::median_of_process(std::process::id());
+    let report = Report {
+        artifact: dir.display().to_string(),
+        structures,
+        total_size_in_bytes: total,
+        footprint_bytes: measured,
+        residual_bytes: measured.map(|bytes| {
+            i64::try_from(bytes)
+                .unwrap_or(i64::MAX)
+                .saturating_sub(i64::try_from(total).unwrap_or(i64::MAX))
+        }),
+        method: METHOD,
+    };
+    println!("{}", serde_json::to_string_pretty(&report)?);
+    drop(provider);
     Ok(())
 }
 
@@ -241,25 +328,4 @@ fn load(dir: &Path, structure: Structure) -> anyhow::Result<Held> {
                 .context("cannot open the edition")?,
         )),
     })
-}
-
-/// The resident memory of this process, as the median of several readings.
-fn resident() -> Option<u64> {
-    let mut samples: Vec<u64> = Vec::with_capacity(SAMPLES);
-    for sample in 0..SAMPLES {
-        if sample > 0 {
-            std::thread::sleep(INTERVAL);
-        }
-        let output = Command::new("ps")
-            .args(["-o", "rss=", "-p", &std::process::id().to_string()])
-            .output()
-            .ok()?;
-        let kilobytes = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .parse::<u64>()
-            .ok()?;
-        samples.push(kilobytes * 1024);
-    }
-    samples.sort_unstable();
-    samples.get(SAMPLES.div_euclid(2)).copied()
 }

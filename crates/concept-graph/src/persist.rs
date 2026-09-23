@@ -56,6 +56,15 @@ pub struct Hierarchy {
 }
 
 impl Hierarchy {
+    /// The heap bytes the adjacency and the closure hold
+    /// ([`crate::footprint`]).
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        self.is_a
+            .size_in_bytes()
+            .saturating_add(self.closure.size_in_bytes())
+    }
+
     /// Writes the layout.
     ///
     /// # Errors

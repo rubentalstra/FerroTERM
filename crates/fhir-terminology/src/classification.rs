@@ -217,13 +217,11 @@ impl ClassificationProvider {
         let store = Store::open(&dir.join(&manifest.store))?;
         let read = |name: &str| {
             let path = dir.join(name);
-            std::fs::read(&path).map_err(|source| OpenError::Io { path, source })
+            crate::artifact::reader(&path).map_err(|source| OpenError::Io { path, source })
         };
-        let graph_bytes = read(&manifest.hierarchy)?;
-        let graph = GraphHierarchy::read_from(&mut graph_bytes.as_slice())?;
+        let graph = GraphHierarchy::read_from(&mut read(&manifest.hierarchy)?)?;
         let children = graph.is_a.transpose()?;
-        let text_bytes = read(&manifest.text)?;
-        let text = designation_index::persist::read_from(&mut text_bytes.as_slice())?;
+        let text = designation_index::persist::read_from(&mut read(&manifest.text)?)?;
         let concepts = store.meta(tables::META_CONCEPTS)?;
         let concepts: u32 = concepts
             .as_deref()

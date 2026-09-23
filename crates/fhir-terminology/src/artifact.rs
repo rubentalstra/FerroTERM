@@ -47,6 +47,30 @@ pub struct Description {
 /// finished writing.
 pub const MANIFEST_FILE: &str = concept_store::MANIFEST_FILE;
 
+/// How much of a side file a reader holds at a time.
+///
+/// Wide enough that a structure of hundreds of megabytes is assembled in a few
+/// thousand reads, small enough that the buffer is never the figure a resident
+/// measurement reports.
+const READ_BUFFER: usize = 1 << 20;
+
+/// Opens `path` for a structure to be assembled from.
+///
+/// A side file is read through this rather than into a `Vec`, because the
+/// whole file would then sit in memory beside the structure it becomes, and
+/// the allocator does not hand those pages back the moment the `Vec` drops
+/// (#322).
+///
+/// # Errors
+///
+/// Returns the I/O error from opening the file.
+pub fn reader(path: &Path) -> std::io::Result<std::io::BufReader<std::fs::File>> {
+    Ok(std::io::BufReader::with_capacity(
+        READ_BUFFER,
+        std::fs::File::open(path)?,
+    ))
+}
+
 /// Whether `dir` holds an artifact manifest.
 #[must_use]
 pub fn is_artifact(dir: &Path) -> bool {

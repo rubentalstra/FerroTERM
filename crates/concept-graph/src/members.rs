@@ -54,6 +54,15 @@ impl Memberships {
         self.sets.entry(refset).or_default().insert(concept.index());
     }
 
+    /// The heap bytes the membership bitmaps hold ([`crate::footprint`]).
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        self.sets.values().fold(
+            crate::footprint::entries::<u64, RoaringBitmap>(self.sets.len()),
+            |total, set| total.saturating_add(crate::footprint::bitmap(set)),
+        )
+    }
+
     /// The members of `refset`, when the edition has it.
     #[must_use]
     pub fn members(&self, refset: u64) -> Option<&RoaringBitmap> {

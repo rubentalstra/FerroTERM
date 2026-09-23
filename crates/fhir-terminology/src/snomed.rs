@@ -289,6 +289,34 @@ pub struct SnomedProvider {
     concepts: u32,
 }
 
+/// What each structure of a served edition holds in memory, in bytes.
+///
+/// No FHIR or SNOMED CT specification governs this: our own design, and the
+/// figures are what the structures count rather than what a process reports.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Footprint {
+    /// The resident columns of the store, by column name.
+    pub store_columns: [(&'static str, usize); 4],
+    /// The child-to-parent adjacency.
+    pub is_a: usize,
+    /// The ancestor and descendant bitmaps.
+    pub closure: usize,
+    /// The parent-to-child adjacency, transposed when the edition opens.
+    pub children: usize,
+    /// The designation dictionary and its postings.
+    pub text: usize,
+    /// The reference set member tables.
+    pub member_tables: usize,
+    /// The attribute rows.
+    pub attributes: usize,
+    /// The attribute inverted index, derived when the edition opens.
+    pub attributes_inverted: usize,
+    /// The reference set membership bitmaps.
+    pub memberships: usize,
+    /// The alternate identifier table.
+    pub identifiers: usize,
+}
+
 impl std::fmt::Debug for SnomedProvider {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SnomedProvider")
@@ -325,15 +353,13 @@ impl SnomedProvider {
         let store = Store::open(&dir.join(&manifest.store))?;
         let read = |name: &str| {
             let path = dir.join(name);
-            std::fs::read(&path).map_err(|source| OpenError::Io { path, source })
+            crate::artifact::reader(&path).map_err(|source| OpenError::Io { path, source })
         };
-        let graph_bytes = read(&manifest.hierarchy)?;
-        let graph = GraphHierarchy::read_from(&mut graph_bytes.as_slice())?;
+        let graph = GraphHierarchy::read_from(&mut read(&manifest.hierarchy)?)?;
         let children = graph.is_a.transpose()?;
-        let text_bytes = read(&manifest.text)?;
-        let text = designation_index::persist::read_from(&mut text_bytes.as_slice())?;
+        let text = designation_index::persist::read_from(&mut read(&manifest.text)?)?;
         let memberships = match &manifest.refsets {
-            Some(name) => Memberships::read_from(&mut read(name)?.as_slice())?,
+            Some(name) => Memberships::read_from(&mut read(name)?)?,
             None => Memberships::new(),
         };
         let (attributes, member_tables, identifiers) = Self::read_ecl_files(dir, &manifest)?;
@@ -435,6 +461,29 @@ impl SnomedProvider {
     #[must_use]
     pub fn edition_uri(&self) -> &str {
         &self.edition
+    }
+
+    /// What every structure of this edition holds in memory.
+    ///
+    /// Each figure is the structure's own count of the heap its allocations
+    /// hold, so a served edition's memory is accounted for structure by
+    /// structure. The caches an operation fills later
+    /// (the root, leaf, defined, and inactive sets, and the parsed expression
+    /// constraints) are not here: they are empty until a request asks for one.
+    #[must_use]
+    pub fn footprint(&self) -> Footprint {
+        Footprint {
+            store_columns: self.store.column_sizes(),
+            is_a: self.hierarchy.graph.is_a.size_in_bytes(),
+            closure: self.hierarchy.graph.closure.size_in_bytes(),
+            children: self.hierarchy.children.size_in_bytes(),
+            text: self.text.size_in_bytes(),
+            member_tables: self.member_tables.size_in_bytes(),
+            attributes: self.attributes.rows_size_in_bytes(),
+            attributes_inverted: self.attributes.inverted_size_in_bytes(),
+            memberships: self.memberships.size_in_bytes(),
+            identifiers: self.identifiers.size_in_bytes(),
+        }
     }
 
     fn resolve_keys(store: &Store) -> Result<Keys, OpenError> {
@@ -555,18 +604,18 @@ impl SnomedProvider {
     ) -> Result<(Attributes, RefsetMembers, Identifiers), OpenError> {
         let read = |name: &str| {
             let path = dir.join(name);
-            std::fs::read(&path).map_err(|source| OpenError::Io { path, source })
+            crate::artifact::reader(&path).map_err(|source| OpenError::Io { path, source })
         };
         let attributes = match &manifest.attributes {
-            Some(name) => Attributes::read_from(&mut read(name)?.as_slice())?,
+            Some(name) => Attributes::read_from(&mut read(name)?)?,
             None => Attributes::default(),
         };
         let member_tables = match &manifest.members {
-            Some(name) => RefsetMembers::read_from(&mut read(name)?.as_slice())?,
+            Some(name) => RefsetMembers::read_from(&mut read(name)?)?,
             None => RefsetMembers::new(),
         };
         let identifiers = match &manifest.identifiers {
-            Some(name) => Identifiers::read_from(&mut read(name)?.as_slice())?,
+            Some(name) => Identifiers::read_from(&mut read(name)?)?,
             None => Identifiers::default(),
         };
         Ok((attributes, member_tables, identifiers))

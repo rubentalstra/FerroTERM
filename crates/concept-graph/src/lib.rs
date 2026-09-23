@@ -12,6 +12,7 @@
 pub mod attributes;
 pub mod closure;
 pub mod csr;
+pub mod footprint;
 pub mod identifiers;
 pub mod members;
 pub mod ordinal;

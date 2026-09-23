@@ -80,12 +80,57 @@ fn requests(c: &mut Criterion) {
     group.finish();
 }
 
+/// What a request costs before the operation starts: the `axum` floor, and
+/// what this server's own layers add to it (#628).
+///
+/// `/health` answers a constant, so the difference between the two floors is
+/// the request log, the metrics sample, and the request identifier, and
+/// nothing of the terminology engine. The SMART gate sits inside each
+/// version's router, so a third floor asks for a path under `/r4b` that no
+/// route matches and pays the gate before the fallback answers.
+fn fixed(c: &mut Criterion) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::scaled::write(dir.path(), CONCEPTS).expect("writes the edition");
+    let config = Config {
+        index: vec![dir.path().to_path_buf()],
+        ..Config::default()
+    };
+    let state = Arc::new(AppState::load(&config).expect("loads"));
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("runtime");
+    let bare = axum::Router::new().route("/health", axum::routing::get(async || "ok"));
+    let served = ferroterm_server::router(Serving::new(config.clone(), Arc::clone(&state)));
+    let call = |router: axum::Router, uri: &str| {
+        let request = Request::get(uri).body(Body::empty()).expect("request");
+        runtime.block_on(async {
+            let response = router.oneshot(request).await.expect("response");
+            axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("body")
+        })
+    };
+
+    let mut group = c.benchmark_group("fixed");
+    group.bench_function("axum_floor", |b| {
+        b.iter(|| call(bare.clone(), "/health"));
+    });
+    group.bench_function("served_floor", |b| {
+        b.iter(|| call(served.clone(), "/health"));
+    });
+    group.bench_function("gated_floor", |b| {
+        b.iter(|| call(served.clone(), "/r4b/no-such-route"));
+    });
+    group.finish();
+}
+
 /// The same router over the local `RxNorm` and SNOMED artifacts, when they are
 /// built, so the served figure a record reports has a bench behind it: a
 /// record measures a socket too, this measures everything above it (#304).
 fn local(c: &mut Criterion) {
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../artifacts");
-    let built: Vec<std::path::PathBuf> = ["rxnorm", "nl"]
+    let built: Vec<std::path::PathBuf> = ["rxnorm", "nl", "icd10nl"]
         .iter()
         .map(|name| root.join(name))
         .filter(|dir| dir.join(fhir_terminology::artifact::MANIFEST_FILE).exists())
@@ -123,6 +168,17 @@ fn local(c: &mut Criterion) {
         })
     };
     let mut group = c.benchmark_group("served");
+    // The smallest answer any served system gives, so the three `$lookup`
+    // benches of this group span 862 bytes to 63 KB and the fixed term of a
+    // served read separates from its per-byte term in one process (#628).
+    let icd10nl = "http%3A%2F%2Fhl7.org%2Ffhir%2Fsid%2Ficd-10-nl";
+    group.bench_function("icd10nl_lookup", |b| {
+        b.iter(|| {
+            answer(&format!(
+                "/r4b/CodeSystem/$lookup?system={icd10nl}&code=M95.3"
+            ))
+        });
+    });
     let rxnorm = "http%3A%2F%2Fwww.nlm.nih.gov%2Fresearch%2Fumls%2Frxnorm";
     group.bench_function("rxnorm_lookup", |b| {
         b.iter(|| {
@@ -180,5 +236,5 @@ fn local(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, requests, local);
+criterion_group!(benches, requests, fixed, local);
 criterion_main!(benches);

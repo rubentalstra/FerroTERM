@@ -186,6 +186,73 @@ impl TextIndex {
         })
     }
 
+    /// The heap bytes the dictionary holds
+    /// (`concept_graph::footprint`).
+    ///
+    /// `fst` keeps the map as the one byte buffer it was built from, so this
+    /// is that buffer
+    /// (<https://docs.rs/fst/0.4.7/fst/struct.Map.html#method.as_fst>).
+    #[must_use]
+    pub fn dictionary_size_in_bytes(&self) -> usize {
+        self.dictionary.as_fst().as_inner().capacity()
+    }
+
+    /// The heap bytes the word postings hold.
+    #[must_use]
+    pub fn postings_size_in_bytes(&self) -> usize {
+        concept_graph::footprint::bitmaps(&self.postings)
+    }
+
+    /// The heap bytes the designation entries hold.
+    #[must_use]
+    pub fn entries_size_in_bytes(&self) -> usize {
+        concept_graph::footprint::vector(&self.entries)
+    }
+
+    /// The heap bytes the language, use, reference set, active, and term
+    /// length filters hold.
+    #[must_use]
+    pub fn filters_size_in_bytes(&self) -> usize {
+        let sets = |total: usize, set: &RoaringBitmap| {
+            total.saturating_add(concept_graph::footprint::bitmap(set))
+        };
+        let tags = self
+            .languages
+            .keys()
+            .fold(0_usize, |total, tag| total.saturating_add(tag.capacity()));
+        [
+            self.languages.values().fold(
+                concept_graph::footprint::entries::<String, RoaringBitmap>(self.languages.len()),
+                sets,
+            ),
+            self.uses.values().fold(
+                concept_graph::footprint::entries::<u32, RoaringBitmap>(self.uses.len()),
+                sets,
+            ),
+            self.refsets.values().fold(
+                concept_graph::footprint::entries::<u32, RoaringBitmap>(self.refsets.len()),
+                sets,
+            ),
+            self.lengths.values().fold(
+                concept_graph::footprint::entries::<u16, RoaringBitmap>(self.lengths.len()),
+                sets,
+            ),
+            concept_graph::footprint::bitmap(&self.active),
+            tags,
+        ]
+        .into_iter()
+        .fold(0_usize, usize::saturating_add)
+    }
+
+    /// The heap bytes the whole index holds.
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        self.dictionary_size_in_bytes()
+            .saturating_add(self.postings_size_in_bytes())
+            .saturating_add(self.entries_size_in_bytes())
+            .saturating_add(self.filters_size_in_bytes())
+    }
+
     /// The number of indexed designations.
     #[must_use]
     pub fn len(&self) -> usize {
