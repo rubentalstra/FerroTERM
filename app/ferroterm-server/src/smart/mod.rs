@@ -119,30 +119,61 @@ fn only(advertised: &[String], options: &[&str]) -> Vec<String> {
         .collect()
 }
 
-/// The audiences a token may name for this deployment, in the order they are
-/// derived.
+/// The audiences a token may name, by the surface it is spent on.
 ///
-/// A client sends "the FHIR server's base URL" as `aud`
-/// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), and this server
-/// serves one FHIR base per version, so an issuer that mints the claim from
-/// that request hands a reader who signed in on `/r5` a different audience
-/// from one who signed in on `/r4b`. Every served version's base is accepted,
-/// with and without the trailing slash a client may send, beside the audience
-/// the deployment names in `FERROTERM_OIDC_AUDIENCE`.
-///
-/// An empty result is a deployment that named neither, which checks no
-/// audience at all.
-fn audiences(config: &Config) -> Vec<String> {
-    let mut accepted = Vec::new();
-    if let Some(base) = config.base_url.as_deref() {
-        for segment in crate::version::SEGMENTS {
-            let endpoint = crate::version::endpoint(base, segment);
-            accepted.push(format!("{endpoint}/"));
-            accepted.push(endpoint);
+/// The `aud` of a SMART authorization request names the resource server the
+/// app wants FHIR data from, which is what keeps a genuine token from reaching
+/// a counterfeit one (<https://hl7.org/fhir/smart-app-launch/app-launch.html>). This
+/// server publishes one FHIR base per version, so an issuer that mints the
+/// claim from that request gives a reader who signed in on `/r5` a different
+/// audience from one who signed in on `/r4b`.
+#[derive(Debug)]
+struct Audiences {
+    /// What the FHIR surface accepts: every served version's base under
+    /// `FERROTERM_BASE_URL`, and the audience the deployment named.
+    ///
+    /// The set is one for every version rather than one per version, so a
+    /// token minted for `/r5` is spendable on `/r4b` as well. That is our own
+    /// design: one process serves the four bases and a reader moves between
+    /// them in one session. An issuer that wants a token bounded to one base
+    /// says so with `authorization_details`
+    /// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), which this
+    /// server does not read.
+    fhir: Vec<String>,
+    /// What the admin listener accepts: the audience the deployment named.
+    admin: Vec<String>,
+}
+
+impl Audiences {
+    /// The sets this deployment accepts; both empty when it checks none.
+    fn of(config: &Config) -> Self {
+        let named: Vec<String> = config.oidc_audience.clone().into_iter().collect();
+        let mut fhir = Vec::new();
+        if let Some(base) = config.base_url.as_deref() {
+            for segment in crate::version::SEGMENTS {
+                let endpoint = crate::version::endpoint(base, segment);
+                // NOTE: FHIR fixes a service base with no trailing slash
+                // (<https://hl7.org/fhir/R4B/http.html#root>), so admitting the
+                // slashed form is our own tolerance and the only one performed.
+                fhir.push(format!("{endpoint}/"));
+                fhir.push(endpoint);
+            }
+        }
+        fhir.extend(named.iter().cloned());
+        Self { fhir, admin: named }
+    }
+
+    /// The audiences a token for `need` may name.
+    ///
+    /// The admin listener serves no FHIR interaction, so the version bases are
+    /// not its audience and only the configured one is: no specification
+    /// governs that surface, which is our own design.
+    fn accepted(&self, need: Need) -> &[String] {
+        match need {
+            Need::Write { .. } => &self.fhir,
+            Need::Admin => &self.admin,
         }
     }
-    accepted.extend(config.oidc_audience.clone());
-    accepted
 }
 
 /// A start the issuer refused.
@@ -202,9 +233,8 @@ struct Claims {
 pub struct Smart {
     /// The issuer's discovery document, read at start.
     metadata: IssuerMetadata,
-    /// The audiences a token may carry, empty when this deployment checks
-    /// none. See [`audiences`].
-    audiences: Vec<String>,
+    /// The audiences a token may carry, per surface.
+    audiences: Audiences,
     /// The scope the admin listener requires, compared verbatim.
     admin_scope: String,
     /// The OAuth client the viewer signs in as, when the deployment registered
@@ -254,7 +284,7 @@ impl Smart {
             .unwrap_or_else(|| String::from("FerroTERM"));
         Ok(Some(Self {
             metadata,
-            audiences: audiences(config),
+            audiences: Audiences::of(config),
             admin_scope: config.oidc_admin_scope.clone(),
             viewer_client_id: config.viewer_client_id.clone(),
             realm,
@@ -487,15 +517,17 @@ impl Smart {
         // RFC 8725 §3.8: a claim the crate checks only when it is present is no
         // check at all, so `iss` is required outright.
         validation.required_spec_claims.insert(String::from("iss"));
-        if self.audiences.is_empty() {
-            // RFC 7519 §4.1.3 leaves `aud` optional; a deployment that names
-            // none accepts any, and the issuer check still bounds the token.
+        let accepted = self.audiences.accepted(need);
+        if accepted.is_empty() {
+            // NOTE: RFC 9068 §4 has a resource server check `aud`, so a
+            // deployment naming neither a base nor an audience is our own
+            // tolerance for the unconfigured case, bounded by the issuer check.
             validation.validate_aud = false;
         } else {
             // NOTE: RFC 7519 §4.1.3 has the recipient identify itself with a
             // value in `aud`, which the crate reads over the string form and
             // the array form alike (<https://docs.rs/jsonwebtoken/11.1.0/jsonwebtoken/struct.Validation.html>).
-            validation.set_audience(&self.audiences);
+            validation.set_audience(accepted);
             // RFC 8725 §3.9: a token whose audience is absent is rejected
             // just as one whose audience is another recipient.
             validation.required_spec_claims.insert(String::from("aud"));
@@ -735,8 +767,15 @@ pub async fn configuration(
 mod tests {
     use http::HeaderMap;
 
-    use super::{audiences, bearer, quoted};
+    use super::{Audiences, Need, bearer, quoted};
     use crate::config::Config;
+    use crate::smart::scopes::Permission;
+
+    /// A write, which is what the FHIR surface asks a token for.
+    const WRITE: Need = Need::Write {
+        resource: "ValueSet",
+        permission: Permission::Update,
+    };
 
     #[test]
     fn a_bearer_credential_is_read_whatever_the_case_of_its_scheme() {
@@ -763,11 +802,12 @@ mod tests {
     // server has one per version.
     #[test]
     fn every_served_version_base_is_an_audience_beside_the_configured_one() {
-        let accepted = audiences(&Config {
+        let audiences = Audiences::of(&Config {
             base_url: Some(String::from("https://tx.example.org")),
             oidc_audience: Some(String::from("ferroterm")),
             ..Config::default()
         });
+        let accepted = audiences.accepted(WRITE);
         for segment in crate::version::SEGMENTS {
             let base = format!("https://tx.example.org/{segment}");
             assert!(accepted.contains(&base), "{base}: {accepted:?}");
@@ -783,13 +823,56 @@ mod tests {
         );
     }
 
+    // The admin listener serves no FHIR interaction, so a base URL is not an
+    // audience for it and naming one leaves it as it was.
     #[test]
-    fn a_deployment_naming_no_base_and_no_audience_checks_none() {
-        assert!(audiences(&Config::default()).is_empty());
-        let only_configured = audiences(&Config {
+    fn the_admin_listener_takes_only_the_configured_audience() {
+        let audiences = Audiences::of(&Config {
+            base_url: Some(String::from("https://tx.example.org")),
             oidc_audience: Some(String::from("ferroterm")),
             ..Config::default()
         });
-        assert_eq!(only_configured, vec![String::from("ferroterm")]);
+        assert_eq!(
+            audiences.accepted(Need::Admin),
+            [String::from("ferroterm")],
+            "no version base is an admin audience"
+        );
+        let base_only = Audiences::of(&Config {
+            base_url: Some(String::from("https://tx.example.org")),
+            ..Config::default()
+        });
+        assert!(
+            base_only.accepted(Need::Admin).is_empty(),
+            "a deployment naming no audience checks none there, as before"
+        );
+    }
+
+    #[test]
+    fn a_deployment_naming_no_base_and_no_audience_checks_none() {
+        let none = Audiences::of(&Config::default());
+        assert!(none.accepted(WRITE).is_empty());
+        assert!(none.accepted(Need::Admin).is_empty());
+        let only_configured = Audiences::of(&Config {
+            oidc_audience: Some(String::from("ferroterm")),
+            ..Config::default()
+        });
+        assert_eq!(only_configured.accepted(WRITE), [String::from("ferroterm")]);
+    }
+
+    // A base URL with a trailing slash would otherwise double the separator
+    // and refuse every real token.
+    #[test]
+    fn a_base_url_that_ends_in_a_slash_derives_the_same_audiences() {
+        let audiences = Audiences::of(&Config {
+            base_url: Some(String::from("https://tx.example.org/")),
+            ..Config::default()
+        });
+        assert!(
+            audiences
+                .accepted(WRITE)
+                .contains(&String::from("https://tx.example.org/r4b")),
+            "{:?}",
+            audiences.accepted(WRITE)
+        );
     }
 }

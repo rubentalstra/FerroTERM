@@ -14,8 +14,10 @@ use tower::ServiceExt;
 /// What a test's SMART gate is configured with.
 ///
 /// Every member but the issuer stays unset when a test names none, which is
-/// what an unset environment variable gives.
-#[derive(Debug, Default)]
+/// what an unset environment variable gives. There is no `Default`: an empty
+/// issuer is a configuration the server refuses to start on, so the issuer is
+/// named through [`SmartSetup::for_issuer`] and the rest is spread over it.
+#[derive(Debug)]
 pub(crate) struct SmartSetup {
     /// `FERROTERM_OIDC_ISSUER`, the issuer whose tokens the gate accepts.
     pub(crate) issuer: String,
@@ -27,6 +29,19 @@ pub(crate) struct SmartSetup {
     pub(crate) viewer_client_id: Option<String>,
     /// `FERROTERM_BASE_URL`, the address clients reach this server at.
     pub(crate) base_url: Option<String>,
+}
+
+impl SmartSetup {
+    /// The gate of `issuer`, with everything else unset.
+    pub(crate) fn for_issuer(issuer: &str) -> Self {
+        Self {
+            issuer: issuer.to_owned(),
+            audience: None,
+            admin_scope: None,
+            viewer_client_id: None,
+            base_url: None,
+        }
+    }
 }
 
 /// The edition in a temporary directory, loaded the way the binary loads it.
@@ -172,11 +187,10 @@ impl Server {
         viewer_client_id: Option<&str>,
     ) -> Self {
         Self::start_persisting_with_smart_setup(SmartSetup {
-            issuer: issuer.to_owned(),
             audience: audience.map(str::to_owned),
             admin_scope: admin_scope.map(str::to_owned),
             viewer_client_id: viewer_client_id.map(str::to_owned),
-            ..SmartSetup::default()
+            ..SmartSetup::for_issuer(issuer)
         })
         .await
     }

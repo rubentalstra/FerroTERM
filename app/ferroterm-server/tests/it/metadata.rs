@@ -109,12 +109,11 @@ async fn the_capability_statements_state_the_configured_base_url() {
     );
 }
 
-/// Every served version answers under the segment the one derivation names.
+/// Every segment the derivation names is served, and states that base.
 ///
-/// The SMART gate accepts these same bases as a token audience, so a segment
-/// the router serves and the derivation does not know would be a base no
-/// reader could hold a token for
-/// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>).
+/// The SMART gate accepts these same bases as a token audience
+/// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), so a segment in
+/// the list that no router serves would be an audience for nothing.
 #[tokio::test]
 async fn the_endpoint_of_every_served_segment_is_the_one_the_router_answers() {
     let base = "https://tx.example.org/fhir";

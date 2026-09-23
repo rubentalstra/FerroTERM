@@ -31,21 +31,20 @@ fresh link reference.
   to 55.1 MB and from 150.3 MB to 49.6 MB. The artifact is smaller on disk as
   well, 863.8 MB to 689.5 MB for the Dutch edition, and the build holds 0.7 GB
   less at its peak.
-
-
-- The SMART gate accepts the FHIR base of every served version as the token
-  audience, not one configured value alone (#650). A SMART client sends the
-  FHIR base it is talking to as `aud`
+- **The SMART gate now checks the token audience wherever `FERROTERM_BASE_URL`
+  is set, so an issuer that mints an audience of its own needs that value in
+  `FERROTERM_OIDC_AUDIENCE`** (#650). A SMART client names the resource server
+  it wants FHIR data from in `aud`
   (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), and this server
-  publishes one base per version, so an issuer minting the claim from that
-  request handed a reader who signed in on `/r5` a token the gate refused
-  wherever the operator had named the `/r4b` base. The accepted set is now
+  publishes one FHIR base per version. An issuer that mints the claim from
+  that request gave a reader who signed in on `/r5` a token the gate refused
+  when the operator had named the `/r4b` base. The write routes now accept
   every version's base derived from `FERROTERM_BASE_URL`, with and without a
-  trailing slash, plus `FERROTERM_OIDC_AUDIENCE` when it is set, and a token
-  whose `aud` holds any of them passes, the string form and the array form
-  alike (RFC 7519 §4.1.3). Setting `FERROTERM_BASE_URL` therefore turns the
-  audience check on: a deployment that names neither variable still checks no
-  audience, as before.
+  trailing slash, beside `FERROTERM_OIDC_AUDIENCE`. A token passes when its
+  `aud` holds any of them, the string form and the array form alike
+  (RFC 7519 §4.1.3). The admin listener is unchanged: it serves no FHIR
+  interaction, so it still accepts `FERROTERM_OIDC_AUDIENCE` alone, and a
+  deployment that names neither variable still checks no audience.
 - `code_challenge_methods_supported` in the served SMART configuration is
   always `["S256"]` (#632). "SMART servers SHALL support the `S256`
   `code_challenge_method` and SHALL NOT support the `plain` method"

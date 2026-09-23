@@ -1109,10 +1109,9 @@ const PROXIED: &str = "https://tx.example.org";
 /// environment.
 async fn proxied(issuer: &str, audience: Option<&str>) -> Server {
     Server::start_persisting_with_smart_setup(SmartSetup {
-        issuer: issuer.to_owned(),
         audience: audience.map(str::to_owned),
         base_url: Some(String::from(PROXIED)),
-        ..SmartSetup::default()
+        ..SmartSetup::for_issuer(issuer)
     })
     .await
 }
@@ -1198,6 +1197,52 @@ async fn an_audience_naming_another_server_is_refused() {
     let configured = key.sign(&claims_for(&mock.uri(), json!("ferroterm")));
     let response = put_colours(&server, Some(&configured)).await;
     assert_eq!(response.status(), StatusCode::CREATED);
+}
+
+// RFC 8725 §3.9: a claim checked only when present is no check, so a token
+// with no `aud` is refused wherever a base URL names the accepted set. The
+// root is no FHIR base of this server, so it is refused with it.
+#[tokio::test]
+async fn a_token_with_no_audience_or_the_root_as_one_is_refused() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = proxied(&mock.uri(), None).await;
+
+    let mut without = claims(&mock.uri(), "system/CodeSystem.cud", 300);
+    without.as_object_mut().expect("an object").remove("aud");
+    let response = put_colours(&server, Some(&key.sign(&without))).await;
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "no `aud`");
+
+    let root = key.sign(&claims_for(&mock.uri(), json!(PROXIED)));
+    let response = put_colours(&server, Some(&root)).await;
+    assert_eq!(
+        response.status(),
+        StatusCode::UNAUTHORIZED,
+        "the root serves no FHIR base"
+    );
+}
+
+// The admin listener serves no FHIR interaction, so a base URL is not an
+// audience for it: naming one leaves that surface as it was.
+#[tokio::test]
+async fn the_admin_listener_does_not_take_a_version_base_as_its_audience() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = proxied(&mock.uri(), None).await;
+    let admin = server.admin_router();
+
+    let mut payload = claims_for(&mock.uri(), json!("an-audience-of-its-own"));
+    payload["scope"] = json!("ferroterm/admin");
+    let request = Request::post("/reload")
+        .header(AUTHORIZATION, format!("Bearer {}", key.sign(&payload)))
+        .body(Body::empty())
+        .expect("request");
+    let response = admin.oneshot(request).await.expect("the admin answers");
+    assert_eq!(
+        response.status(),
+        StatusCode::OK,
+        "a base URL alone does not start checking the admin audience"
+    );
 }
 
 // RFC 7519 §4.1.3 leaves `aud` optional: a deployment that names neither a

@@ -36,9 +36,12 @@ pub const SEGMENTS: [&str; 4] = ["r4", "r4b", "r5", "r6"];
 /// This is the one derivation of a version's base: a capability statement
 /// publishes it as `implementation.url`
 /// (<https://hl7.org/fhir/R4B/capabilitystatement-definitions.html#CapabilityStatement.implementation.url>),
-/// and the SMART gate accepts it as a token audience.
+/// and the SMART gate accepts it as a token audience. A service base carries
+/// no trailing slash (<https://hl7.org/fhir/R4B/http.html#root>), so one on
+/// `base` is dropped rather than doubled.
 #[must_use]
 pub fn endpoint(base: &str, segment: &str) -> String {
+    let base = base.trim_end_matches('/');
     format!("{base}/{segment}")
 }
 
