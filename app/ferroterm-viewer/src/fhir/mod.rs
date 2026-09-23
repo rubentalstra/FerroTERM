@@ -8,11 +8,15 @@
 pub(crate) mod authoring;
 pub(crate) mod capability;
 pub(crate) mod code_system;
+#[cfg(feature = "editor")]
+pub(crate) mod compose;
 pub(crate) mod concept;
 pub(crate) mod concept_map;
 pub(crate) mod error;
 pub(crate) mod expansion;
 pub(crate) mod facts;
+#[cfg(feature = "editor")]
+pub(crate) mod implicit;
 pub(crate) mod named;
 pub(crate) mod outcome;
 pub(crate) mod searchset;
@@ -38,6 +42,12 @@ use serde::de::DeserializeOwned;
 
 use crate::fhir::capability::CapabilityStatement;
 use crate::fhir::code_system::CodeSystemSearch;
+#[cfg(feature = "editor")]
+use crate::fhir::compose::Draft;
+#[cfg(feature = "editor")]
+use crate::fhir::compose::Preview;
+#[cfg(feature = "editor")]
+use crate::fhir::compose::StoredValueSet;
 use crate::fhir::concept::ConceptQuery;
 use crate::fhir::concept::LookupAnswer;
 use crate::fhir::concept::LookupRequest;
@@ -622,6 +632,53 @@ impl FhirClient {
         let url = self.smart_configuration_url(version);
         let response = send(Request::get(&url).header("Accept", SMART_JSON), &url).await?;
         self.read_json(response, &url).await
+    }
+}
+
+/// The reads the value set composer makes, which the editor bundle alone
+/// carries.
+#[cfg(feature = "editor")]
+impl FhirClient {
+    /// Reads one `ValueSet` as the composer edits it.
+    ///
+    /// The read is the ordinary RESTful read
+    /// (<https://hl7.org/fhir/R4B/http.html#read>); the composer needs the
+    /// whole `compose` and the `meta` an update states, which the listing
+    /// screen's narrower reader does not carry.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. An id
+    /// this root does not hold arrives as [`FhirError::Refused`] carrying the
+    /// server's own `OperationOutcome`.
+    pub(crate) async fn value_set_stored(
+        &self,
+        version: FhirVersion,
+        id: &str,
+    ) -> Result<StoredValueSet, FhirError> {
+        self.get_json(&self.resource_url(version, VALUE_SET, id))
+            .await
+    }
+
+    /// Expands a compose that has never been saved, one page at a time.
+    ///
+    /// The draft travels in the `valueSet` parameter of a `POST`, which is the
+    /// alternative to naming a value set by `url`
+    /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>).
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. A
+    /// compose the server refuses, an expression it cannot parse among them,
+    /// arrives as [`FhirError::Refused`] carrying its own `OperationOutcome`.
+    pub(crate) async fn preview_compose(
+        &self,
+        version: FhirVersion,
+        draft: &Draft,
+        page: &Preview,
+    ) -> Result<ExpandedValueSet, FhirError> {
+        self.post_json(&self.expand_post_url(version), &draft.preview_body(page))
+            .await
     }
 }
 

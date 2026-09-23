@@ -36,6 +36,10 @@ pub(crate) const VALIDATE_PATH: &str = "validate";
 /// The value set screen's path below the base.
 pub(crate) const VALUE_SETS_PATH: &str = "valuesets";
 
+/// The value set composer's path below the base, in the editor bundle.
+#[cfg(feature = "editor")]
+pub(crate) const COMPOSE_PATH: &str = "compose";
+
 /// The concept map screen's path below the base.
 pub(crate) const CONCEPT_MAPS_PATH: &str = "conceptmaps";
 
@@ -186,6 +190,8 @@ pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
         Some(VALUE_SETS_PATH) => Some(VALUE_SETS_PATH),
         #[cfg(feature = "editor")]
         Some(CODE_SYSTEM_EDITOR_PATH) => Some(CODE_SYSTEM_EDITOR_PATH),
+        #[cfg(feature = "editor")]
+        Some(COMPOSE_PATH) => Some(COMPOSE_PATH),
         Some(CONCEPT_MAPS_PATH) => Some(CONCEPT_MAPS_PATH),
         Some(TRANSLATE_PATH) => Some(TRANSLATE_PATH),
         // The command bar is on every screen rather than in the sidebar, and
