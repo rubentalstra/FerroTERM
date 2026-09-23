@@ -129,6 +129,21 @@ pub struct Table {
 }
 
 impl Table {
+    /// The heap bytes this table holds ([`crate::footprint`]).
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        crate::footprint::strings(&self.fields)
+            .saturating_add(crate::footprint::vector(&self.kinds))
+            .saturating_add(crate::footprint::vector(&self.concepts))
+            .saturating_add(crate::footprint::vector(&self.times))
+            .saturating_add(crate::footprint::vector(&self.modules))
+            .saturating_add(crate::footprint::vector(&self.tags))
+            .saturating_add(crate::footprint::vector(&self.payloads))
+            .saturating_add(crate::footprint::vector(&self.longs))
+            .saturating_add(crate::footprint::strings(&self.strings))
+            .saturating_add(crate::footprint::bitmap(&self.members))
+    }
+
     /// The additional field names, in column order.
     #[must_use]
     pub fn fields(&self) -> &[String] {
@@ -247,6 +262,15 @@ pub struct RefsetMembers {
 }
 
 impl RefsetMembers {
+    /// The heap bytes every member table holds ([`crate::footprint`]).
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        self.tables.values().fold(
+            crate::footprint::entries::<u64, Table>(self.tables.len()),
+            |total, table| total.saturating_add(table.size_in_bytes()),
+        )
+    }
+
     /// An empty set of tables.
     #[must_use]
     pub fn new() -> Self {

@@ -58,6 +58,17 @@ impl Identifiers {
         }
     }
 
+    /// The heap bytes the table holds, its codes included
+    /// ([`crate::footprint`]).
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        self.entries
+            .iter()
+            .fold(crate::footprint::vector(&self.entries), |total, entry| {
+                total.saturating_add(entry.1.capacity())
+            })
+    }
+
     /// The concept identified by `code` in `scheme`.
     #[must_use]
     pub fn lookup(&self, scheme: u64, code: &str) -> Option<Ordinal> {

@@ -30,19 +30,57 @@ issue, not called done.
 
 ## Where the memory goes
 
-| Structure | Held | Rough size for the Dutch edition |
-|---|---|---|
-| Transitive closure, both directions, as roaring bitmaps | resident, read at startup | the larger part of `hierarchy.bin` |
-| CSR is-a adjacency | resident, read at startup | tens of MB |
-| `fst` word dictionary and roaring postings | resident, read at startup | `text.bin` |
-| Concepts and displays, dense columns addressed by ordinal | resident, read when the store opens | part of `store.redb` |
-| Designations, acceptability, properties | left in the file, point-read through `redb`'s page cache | most of `store.redb` |
+Every structure a served edition holds reports what its own allocations hold,
+and `ferroterm-residency --report` prints those counts beside the process
+footprint, so the accounting adds up from the structures rather than being
+inferred from a total. The two SNOMED editions below were measured on an
+Apple M2 with the release binaries. The top rows are the structures' own
+counts; the bottom four are the process that loaded them and nothing else, so
+they run under a serving process, which also holds the FHIR core code systems
+and the HTTP runtime. The benchmarks page reports the serving process, from
+whichever record set is committed there.
+
+| Structure | On disk (NL) | Resident (NL) | Resident (International) |
+|---|---|---|---|
+| Concept records, a dense column by ordinal | part of `store.redb` | 20.0 MB | 19.4 MB |
+| Preferred displays, a dense column by ordinal | part of `store.redb` | 73.5 MB | 55.6 MB |
+| Properties, a dense column by ordinal | part of `store.redb` | 62.9 MB | 61.1 MB |
+| Acceptability, a dense column by ordinal | part of `store.redb` | 49.8 MB | 37.1 MB |
+| Transitive closure, both directions, roaring bitmaps | part of `hierarchy.bin` | 150.6 MB | 143.6 MB |
+| CSR is-a adjacency | part of `hierarchy.bin` | 4.9 MB | 4.7 MB |
+| CSR child adjacency, transposed when the edition opens | derived | 4.9 MB | 4.7 MB |
+| `fst` word dictionary and roaring postings | `text.bin` 76.6 MB | 115.7 MB | 69.1 MB |
+| Reference set member tables | `members.bin` 35.2 MB | 60.0 MB | 57.0 MB |
+| Attribute rows | `attributes.bin` 12.5 MB | 12.5 MB | 11.9 MB |
+| Attribute inverted index, derived when the edition opens | derived | 4.9 MB | 4.7 MB |
+| Reference set membership bitmaps | `refsets.bin` 0.7 MB | 0.7 MB | 0.6 MB |
+| Alternate identifiers | `identifiers.bin` | 0 MB | 0 MB |
+| **Every structure** | | **560.4 MB** | **469.5 MB** |
+| The `redb` page cache, capped | | 67.1 MB | 67.1 MB |
+| Unattributed: what the allocator keeps | | 154.7 MB | 83.1 MB |
+| **The process, measured** | | **782.2 MB** | **619.7 MB** |
+
+The designation text is the one part of an edition that stays on disk: it is
+the largest thing an artifact holds and a point read through `redb` answers it
+in microseconds, so it is read per request rather than held. Everything else
+above is resident because a read reaches it: `$lookup` reads the displays and
+the properties, `$expand` reads the concepts and the closure, `$subsumes` is a
+membership test on the closure, ECL reads the attributes and the membership
+bitmaps, and a `filter` search reads the word dictionary. Nothing in the list
+is loaded and never touched.
+
+The two ends of the accounting are worth naming. The `redb` page cache is
+capped at 64 MiB: the columns are read once when the store opens and never
+again, and the default cache of a gibibyte would keep their pages for the life
+of the process. The unattributed remainder is the allocator's: each column is
+copied out of the database as the store opens, and the pages of the copy's
+source are not handed back to the operating system when it is freed.
 
 Both directions of the closure are stored on purpose: subsumption needs one
 direction, and a descendant set is returned directly from the other. Roaring
 compresses SNOMED-shaped sets heavily, which is why the closure of half a
-million concepts fits in hundreds of megabytes rather than the gigabytes a plain
-bitset would need.
+million concepts fits in hundreds of megabytes rather than the gigabytes a
+plain bitset would need.
 
 ## Disk and CPU
 

@@ -126,6 +126,14 @@ impl Column {
         Ok(Self { offsets, records })
     }
 
+    /// The heap bytes this column holds
+    /// (`concept_graph::footprint`).
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        concept_graph::footprint::vector(&self.offsets)
+            .saturating_add(concept_graph::footprint::vector(&self.records))
+    }
+
     /// How many ordinals the column holds.
     #[must_use]
     pub fn len(&self) -> usize {

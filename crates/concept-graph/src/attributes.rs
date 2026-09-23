@@ -145,6 +145,13 @@ impl Inverted {
         }
     }
 
+    fn size_in_bytes(&self) -> usize {
+        crate::footprint::vector(&self.targets)
+            .saturating_add(crate::footprint::vector(&self.offsets))
+            .saturating_add(crate::footprint::vector(&self.sources))
+            .saturating_add(crate::footprint::bitmap(&self.all_sources))
+    }
+
     fn sources(&self, target: u32) -> &[u32] {
         let Ok(index) = self.targets.binary_search(&target) else {
             return &[];
@@ -179,6 +186,37 @@ pub struct Attributes {
 }
 
 impl Attributes {
+    /// The heap bytes the rows hold ([`crate::footprint`]).
+    #[must_use]
+    pub fn rows_size_in_bytes(&self) -> usize {
+        crate::footprint::vector(&self.types)
+            .saturating_add(crate::footprint::vector(&self.offsets))
+            .saturating_add(crate::footprint::vector(&self.groups))
+            .saturating_add(crate::footprint::vector(&self.kinds))
+            .saturating_add(crate::footprint::vector(&self.tags))
+            .saturating_add(crate::footprint::vector(&self.payloads))
+            .saturating_add(crate::footprint::strings(&self.strings))
+    }
+
+    /// The heap bytes the inverted index holds.
+    ///
+    /// It is derived when the artifact opens rather than read from it, so it
+    /// is reported apart from the rows it was derived from.
+    #[must_use]
+    pub fn inverted_size_in_bytes(&self) -> usize {
+        self.inverted.iter().fold(
+            crate::footprint::vector(&self.inverted),
+            |total, inverted| total.saturating_add(inverted.size_in_bytes()),
+        )
+    }
+
+    /// The heap bytes the rows and the inverted index hold together.
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        self.rows_size_in_bytes()
+            .saturating_add(self.inverted_size_in_bytes())
+    }
+
     /// Builds the attributes of `nodes` concepts from `edges`, whose types
     /// index `types`.
     ///

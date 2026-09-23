@@ -63,6 +63,22 @@ impl Closure {
         }
     }
 
+    /// The heap bytes the two bitmap lists hold ([`crate::footprint`]).
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        crate::footprint::bitmaps(&self.ancestors)
+            .saturating_add(crate::footprint::bitmaps(&self.descendants))
+    }
+
+    /// The heap bytes the ancestor sets alone hold.
+    ///
+    /// Subsumption reads the ancestors and an expansion reads the
+    /// descendants, so the two halves are reported apart.
+    #[must_use]
+    pub fn ancestors_size_in_bytes(&self) -> usize {
+        crate::footprint::bitmaps(&self.ancestors)
+    }
+
     /// The number of nodes.
     #[must_use]
     pub fn nodes(&self) -> u32 {

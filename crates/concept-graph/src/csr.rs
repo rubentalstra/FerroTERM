@@ -114,6 +114,14 @@ impl Csr {
         self.targets.len()
     }
 
+    /// The heap bytes this adjacency holds
+    /// ([`crate::footprint`]).
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        crate::footprint::vector(&self.offsets)
+            .saturating_add(crate::footprint::vector(&self.targets))
+    }
+
     /// The neighbours of `node`, sorted; empty for an unknown node.
     #[must_use]
     pub fn neighbours(&self, node: Ordinal) -> &[u32] {

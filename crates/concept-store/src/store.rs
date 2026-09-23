@@ -75,6 +75,13 @@ pub enum StoreError {
     },
 }
 
+/// How much memory the database may keep for the pages it has read.
+///
+// NOTE: redb's default is a gibibyte
+// (<https://docs.rs/redb/4.2.0/redb/struct.Builder.html#method.set_cache_size>),
+// so the columns read once at open would stay cached for the process's life.
+const CACHE_BYTES: usize = 64 << 20;
+
 /// An opened artifact.
 pub struct Store {
     path: PathBuf,
@@ -127,10 +134,13 @@ impl Store {
     /// Returns [`StoreError`] when the file cannot be opened, is not an
     /// artifact of this layout, or a table is missing.
     pub fn open(path: &Path) -> Result<Self, StoreError> {
-        let db = ReadOnlyDatabase::open(path).map_err(|source| StoreError::Open {
-            path: path.to_path_buf(),
-            source,
-        })?;
+        let db = redb::Builder::new()
+            .set_cache_size(CACHE_BYTES)
+            .open_read_only(path)
+            .map_err(|source| StoreError::Open {
+                path: path.to_path_buf(),
+                source,
+            })?;
         let txn = db.begin_read()?;
         let meta = open_table!(txn, tables::META)?;
         let layout = meta
@@ -178,6 +188,32 @@ impl Store {
     #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// The heap bytes each resident column holds, by column name.
+    ///
+    /// The designation text and the code index stay in the database and are
+    /// point-read, so they are not here; what `redb` keeps in its page cache
+    /// is the database's own and no column of it.
+    #[must_use]
+    pub fn column_sizes(&self) -> [(&'static str, usize); 4] {
+        [
+            (tables::COLUMN_CONCEPTS, self.concepts.size_in_bytes()),
+            (tables::COLUMN_DISPLAYS, self.displays.size_in_bytes()),
+            (tables::COLUMN_PROPERTIES, self.properties.size_in_bytes()),
+            (
+                tables::COLUMN_ACCEPTABILITY,
+                self.acceptability.size_in_bytes(),
+            ),
+        ]
+    }
+
+    /// The heap bytes the resident columns hold together.
+    #[must_use]
+    pub fn size_in_bytes(&self) -> usize {
+        self.column_sizes()
+            .into_iter()
+            .fold(0_usize, |total, (_, bytes)| total.saturating_add(bytes))
     }
 
     /// An artifact-level fact by key.

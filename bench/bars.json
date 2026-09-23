@@ -94,6 +94,18 @@
       "max_us": 50,
       "measured_us": 6,
       "claim": "the first page of an expansion costs the page, never the selection"
+    },
+    {
+      "bench": "fixed/served_floor",
+      "max_us": 10,
+      "measured_us": 2,
+      "claim": "the layers every request passes cost microseconds, whatever the operation behind them"
+    },
+    {
+      "bench": "fixed/gated_floor",
+      "max_us": 15,
+      "measured_us": 3,
+      "claim": "the SMART gate costs a version router and an absent issuer, never a token check no deployment asked for"
     }
   ],
   "served_comment": [
@@ -119,17 +131,37 @@
     "fewer properties unasked, which the specification permits, would change",
     "the answer so that a measurement passes.",
     "",
-    "The fixed term is the one that moved: 70 us when it was measured on",
-    "2026-09-08 against 97.6 us here, with the rate unchanged, so the cost is",
-    "per request and not per byte. It leaves the smallest answers 4% under the",
-    "bar. The bar is not raised to make room for it; the 28 us is #628."
+    "What the fixed term is made of, measured on 2026-09-23 (#628). Fitted over",
+    "the three `served/*_lookup` benches, which span 862 bytes to 63,134 bytes",
+    "in one process with no socket, a $lookup costs 11.9 us plus 3.74 ns per",
+    "byte. The same fit over a record set, which measures an HTTP round trip on",
+    "a loopback socket, reads 97.6 us plus 4.61 ns per byte. So about 86 us of",
+    "the fixed term is the socket, the client, and the kernel, and about 12 us",
+    "is the server. Of that 12 us, `fixed/axum_floor` puts routing at 0.7 us and",
+    "`fixed/served_floor` puts the request log, the metrics sample, and the",
+    "request identifier at 1.2 us on top of it; the SMART gate with no issuer",
+    "configured adds 0.7 us more (`fixed/gated_floor`).",
+    "",
+    "The 28 us this file recorded between the 2026-09-08 fit and the 0.1.4 set",
+    "is the day, not the code. The server built from the 2026-09-08 tree and",
+    "the server built from today's tree were run by the same harness over the",
+    "same artifact, alternating, six passes each: the 862-byte ICD-10-NL answer",
+    "reads a median 104.7 us on the old binary and 83.1 us on the new one, and a",
+    "fastest pass of 78.4 us against 60.2 us. No change in the server moves a",
+    "term the loopback round trip sets, and the tree the earlier 70 us was",
+    "measured on does not reproduce it here.",
+    "",
+    "The bar stays where it is. It leaves the smallest answers about 4% of",
+    "headroom on this machine, which is headroom over a socket rather than over",
+    "the server, so the two `fixed/` bars above are the ones that gate the cost",
+    "the server controls."
   ],
   "served_bars": [
     {
       "operation": "lookup",
       "fixed_us": 100,
       "rate_ns_per_byte": 6.0,
-      "measured": "on 2026-09-23, over bench/records/2026-09-23-apple-m2: 862 B answered in 96.3 us, 7,368 B in 135.8 us, 26,725 B in 221.8 us, 63,134 B in 387.7 us, a fixed 97.6 us plus 4.61 ns per byte; the earlier fit, on 2026-09-08, was 70 us plus 4.5 ns per byte",
+      "measured": "on 2026-09-23, over bench/records/2026-09-23-apple-m2: 862 B answered in 96.3 us, 7,368 B in 135.8 us, 26,725 B in 221.8 us, 63,134 B in 387.7 us, a fixed 97.6 us plus 4.61 ns per byte; in one process with no socket the same three systems fit 11.9 us plus 3.74 ns per byte (#628)",
       "claim": "a served read costs a fixed amount plus the serialising of its answer, at one rate on every code system"
     }
   ]

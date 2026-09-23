@@ -362,3 +362,29 @@ fn a_store_answers_concurrently_on_the_snapshot_it_opened() {
         }
     });
 }
+
+#[test]
+fn the_resident_columns_report_what_they_hold() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let store = build(&dir.path().join("synthetic.redb"));
+    let sizes = store.column_sizes();
+    let named: Vec<&str> = sizes.iter().map(|(name, _)| *name).collect();
+    assert_eq!(
+        named,
+        vec![
+            tables::COLUMN_CONCEPTS,
+            tables::COLUMN_DISPLAYS,
+            tables::COLUMN_PROPERTIES,
+            tables::COLUMN_ACCEPTABILITY,
+        ],
+        "every column the store keeps resident is reported"
+    );
+    for (name, bytes) in sizes {
+        assert!(bytes > 0, "{name} holds bytes for a two-concept artifact");
+    }
+    assert_eq!(
+        store.size_in_bytes(),
+        sizes.iter().map(|(_, bytes)| bytes).sum::<usize>(),
+        "the total is the columns added up"
+    );
+}

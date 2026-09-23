@@ -326,12 +326,12 @@ impl Icd11Provider {
         let store = Store::open(&dir.join(&manifest.store))?;
         let read = |name: &str| {
             let path = dir.join(name);
-            std::fs::read(&path).map_err(|source| OpenError::Io { path, source })
+            crate::artifact::reader(&path).map_err(|source| OpenError::Io { path, source })
         };
-        let graph = GraphHierarchy::read_from(&mut read(&manifest.hierarchy)?.as_slice())?;
+        let graph = GraphHierarchy::read_from(&mut read(&manifest.hierarchy)?)?;
         let children = graph.is_a.transpose()?;
-        let text = designation_index::persist::read_from(&mut read(&manifest.text)?.as_slice())?;
-        let keys = KeyTable::read_from(&mut read(&manifest.keys)?.as_slice())?;
+        let text = designation_index::persist::read_from(&mut read(&manifest.text)?)?;
+        let keys = KeyTable::read_from(&mut read(&manifest.keys)?)?;
         let scales_path = dir.join(&manifest.scales);
         let scales_text =
             std::fs::read_to_string(&scales_path).map_err(|source| OpenError::Io {
