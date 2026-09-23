@@ -25,6 +25,14 @@ packaged=0
 # A here-string, never a pipe: `grep -q` stops at the first match, and a writer
 # killed by SIGPIPE makes `set -o pipefail` report the whole test as false, so a
 # large diff would silently answer "nothing packaged changed".
+# A member that says `publish = false` ships nothing, so its files are not
+# packaged content (its version still moves with the line, under crates/*).
+for manifest in $(git ls-tree -r --name-only "$head" -- crates | grep -E '^crates/[a-z0-9-]+/Cargo\.toml$'); do
+  if git show "$head:$manifest" | grep -q '^publish = false'; then
+    member="${manifest%/Cargo.toml}"
+    changed="$(grep -v "^${member}/" <<<"$changed" || true)"
+  fi
+done
 if grep -qE '^crates/[a-z0-9-]+/(src/|data/|README\.md$|LICENSE$|Cargo\.toml$)' <<<"$changed"; then
   packaged=1
 fi

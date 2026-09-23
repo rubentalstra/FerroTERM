@@ -17,11 +17,11 @@ authorized.
 
 `terminology-syndication` is one crate of
 [FerroTERM](https://github.com/rubentalstra/FerroTERM), a pure-Rust FHIR
-terminology server for SNOMED CT, LOINC, and other clinical code systems. The
-crates are published so other projects can reuse them; the API is pre-1.0 and
-moves with the FerroTERM release train. The Rust module path is
-`terminology_syndication`. Documentation:
-<https://docs.rs/terminology-syndication>.
+terminology server for SNOMED CT, LOINC, and other clinical code systems. This
+crate is not published on crates.io: it is consumed inside the FerroTERM
+workspace by the sync service and its add-ons, and its version moves with the
+workspace's crate line. The Rust module path is `terminology_syndication`;
+the documentation is `cargo doc` in the workspace.
 
 ## Licence
 

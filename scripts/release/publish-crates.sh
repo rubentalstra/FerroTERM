@@ -39,7 +39,6 @@ readonly CRATES=(
   labcodeset
   icd11
   rxnorm-rrf
-  terminology-syndication
   fhir-terminology
 )
 
