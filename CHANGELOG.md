@@ -13,6 +13,32 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- The SMART write gate accepts `user/` scopes beside the `system/` ones, so a
+  person signed in to an interactive client can write (#632). `user/` is "data
+  that a user can access" and `system/` is a client authorized in its own
+  right, and both address the same resource types
+  (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>), so
+  the route-to-letter mapping is unchanged: `user/ValueSet.u` opens a `PUT`,
+  `user/CodeSystem.c` a `POST`, `user/ConceptMap.d` a `DELETE`, with the
+  combined `cud` and `cruds` forms and the version 1 `.write` and `.*` mapped
+  as the specification maps them. `patient/` is refused with a 403 and an
+  `OperationOutcome`, because a terminology server holds no patient record and
+  a patient-compartment scope selects nothing on it. A refusal names every
+  scope that opens the route in its outcome text; the challenge's optional
+  `scope` attribute is sent only where one scope does, since RFC 6750 §3 reads
+  it as the scope a token must carry, a space-delimited set (RFC 6749 §3.3)
+  rather than a choice.
+- `.well-known/smart-configuration` publishes what a browser client needs for
+  a standalone launch (#632): `launch-standalone` and `client-public` beside
+  the confidential-client capabilities, `permission-user` for the scopes above,
+  and `sso-openid-connect` with the required `issuer` member where the
+  configured issuer lists `openid` in its `scopes_supported`
+  (<https://hl7.org/fhir/smart-app-launch/conformance.html>). Every
+  issuer-derived capability is still claimed only where the issuer's own
+  document backs it.
+
 ### Fixed
 
 - The RF2 relationship reader admits only rows whose `characteristicTypeId` is
@@ -30,6 +56,25 @@ fresh link reference.
 
 ### Changed
 
+- `code_challenge_methods_supported` in the served SMART configuration is
+  always `["S256"]` (#632). "SMART servers SHALL support the `S256`
+  `code_challenge_method` and SHALL NOT support the `plain` method"
+  (<https://hl7.org/fhir/smart-app-launch/app-launch.html>), and the member is
+  required, so the server states its own support and drops a `plain` the
+  issuer advertises. Before this it echoed the issuer's filtered list, which
+  published an empty array when the issuer named no method.
+- `scopes_supported` republishes only the scopes the write gate honours
+  (#632). SMART says the server "SHALL support all scopes listed here", so a
+  `patient/` scope, a `launch/` context scope, or a search-parameter-narrowed
+  scope from the issuer's list is dropped instead of being promised and then
+  refused with a 403.
+- An issuer that omits `grant_types_supported` or
+  `token_endpoint_auth_methods_supported` is read as its documented default,
+  `["authorization_code", "implicit"]` and `client_secret_basic`
+  (<https://openid.net/specs/openid-connect-discovery-1_0.html>, §3), instead
+  of as an issuer that supports neither (#632). The served document then
+  carries a non-empty `grant_types_supported`, which SMART makes required, and
+  the capability list names the client type that issuer actually accepts.
 - The eleven latency bars in `bench/bars.json` are tightened from the flat
   millisecond to a round number three to six times over the slowest median the
   bench has shown, so a regression fails `scripts/checks/bench-bars.sh` in CI

@@ -23,6 +23,19 @@ pub const DISCOVERY_PATH: &str = ".well-known/openid-configuration";
 /// refuses the start with a reason instead of hanging the process.
 pub const TIMEOUT: Duration = Duration::from_secs(10);
 
+/// The grant types an issuer that omits `grant_types_supported` runs.
+///
+/// OpenID Connect Discovery 1.0 §3: "If omitted, the default value is
+/// `["authorization_code", "implicit"]`."
+const DEFAULT_GRANT_TYPES: [&str; 2] = ["authorization_code", "implicit"];
+
+/// The client authentication an issuer that omits
+/// `token_endpoint_auth_methods_supported` runs.
+///
+/// OpenID Connect Discovery 1.0 §3: "If omitted, the default is
+/// `client_secret_basic`".
+const DEFAULT_TOKEN_ENDPOINT_AUTH_METHODS: [&str; 1] = ["client_secret_basic"];
+
 /// The largest metadata document this server reads.
 ///
 /// No specification governs the bound: our own design. A JWKS holds a handful
@@ -108,6 +121,11 @@ pub enum FetchError {
         /// The URL as given.
         url: String,
     },
+}
+
+/// `values` as owned strings.
+fn owned(values: &[&str]) -> Vec<String> {
+    values.iter().map(|value| (*value).to_owned()).collect()
 }
 
 /// Whether `url` may be fetched: `https`, or plain HTTP on the loopback host.
@@ -282,13 +300,22 @@ impl Http {
     /// parse, or declares another issuer.
     pub async fn discover(&self, issuer: &str) -> Result<IssuerMetadata, FetchError> {
         let url = format!("{}/{DISCOVERY_PATH}", issuer.trim_end_matches('/'));
-        let metadata: IssuerMetadata = self.json(&url).await?;
+        let mut metadata: IssuerMetadata = self.json(&url).await?;
         if metadata.issuer.trim_end_matches('/') != issuer.trim_end_matches('/') {
             return Err(FetchError::IssuerMismatch {
                 url,
                 declared: metadata.issuer,
                 configured: issuer.to_owned(),
             });
+        }
+        // NOTE: an omitted member means its documented default, not an issuer
+        // that supports nothing (OpenID Connect Discovery 1.0 §3).
+        if metadata.grant_types_supported.is_empty() {
+            metadata.grant_types_supported = owned(&DEFAULT_GRANT_TYPES);
+        }
+        if metadata.token_endpoint_auth_methods_supported.is_empty() {
+            metadata.token_endpoint_auth_methods_supported =
+                owned(&DEFAULT_TOKEN_ENDPOINT_AUTH_METHODS);
         }
         Ok(metadata)
     }

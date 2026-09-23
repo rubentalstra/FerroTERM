@@ -125,13 +125,42 @@ fn discovery(base: &str) -> Value {
     })
 }
 
-/// A `wiremock` issuer publishing the document and the key set.
-async fn issuer(key: &SigningKey) -> MockServer {
+/// The discovery document of an issuer a public client signs in to: no client
+/// authentication and the OpenID Connect scope.
+fn public_discovery(base: &str) -> Value {
+    json!({
+        "issuer": base,
+        "jwks_uri": format!("{base}/jwks"),
+        "authorization_endpoint": format!("{base}/authorize"),
+        "token_endpoint": format!("{base}/token"),
+        "grant_types_supported": ["authorization_code", "refresh_token"],
+        "scopes_supported": ["openid", "fhirUser", "user/CodeSystem.cud"],
+        "response_types_supported": ["code"],
+        "token_endpoint_auth_methods_supported": ["none", "client_secret_basic"],
+        "code_challenge_methods_supported": ["plain", "S256"],
+    })
+}
+
+/// The discovery document of an issuer that omits every optional member and
+/// advertises a patient scope this server refuses.
+fn sparse_discovery(base: &str) -> Value {
+    json!({
+        "issuer": base,
+        "jwks_uri": format!("{base}/jwks"),
+        "authorization_endpoint": format!("{base}/authorize"),
+        "token_endpoint": format!("{base}/token"),
+        "scopes_supported": ["openid", "patient/CodeSystem.cud", "launch/patient", "user/ValueSet.cud"],
+    })
+}
+
+/// A `wiremock` issuer publishing the key set and the document `build` writes
+/// for its own base URL.
+async fn issuer_publishing(key: &SigningKey, build: fn(&str) -> Value) -> MockServer {
     let server = MockServer::start().await;
     let base = server.uri();
     Mock::given(method("GET"))
         .and(path("/.well-known/openid-configuration"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(discovery(&base)))
+        .respond_with(ResponseTemplate::new(200).set_body_json(build(&base)))
         .mount(&server)
         .await;
     Mock::given(method("GET"))
@@ -142,17 +171,53 @@ async fn issuer(key: &SigningKey) -> MockServer {
     server
 }
 
-/// A `PUT` of the colours code system carrying `token`, when one is given.
-async fn put_colours(server: &Server, token: Option<&str>) -> http::Response<Body> {
-    let mut request = Request::put("/r4b/CodeSystem/colours")
-        .header(http::header::CONTENT_TYPE, "application/fhir+json");
+/// A `wiremock` issuer publishing the document and the key set.
+async fn issuer(key: &SigningKey) -> MockServer {
+    issuer_publishing(key, discovery).await
+}
+
+/// A `PUT` of `body` at `uri` carrying `token`, when one is given.
+async fn put_with(
+    server: &Server,
+    uri: &str,
+    body: &Value,
+    token: Option<&str>,
+) -> http::Response<Body> {
+    let mut request = Request::put(uri).header(http::header::CONTENT_TYPE, "application/fhir+json");
     if let Some(token) = token {
         request = request.header(AUTHORIZATION, format!("Bearer {token}"));
     }
-    let request = request
-        .body(Body::from(colours().to_string()))
-        .expect("request");
+    let request = request.body(Body::from(body.to_string())).expect("request");
     server.send(request).await
+}
+
+/// A `PUT` of the colours code system carrying `token`, when one is given.
+async fn put_colours(server: &Server, token: Option<&str>) -> http::Response<Body> {
+    put_with(server, "/r4b/CodeSystem/colours", &colours(), token).await
+}
+
+/// The capability strings of a served SMART configuration document.
+fn capabilities(document: &Value) -> Vec<String> {
+    document["capabilities"]
+        .as_array()
+        .expect("capabilities are required")
+        .iter()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect()
+}
+
+/// The served SMART configuration document of `version`.
+async fn configuration(server: &Server, version: &str) -> Value {
+    let (code, content_type, body) = server
+        .get_text(
+            &format!("/{version}/.well-known/smart-configuration"),
+            Some("application/json"),
+        )
+        .await;
+    assert_eq!(code, StatusCode::OK, "{version}: {body}");
+    assert_eq!(content_type, "application/json", "{version}");
+    serde_json::from_str(&body).expect("json")
 }
 
 /// The `WWW-Authenticate` value of a response.
@@ -232,9 +297,16 @@ async fn a_token_with_the_scope_writes_and_one_without_it_is_refused() {
     let sent = challenge(&response);
     assert_eq!(response.status(), StatusCode::FORBIDDEN, "{sent}");
     assert!(sent.contains("error=\"insufficient_scope\""), "{sent}");
-    assert!(sent.contains("scope=\"system/CodeSystem.u\""), "{sent}");
+    // RFC 6750 §3 reads `scope` as the scope a token must carry, a conjunction
+    // (RFC 6749 §3.3), so two alternatives are named in the outcome instead.
+    assert!(!sent.contains("scope="), "{sent}");
     let (_, body) = fixture::json(response).await;
     assert_eq!(body["issue"][0]["code"], "forbidden");
+    let diagnostics = body["issue"][0]["diagnostics"].as_str().unwrap_or_default();
+    assert!(
+        diagnostics.contains("`system/CodeSystem.u` or `user/CodeSystem.u`"),
+        "{diagnostics}"
+    );
 
     let writer = key.sign(&claims(&mock.uri(), "system/CodeSystem.cud", 300));
     let (status, body) = fixture::json(put_colours(&server, Some(&writer)).await).await;
@@ -295,6 +367,248 @@ async fn the_version_one_write_scope_is_accepted() {
     let writer = key.sign(&claims(&mock.uri(), "system/CodeSystem.write", 300));
     let response = put_colours(&server, Some(&writer)).await;
     assert_eq!(response.status(), StatusCode::CREATED);
+}
+
+// The user compartment is "data that a user can access", which is what a
+// person signed in to an editor carries
+// (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>).
+#[tokio::test]
+async fn a_user_update_scope_writes_a_put_and_a_user_create_scope_does_not() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = Server::start_persisting_with_smart(&mock.uri(), None, None).await;
+    let colour_set = json!({
+        "resourceType": "ValueSet",
+        "url": "http://ferroterm.test/ValueSet/colour-set",
+        "version": "1.0",
+        "status": "active",
+        "compose": {"include": [{"system": COLOURS}]}
+    });
+
+    let creator = key.sign(&claims(&mock.uri(), "user/ValueSet.c", 300));
+    let response = put_with(
+        &server,
+        "/r4b/ValueSet/colour-set",
+        &colour_set,
+        Some(&creator),
+    )
+    .await;
+    let sent = challenge(&response);
+    assert_eq!(
+        response.status(),
+        StatusCode::FORBIDDEN,
+        "a `PUT` needs the update letter: {sent}"
+    );
+    assert!(sent.contains("error=\"insufficient_scope\""), "{sent}");
+    let (_, body) = fixture::json(response).await;
+    let diagnostics = body["issue"][0]["diagnostics"].as_str().unwrap_or_default();
+    assert!(
+        diagnostics.contains("`system/ValueSet.u` or `user/ValueSet.u`"),
+        "{diagnostics}"
+    );
+
+    let updater = key.sign(&claims(&mock.uri(), "user/ValueSet.u", 300));
+    let response = put_with(
+        &server,
+        "/r4b/ValueSet/colour-set",
+        &colour_set,
+        Some(&updater),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+}
+
+// The version 1 `.write` maps to `.cud` in the user compartment as it does in
+// the system one
+// (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>).
+#[tokio::test]
+async fn the_version_one_user_write_scope_creates_a_concept_map() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = Server::start_persisting_with_smart(&mock.uri(), None, None).await;
+    let map = json!({
+        "resourceType": "ConceptMap",
+        "url": "http://ferroterm.test/ConceptMap/colours-hues",
+        "version": "1.0",
+        "status": "active",
+        "group": [{
+            "source": COLOURS,
+            "target": "http://ferroterm.test/CodeSystem/hues",
+            "element": [{
+                "code": "red",
+                "target": [{"code": "crimson", "equivalence": "equivalent"}]
+            }]
+        }]
+    });
+
+    let (code, _) = server.post("/r4b/ConceptMap", &map).await;
+    assert_eq!(code, StatusCode::UNAUTHORIZED, "a create needs a token");
+
+    let writer = key.sign(&claims(&mock.uri(), "user/ConceptMap.write", 300));
+    let (code, body) = server
+        .post_with_header(
+            "/r4b/ConceptMap",
+            &map,
+            AUTHORIZATION.as_str(),
+            &format!("Bearer {writer}"),
+        )
+        .await;
+    assert_eq!(code, StatusCode::CREATED, "{body}");
+}
+
+// A terminology server holds no patient record, so a patient-compartment scope
+// selects nothing on it
+// (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>).
+#[tokio::test]
+async fn a_patient_scope_is_refused_on_every_write_route() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = Server::start_persisting_with_smart(&mock.uri(), None, None).await;
+    let token = key.sign(&claims(
+        &mock.uri(),
+        "patient/CodeSystem.cud patient/ValueSet.cruds patient/*.*",
+        300,
+    ));
+
+    let response = put_colours(&server, Some(&token)).await;
+    let sent = challenge(&response);
+    assert_eq!(response.status(), StatusCode::FORBIDDEN, "{sent}");
+    assert!(sent.contains("error=\"insufficient_scope\""), "{sent}");
+    let (_, body) = fixture::json(response).await;
+    assert_eq!(body["issue"][0]["code"], "forbidden");
+
+    let (code, _) = server
+        .post_with_header(
+            "/r4b/CodeSystem",
+            &colours(),
+            AUTHORIZATION.as_str(),
+            &format!("Bearer {token}"),
+        )
+        .await;
+    assert_eq!(code, StatusCode::FORBIDDEN, "a create is refused too");
+}
+
+// The public client profile needs the authorization endpoint, `S256`, and the
+// capabilities that name the flow
+// (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+#[tokio::test]
+async fn the_configuration_publishes_what_a_public_client_needs() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer_publishing(&key, public_discovery).await;
+    let base = mock.uri();
+    let server = Server::start_persisting_with_smart(&base, None, None).await;
+
+    for version in ["r4", "r4b", "r5", "r6"] {
+        let document = configuration(&server, version).await;
+        assert_eq!(
+            document["authorization_endpoint"],
+            format!("{base}/authorize"),
+            "{version}"
+        );
+        // RFC 7636 §4.2 defines `S256`, and `plain` is a SHALL NOT here even
+        // though this issuer advertises it.
+        assert_eq!(
+            document["code_challenge_methods_supported"],
+            json!(["S256"]),
+            "{version}"
+        );
+        // `issuer` is required where `sso-openid-connect` is claimed.
+        assert_eq!(document["issuer"], base, "{version}");
+        let claimed = capabilities(&document);
+        for capability in [
+            "launch-standalone",
+            "client-public",
+            "permission-user",
+            "permission-v1",
+            "sso-openid-connect",
+        ] {
+            assert!(
+                claimed.iter().any(|value| value == capability),
+                "{version}: {capability} is missing from {claimed:?}"
+            );
+        }
+        for refused in ["permission-v2", "permission-patient"] {
+            assert!(
+                !claimed.iter().any(|value| value == refused),
+                "{version}: {refused} is not supported and not claimed: {claimed:?}"
+            );
+        }
+    }
+}
+
+// An omitted member means its documented default, so an issuer that publishes
+// neither still gets a conformant document
+// (<https://openid.net/specs/openid-connect-discovery-1_0.html>, §3).
+#[tokio::test]
+async fn an_issuer_that_omits_the_optional_members_gets_their_documented_defaults() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer_publishing(&key, sparse_discovery).await;
+    let server = Server::start_persisting_with_smart(&mock.uri(), None, None).await;
+
+    let document = configuration(&server, "r4b").await;
+    // The default is `["authorization_code", "implicit"]`, of which SMART
+    // names only the first as an option for this member.
+    assert_eq!(
+        document["grant_types_supported"],
+        json!(["authorization_code"])
+    );
+    // The default is `client_secret_basic`.
+    assert_eq!(
+        document["token_endpoint_auth_methods_supported"],
+        json!(["client_secret_basic"])
+    );
+    let claimed = capabilities(&document);
+    for capability in ["launch-standalone", "client-confidential-symmetric"] {
+        assert!(
+            claimed.iter().any(|value| value == capability),
+            "{capability} is missing from {claimed:?}"
+        );
+    }
+    // The server SHALL support every scope it republishes, so the refused ones
+    // are dropped (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+    assert_eq!(
+        document["scopes_supported"],
+        json!(["openid", "user/ValueSet.cud"])
+    );
+}
+
+// The PKCE member is required and `S256` is a SHALL in it, so it is published
+// whatever the issuer advertises
+// (<https://hl7.org/fhir/smart-app-launch/app-launch.html>).
+#[tokio::test]
+async fn the_pkce_member_is_published_even_when_the_issuer_advertises_none() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer_publishing(&key, sparse_discovery).await;
+    let server = Server::start_persisting_with_smart(&mock.uri(), None, None).await;
+
+    let document = configuration(&server, "r4b").await;
+    assert_eq!(
+        document["code_challenge_methods_supported"],
+        json!(["S256"])
+    );
+}
+
+// `sso-openid-connect` rests on the issuer's OpenID Connect profile, so an
+// issuer that lists no `openid` scope does not earn it
+// (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+#[tokio::test]
+async fn sso_openid_connect_is_claimed_only_where_the_issuer_lists_openid() {
+    let key = SigningKey::generate("k1");
+    let mock = issuer(&key).await;
+    let server = Server::start_persisting_with_smart(&mock.uri(), None, None).await;
+
+    let document = configuration(&server, "r4b").await;
+    let claimed = capabilities(&document);
+    assert!(
+        !claimed.iter().any(|value| value == "sso-openid-connect"),
+        "{claimed:?}"
+    );
+    assert!(
+        !claimed.iter().any(|value| value == "client-public"),
+        "this issuer authenticates every client: {claimed:?}"
+    );
+    // `issuer` is omitted where `sso-openid-connect` is not claimed.
+    assert!(document["issuer"].is_null(), "{document}");
 }
 
 // RFC 6750 §3.1: a credential that does not verify is `invalid_token`.
@@ -520,6 +834,12 @@ async fn the_admin_listener_requires_the_configured_scope() {
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    // RFC 6750 §3: one scope opens this route, so the challenge names it.
+    assert!(
+        challenge(&response).contains("scope=\"ferroterm/reload\""),
+        "{}",
+        challenge(&response)
+    );
 
     let right = key.sign(&claims(&mock.uri(), "ferroterm/reload", 300));
     let response = admin
@@ -645,15 +965,7 @@ async fn the_smart_configuration_is_served_from_the_issuer_document() {
     let server = Server::start_persisting_with_smart(&base, None, None).await;
 
     for version in ["r4", "r4b", "r5", "r6"] {
-        let (status, content_type, body) = server
-            .get_text(
-                &format!("/{version}/.well-known/smart-configuration"),
-                Some("application/json"),
-            )
-            .await;
-        assert_eq!(status, StatusCode::OK, "{version}: {body}");
-        assert_eq!(content_type, "application/json", "{version}");
-        let document: Value = serde_json::from_str(&body).expect("json");
+        let document = configuration(&server, version).await;
         assert_eq!(document["token_endpoint"], format!("{base}/token"));
         assert_eq!(
             document["authorization_endpoint"],
@@ -681,19 +993,16 @@ async fn the_smart_configuration_is_served_from_the_issuer_document() {
             json!(["private_key_jwt"]),
             "{version}"
         );
-        let capabilities = document["capabilities"]
-            .as_array()
-            .expect("capabilities are required")
-            .iter()
-            .filter_map(Value::as_str)
-            .collect::<Vec<_>>();
+        let claimed = capabilities(&document);
         assert!(
-            capabilities.contains(&"client-confidential-asymmetric"),
-            "the issuer advertises private_key_jwt: {capabilities:?}"
+            claimed
+                .iter()
+                .any(|value| value == "client-confidential-asymmetric"),
+            "the issuer advertises private_key_jwt: {claimed:?}"
         );
         assert!(
-            !capabilities.contains(&"permission-v2"),
-            "the granular scope syntax is refused, so it is not claimed: {capabilities:?}"
+            !claimed.iter().any(|value| value == "permission-v2"),
+            "the granular scope syntax is refused, so it is not claimed: {claimed:?}"
         );
     }
 

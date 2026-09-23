@@ -1,19 +1,20 @@
 //! SMART scopes: what a granted scope string permits on a resource type.
 //!
-//! The grammar is `system/<resource>.<permissions>`, where the permissions are
-//! a subset of the in-order string `cruds`
+//! The grammar is `<compartment>/<resource>.<permissions>`, where the
+//! permissions are a subset of the in-order string `cruds`
 //! (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>,
 //! §Scopes for requesting FHIR Resources). The version 1 forms `.read`,
 //! `.write`, and `.*` are accepted too: the specification maps them to `.rs`,
 //! `.cud`, and `.cruds` in the same section.
 
-/// The compartment the write routes are gated on.
+/// The compartments the write routes are gated on, in the order a refusal
+/// names them.
 ///
-/// A write on a `CodeSystem`, a `ValueSet`, or a `ConceptMap` carries no
-/// patient and no user context, so the system compartment is the one that
-/// applies (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>,
-/// §Scopes for requesting clinical data).
-const SYSTEM: &str = "system";
+/// `system/` is a client authorized in its own right and `user/` is a person
+/// acting through an interactive client; both address the same resource types
+/// (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>,
+/// §Scopes for requesting FHIR Resources).
+const COMPARTMENTS: [&str; 2] = ["system", "user"];
 
 /// The permission letters, in the order the specification fixes them.
 const CRUDS: &str = "cruds";
@@ -40,11 +41,14 @@ impl Permission {
         }
     }
 
-    /// The scope this permission reads as, for a diagnostic naming what is
-    /// missing.
+    /// The scopes that grant this permission on `resource`, for a refusal
+    /// naming what is missing.
     #[must_use]
-    pub fn scope_for(self, resource: &str) -> String {
-        format!("{SYSTEM}/{resource}.{}", self.letter())
+    pub fn scopes_for(self, resource: &str) -> Vec<String> {
+        COMPARTMENTS
+            .iter()
+            .map(|compartment| format!("{compartment}/{resource}.{}", self.letter()))
+            .collect()
     }
 }
 
@@ -61,7 +65,10 @@ pub fn grants(granted: &str, resource: &str, permission: Permission) -> bool {
     let Some((compartment, rest)) = granted.trim().split_once('/') else {
         return false;
     };
-    if compartment != SYSTEM || rest.contains('?') {
+    // NOTE: `patient/` narrows a grant to one patient's compartment, and a
+    // terminology server holds no patient record, so the scope selects nothing
+    // here (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>).
+    if !COMPARTMENTS.contains(&compartment) || rest.contains('?') {
         return false;
     }
     let Some((requested, permissions)) = rest.rsplit_once('.') else {
@@ -71,6 +78,21 @@ pub fn grants(granted: &str, resource: &str, permission: Permission) -> bool {
         return false;
     }
     permits(permissions, permission)
+}
+
+/// Whether this server honours `advertised`, one scope of the issuer's list.
+///
+/// A scope that names no compartment is the authorization server's own
+/// (`openid`, `offline_access`) and passes through; a resource scope is kept
+/// only where [`grants`] could honour it, so the republished
+/// `scopes_supported` promises nothing the write gate refuses
+/// (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+#[must_use]
+pub fn serves(advertised: &str) -> bool {
+    match advertised.trim().split_once('/') {
+        Some((compartment, rest)) => COMPARTMENTS.contains(&compartment) && !rest.contains('?'),
+        None => true,
+    }
 }
 
 /// Whether the permission part of a scope covers `permission`.
@@ -116,7 +138,13 @@ pub fn granted(scope: Option<&str>, scp: Option<&[String]>) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Permission, granted, grants, in_order};
+    use super::{Permission, granted, grants, in_order, serves};
+
+    /// The three resource types the write routes cover.
+    const WRITTEN: [&str; 3] = ["CodeSystem", "ValueSet", "ConceptMap"];
+
+    /// The three write permissions, with the letter each one needs.
+    const WRITES: [Permission; 3] = [Permission::Create, Permission::Update, Permission::Delete];
 
     #[test]
     fn a_version_two_scope_grants_the_letter_it_carries() {
@@ -159,10 +187,101 @@ mod tests {
         assert!(grants("system/*.write", "ConceptMap", Permission::Create));
     }
 
+    // The user compartment is "data that a user can access", which is the
+    // grant an interactive editor carries
+    // (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>).
+    #[test]
+    fn a_user_scope_grants_the_same_letters_as_a_system_scope() {
+        for resource in WRITTEN {
+            for permission in WRITES {
+                let single = format!("user/{resource}.{}", permission.letter());
+                assert!(grants(&single, resource, permission), "{single}");
+                assert!(
+                    grants(&format!("user/{resource}.cud"), resource, permission),
+                    "user/{resource}.cud for {permission:?}"
+                );
+                assert!(
+                    grants(&format!("user/{resource}.cruds"), resource, permission),
+                    "user/{resource}.cruds for {permission:?}"
+                );
+                assert!(
+                    grants(&format!("user/{resource}.write"), resource, permission),
+                    "user/{resource}.write for {permission:?}"
+                );
+                assert!(
+                    !grants(&format!("user/{resource}.rs"), resource, permission),
+                    "user/{resource}.rs for {permission:?}"
+                );
+            }
+        }
+        assert!(grants("user/*.cud", "ValueSet", Permission::Create));
+        assert!(!grants(
+            "user/CodeSystem.cud",
+            "ValueSet",
+            Permission::Create
+        ));
+    }
+
+    // A terminology server holds no patient record, so a patient-compartment
+    // scope selects nothing on it.
+    #[test]
+    fn a_patient_scope_grants_nothing_on_any_written_resource() {
+        for resource in WRITTEN {
+            for permission in WRITES {
+                for scope in [
+                    format!("patient/{resource}.cud"),
+                    format!("patient/{resource}.cruds"),
+                    format!("patient/{resource}.write"),
+                    String::from("patient/*.*"),
+                ] {
+                    assert!(
+                        !grants(&scope, resource, permission),
+                        "{scope} for {permission:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    // The server SHALL support every scope it republishes, so the list keeps
+    // only what the gate honours
+    // (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
+    #[test]
+    fn only_a_scope_the_gate_honours_stays_in_the_advertised_list() {
+        for kept in [
+            "openid",
+            "fhirUser",
+            "offline_access",
+            "system/CodeSystem.cud",
+            "user/ValueSet.cruds",
+            "user/*.write",
+        ] {
+            assert!(serves(kept), "{kept}");
+        }
+        for dropped in [
+            "patient/CodeSystem.cud",
+            "patient/*.rs",
+            "launch/patient",
+            "user/CodeSystem.cud?url=http://example.org",
+        ] {
+            assert!(!serves(dropped), "{dropped}");
+        }
+    }
+
+    #[test]
+    fn the_refusal_names_both_compartments_of_the_permission() {
+        assert_eq!(
+            Permission::Update.scopes_for("ValueSet"),
+            vec![
+                String::from("system/ValueSet.u"),
+                String::from("user/ValueSet.u")
+            ]
+        );
+    }
+
     #[test]
     fn a_scope_of_another_compartment_or_shape_grants_nothing() {
         for scope in [
-            "user/CodeSystem.cud",
             "patient/CodeSystem.cud",
             "system/CodeSystem",
             "CodeSystem.cud",
