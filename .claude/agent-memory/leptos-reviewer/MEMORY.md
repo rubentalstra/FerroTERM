@@ -109,3 +109,5 @@ because what it records is true and the method is reusable.
 FerroEHR's `default-style-guard-untracked-blindspot` describes
 `scripts/checks/default-style.sh`, a script with no counterpart in this
 repository. Nothing in it transfers.
+- [One-shot async in a resource re-runs on the way out](one-shot-async-in-a-resource-reruns-on-the-way-out.md), a code exchange or any side effect belongs in spawn_local, never in a Resource (#647)
+- [ScopedFuture tracks inside the async block](scopedfuture-tracks-inside-the-async-block.md), a signal read after an await re-subscribes the resource; read inputs first or get_untracked (#647)
