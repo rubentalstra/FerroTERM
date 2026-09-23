@@ -28,4 +28,5 @@
 mod accessibility;
 mod docs_shots;
 mod harness;
+mod sign_in;
 mod viewer;

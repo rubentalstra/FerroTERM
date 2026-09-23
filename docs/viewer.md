@@ -487,6 +487,7 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | Value sets | `/ui/valuesets` | `GET /{v}/ValueSet` search and read, with a link into the expansion runner |
 | Concept maps | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read, with a link into the translate runner |
 | About this server | `/ui/about` | three tabs: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |
+| Signing in | `/ui/callback` | `GET /{v}/.well-known/smart-configuration`, then the issuer's token endpoint. Not a place a reader goes: the identity provider sends them through it |
 
 `/ui/versions`, `/ui/evidence` and `/ui/settings` were screens of their own and
 now redirect to the About tab they named, so a link written before the merge
@@ -534,13 +535,59 @@ the address, so a run is already a URL and the list holds links and nothing
 else: a remembered run is re-run when a reader returns to it and can never show
 a stale answer beside a live one. Twelve are kept, in `localStorage` alone.
 
+### Signing in
+
+**The viewer signs a person in only where the server publishes an issuer.**
+The server's own `[base]/.well-known/smart-configuration` names the
+authorization and token endpoints, `S256`, the `client-public` and
+`launch-standalone` capabilities, and `ferroterm_viewer_client_id`, the OAuth
+client the operator registered for this viewer. A document missing any of them
+means the deployment set no sign-in up, and the viewer draws no sign-in control
+and no edit control anywhere. RFC 8414 §2 admits the extra member, and reading
+the client from the document is what keeps one bundle serving every
+deployment: nothing about an identity provider is compiled in.
+
+The launch is the standalone launch of a public client
+(<https://hl7.org/fhir/smart-app-launch/app-launch.html>). The viewer draws a
+PKCE verifier from `crypto.getRandomValues`, derives the `S256` challenge with
+`crypto.subtle.digest` (RFC 7636), and sends the reader to the authorization
+endpoint with `response_type=code`, the client, the redirect address, the
+scopes, a `state`, the `aud` of the served version, and the challenge. It
+checks the `state` on return (RFC 6749 §10.12), exchanges the code at the token
+endpoint with the verifier and no secret, and holds the access token in a
+Leptos signal.
+
+**The token lives in memory and nowhere else.** No specification governs where
+a browser client keeps one. `localStorage` outlives the tab and is readable by
+every script the page loads; a cookie travels on requests the viewer did not
+make. A token in a signal dies when the tab closes, and closing the tab signs
+out. The verifier and the `state` are the one exception: they have to survive
+the full page load the redirect causes, so they spend it in `sessionStorage`,
+which is per tab, and are cleared the moment the callback reads them. They are
+one-shot secrets that are worthless once the code is spent.
+
+The viewer asks for `openid`, `fhirUser`, and `user/CodeSystem.cud`,
+`user/ValueSet.cud`, `user/ConceptMap.cud`. An identity provider that grants a
+subset answers with the subset, and the viewer draws only what that subset
+opens.
+
+### The roles
+
+The roles live in the identity provider and reach the server as scopes. The
+server enforces them; the viewer reads the same scopes so it never offers a
+control the server would refuse.
+
+| Role | Scopes the identity provider grants | What the viewer draws |
+|---|---|---|
+| Reader | none of the write scopes | every screen, no edit control, no sign-in needed |
+| Terminologist | `user/CodeSystem.cud`, `user/ValueSet.cud`, `user/ConceptMap.cud`, or the subset granted | the edit controls for the types the granted subset covers |
+| Operator | the admin scope (`FERROTERM_OIDC_ADMIN_SCOPE`) | nothing extra: the admin listener is its own surface, not a screen |
+
+National content carries no edit control under any role: the built indexes open
+read-only and have no write path, so the editor never offers to change one.
+
 ### Deliberately out of scope
 
-- **Writing FHIR resources from the viewer.** The server exposes `CodeSystem`,
-  `ValueSet`, and `ConceptMap` create, update, and delete, and the viewer does
-  not call them. Those are unauthenticated in the server today, and a UI that
-  invites a destructive call is a different product with a different security
-  design.
 - **Browsing another server (`?tx=`).** Same-origin only, §2.
 - **Syndication and edition installation.** No feed exists; the offline build
   owns edition loading.
