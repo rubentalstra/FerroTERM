@@ -52,7 +52,10 @@ fn the_local_edition_closure_builds_and_fits_the_estimate() {
         .next()
         .expect("relationship file");
     let mut edges = Vec::new();
-    for relationship in Rows::<_, Relationship>::open(&relationship_file.path).expect("header") {
+    for relationship in Rows::<_, Relationship>::open(&relationship_file.path)
+        .expect("header")
+        .inferred()
+    {
         let relationship = relationship.expect("row parses");
         if relationship.base.active
             && relationship.type_id == constants::IS_A

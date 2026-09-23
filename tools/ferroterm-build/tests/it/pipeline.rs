@@ -205,6 +205,56 @@ fn the_store_graph_and_text_crates_open_what_the_build_wrote() {
     );
 }
 
+/// Release file specification appendix E.5: a qualifying or additional row is
+/// not part of the definition of its source concept, so it defines nothing.
+#[test]
+fn a_row_outside_the_inferred_view_defines_nothing() {
+    let release = tempfile::tempdir().expect("tempdir");
+    fixture::write_release(release.path());
+    let out = tempfile::tempdir().expect("tempdir");
+    let report = pipeline::build(release.path(), &[], out.path()).expect("build");
+    assert_eq!(
+        report.is_a_edges, 4,
+        "the qualifying is-a row is not a hierarchy edge"
+    );
+    assert_eq!(
+        report.attributes, 2,
+        "the additional and the qualifying concrete row are not attributes"
+    );
+
+    let store = Store::open(&report.store).expect("store opens");
+    let animal = store.ordinal(&concept(2)).expect("read").expect("animal");
+    let dog = store.ordinal(&concept(4)).expect("read").expect("dog");
+    let graph = fs::read(&report.hierarchy).expect("hierarchy file");
+    let hierarchy = Hierarchy::read_from(&mut graph.as_slice()).expect("hierarchy reads");
+    assert_eq!(
+        hierarchy.is_a.neighbours(dog),
+        [animal.index()],
+        "the dog's only parent is the animal"
+    );
+
+    let property = |ordinal, key_name: &str| {
+        let key = store
+            .vocabulary_ordinal(Vocabulary::PropertyKeys, key_name)
+            .expect("read")
+            .expect("key");
+        store
+            .properties(ordinal)
+            .expect("read")
+            .into_iter()
+            .find(|(k, _)| *k == key)
+            .map(|(_, values)| values)
+    };
+    assert!(
+        property(dog, &concept(6)).is_none(),
+        "the additional relationship is not a property"
+    );
+    assert!(
+        property(dog, &concept(8)).is_none(),
+        "the qualifying concrete value is not a property"
+    );
+}
+
 #[test]
 fn the_graph_and_text_files_open_beside_the_store() {
     let release = tempfile::tempdir().expect("tempdir");

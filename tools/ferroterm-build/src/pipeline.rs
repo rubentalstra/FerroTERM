@@ -679,14 +679,14 @@ fn ordinal_of_concept(
         })
 }
 
-/// Reads one RF2 relationship file: an active is-a row becomes a hierarchy
-/// edge, every other one an attribute value on its source.
+/// Reads one RF2 relationship file: an active inferred is-a row becomes a
+/// hierarchy edge, every other one an attribute value on its source.
 fn read_relationship_file(
     path: &Path,
     ordinals: &BTreeMap<ConceptId, Ordinal>,
     out: &mut Relationships,
 ) -> Result<(), Error> {
-    for relationship in Rows::<_, Relationship>::open(path)? {
+    for relationship in Rows::<_, Relationship>::open(path)?.inferred() {
         let relationship = relationship?;
         if !relationship.base.active {
             continue;
@@ -712,14 +712,14 @@ fn read_relationship_file(
     Ok(())
 }
 
-/// Reads one RF2 concrete-value relationship file: every active row is an
-/// attribute whose value is a number or a string.
+/// Reads one RF2 concrete-value relationship file: every active inferred row
+/// is an attribute whose value is a number or a string.
 fn read_concrete_relationship_file(
     path: &Path,
     ordinals: &BTreeMap<ConceptId, Ordinal>,
     out: &mut Relationships,
 ) -> Result<(), Error> {
-    for relationship in Rows::<_, ConcreteRelationship>::open(path)? {
+    for relationship in Rows::<_, ConcreteRelationship>::open(path)?.inferred() {
         let relationship = relationship?;
         if !relationship.base.active {
             continue;

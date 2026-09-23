@@ -27,10 +27,14 @@ pub const PRIMITIVE: ConceptId = ConceptId::published(900_000_000_000_074_008);
 /// `900000000000073002 |Defined|` definition status.
 pub const DEFINED: ConceptId = ConceptId::published(900_000_000_000_073_002);
 
+/// `900000000000006009 |Defining relationship|`.
+pub const DEFINING: ConceptId = ConceptId::published(900_000_000_000_006_009);
 /// `900000000000011006 |Inferred relationship|`.
 pub const INFERRED: ConceptId = ConceptId::published(900_000_000_000_011_006);
 /// `900000000000010007 |Stated relationship|`.
 pub const STATED: ConceptId = ConceptId::published(900_000_000_000_010_007);
+/// `900000000000225001 |Qualifying relationship|`.
+pub const QUALIFYING: ConceptId = ConceptId::published(900_000_000_000_225_001);
 /// `900000000000227009 |Additional relationship|`.
 pub const ADDITIONAL: ConceptId = ConceptId::published(900_000_000_000_227_009);
 
@@ -97,8 +101,10 @@ pub fn all() -> Vec<Sctid> {
         ACCEPTABLE.sctid(),
         PRIMITIVE.sctid(),
         DEFINED.sctid(),
+        DEFINING.sctid(),
         INFERRED.sctid(),
         STATED.sctid(),
+        QUALIFYING.sctid(),
         ADDITIONAL.sctid(),
         CORE_MODULE.sctid(),
         MODEL_COMPONENT_MODULE.sctid(),
@@ -135,6 +141,17 @@ mod tests {
             assert_eq!(parsed, id);
             assert_eq!(parsed.partition(), Ok(Partition::Concept));
         }
+    }
+
+    /// The characteristic type enumeration, as appendix E.5 lists it; a
+    /// check-digit-valid wrong value would pass the test above alone.
+    #[test]
+    fn the_characteristic_types_are_the_published_values() {
+        assert_eq!(super::DEFINING.value(), 900_000_000_000_006_009);
+        assert_eq!(super::INFERRED.value(), 900_000_000_000_011_006);
+        assert_eq!(super::STATED.value(), 900_000_000_000_010_007);
+        assert_eq!(super::QUALIFYING.value(), 900_000_000_000_225_001);
+        assert_eq!(super::ADDITIONAL.value(), 900_000_000_000_227_009);
     }
 
     /// The values of the descriptor metadata tree, as the specification lists

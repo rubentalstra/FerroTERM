@@ -21,6 +21,11 @@ RF2 release file specification is the authority
   `constants`, and tested.
 - Snapshot semantics: one row per component id, `active` and
   `effectiveTime` carried as typed fields, never dropped.
+- The relationship and concrete value rows carry their `characteristicTypeId`,
+  and `Rows::inferred` is the one seam that narrows a file to
+  `900000000000011006 |Inferred relationship|`: the rest of the enumeration is
+  not part of a concept's definition, so a caller building a hierarchy or an
+  attribute value reads through it.
 - Fixtures are shaped, synthetic RF2 only, minted with valid check digits in
   an invented namespace. The licensed release under `data/` is read only by
   the ignored `local_edition` test (`.claude/rules/vendored-inputs.md`).
