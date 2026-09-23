@@ -1107,6 +1107,7 @@ dependencies = [
  "console_error_panic_hook",
  "gloo-net 0.7.0",
  "http",
+ "js-sys",
  "leptos",
  "leptos_meta",
  "leptos_router",
@@ -1115,6 +1116,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.20",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 

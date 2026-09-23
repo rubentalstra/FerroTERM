@@ -95,6 +95,15 @@ const CODE_CHALLENGE_METHODS: [&str; 1] = ["S256"];
 /// (<https://openid.net/specs/openid-connect-core-1_0.html>, §3.1.2.1).
 const OPENID: &str = "openid";
 
+/// The member the viewer reads its own `client_id` from.
+///
+/// SMART fixes the members it defines and leaves the document open, and
+/// RFC 8414 §2 admits additional metadata parameters, so the name carries this
+/// server's own prefix. The viewer is a public client served by this server, so
+/// it learns the client the operator registered from the same document that
+/// names the endpoints, and the bundle stays one artifact for every deployment.
+const VIEWER_CLIENT_ID: &str = "ferroterm_viewer_client_id";
+
 /// The members of `advertised` that `options` admits, in the order `options`
 /// fixes them.
 ///
@@ -171,6 +180,9 @@ pub struct Smart {
     audience: Option<String>,
     /// The scope the admin listener requires, compared verbatim.
     admin_scope: String,
+    /// The OAuth client the viewer signs in as, when the deployment registered
+    /// one.
+    viewer_client_id: Option<String>,
     /// The protection space the challenge names (RFC 6750 §3).
     realm: String,
     /// The client the issuer is asked with.
@@ -217,6 +229,7 @@ impl Smart {
             metadata,
             audience: config.oidc_audience.clone(),
             admin_scope: config.oidc_admin_scope.clone(),
+            viewer_client_id: config.viewer_client_id.clone(),
             realm,
             http,
             keys,
@@ -239,6 +252,13 @@ impl Smart {
     #[must_use]
     pub fn authorize_endpoint(&self) -> Option<&str> {
         self.metadata.authorization_endpoint.as_deref()
+    }
+
+    /// The OAuth client the viewer signs in as, when the deployment registered
+    /// one.
+    #[must_use]
+    pub fn viewer_client_id(&self) -> Option<&str> {
+        self.viewer_client_id.as_deref()
     }
 
     /// The issuer's dynamic registration endpoint, when it runs one.
@@ -365,6 +385,9 @@ impl Smart {
             if let Some(endpoint) = endpoint {
                 put(name, endpoint.into());
             }
+        }
+        if let Some(client) = self.viewer_client_id.as_deref() {
+            put(VIEWER_CLIENT_ID, client.into());
         }
         let authentication = only(
             &self.metadata.token_endpoint_auth_methods_supported,

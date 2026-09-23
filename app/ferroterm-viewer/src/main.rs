@@ -6,6 +6,7 @@
 //! do.
 
 mod app;
+mod auth;
 mod comparison;
 mod components;
 mod density;

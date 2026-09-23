@@ -16,11 +16,13 @@ use leptos_router::hooks::use_query;
 use leptos_router::params::Params;
 use leptos_router::path;
 
+use crate::auth::Session;
 use crate::components::health::HealthIndicator;
 use crate::components::icon;
 use crate::components::icon::Glyph;
 use crate::components::icon::Icon;
 use crate::components::mark::Lockup;
+use crate::components::sign_in::SignInControl;
 use crate::components::spinner::Spinner;
 use crate::components::theme_toggle::ThemeToggle;
 use crate::components::version_switcher::VersionSwitcher;
@@ -28,6 +30,7 @@ use crate::fhir::version::FhirVersion;
 use crate::find::QUERY_PARAM;
 use crate::pages::about::AboutPage;
 use crate::pages::browse::BrowsePage;
+use crate::pages::callback::CallbackPage;
 use crate::pages::code_system::CodeSystemPage;
 use crate::pages::concept_maps::ConceptMapsPage;
 use crate::pages::expand::ExpandPage;
@@ -306,6 +309,7 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
                 <div class="flex items-center gap-default">
                     <VersionSwitcher selected=version />
                     <HealthIndicator />
+                    <SignInControl />
                     <ThemeToggle />
                 </div>
             </div>
@@ -364,6 +368,7 @@ pub(crate) fn Shell() -> impl IntoView {
             .unwrap_or_else(|| settings.version.get())
     });
     provide_context(SelectedVersion(version));
+    provide_context(Session::new());
 
     let nav_open = RwSignal::new(false);
     let bar = topbar(version, nav_open);
@@ -381,6 +386,7 @@ pub(crate) fn Shell() -> impl IntoView {
             <Route path=path!("/translate") view=TranslatePage />
             <Route path=path!("/valuesets") view=ValueSetsPage />
             <Route path=path!("/find") view=FindPage />
+            <Route path=path!("/callback") view=CallbackPage />
             // The three panes were three screens. A link written then still
             // opens the pane it named, which is the fragment each carries.
             <Route path=path!("/versions") view=|| moved_to("about-versions-heading") />
@@ -411,6 +417,7 @@ mod tests {
     use super::EXPLORE;
     use super::NAV_GROUPS;
     use super::NavItem;
+    use crate::routes::CALLBACK_PATH;
     use crate::routes::UI_BASE;
     use crate::routes::nav_section;
 
@@ -474,6 +481,19 @@ mod tests {
             NAV_GROUPS.last().map(|group| group.1.len()),
             Some(ABOUT.len()),
             "the screens about the server come after the screens about a code"
+        );
+    }
+
+    #[test]
+    fn the_sign_in_callback_is_not_one_of_the_places_a_reader_goes() {
+        assert!(
+            !entries().contains(&CALLBACK_PATH),
+            "the issuer sends a reader through the callback; nobody navigates to it"
+        );
+        assert_eq!(
+            nav_section(&format!("{UI_BASE}/{CALLBACK_PATH}")),
+            None,
+            "a screen reached through a redirect marks no entry"
         );
     }
 

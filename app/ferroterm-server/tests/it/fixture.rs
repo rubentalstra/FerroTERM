@@ -143,6 +143,16 @@ impl Server {
         audience: Option<&str>,
         admin_scope: Option<&str>,
     ) -> Self {
+        Self::start_persisting_with_smart_client(issuer, audience, admin_scope, None).await
+    }
+
+    /// The same server, with the OAuth client the viewer signs in as.
+    pub(crate) async fn start_persisting_with_smart_client(
+        issuer: &str,
+        audience: Option<&str>,
+        admin_scope: Option<&str>,
+        viewer_client_id: Option<&str>,
+    ) -> Self {
         let dir = tempfile::tempdir().expect("tempdir");
         ferroterm_testkit::snomed::write(dir.path()).expect("writes the edition");
         let fhir = dir.path().join("fhir");
@@ -156,6 +166,7 @@ impl Server {
             oidc_audience: audience.map(str::to_owned),
             oidc_admin_scope: admin_scope
                 .map_or_else(|| Config::default().oidc_admin_scope, str::to_owned),
+            viewer_client_id: viewer_client_id.map(str::to_owned),
             ..Config::default()
         };
         let smart = ferroterm_server::smart::Smart::start(&config)

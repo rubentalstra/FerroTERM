@@ -29,6 +29,7 @@ serde_json.workspace = true
 console_error_panic_hook.workspace = true
 gloo-net.workspace = true
 http.workspace = true
+js-sys.workspace = true
 leptos.workspace = true
 leptos_meta.workspace = true
 leptos_router.workspace = true
@@ -37,7 +38,9 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true
 web-sys = { workspace = true, features = [
+  "Crypto",
   "Document",
   "DomTokenList",
   "Element",
@@ -45,7 +48,9 @@ web-sys = { workspace = true, features = [
   "HtmlInputElement",
   "Location",
   "MediaQueryList",
+  "Performance",
   "Storage",
+  "SubtleCrypto",
   "Window",
 ] }
 

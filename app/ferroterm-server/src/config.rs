@@ -65,6 +65,16 @@ pub const OIDC_AUDIENCE_ENV: &str = "FERROTERM_OIDC_AUDIENCE";
 /// token grants. No specification governs the admin surface, so the name is
 /// the deployment's own.
 pub const OIDC_ADMIN_SCOPE_ENV: &str = "FERROTERM_OIDC_ADMIN_SCOPE";
+/// The environment variable naming the OAuth client the viewer signs in as.
+///
+/// The viewer is a public client: it holds no secret, and the `client_id` it
+/// presents at the authorization endpoint is the one the operator registered
+/// with the identity provider. The server publishes the value in its own
+/// `.well-known/smart-configuration` under `ferroterm_viewer_client_id`, which
+/// RFC 8414 §2 admits as an additional metadata parameter, so the bundle stays
+/// one artifact and configures nothing at build time. Unset, the viewer offers
+/// no sign-in and shows no edit control.
+pub const VIEWER_CLIENT_ID_ENV: &str = "FERROTERM_VIEWER_CLIENT_ID";
 /// The environment variable switching the viewer on or off.
 ///
 /// It reads `on` or `off` (`true`/`false`, `1`/`0`, and `yes`/`no` are taken
@@ -124,6 +134,9 @@ pub struct Config {
     pub oidc_audience: Option<String>,
     /// The scope the admin listener requires, compared verbatim.
     pub oidc_admin_scope: String,
+    /// The OAuth client the viewer signs in as; `None` when the deployment
+    /// registered none and the viewer offers no sign-in.
+    pub viewer_client_id: Option<String>,
     /// Whether the server mounts the viewer under `/ui`.
     pub viewer: bool,
 }
@@ -160,6 +173,7 @@ impl Default for Config {
             oidc_issuer: None,
             oidc_audience: None,
             oidc_admin_scope: String::from("ferroterm/admin"),
+            viewer_client_id: None,
             viewer: true,
         }
     }
@@ -209,6 +223,10 @@ impl Config {
                 .map(|scope| scope.trim().to_owned())
                 .filter(|scope| !scope.is_empty())
                 .unwrap_or(defaults.oidc_admin_scope),
+            viewer_client_id: std::env::var(VIEWER_CLIENT_ID_ENV)
+                .ok()
+                .map(|client| client.trim().to_owned())
+                .filter(|client| !client.is_empty()),
             viewer: viewer(defaults.viewer)?,
         })
     }
