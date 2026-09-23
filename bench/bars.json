@@ -11,74 +11,88 @@
     "",
     "A bar is the CLAIM, not a machine's measurement: it never moves to match",
     "a slower run. `measured_us` records what one machine answered, so the",
-    "headroom a run has is visible, and it is a record, never a gate."
+    "headroom a run has is visible, and it is a record, never a gate.",
+    "",
+    "Each bar is a round number over the slowest median the bench has shown on",
+    "either machine that runs this check, with three to six times the headroom",
+    "(#304, 2026-09-23). Two machines run it: this laptop, and the shared",
+    "ubuntu-latest runner of the bench-bars CI job, whose medians over three",
+    "runs of the same code differ by up to 1.5x between runner instances and",
+    "are the slower of the two for the served operations. A bar set close to",
+    "its measurement gates on that spread instead of on a regression, and a",
+    "bar left at the millisecond gates on nothing: a $lookup that got twenty",
+    "times slower would still pass. Tightening a bar states a stronger claim",
+    "and is always allowed; raising one is not.",
+    "",
+    "No FHIR or SNOMED CT specification governs a benchmark. The bars, their",
+    "shape, and the headroom rule above are this project's own design."
   ],
-  "machine": "Apple M2 Pro, macOS 25.5, release profile, 20000 synthetic concepts",
+  "machine": "Apple M2, macOS 26.5, release profile, 20000 synthetic concepts",
   "bars": [
     {
       "bench": "operations/lookup",
-      "max_us": 1000,
-      "measured_us": 9,
-      "claim": "a point read answers in under a millisecond"
+      "max_us": 25,
+      "measured_us": 3,
+      "claim": "a point read costs its answer, never a scan of the edition"
     },
     {
       "bench": "operations/validate_code",
-      "max_us": 1000,
-      "measured_us": 8,
-      "claim": "a point read answers in under a millisecond"
+      "max_us": 25,
+      "measured_us": 4,
+      "claim": "validating a code is a point read, never an expansion"
     },
     {
       "bench": "operations/subsumes",
-      "max_us": 1000,
-      "measured_us": 2,
-      "claim": "subsumption answers from the closure in under a millisecond"
+      "max_us": 10,
+      "measured_us": 1,
+      "claim": "subsumption answers from the closure bitmaps, never by walking the hierarchy"
     },
     {
       "bench": "operations/translate",
-      "max_us": 1000,
-      "measured_us": 17,
+      "max_us": 100,
+      "measured_us": 16,
       "claim": "a translation over a map reference set costs its answer, never the reference set"
     },
     {
       "bench": "expand/isa_root_page_10",
-      "max_us": 1000,
-      "measured_us": 92,
-      "claim": "a page of an expansion is cut from the bitmaps in under a millisecond"
+      "max_us": 400,
+      "measured_us": 66,
+      "claim": "a page of an expansion is cut from the bitmaps before a concept is read"
     },
     {
       "bench": "http/lookup",
-      "max_us": 1000,
-      "measured_us": 47,
-      "claim": "the served operation, routing and codec included, stays under a millisecond"
+      "max_us": 100,
+      "measured_us": 13,
+      "claim": "the served point read adds routing and the codec to the read, and no more"
     },
     {
       "bench": "http/validate_code",
-      "max_us": 1000,
-      "measured_us": 13,
-      "claim": "the served operation, routing and codec included, stays under a millisecond"
+      "max_us": 50,
+      "measured_us": 7,
+      "claim": "the served validation adds routing and the codec to the read, and no more"
     },
     {
       "bench": "http/subsumes",
-      "max_us": 1000,
-      "measured_us": 8,
-      "claim": "the served operation, routing and codec included, stays under a millisecond"
+      "max_us": 50,
+      "measured_us": 7,
+      "claim": "the served subsumption adds routing and the codec to the closure read"
     },
     {
       "bench": "http/expand_page_10",
-      "max_us": 1000,
-      "measured_us": 118,
-      "claim": "the served page of an expansion stays under a millisecond"
+      "max_us": 750,
+      "measured_us": 129,
+      "claim": "the served page of an expansion costs the page, never the selection behind it"
     },
     {
       "bench": "http/translate",
-      "max_us": 1000,
-      "measured_us": 70,
-      "claim": "the served translation stays under a millisecond whatever the reference set holds"
+      "max_us": 400,
+      "measured_us": 120,
+      "claim": "the served translation costs its answer whatever the reference set holds"
     },
     {
       "bench": "expand/isa_root_first_10",
-      "max_us": 1000,
-      "measured_us": 31,
+      "max_us": 50,
+      "measured_us": 6,
       "claim": "the first page of an expansion costs the page, never the selection"
     }
   ],
@@ -93,14 +107,29 @@
     "times faster than a 1.5 KB one, which is a bar on how much a system has to",
     "say about a concept. So the bar has the shape the measurement has, and a",
     "regression in either term fails it: a slower operation moves the fixed",
-    "part, a slower codec moves the rate (the decision on #512)."
+    "part, a slower codec moves the rate (the decision on #512).",
+    "",
+    "Confirmed against bench/records/2026-09-23-apple-m2 on 2026-09-23, the",
+    "first committed set that carries an answer size (#512). Fitted over its",
+    "seven systems, $lookup costs a fixed 97.6 us plus 4.61 ns per byte, and",
+    "all seven hold the bar. RxNorm's 387.7 us for 63,134 bytes is the largest",
+    "answer rather than the slowest read: SNOMED CT International pays 216.8 us",
+    "for 25,764 bytes at the same rate. The two rejected shapes stand. A fixed",
+    "narrow answer would stop measuring what a client is served, and returning",
+    "fewer properties unasked, which the specification permits, would change",
+    "the answer so that a measurement passes.",
+    "",
+    "The fixed term is the one that moved: 70 us when it was measured on",
+    "2026-09-08 against 97.6 us here, with the rate unchanged, so the cost is",
+    "per request and not per byte. It leaves the smallest answers 4% under the",
+    "bar. The bar is not raised to make room for it; the 28 us is #628."
   ],
   "served_bars": [
     {
       "operation": "lookup",
       "fixed_us": 100,
       "rate_ns_per_byte": 6.0,
-      "measured": "on 2026-09-08, natively: 862 B answered in 75 us, 7,368 B in 123 us, 26,725 B in 211 us, 63,134 B in 355 us, which is a fixed 70 us plus 4.5 ns per byte; the bar above carries headroom over that fit",
+      "measured": "on 2026-09-23, over bench/records/2026-09-23-apple-m2: 862 B answered in 96.3 us, 7,368 B in 135.8 us, 26,725 B in 221.8 us, 63,134 B in 387.7 us, a fixed 97.6 us plus 4.61 ns per byte; the earlier fit, on 2026-09-08, was 70 us plus 4.5 ns per byte",
       "claim": "a served read costs a fixed amount plus the serialising of its answer, at one rate on every code system"
     }
   ]

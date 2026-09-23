@@ -19,7 +19,10 @@ For one code system and one run, `ferroterm-bench` writes a JSON record with:
   build's peak resident memory (from `/usr/bin/time`), when the release is at
   hand;
 - the time from starting the server until `/health` answers, and the server's
-  resident memory after start and after the warm requests (`ps -o rss=`);
+  resident memory after start and after the warm requests, the median of five
+  readings of that one process (`footprint`'s `phys_footprint` on macOS, which
+  counts the pages the kernel compressed away, and `ps -o rss=` elsewhere,
+  where the resident set already counts them);
 - per operation (`$lookup`, `$validate-code`, `$subsumes`, a small and a large
   `$expand`, and a designation search through `filter`): the first request
   cold, and the nearest-rank p50, p95, and p99 over the warm requests that
@@ -89,6 +92,23 @@ from and links to its record.
 
 ## The current record set
 
+`bench/records/2026-09-23-apple-m2/`, taken on 2026-09-22 with the 0.1.4
+release binaries on an Apple M2 with 17.18 GB, natively rather than in a
+container. Nothing else of the owner's ran while it was taken: no compiler, no
+test run, no editor indexing, and Docker Desktop idle with no container
+started. FerroTERM's own processes are the only ones in the figures, one
+server at a time, and the harness measures every system's serving before it
+runs any build, so no build shares a CPU with a latency measurement.
+
+The resident and peak-build figures are the server's and the build tool's, not
+the machine's. Resident memory is the median of five readings of the one
+server process, read with `footprint` so the pages macOS compressed are
+counted; peak build memory is the `ferroterm-build` child's peak over one
+system's release, from `/usr/bin/time`. The set's own
+[README](https://github.com/rubentalstra/FerroTERM/blob/main/bench/records/2026-09-23-apple-m2/README.md)
+carries the machine state in full, including what the one-minute load average
+in each record is an average of.
+
 <!-- bench-table:begin -->
 | Code system | Release | Concepts | Build | Peak build memory | Index on disk | Resident | `$lookup` | `$validate-code` | `$subsumes` | `$expand` (small) | `$expand` (large) | Search | Snowstorm |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -113,3 +133,12 @@ after start and the figure after the warm requests are close. The design target
 for point reads is under a millisecond in the release profile on the Dutch
 edition; a millisecond-scale figure is a measurement to improve, never a result
 to call fine.
+
+`$lookup` reads slower on some systems than on others because its answer is
+larger, not because the read is. Across the seven systems in the set, its warm
+p50 fits a fixed 98 µs plus 4.6 ns for every byte of the answer, from a 862
+byte ICD-10-NL answer at 96 µs to a 63,134 byte RxNorm answer at 388 µs: the
+same rate on every system, and RxNorm is the largest answer rather than the
+slowest read. The bar the project holds it to has that shape, `100 µs +
+6.0 ns/byte` in `bench/bars.json`, and `scripts/checks/served-bars.sh` checks
+every record of the published set against it.

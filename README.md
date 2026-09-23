@@ -90,13 +90,12 @@ Measured by the benchmark harness on one machine, one record per
 code system, warm p50 per operation; nothing here is typed by hand, and CI fails
 when the table drifts from the records under `bench/records/`.
 
-**These figures are older than the code.** The record set below was taken on
-2026-09-06 against 0.1.0, and the read path has been worked since: the two
-SNOMED editions and RxNorm all answer `$lookup` faster than the table says. A
-record taken on a machine that is not quiet measures the operating system
-rather than the server, so the set is retaken rather than refreshed in place,
-which is what [#512](https://github.com/rubentalstra/FerroTERM/issues/512)
-carries. Older true figures beat fresher wrong ones.
+The set below was taken on 2026-09-22 with the 0.1.4 release binaries, natively
+on an Apple M2 with nothing else running: a record taken on a busy machine
+measures the operating system rather than the server. The resident and
+peak-build figures are the server's and the build tool's own, and the set's
+[README](bench/records/2026-09-23-apple-m2/README.md) states the machine's
+condition and the instrument behind each figure.
 
 <!-- bench-table:begin -->
 | Code system | Release | Concepts | Build | Peak build memory | Index on disk | Resident | `$lookup` | `$validate-code` | `$subsumes` | `$expand` (small) | `$expand` (large) | Search | Snowstorm |
