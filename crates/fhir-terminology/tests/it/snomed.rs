@@ -281,7 +281,7 @@ fn a_registry_with_the_provider_renders_terminology_capabilities() {
     // NOTE: the element is "If the compositional grammar defined by the code
     // system is supported"
     // (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>).
-    assert!(!system.versions[0].compositional);
+    assert!(system.versions[0].compositional);
     assert_eq!(system.versions[0].languages, ["en", "nl"]);
     assert!(
         system.versions[0]
@@ -627,11 +627,11 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
         op: FilterOperator::Equal,
         value: value.to_owned(),
     };
+    // NOTE: the filter says whether post-coordination is allowed
+    // (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties"), so
+    // either value selects every precoordinated concept of the version.
     assert_eq!(p.filter(&expressions("false")).expect("all").len(), 21);
-    assert!(matches!(
-        p.filter(&expressions("true")),
-        Err(ProviderError::UnsupportedFilter { .. })
-    ));
+    assert_eq!(p.filter(&expressions("true")).expect("all").len(), 21);
     assert!(matches!(
         p.filter(&expressions("maybe")),
         Err(ProviderError::InvalidFilterValue { .. })
@@ -730,9 +730,9 @@ fn the_defined_grammar_and_the_supported_grammar_are_two_declarations() {
     // `TerminologyCapabilities.codeSystem.version.compositional` is "If the
     // compositional grammar defined by the code system is supported"
     // (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>),
-    // which this server does not: every expression is refused.
-    assert!(!p.declaration().compositional.supported());
-    assert_eq!(p.declaration().compositional, Compositional::Defined);
+    // which this server does: an expression is a code it locates.
+    assert!(p.declaration().compositional.supported());
+    assert_eq!(p.declaration().compositional, Compositional::Supported);
     let mut registry = Registry::new();
     registry.register(Arc::new(p)).expect("registers");
     let summary = Summary::of(&registry);
@@ -770,8 +770,8 @@ fn the_defined_grammar_and_the_supported_grammar_are_two_declarations() {
     for (version, value) in flags {
         assert_eq!(
             value,
-            Some(false),
-            "{version} declares the grammar unsupported"
+            Some(true),
+            "{version} declares the grammar supported"
         );
     }
 }
@@ -781,28 +781,48 @@ fn a_post_coordinated_expression_is_refused_for_the_grammar_not_as_an_unknown_co
     let (_dir, p) = provider();
     let mut registry = Registry::new();
     registry.register(Arc::new(p)).expect("registers");
-    // NOTE: SNOMED CT Expressions in Compositional Grammar are valid codes
-    // (<https://hl7.org/fhir/R4B/snomedct.html>, "Code"), so a server that will
-    // not evaluate one says that instead of reporting an unknown concept.
+    // NOTE: an expression is a valid code and "subject to the same rules as
+    // precoordinated concepts" (<https://hl7.org/fhir/R4B/snomedct.html>,
+    // "Code"), so a well-formed one over defined concepts locates.
     let expression = format!("{}:{}={}", code(CAT), code(COVERING), code(FUR));
     let input = lookup::LookupInput {
         system: Some(SYSTEM.to_owned()),
         code: Some(expression.clone()),
         ..lookup::LookupInput::default()
     };
-    let error = lookup::lookup(&registry, &Invocation::Type, &input).expect_err("refuses");
+    let outcome = lookup::lookup(&registry, &Invocation::Type, &input).expect("looks up");
+    assert_eq!(
+        outcome.code,
+        format!("=== {} : {} = {}", code(CAT), code(COVERING), code(FUR)),
+        "the answer is the expression in one canonical order"
+    );
+
+    // A malformed expression is refused for the grammar, with the offset the
+    // parser stopped at (the Compositional Grammar specification, §7.3).
+    let malformed = format!("{}:{}=", code(CAT), code(COVERING));
+    let error = lookup::lookup(
+        &registry,
+        &Invocation::Type,
+        &lookup::LookupInput {
+            system: Some(SYSTEM.to_owned()),
+            code: Some(malformed.clone()),
+            ..lookup::LookupInput::default()
+        },
+    )
+    .expect_err("refuses");
     assert!(
-        matches!(&error, OperationError::UnsupportedGrammar { system, code }
-            if system == SYSTEM && *code == expression),
+        matches!(&error, OperationError::InvalidCode { code, reason }
+            if *code == malformed && reason.contains("compositional grammar")),
         "{error:?}"
     );
-    assert_eq!(error.issue_code(), "not-supported");
-    assert_eq!(error.tx_issue_type(), "not-supported");
+    assert_eq!(error.issue_code(), "code-invalid");
+    assert_eq!(error.tx_issue_type(), "invalid-code");
+
     // `$validate-code` answers `false` for the same code, and its message says
     // which of the two failures it is.
     let request = validate_code::ValidateCodeInput {
         url: Some(SYSTEM.to_owned()),
-        code: Some(expression.clone()),
+        code: Some(malformed),
         ..validate_code::ValidateCodeInput::default()
     };
     let outcome =
@@ -810,9 +830,7 @@ fn a_post_coordinated_expression_is_refused_for_the_grammar_not_as_an_unknown_co
     assert!(!outcome.result);
     let message = outcome.message.expect("a message");
     assert!(
-        message.contains(
-            "compositional grammar of the code system, which this server does not evaluate"
-        ),
+        message.contains("not valid compositional grammar"),
         "{message}"
     );
 

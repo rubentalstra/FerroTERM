@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: BUSL-1.1
+[package]
+name = "sct-scg"
+description = "The SNOMED CT Compositional Grammar lexer, parser, and printer"
+version = "0.1.109"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation = "https://docs.rs/sct-scg"
+readme = "README.md"
+keywords = ["snomed", "scg", "parser", "terminology", "healthcare"]
+categories = ["parser-implementations", "science"]
+# The crate line is published on crates.io (.claude/rules/crates-publishing.md);
+# `include` is the packaged content the bump rule watches.
+publish = true
+include = ["src/**", "README.md", "LICENSE"]
+
+[dependencies]
+logos.workspace = true
+thiserror.workspace = true
+winnow.workspace = true
+
+[lints]
+workspace = true

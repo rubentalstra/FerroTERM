@@ -92,8 +92,58 @@ on the system, edition, or version URI) and the `constraint` filter of a
 Malformed ECL is an `OperationOutcome` with issue code `invalid` naming the
 byte offset; an identifier the edition does not have is `code-invalid`; a
 construct the artifact cannot answer (a description module or effective time
-filter, a filter on inactive members) is `not-supported`. The `expressions`
-filter accepts `false`; post-coordinated expressions are not served.
+filter, a filter on inactive members) is `not-supported`.
+
+## Post-coordinated expressions
+
+A SNOMED CT expression in Compositional Grammar is a valid `code` and is
+"subject to the same rules as precoordinated concepts"
+(<https://hl7.org/fhir/R4B/snomedct.html>), so you send one wherever you send a
+concept id:
+
+```text
+POST [base]/CodeSystem/$validate-code
+{"resourceType":"Parameters","parameter":[
+  {"name":"url","valueUri":"http://snomed.info/sct"},
+  {"name":"code","valueCode":"83152002 |Oophorectomy| : 405815000 |Procedure device| = 122456005 |Laser device|"}]}
+```
+
+Send an expression by POST. It carries spaces, pipes, and braces, so a GET
+query string has to percent-encode every one of them.
+
+- `$validate-code` checks the syntax and that the version defines every concept
+  the expression names. A syntax error answers `false` with the byte the parser
+  stopped at; an unknown concept answers `false` naming it.
+- `$lookup` answers the expression in one canonical order as `code`, and a
+  `display` that is the expression with the edition's terms written in, since
+  SNOMED International publishes no terms for expressions. `normalForm` and
+  `normalFormTerse` answer the expression's necessary normal form, and the
+  expression's own refinement comes back as the concept-model properties keyed
+  by attribute concept id. An expression over an inactive concept validates
+  with `inactive = true`, the way an inactive concept does.
+- `$subsumes` takes an expression as `codeA`, as `codeB`, or as both.
+- `$closure` relates an expression to the concepts a table already holds.
+
+The `expressions` filter decides whether a *filtered* include admits one:
+`{"property": "expressions", "op": "=", "value": "true"}`. A filtered include
+that states `false`, or states no `expressions` filter at all, refuses an
+expression; one that states `true` admits an expression whose focus concepts it
+contains. An include that *enumerates* an expression in
+`compose.include.concept` contains it whichever way either side spells it, and
+carries no filter at all, since `vsd-3` forbids one beside enumerated concepts.
+An expansion lists only the expressions a value set enumerates, and
+`excludePostCoordinated=true` drops those; a filtered selection stays the
+`valueset-unclosed` case.
+
+Three boundaries are deliberate. No concept model (MRCM) check runs, so an
+expression the concept model forbids still validates. No close-to-user
+transformation runs, so an expression is compared as written. Subsumption is
+decided over the edition's inferred view without a description logic
+classifier: what the server answers `subsumes` or `subsumed-by` holds, and
+what it answers `not-subsumed` is what that view does not state. SNOMED
+International withdrew normal-form comparison as a subsumption test in the
+July 2019 International Edition and directs implementers to a classifier
+(<https://docs.snomed.org/snomed-international-documents/snomed-ct-glossary/n/normal-form>).
 
 ## Paging a large expansion
 

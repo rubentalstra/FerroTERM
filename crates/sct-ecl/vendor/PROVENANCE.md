@@ -8,6 +8,6 @@
 - Contents: `syntax/` (the ANTLR grammar `ECL.g4` and the ABNF forms) and
   `examples/` (the valid example corpus), copied verbatim; `README.md`.
 
-The parser in `crates/ferroterm-ecl` mirrors `syntax/ECL.g4` rule for
+The parser in `crates/sct-ecl` mirrors `syntax/ECL.g4` rule for
 rule; the corpus is the parse-conformance fixture. Never hand-edit these
 files; change the pin in `docs/VERSIONS.md` and re-run the script.

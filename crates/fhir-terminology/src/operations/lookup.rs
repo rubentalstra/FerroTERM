@@ -238,7 +238,10 @@ pub fn lookup(
     let status = provider.status(concept)?;
     let abstract_concept = status.abstract_concept && !status.codeless;
     Ok(LookupOutcome {
-        code: String::from(code),
+        // NOTE: no FHIR/SNOMED spec governs this: our own design. The code as
+        // the system spells it, which for an expression is its canonical form
+        // and for every other system is the code as given.
+        code: located.code.clone(),
         system: identity.url.clone(),
         abstract_concept,
         name: identity

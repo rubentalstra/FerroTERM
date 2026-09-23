@@ -499,7 +499,7 @@
       "uri": "http://snomed.info/sct",
       "version": [
         {
-          "compositional": false,
+          "compositional": true,
           "extension": [
             {
               "extension": [
@@ -920,7 +920,7 @@
       ]
     }
   ],
-  "date": "2026-09-22T23:19:18.057454Z",
+  "date": "2026-09-23T13:34:00.808809Z",
   "description": "Serves the FHIR R6 ballot (version 6.0.0-ballot5). Every behaviour grounded only in the ballot is re-verified against the published specification when it appears, and may change with it.",
   "expansion": {
     "hierarchical": false,

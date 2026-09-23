@@ -174,6 +174,25 @@ else
   note "no vendored ECL grammar yet — skipped"
 fi
 
+# --- The vendored SCG syntax commit == docs/VERSIONS.md SCG pin --------------
+echo "== vendored SCG syntax (PROVENANCE.md <-> docs/VERSIONS.md)"
+scg_prov="crates/sct-scg/vendor/PROVENANCE.md"
+if [[ -f "$scg_prov" ]]; then
+  scg_commit="$(sed -nE 's/^- Commit:[[:space:]]*//p' "$scg_prov" | head -n1 | tr -d '[:space:]')"
+  scg_pin="$(awk -F'|' '$2 ~ /^[[:space:]]*SCG[[:space:]]*$/ { v = $3; gsub(/^[[:space:]]+/, "", v); split(v, w, /[[:space:]]/); print w[1]; exit }' docs/VERSIONS.md)"
+  if [[ -z "$scg_commit" ]]; then
+    bad "$scg_prov has no '- Commit:' line"
+  elif [[ -z "$scg_pin" ]]; then
+    bad "docs/VERSIONS.md has no SCG row"
+  elif [[ "$scg_commit" != "$scg_pin" ]]; then
+    bad "SCG syntax: PROVENANCE.md says $scg_commit, docs/VERSIONS.md pins $scg_pin"
+  else
+    note "OK: SCG syntax ${scg_commit:0:12}"
+  fi
+else
+  note "no vendored SCG syntax yet — skipped"
+fi
+
 # --- One licence everywhere the project names its own ------------------------
 # The project's own code is BUSL-1.1 (LICENSE); a header, manifest, badge, or
 # image label still saying MIT or Apache-2.0 is a stale claim. Third-party files keep theirs.

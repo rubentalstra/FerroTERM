@@ -491,7 +491,7 @@
       "version": [
         {
           "code": "http://snomed.info/sct/91234567105/version/20260101",
-          "compositional": false,
+          "compositional": true,
           "extension": [
             {
               "extension": [
@@ -904,7 +904,7 @@
       ]
     }
   ],
-  "date": "2026-09-22T23:19:18.046945Z",
+  "date": "2026-09-23T13:34:00.798713Z",
   "expansion": {
     "hierarchical": false,
     "incomplete": false,

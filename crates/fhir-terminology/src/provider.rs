@@ -719,6 +719,27 @@ pub trait CodeSystemProvider: fmt::Debug + Send + Sync {
         false
     }
 
+    /// Why `code` is not a code of this system, when the system can say more
+    /// than "absent".
+    ///
+    /// A system whose compositional grammar this server evaluates knows
+    /// whether a code it refused was malformed and where, or well formed and
+    /// naming a concept the version does not define. The `$validate-code`
+    /// message carries the answer instead of "unknown code" alone.
+    fn rejection(&self, _code: &str) -> Option<String> {
+        None
+    }
+
+    /// Whether `filter` is the one that admits post-coordinated expressions
+    /// into a selection.
+    ///
+    /// A value set states post-coordination with a filter its code system
+    /// defines, so the system names its own; the compose layer only asks
+    /// whether one of an include's filters says yes.
+    fn admits_post_coordination(&self, _filter: &Filter) -> bool {
+        false
+    }
+
     /// The language of the system's own displays (`CodeSystem.language`),
     /// when the system states one.
     fn language(&self) -> Option<&str> {

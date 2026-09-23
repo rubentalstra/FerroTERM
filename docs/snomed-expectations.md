@@ -29,13 +29,13 @@ A verdict is one of three:
   tracks it.
 - **Not offered.** FerroTERM does not do this, and the row says why.
 
-37 expectations were checked: 34 met, 3 not offered. Some appear in two
+37 expectations were checked: 35 met, 2 not offered. Some appear in two
 sources, and where they do the detail says so.
 
 A row that a later change fixes is re-checked the same way, on a server built
 from that change over the same two artifact directories, and the detail says
 which issue moved it. [C22](#c22-detail) was re-checked on issue #361,
-[C5](#c5-detail) on issue #367, [B1](#b1-detail) on issue #359, and
+[C5](#c5-detail) on issues #367 and #638, [B1](#b1-detail) on issue #359, and
 [C10](#c10-detail), [C23](#c23-detail), and [C24](#c24-detail) on issues #360,
 #363, and #362.
 
@@ -91,7 +91,7 @@ the observed ECL coverage sits under [A3](#a3) as its evidence.
 | <a id="c2"></a>C2 | §.1 Version: a URI for a specific Edition published on a particular date | **Met** | [B1](#b1-detail) |
 | <a id="c3"></a>C3 | §.1 Code: Concept IDs are valid in the `code` element | **Met** | [C3](#c3-detail) · `::locate_accepts_valid_sctids_only` |
 | <a id="c4"></a>C4 | §.1 Code: "SNOMED CT Terms and Description Identifiers are not valid as codes in FHIR" | **Met** | [C3](#c3-detail) · `::locate_accepts_valid_sctids_only` |
-| <a id="c5"></a>C5 | §.1, §.5 Code: SNOMED CT Expressions in Compositional Grammar are valid in the `code` element | **Not offered** | [C5](#c5-detail) · `crates/fhir-terminology/tests/it/snomed.rs::a_post_coordinated_expression_is_refused_for_the_grammar_not_as_an_unknown_concept`; the capability statement says so, issue #367 |
+| <a id="c5"></a>C5 | §.1, §.5 Code: SNOMED CT Expressions in Compositional Grammar are valid in the `code` element | **Met** | [C5](#c5-detail) · `crates/fhir-terminology/tests/it/snomed_expression.rs::a_well_formed_expression_over_defined_concepts_validates`; `app/ferroterm-server/tests/it/snomed_expression.rs::validate_code_accepts_an_expression_on_every_served_version` |
 | <a id="c6"></a>C6 | §.1 Display: "The best display is the preferred term in the relevant language or dialect, as specified in the associated language reference set" | **Met** | [C6](#c6-detail) · `::display_is_the_preferred_term_of_the_language_with_a_stated_fallback` |
 | <a id="c7"></a>C7 | §.1 Inactive: "Inactive codes are identified using the 'inactive' property" | **Met** | [C7](#c7-detail) · `::properties_follow_the_snomed_on_fhir_list` |
 | <a id="c8"></a>C8 | §.1 Subsumption: "based on the \|is a\| relationship defined by SNOMED CT" | **Met** | [C8](#c8-detail) · `::the_hierarchy_answers_subsumption_and_the_filters_from_the_closure` |
@@ -106,7 +106,7 @@ the observed ECL coverage sits under [A3](#a3) as its evidence.
 | <a id="c17"></a>C17 | §.8.1 By Subsumption: property `concept`, operator `is-a` | **Met** | [C17](#c17-detail) · `::the_hierarchy_answers_subsumption_and_the_filters_from_the_closure` |
 | <a id="c18"></a>C18 | §.8.2 By Reference Set: property `concept`, operator `in` | **Met** | [C17](#c17-detail) |
 | <a id="c19"></a>C19 | §.8.3 By SNOMED Expression Constraint: property `constraint`, operator `=` | **Met** | [C17](#c17-detail) · `::ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set` |
-| <a id="c20"></a>C20 | §.8.4 By whether post-coordination is allowed: property `expressions`, operator `=`, values true or false | **Met** | [C17](#c17-detail) |
+| <a id="c20"></a>C20 | §.8.4 By whether post-coordination is allowed: property `expressions`, operator `=`, values true or false | **Met** | [C17](#c17-detail) · `crates/fhir-terminology/tests/it/snomed_expression.rs::the_expressions_filter_decides_whether_a_value_set_admits_an_expression` |
 | <a id="c21"></a>C21 | §.9: the five query forms `?fhir_vs`, `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, `?fhir_vs=refset/[sctid]`, `?fhir_vs=ecl/[ecl]`, the ECL URI-encoded | **Met** | [C21](#c21-detail) · `::the_implicit_value_sets_follow_the_snomed_ct_page`, `::malformed_and_unknown_implicit_value_sets_are_refused` |
 | <a id="c22"></a>C22 | §.9: "The base URL is either `http://snomed.info/sct`, or the URI for the edition version" | **Met** | [C22](#c22-detail) · `crates/fhir-terminology/tests/it/snomed_editions.rs` (7 tests) |
 | <a id="c23"></a>C23 | §.9: "`?fhir_vs=refset` - all concept ids that correspond to reference sets that are explicitly defined in the specified SNOMED CT edition" | **Met** | [C23](#c23-detail) · `::a_language_reference_set_is_listed_and_its_member_forms_are_refused` |
@@ -261,6 +261,39 @@ $lookup code=123558018   -> 400 invalid-code
 example (§2, Table 2.2), and the page says description identifiers are not
 valid codes.
 
+<a id="c5-detail"></a>**C5. Post-coordinated expressions.** Served since issue
+#638.
+
+SNOMED CT Expressions in Compositional Grammar are valid codes per §.1 and are
+"subject to the same rules as precoordinated concepts", so an expression
+locates like any other code. `$lookup` answers the expression in one canonical
+order with a generated display, `$validate-code` checks the syntax and every
+concept reference, `$subsumes` takes an expression on either side, and
+`$closure` relates one to the concepts a table holds.
+
+`TerminologyCapabilities.codeSystem.version.compositional` is "If the
+compositional grammar defined by the code system is supported", which this
+server now is, and every served version carries `compositional: true` for
+SNOMED CT.
+
+Three boundaries are deliberate and each is recorded in the code.
+
+- **No concept model check.** §7.3 Validating of the Compositional Grammar
+  specification lists three checks: the syntax, the concept model, and that
+  "All concept references included in the expression must be valid". The first
+  and the third run here; MRCM validation does not.
+- **No close-to-user transformation.** An expression is read as written. No
+  transformation moves a loose attribute into a group or distributes a
+  laterality, so an expression whose refinement repeats what its focus concept
+  already states is accepted and compared as written.
+- **Subsumption is sound and not complete.** SNOMED International withdrew
+  normal-form comparison as a subsumption test in the July 2019 International
+  Edition and directs implementers to "a description logic classifier"
+  (<https://docs.snomed.org/snomed-international-documents/snomed-ct-glossary/n/normal-form>),
+  and no reasoner runs here. What the server answers `subsumes` or
+  `subsumed-by` holds in the edition's inferred view; what it answers
+  `not-subsumed` is what that view does not state.
+
 <a id="c6-detail"></a>**C6. Display is the preferred term of the language.**
 Shown under [A2](#a2-detail). The NL edition returns the Dutch preferred term
 for `displayLanguage=nl` and the English one for `displayLanguage=en`. The
@@ -383,19 +416,17 @@ concept   in    723264001    -> 200, total 21431     (International)
 constraint =    << 74400008 : 363698007 = 66754008
                              -> 200, total 33        (International)
 expressions =   false        -> 200, total 535502    (International)
-expressions =   true         -> 422 vs-invalid
-   filter `expressions` with operator `= true` is not supported
 ```
 
-The refusal of `expressions = true` is the answer §.8.4 provides for a server
-that does not allow post-coordination, and the capability statement declares
-the filter with its two values. Pinning the version routes correctly: an
+The transcript above was taken before post-coordination was served, when
+`expressions = true` was refused with `422 vs-invalid`. Both values now select
+every precoordinated concept of the version, and the value decides whether an
+expression may join the selection
+(`crates/fhir-terminology/tests/it/snomed_expression.rs::the_expressions_filter_decides_whether_a_value_set_admits_an_expression`).
+Re-running the transcript against a licensed edition is the differential
+harness's job. Pinning the version routes correctly: an
 include pinned to the NL edition expands 548,949 concepts and one pinned to
 the International expands 535,502.
-
-The issue code on the refusal is `invalid` where `not-supported` reads
-closer to the message. No section governs the choice, so it is recorded
-rather than filed.
 
 <a id="c21-detail"></a>**C21. The five implicit forms.** All five parse and
 evaluate, on both editions, with the ECL URI-decoded:
@@ -647,43 +678,6 @@ returns. §.6 RDF describes `http://snomed.info/id/[concept-id]` and
 `http://snomed.info/scg/[expression]` as the RDF ontological form of a
 `system`/`code` pair, which is a representation question rather than a
 terminology API one.
-
-<a id="c5-detail"></a>**C5. Post-coordinated expressions.** Re-checked on
-issue #367.
-
-SNOMED CT Expressions in Compositional Grammar are valid codes per §.1, and
-FerroTERM refuses them, naming the grammar as the reason:
-
-```
-$lookup system=http://snomed.info/sct code=74400008:363698007=66754008
--> 400 not-supported
-   code `74400008:363698007=66754008` is an expression in the compositional
-   grammar of code system `http://snomed.info/sct`, which this server does
-   not evaluate
-```
-
-The page provides the way to say so. §.8.4 defines the `expressions` filter
-for exactly this, and FerroTERM declares it with the description
-"whether post-coordinated expressions are permitted; only `false` is served",
-and refuses `expressions = true`. That is a spec-sanctioned declaration, so
-the absence is recorded here rather than filed.
-
-The capability statement agrees with the refusal since issue #367. The two
-FHIR elements read two different declarations, because their definitions in
-the vendored packages are different. `CodeSystem.compositional` is "The code
-system defines a compositional (post-coordination) grammar", which is true of
-SNOMED CT.
-`TerminologyCapabilities.codeSystem.version.compositional` is "If the
-compositional grammar defined by the code system is supported", which is
-false of this server, and that is what the terminology capabilities now
-carry, on both editions:
-
-```
-GET /r4b/metadata?mode=terminology
-   codeSystem http://snomed.info/sct
-     version http://snomed.info/sct/449080006/version/20260901   compositional false
-     version http://snomed.info/sct/11000146104/version/20260630 compositional false
-```
 
 <a id="c14-detail"></a>**C14. `normalForm` and `normalFormTerse`.** §.7 defines
 five SNOMED properties and all five are served.

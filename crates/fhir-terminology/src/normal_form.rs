@@ -62,6 +62,12 @@ pub enum Value {
     Number(String),
     /// A concrete string, without the quotes the release spells it with.
     Text(String),
+    /// A nested expression, which only an authored expression carries: the
+    /// release's relationship file has no shape for one.
+    ///
+    /// Boxed, because an enum costs its widest variant for every value and
+    /// this is the rare and by far the widest one.
+    Nested(Box<Expression>),
 }
 
 /// One attribute of a definition, with the role group it belongs to.
@@ -115,6 +121,9 @@ impl Value {
             Self::Text(text) => {
                 format!("\"{}\"", text.replace('\\', "\\\\").replace('"', "\\\""))
             }
+            // NOTE: `expressionValue = … / "(" ws subExpression ws ")"` (§5),
+            // and a `subExpression` carries no definition status.
+            Self::Nested(expression) => format!("({})", expression.body()),
         }
     }
 
@@ -124,6 +133,7 @@ impl Value {
             Self::Concept(reference) => (0, numeric(&reference.code)),
             Self::Number(number) => (1, number.clone()),
             Self::Text(text) => (2, text.clone()),
+            Self::Nested(expression) => (3, expression.body()),
         }
     }
 }
@@ -147,15 +157,23 @@ impl Expression {
         } else {
             SUBTYPE_OF
         };
+        Some(format!("{prefix} {}", self.body()))
+    }
+
+    /// The `subExpression` alone: the focus concepts and the refinement,
+    /// without the definition status a nested expression has no place for
+    /// (§5).
+    #[must_use]
+    pub fn body(&self) -> String {
         let mut focus: Vec<&Reference> = self.focus.iter().collect();
         focus.sort_by_key(|reference| numeric(&reference.code));
         let focus: Vec<String> = focus.iter().map(|reference| reference.render()).collect();
-        let expression = format!("{prefix} {}", focus.join(" + "));
+        let body = focus.join(" + ");
         let refinement = self.refinement();
         if refinement.is_empty() {
-            return Some(expression);
+            return body;
         }
-        Some(format!("{expression} : {refinement}"))
+        format!("{body} : {refinement}")
     }
 
     /// The refinement: the ungrouped attributes, then each role group.

@@ -87,6 +87,36 @@
       "parameters": { "codeA": "123037004", "codeB": "71388002" }
     },
     {
+      "name": "validate-code-expression",
+      "operation": "validate-code",
+      "compare": "result",
+      "parameters": { "code": "71388002 : 260686004 = 129304002" }
+    },
+    {
+      "name": "validate-code-expression-unknown-concept",
+      "operation": "validate-code",
+      "compare": "result",
+      "parameters": { "code": "71388002 : 260686004 = 999999999" }
+    },
+    {
+      "name": "subsumes-expression-over-concept",
+      "operation": "subsumes",
+      "compare": "outcome",
+      "parameters": {
+        "codeA": "=== 71388002 : 260686004 = 129304002",
+        "codeB": "83152002"
+      }
+    },
+    {
+      "name": "subsumes-expression-over-expression",
+      "operation": "subsumes",
+      "compare": "outcome",
+      "parameters": {
+        "codeA": "=== 71388002 : 260686004 = 129304002",
+        "codeB": "=== 71388002 : { 260686004 = 129304002, 405813007 = 15497006 }"
+      }
+    },
+    {
       "name": "expand-ecl-descendants",
       "operation": "expand",
       "compare": "codes",

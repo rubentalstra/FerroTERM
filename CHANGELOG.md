@@ -32,73 +32,6 @@ fresh link reference.
   well, 863.8 MB to 689.5 MB for the Dutch edition, and the build holds 0.7 GB
   less at its peak.
 
-### Added
-
-- The viewer signs a person in with SMART App Launch and gains a write client
-  (#633). Where the deployment sets `FERROTERM_OIDC_ISSUER` and
-  `FERROTERM_VIEWER_CLIENT_ID`, the server publishes the client as
-  `ferroterm_viewer_client_id` in its `.well-known/smart-configuration`
-  (RFC 8414 §2 admits the extra member), and the top bar gains a **Sign in**
-  control. The viewer is a public client performing a standalone launch
-  (<https://hl7.org/fhir/smart-app-launch/app-launch.html>): a PKCE verifier
-  from the browser's own crypto with an `S256` challenge (RFC 7636), a `state`
-  checked on return (RFC 6749 §10.12), the code exchanged at the token endpoint
-  with the verifier and no client secret, and `/ui/callback` as the redirect
-  address to register. The access token is held in memory for the life of the
-  tab: never `localStorage`, never a cookie, so closing the tab signs out.
-  Signing out drops the token and revokes it where the issuer publishes a
-  `revocation_endpoint` (RFC 7009). The viewer reads the granted scopes the way
-  the server's gate reads them, so it offers only what the server would allow,
-  and a deployment that publishes no issuer shows no sign-in and no edit
-  control anywhere.
-- The FHIR client gains create, update with `If-Match` from the resource's
-  version, delete, and `_history`, each presenting the bearer when one is held
-  and each reading the server's own `OperationOutcome` into a typed refusal the
-  editor screens render: `401` as sign-in required, `403` as no permission,
-  `412` as a concurrent edit
-  (<https://hl7.org/fhir/R4B/http.html#concurrency>). Nothing writes yet; the
-  screens that call this seam are #631.
-
-- The SMART write gate accepts `user/` scopes beside the `system/` ones, so a
-  person signed in to an interactive client can write (#632). `user/` is "data
-  that a user can access" and `system/` is a client authorized in its own
-  right, and both address the same resource types
-  (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>), so
-  the route-to-letter mapping is unchanged: `user/ValueSet.u` opens a `PUT`,
-  `user/CodeSystem.c` a `POST`, `user/ConceptMap.d` a `DELETE`, with the
-  combined `cud` and `cruds` forms and the version 1 `.write` and `.*` mapped
-  as the specification maps them. `patient/` is refused with a 403 and an
-  `OperationOutcome`, because a terminology server holds no patient record and
-  a patient-compartment scope selects nothing on it. A refusal names every
-  scope that opens the route in its outcome text; the challenge's optional
-  `scope` attribute is sent only where one scope does, since RFC 6750 §3 reads
-  it as the scope a token must carry, a space-delimited set (RFC 6749 §3.3)
-  rather than a choice.
-- `.well-known/smart-configuration` publishes what a browser client needs for
-  a standalone launch (#632): `launch-standalone` and `client-public` beside
-  the confidential-client capabilities, `permission-user` for the scopes above,
-  and `sso-openid-connect` with the required `issuer` member where the
-  configured issuer lists `openid` in its `scopes_supported`
-  (<https://hl7.org/fhir/smart-app-launch/conformance.html>). Every
-  issuer-derived capability is still claimed only where the issuer's own
-  document backs it.
-
-### Fixed
-
-- The RF2 relationship reader admits only rows whose `characteristicTypeId` is
-  `900000000000011006 |Inferred relationship|` (#545). A qualifying or an
-  additional row "is not part of the definition of the concept" (release file
-  specification, appendix E.5), so neither reaches the hierarchy, the concept's
-  attribute properties, ECL refinement, or the normal form. The concrete value
-  file carries the same column and gets the same filter, since §4.2.6 states
-  that its rules are those of the relationship file. A current edition ships
-  only inferred rows, so a build of one produces the same artifacts as before;
-  an edition published before 2018 and an extension that ships other rows no
-  longer put them into a concept definition. The build counts every row it
-  leaves out and prints the count, so a release whose relationships sit
-  outside the inferred view never builds a thin hierarchy in silence.
-
-### Changed
 
 - `code_challenge_methods_supported` in the served SMART configuration is
   always `["S256"]` (#632). "SMART servers SHALL support the `S256`
@@ -207,6 +140,96 @@ fresh link reference.
   definition plus the parameters the HL7 terminology ecosystem requires of
   every server (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>),
   which is what the server has accepted since the overlay landed (#537).
+
+### Added
+
+- The viewer signs a person in with SMART App Launch and gains a write client
+  (#633). Where the deployment sets `FERROTERM_OIDC_ISSUER` and
+  `FERROTERM_VIEWER_CLIENT_ID`, the server publishes the client as
+  `ferroterm_viewer_client_id` in its `.well-known/smart-configuration`
+  (RFC 8414 §2 admits the extra member), and the top bar gains a **Sign in**
+  control. The viewer is a public client performing a standalone launch
+  (<https://hl7.org/fhir/smart-app-launch/app-launch.html>): a PKCE verifier
+  from the browser's own crypto with an `S256` challenge (RFC 7636), a `state`
+  checked on return (RFC 6749 §10.12), the code exchanged at the token endpoint
+  with the verifier and no client secret, and `/ui/callback` as the redirect
+  address to register. The access token is held in memory for the life of the
+  tab: never `localStorage`, never a cookie, so closing the tab signs out.
+  Signing out drops the token and revokes it where the issuer publishes a
+  `revocation_endpoint` (RFC 7009). The viewer reads the granted scopes the way
+  the server's gate reads them, so it offers only what the server would allow,
+  and a deployment that publishes no issuer shows no sign-in and no edit
+  control anywhere.
+- The FHIR client gains create, update with `If-Match` from the resource's
+  version, delete, and `_history`, each presenting the bearer when one is held
+  and each reading the server's own `OperationOutcome` into a typed refusal the
+  editor screens render: `401` as sign-in required, `403` as no permission,
+  `412` as a concurrent edit
+  (<https://hl7.org/fhir/R4B/http.html#concurrency>). Nothing writes yet; the
+  screens that call this seam are #631.
+
+- The SMART write gate accepts `user/` scopes beside the `system/` ones, so a
+  person signed in to an interactive client can write (#632). `user/` is "data
+  that a user can access" and `system/` is a client authorized in its own
+  right, and both address the same resource types
+  (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>), so
+  the route-to-letter mapping is unchanged: `user/ValueSet.u` opens a `PUT`,
+  `user/CodeSystem.c` a `POST`, `user/ConceptMap.d` a `DELETE`, with the
+  combined `cud` and `cruds` forms and the version 1 `.write` and `.*` mapped
+  as the specification maps them. `patient/` is refused with a 403 and an
+  `OperationOutcome`, because a terminology server holds no patient record and
+  a patient-compartment scope selects nothing on it. A refusal names every
+  scope that opens the route in its outcome text; the challenge's optional
+  `scope` attribute is sent only where one scope does, since RFC 6750 §3 reads
+  it as the scope a token must carry, a space-delimited set (RFC 6749 §3.3)
+  rather than a choice.
+- `.well-known/smart-configuration` publishes what a browser client needs for
+  a standalone launch (#632): `launch-standalone` and `client-public` beside
+  the confidential-client capabilities, `permission-user` for the scopes above,
+  and `sso-openid-connect` with the required `issuer` member where the
+  configured issuer lists `openid` in its `scopes_supported`
+  (<https://hl7.org/fhir/smart-app-launch/conformance.html>). Every
+  issuer-derived capability is still claimed only where the issuer's own
+  document backs it.
+- Post-coordinated SNOMED CT expressions are served (#638). An expression in
+  Compositional Grammar is a valid `code` and is "subject to the same rules as
+  precoordinated concepts" (<https://hl7.org/fhir/R4B/snomedct.html>), so
+  `CodeSystem/$validate-code` checks its syntax and every concept it names,
+  `$lookup` answers the expression in one canonical order with a display that
+  carries the edition's terms, `$subsumes` takes an expression on either side,
+  and `$closure` relates one to the concepts a table holds.
+  `TerminologyCapabilities.codeSystem.version.compositional` is now `true` for
+  SNOMED CT on every served version. The `expressions` filter decides whether a
+  filtered include admits an expression: `true` admits one whose focus concepts
+  it contains, and `false` or no filter refuses it. An include that enumerates
+  an expression contains it whichever way either side spells it, and
+  `excludePostCoordinated` drops those from an expansion. `$lookup` answers the
+  expression's own refinement as the concept-model properties, and an
+  expression over an inactive concept validates with `inactive = true`, the way
+  an inactive concept does. Three boundaries are recorded in the code and in
+  the book: no concept model (MRCM) check, no close-to-user transformation, and
+  subsumption decided over the edition's inferred view without a description
+  logic classifier.
+- `crates/sct-scg`, a `logos` lexer and `winnow` parser for the SNOMED CT
+  Compositional Grammar, faithful to the normative ABNF rule for rule, with a
+  printer whose output parses back to the same tree. The ABNF and the official
+  example corpus are vendored from the `IHTSDO/SNOMEDCT-Languages` repository
+  by `scripts/vendor/scg-grammar.sh` and pinned in `docs/VERSIONS.md`.
+
+### Fixed
+
+- The RF2 relationship reader admits only rows whose `characteristicTypeId` is
+  `900000000000011006 |Inferred relationship|` (#545). A qualifying or an
+  additional row "is not part of the definition of the concept" (release file
+  specification, appendix E.5), so neither reaches the hierarchy, the concept's
+  attribute properties, ECL refinement, or the normal form. The concrete value
+  file carries the same column and gets the same filter, since §4.2.6 states
+  that its rules are those of the relationship file. A current edition ships
+  only inferred rows, so a build of one produces the same artifacts as before;
+  an edition published before 2018 and an extension that ships other rows no
+  longer put them into a concept definition. The build counts every row it
+  leaves out and prints the count, so a release whose relationships sit
+  outside the inferred view never builds a thin hierarchy in silence.
 
 ## [0.1.4] - 2026-09-23
 
