@@ -382,6 +382,51 @@ async fn an_unknown_system_is_a_false_result_naming_the_system_on_every_version(
     }
 }
 
+// NOTE: the server SHALL return `x-caused-by-unknown-system` for each code
+// system it did not support
+// (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
+#[tokio::test]
+async fn a_value_set_that_selects_an_unheld_system_names_it_as_caused_on_every_version() {
+    let server = Server::start_with_resources();
+    let missing = "http://example.org/fhir/CodeSystem/absent";
+    for version in VERSIONS {
+        let request = json!({"resourceType": "Parameters", "parameter": [
+            {"name": "valueSet", "resource": {
+                "resourceType": "ValueSet",
+                "url": "http://example.org/fhir/ValueSet/selects-absent",
+                "status": "active",
+                "compose": {"include": [{"system": missing}]}
+            }},
+            {"name": "system", "valueUri": missing},
+            {"name": "code", "valueCode": "x"}
+        ]});
+        let (status, body) = server
+            .post(&format!("/{version}/ValueSet/$validate-code"), &request)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            parameter(&body, "result").unwrap()["valueBoolean"],
+            false,
+            "{version}: {body}"
+        );
+        assert_eq!(
+            parameter(&body, "x-caused-by-unknown-system").unwrap()["valueCanonical"],
+            missing,
+            "{version}: {body}"
+        );
+        assert!(
+            parameter(&body, "x-unknown-system").is_none(),
+            "{version}: the value set is the cause, not the input: {body}"
+        );
+        let issue = &parameter(&body, "issues").expect("issues")["resource"]["issue"][0];
+        assert_eq!(issue["code"], "not-found", "{version}: {body}");
+        assert_eq!(
+            issue["details"]["coding"][0]["code"], "not-found",
+            "{version}: {body}"
+        );
+    }
+}
+
 #[tokio::test]
 async fn lookup_answers_code_system_and_abstract_on_every_version() {
     let server = Server::start_with_resources();

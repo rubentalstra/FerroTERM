@@ -67,6 +67,13 @@ fresh link reference.
   cannot create a new crate. `crate-version-guard.sh` no longer counts an
   unpublished member's files as packaged content.
 
+- The FHIR API chapter states how a `$validate-code` names a code system the
+  server does not hold, and corrects its claim that each operation's parameter
+  set is the R4B `OperationDefinition`. The set is the served version's own
+  definition plus the parameters the HL7 terminology ecosystem requires of
+  every server (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>),
+  which is what the server has accepted since the overlay landed (#537).
+
 ## [0.1.4] - 2026-09-23
 
 ### Added
