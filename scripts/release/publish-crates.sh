@@ -32,6 +32,7 @@ readonly CRATES=(
   concept-store
   designation-index
   sct-ecl
+  sct-scg
   loinc
   classification
   dhd-thesaurus
