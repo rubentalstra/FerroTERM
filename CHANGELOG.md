@@ -13,6 +13,16 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Changed
+
+- `terminology-syndication` is not published on crates.io (the owner's
+  decision, 2026-09-23): it says `publish = false` and sits outside the
+  release lane's crate list, consumed inside the workspace by the sync service
+  and its add-ons. The v0.1.4 release run had published the other thirteen
+  crates at 0.1.105 and failed on this one, since a Trusted Publishing token
+  cannot create a new crate. `crate-version-guard.sh` no longer counts an
+  unpublished member's files as packaged content.
+
 ## [0.1.4] - 2026-09-23
 
 ### Added
