@@ -132,23 +132,30 @@ if [[ "${ours##*/}" != "${theirs##*/}" ]]; then
   exit 1
 fi
 
+# One field of a request, percent-encoded for a query string. A concept id
+# passes through unchanged; a post-coordinated expression carries spaces and
+# operators that would otherwise cut the query short.
+field() {
+  jq -rR '@uri' <<<"$(jq -r ".$1" <<<"$2")"
+}
+
 # The URL of one request against one base, per operation.
 url_of() {
   local base=$1 operation=$2 parameters=$3 query
   case "$operation" in
     lookup)
-      query="system=$system&code=$(jq -r '.code' <<<"$parameters")"
+      query="system=$system&code=$(field code "$parameters")"
       printf "%s/CodeSystem/\$lookup?%s" "$base" "$query"
       ;;
     validate-code)
-      query="url=$system&code=$(jq -r '.code' <<<"$parameters")"
+      query="url=$system&code=$(field code "$parameters")"
       local display
       display=$(jq -r '.display // empty' <<<"$parameters")
       [[ -n "$display" ]] && query="$query&display=$(jq -rR '@uri' <<<"$display")"
       printf "%s/CodeSystem/\$validate-code?%s" "$base" "$query"
       ;;
     subsumes)
-      query="system=$system&codeA=$(jq -r '.codeA' <<<"$parameters")&codeB=$(jq -r '.codeB' <<<"$parameters")"
+      query="system=$system&codeA=$(field codeA "$parameters")&codeB=$(field codeB "$parameters")"
       printf "%s/CodeSystem/\$subsumes?%s" "$base" "$query"
       ;;
     expand)

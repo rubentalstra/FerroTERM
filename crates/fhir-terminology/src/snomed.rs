@@ -19,6 +19,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 mod conceptmap;
 mod ecl;
+pub mod expression;
 
 use concept_graph::attributes;
 use concept_graph::attributes::{Attributes, AttributesError};
@@ -67,6 +68,11 @@ const FHIR_CM: &str = "fhir_cm";
 /// term (<http://snomed.org/scg>). A concept reference alone carries none of
 /// them, so their presence is what separates an expression from an SCTID.
 const SCG_OPERATORS: [char; 8] = ['+', ':', '=', '{', '}', ',', '|', '<'];
+
+/// The filter property that says whether post-coordination is allowed
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties").
+const EXPRESSIONS: &str = "expressions";
+
 /// The manifest version this provider reads: the store beside the hierarchy
 /// and the designation index as their own files.
 pub const MANIFEST_VERSION: u32 = 2;
@@ -278,6 +284,11 @@ pub struct SnomedProvider {
     defined: OnceLock<RoaringBitmap>,
     /// Parsed expression constraints by their text, bounded.
     expressions: Mutex<HashMap<String, Arc<ExpressionConstraint>>>,
+    /// The post-coordinated expressions this edition has resolved, bounded.
+    scg: Mutex<expression::Expressions>,
+    /// The store ordinal of each attribute type, by its index in the attribute
+    /// table; read once on the first subsumption over an expression.
+    attribute_ordinals: OnceLock<Vec<Option<u32>>>,
     /// The inactive concepts, read once on the first request that needs them.
     inactive: OnceLock<ConceptSet>,
     identity: Identity,
@@ -416,6 +427,8 @@ impl SnomedProvider {
             leaves: OnceLock::new(),
             defined: OnceLock::new(),
             expressions: Mutex::new(HashMap::new()),
+            scg: Mutex::new(expression::Expressions::default()),
+            attribute_ordinals: OnceLock::new(),
             inactive: OnceLock::new(),
             identity: Identity {
                 url: SYSTEM.to_owned(),
@@ -433,9 +446,9 @@ impl SnomedProvider {
                 case_sensitive: false,
                 hierarchy_meaning: Some(HierarchyMeaning::IsA),
                 // NOTE: SNOMED CT defines Compositional Grammar
-                // (<http://snomed.org/scg>) and this server evaluates no
-                // expression, so the grammar is defined and not supported.
-                compositional: Compositional::Defined,
+                // (<http://snomed.org/scg>) and this server evaluates it, so
+                // an expression is a code this version locates.
+                compositional: Compositional::Supported,
                 languages: manifest.languages,
                 properties,
                 // NOTE: the FHIR SNOMED CT page defines `concept is-a` and `concept in`
@@ -565,9 +578,9 @@ impl SnomedProvider {
                 value: String::from("an ECL expression"),
             },
             FilterDefinition {
-                code: String::from("expressions"),
+                code: String::from(EXPRESSIONS),
                 description: Some(String::from(
-                    "whether post-coordinated expressions are permitted; only `false` is served",
+                    "whether post-coordinated expressions are permitted",
                 )),
                 operators: vec![FilterOperator::Equal],
                 value: String::from("true or false"),
@@ -1057,7 +1070,11 @@ impl CodeSystemProvider for SnomedProvider {
             NORMAL_FORM_TERSE => false,
             _ => return Ok(None),
         };
-        let Some(expression) = self.normal_form(concept, terms)? else {
+        let generated = match self.registered(concept)? {
+            Some(record) => self.expression_normal_form(&record, terms)?,
+            None => self.normal_form(concept, terms)?,
+        };
+        let Some(expression) = generated else {
             return Ok(None);
         };
         Ok(Some(Property {
@@ -1082,6 +1099,15 @@ impl CodeSystemProvider for SnomedProvider {
     }
 
     fn locate(&self, code: &str) -> Result<Option<Located>, ProviderError> {
+        // NOTE: an expression in Compositional Grammar is a valid code and is
+        // "subject to the same rules as precoordinated concepts"
+        // (<https://hl7.org/fhir/R4B/snomedct.html>, "Code").
+        if self.is_expression(code) {
+            return Ok(self
+                .resolve_expression(code)?
+                .ok()
+                .map(|(concept, code)| Located { concept, code }));
+        }
         // NOTE: a string that is not a well-formed SCTID (check digit,
         // partition) is not a code of this system; that is "absent", not an
         // error (<https://hl7.org/fhir/R4B/snomedct.html>, valid code values).
@@ -1099,13 +1125,44 @@ impl CodeSystemProvider for SnomedProvider {
     }
 
     // NOTE: SNOMED CT Expressions in Compositional Grammar are valid codes
-    // (<https://hl7.org/fhir/R4B/snomedct.html>, "Code"), so an expression is
-    // refused for the grammar, not as a concept the edition lacks.
+    // (<https://hl7.org/fhir/R4B/snomedct.html>, "Code"), and a concept
+    // reference alone carries none of the grammar's own characters.
     fn is_expression(&self, code: &str) -> bool {
         code.contains(SCG_OPERATORS)
     }
 
+    /// Why an expression is not a code of this version: the grammar's own
+    /// position for a malformed one, and the concept named otherwise (the
+    /// Compositional Grammar specification, §7.3 Validating).
+    fn rejection(&self, code: &str) -> Option<String> {
+        if !self.is_expression(code) {
+            return None;
+        }
+        // NOTE: no FHIR/SNOMED spec governs this: our own design. A store this
+        // read cannot reach says nothing more than "absent", which is what the
+        // caller reports when this answers `None`.
+        self.resolve_expression(code)
+            .ok()?
+            .err()
+            .map(|error| error.to_string())
+    }
+
+    fn is_postcoordinated(&self, concept: Concept) -> bool {
+        Self::is_expression_handle(concept)
+    }
+
+    /// `expressions = true` is the filter that admits post-coordination
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties").
+    fn admits_post_coordination(&self, filter: &Filter) -> bool {
+        filter.op == FilterOperator::Equal
+            && filter.property == EXPRESSIONS
+            && filter.value.trim() == "true"
+    }
+
     fn code(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
+        if let Some(record) = self.registered(concept)? {
+            return Ok(Some(record.canonical().to_owned()));
+        }
         Ok(self
             .store
             .code(Self::ordinal(concept))
@@ -1118,10 +1175,16 @@ impl CodeSystemProvider for SnomedProvider {
         concept: Concept,
         language: Option<&str>,
     ) -> Result<Option<String>, ProviderError> {
+        if let Some(record) = self.registered(concept)? {
+            return Ok(Some(self.expression_display(&record, language)?));
+        }
         self.choose_display(Self::ordinal(concept), language)
     }
 
     fn definition(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
+        if Self::is_expression_handle(concept) {
+            return Ok(None);
+        }
         Ok(self
             .store
             .designations(Self::ordinal(concept))
@@ -1131,7 +1194,23 @@ impl CodeSystemProvider for SnomedProvider {
             .map(|d| d.term))
     }
 
+    /// An expression is active when every concept it names is active.
+    ///
+    /// The concept references of an expression "must refer to active concepts
+    /// in the given version and edition of SNOMED CT" (the Compositional
+    /// Grammar specification, §7.3 Validating). Inactive is not invalid on
+    /// this server, so an expression over an inactive concept validates and
+    /// says which it is (<https://hl7.org/fhir/R4B/snomedct.html>, "Inactive").
     fn status(&self, concept: Concept) -> Result<Status, ProviderError> {
+        if let Some(record) = self.registered(concept)? {
+            return Ok(Status {
+                standards_status: None,
+                active: self.expression_is_active(&record)?,
+                inactive_reason: None,
+                abstract_concept: false,
+                codeless: false,
+            });
+        }
         let record = self
             .store
             .concept(Self::ordinal(concept))
@@ -1145,11 +1224,18 @@ impl CodeSystemProvider for SnomedProvider {
         })
     }
 
+    /// An expression carries no designation: "SNOMED International does not
+    /// define terms for expressions"
+    /// (<https://hl7.org/fhir/R4B/snomedct.html>, "Display"), so the generated
+    /// display is the only term and `$lookup` adds it by itself.
     fn designations(
         &self,
         concept: Concept,
         language: Option<&str>,
     ) -> Result<Vec<Designation>, ProviderError> {
+        if Self::is_expression_handle(concept) {
+            return Ok(Vec::new());
+        }
         let wanted = language.map(primary_subtag);
         Ok(self
             .store
@@ -1171,6 +1257,25 @@ impl CodeSystemProvider for SnomedProvider {
     }
 
     fn properties(&self, concept: Concept) -> Result<Vec<Property>, ProviderError> {
+        // NOTE: the FHIR-defined properties of "the given code or expression"
+        // that an expression itself states (<https://hl7.org/fhir/R4B/snomedct.html>,
+        // "SNOMED CT Properties"): its status and its own refinement.
+        if let Some(record) = self.registered(concept)? {
+            let mut out = vec![
+                Property {
+                    code: String::from("inactive"),
+                    value: PropertyValue::Boolean(!self.expression_is_active(&record)?),
+                    ..Property::default()
+                },
+                Property {
+                    code: String::from("sufficientlyDefined"),
+                    value: PropertyValue::Boolean(record.sufficiently_defined()),
+                    ..Property::default()
+                },
+            ];
+            out.extend(Self::expression_attributes(&record));
+            return Ok(out);
+        }
         let ordinal = Self::ordinal(concept);
         let Some(record) = self.store.concept(ordinal).map_err(storage)? else {
             return Ok(Vec::new());
@@ -1272,21 +1377,21 @@ impl CodeSystemProvider for SnomedProvider {
     }
 
     /// `concept in [sctid]` is reference set membership, `constraint = [ecl]`
-    /// the evaluated expression constraint, and `expressions = false` every
-    /// concept (<https://hl7.org/fhir/R4B/snomedct.html>, "Filter Properties");
-    /// every other filter is the generic evaluation over the closure and the
-    /// store. Post-coordination (`expressions = true`) is not served.
+    /// the evaluated expression constraint, and `expressions` every concept of
+    /// the version either way (<https://hl7.org/fhir/R4B/snomedct.html>,
+    /// "Filter Properties"); every other filter is the generic evaluation over
+    /// the closure and the store.
+    ///
+    /// The `expressions` value decides whether an expression may join the
+    /// selection, which is a question about a code the version does not
+    /// enumerate, so it is answered in `filter_matches` and not by this set.
     fn filter(&self, filter: &Filter) -> Result<ConceptSet, ProviderError> {
         if filter.op == FilterOperator::Equal {
             match filter.property.as_str() {
                 "constraint" => return self.constraint(&filter.value),
-                "expressions" => {
+                EXPRESSIONS => {
                     return match filter.value.trim() {
-                        "false" => self.all(),
-                        "true" => Err(ProviderError::UnsupportedFilter {
-                            property: filter.property.clone(),
-                            operator: String::from("= true"),
-                        }),
+                        "false" | "true" => self.all(),
                         other => Err(ProviderError::InvalidFilterValue {
                             property: filter.property.clone(),
                             value: other.to_owned(),
@@ -1334,10 +1439,48 @@ impl CodeSystemProvider for SnomedProvider {
     /// selection stating it is complete.
     fn unclosed(&self, filters: &[Filter]) -> bool {
         !filters.iter().any(|filter| {
-            filter.property == "expressions"
+            filter.property == EXPRESSIONS
                 && filter.op == FilterOperator::Equal
                 && filter.value.trim() == "false"
         })
+    }
+
+    /// Whether one concept passes a filter.
+    ///
+    /// An expression is not in any evaluated set, because the version does not
+    /// enumerate it, so it is tested against the filter through its focus
+    /// concepts: it is subsumed by each of them, so a selection that holds them
+    /// all and is closed under subtype holds it too. No FHIR or SNOMED CT
+    /// specification governs the membership of an expression in a value set:
+    /// this is our own design, and a selection that is not closed under subtype
+    /// (reference set membership, a property equality) can admit an expression
+    /// it does not hold. The `expressions` filter bounds it: a value set says
+    /// `true` before any expression is considered.
+    fn filter_matches(&self, concept: Concept, filter: &Filter) -> Result<bool, ProviderError> {
+        let Some(record) = self.registered(concept)? else {
+            return Ok(self.filter(filter)?.contains(concept.index()));
+        };
+        if filter.op == FilterOperator::Equal && filter.property == EXPRESSIONS {
+            return Ok(filter.value.trim() == "true");
+        }
+        let selected = self.filter(filter)?;
+        Ok(record
+            .focus_concepts()
+            .iter()
+            .all(|focus| selected.contains(*focus)))
+    }
+
+    /// The subsumption between two codes when either is an expression; the
+    /// materialized closure answers the rest.
+    fn subsumes(
+        &self,
+        a: Concept,
+        b: Concept,
+    ) -> Result<Option<concept_graph::subsumption::Outcome>, ProviderError> {
+        if !Self::is_expression_handle(a) && !Self::is_expression_handle(b) {
+            return Ok(None);
+        }
+        self.expression_subsumes(a, b).map(Some)
     }
 
     /// The implicit value sets of the FHIR SNOMED CT page

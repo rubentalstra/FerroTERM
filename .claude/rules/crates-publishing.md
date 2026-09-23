@@ -10,11 +10,12 @@ The `crates/*` members are published on crates.io under plain names
 `gstandaard`, `labcodeset`, `icd11`, `rxnorm-rrf`; the owner's decision on
 #164, 2026-09-03, `labcodeset` added 2026-09-04) so other projects can depend
 on them. The server (`app/*`), the tools (`tools/*`), and the add-ons
-(`addons/*`) are never published. `crates/terminology-syndication` is the one
-`crates/*` member that is not published either (the owner's decision,
-2026-09-23): it says `publish = false` with its `# NOTE: unpublished:` reason
-and sits outside the `CRATES` list, while its version still moves with the
-lockstep line because it lives under `crates/*`. Every member is BUSL-1.1 except `rf2`, which
+(`addons/*`) are never published. Two `crates/*` members are not published
+either, each saying `publish = false` with its `# NOTE: unpublished:` reason
+and sitting outside the `CRATES` list while its version moves with the
+lockstep line: `terminology-syndication` (the owner's decision, 2026-09-23)
+and `sct-scg`, the Compositional Grammar parser, which waits for the owner's
+first publish by hand (#652) because the lane cannot create a new crate. Every member is BUSL-1.1 except `rf2`, which
 is Apache 2.0 (the owner's decision on #223, 2026-09-04) so the RF2 reader
 stays usable by any Rust project. `fhir-types` left this line with the FHIR
 model (#300) and is published by the FerroBRIDGE repository. Published versions are immutable, so version

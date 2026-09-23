@@ -153,6 +153,14 @@ impl CodeSystemProvider for Supplemented {
         self.inner.is_expression(code)
     }
 
+    fn rejection(&self, code: &str) -> Option<String> {
+        self.inner.rejection(code)
+    }
+
+    fn admits_post_coordination(&self, filter: &crate::filter::Filter) -> bool {
+        self.inner.admits_post_coordination(filter)
+    }
+
     fn code(&self, concept: Concept) -> Result<Option<String>, ProviderError> {
         self.inner.code(concept)
     }

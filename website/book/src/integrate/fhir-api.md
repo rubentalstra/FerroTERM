@@ -18,7 +18,7 @@ server gave.
 |---|---|---|
 | `CodeSystem/$lookup` | a concept's display, designations, and properties | a point read in the store; `property` narrows, `displayLanguage` picks the language |
 | `CodeSystem/$validate-code` | whether the code exists and the display is right | the store; the right display comes back when the given one is wrong; inactive codes validate with a message |
-| `CodeSystem/$subsumes` | `subsumes`, `subsumed-by`, `equivalent`, or `not-subsumed` | a bitmap membership test in the closure |
+| `CodeSystem/$subsumes` | `subsumes`, `subsumed-by`, `equivalent`, or `not-subsumed` | a bitmap membership test in the closure; either side may be a SNOMED CT expression ([Post-coordinated expressions](ecl-value-sets.md#post-coordinated-expressions)) |
 | `ValueSet/$expand` | the members of a value set, paged | the compose layer over the providers' filters and bitmaps |
 | `ValueSet/$validate-code` | whether a code is a member, and its display | membership without enumerating the set |
 | `ConceptMap/$translate` | the targets a code maps to, with the relationship | loaded, inline, or request-scoped maps |
@@ -79,7 +79,9 @@ filters a system answers are the ones its provider declares in
 `TerminologyCapabilities`, and they differ by system, so read the declaration
 rather than assuming a common set. SNOMED CT declares `concept` with `is-a`,
 `descendent-of`, and `in`, then `constraint` for an expression constraint and
-`expressions` for post-coordination. The others declare their own: LOINC's
+`expressions` for post-coordination
+([Post-coordinated expressions](ecl-value-sets.md#post-coordinated-expressions)).
+The others declare their own: LOINC's
 `parent` and `ancestor` and its table fields, RxNorm's `STY`, `SAB`, `TTY`,
 `REL`, and `RELA`, UCUM's `canonical` and `property`, ICD-10's note kinds. `$expand`
 honours `count` and `offset` (at most 1,000 members without `count`), `filter`

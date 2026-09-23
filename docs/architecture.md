@@ -344,6 +344,7 @@ code system adds a loader crate (`rf2` is the first) that feeds them.
 | `crates/concept-store` | The `redb`-backed columnar concept and designation store, one per code system version: point reads for `$lookup`/`$validate-code` | hand-written |
 | `crates/designation-index` | The `fst` + roaring designation search index (prefix, language and use filter, term-length sort) | hand-written |
 | `crates/sct-ecl` | Expression Constraint Language lexer, parser, and evaluator (compiles ECL to set algebra over `concept-graph`) | hand-written |
+| `crates/sct-scg` | Compositional Grammar lexer, parser, and printer, the syntax of a post-coordinated expression; syntax only | hand-written |
 | `crates/fhir-terminology` | The engine: the FHIR terminology operations over the code system provider seam, dispatched per version | hand-written |
 | `crates/loinc` | LOINC release loader and typed row model | hand-written |
 | `crates/classification` | ClaML and ICD-10-CM tabular readers into one classification model (ICD-10 family, ICPC-2) | hand-written |

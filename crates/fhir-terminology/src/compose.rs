@@ -367,7 +367,18 @@ fn admits(
     code: &str,
 ) -> Result<bool, ProviderError> {
     if !include.concepts.is_empty() {
-        return Ok(include.concepts.iter().any(|c| c.code == code));
+        return Ok(enumerated(provider, include, concept, code)?.is_some());
+    }
+    // NOTE: an expression enters a filtered selection only where a filter says
+    // post-coordination is allowed (<https://hl7.org/fhir/R4B/snomedct.html>,
+    // "Filter Properties", the `expressions` filter).
+    if provider.is_postcoordinated(concept)
+        && !include
+            .filters
+            .iter()
+            .any(|filter| provider.admits_post_coordination(filter))
+    {
+        return Ok(false);
     }
     for filter in &include.filters {
         if !provider.filter_matches(concept, filter)? {
@@ -375,6 +386,34 @@ fn admits(
         }
     }
     Ok(true)
+}
+
+/// Whether an include's enumerated concepts name `code`.
+///
+/// A code a system spells differently from the value set (a case-insensitive
+/// system, a post-coordinated expression) is compared by what it locates to,
+/// because `ValueSet.compose.include.concept` "specifies a concept to be
+/// included in the value set"
+/// (<https://hl7.org/fhir/R4B/valueset-definitions.html#ValueSet.compose.include.concept>)
+/// and one concept is one member however either side wrote it.
+fn enumerated<'i>(
+    provider: &Arc<dyn CodeSystemProvider>,
+    include: &'i Include,
+    concept: Concept,
+    code: &str,
+) -> Result<Option<&'i ConceptRef>, ProviderError> {
+    if let Some(found) = include.concepts.iter().find(|c| c.code == code) {
+        return Ok(Some(found));
+    }
+    for listed in &include.concepts {
+        if provider
+            .locate(&listed.code)?
+            .is_some_and(|located| located.concept == concept)
+        {
+            return Ok(Some(listed));
+        }
+    }
+    Ok(None)
 }
 
 /// The three checks `ValueSet.compose.include` must pass (`vsd-1`, `vsd-2`,
@@ -1212,10 +1251,8 @@ impl Expander<'_> {
         if !admits(provider, include, located.concept, &located.code).map_err(failed)? {
             return Ok(Contained::Refused);
         }
-        let overridden = include
-            .concepts
-            .iter()
-            .find(|c| c.code == located.code)
+        let overridden = enumerated(provider, include, located.concept, &located.code)
+            .map_err(failed)?
             .and_then(|c| c.display.clone());
         let display = match overridden {
             Some(display) => Some(display),

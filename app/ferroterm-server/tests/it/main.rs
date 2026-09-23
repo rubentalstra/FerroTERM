@@ -35,6 +35,7 @@ mod reload;
 mod scope;
 mod shutdown;
 mod smart;
+mod snomed_expression;
 mod telemetry;
 mod translate;
 mod ui;

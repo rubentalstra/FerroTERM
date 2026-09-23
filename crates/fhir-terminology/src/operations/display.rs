@@ -393,12 +393,15 @@ pub fn unknown_code(provider: &dyn CodeSystemProvider, code: &str) -> (super::Me
     // NOTE: a code the system's compositional grammar defines is not a code
     // the system lacks, so the caveat says which of the two this is
     // (<https://hl7.org/fhir/R4B/terminologycapabilities-definitions.html#TerminologyCapabilities.codeSystem.version.compositional>).
-    let grammar = if provider.declaration().compositional == crate::provider::Compositional::Defined
-        && provider.is_expression(code)
-    {
-        " - note that the code is an expression in the compositional grammar of the code system, which this server does not evaluate"
-    } else {
-        ""
+    let grammar = match provider.declaration().compositional {
+        crate::provider::Compositional::Defined if provider.is_expression(code) => String::from(
+            " - note that the code is an expression in the compositional grammar of the code system, which this server does not evaluate",
+        ),
+        crate::provider::Compositional::Supported => provider
+            .rejection(code)
+            .map(|reason| format!(" - {reason}"))
+            .unwrap_or_default(),
+        _ => String::new(),
     };
     if matches!(provider.declaration().content, ContentMode::Fragment) {
         return (

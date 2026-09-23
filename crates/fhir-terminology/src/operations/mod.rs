@@ -407,6 +407,15 @@ pub fn locate(
                 code: code.to_owned(),
             };
         }
+        // NOTE: a system whose grammar this server evaluates says why it
+        // refused the code (the Compositional Grammar specification, §7.3
+        // Validating), which "unknown code" alone does not.
+        if let Some(reason) = provider.rejection(code) {
+            return OperationError::InvalidCode {
+                code: code.to_owned(),
+                reason,
+            };
+        }
         OperationError::UnknownCode {
             system: identity.url.clone(),
             version: identity.version.clone(),

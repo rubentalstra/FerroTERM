@@ -26,6 +26,7 @@ Every vendored tree is:
 | input | script | destination |
 |---|---|---|
 | The ECL grammar and example corpus (IHTSDO, Apache 2.0), tag pinned in `docs/VERSIONS.md` | `scripts/vendor/ecl-grammar.sh` | `crates/sct-ecl/vendor/` |
+| The Compositional Grammar normative ABNF and example corpus (IHTSDO, Apache 2.0), commit pinned in `docs/VERSIONS.md` | `scripts/vendor/scg-grammar.sh` | `crates/sct-scg/vendor/` |
 | The IANA, CLDR, and UCUM registry data behind the registry code systems | `scripts/vendor/registries.sh` | `crates/fhir-terminology/data/` |
 | Three public terminology syndication listings, the parser's real corpus | `scripts/vendor/syndication-feeds.sh` | `crates/terminology-syndication/vendor/feeds/` |
 

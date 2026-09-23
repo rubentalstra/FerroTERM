@@ -46,6 +46,9 @@ server. Every crate carries its own `CLAUDE.md` with crate-local discipline.
   (per-word prefix, language and use filters, matched-term-length sort).
 - `crates/sct-ecl`: the Expression Constraint Language lexer, parser, and
   evaluator (compiles ECL to set algebra over `concept-graph`).
+- `crates/sct-scg`: the Compositional Grammar lexer, parser, and printer, the
+  syntax a post-coordinated expression is written in. Syntax only; resolving a
+  concept and deciding subsumption belong to the SNOMED provider.
 - `crates/fhir-terminology`: the engine. `$lookup`/`$validate-code`/`$expand`/
   `$subsumes`/`$translate` over the code system provider seam, dispatched per
   FHIR version.
