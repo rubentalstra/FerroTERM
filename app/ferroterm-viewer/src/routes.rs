@@ -6,8 +6,17 @@
 use crate::fhir::version::FhirVersion;
 use crate::url::RequestUrl;
 
-/// Where the server mounts the bundle, and where the router is based.
+/// Where the server mounts the reader bundle, and where its router is based.
+///
+/// The crate builds twice. The reader bundle is this base; the editor bundle
+/// is the same crate with the `editor` feature on, mounted a level below it,
+/// so a reader who never edits downloads none of the authoring code.
+#[cfg(not(feature = "editor"))]
 pub(crate) const UI_BASE: &str = "/ui";
+
+/// Where the server mounts the editor bundle, and where its router is based.
+#[cfg(feature = "editor")]
+pub(crate) const UI_BASE: &str = "/ui/editor";
 
 /// The query parameter that carries the selected FHIR version.
 pub(crate) const VERSION_PARAM: &str = "fhir";
@@ -60,11 +69,23 @@ pub(crate) const SYSTEM_PARAM: &str = "system";
 /// The query parameter that carries a code system version into a screen.
 pub(crate) const SYSTEM_VERSION_PARAM: &str = "version";
 
+/// The router base as a URL of its own, one percent-encoded segment at a time.
+///
+/// The base is more than one segment in the editor bundle, so it is never
+/// written as a single segment: that would escape the separator inside it.
+pub(crate) fn base_url() -> RequestUrl {
+    let mut url = RequestUrl::new();
+    for segment in UI_BASE.split('/').filter(|segment| !segment.is_empty()) {
+        url = url.segment(segment);
+    }
+    url
+}
+
 /// Builds a link to one of the viewer's own pages.
 ///
 /// `path` is the page's path below the base, with `""` naming the index.
 pub(crate) fn ui_link(path: &str, version: FhirVersion) -> String {
-    let mut url = RequestUrl::new().segment(UI_BASE.trim_start_matches('/'));
+    let mut url = base_url();
     for part in path.split('/').filter(|part| !part.is_empty()) {
         url = url.segment(part);
     }
@@ -81,8 +102,7 @@ pub(crate) fn ui_link(path: &str, version: FhirVersion) -> String {
 // reserved set escaped (<https://tc39.es/ecma262/#sec-decodeuri-encodeduri>),
 // so a canonical carrying a literal `%` is the one shape that does not survive.
 pub(crate) fn system_link(system: &str, version: FhirVersion) -> String {
-    RequestUrl::new()
-        .segment(UI_BASE.trim_start_matches('/'))
+    base_url()
         .segment(SYSTEMS_PATH)
         .segment(system)
         .query(VERSION_PARAM, version.segment())
@@ -100,8 +120,7 @@ pub(crate) fn system_tool_link(
     system_version: Option<&str>,
     version: FhirVersion,
 ) -> String {
-    let mut url = RequestUrl::new()
-        .segment(UI_BASE.trim_start_matches('/'))
+    let mut url = base_url()
         .segment(path)
         .query(VERSION_PARAM, version.segment())
         .query(SYSTEM_PARAM, system);
@@ -117,8 +136,7 @@ pub(crate) fn system_tool_link(
 /// that and nothing else: every other parameter is the runner's own default
 /// or the reader's stored page size.
 pub(crate) fn expansion_link(canonical: &str, version: FhirVersion) -> String {
-    RequestUrl::new()
-        .segment(UI_BASE.trim_start_matches('/'))
+    base_url()
         .segment(EXPAND_PATH)
         .query(VERSION_PARAM, version.segment())
         .query("url", canonical)
@@ -132,10 +150,11 @@ pub(crate) fn expansion_link(canonical: &str, version: FhirVersion) -> String {
 /// sidebar entry answers `None`, so a screen a reader reached some other way
 /// leaves every entry unmarked.
 pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
-    let mut segments = pathname.split('/').filter(|segment| !segment.is_empty());
-    if segments.next() != Some(UI_BASE.trim_start_matches('/')) {
+    let below = pathname.strip_prefix(UI_BASE)?;
+    if !(below.is_empty() || below.starts_with('/')) {
         return None;
     }
+    let mut segments = below.split('/').filter(|segment| !segment.is_empty());
     match segments.next() {
         // A code system's own screen is reached from the overview that lists
         // the systems, so the overview stays marked while a reader reads one.
@@ -182,22 +201,43 @@ pub(crate) fn version_link(pathname: &str, search: &str, version: FhirVersion) -
 mod tests {
     use super::*;
 
+    /// An address under the bundle's own base.
+    ///
+    /// Every expectation is written against the base rather than against a
+    /// literal, because the crate builds twice and the two bundles are based
+    /// at different paths.
+    fn under(path: &str) -> String {
+        format!("{UI_BASE}{path}")
+    }
+
     #[test]
     fn the_index_link_carries_the_version() {
-        assert_eq!(ui_link("", FhirVersion::R4B), "/ui?fhir=r4b");
+        assert_eq!(ui_link("", FhirVersion::R4B), under("?fhir=r4b"));
     }
 
     #[test]
     fn a_page_link_carries_the_version() {
-        assert_eq!(ui_link("settings", FhirVersion::R5), "/ui/settings?fhir=r5");
+        assert_eq!(
+            ui_link("settings", FhirVersion::R5),
+            under("/settings?fhir=r5")
+        );
     }
 
     #[test]
     fn a_nested_page_link_keeps_its_segments() {
         assert_eq!(
             ui_link("/systems/detail", FhirVersion::R4),
-            "/ui/systems/detail?fhir=r4",
+            under("/systems/detail?fhir=r4"),
             "leading and repeated separators do not produce empty segments"
+        );
+    }
+
+    #[test]
+    fn the_base_is_built_one_segment_at_a_time() {
+        assert_eq!(
+            base_url().render(""),
+            UI_BASE,
+            "a base of more than one segment keeps its separator rather than escaping it"
         );
     }
 
@@ -208,7 +248,7 @@ mod tests {
     /// segment, then percent-decode it.
     fn round_trip(link: &str) -> String {
         let below = link
-            .strip_prefix("/ui/systems/")
+            .strip_prefix(&under("/systems/"))
             .expect("the link addresses a code system screen");
         let segment = below.split('?').next().unwrap_or_default();
         percent_encoding::percent_decode_str(segment)
@@ -223,7 +263,7 @@ mod tests {
         let link = system_link(system, FhirVersion::R4B);
         assert_eq!(
             link,
-            "/ui/systems/https:%2F%2Fterminology.example%2Fanimals?fhir=r4b"
+            under("/systems/https:%2F%2Fterminology.example%2Fanimals?fhir=r4b")
         );
         assert_eq!(round_trip(&link), system);
     }
@@ -249,7 +289,9 @@ mod tests {
                 Some("2031-01-01"),
                 FhirVersion::R5
             ),
-            "/ui/expand?fhir=r5&system=https%3A%2F%2Fterminology.example%2Fx&version=2031-01-01"
+            under(
+                "/expand?fhir=r5&system=https%3A%2F%2Fterminology.example%2Fx&version=2031-01-01"
+            )
         );
     }
 
@@ -262,7 +304,7 @@ mod tests {
                 None,
                 FhirVersion::R4
             ),
-            "/ui/browse?fhir=r4&system=https%3A%2F%2Fterminology.example%2Fx",
+            under("/browse?fhir=r4&system=https%3A%2F%2Fterminology.example%2Fx"),
             "an absent version is left out rather than sent as an empty one"
         );
     }
@@ -274,16 +316,16 @@ mod tests {
                 "http://terminology.example/x?fhir_vs=isa/1",
                 FhirVersion::R4B
             ),
-            "/ui/expand?fhir=r4b&url=http%3A%2F%2Fterminology.example%2Fx%3Ffhir_vs%3Disa%2F1",
+            under("/expand?fhir=r4b&url=http%3A%2F%2Fterminology.example%2Fx%3Ffhir_vs%3Disa%2F1"),
             "an implicit canonical carrying its own query string stays in one parameter"
         );
     }
 
     #[test]
     fn the_base_itself_is_the_overview() {
-        assert_eq!(nav_section("/ui"), Some(OVERVIEW_PATH));
+        assert_eq!(nav_section(UI_BASE), Some(OVERVIEW_PATH));
         assert_eq!(
-            nav_section("/ui/"),
+            nav_section(&under("/")),
             Some(OVERVIEW_PATH),
             "the index is reachable with and without its trailing separator"
         );
@@ -291,20 +333,21 @@ mod tests {
 
     #[test]
     fn a_screen_marks_its_own_entry() {
-        assert_eq!(nav_section("/ui/browse"), Some(BROWSE_PATH));
-        assert_eq!(nav_section("/ui/expand"), Some(EXPAND_PATH));
-        assert_eq!(nav_section("/ui/validate"), Some(VALIDATE_PATH));
-        assert_eq!(nav_section("/ui/valuesets"), Some(VALUE_SETS_PATH));
-        assert_eq!(nav_section("/ui/conceptmaps"), Some(CONCEPT_MAPS_PATH));
-        assert_eq!(nav_section("/ui/translate"), Some(TRANSLATE_PATH));
-        assert_eq!(nav_section("/ui/about"), Some(ABOUT_PATH));
+        assert_eq!(nav_section(&under("/browse")), Some(BROWSE_PATH));
+        assert_eq!(nav_section(&under("/expand")), Some(EXPAND_PATH));
+        assert_eq!(nav_section(&under("/validate")), Some(VALIDATE_PATH));
+        assert_eq!(nav_section(&under("/valuesets")), Some(VALUE_SETS_PATH));
+        assert_eq!(nav_section(&under("/conceptmaps")), Some(CONCEPT_MAPS_PATH));
+        assert_eq!(nav_section(&under("/translate")), Some(TRANSLATE_PATH));
+        assert_eq!(nav_section(&under("/about")), Some(ABOUT_PATH));
     }
 
     #[test]
     fn an_address_a_pane_used_to_have_marks_the_screen_it_moved_into() {
-        for address in ["/ui/versions", "/ui/evidence", "/ui/settings"] {
+        for pane in ["/versions", "/evidence", "/settings"] {
+            let address = under(pane);
             assert_eq!(
-                nav_section(address),
+                nav_section(&address),
                 Some(ABOUT_PATH),
                 "`{address}` opens a pane of About, so About is the entry it marks"
             );
@@ -314,7 +357,7 @@ mod tests {
     #[test]
     fn a_code_system_screen_marks_the_overview_that_lists_it() {
         assert_eq!(
-            nav_section("/ui/systems/https:%2F%2Fterminology.example%2Fanimals"),
+            nav_section(&under("/systems/https:%2F%2Fterminology.example%2Fanimals")),
             Some(OVERVIEW_PATH),
             "a reader reading one system is still under the screen that listed it"
         );
@@ -322,19 +365,24 @@ mod tests {
 
     #[test]
     fn an_address_with_no_entry_marks_nothing() {
-        assert_eq!(nav_section("/ui/nowhere"), None);
+        assert_eq!(nav_section(&under("/nowhere")), None);
         assert_eq!(
             nav_section("/health"),
             None,
             "an address outside the base is not one of the viewer's screens"
+        );
+        assert_eq!(
+            nav_section(&format!("{UI_BASE}nowhere")),
+            None,
+            "a path that only starts with the base's characters is not under it"
         );
     }
 
     #[test]
     fn switching_version_keeps_the_page_the_reader_is_on() {
         assert_eq!(
-            version_link("/ui/settings", "", FhirVersion::R6),
-            "/ui/settings?fhir=r6"
+            version_link(&under("/settings"), "", FhirVersion::R6),
+            under("/settings?fhir=r6")
         );
     }
 
@@ -342,27 +390,29 @@ mod tests {
     fn switching_version_keeps_every_other_parameter_the_address_carries() {
         assert_eq!(
             version_link(
-                "/ui/expand",
+                &under("/expand"),
                 "fhir=r4b&system=https%3A%2F%2Fterminology.example%2Fx&version=2031-01-01",
                 FhirVersion::R5
             ),
-            "/ui/expand?system=https%3A%2F%2Fterminology.example%2Fx&version=2031-01-01&fhir=r5",
+            under(
+                "/expand?system=https%3A%2F%2Fterminology.example%2Fx&version=2031-01-01&fhir=r5"
+            ),
             "a switcher that dropped the system would change what the screen shows"
         );
     }
 
     #[test]
     fn switching_version_does_not_leave_the_version_it_replaced_behind() {
-        let rewritten = version_link("/ui/expand", "fhir=r4&fhir=r5&q=a", FhirVersion::R6);
+        let rewritten = version_link(&under("/expand"), "fhir=r4&fhir=r5&q=a", FhirVersion::R6);
         assert_eq!(rewritten.matches("fhir=").count(), 1, "{rewritten}");
-        assert_eq!(rewritten, "/ui/expand?q=a&fhir=r6");
+        assert_eq!(rewritten, under("/expand?q=a&fhir=r6"));
     }
 
     #[test]
     fn a_parameter_without_a_value_survives_the_rewrite() {
         assert_eq!(
-            version_link("/ui/browse", "flat&fhir=r4", FhirVersion::R4B),
-            "/ui/browse?flat&fhir=r4b",
+            version_link(&under("/browse"), "flat&fhir=r4", FhirVersion::R4B),
+            under("/browse?flat&fhir=r4b"),
             "the query is carried verbatim, so a bare parameter is not invented into a pair"
         );
     }

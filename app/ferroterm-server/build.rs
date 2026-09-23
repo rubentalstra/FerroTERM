@@ -16,12 +16,19 @@ use std::path::{Path, PathBuf};
 // tests exercise cannot drift.
 include!("src/release_date.rs");
 
-/// The environment variable naming the directory the viewer bundle was built
+/// The environment variable naming the directory the reader bundle was built
 /// into, for a build that stages it somewhere other than the default.
 const BUNDLE_ENV: &str = "FERROTERM_UI_BUNDLE";
 
 /// The directory `trunk build` writes, relative to this manifest.
 const DEFAULT_BUNDLE: &str = "../ferroterm-viewer/dist";
+
+/// The environment variable naming the directory the editor bundle was built
+/// into.
+const EDITOR_BUNDLE_ENV: &str = "FERROTERM_UI_EDITOR_BUNDLE";
+
+/// The directory the editor build of the same crate writes.
+const DEFAULT_EDITOR_BUNDLE: &str = "../ferroterm-viewer/dist-editor";
 
 /// The size above which `clippy::large_include_file` fires, its own default
 /// (<https://rust-lang.github.io/rust-clippy/master/index.html#large_include_file>).
@@ -61,41 +68,59 @@ fn release_date_env() {
     }
 }
 
-/// Writes the viewer bundle table into `OUT_DIR/ui_bundle.rs`.
+/// Writes the two viewer bundle tables into `OUT_DIR/ui_bundle.rs`.
 ///
-/// A directory named by `FERROTERM_UI_BUNDLE` must exist, so a release lane
-/// that means to ship the viewer fails loud when the bundle is missing. The
-/// default directory may be absent, because a fresh clone has no `dist/` and
-/// `cargo build --all-features` must still succeed there; the table is then
-/// empty and the server mounts no `/ui` route.
+/// The viewer crate builds twice, into a reader bundle served at `/ui` and an
+/// editor bundle served at `/ui/editor`, so this binary carries one table per
+/// bundle and mounts each where the bundle's own `public_url` points.
 fn ui_bundle() {
-    println!("cargo::rerun-if-env-changed={BUNDLE_ENV}");
-    let named = std::env::var_os(BUNDLE_ENV).map(PathBuf::from);
-    let required = named.is_some();
-    let dist = named.unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join(DEFAULT_BUNDLE));
-    println!("cargo:rerun-if-changed={}", dist.display());
-    let mut files = Vec::new();
-    let source = match collect(&dist, "", &mut files) {
-        Ok(()) => table(&files),
-        Err(error) if required => refusal(&format!(
-            "{BUNDLE_ENV} names {}, which does not read: {error}. Build the bundle with `trunk build --release --locked` in app/ferroterm-viewer.",
-            dist.display()
-        )),
-        Err(error) => {
-            println!(
-                "cargo::warning=the ui feature is on and {} does not read ({error}); this binary carries no viewer and serves no /ui route",
-                dist.display()
-            );
-            table(&[])
-        }
-    };
+    let reader = bundle_table("BUNDLE", BUNDLE_ENV, DEFAULT_BUNDLE, "/ui");
+    let editor = bundle_table(
+        "EDITOR_BUNDLE",
+        EDITOR_BUNDLE_ENV,
+        DEFAULT_EDITOR_BUNDLE,
+        "/ui/editor",
+    );
     let Some(out_dir) = std::env::var_os("OUT_DIR") else {
         println!("cargo::warning=OUT_DIR is unset, so the viewer bundle table cannot be written");
         return;
     };
     let out = Path::new(&out_dir).join("ui_bundle.rs");
-    if let Err(error) = std::fs::write(&out, source) {
+    if let Err(error) = std::fs::write(&out, format!("{reader}{editor}")) {
         println!("cargo::warning=cannot write {}: {error}", out.display());
+    }
+}
+
+/// The table `name` over the bundle `variable` names, or over `default`.
+///
+/// A directory named by the environment variable must exist, so a release
+/// lane that means to ship the viewer fails loud when a bundle is missing.
+/// The default directory may be absent, because a fresh clone has no `dist/`
+/// and `cargo build --all-features` must still succeed there; the table is
+/// then empty and the server mounts no route over it.
+fn bundle_table(name: &str, variable: &str, default: &str, mount: &str) -> String {
+    println!("cargo::rerun-if-env-changed={variable}");
+    let named = std::env::var_os(variable).map(PathBuf::from);
+    let required = named.is_some();
+    let dist = named.unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join(default));
+    println!("cargo:rerun-if-changed={}", dist.display());
+    let mut files = Vec::new();
+    match collect(&dist, "", &mut files) {
+        Ok(()) => table(name, &files),
+        Err(error) if required => refusal(
+            &format!(
+                "{variable} names {}, which does not read: {error}. Build the bundle with `trunk build --release --locked` in app/ferroterm-viewer.",
+                dist.display()
+            ),
+            name,
+        ),
+        Err(error) => {
+            println!(
+                "cargo::warning=the ui feature is on and {} does not read ({error}); this binary carries no bundle for {mount}",
+                dist.display()
+            );
+            table(name, &[])
+        }
     }
 }
 
@@ -132,7 +157,7 @@ fn collect(root: &Path, prefix: &str, out: &mut Vec<(String, PathBuf)>) -> std::
     Ok(())
 }
 
-/// The `BUNDLE` table over `files`.
+/// The table `name` over `files`.
 ///
 /// The `include_bytes!` of a multi-megabyte WebAssembly module trips
 /// `clippy::large_include_file`, so the expectation is written only when a
@@ -141,7 +166,7 @@ fn collect(root: &Path, prefix: &str, out: &mut Vec<(String, PathBuf)>) -> std::
     clippy::format_collect,
     reason = "a build script writes this table once, and the line per file reads better than a folded writer"
 )]
-fn table(files: &[(String, PathBuf)]) -> String {
+fn table(name: &str, files: &[(String, PathBuf)]) -> String {
     let large = files
         .iter()
         .any(|(_, path)| std::fs::metadata(path).is_ok_and(|meta| meta.len() > LARGE_INCLUDE_FILE));
@@ -158,15 +183,15 @@ fn table(files: &[(String, PathBuf)]) -> String {
         })
         .collect();
     format!(
-        "/// The bundle compiled into this binary: the files the viewer's\n\
-         /// `dist/` held when this crate was built.\n\
-         {expectation}pub const BUNDLE: &[Asset] = &[\n{entries}];\n"
+        "/// One bundle compiled into this binary: the files the viewer's\n\
+         /// build directory held when this crate was built.\n\
+         {expectation}pub const {name}: &[Asset] = &[\n{entries}];\n"
     )
 }
 
 /// A bundle table that refuses to compile, with `message` as the failure.
-fn refusal(message: &str) -> String {
+fn refusal(message: &str, name: &str) -> String {
     format!(
-        "compile_error!({message:?});\n/// The bundle this build could not read.\npub const BUNDLE: &[Asset] = &[];\n"
+        "compile_error!({message:?});\n/// The bundle this build could not read.\npub const {name}: &[Asset] = &[];\n"
     )
 }

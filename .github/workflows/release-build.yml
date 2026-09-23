@@ -100,9 +100,15 @@ jobs:
           tool: trunk@0.21.14
       - name: Add the WebAssembly target
         run: rustup target add wasm32-unknown-unknown
-      - name: Build the viewer bundle
+      # Two bundles from one crate: the reader's, served at /ui, and the
+      # editor's, the same crate with its feature on, served at /ui/editor
+      # (trunk 0.21.14 `build --features/--dist/--public-url`).
+      - name: Build the viewer bundles
         working-directory: app/ferroterm-viewer
-        run: trunk build --release --locked
+        run: |
+          set -euo pipefail
+          trunk build --release --locked
+          trunk build --release --locked --features editor --dist dist-editor --public-url /ui/editor/
 
       # `cargo auditable` embeds the compressed dependency list in the binary's
       # own `.dep-v0` section (<4 KiB), so the SHIPPED artifact self-describes to
@@ -129,6 +135,7 @@ jobs:
           # the default. Without it a release would ship a viewer-less binary
           # and nothing would say so.
           FERROTERM_UI_BUNDLE="${GITHUB_WORKSPACE}/app/ferroterm-viewer/dist" \
+            FERROTERM_UI_EDITOR_BUNDLE="${GITHUB_WORKSPACE}/app/ferroterm-viewer/dist-editor" \
             cargo auditable build --release --locked --target "$TARGET" \
             -p ferroterm-server --features "$VIEWER_FEATURE"
           cargo auditable build --release --locked --target "$TARGET" \

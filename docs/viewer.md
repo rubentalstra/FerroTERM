@@ -110,12 +110,12 @@ in. No ordinary `cargo build`, `cargo clippy`, or `cargo nextest` run may
 require a bundle that is not present.
 
 The mechanism is the server's build script. With the `ui` feature on it walks
-the bundle directory and writes a table of `Asset { path, bytes }` with one
+each bundle directory and writes a table of `Asset { path, bytes }` with one
 `include_bytes!` per file, which `src/ui.rs` includes; the table is a static
 in the binary and a request is a lookup in it, so no request path reaches the
-filesystem. `FERROTERM_UI_BUNDLE` names the directory when a build stages it
-elsewhere, and a directory it names that does not read is a `compile_error!`
-telling you to run Trunk. The default directory may be absent, because
+filesystem. `FERROTERM_UI_BUNDLE` and `FERROTERM_UI_EDITOR_BUNDLE` name the two
+directories when a build stages them elsewhere, and a directory either one
+names that does not read is a `compile_error!` telling you to run Trunk. The default directory may be absent, because
 `cargo build --all-features` on a fresh clone must pass: the table is then
 empty, the build warns, and the server mounts no `/ui` route. The workspace
 denies `clippy::large_include_file`, so the build script writes a scoped
@@ -124,12 +124,56 @@ when a file is large enough to fire the lint. Staging `dist/` beside the
 binary and serving it with `tower-http`'s `ServeDir` stays the contingency if
 the embed ever becomes the wrong trade.
 
+### Two bundles from one crate
+
+The crate builds twice. The **reader bundle** is the default feature set,
+served at `/ui`: every screen of the inventory below, and no authoring code.
+The **editor bundle** is the same crate with the cargo feature `editor` on,
+served at `/ui/editor`: every reader screen plus the authoring screens, with
+the router based at `/ui/editor` so each bundle's links stay inside its own
+tree. A reader who never signs in downloads no editor byte, because `/ui` is
+the reader bundle. A person who edits opens `/ui/editor`, signs in there once,
+and reads there too, so nothing crosses between the two pages and the token
+the sign-in holds in memory survives the whole session.
+
+The sign-in control on the reader bundle is a link to `/ui/editor`, drawn only
+where the served root's capability statement declares `SMART-on-FHIR`. Inside
+the editor bundle the screens are the reader's screens until a token with the
+scope is held, so "the same screen, read-only" is one screen with one code
+path rather than two.
+
+**Trunk builds the crate twice, from the same `index.html`.** The reader build
+is `trunk build --release --locked`; the editor build is the same command with
+`--features editor --dist dist-editor --public-url /ui/editor/`. Those three
+are build-level flags of `trunk build` itself, verified against `trunk
+0.21.14 --help` and the guide
+(<https://github.com/trunk-rs/trunk/blob/main/guide/src/configuration/index.md>),
+so there is no second `index.html` and no second `Trunk.toml` to keep in step
+with the first.
+
+**Why not one bundle with a lazily loaded editor.** Leptos 0.8 carries
+`#[lazy]` and `#[lazy_route]`, but the `wasm-split` pass that turns them into a
+second downloadable module lives in `cargo-leptos`, which builds server-side
+rendered and hydrated applications and cannot build a client-side-rendered one
+(<https://github.com/leptos-rs/cargo-leptos>). Trunk 0.21.14 has no stage that
+runs the pass. A spike confirmed the consequence: the build emits
+`__wasm_split_placeholder__` imports that no browser resolves. Two bundles from
+one crate is the arrangement that holds the same property with the toolchain
+that is pinned. No specification governs any of this: our own design.
+
 ### The routes the server gains
 
 | Route | Answers |
 |---|---|
-| `GET /ui/` and `GET /ui/*` | the bundle, its assets, and the SPA fallback to `index.html` inside `/ui` only |
+| `GET /ui/` and `GET /ui/*` | the reader bundle, its assets, and the SPA fallback to its `index.html` inside `/ui` only |
+| `GET /ui/editor/` and `GET /ui/editor/*` | the editor bundle and its assets, with its own SPA fallback |
 | `GET /` | a redirect to `/ui/` when the viewer is on; today's `OperationOutcome` `not-found` when it is off |
+
+The editor routes are registered after the reader's, and a static `/ui/editor`
+segment outranks the reader's catch-all in the router, so an address under the
+editor mount reaches the editor tree and every other address still reaches the
+reader's. A binary carrying no editor bundle mounts none, and `/ui/editor` is
+then an unknown client-side route of the reader.
 
 Everything outside `/ui` is untouched: `/health`, `/metrics`, `/r4`, `/r4b`,
 `/r5`, `/r6`, and the catch-all `OperationOutcome` `not-found` that
@@ -147,7 +191,7 @@ and the root path is free. Trunk is told the same prefix with
 
 `FERROTERM_UI` joins the existing `FERROTERM_*` configuration in
 `app/ferroterm-server/src/config.rs`. It defaults to on; `FERROTERM_UI=off`
-drops the `/ui` routes and restores today's `/` behaviour, for a deployment
+drops both mounts and restores today's `/` behaviour, for a deployment
 that wants an API-only surface. The switch drops routes rather than serving a
 403, so a locked-down deployment presents no viewer at all.
 
@@ -697,10 +741,11 @@ The additions, recorded in `docs/ci-cd.md` as they land. Everything below is
 built except the `ui-e2e` job:
 
 - **`ci.yml`, a `viewer` job.** `cargo fmt` and `leptosfmt --check` over the
-  crate, `cargo clippy --target wasm32-unknown-unknown --all-features -D
-  warnings`, `cargo nextest run -p ferroterm-viewer` for the component-free
-  logic, and `trunk build --release --locked`. The wasm target is the gate
-  that matters: it is the only place a dependency that cannot compile for the
+  crate, `cargo clippy --target wasm32-unknown-unknown -D warnings` with and
+  without `--features editor`, `cargo nextest run -p ferroterm-viewer` for the
+  component-free logic in both feature sets, and `trunk build --release
+  --locked` for each of the two bundles. The wasm target is the gate that
+  matters: it is the only place a dependency that cannot compile for the
   browser shows up.
 - **A recorded bundle size.** The compressed `.wasm` size is written to a
   committed file and compared on every build, the same shape
@@ -753,6 +798,12 @@ one artifact is what the claim is about, and a dependency the viewer chose is
 the viewer's weight. `app/ferroterm-viewer/bundle-size.json` holds the bars for
 the three assets (wasm, JS bootstrap, CSS) and `scripts/checks/bundle-size.sh`
 checks the build in `dist/`, in the `viewer` CI job.
+
+**Each bundle has its own bars file**, because they are two downloads. The
+editor bundle's are `app/ferroterm-viewer/bundle-size-editor.json`, checked
+over `dist-editor/` by the same guard in the same job. The reader's ceiling is
+not raised to make room for the editor: the whole point of building twice is
+that the editor's bytes never reach a reader who does not edit.
 
 **Two numbers, because one cannot do both jobs.** A single absolute total on an
 artifact that legitimately grows has to be raised every time it grows, and a
@@ -826,6 +877,25 @@ today is breached by honest work next week. The two jobs are split:
   stubbed out the screen still cost 49,533, because it is a search, a concept
   detail, a hierarchy, capability gating and a language picker over four
   requests.
+
+**The editor bundle's ceiling: 750,000 bytes.** It is the reader ceiling plus
+one authoring screen for each resource type the server writes. The arithmetic
+is §13's own, on the figures already recorded here:
+
+| | gzipped |
+|---|---|
+| the reader ceiling, which the editor bundle carries whole | 540,000 |
+| three authoring screens, at the largest screen this project has measured (68,519) | 205,557 |
+| the sum, rounded up | 750,000 |
+
+The three are `CodeSystem`, `ValueSet`, and `ConceptMap`, which is exactly the
+set the roles table in §9 names and the set the server exposes the write
+interactions on. The largest measured screen is the unit rather than the mean,
+because an authoring screen is a form, a list, a lifecycle and a refusal
+surface over one resource, which is the shape the concept browser had when it
+set that figure. The per-change budget is the reader's, 70,000 bytes, for the
+reason §13 already gives: it admits the largest screen measured and still
+refuses an increment nobody intended.
 
 **A change cannot make its own build green by editing a number.** The guard
 reads `measured_gzip_bytes` **out of git at the merge base**, not out of the

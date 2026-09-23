@@ -31,22 +31,33 @@ report on the first hard failure; run the cheap gates first.
 cargo fmt -p ferroterm-viewer --check
 leptosfmt --check app/ferroterm-viewer/src app/ferroterm-viewer/tests
 
-# 2. Clippy on the target the crate actually ships to. This is the gate that
-#    catches a dependency that cannot compile for the browser.
+# 2. Clippy on the target the crate actually ships to, in both feature sets,
+#    because the crate builds as two bundles. This is the gate that catches a
+#    dependency that cannot compile for the browser.
+cargo clippy -p ferroterm-viewer --target wasm32-unknown-unknown \
+  --all-targets -- -D warnings
 cargo clippy -p ferroterm-viewer --target wasm32-unknown-unknown \
   --all-features --all-targets -- -D warnings
 
 # 3. Tests: the component-free logic (URL building, OperationOutcome
-#    flattening, capability reading, paging arithmetic, the tree model).
+#    flattening, capability reading, paging arithmetic, the tree model, the
+#    editor's form model).
 cargo nextest run -p ferroterm-viewer
+cargo nextest run -p ferroterm-viewer --features editor
 
 # 4. The full bundle, only when the change touches the build surface
 #    (Cargo.toml, index.html, Trunk.toml, styles, assets); otherwise report it
 #    skipped with the reason. --locked so the build cannot re-resolve.
 (cd app/ferroterm-viewer && trunk build --release --locked)
+(cd app/ferroterm-viewer &&
+  trunk build --release --locked --features editor --dist dist-editor \
+    --public-url /ui/editor/)
 
-# 5. The recorded bundle size. A claim never moves to match a fatter build.
+# 5. The recorded size of each bundle. A claim never moves to match a fatter
+#    build.
 bash scripts/checks/bundle-size.sh
+bash scripts/checks/bundle-size.sh --bars app/ferroterm-viewer/bundle-size-editor.json \
+  --dist app/ferroterm-viewer/dist-editor
 
 # 6. E2E journeys (merge-gating in CI; local needs Docker): thirtyfour over
 #    WebDriver against the built image.

@@ -56,7 +56,7 @@ use crate::state::AppState;
 /// version prefix. Any other path is an `OperationOutcome` `not-found`, and
 /// that includes `/reload`, which only the admin listener serves.
 pub fn router(serving: Serving) -> Router {
-    router_with_bundle(serving, ui::BUNDLE)
+    router_with_bundles(serving, ui::BUNDLE, ui::EDITOR_BUNDLE)
 }
 
 /// Builds the HTTP application over `serving`, serving `bundle` as the viewer.
@@ -67,6 +67,18 @@ pub fn router(serving: Serving) -> Router {
 /// argument is what lets a test drive the viewer routes without the release
 /// build's `dist/`.
 pub fn router_with_bundle(serving: Serving, bundle: &'static [ui::Asset]) -> Router {
+    router_with_bundles(serving, bundle, &[])
+}
+
+/// Builds the HTTP application over `serving`, serving both viewer bundles.
+///
+/// `editor` is the second bundle, mounted at `/ui/editor`; an empty one
+/// mounts nothing there, which is what a binary built without it carries.
+pub fn router_with_bundles(
+    serving: Serving,
+    bundle: &'static [ui::Asset],
+    editor: &'static [ui::Asset],
+) -> Router {
     let viewer = serving.current().serves_viewer() && !bundle.is_empty();
     // The gate sits inside each version's router, so the path it reads is the
     // one under the version prefix that `nest` leaves.
@@ -91,7 +103,7 @@ pub fn router_with_bundle(serving: Serving, bundle: &'static [ui::Asset]) -> Rou
     // the viewer here keeps its assets out of the request log and the metrics
     // (<https://docs.rs/axum/0.8/axum/struct.Router.html#method.layer>).
     let app = if viewer {
-        app.merge(ui::router(bundle))
+        app.merge(ui::router(bundle, editor))
     } else {
         app
     };

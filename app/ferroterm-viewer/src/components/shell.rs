@@ -46,15 +46,14 @@ use crate::routes::EXPAND_PATH;
 use crate::routes::FIND_PATH;
 use crate::routes::OVERVIEW_PATH;
 use crate::routes::TRANSLATE_PATH;
-use crate::routes::UI_BASE;
 use crate::routes::VALIDATE_PATH;
 use crate::routes::VALUE_SETS_PATH;
 use crate::routes::VERSION_PARAM;
+use crate::routes::base_url;
 use crate::routes::nav_section;
 use crate::routes::ui_link;
 use crate::settings::Settings;
 use crate::styles;
-use crate::url::RequestUrl;
 
 /// The FHIR version the current address selects, for every screen to read.
 #[derive(Clone, Copy, Debug)]
@@ -239,8 +238,7 @@ fn command_bar(version: Signal<FhirVersion>) -> AnyView {
             .unwrap_or_default()
             .trim()
             .to_owned();
-        let target = RequestUrl::new()
-            .segment(UI_BASE.trim_start_matches('/'))
+        let target = base_url()
             .segment(FIND_PATH)
             .query(VERSION_PARAM, version.get().segment())
             .query(QUERY_PARAM, &asked)

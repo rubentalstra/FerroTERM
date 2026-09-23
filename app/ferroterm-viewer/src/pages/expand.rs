@@ -49,13 +49,12 @@ use crate::offers::choices;
 use crate::offers::published;
 use crate::paging::MAX_COUNT;
 use crate::paging::Page;
-use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
+use crate::routes::base_url;
 use crate::runs::Run;
 use crate::settings::Settings;
 use crate::settings::parse_page_size;
 use crate::styles;
-use crate::url::RequestUrl;
 
 /// The runner's own path below the router base.
 const RUNNER_PATH: &str = "expand";
@@ -275,8 +274,7 @@ impl RunnerParams {
     // through untouched while it unescapes the path a second time
     // (`leptos_router` 0.8.15 `src/location/mod.rs`).
     fn address(&self, version: FhirVersion) -> String {
-        let mut url = RequestUrl::new()
-            .segment(UI_BASE.trim_start_matches('/'))
+        let mut url = base_url()
             .segment(RUNNER_PATH)
             .query(VERSION_PARAM, version.segment());
         if self.url.is_empty() {
@@ -1013,6 +1011,7 @@ fn typed_flag(node: NodeRef<Input>) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::routes::UI_BASE;
     use std::sync::Arc;
     use std::sync::atomic::AtomicU32;
     use std::sync::atomic::Ordering;
@@ -1195,9 +1194,12 @@ mod tests {
         let address = params.address(FhirVersion::R5);
         assert_eq!(
             address,
-            "/ui/expand?fhir=r5&url=https%3A%2F%2Fterminology.example%2Fvs%3Fall%3Dtrue\
-             &filter=a%26b&count=25&offset=50&displayLanguage=cy&activeOnly=true\
-             &includeDesignations=true",
+            format!(
+                "{UI_BASE}/expand\
+                 ?fhir=r5&url=https%3A%2F%2Fterminology.example%2Fvs%3Fall%3Dtrue\
+                 &filter=a%26b&count=25&offset=50&displayLanguage=cy&activeOnly=true\
+                 &includeDesignations=true"
+            ),
             "every value the reader typed is encoded into the parameter it belongs to"
         );
         // The router percent-decodes a query on read, so the parameters come
@@ -1229,7 +1231,7 @@ mod tests {
         };
         assert_eq!(
             params.address(FhirVersion::R4B),
-            "/ui/expand?fhir=r4b&url=https%3A%2F%2Fterminology.example%2Fvs&count=",
+            format!("{UI_BASE}/expand?fhir=r4b&url=https%3A%2F%2Fterminology.example%2Fvs&count="),
             "the empty count is written, or a revisit would page a run that asked not to be"
         );
         assert_eq!(
@@ -1248,7 +1250,9 @@ mod tests {
         };
         assert_eq!(
             typed.address(FhirVersion::R4B),
-            "/ui/expand?fhir=r4b&url=https%3A%2F%2Fterminology.example%2Fvs&count=twenty",
+            format!(
+                "{UI_BASE}/expand?fhir=r4b&url=https%3A%2F%2Fterminology.example%2Fvs&count=twenty"
+            ),
             "the value the reader typed travels rather than being dropped on the way"
         );
         let read = RunnerParams::read(
@@ -1269,7 +1273,7 @@ mod tests {
     fn an_address_with_no_value_set_carries_only_the_version() {
         assert_eq!(
             RunnerParams::default().address(FhirVersion::R4),
-            "/ui/expand?fhir=r4",
+            format!("{UI_BASE}/expand?fhir=r4"),
             "an empty runner is a link worth sharing and nothing more"
         );
     }

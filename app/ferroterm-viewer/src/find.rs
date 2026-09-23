@@ -12,11 +12,10 @@ use crate::fhir::version::FhirVersion;
 use crate::routes::BROWSE_PATH;
 use crate::routes::EXPAND_PATH;
 use crate::routes::TRANSLATE_PATH;
-use crate::routes::UI_BASE;
 use crate::routes::VALIDATE_PATH;
 use crate::routes::VERSION_PARAM;
+use crate::routes::base_url;
 use crate::routes::system_link;
-use crate::url::RequestUrl;
 
 /// The query parameter the command bar carries what was typed in.
 pub(crate) const QUERY_PARAM: &str = "q";
@@ -212,8 +211,7 @@ fn text_offers(text: &str, version: FhirVersion) -> Vec<Offer> {
 
 /// The address of one screen, carrying the subject as one parameter.
 fn screen_with(path: &str, name: &str, value: &str, version: FhirVersion) -> String {
-    RequestUrl::new()
-        .segment(UI_BASE.trim_start_matches('/'))
+    base_url()
         .segment(path)
         .query(VERSION_PARAM, version.segment())
         .query(name, value)
@@ -223,6 +221,7 @@ fn screen_with(path: &str, name: &str, value: &str, version: FhirVersion) -> Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::routes::UI_BASE;
 
     /// A root that declares everything, so a case about shape is about shape.
     const EVERYTHING: Declared = Declared {
@@ -329,9 +328,13 @@ mod tests {
         assert!(
             found
                 .iter()
-                .any(|offer| offer.href.contains("/ui/systems/")),
+                .any(|offer| offer.href.contains(&format!("{UI_BASE}/systems/"))),
             "the viewer cannot tell the two apart without asking, so it offers both"
         );
-        assert!(found.iter().any(|offer| offer.href.contains("/ui/expand")));
+        assert!(
+            found
+                .iter()
+                .any(|offer| offer.href.contains(&format!("{UI_BASE}/expand")))
+        );
     }
 }

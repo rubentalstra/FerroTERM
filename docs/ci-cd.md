@@ -23,7 +23,7 @@ exist.
 | `release.yml` | `v*` orchestrator: draft → per-arch build → image → verify assets → publish last | on tag |
 | `release-image.yml` | reusable SLSA Build L3 lane: the distroless static image from the attested musl binaries, pushed to GHCR with provenance and SBOM attestations on the index and on each platform manifest | on tag |
 | `ci.yml` (`hadolint` job) | `hadolint` over every `Dockerfile` in the tree, plus `docker/Dockerfile.sync` by name | now |
-| `ci.yml` (`viewer` job) | the viewer's WebAssembly lane: `cargo fmt` and `leptosfmt --check` over `app/ferroterm-viewer`, `cargo clippy --target wasm32-unknown-unknown -D warnings`, `cargo nextest run -p ferroterm-viewer`, `trunk build --release --locked`, and the recorded bundle size (`scripts/checks/bundle-size.sh`) | on workspace |
+| `ci.yml` (`viewer` job) | the viewer's WebAssembly lane, run over both bundles the crate builds: `cargo fmt` and `leptosfmt --check` over `app/ferroterm-viewer`, `cargo clippy --target wasm32-unknown-unknown -D warnings` with and without `--features editor`, `cargo nextest run -p ferroterm-viewer` in both, `trunk build --release --locked` for each, and the recorded bundle size of each (`scripts/checks/bundle-size.sh`) | on workspace |
 | `ci.yml` (`viewer-boundary` job) | the viewer's resolved dependency closure links no workspace crate (`scripts/checks/viewer-boundary.sh`) | on workspace |
 | `ci.yml` (`no-client-in-server` job) | the server binary's resolved dependency tree carries no HTTP client, so its only outbound call is the OIDC issuer the optional SMART gate reads (`scripts/checks/no-client-in-server.sh`) | on workspace |
 | `ci.yml` (`addon-boundary` job) | only `app/ferroterm-sync` links an `addons/*` crate, and an add-on links the syndication client and the leaf crates the script names (`scripts/checks/addon-boundary.sh`, run with `--self-test` first) | on workspace |
@@ -124,9 +124,10 @@ browser container is started with `SE_NODE_MAX_SESSIONS` raised to the runner's
 processor count and the journeys run with the same test-thread count, so they
 run beside each other rather than queueing on the grid's one default session.
 
-On a tag, `release-build.yml` runs `trunk build --release --locked` before
-`cargo auditable build`, and builds the server with the feature that embeds
-`dist/` into the binary. The bundle is architecture-independent, so the build
+On a tag, `release-build.yml` runs `trunk build --release --locked` twice
+before `cargo auditable build`, once for the reader bundle and once with
+`--features editor` for the editor bundle, and builds the server with the
+feature that embeds both directories into the binary. The bundle is architecture-independent, so the build
 is the same work in each per-architecture job; it happens inside the reusable
 lane because a bundle handed in by a caller job would put bytes the L3 builder
 did not produce inside the artifact it signs. The release therefore gains no
@@ -135,10 +136,11 @@ new asset, no new attestation subject, and no change to the SLSA shape, and
 always did, one of which now carries the web UI. The feature name lives in one
 place, the `VIEWER_FEATURE` variable at the top of `release-build.yml`, and
 `scripts/checks/versions.sh` fails when the server stops declaring it. The lane
-also sets `FERROTERM_UI_BUNDLE` to the directory Trunk just wrote, because the
-server's build script refuses a named directory that does not read and only
-warns when it falls back to the default. A release that lost its bundle
-therefore fails to build rather than shipping a binary with no viewer in it.
+also sets `FERROTERM_UI_BUNDLE` and `FERROTERM_UI_EDITOR_BUNDLE` to the
+directories Trunk just wrote, because the server's build script refuses a named
+directory that does not read and only warns when it falls back to the default.
+A release that lost a bundle therefore fails to build rather than shipping a
+binary with no viewer in it.
 
 ## The container image
 

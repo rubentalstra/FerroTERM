@@ -75,13 +75,12 @@ use crate::offers::published;
 use crate::offers::versions;
 use crate::routes::SYSTEM_PARAM;
 use crate::routes::SYSTEM_VERSION_PARAM;
-use crate::routes::UI_BASE;
 use crate::routes::VALIDATE_PATH;
 use crate::routes::VERSION_PARAM;
+use crate::routes::base_url;
 use crate::routes::system_link;
 use crate::runs::Run;
 use crate::styles;
-use crate::url::RequestUrl;
 
 /// The address parameter carrying which resource type the code is checked in.
 const ON_PARAM: &str = "on";
@@ -341,8 +340,7 @@ impl RunnerParams {
     // through untouched while it unescapes the path a second time
     // (`leptos_router` 0.8.15 `src/location/mod.rs`).
     fn address(&self, version: FhirVersion) -> String {
-        let mut url = RequestUrl::new()
-            .segment(UI_BASE.trim_start_matches('/'))
+        let mut url = base_url()
             .segment(VALIDATE_PATH)
             .query(VERSION_PARAM, version.segment())
             .query(ON_PARAM, self.on.segment());
@@ -1348,6 +1346,7 @@ fn go(navigate: &dyn Fn(&str, NavigateOptions), target: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::routes::UI_BASE;
 
     fn read(pairs: &[(&str, &str)]) -> RunnerParams {
         RunnerParams::read(&|name| {
@@ -1419,9 +1418,11 @@ mod tests {
         ]);
         assert_eq!(
             params.address(FhirVersion::R5),
-            "/ui/validate?fhir=r5&on=valueset\
-             &system=https%3A%2F%2Fterminology.example%2Fx%3Fa%3Db\
-             &valueSet=https%3A%2F%2Fterminology.example%2Fvs&code=c%26d&codeA=cat&codeB=kitten",
+            format!(
+                "{UI_BASE}/validate?fhir=r5&on=valueset\
+                 &system=https%3A%2F%2Fterminology.example%2Fx%3Fa%3Db\
+                 &valueSet=https%3A%2F%2Fterminology.example%2Fvs&code=c%26d&codeA=cat&codeB=kitten"
+            ),
             "every value the reader typed is encoded into the parameter it belongs to"
         );
         // The router percent-decodes a query on read, so the parameters come
@@ -1444,7 +1445,7 @@ mod tests {
     fn an_empty_runner_is_a_link_worth_sharing_and_nothing_more() {
         assert_eq!(
             RunnerParams::default().address(FhirVersion::R4B),
-            "/ui/validate?fhir=r4b&on=codesystem"
+            format!("{UI_BASE}/validate?fhir=r4b&on=codesystem")
         );
     }
 

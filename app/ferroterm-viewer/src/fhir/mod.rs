@@ -557,8 +557,7 @@ impl FhirClient {
     /// and with the token request, which RFC 6749 §4.1.3 requires, and it is
     /// what the operator registers with the identity provider.
     pub(crate) fn redirect_uri(&self) -> String {
-        RequestUrl::new()
-            .segment(UI_PREFIX.trim_start_matches('/'))
+        crate::routes::base_url()
             .segment(CALLBACK_PATH)
             .render(&self.root)
     }
@@ -1290,7 +1289,7 @@ mod tests {
         };
         assert_eq!(
             client.redirect_uri(),
-            "https://tx.example.org/ui/callback",
+            format!("https://tx.example.org{}/callback", crate::routes::UI_BASE),
             "the same value is sent with the authorization and the token request"
         );
         let below = FhirClient {
@@ -1298,7 +1297,10 @@ mod tests {
         };
         assert_eq!(
             below.redirect_uri(),
-            "https://hospital.example/terminology/ui/callback",
+            format!(
+                "https://hospital.example/terminology{}/callback",
+                crate::routes::UI_BASE
+            ),
             "a server mounted below the origin redirects back to its own mount"
         );
     }

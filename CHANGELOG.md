@@ -155,6 +155,16 @@ fresh link reference.
 
 ### Added
 
+- The viewer ships as two bundles, and the server serves both (#634). The
+  reader bundle is what `/ui` has always served, unchanged in size and in
+  content. The editor bundle is the same crate built with `--features editor`,
+  served at `/ui/editor`, carrying every reading screen plus the authoring
+  screens. A reader who never edits downloads no authoring byte, and a person
+  who edits opens `/ui/editor`, signs in there, and reads there too. Each
+  bundle has its own recorded size (`app/ferroterm-viewer/bundle-size.json` and
+  `bundle-size-editor.json`), and the release lane embeds both trees in the one
+  binary.
+
 - The viewer signs a person in with SMART App Launch and gains a write client
   (#633). Where the deployment sets `FERROTERM_OIDC_ISSUER` and
   `FERROTERM_VIEWER_CLIENT_ID`, the server publishes the client as

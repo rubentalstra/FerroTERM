@@ -22,10 +22,9 @@ use crate::components::icon::Icon;
 use crate::fhir::searchset::SearchFilter;
 use crate::fhir::version::FhirVersion;
 use crate::paging::Page;
-use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
+use crate::routes::base_url;
 use crate::styles;
-use crate::url::RequestUrl;
 
 /// The address parameter carrying the canonical the search filters on.
 const URL_PARAM: &str = "url";
@@ -135,8 +134,7 @@ impl ListParams {
         version: FhirVersion,
         extra: &[(&str, &str)],
     ) -> String {
-        let mut url = RequestUrl::new()
-            .segment(UI_BASE.trim_start_matches('/'))
+        let mut url = base_url()
             .segment(path)
             .query(VERSION_PARAM, version.segment());
         if !self.filter.url.is_empty() {
@@ -621,6 +619,7 @@ pub(crate) fn pager_view(
 
 #[cfg(test)]
 mod tests {
+    use crate::routes::UI_BASE;
     /// Three resources, one of which states no version.
     fn published() -> Vec<Published<'static>> {
         vec![
@@ -790,8 +789,11 @@ mod tests {
         );
         assert_eq!(
             params.address("valuesets", FhirVersion::R4B),
-            "/ui/valuesets?fhir=r4b&url=https%3A%2F%2Fterminology.example%2FValueSet%2Fx%3Fa%3Db\
-             &version=2031&page=3&id=vs-1",
+            format!(
+                "{UI_BASE}/valuesets\
+                 ?fhir=r4b&url=https%3A%2F%2Fterminology.example%2FValueSet%2Fx%3Fa%3Db\
+                 &version=2031&page=3&id=vs-1"
+            ),
             "a canonical carrying its own query string cannot truncate the address"
         );
     }
@@ -801,7 +803,7 @@ mod tests {
         let params = ListParams::read(&map(&[]), 25);
         assert_eq!(
             params.address("conceptmaps", FhirVersion::R5),
-            "/ui/conceptmaps?fhir=r5",
+            format!("{UI_BASE}/conceptmaps?fhir=r5"),
             "an address says what was asked for, and nothing was"
         );
     }
@@ -841,7 +843,9 @@ mod tests {
                     ("system", "https://x.example/s")
                 ]
             ),
-            "/ui/conceptmaps?fhir=r4b&page=2&code=x&system=https%3A%2F%2Fx.example%2Fs",
+            format!(
+                "{UI_BASE}/conceptmaps?fhir=r4b&page=2&code=x&system=https%3A%2F%2Fx.example%2Fs"
+            ),
             "a parameter the reader left empty is left out rather than sent empty"
         );
     }
