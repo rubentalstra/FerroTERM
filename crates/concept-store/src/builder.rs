@@ -1,11 +1,12 @@
 //! Writing an artifact, offline, in one transaction.
 //!
 //! The build tool feeds concepts, designations, acceptability, properties, and
-//! nothing else; `finish` packs each ordinal-keyed set into a dense column,
-//! chooses the displays, and commits. Two builds from the same input produce
-//! the same bytes.
+//! nothing else; `finish` packs each ordinal-keyed set into a dense column
+//! beside the database, chooses the displays, and commits. Two builds from the
+//! same input produce the same bytes.
 
 use std::collections::BTreeMap;
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use concept_graph::ordinal::Ordinal;
@@ -14,6 +15,12 @@ use redb::{Database, TableHandle};
 use crate::column::Column;
 use crate::record::{self, Concept, Designation, PropertyValue};
 use crate::tables;
+
+/// How much of a column's side file the writer holds before it goes to disk.
+///
+/// A column is written as a count, an offset per record, and the records, each
+/// a small write, so the buffer is what turns them into whole-page writes.
+const WRITE_BUFFER: usize = 1 << 20;
 
 /// A failure while building.
 #[derive(Debug, thiserror::Error)]
@@ -42,6 +49,15 @@ pub enum BuildError {
     /// Reclaiming the unused pages after the commit failed.
     #[error("compaction failed")]
     Compaction(#[from] redb::CompactionError),
+    /// A column's side file could not be written.
+    #[error("cannot write {path}")]
+    Io {
+        /// The file.
+        path: PathBuf,
+        /// The underlying error.
+        #[source]
+        source: std::io::Error,
+    },
     /// A vocabulary name was registered twice with different ordinals.
     #[error("{kind} {name:?} is already ordinal {existing}, not {requested}")]
     Vocabulary {
@@ -269,12 +285,11 @@ impl StoreBuilder {
     ///
     /// Choosing a display is the hottest read the server has, and it should
     /// not have to find the designation this build already found.
-    fn display_column(
+    fn display_rows(
         &self,
         chosen: &BTreeMap<(u32, u32, u32), u32>,
         display_use: u32,
-        count: u32,
-    ) -> Vec<u8> {
+    ) -> BTreeMap<u32, Vec<u8>> {
         let mut by_concept: BTreeMap<u32, Vec<(u32, String, String)>> = BTreeMap::new();
         for ((concept, refset, use_ordinal), index) in chosen {
             if *use_ordinal != display_use {
@@ -292,7 +307,7 @@ impl StoreBuilder {
                 designation.term,
             ));
         }
-        let packed: BTreeMap<u32, Vec<u8>> = by_concept
+        by_concept
             .into_iter()
             .map(|(concept, entries)| {
                 let borrowed: Vec<(u32, &str, &str)> = entries
@@ -301,13 +316,7 @@ impl StoreBuilder {
                     .collect();
                 (concept, record::Displays::encode(&borrowed))
             })
-            .collect();
-        Column::pack(
-            count,
-            packed
-                .iter()
-                .map(|(concept, bytes)| (Ordinal::new(*concept), bytes.as_slice())),
-        )
+            .collect()
     }
 
     /// Calls `write` once per concept with that concept's rows.
@@ -341,25 +350,47 @@ impl StoreBuilder {
         }
     }
 
-    /// The dense column of one record per concept, packed by `pack`.
-    fn column<'a, K: 'a, V: 'a, R>(
-        count: u32,
+    /// One record per concept, encoded by `pack`, keyed by concept ordinal.
+    fn column_rows<'a, K: 'a, V: 'a, R>(
         rows: &'a BTreeMap<K, V>,
         concept: impl Fn(&K) -> u32,
         row: impl Fn(&'a K, &'a V) -> R,
         pack: impl Fn(&[R]) -> Vec<u8>,
-    ) -> Result<Vec<u8>, BuildError> {
+    ) -> Result<BTreeMap<u32, Vec<u8>>, BuildError> {
         let mut packed: BTreeMap<u32, Vec<u8>> = BTreeMap::new();
         Self::per_concept(rows, concept, row, |ordinal, group| {
             packed.insert(ordinal, pack(group));
             Ok(())
         })?;
-        Ok(Column::pack(
+        Ok(packed)
+    }
+
+    /// Writes one dense column to its own file beside the database.
+    ///
+    /// A column is a position-addressed array, which a b-tree of positions
+    /// only pretends to be, and a reader of a file assembles it at the address
+    /// it serves from (#641).
+    fn write_column(
+        &self,
+        name: &str,
+        count: u32,
+        rows: &BTreeMap<u32, Vec<u8>>,
+    ) -> Result<(), BuildError> {
+        let path = Column::file(&self.path, name);
+        let failed = |source| BuildError::Io {
+            path: path.clone(),
+            source,
+        };
+        let file = std::fs::File::create(&path).map_err(failed)?;
+        let mut out = BufWriter::with_capacity(WRITE_BUFFER, file);
+        Column::write_to(
             count,
-            packed
-                .iter()
+            rows.iter()
                 .map(|(ordinal, bytes)| (Ordinal::new(*ordinal), bytes.as_slice())),
-        ))
+            &mut out,
+        )
+        .map_err(failed)?;
+        out.flush().map_err(failed)
     }
 
     /// Writes every buffered row in key order, computes the preferred
@@ -395,34 +426,35 @@ impl StoreBuilder {
             .keys()
             .next_back()
             .map_or(0, |highest| highest.saturating_add(1));
-        {
-            let mut columns = txn.open_table(tables::COLUMNS)?;
-            // An ordinal is a position, so these are dense columns rather
-            // than b-trees keyed by that position.
-            let concepts = Column::pack(
-                count,
-                self.concepts
-                    .iter()
-                    .map(|(ordinal, bytes)| (Ordinal::new(*ordinal), bytes.as_slice())),
-            );
-            columns.insert(tables::COLUMN_CONCEPTS, concepts.as_slice())?;
-            let acceptability = Self::column(
-                count,
+        // An ordinal is a position, so these are dense columns in their own
+        // files rather than b-trees keyed by that position.
+        self.write_column(tables::COLUMN_CONCEPTS, count, &self.concepts)?;
+        self.write_column(
+            tables::COLUMN_ACCEPTABILITY,
+            count,
+            &Self::column_rows(
                 &self.acceptability,
                 |(concept, _, _)| *concept,
                 |(_, index, refset), acceptability| (*index, *refset, *acceptability),
                 record::Acceptability::encode,
-            )?;
-            columns.insert(tables::COLUMN_ACCEPTABILITY, acceptability.as_slice())?;
-            let properties = Self::column(
-                count,
+            )?,
+        )?;
+        self.write_column(
+            tables::COLUMN_PROPERTIES,
+            count,
+            &Self::column_rows(
                 &self.properties,
                 |(concept, _)| *concept,
                 |(_, key), values| (*key, values.as_slice()),
                 record::Properties::encode,
-            )?;
-            columns.insert(tables::COLUMN_PROPERTIES, properties.as_slice())?;
-        }
+            )?,
+        )?;
+        // A code system with no display use still gets the file, empty, so a
+        // store that opens one reads four columns or refuses.
+        let displays = rule.display_use.map_or_else(BTreeMap::new, |display_use| {
+            self.display_rows(&self.chosen_preferred(rule), display_use)
+        });
+        self.write_column(tables::COLUMN_DISPLAYS, count, &displays)?;
         self.write_designations(&txn)?;
         for table_def in [
             tables::PROPERTY_KEYS,
@@ -436,12 +468,6 @@ impl StoreBuilder {
                     table.insert(*ordinal, name.as_str())?;
                 }
             }
-        }
-        if let Some(display_use) = rule.display_use {
-            let chosen = self.chosen_preferred(rule);
-            let displays = self.display_column(&chosen, display_use, count);
-            let mut columns = txn.open_table(tables::COLUMNS)?;
-            columns.insert(tables::COLUMN_DISPLAYS, displays.as_slice())?;
         }
         txn.commit()?;
         // redb grows the file in regions ahead of use; compaction returns the

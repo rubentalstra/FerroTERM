@@ -2,6 +2,7 @@ use std::path::Path;
 
 use concept_graph::ordinal::Ordinal;
 use concept_store::builder::{BuildError, PreferredRule, StoreBuilder};
+use concept_store::column::Column;
 use concept_store::record::{Concept, Designation, PropertyValue};
 use concept_store::store::{Store, StoreError, Vocabulary};
 use concept_store::tables;
@@ -286,10 +287,100 @@ fn two_builds_of_the_same_input_are_byte_identical() {
     let second = dir.path().join("b.redb");
     drop(build(&first));
     drop(build(&second));
-    let a = std::fs::read(&first).expect("read");
-    let b = std::fs::read(&second).expect("read");
-    assert_eq!(a.len(), b.len());
-    assert_eq!(a, b);
+    let same = |a: &Path, b: &Path| {
+        let left = std::fs::read(a).expect("read");
+        let right = std::fs::read(b).expect("read");
+        assert_eq!(
+            left.len(),
+            right.len(),
+            "{} and {}",
+            a.display(),
+            b.display()
+        );
+        assert_eq!(left, right, "{} and {}", a.display(), b.display());
+    };
+    same(&first, &second);
+    for name in tables::COLUMNS {
+        same(&Column::file(&first, name), &Column::file(&second, name));
+    }
+}
+
+#[test]
+fn a_column_is_a_side_file_the_database_no_longer_carries() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("synthetic.redb");
+    let store = build(&path);
+    let bytes =
+        std::fs::read(Column::file(&path, tables::COLUMN_CONCEPTS)).expect("the concept column");
+    let column = Column::read(&bytes).expect("the file reads as a column");
+    let record = column.get(Ordinal::new(0)).expect("the root's record");
+    assert_eq!(
+        Concept::decode(record).expect("decodes").code,
+        store
+            .concept(Ordinal::new(0))
+            .expect("read")
+            .expect("present")
+            .code,
+        "the file holds the record the store answers from"
+    );
+    for name in tables::COLUMNS {
+        assert!(
+            Column::file(&path, name).is_file(),
+            "the {name} column has its own file"
+        );
+    }
+    drop(store);
+    let db = redb::ReadOnlyDatabase::open(&path).expect("opens");
+    let txn = redb::ReadableDatabase::begin_read(&db).expect("read txn");
+    let columns: redb::TableDefinition<'_, &str, &[u8]> = redb::TableDefinition::new("columns");
+    assert!(
+        matches!(
+            txn.open_table(columns),
+            Err(redb::TableError::TableDoesNotExist(_))
+        ),
+        "the database carries no column table"
+    );
+}
+
+#[test]
+fn a_column_file_the_build_did_not_write_is_refused() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("synthetic.redb");
+    drop(build(&path));
+    std::fs::remove_file(Column::file(&path, tables::COLUMN_DISPLAYS)).expect("removes");
+    assert!(
+        matches!(
+            Store::open(&path),
+            Err(StoreError::Column { ref column, .. }) if column == tables::COLUMN_DISPLAYS
+        ),
+        "a store opens all four columns or none"
+    );
+}
+
+#[test]
+fn an_artifact_of_another_layout_is_refused_either_way() {
+    // An older server refuses this layout and this one refuses an older
+    // artifact, by the same check, so neither reads the other as garbage.
+    for other in ["6", "8"] {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("other.redb");
+        let db = redb::Database::create(&path).expect("creates");
+        let txn = db.begin_write().expect("txn");
+        {
+            let mut meta = txn.open_table(tables::META).expect("table");
+            meta.insert(tables::META_LAYOUT, other).expect("insert");
+        }
+        txn.commit().expect("commit");
+        drop(db);
+        assert!(
+            matches!(
+                Store::open(&path),
+                Err(StoreError::Layout { found: Some(ref found), expected })
+                    if found == other && expected == tables::LAYOUT_VERSION
+            ),
+            "layout {other} is refused"
+        );
+    }
 }
 
 #[test]

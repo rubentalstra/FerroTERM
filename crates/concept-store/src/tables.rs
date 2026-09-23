@@ -11,20 +11,26 @@ use redb::TableDefinition;
 pub const META: TableDefinition<&str, &str> = TableDefinition::new("meta");
 /// Native code to concept ordinal.
 pub const CODES: TableDefinition<&str, u32> = TableDefinition::new("codes");
-/// Packed columns by name, each a [`crate::column::Column`] addressed by
-/// ordinal. `concepts` holds the encoded [`crate::record::Concept`] of every
-/// ordinal.
-pub const COLUMNS: TableDefinition<&str, &[u8]> = TableDefinition::new("columns");
-/// The `COLUMNS` key of the concept column.
+/// The columns of an artifact, in the order the store reads them.
+///
+/// Each is a [`crate::column::Column`] in its own file beside the database,
+/// named by [`crate::column::Column::file`]: a column held in the database
+/// arrived as the value `redb` materialized and again as the copy the store
+/// serves from (#641).
+pub const COLUMNS: [&str; 4] = [
+    COLUMN_CONCEPTS,
+    COLUMN_DISPLAYS,
+    COLUMN_PROPERTIES,
+    COLUMN_ACCEPTABILITY,
+];
+/// The concept column: the encoded [`crate::record::Concept`] of every ordinal.
 pub const COLUMN_CONCEPTS: &str = "concepts";
-/// The `COLUMNS` key of the preferred-designation column, the displays the
-/// build chose per concept.
+/// The preferred-designation column, the displays the build chose per concept.
 pub const COLUMN_DISPLAYS: &str = "displays";
-/// The `COLUMNS` key of the property column, one encoded
-/// [`crate::record::Properties`] per concept.
+/// The property column, one encoded [`crate::record::Properties`] per concept.
 pub const COLUMN_PROPERTIES: &str = "properties";
-/// The `COLUMNS` key of the acceptability column, one encoded
-/// [`crate::record::Acceptability`] per concept.
+/// The acceptability column, one encoded [`crate::record::Acceptability`] per
+/// concept.
 pub const COLUMN_ACCEPTABILITY: &str = "acceptability";
 /// Concept ordinal to its encoded [`crate::record::Designations`].
 ///
@@ -44,7 +50,12 @@ pub const ACCEPTABILITIES: TableDefinition<u32, &str> = TableDefinition::new("ac
 /// The `META` key of the layout version.
 pub const META_LAYOUT: &str = "layout";
 /// The layout version this build writes and reads.
-pub const LAYOUT_VERSION: &str = "6";
+///
+/// An artifact of another layout is refused either way round: an older server
+/// refuses one whose columns are side files, and this one refuses an older
+/// artifact whose columns are still in the database, rather than reading
+/// either as garbage.
+pub const LAYOUT_VERSION: &str = "7";
 /// The `META` key of the code system URI.
 pub const META_SYSTEM: &str = "system";
 /// The `META` key of the code system version string.
