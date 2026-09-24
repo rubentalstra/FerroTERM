@@ -536,9 +536,9 @@ impl<'a> Sources<'a> {
                     Some(Ok(compose)) => {
                         let metadata = self.registry.implicit_metadata(url);
                         Ok(Arc::new(crate::valueset::model::ValueSetModel {
-                            // NOTE: an implicit value set is answered from the
-                            // provider rather than read from a resource, so it
-                            // carries no authored id.
+                            // NOTE: an implicit value set has no resource, and a
+                            // logical id belongs to one
+                            // (<https://hl7.org/fhir/R4B/resource.html#id>).
                             id: None,
                             expansion_parameters: Vec::new(),
                             language: None,

@@ -330,8 +330,10 @@ fresh link reference.
   example, keeps the minted one. Two loaded resources of one type carrying the
   same id refuse the load, as does a loaded id a persisted record already
   answers on, with a diagnostic naming the canonicals; the server never renames
-  a resource it loads. A client that addressed one of these resources by the
-  minted id moves to the authored one, which a search now returns.
+  a resource it loads. A `PUT` or `POST` onto an id a loaded resource is read at
+  is refused with `409 Conflict` for the same reason. A client that addressed
+  one of these resources by the minted id moves to the authored one, which a
+  search now returns.
 
 - The RF2 relationship reader admits only rows whose `characteristicTypeId` is
   `900000000000011006 |Inferred relationship|` (#545). A qualifying or an

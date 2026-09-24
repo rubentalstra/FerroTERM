@@ -184,8 +184,9 @@ impl CodeSystemModel {
         let declaration = provider.declaration();
         let standing = provider.standing();
         Self {
-            // NOTE: a provider that holds no resource of its own carries no
-            // authored id, so the server names the instance itself.
+            // NOTE: a logical id belongs to a resource
+            // (<https://hl7.org/fhir/R4B/resource.html#id>), and this picture is
+            // built from a provider, so the server names the instance itself.
             id: None,
             url: identity.url.clone(),
             version: identity.version.clone(),

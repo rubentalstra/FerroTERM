@@ -190,7 +190,9 @@ Two ids never compete. An `id` outside the FHIR id alphabet (at most 64 of
 a second loaded resource of the same type carrying an id the first one holds, or
 a loaded id a resource written through the REST API already answers on. The
 diagnostic names the canonicals involved; the server never renames a resource to
-make room.
+make room. From the other side, a `PUT` or `POST` onto an id a loaded resource
+is read at is refused with `409 Conflict`, so a client cannot shadow what the
+deployment serves.
 
 ## What you do not configure
 

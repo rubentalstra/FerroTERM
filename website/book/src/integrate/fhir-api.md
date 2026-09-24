@@ -207,7 +207,7 @@ defines (<https://hl7.org/fhir/R4B/http.html>), under every version prefix:
 | Request | Answer |
 |---|---|
 | `POST {type}` | `201 Created` with `Location`, `ETag`, and `Last-Modified`; the server assigns the id |
-| `PUT {type}/{id}` | `200 OK` when the id existed, `201 Created` when it is new |
+| `PUT {type}/{id}` | `200 OK` when the id existed, `201 Created` when it is new, `409 Conflict` when the id is one a loaded resource is read at |
 | `GET {type}/{id}` | `200 OK` with `ETag` and `Last-Modified`, `404` for an unknown id, `410 Gone` for a deleted one |
 | `GET {type}/{id}/_history/{versionId}` | `200 OK` with that version of the resource |
 | `GET {type}?url=…&version=…` | a `searchset` `Bundle` |

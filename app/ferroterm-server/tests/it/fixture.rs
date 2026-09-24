@@ -115,6 +115,12 @@ impl Server {
         Self::assembled(Arc::new(dir), config)
     }
 
+    /// The state `config` names over the resources a test wrote into `dir`,
+    /// which stays alive for as long as the server does.
+    pub(crate) fn start_with_config(dir: tempfile::TempDir, config: Config) -> Self {
+        Self::assembled(Arc::new(dir), config)
+    }
+
     /// The state `config` names, held the way the binary holds it.
     fn assembled(dir: Arc<tempfile::TempDir>, config: Config) -> Self {
         let state = Arc::new(AppState::load(&config).expect("loads"));

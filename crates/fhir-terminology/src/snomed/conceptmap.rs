@@ -293,8 +293,8 @@ pub(crate) fn concept_map(
     let scope = Some(format!("{base}?{FHIR_VS}"));
     let refset_name = name_of(edition, refset);
     Ok(ConceptMapModel {
-        // NOTE: an implicit concept map is answered from the edition rather than
-        // read from a resource, so it carries no authored id.
+        // NOTE: an implicit concept map has no resource, and a logical id
+        // belongs to one (<https://hl7.org/fhir/R4B/resource.html#id>).
         id: None,
         url: url.to_owned(),
         version: Some(base.clone()),

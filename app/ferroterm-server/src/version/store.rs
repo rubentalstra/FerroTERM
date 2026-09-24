@@ -335,7 +335,24 @@ fn created(request: &Request<'_>, record: &Record) -> Response {
 }
 
 /// Stores `object` as `id` and returns the record it became.
+///
+/// # Errors
+///
+/// A write onto an id the deployment loaded a resource under is a 409: that
+/// resource answers a read at the id and is not the client's to replace. No
+/// FHIR specification governs a write onto such an id: our own design, and it
+/// is the refusal the server would otherwise meet at its next start.
 fn write(request: &Request<'_>, id: &str, object: Object) -> Result<Record, Failure> {
+    if let Some(canonical) = request.state.loaded_canonical(request.resource_type, id) {
+        return Err(Failure::new(
+            StatusCode::CONFLICT,
+            "conflict",
+            format!(
+                "the id `{id}` is the one the loaded {} `{canonical}` is read at",
+                request.resource_type.name()
+            ),
+        ));
+    }
     request
         .state
         .put_persisted(

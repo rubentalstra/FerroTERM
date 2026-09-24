@@ -176,16 +176,16 @@ pub enum LoadError {
     /// A persisted resource does not layer over the loaded state.
     #[error("cannot serve the persisted resources")]
     Persisted(#[source] PersistError),
-    /// Two loaded resources of one type carry the same logical id.
-    #[error("the {resource_type} resources `{first}` and `{second}` both carry the id `{id}`")]
+    /// Two loaded resources of one type answer on the same logical id.
+    #[error("the {resource_type} `{second}` carries the id `{id}`, which `{first}` answers on")]
     DuplicateId {
         /// The resource type both are of.
         resource_type: &'static str,
         /// The id they share.
         id: String,
-        /// The canonical of the resource that holds the id.
+        /// The canonical of the resource already answering on the id.
         first: String,
-        /// The canonical of the resource that also asks for it.
+        /// The canonical of the resource that carries it too.
         second: String,
     },
     /// A loaded resource carries the logical id of a persisted record.
@@ -583,7 +583,7 @@ impl AppState {
         }
         check_supplement_targets(&loaded, &supplements)?;
         check_distinct_ids(
-            "CodeSystem",
+            ResourceType::CodeSystem,
             loaded.iter().filter_map(|l| {
                 let model = l.provider.code_system()?;
                 Some((
@@ -655,7 +655,7 @@ impl AppState {
     ) -> Result<(), LoadError> {
         for model in value_sets.iter() {
             let id = registered_id(
-                "ValueSet",
+                ResourceType::ValueSet,
                 model.id.as_deref(),
                 &model.url,
                 model.version.as_deref(),
@@ -666,7 +666,7 @@ impl AppState {
         }
         for model in concept_maps.iter() {
             let id = registered_id(
-                "ConceptMap",
+                ResourceType::ConceptMap,
                 model.id.as_deref(),
                 &model.url,
                 model.version.as_deref(),
@@ -758,19 +758,26 @@ impl AppState {
     /// [`Self::with_core`], which [`Self::load`] does for a real deployment.
     #[must_use]
     pub fn from_registry(registry: Registry) -> Self {
+        // NOTE: an authored id names the resource that carries it
+        // (<https://hl7.org/fhir/R4B/resource.html#id>), so every one of them is taken
+        // first and only a minted id ever yields the suffix.
         let mut instances = BTreeMap::new();
+        let mut minting = Vec::new();
         for url in registry.systems() {
             for provider in registry.versions(url) {
                 let identity = provider.identity();
-                // NOTE: `AppState::build` refuses a collision between authored ids before
-                // it reaches here, so the suffix only ever renames a minted id.
-                let authored = provider
-                    .code_system()
-                    .and_then(|model| model.id.clone())
-                    .unwrap_or_else(|| instance_id(&identity.url, &identity.version));
-                let id = unique_id(&instances, authored);
-                instances.insert(id, (identity.url.clone(), identity.version.clone()));
+                let served = (identity.url.clone(), identity.version.clone());
+                match provider.code_system().and_then(|model| model.id.clone()) {
+                    Some(authored) => {
+                        instances.insert(unique_id(&instances, authored), served);
+                    }
+                    None => minting.push(served),
+                }
             }
+        }
+        for (url, version) in minting {
+            let id = unique_id(&instances, instance_id(&url, &version));
+            instances.insert(id, (url, version));
         }
         let base = Layer {
             registry,
@@ -1000,6 +1007,30 @@ impl AppState {
             .layer
             .concept_maps
             .resolve(url, version.as_deref())
+    }
+
+    /// The canonical of the resource the deployment loaded under `id`, when it
+    /// loaded one of `resource_type`.
+    ///
+    /// A loaded resource is read at that id
+    /// (<https://hl7.org/fhir/R4B/resource.html#id>), so a write the client
+    /// aims at the same id is refused rather than layered over it.
+    #[must_use]
+    pub fn loaded_canonical(&self, resource_type: ResourceType, id: &str) -> Option<String> {
+        match resource_type {
+            ResourceType::CodeSystem => self
+                .instances
+                .get(id)
+                .map(|(url, version)| canonical(url, Some(version))),
+            ResourceType::ValueSet => self
+                .value_set_instances
+                .get(id)
+                .map(|(url, version)| canonical(url, version.as_deref())),
+            ResourceType::ConceptMap => self
+                .concept_map_instances
+                .get(id)
+                .map(|(url, version)| canonical(url, version.as_deref())),
+        }
     }
 
     /// The `CodeSystem` instance ids and what they serve, sorted by id.
@@ -1420,14 +1451,14 @@ fn canonical(url: &str, version: Option<&str>) -> String {
 /// rename a resource it loads (<https://hl7.org/fhir/R4B/resource.html#id>), so
 /// the load fails instead of picking one.
 fn check_distinct_ids(
-    resource_type: &'static str,
+    resource_type: ResourceType,
     authored: impl Iterator<Item = (String, String)>,
 ) -> Result<(), LoadError> {
     let mut seen: BTreeMap<String, String> = BTreeMap::new();
     for (id, canonical) in authored {
         if let Some(first) = seen.get(&id) {
             return Err(LoadError::DuplicateId {
-                resource_type,
+                resource_type: resource_type.name(),
                 id,
                 first: first.clone(),
                 second: canonical,
@@ -1450,7 +1481,7 @@ fn check_distinct_ids(
 /// Returns [`LoadError::DuplicateId`] when another loaded resource of the type
 /// already answers on the authored id.
 fn registered_id(
-    resource_type: &'static str,
+    resource_type: ResourceType,
     authored: Option<&str>,
     url: &str,
     version: Option<&str>,
@@ -1464,7 +1495,7 @@ fn registered_id(
     };
     if let Some((held_url, held_version)) = taken.get(authored) {
         return Err(LoadError::DuplicateId {
-            resource_type,
+            resource_type: resource_type.name(),
             id: authored.to_owned(),
             first: canonical(held_url, held_version.as_deref()),
             second: canonical(url, version),
