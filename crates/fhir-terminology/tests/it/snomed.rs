@@ -476,7 +476,7 @@ fn a_language_reference_set_is_listed_and_its_member_forms_are_refused() {
         matches!(
             p.implicit_value_set(&format!("{base}?fhir_vs=refset/{}", snomed::GB_REFSET))
                 .expect("implicit"),
-            Err(ProviderError::InvalidFilterValue { ref value, .. }) if value == snomed::GB_REFSET
+            Err(ProviderError::InvalidFilterValue(ref invalid)) if invalid.value == snomed::GB_REFSET
         ),
         "the members of a language reference set are descriptions"
     );
@@ -546,17 +546,17 @@ fn malformed_and_unknown_implicit_value_sets_are_refused() {
     assert!(matches!(
         p.implicit_value_set(&format!("{base}?fhir_vs=isa/abc"))
             .expect("implicit"),
-        Err(ProviderError::MalformedImplicitValueSet { .. })
+        Err(ProviderError::MalformedImplicitValueSet(_))
     ));
     assert!(matches!(
         p.implicit_value_set(&format!("{base}?fhir_vs=ecl/%3C%3C%20"))
             .expect("implicit"),
-        Err(ProviderError::MalformedImplicitValueSet { .. })
+        Err(ProviderError::MalformedImplicitValueSet(_))
     ));
     assert!(matches!(
         p.implicit_value_set(&format!("{base}?fhir_vs=nope"))
             .expect("implicit"),
-        Err(ProviderError::MalformedImplicitValueSet { .. })
+        Err(ProviderError::MalformedImplicitValueSet(_))
     ));
     // The base may be any edition version (<https://hl7.org/fhir/R4B/snomedct.html>,
     // "Implicit Value Sets"), so another edition is a version this provider does
@@ -577,7 +577,7 @@ fn malformed_and_unknown_implicit_value_sets_are_refused() {
             op: FilterOperator::In,
             value: String::from("abc"),
         }),
-        Err(ProviderError::InvalidFilterValue { .. })
+        Err(ProviderError::InvalidFilterValue(_))
     ));
     let declared = p
         .declaration()
@@ -607,7 +607,7 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
     assert!(
         matches!(
             p.filter(&filter("<< ")),
-            Err(ProviderError::InvalidFilterValue { reason, .. }) if reason.contains("byte 3")
+            Err(ProviderError::InvalidFilterValue(invalid)) if invalid.reason.contains("byte 3") && invalid.position == Some(3)
         ),
         "malformed ECL names the position"
     );
@@ -634,7 +634,7 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
     assert_eq!(p.filter(&expressions("true")).expect("all").len(), 21);
     assert!(matches!(
         p.filter(&expressions("maybe")),
-        Err(ProviderError::InvalidFilterValue { .. })
+        Err(ProviderError::InvalidFilterValue(_))
     ));
     let codes: Vec<&str> = p
         .declaration()
@@ -672,14 +672,14 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
     assert!(
         matches!(
             p.implicit_value_set("http://snomed.info/sct?fhir_vs=ecl/%3C%3C%20"),
-            Some(Err(ProviderError::MalformedImplicitValueSet { reason, .. })) if reason.contains("byte")
+            Some(Err(ProviderError::MalformedImplicitValueSet(malformed))) if malformed.reason.contains("byte")
         ),
         "malformed ECL is a malformed implicit value set"
     );
     assert!(
         matches!(
             p.implicit_value_set("http://snomed.info/sct?fhir_vs=ecl/%3"),
-            Some(Err(ProviderError::MalformedImplicitValueSet { .. }))
+            Some(Err(ProviderError::MalformedImplicitValueSet(_)))
         ),
         "a stray percent is malformed"
     );
@@ -689,6 +689,51 @@ fn ecl_arrives_as_the_constraint_filter_and_the_ecl_implicit_value_set() {
             Some(Ok(_))
         ),
         "an expression without reserved characters needs no encoding"
+    );
+}
+
+/// A parse failure carries the parser's position as data and its error as the
+/// cause: into the filter value for a `constraint` filter, and into the URI,
+/// through its percent-encoding, for the `ecl/` implicit value set
+/// (<https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets").
+#[test]
+fn a_malformed_expression_constraint_states_where_the_parser_stopped() {
+    let (_dir, p) = provider();
+    let refused = p.filter(&Filter {
+        property: String::from("constraint"),
+        op: FilterOperator::Equal,
+        value: String::from("<< OR"),
+    });
+    let Err(ProviderError::InvalidFilterValue(invalid)) = &refused else {
+        panic!("malformed ECL is an invalid filter value: {refused:?}");
+    };
+    assert_eq!(
+        invalid.position,
+        Some(3),
+        "the parser stops at `OR`, byte 3"
+    );
+    let cause = std::error::Error::source(invalid.as_ref())
+        .and_then(|cause| cause.downcast_ref::<sct_ecl::ParseError>());
+    assert_eq!(
+        cause.map(sct_ecl::ParseError::offset),
+        Some(3),
+        "the parse error is the cause, not a copy of its text"
+    );
+
+    let url = "http://snomed.info/sct?fhir_vs=ecl/%3C%3C%20OR";
+    let refused = p.implicit_value_set(url).expect("the form is SNOMED's");
+    let Err(ProviderError::MalformedImplicitValueSet(malformed)) = &refused else {
+        panic!("malformed ECL is a malformed implicit value set: {refused:?}");
+    };
+    assert_eq!(
+        malformed.position,
+        url.find("OR"),
+        "decoded byte 3 is the `O` after three escapes in the URI"
+    );
+    assert!(
+        std::error::Error::source(malformed.as_ref())
+            .is_some_and(<dyn std::error::Error>::is::<sct_ecl::ParseError>),
+        "the parse error is the cause"
     );
 }
 

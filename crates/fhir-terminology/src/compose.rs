@@ -66,6 +66,45 @@ pub struct Compose {
     pub inactive: Option<bool>,
 }
 
+impl Compose {
+    /// Where the first filter on `property` whose value is `value` sits,
+    /// searching the includes before the excludes.
+    #[must_use]
+    pub fn filter_at(&self, property: &str, value: &str) -> Option<FilterAt> {
+        let find = |side: Side, rules: &[Include]| {
+            rules.iter().enumerate().find_map(|(rule, include)| {
+                include
+                    .filters
+                    .iter()
+                    .position(|filter| filter.property == property && filter.value == value)
+                    .map(|filter| FilterAt { side, rule, filter })
+            })
+        };
+        find(Side::Include, &self.include).or_else(|| find(Side::Exclude, &self.exclude))
+    }
+}
+
+/// Which list of `ValueSet.compose` a rule sits in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Side {
+    /// `compose.include`.
+    Include,
+    /// `compose.exclude`.
+    Exclude,
+}
+
+/// Where a filter sits in a compose: `compose.include[rule].filter[filter]`,
+/// or the same under `compose.exclude`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FilterAt {
+    /// The list the rule is in.
+    pub side: Side,
+    /// The index of the rule in that list.
+    pub rule: usize,
+    /// The index of the filter in the rule.
+    pub filter: usize,
+}
+
 /// The request-time controls of an expansion (`$expand` parameters).
 #[expect(
     clippy::struct_excessive_bools,

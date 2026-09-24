@@ -307,11 +307,8 @@ impl RxNormProvider {
 
     /// The concept a relationship filter value names: `CUI:[RXCUI]` or `AUI:[RXAUI]`.
     fn named(&self, filter: &Filter, value: &str) -> Result<Ordinal, ProviderError> {
-        let invalid = |reason: &str| ProviderError::InvalidFilterValue {
-            property: filter.property.clone(),
-            value: value.to_owned(),
-            reason: reason.to_owned(),
-        };
+        let invalid =
+            |reason: &str| ProviderError::invalid_filter_value(&filter.property, value, reason);
         match value.split_once(':') {
             Some(("CUI", rxcui)) => self
                 .store
@@ -483,10 +480,10 @@ impl CodeSystemProvider for RxNormProvider {
     fn implicit_value_set(&self, url: &str) -> Option<Result<Compose, ProviderError>> {
         let rest = url.strip_prefix(SYSTEM)?.strip_prefix("/vs")?;
         if !rest.is_empty() {
-            return Some(Err(ProviderError::MalformedImplicitValueSet {
-                url: url.to_owned(),
-                reason: String::from("RxNorm defines only `/vs`, all codes"),
-            }));
+            return Some(Err(ProviderError::malformed_implicit_value_set(
+                url,
+                "RxNorm defines only `/vs`, all codes",
+            )));
         }
         Some(Ok(Compose {
             include: vec![Include {

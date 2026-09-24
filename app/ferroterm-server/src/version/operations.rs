@@ -13,10 +13,10 @@ macro_rules! operations {
             use std::sync::Arc;
 
             use axum::body::Bytes;
-            use axum::extract::{Path as UrlPath, Query, State};
+            use axum::extract::{Path as UrlPath, Query, RawQuery, State};
             use axum::response::{IntoResponse, Response};
             use fhir_terminology::operations::{
-                Invocation, expand, lookup, subsumes, translate, validate_code,
+                Invocation, OperationError, expand, lookup, subsumes, translate, validate_code,
                 value_set_validate_code,
             };
             use fhir_terminology::valueset::render;
@@ -45,7 +45,7 @@ macro_rules! operations {
 
             use super::resources::{split_resources, split_supplied};
             use super::{map, parameters};
-            use crate::outcome::Failure;
+            use crate::outcome::{Failure, Origin};
             use crate::scope::{Scope, scope_of};
             use crate::state::AppState;
             use crate::wire::{Wire, without_format};
@@ -236,11 +236,42 @@ macro_rules! operations {
                 headers: &HeaderMap,
                 body: &Bytes,
             ) -> Result<(Scope, Parameters), Failure> {
-                let (mut parameters, resources) =
-                    split_supplied(parameters::object_from_body(headers, body)?)?;
+                from_body_placed(state, operation, also, headers, body)
+                    .map(|(scope, parameters, _)| (scope, parameters))
+            }
+
+            /// A `POST` invocation, with where the body wrote each parameter.
+            ///
+            /// The body's own order is taken before its `tx-resource`s are split off,
+            /// so a refusal names a parameter by the index the client sent it at.
+            fn from_body_placed(
+                state: &AppState,
+                operation: &fhir_types::operation::Operation,
+                also: &[&str],
+                headers: &HeaderMap,
+                body: &Bytes,
+            ) -> Result<(Scope, Parameters, Origin), Failure> {
+                let object = parameters::object_from_body(headers, body)?;
+                let origin = Origin::of_body(&object);
+                let (mut parameters, resources) = split_supplied(object)?;
                 parameters::refuse_undeclared(operation, also, &parameters)?;
                 parameters::apply_accept_language(operation, headers, &mut parameters);
-                Ok((scope_of(state, super::metadata::FHIR_VERSION, headers, resources)?, parameters))
+                Ok((
+                    scope_of(state, super::metadata::FHIR_VERSION, headers, resources)?,
+                    parameters,
+                    origin,
+                ))
+            }
+
+            /// The failure of a value set operation: a refused value pointed at
+            /// where `origin` shows the request wrote it, anything else as the
+            /// request's scope answers it.
+            fn value_set_refused(scope: &Scope, error: OperationError, origin: &Origin) -> Failure {
+                if error.refused().is_some() {
+                    Failure::placed(error, origin)
+                } else {
+                    scope.refused(error)
+                }
             }
 
             fn run_lookup(
@@ -298,6 +329,7 @@ macro_rules! operations {
                 scope: &Scope,
                 instance: Option<&Bound>,
                 parameters: &Parameters,
+                origin: &Origin,
             ) -> Handled {
                 let request = ValueSetExpandRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
@@ -314,8 +346,8 @@ macro_rules! operations {
                     input.url = Some(bound.url.clone());
                     input.value_set_version.clone_from(&bound.version);
                 }
-                let outcome =
-                    expand::expand(&scope.sources(), &input).map_err(|e| scope.refused(e))?;
+                let outcome = expand::expand(&scope.sources(), &input)
+                    .map_err(|e| value_set_refused(scope, e, origin))?;
                 Ok(Answer::ValueSet(Box::new(render::$fhir::expansion(
                     &outcome,
                 ))))
@@ -325,9 +357,10 @@ macro_rules! operations {
                 scope: &Scope,
                 instance: Option<&Bound>,
                 parameters: &Parameters,
+                origin: &Origin,
             ) -> Handled {
                 Ok(Answer::Parameters(Box::new(value_set_validation(
-                    scope, instance, parameters,
+                    scope, instance, parameters, origin,
                 )?)))
             }
 
@@ -336,6 +369,7 @@ macro_rules! operations {
                 scope: &Scope,
                 instance: Option<&Bound>,
                 parameters: &Parameters,
+                origin: &Origin,
             ) -> Result<Parameters, Failure> {
                 let request = ValueSetValidateCodeRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
@@ -354,7 +388,7 @@ macro_rules! operations {
                 }
                 let validation =
                     value_set_validate_code::validate_code(&scope.sources(), &input)
-                        .map_err(|e| scope.refused(e))?;
+                        .map_err(|e| value_set_refused(scope, e, origin))?;
                 Ok(map::value_set_validation_parameters(&validation))
             }
 
@@ -404,7 +438,7 @@ macro_rules! operations {
                 let resource = match own(validation) {
                     Ok(own) => {
                         let merged = merge(shared, own);
-                        match value_set_validation(scope, None, &merged) {
+                        match value_set_validation(scope, None, &merged, &Origin::Unplaced) {
                             Ok(answered) => Some(Resource::Parameters(Box::new(answered))),
                             Err(failure) => outcome_resource(&failure),
                         }
@@ -657,9 +691,9 @@ macro_rules! operations {
                     Which::Lookup => run_lookup(&scope, &invocation, &parameters),
                     Which::ValidateCode => run_validate_code(&scope, &invocation, &parameters),
                     Which::Subsumes => run_subsumes(&scope, &invocation, &parameters),
-                    Which::Expand => run_expand(&scope, bound.as_ref(), &parameters),
+                    Which::Expand => run_expand(&scope, bound.as_ref(), &parameters, &Origin::Unplaced),
                     Which::ValueSetValidateCode => {
-                        run_value_set_validate_code(&scope, bound.as_ref(), &parameters)
+                        run_value_set_validate_code(&scope, bound.as_ref(), &parameters, &Origin::Unplaced)
                     }
                     Which::Translate => run_translate(&scope, bound.as_ref(), &parameters),
                 }
@@ -890,15 +924,17 @@ macro_rules! operations {
             pub async fn expand_get(
                 State(state): State<Arc<AppState>>,
                 headers: HeaderMap,
+                RawQuery(raw): RawQuery,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
                 let (wire, query) = match negotiated(&headers, &query) {
                     Ok(negotiated) => negotiated,
                     Err(failure) => return failure.into_response(),
                 };
+                let origin = Origin::Query(raw.unwrap_or_default());
                 finish(
                     from_query(&state, &VALUE_SET_EXPAND, &headers, &query)
-                        .and_then(|(scope, p)| run_expand(&scope, None, &p)), wire)
+                        .and_then(|(scope, p)| run_expand(&scope, None, &p, &origin)), wire)
             }
 
             /// `POST /ValueSet/$expand`.
@@ -913,8 +949,8 @@ macro_rules! operations {
                     Err(failure) => return failure.into_response(),
                 };
                 finish(
-                    from_body(&state, &VALUE_SET_EXPAND, &headers, &body)
-                        .and_then(|(scope, p)| run_expand(&scope, None, &p)), wire)
+                    from_body_placed(&state, &VALUE_SET_EXPAND, &[], &headers, &body)
+                        .and_then(|(scope, p, origin)| run_expand(&scope, None, &p, &origin)), wire)
             }
 
             /// `GET /ValueSet/{id}/$expand`.
@@ -931,7 +967,7 @@ macro_rules! operations {
                 finish(
                     value_set_instance(&state, &id).and_then(|bound| {
                         from_query(&state, &VALUE_SET_EXPAND, &headers, &query)
-                            .and_then(|(scope, p)| run_expand(&scope, Some(&bound), &p))
+                            .and_then(|(scope, p)| run_expand(&scope, Some(&bound), &p, &Origin::Unplaced))
                     }),
                     wire,
                 )
@@ -952,7 +988,7 @@ macro_rules! operations {
                 finish(
                     value_set_instance(&state, &id).and_then(|bound| {
                         from_body(&state, &VALUE_SET_EXPAND, &headers, &body)
-                            .and_then(|(scope, p)| run_expand(&scope, Some(&bound), &p))
+                            .and_then(|(scope, p)| run_expand(&scope, Some(&bound), &p, &Origin::Unplaced))
                     }),
                     wire,
                 )
@@ -962,15 +998,20 @@ macro_rules! operations {
             pub async fn value_set_validate_code_get(
                 State(state): State<Arc<AppState>>,
                 headers: HeaderMap,
+                RawQuery(raw): RawQuery,
                 Query(query): Query<Vec<(String, String)>>,
             ) -> Response {
                 let (wire, query) = match negotiated(&headers, &query) {
                     Ok(negotiated) => negotiated,
                     Err(failure) => return failure.into_response(),
                 };
+                let origin = Origin::Query(raw.unwrap_or_default());
                 finish(
-                    from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, None, &p)), wire)
+                    from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query).and_then(
+                        |(scope, p)| run_value_set_validate_code(&scope, None, &p, &origin),
+                    ),
+                    wire,
+                )
             }
 
             /// `POST /ValueSet/$validate-code`.
@@ -985,8 +1026,11 @@ macro_rules! operations {
                     Err(failure) => return failure.into_response(),
                 };
                 finish(
-                    from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, None, &p)), wire)
+                    from_body_placed(&state, &VALUE_SET_VALIDATE_CODE, &[], &headers, &body).and_then(
+                        |(scope, p, origin)| run_value_set_validate_code(&scope, None, &p, &origin),
+                    ),
+                    wire,
+                )
             }
 
             /// `GET /ValueSet/{id}/$validate-code`.
@@ -1003,7 +1047,7 @@ macro_rules! operations {
                 finish(
                     value_set_instance(&state, &id).and_then(|bound| {
                         from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query).and_then(
-                            |(scope, p)| run_value_set_validate_code(&scope, Some(&bound), &p),
+                            |(scope, p)| run_value_set_validate_code(&scope, Some(&bound), &p, &Origin::Unplaced),
                         )
                     }),
                     wire,
@@ -1025,7 +1069,7 @@ macro_rules! operations {
                 finish(
                     value_set_instance(&state, &id).and_then(|bound| {
                         from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body).and_then(
-                            |(scope, p)| run_value_set_validate_code(&scope, Some(&bound), &p),
+                            |(scope, p)| run_value_set_validate_code(&scope, Some(&bound), &p, &Origin::Unplaced),
                         )
                     }),
                     wire,

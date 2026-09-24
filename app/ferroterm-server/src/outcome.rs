@@ -1,7 +1,9 @@
 //! `OperationOutcome` responses
-//! (<https://hl7.org/fhir/R4B/operationoutcome.html>). R4, R4B, and R5 declare
-//! the same `issue` elements a failure fills, so one render serves every
-//! version.
+//! (<https://hl7.org/fhir/R4B/operationoutcome.html>).
+//!
+//! R4, R4B, and R5 declare the same `issue` elements a failure fills. R6 drops
+//! `issue.location` and adds `success` to the severities; a failure never sets
+//! `location` and is always an `error`, so one render serves every version.
 //!
 //! Every failure a client can cause answers with an `OperationOutcome` whose
 //! issue carries `severity`, `code` from the issue-type value set, and
@@ -9,10 +11,13 @@
 
 use axum::body::Body;
 use axum::response::{IntoResponse, Response};
-use fhir_terminology::operations::OperationError;
+use fhir_terminology::compose::Side;
 use fhir_terminology::operations::value_set_validate_code::TX_ISSUE_TYPE;
+use fhir_terminology::operations::{OperationError, Refused, RefusedInput};
+use fhir_terminology::position::{column, encoded_offset};
 use fhir_types::r4b::codeable_concept::CodeableConcept;
 use fhir_types::r4b::coding::Coding;
+use fhir_types::r4b::extension::{Extension, ExtensionValue};
 use fhir_types::r4b::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
 use http::StatusCode;
 use http::header::CONTENT_TYPE;
@@ -33,6 +38,143 @@ pub struct Failure {
     pub kind: Option<&'static str>,
     /// The path of the element at fault, for `issue.expression`.
     pub expression: Option<String>,
+    /// The 1-based column in the value `expression` names where the fault is,
+    /// for `operationoutcome-issue-col` (on line 1).
+    pub column: Option<usize>,
+}
+
+/// The `operationoutcome-issue-line` extension
+/// (<https://hl7.org/fhir/extensions/StructureDefinition-operationoutcome-issue-line.html>).
+pub const ISSUE_LINE_URL: &str =
+    "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line";
+
+/// The `operationoutcome-issue-col` extension
+/// (<https://hl7.org/fhir/extensions/StructureDefinition-operationoutcome-issue-col.html>).
+pub const ISSUE_COL_URL: &str =
+    "http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col";
+
+/// Where a request wrote its inputs, so a refusal can point into them.
+///
+/// No specification governs this: our own design.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum Origin {
+    /// The query string, exactly as the client sent it.
+    Query(String),
+    /// A `Parameters` body: the name of each parameter, in the order the body
+    /// carried them.
+    Body(Vec<Option<String>>),
+    /// Inputs no expression can name: an instance-level invocation, whose
+    /// value set is the instance, or an entry of a batch.
+    #[default]
+    Unplaced,
+}
+
+impl Origin {
+    /// The `Parameters` body of `object`, by the names of its parameters.
+    #[must_use]
+    pub fn of_body(object: &fhir_types::codec::Object) -> Self {
+        let names = match object.get("parameter") {
+            Some(fhir_types::codec::Value::Array(sent)) => sent
+                .iter()
+                .map(|parameter| {
+                    parameter
+                        .get("name")
+                        .and_then(fhir_types::codec::Value::as_str)
+                        .map(str::to_owned)
+                })
+                .collect(),
+            _ => Vec::new(),
+        };
+        Self::Body(names)
+    }
+
+    /// The `issue.expression` naming where the request wrote `refused`, and
+    /// the column of its position there.
+    ///
+    /// The paths are the restricted `FHIRPath` an `issue.expression` is written
+    /// in, and `http.url` is its form for a query parameter
+    /// (<https://hl7.org/fhir/R4B/operationoutcome.html#expression>,
+    /// <https://hl7.org/fhir/R4B/fhirpath.html#simple>).
+    fn point(&self, refused: &Refused) -> Option<(String, Option<usize>)> {
+        let at = |text: &str, offset: Option<usize>| offset.and_then(|offset| column(text, offset));
+        match (&refused.input, self) {
+            (RefusedInput::Filter(filter), Self::Body(names)) => {
+                let index = Self::index(names, "valueSet")?;
+                let side = match filter.side {
+                    Side::Include => "include",
+                    Side::Exclude => "exclude",
+                };
+                Some((
+                    format!(
+                        "Parameters.parameter[{index}].resource.compose.{side}[{}].filter[{}].value",
+                        filter.rule, filter.filter
+                    ),
+                    at(&refused.text, refused.position),
+                ))
+            }
+            (RefusedInput::Url, Self::Body(names)) => Some((
+                format!(
+                    "Parameters.parameter[{}].valueUri",
+                    Self::index(names, "url")?
+                ),
+                at(&refused.text, refused.position),
+            )),
+            (RefusedInput::Url, Self::Query(query)) => {
+                let sent = query_value(query, "url")?;
+                let offset = refused
+                    .position
+                    .and_then(|offset| encoded_offset(sent, offset));
+                Some((String::from("http.url"), at(sent, offset)))
+            }
+            (RefusedInput::Filter(_), Self::Query(_)) | (_, Self::Unplaced) => None,
+        }
+    }
+
+    /// The index of the first parameter called `name`.
+    fn index(names: &[Option<String>], name: &str) -> Option<usize> {
+        names.iter().position(|sent| sent.as_deref() == Some(name))
+    }
+}
+
+/// The value of the first query parameter called `name`, still encoded as the
+/// client sent it.
+fn query_value<'a>(query: &'a str, name: &str) -> Option<&'a str> {
+    query.split('&').find_map(|pair| {
+        let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
+        let decoded = form_decoded(key)?;
+        (decoded == name).then_some(value)
+    })
+}
+
+/// A query parameter name decoded as `application/x-www-form-urlencoded`;
+/// `None` when it is not UTF-8.
+fn form_decoded(text: &str) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut index = 0_usize;
+    while let Some(&byte) = bytes.get(index) {
+        let hex = index
+            .checked_add(1)
+            .zip(index.checked_add(3))
+            .and_then(|(start, end)| bytes.get(start..end))
+            .and_then(|hex| std::str::from_utf8(hex).ok())
+            .and_then(|hex| u8::from_str_radix(hex, 16).ok());
+        match (byte, hex) {
+            (b'%', Some(decoded)) => {
+                out.push(decoded);
+                index = index.checked_add(3)?;
+            }
+            (b'+', _) => {
+                out.push(b' ');
+                index = index.checked_add(1)?;
+            }
+            _ => {
+                out.push(byte);
+                index = index.checked_add(1)?;
+            }
+        }
+    }
+    String::from_utf8(out).ok()
 }
 
 impl Failure {
@@ -45,7 +187,21 @@ impl Failure {
             diagnostics: diagnostics.into(),
             kind: None,
             expression: None,
+            column: None,
         }
+    }
+
+    /// The failure of `error`, pointing at the value it refused where
+    /// `origin` shows the request wrote it.
+    #[must_use]
+    pub fn placed(error: OperationError, origin: &Origin) -> Self {
+        let pointed = error.refused().and_then(|refused| origin.point(refused));
+        let mut failure = Self::from(error);
+        if let Some((expression, column)) = pointed {
+            failure.expression = Some(expression);
+            failure.column = column;
+        }
+        failure
     }
 
     /// This failure with a `tx-issue-type` coding.
@@ -87,11 +243,31 @@ impl Failure {
                     .iter()
                     .map(|expression| expression.as_str().into())
                     .collect(),
+                extension: self.column.map(position).unwrap_or_default(),
                 ..Default::default()
             }],
             ..Default::default()
         }
     }
+}
+
+/// The line and column of a fault inside the value `issue.expression` names.
+// NOTE: <https://hl7.org/fhir/extensions/StructureDefinition-operationoutcome-issue-col.html> and <https://hl7.org/fhir/extensions/StructureDefinition-operationoutcome-issue-line.html>
+// fix no base or unit, so this is our own design: an expression constraint is line 1, and the column is 1-based in
+// Unicode scalar values into the value `expression` names (for `http.url`, the query value as the client sent it).
+fn position(column: usize) -> Vec<Extension> {
+    vec![
+        Extension {
+            url: ISSUE_LINE_URL.to_owned(),
+            value: Some(ExtensionValue::Integer(1.into())),
+            ..Default::default()
+        },
+        Extension {
+            url: ISSUE_COL_URL.to_owned(),
+            value: Some(ExtensionValue::String(column.to_string().as_str().into())),
+            ..Default::default()
+        },
+    ]
 }
 
 fn tx_issue_coding(kind: &str) -> Coding {
@@ -152,4 +328,26 @@ pub async fn not_found(headers: http::HeaderMap) -> Response {
         "no such resource or operation on this server",
     )
     .respond(wire)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::query_value;
+
+    #[test]
+    fn a_query_value_is_found_by_its_decoded_name_and_kept_as_sent() {
+        let query = "count=10&u%72l=a%2520b+c&url=second";
+        assert_eq!(
+            query_value(query, "url"),
+            Some("a%2520b+c"),
+            "the first `url`, its name decoded and its value untouched"
+        );
+        assert_eq!(query_value(query, "count"), Some("10"));
+        assert_eq!(
+            query_value("flag&url=x", "flag"),
+            Some(""),
+            "a bare name has an empty value"
+        );
+        assert_eq!(query_value(query, "valueSet"), None);
+    }
 }

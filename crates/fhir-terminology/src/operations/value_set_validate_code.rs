@@ -227,16 +227,19 @@ fn resolver_for<'a>(
 
 /// What one `validate_code` call resolves once, for every phase below to read.
 ///
-/// These five are invariant for a whole call: the same sources, the same value
-/// set, the same resolver over it, the same version negotiation, and the same
-/// policy. Threading them one by one is what made this file's argument lists
-/// what they are.
+/// These are invariant for a whole call: the same sources, the same value
+/// set and whether the request carried it inline, the same resolver over it, the
+/// same version negotiation, and the same policy. Threading them one by one
+/// is what made this file's argument lists what they are.
 #[derive(Debug, Clone, Copy)]
 struct Context<'a> {
     /// The registries and stores this call reads.
     sources: &'a Sources<'a>,
     /// The value set being validated against.
     model: &'a ValueSetModel,
+    /// Whether the request carried the value set inline, so a refused filter
+    /// value is one of its own.
+    inline: bool,
     /// The resolver the model's references are answered on.
     resolver: &'a Resolver<'a>,
     /// The version negotiation the request asked for.
@@ -353,6 +356,7 @@ pub fn validate_code(
     let context = &Context {
         sources,
         model: &model,
+        inline: input.inline_value_set.is_some(),
         resolver: &resolver,
         negotiation: &negotiation,
         policy: &policy,
@@ -717,7 +721,12 @@ fn check(context: &Context<'_>, subject: &Subject<'_>) -> Result<Validation, Ope
         Err(crate::compose::ComposeError::UnknownValueSet(url)) => {
             return Ok(unknown_import(&system, version, &url, &located.code));
         }
-        Err(error) => return Err(error.into()),
+        Err(error) => {
+            return Err(OperationError::of_compose(
+                error,
+                context.inline.then_some(&model.compose),
+            ));
+        }
     };
     let Some(item) = contained else {
         let mut validation = outside_value_set(
@@ -1639,7 +1648,12 @@ fn infer_by_membership(
         match contained {
             Ok(Some(_)) => matches.push(system.to_owned()),
             Ok(None) | Err(crate::compose::ComposeError::UnknownValueSet(_)) => {}
-            Err(error) => return Err(error.into()),
+            Err(error) => {
+                return Err(OperationError::of_compose(
+                    error,
+                    context.inline.then_some(&model.compose),
+                ));
+            }
         }
     }
     Ok(matches)

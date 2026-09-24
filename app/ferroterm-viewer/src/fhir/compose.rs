@@ -292,26 +292,52 @@ impl Draft {
         }
     }
 
-    /// The filter value a refusal points into, and where.
+    /// The filter value a refusal points into, and the column to mark.
     ///
-    /// The server names the value it refused and states the position in its
-    /// own words, so this finds the filter that value belongs to and answers
-    /// what to mark. A refusal about anything else answers `None` and the
-    /// screen marks nothing; the outcome is rendered verbatim either way.
-    pub(crate) fn marked_value(&self, diagnostic: &str) -> Option<(String, String, u32)> {
-        let position = position_in(diagnostic)?;
-        self.clauses.iter().find_map(|clause| {
-            clause.filters.iter().find_map(|filter| {
-                let value = filter.value.trim();
-                (!value.is_empty() && diagnostic.contains(value)).then(|| {
-                    (
-                        format!("{} {}", filter.property, filter.op),
-                        filter.value.clone(),
-                        position,
-                    )
-                })
-            })
-        })
+    /// The server names the filter by `issue.expression`, a path into the
+    /// `Parameters` the preview sent
+    /// (<https://hl7.org/fhir/R4B/operationoutcome.html#expression>), and the
+    /// column by the `operationoutcome-issue-col` extension. The path indexes
+    /// the compose as [`Draft::resource`] wrote it, so this walks the clauses
+    /// and filters the same way to find the row. A refusal about anything
+    /// else answers `None` and the screen marks nothing; the outcome is
+    /// rendered verbatim either way.
+    pub(crate) fn marked_value(
+        &self,
+        expression: &str,
+        column: u32,
+    ) -> Option<(String, String, u32)> {
+        // NOTE: no FHIR spec governs this, our own design: a path of any other shape is a refusal
+        // about another input, which has no row to mark.
+        let (_, path) = expression.split_once("].resource.compose.")?;
+        let (side, rest) = path.split_once('[')?;
+        let included = match side {
+            "include" => true,
+            "exclude" => false,
+            _ => return None,
+        };
+        let (rule, rest) = rest.split_once("].filter[")?;
+        let (filter, rest) = rest.split_once(']')?;
+        if rest != ".value" {
+            return None;
+        }
+        let rule: usize = rule.parse().ok()?;
+        let filter: usize = filter.parse().ok()?;
+        let clause = self
+            .clauses
+            .iter()
+            .filter(|clause| clause.included == included)
+            .nth(rule)?;
+        let row = clause
+            .filters
+            .iter()
+            .filter(|row| !row.property.trim().is_empty())
+            .nth(filter)?;
+        Some((
+            format!("{} {}", row.property, row.op),
+            row.value.trim().to_owned(),
+            column,
+        ))
     }
 
     /// Every invariant any clause breaks, in the order the clauses are drawn.
@@ -618,53 +644,20 @@ impl Clause {
     }
 }
 
-/// The byte offset the server's own diagnostic points at, when it states one.
+/// `value` split around the character at the 1-based `column`, for marking it.
 ///
-/// No FHIR element carries a character position inside an operation input:
-/// `OperationOutcome.issue.expression` is a `FHIRPath` into the resource, not
-/// an offset into a value (<https://hl7.org/fhir/R4B/operationoutcome.html>).
-/// So this is our own design: the server states the position in its own words,
-/// and the screen reads it back to mark the character. The outcome is rendered
-/// verbatim beside the mark either way, and a diagnostic stating no position
-/// marks nothing.
-// TODO(#656): read the position from an `OperationOutcome` element instead,
-// once the server states one, and drop the scan of its prose.
-fn position_in(diagnostic: &str) -> Option<u32> {
-    let mut words = diagnostic.split_whitespace();
-    while let Some(word) = words.next() {
-        if word == "byte" {
-            let digits: String = words
-                .next()?
-                .chars()
-                .take_while(char::is_ascii_digit)
-                .collect();
-            return digits.parse().ok();
-        }
-    }
-    None
-}
-
-/// `value` split around the character at `position`, for marking it.
-///
-/// The offset is a byte offset into the value, so the split lands on the
-/// character boundary at or before it and the marked run is one whole
-/// character. An offset past the end marks the end, which is where a
-/// diagnostic about a truncated value points.
-pub(crate) fn mark(value: &str, position: u32) -> (String, String, String) {
-    let offset = usize::try_from(position).unwrap_or(usize::MAX);
-    if offset >= value.len() {
-        return (value.to_owned(), String::from(" "), String::new());
-    }
-    let start = value
-        .char_indices()
-        .map(|(index, _)| index)
-        .take_while(|index| *index <= offset)
-        .last()
-        .unwrap_or_default();
-    let (before, rest) = value.split_at_checked(start).unwrap_or((value, ""));
-    let mut characters = rest.chars();
+/// The server counts the column in Unicode scalar values, so the marked run is
+/// one whole character. A column past the end marks the end, which is where a
+/// refusal of a truncated value points.
+pub(crate) fn mark(value: &str, column: u32) -> (String, String, String) {
+    let skipped = usize::try_from(column.saturating_sub(1)).unwrap_or(usize::MAX);
+    let mut characters = value.chars();
+    let before: String = characters.by_ref().take(skipped).collect();
     let at: String = characters.by_ref().take(1).collect();
-    (before.to_owned(), at, characters.collect())
+    if at.is_empty() {
+        return (before, String::from(" "), String::new());
+    }
+    (before, at, characters.collect())
 }
 
 /// The entry of `list` in `held` whose `key` element is `value`.
@@ -1189,39 +1182,89 @@ mod tests {
         {
             row.value = String::from("<<73211009 OR");
         }
-        // The shape the server refuses a filter value in, with the parser's
-        // own byte offset in its words.
-        let said = "filter `constraint` value `<<73211009 OR` is invalid: expected a focus concept at byte 13, found the end of the expression";
+        // The path the server names a refused filter value by, into the
+        // `Parameters` the preview sent, and the column it states.
+        let named = "Parameters.parameter[0].resource.compose.include[0].filter[0].value";
         assert_eq!(
-            draft.marked_value(said),
+            draft.marked_value(named, 14),
             Some((
                 String::from("constraint ="),
                 String::from("<<73211009 OR"),
-                13
+                14
             )),
             "the filter the server named is the one the screen marks"
         );
         assert_eq!(
-            draft.marked_value("code `x` is not in code system `y`"),
+            draft.marked_value("http.url", 3),
             None,
-            "a refusal that states no position marks nothing"
+            "a refusal about another input marks nothing"
         );
         assert_eq!(
-            draft.marked_value("filter `constraint` value `something else` is invalid: at byte 1"),
+            draft.marked_value(
+                "Parameters.parameter[0].resource.compose.include[0].filter[1].value",
+                1
+            ),
             None,
-            "and one naming another value marks nothing either"
+            "and one naming a filter the draft does not hold marks nothing either"
+        );
+        assert_eq!(
+            draft.marked_value(
+                "Parameters.parameter[0].resource.compose.exclude[0].filter[0].value",
+                1
+            ),
+            None,
+            "an exclude is counted apart from the includes"
+        );
+    }
+
+    #[test]
+    fn a_refusal_counts_the_filters_and_clauses_the_resource_sends() {
+        let (mut draft, key) = over("https://terminology.example/x");
+        // A row with no property is not sent, so it takes no index on the wire.
+        draft.add_filter(key, "", "=");
+        draft.add_filter(key, "constraint", "=");
+        let excluded = draft.add_clause(false);
+        draft.add_filter(excluded, "constraint", "=");
+        for (clause, value) in [(key, "<< 1 OR"), (excluded, "<< 2 OR")] {
+            if let Some(row) = draft
+                .clause_mut(clause)
+                .and_then(|clause| clause.filters.last_mut())
+            {
+                row.value = format!(" {value} ");
+            }
+        }
+        assert_eq!(
+            draft
+                .marked_value(
+                    "Parameters.parameter[0].resource.compose.include[0].filter[0].value",
+                    6
+                )
+                .map(|(_, value, _)| value),
+            Some(String::from("<< 1 OR")),
+            "the row without a property is skipped, and the value is the trimmed one sent"
+        );
+        assert_eq!(
+            draft
+                .marked_value(
+                    "Parameters.parameter[0].resource.compose.exclude[0].filter[0].value",
+                    6
+                )
+                .map(|(_, value, _)| value),
+            Some(String::from("<< 2 OR")),
+            "the first exclude is `exclude[0]`"
         );
     }
 
     #[test]
     fn the_marked_character_is_one_whole_character() {
         assert_eq!(
-            mark("<<73211009", 2),
+            mark("<<73211009", 3),
             (
                 String::from("<<"),
                 String::from("7"),
                 String::from("3211009")
-            )
+            ),
+            "column 3 is the third character"
         );
         let multibyte = "<<73211009 |diabetes mellitus\u{2014}type 2|";
         let (before, at, after) = mark(multibyte, 30);
@@ -1230,30 +1273,20 @@ mod tests {
             multibyte,
             "the three parts are the value, whole"
         );
-        assert_eq!(at.chars().count(), 1, "one character is marked: `{at}`");
+        assert_eq!(
+            at, "\u{2014}",
+            "column 30 is the dash, counted in characters"
+        );
         let (before, at, after) = mark("<<7", 99);
-        assert_eq!(before, "<<7", "an offset past the end marks the end");
+        assert_eq!(before, "<<7", "a column past the end marks the end");
         assert_eq!(at, " ");
         assert!(after.is_empty());
-    }
-
-    #[test]
-    fn the_position_comes_from_the_server_s_own_diagnostic() {
+        let (before, at, _) = mark("<<7", 4);
         assert_eq!(
-            position_in(
-                "filter `constraint` value `x` is invalid: expected a focus concept at byte 17, found \"OR\""
-            ),
-            Some(17),
-            "the parser's own offset is what the mark sits on"
+            (before.as_str(), at.as_str()),
+            ("<<7", " "),
+            "the column after the last character is the end"
         );
-        assert_eq!(
-            position_in("the expression nests 41 deep at byte 8; the limit is 40"),
-            Some(8),
-            "a trailing separator does not make the number unreadable"
-        );
-        assert_eq!(position_in("code `x` is not in code system `y`"), None);
-        assert_eq!(position_in("failed at byte"), None);
-        assert_eq!(position_in("failed at byte nowhere"), None);
     }
 
     #[test]

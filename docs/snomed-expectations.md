@@ -223,6 +223,15 @@ which `.claude/rules/snomed-terminology.md` [S-ECL-4] requires:
    code `99999999999` is invalid: not a concept of the edition
 ```
 
+The malformed answer also states where the parser stopped as data. Its
+`issue.expression` names the input (`http.url` for the `url` query parameter,
+`Parameters.parameter[i].valueUri` in a body, and
+`Parameters.parameter[i].resource.compose.include[j].filter[k].value` for a
+filter of an inline value set). The `operationoutcome-issue-line` extension
+carries 1, and `operationoutcome-issue-col` carries the 1-based column,
+counted in characters into that value as the client sent it, so the
+percent-encoding of a query value counts.
+
 <a id="a5-detail"></a>**A5. Load a release package, serve it over an API.**
 Both editions were built offline by `ferroterm-build` from the owner's
 licensed RF2 releases and served read-only. The manifest records the edition,

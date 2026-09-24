@@ -192,7 +192,7 @@ fn the_provider_locates_describes_and_filters_expressions() {
             kg.concept,
             &filter("canonical", FilterOperator::Equal, "not a unit")
         ),
-        Err(ProviderError::InvalidFilterValue { .. })
+        Err(ProviderError::InvalidFilterValue(_))
     ));
     assert!(matches!(provider.all(), Err(ProviderError::NotEnumerable)));
     assert!(matches!(
