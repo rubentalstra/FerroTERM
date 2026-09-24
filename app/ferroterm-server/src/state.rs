@@ -35,7 +35,9 @@ use fhir_terminology::valueset::store::ValueSetStore;
 use fhir_terminology::versioned::Duplicate;
 
 use crate::config::Config;
-use crate::persistence::{Closure, Record, ResourceStore, ResourceType, StoreError};
+use crate::persistence::{
+    Closure, HistoryEntry, Method, Record, ResourceStore, ResourceType, StoreError,
+};
 use crate::scope::Caches;
 
 /// A failure to load the state.
@@ -1309,6 +1311,41 @@ impl AppState {
         Ok(store.version(resource_type, id, version_id)?)
     }
 
+    /// Every version of the persisted resources of `resource_type`, or of the
+    /// one with `id` when one is given, deletes included; empty when the
+    /// deployment persists nothing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PersistError::Store`] when the store cannot be read.
+    pub fn persisted_history(
+        &self,
+        resource_type: ResourceType,
+        id: Option<&str>,
+    ) -> Result<Vec<HistoryEntry>, PersistError> {
+        let Some(store) = self.store.as_ref() else {
+            return Ok(Vec::new());
+        };
+        Ok(store.history(resource_type, id)?)
+    }
+
+    /// Whether version `version_id` of the persisted `resource_type` with `id`
+    /// is a delete.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PersistError::NotConfigured`] when the deployment persists no
+    /// resources, and [`PersistError::Store`] when the store cannot be read.
+    pub fn persisted_is_delete(
+        &self,
+        resource_type: ResourceType,
+        id: &str,
+        version_id: u32,
+    ) -> Result<bool, PersistError> {
+        let store = self.store.as_ref().ok_or(PersistError::NotConfigured)?;
+        Ok(store.is_delete(resource_type, id, version_id)?)
+    }
+
     /// The closure table named `name`.
     ///
     /// # Errors
@@ -1335,7 +1372,10 @@ impl AppState {
     /// `meta.versionId` and replacing the served layer.
     ///
     /// `fhir_version` is the version the resource arrived in, so a later read
-    /// converts it exactly as the loader converts a resource from disk.
+    /// converts it exactly as the loader converts a resource from disk, and
+    /// `method` is the interaction that wrote it, which its history states.
+    /// The version counts on from the last one the store holds, a delete
+    /// included, so a resource written again after a delete keeps its history.
     ///
     /// # Errors
     ///
@@ -1351,6 +1391,7 @@ impl AppState {
         resource_type: ResourceType,
         id: &str,
         fhir_version: &str,
+        method: Method,
         mut resource: fhir_types::codec::Object,
     ) -> Result<Record, PersistError> {
         let store = self.store.as_ref().ok_or(PersistError::NotConfigured)?;
@@ -1377,10 +1418,9 @@ impl AppState {
             }
         }
         let key = (resource_type, id.to_owned());
-        let version_id = persisted
-            .records
-            .get(&key)
-            .map_or(1, |held| held.version_id.saturating_add(1));
+        let version_id = store
+            .latest_version(resource_type, id)?
+            .map_or(1, |latest| latest.saturating_add(1));
         let last_modified = fhir_terminology::clock::now().to_string();
         stamp(&mut resource, version_id, &last_modified);
         let record = Record {
@@ -1396,7 +1436,7 @@ impl AppState {
         let mut records = persisted.records.clone();
         records.insert(key, record.clone());
         let Layers { layer, served } = persisted_layers(&self.base, &self.core, &records)?;
-        store.put(&record)?;
+        store.put_by(&record, method)?;
         *persisted = Persisted {
             records,
             layer,

@@ -168,6 +168,8 @@ macro_rules! surface {
                         .put(store::code_system_update)
                         .delete(store::code_system_delete),
                 )
+                .route("/CodeSystem/_history", get(store::code_system_type_history))
+                .route("/CodeSystem/{id}/_history", get(store::code_system_history))
                 .route(
                     "/CodeSystem/{id}/_history/{version}",
                     get(store::code_system_version_read),
@@ -182,6 +184,8 @@ macro_rules! surface {
                         .put(store::value_set_update)
                         .delete(store::value_set_delete),
                 )
+                .route("/ValueSet/_history", get(store::value_set_type_history))
+                .route("/ValueSet/{id}/_history", get(store::value_set_history))
                 .route(
                     "/ValueSet/{id}/_history/{version}",
                     get(store::value_set_version_read),
@@ -196,6 +200,8 @@ macro_rules! surface {
                         .put(store::concept_map_update)
                         .delete(store::concept_map_delete),
                 )
+                .route("/ConceptMap/_history", get(store::concept_map_type_history))
+                .route("/ConceptMap/{id}/_history", get(store::concept_map_history))
                 .route(
                     "/ConceptMap/{id}/_history/{version}",
                     get(store::concept_map_version_read),

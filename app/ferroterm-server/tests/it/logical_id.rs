@@ -373,6 +373,7 @@ fn a_loaded_id_a_persisted_record_holds_refuses_the_load() {
             ferroterm_server::persistence::ResourceType::ValueSet,
             "held",
             "4.3.0",
+            ferroterm_server::persistence::Method::Put,
             object,
         )
         .expect("writes");

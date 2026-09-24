@@ -176,13 +176,31 @@ impl History {
     ///
     /// The server sends them most recent first
     /// (<https://hl7.org/fhir/R4B/http.html#history>), and each entry's
-    /// `request.method` names the interaction that made the version.
+    /// `request.method` names the interaction that made the version. An entry
+    /// with no resource, a delete, is keyed by the version its
+    /// `response.etag` names, where it names one.
     pub(crate) fn versions(&self) -> Vec<Version> {
         self.entry
             .iter()
             .enumerate()
             .map(|(position, entry)| {
                 let mut version = Version::of(entry.resource.clone(), position);
+                let stated = entry
+                    .resource
+                    .as_ref()
+                    .map(StoredResource::of)
+                    .and_then(|read| read.meta)
+                    .and_then(|meta| meta.version_id);
+                if stated.is_none()
+                    && let Some(etag) = entry
+                        .response
+                        .as_ref()
+                        .and_then(|response| response.etag.as_deref())
+                        .map(strong_tag_of)
+                        .filter(|tag| !tag.is_empty())
+                {
+                    etag.clone_into(&mut version.id);
+                }
                 version.method = entry
                     .request
                     .as_ref()
@@ -443,6 +461,28 @@ mod tests {
             "an entry with no resource still says when the server wrote it"
         );
         assert!(second.resource.is_none());
+    }
+
+    #[test]
+    fn a_delete_in_a_history_is_keyed_by_the_version_its_etag_names() {
+        let history: History = serde_json::from_str(
+            r#"{"resourceType":"Bundle","type":"history","total":2,"entry":[
+                 {"fullUrl":"https://tx.example.org/r4b/CodeSystem/colours",
+                  "request":{"method":"DELETE","url":"CodeSystem/colours"},
+                  "response":{"status":"204 No Content","etag":"W/\"3\"","lastModified":"2026-09-24T11:00:00Z"}},
+                 {"fullUrl":"https://tx.example.org/r4b/CodeSystem/colours",
+                  "resource":{"resourceType":"CodeSystem","id":"colours",
+                   "meta":{"versionId":"2","lastUpdated":"2026-09-24T10:00:00Z"}},
+                  "request":{"method":"PUT","url":"CodeSystem/colours"},
+                  "response":{"status":"200 OK","etag":"W/\"2\"","lastModified":"2026-09-24T10:00:00Z"}}]}"#,
+        )
+        .expect("the server's own history Bundle parses");
+        let ids: Vec<String> = history
+            .versions()
+            .into_iter()
+            .map(|version| version.id)
+            .collect();
+        assert_eq!(ids, ["3", "2"]);
     }
 
     #[test]
