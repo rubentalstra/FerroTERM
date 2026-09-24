@@ -188,36 +188,7 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
     };
 
     let expansion = previewing(&client, version, previewed, page);
-    let announcement = announcing(expansion);
-    // One live region carries every message the screen has, so a screen reader
-    // hears the count, the refusal, and the save in one place
-    // (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>). What an event wrote
-    // wins until the next preview is asked for, which clears it.
-    let said = move || {
-        let written = report.get();
-        if written.is_empty() {
-            announcement.get()
-        } else {
-            written
-        }
-    };
-
-    let heading = view! {
-        <Title text="Compose a value set" />
-        <h1 class=styles::PAGE_TITLE>"Compose a value set"</h1>
-        <p class=styles::LEAD>
-            "Draw in a published value set, add your own codes, and see what the selection holds."
-        </p>
-        <p
-            id=REPORT_ID
-            tabindex="-1"
-            aria-live="polite"
-            class=format!("mt-default {}", styles::MUTED)
-        >
-            {said}
-        </p>
-    }
-    .into_any();
+    let heading = heading(report, announcing(expansion));
 
     let editable = editable(id, writable);
     let versions = history_offer(VALUE_SET, id.into(), version);
@@ -252,6 +223,39 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
 /// not hold renders the server's own `OperationOutcome` instead of an empty
 /// form.
 type Reading = LocalResource<Option<Result<Value, FhirError>>>;
+
+/// The title, the lead, and the one live region every message lands in.
+///
+/// One live region carries every message the screen has, so a screen reader
+/// hears the count, the refusal, and the save in one place
+/// (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>). What an event wrote
+/// wins until the next preview is asked for, which clears it.
+fn heading(report: RwSignal<String>, announcement: Memo<String>) -> AnyView {
+    let said = move || {
+        let written = report.get();
+        if written.is_empty() {
+            announcement.get()
+        } else {
+            written
+        }
+    };
+    view! {
+        <Title text="Compose a value set" />
+        <h1 class=styles::PAGE_TITLE>"Compose a value set"</h1>
+        <p class=styles::LEAD>
+            "Draw in a published value set, add your own codes, and see what the selection holds."
+        </p>
+        <p
+            id=REPORT_ID
+            tabindex="-1"
+            aria-live="polite"
+            class=format!("mt-default {}", styles::MUTED)
+        >
+            {said}
+        </p>
+    }
+    .into_any()
+}
 
 /// Reads the `ValueSet` the address names, again after every save.
 fn reading(
