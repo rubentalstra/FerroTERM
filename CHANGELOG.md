@@ -386,6 +386,17 @@ fresh link reference.
 
 ### Fixed
 
+- **A persisted resource can no longer take the canonical of a FHIR core
+  resource** (#679). A create or update whose `url` and `version` a
+  `CodeSystem` or `ValueSet` of the FHIR core terminology carries, on any
+  served version, is refused with `409` and an `OperationOutcome` issue of
+  code `duplicate` naming the FHIR version whose core terminology holds it
+  (<https://hl7.org/fhir/R4B/resource.html#canonical>). Such a write used to
+  be stored and to answer for the core code system or value set on every
+  version, with nothing on the wire saying so. A store that already holds one
+  keeps the record, leaves it out of what the operations resolve, answers
+  from the core terminology, and logs a warning at startup naming the id.
+
 - **Two resources of one type can no longer carry one canonical** (#670). A
   create or update whose `url` and `version` another `CodeSystem`, `ValueSet`
   or `ConceptMap` of the same type already carries, persisted or loaded from
