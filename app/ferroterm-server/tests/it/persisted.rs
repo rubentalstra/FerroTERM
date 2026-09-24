@@ -753,3 +753,66 @@ async fn a_concept_map_written_as_r4b_leaves_the_r5_search_answering() {
     );
     assert!(entries_of(&body, "outcome").is_empty(), "{body}");
 }
+
+#[tokio::test]
+async fn the_instance_lists_are_sorted_by_id_across_loaded_and_persisted() {
+    let server = Server::start_persisting();
+    for (resource_type, body) in [
+        (
+            "ValueSet",
+            json!({"resourceType": "ValueSet", "url": COLOUR_SET, "status": "active"}),
+        ),
+        (
+            "ConceptMap",
+            json!({
+                "resourceType": "ConceptMap",
+                "url": "http://ferroterm.test/ConceptMap/sorted",
+                "status": "active"
+            }),
+        ),
+    ] {
+        // An id that sorts before every loaded one and one that sorts after.
+        for id in ["000-first", "zzz-last"] {
+            let mut written = body.clone();
+            written["version"] = json!(id);
+            let response = server
+                .put(&format!("/r4b/{resource_type}/{id}"), &written)
+                .await;
+            assert_eq!(
+                response.status(),
+                StatusCode::CREATED,
+                "{resource_type}/{id}"
+            );
+        }
+    }
+    let state = server.state();
+    let value_sets: Vec<String> = state
+        .value_set_instances()
+        .into_iter()
+        .map(|(id, _, _)| id)
+        .collect();
+    let concept_maps: Vec<String> = state
+        .concept_map_instances()
+        .into_iter()
+        .map(|(id, _, _)| id)
+        .collect();
+    assert!(
+        value_sets.len() > 2,
+        "the loaded value sets are in the list too: {value_sets:?}"
+    );
+    for (resource_type, ids) in [("ValueSet", value_sets), ("ConceptMap", concept_maps)] {
+        let mut sorted = ids.clone();
+        sorted.sort();
+        assert_eq!(ids, sorted, "{resource_type}: the list is sorted by id");
+        assert_eq!(
+            ids.first().map(String::as_str),
+            Some("000-first"),
+            "{resource_type}"
+        );
+        assert_eq!(
+            ids.last().map(String::as_str),
+            Some("zzz-last"),
+            "{resource_type}"
+        );
+    }
+}
