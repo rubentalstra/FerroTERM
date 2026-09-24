@@ -200,6 +200,31 @@ here changes what another reader sees.
 
 ![The About screen, with the version comparison open and the evidence and settings panes below it](img/viewer/about.png)
 
+### Editing a concept map
+
+Sign in, and `/ui/editor/conceptmap` authors a local `ConceptMap`: its
+canonical, version and status, the value sets that scope it, and one group per
+pair of systems with the codes it maps between them. Both sides of every
+mapping are picked by searching the system the group names, so a code arrives
+with the display your server gave it.
+
+The screen writes the elements the FHIR version you are on defines. On `/r4`
+and `/r4b` that is `source[x]`, `target[x]` and `equivalence`; on `/r5` and
+`/r6` it is `sourceScope[x]`, `targetScope[x]`, `relationship` and `noMap`. The
+relationship control offers whatever your server expands that version's own
+value set to, so nothing about the codes is compiled into the viewer.
+
+**Preview before you save.** Each code carries a control that runs
+`ConceptMap/$translate` with the map on screen sent inline, so you see what the
+mapping does before anything is written. A server that does not accept a map
+sent that way makes the preview fall back to the saved map, and the panel says
+so.
+
+Saving sends the whole resource with `If-Match`. If someone changed the map
+since you opened it, the server answers `412`, the screen says so in its own
+words and offers to reload. A map your deployment loaded from a file opens the
+same screen read-only, because the REST API is not managing it.
+
 ## Signing in
 
 The viewer is read-only until you configure an identity provider. Set

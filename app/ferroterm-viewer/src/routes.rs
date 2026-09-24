@@ -56,6 +56,10 @@ pub(crate) const CALLBACK_PATH: &str = "callback";
 #[cfg(feature = "editor")]
 pub(crate) const CODE_SYSTEM_EDITOR_PATH: &str = "codesystem";
 
+/// The concept map editor's path below the base, in the editor bundle.
+#[cfg(feature = "editor")]
+pub(crate) const CONCEPT_MAP_EDITOR_PATH: &str = "conceptmap";
+
 /// Where the server mounts the editor bundle, for the reader bundle to link to.
 ///
 /// It is a whole address rather than a route of this bundle: the two bundles
@@ -192,6 +196,8 @@ pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
         Some(CODE_SYSTEM_EDITOR_PATH) => Some(CODE_SYSTEM_EDITOR_PATH),
         #[cfg(feature = "editor")]
         Some(COMPOSE_PATH) => Some(COMPOSE_PATH),
+        #[cfg(feature = "editor")]
+        Some(CONCEPT_MAP_EDITOR_PATH) => Some(CONCEPT_MAP_EDITOR_PATH),
         Some(CONCEPT_MAPS_PATH) => Some(CONCEPT_MAPS_PATH),
         Some(TRANSLATE_PATH) => Some(TRANSLATE_PATH),
         // The command bar is on every screen rather than in the sidebar, and

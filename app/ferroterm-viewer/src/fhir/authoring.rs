@@ -44,11 +44,19 @@ impl AuthoredSearch {
     /// (<https://hl7.org/fhir/R4B/http.html#search>), so an entry declaring
     /// another type is passed over rather than read as a code system.
     pub(crate) fn first(&self) -> Option<Value> {
+        self.first_of(CODE_SYSTEM)
+    }
+
+    /// The first resource of `resource_type` the answer carries.
+    ///
+    /// The envelope is the same whatever was searched for, so one reader
+    /// serves every authoring screen and each one names the type it drew.
+    pub(crate) fn first_of(&self, resource_type: &str) -> Option<Value> {
         self.entry
             .iter()
             .filter_map(|entry| entry.resource.as_ref())
             .find(|resource| {
-                resource.get("resourceType").and_then(Value::as_str) == Some(CODE_SYSTEM)
+                resource.get("resourceType").and_then(Value::as_str) == Some(resource_type)
             })
             .cloned()
     }
@@ -240,6 +248,158 @@ impl StoredValue {
     }
 }
 
+/// A `ConceptMap` as the editor reads it back off the server.
+///
+/// Every element that is spelled differently per version is read under both
+/// spellings, because a resource is read from whichever root the reader is
+/// looking through and the form holds one fact rather than one per release
+/// (<https://hl7.org/fhir/R4B/conceptmap.html>,
+/// <https://hl7.org/fhir/R5/conceptmap.html>). The resource itself travels
+/// beside this, so what the screen does not draw is still what is sent back.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub(crate) struct StoredConceptMap {
+    /// `id`, the logical id an update addresses.
+    #[serde(default)]
+    pub(crate) id: Option<String>,
+    /// `meta`, which carries the version an update states.
+    #[serde(default)]
+    pub(crate) meta: Option<Meta>,
+    /// `ConceptMap.url`, the canonical.
+    #[serde(default)]
+    pub(crate) url: Option<String>,
+    /// `ConceptMap.version`, the business version.
+    #[serde(default)]
+    pub(crate) version: Option<String>,
+    /// `ConceptMap.status`, a code of the publication status value set.
+    #[serde(default)]
+    pub(crate) status: Option<String>,
+    /// `sourceUri`, which R4 and R4B scope a map with.
+    #[serde(default, rename = "sourceUri")]
+    source_uri: Option<String>,
+    /// `sourceCanonical`, the other arm of that choice.
+    #[serde(default, rename = "sourceCanonical")]
+    source_canonical: Option<String>,
+    /// `sourceScopeUri`, which R5 and R6 scope a map with.
+    #[serde(default, rename = "sourceScopeUri")]
+    source_scope_uri: Option<String>,
+    /// `sourceScopeCanonical`, the other arm of that choice.
+    #[serde(default, rename = "sourceScopeCanonical")]
+    source_scope_canonical: Option<String>,
+    /// `targetUri`.
+    #[serde(default, rename = "targetUri")]
+    target_uri: Option<String>,
+    /// `targetCanonical`.
+    #[serde(default, rename = "targetCanonical")]
+    target_canonical: Option<String>,
+    /// `targetScopeUri`.
+    #[serde(default, rename = "targetScopeUri")]
+    target_scope_uri: Option<String>,
+    /// `targetScopeCanonical`.
+    #[serde(default, rename = "targetScopeCanonical")]
+    target_scope_canonical: Option<String>,
+    /// `ConceptMap.group`, the pairs of systems it maps between.
+    #[serde(default)]
+    pub(crate) group: Vec<StoredMapGroup>,
+}
+
+/// One `ConceptMap.group`.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub(crate) struct StoredMapGroup {
+    /// `group.source`, a `uri` in R4 and R4B and a `canonical` in R5 and R6.
+    #[serde(default)]
+    pub(crate) source: Option<String>,
+    /// `group.sourceVersion`, which R4 and R4B state beside the system.
+    #[serde(default, rename = "sourceVersion")]
+    pub(crate) source_version: Option<String>,
+    /// `group.target`.
+    #[serde(default)]
+    pub(crate) target: Option<String>,
+    /// `group.targetVersion`.
+    #[serde(default, rename = "targetVersion")]
+    pub(crate) target_version: Option<String>,
+    /// `group.element`, the codes this group maps.
+    #[serde(default)]
+    pub(crate) element: Vec<StoredMapElement>,
+}
+
+/// One `group.element`: a source code and what it maps to.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub(crate) struct StoredMapElement {
+    /// `element.code`.
+    #[serde(default)]
+    pub(crate) code: Option<String>,
+    /// `element.display`.
+    #[serde(default)]
+    pub(crate) display: Option<String>,
+    /// `element.noMap`, which R5 and R6 define and R4 and R4B do not.
+    #[serde(default, rename = "noMap")]
+    pub(crate) no_map: Option<bool>,
+    /// `element.target`.
+    #[serde(default)]
+    pub(crate) target: Vec<StoredMapTarget>,
+}
+
+/// One `element.target`: a code and its relationship to the source.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub(crate) struct StoredMapTarget {
+    /// `target.code`.
+    #[serde(default)]
+    pub(crate) code: Option<String>,
+    /// `target.display`.
+    #[serde(default)]
+    pub(crate) display: Option<String>,
+    /// `target.equivalence`, which R4 and R4B state the relation in.
+    #[serde(default)]
+    pub(crate) equivalence: Option<String>,
+    /// `target.relationship`, which R5 and R6 state it in.
+    #[serde(default)]
+    pub(crate) relationship: Option<String>,
+    /// `target.comment`.
+    #[serde(default)]
+    pub(crate) comment: Option<String>,
+}
+
+impl StoredConceptMap {
+    /// The elements the editor draws, read out of `resource`.
+    pub(crate) fn of(resource: &Value) -> Self {
+        serde_json::from_value(resource.clone()).unwrap_or_default()
+    }
+
+    /// The version an update of this resource states in `If-Match`.
+    pub(crate) fn version_id(&self) -> Option<String> {
+        self.meta.as_ref()?.version_id.clone()
+    }
+
+    /// What the map's source codes are drawn from, whichever arm stated it.
+    pub(crate) fn source_scope(&self) -> Option<&str> {
+        first_stated([
+            &self.source_scope_canonical,
+            &self.source_scope_uri,
+            &self.source_canonical,
+            &self.source_uri,
+        ])
+    }
+
+    /// What the map's target codes are drawn from, whichever arm stated it.
+    pub(crate) fn target_scope(&self) -> Option<&str> {
+        first_stated([
+            &self.target_scope_canonical,
+            &self.target_scope_uri,
+            &self.target_canonical,
+            &self.target_uri,
+        ])
+    }
+}
+
+/// The first of `arms` the resource stated, in the order given.
+///
+/// A `value[x]` choice carries at most one arm
+/// (<https://hl7.org/fhir/R4B/formats.html#choice>), so the order only decides
+/// which release's spelling is preferred when a document carries two.
+fn first_stated(arms: [&Option<String>; 4]) -> Option<&str> {
+    arms.into_iter().flatten().map(String::as_str).next()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,5 +462,73 @@ mod tests {
             let value: StoredValue = serde_json::from_str(json).expect("the arm parses");
             assert_eq!(value.text(), expected, "{json}");
         }
+    }
+
+    #[test]
+    fn a_searchset_answers_the_first_resource_of_the_type_that_was_searched_for() {
+        let answer: AuthoredSearch = serde_json::from_str(
+            r#"{"resourceType":"Bundle","entry":[
+                 {"resource":{"resourceType":"OperationOutcome"}},
+                 {"resource":{"resourceType":"ConceptMap","id":"m"}}]}"#,
+        )
+        .expect("the server's own answer parses");
+        assert_eq!(
+            answer
+                .first_of("ConceptMap")
+                .and_then(|held| held.get("id").and_then(Value::as_str).map(str::to_owned)),
+            Some(String::from("m"))
+        );
+        assert_eq!(
+            answer.first(),
+            None,
+            "a search for one type does not answer another"
+        );
+    }
+
+    /// A map's scope is `source[x]` on R4 and R4B and `sourceScope[x]` on R5
+    /// and R6 (<https://hl7.org/fhir/R4B/conceptmap.html>,
+    /// <https://hl7.org/fhir/R5/conceptmap.html>), so the reader takes
+    /// whichever arm the resource stated.
+    #[test]
+    fn a_stored_concept_map_reads_the_scope_under_either_release_s_spelling() {
+        let r4b: StoredConceptMap = serde_json::from_str(
+            r#"{"resourceType":"ConceptMap","id":"m","meta":{"versionId":"2"},
+                "url":"https://terminology.example/m","version":"1","status":"active",
+                "sourceUri":"https://terminology.example/vs-a",
+                "targetCanonical":"https://terminology.example/vs-b",
+                "group":[{"source":"https://terminology.example/a","sourceVersion":"1.0",
+                  "target":"https://terminology.example/b",
+                  "element":[{"code":"x","display":"Ex","target":[
+                    {"code":"y","display":"Why","equivalence":"wider","comment":"c"}]}]}]}"#,
+        )
+        .expect("the server's own answer parses");
+        assert_eq!(r4b.version_id().as_deref(), Some("2"));
+        assert_eq!(r4b.source_scope(), Some("https://terminology.example/vs-a"));
+        assert_eq!(r4b.target_scope(), Some("https://terminology.example/vs-b"));
+        let group = r4b.group.first().expect("the map carries one group");
+        assert_eq!(group.source_version.as_deref(), Some("1.0"));
+        let element = group.element.first().expect("the group carries one code");
+        assert_eq!(element.no_map, None, "R4B defines no `noMap`");
+        let target = element.target.first().expect("the code carries one target");
+        assert_eq!(target.equivalence.as_deref(), Some("wider"));
+        assert_eq!(target.relationship, None);
+
+        let r5: StoredConceptMap = serde_json::from_str(
+            r#"{"resourceType":"ConceptMap","url":"https://terminology.example/m","status":"draft",
+                "sourceScopeCanonical":"https://terminology.example/vs-a",
+                "group":[{"source":"https://terminology.example/a|1.0",
+                  "target":"https://terminology.example/b",
+                  "element":[{"code":"x","noMap":true}]}]}"#,
+        )
+        .expect("the server's own answer parses");
+        assert_eq!(r5.source_scope(), Some("https://terminology.example/vs-a"));
+        assert_eq!(r5.target_scope(), None);
+        assert_eq!(
+            r5.group
+                .first()
+                .and_then(|group| group.element.first())
+                .and_then(|element| element.no_map),
+            Some(true)
+        );
     }
 }

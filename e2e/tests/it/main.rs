@@ -27,6 +27,7 @@
 
 mod accessibility;
 mod composer;
+mod concept_map_editor;
 mod docs_shots;
 mod editor;
 mod harness;

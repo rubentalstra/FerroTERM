@@ -14,6 +14,9 @@ because what it records is true and the method is reusable.
 
 ## Confirmed here
 
+- [A select needs `selected` on every option](select-needs-selected-on-every-option.md):
+  `prop:value` alone shows the first option when the codes arrive after the
+  form is built; both are needed, and they cover different cases
 - [Unused dependency weight is already gone](unused-dep-weight-is-already-gone.md):
   LTO plus `--gc-sections` drops a crate the viewer never calls, so `chrono`
   and `icondata_ai` were 0 bytes of the bundle; refuse an unmeasured claim
@@ -113,3 +116,6 @@ repository. Nothing in it transfers.
 - [ScopedFuture tracks inside the async block](scopedfuture-tracks-inside-the-async-block.md), a signal read after an await re-subscribes the resource; read inputs first or get_untracked (#647)
 - [A form built inside the resource closure](form-built-inside-the-resource-closure.md), creating the form signal in the reading closure ties everything typed to every OTHER signal that closure reads (#634)
 - [A narrow model plus a whole-resource PUT](narrow-model-whole-resource-put.md), an update replaces the resource in full, so every element the form does not model is deleted silently (#634)
+- [A Memo source gates a resource refetch](memo-source-gates-a-resource-refetch.md), a Signal::derive over the form's draft refetches every per-row resource on every keystroke; a Memo does not (#636)
+- [prop:value moves the caret only on a change](prop-value-caret-only-moves-on-change.md), the HTML value setter compares first, so a pass-through driven input is caret-safe and the seeded value= form is the deviation (#636)
+- [An sr-only label under a visible p](sr-only-label-beside-a-visible-p.md), passes the e2e label check and fails SC 2.5.3 Label in Name (#636)

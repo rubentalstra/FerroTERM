@@ -19,6 +19,7 @@ use leptos::prelude::*;
 #[cfg(feature = "editor")]
 use leptos::task::spawn_local;
 
+#[cfg(feature = "editor")]
 use crate::auth::Session;
 #[cfg(feature = "editor")]
 use crate::auth::begin;
@@ -58,6 +59,11 @@ const WRITABLE: [&str; 3] = ["CodeSystem", "ValueSet", "ConceptMap"];
 const LETTERS: [Letter; 3] = [Letter::Create, Letter::Update, Letter::Delete];
 
 /// The live region the sign-in reports into.
+///
+/// Only the bundle that signs anybody in has one. A region nothing ever writes
+/// is chrome a screen reader walks past for no reason, so the reader bundle
+/// draws none.
+#[cfg(feature = "editor")]
 const REPORT_ID: &str = "sign-in-report";
 
 /// Signs a reader in, and says who is signed in and what they may change.
@@ -68,12 +74,6 @@ const REPORT_ID: &str = "sign-in-report";
 /// boundary, because there is no fallback to flash: an unread root draws no
 /// control, and a refetch keeps the last value until the next one resolves
 /// (<https://docs.rs/reactive_graph/0.2/reactive_graph/computed/struct.AsyncDerived.html>).
-///
-/// The report is a live region that is in the document whether or not it has
-/// anything to say, because a region inserted along with its first message is
-/// not announced (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>). It is an
-/// inline element, because a screen's own announcement is the paragraph the
-/// accessibility pass reads and this is chrome.
 #[component]
 #[expect(
     unreachable_pub,
@@ -82,17 +82,9 @@ const REPORT_ID: &str = "sign-in-report";
 pub(crate) fn SignInControl() -> impl IntoView {
     let client = expect_context::<FhirClient>();
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
-    let session = expect_context::<Session>();
-    let report = RwSignal::new(String::new());
-    let control = control(client, version, session, report);
+    let control = control(client, version);
 
-    view! {
-        <div class="flex items-center gap-default">
-            {control} <span id=REPORT_ID aria-live="polite" class=styles::HINT>
-                {move || report.get()}
-            </span>
-        </div>
-    }
+    view! { <div class="flex items-center gap-default">{control}</div> }
 }
 
 /// The editor bundle's control: the sign-in itself, and who is signed in.
@@ -101,13 +93,16 @@ pub(crate) fn SignInControl() -> impl IntoView {
 /// to flash: an unread root draws no control, and a refetch keeps the last
 /// value until the next one resolves
 /// (<https://docs.rs/reactive_graph/0.2/reactive_graph/computed/struct.AsyncDerived.html>).
+///
+/// The report is a live region that is in the document whether or not it has
+/// anything to say, because a region inserted along with its first message is
+/// not announced (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>). It is an
+/// inline element, because a screen's own announcement is the paragraph the
+/// accessibility pass reads and this is chrome.
 #[cfg(feature = "editor")]
-fn control(
-    client: FhirClient,
-    version: Signal<FhirVersion>,
-    session: Session,
-    report: RwSignal<String>,
-) -> impl IntoView {
+fn control(client: FhirClient, version: Signal<FhirVersion>) -> impl IntoView {
+    let session = expect_context::<Session>();
+    let report = RwSignal::new(String::new());
     let reader = client.clone();
     let offer = LocalResource::new(move || {
         let reader = reader.clone();
@@ -126,7 +121,7 @@ fn control(
         })
     };
 
-    move || match offered() {
+    let inner = move || match offered() {
         None => ().into_any(),
         Some(sign_in) => {
             if session.signed_in() {
@@ -135,6 +130,12 @@ fn control(
                 signed_out(client.clone(), version, sign_in, report)
             }
         }
+    };
+    view! {
+        {inner}
+        <span id=REPORT_ID aria-live="polite" class=styles::HINT>
+            {move || report.get()}
+        </span>
     }
 }
 
@@ -146,12 +147,7 @@ fn control(
 /// bundle's own router base and the router would otherwise intercept it and
 /// answer its own 404.
 #[cfg(not(feature = "editor"))]
-fn control(
-    client: FhirClient,
-    version: Signal<FhirVersion>,
-    _session: Session,
-    _report: RwSignal<String>,
-) -> impl IntoView {
+fn control(client: FhirClient, version: Signal<FhirVersion>) -> impl IntoView {
     let statement = LocalResource::new(move || {
         let client = client.clone();
         let version = version.get();

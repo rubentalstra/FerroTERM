@@ -7,7 +7,7 @@
       "pattern": "*_bg.wasm",
       "max_gzip_bytes": 750000,
       "max_growth_gzip_bytes": 70000,
-      "measured_gzip_bytes": 692357,
+      "measured_gzip_bytes": 746211,
       "claim": "the finished editor bundle is the reader bundle plus one authoring screen for each resource type the server writes"
     },
     {
@@ -23,7 +23,7 @@
       "pattern": "*.css",
       "max_gzip_bytes": 8000,
       "max_growth_gzip_bytes": 2000,
-      "measured_gzip_bytes": 5118,
+      "measured_gzip_bytes": 5154,
       "claim": "the compiled Tailwind sheet is under 8 KB gzipped"
     }
   ]
