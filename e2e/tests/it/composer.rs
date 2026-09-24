@@ -79,8 +79,9 @@ const SYSTEM_PICKER: &str = "select[id^='compose-system-']";
 /// The search that finds a code in that system.
 const CODE_SEARCH: &str = "input[id^='compose-search-']";
 
-/// The read-only notice a screen that cannot be saved carries.
-const READ_ONLY: &str = "//*[contains(text(), 'read-only') or contains(text(), 'Sign in to save')]";
+/// The notice a screen that cannot be saved carries.
+const READ_ONLY: &str = "//p[contains(text(), 'read-only') or contains(text(), 'no permission') \
+     or contains(text(), 'Sign in to save')]";
 
 /// Picks `value` in the `index`-th control matching `selector`.
 ///
@@ -388,7 +389,8 @@ async fn one_include_is_composed_with_the_keyboard_alone() {
     outcome.expect("the journey ran and the browser session ended cleanly");
 }
 
-/// A reader who signed in without a write scope sees the composer read-only.
+/// A reader who signed in without a write scope is offered no save, and the
+/// content the server holds no writable record of opens read-only.
 #[tokio::test]
 async fn a_reader_without_the_scope_composes_nothing() {
     let Some(deployment) = signed_in() else {
@@ -400,11 +402,29 @@ async fn a_reader_without_the_scope_composes_nothing() {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
             open_composer(&journey, &deployment, "reader", "composes-nothing").await;
 
+            let said = journey
+                .element(By::XPath(READ_ONLY), "the notice that nothing can be saved")
+                .await
+                .text()
+                .await?;
+            assert!(
+                said.contains("no permission"),
+                "the reader is told why nothing can be saved: `{said}`"
+            );
+            assert_eq!(
+                journey.count(By::XPath(SAVE)).await,
+                0,
+                "a reader with no write scope is offered no save"
+            );
+
+            // A national value set is the fixture this deployment loads from
+            // disk, which the server holds no writable record of, so it opens
+            // to read under every role.
             journey
-                .element(
-                    By::XPath(READ_ONLY),
-                    "the notice that the form is read-only",
-                )
+                .reopen(&format!(
+                    "{}/ui/editor/compose?fhir=r4b&id=e2e-taxonomy-all",
+                    deployment.base
+                ))
                 .await;
             let disabled = journey
                 .element(By::Css(URL_FIELD), "the canonical field")
@@ -414,12 +434,12 @@ async fn a_reader_without_the_scope_composes_nothing() {
                 .unwrap_or_default();
             assert_eq!(
                 disabled, "true",
-                "a reader with no write scope cannot type into the form"
+                "content the server serves from its loaded indexes opens read-only"
             );
             assert_eq!(
                 journey.count(By::XPath(SAVE)).await,
                 0,
-                "and is offered no save"
+                "and offers no save either"
             );
 
             journey.no_console_errors().await;

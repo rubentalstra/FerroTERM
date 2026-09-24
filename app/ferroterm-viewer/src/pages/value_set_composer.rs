@@ -185,9 +185,10 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
     }
     .into_any();
 
+    let editable = editable(id, writable);
     let banner = read_only_banner(writable, id, session);
-    let identity = identity_section(editing, writable);
-    let clauses = clause_sections(editing, writable, offers);
+    let identity = identity_section(editing, editable);
+    let clauses = clause_sections(editing, editable, offers);
     let actions = save_section(
         &client, version, editing, writable, session, report, refusal, saves, previewed,
     );
@@ -256,6 +257,16 @@ fn writable(
             && (new_draft
                 || answered.with(|held| held.as_ref().is_some_and(StoredValueSet::writable)))
     })
+}
+
+/// Whether the form itself takes what the reader types.
+///
+/// Composing and previewing are reads, so a new draft is composed by anyone;
+/// the save is the write, and the control for it is drawn only where the token
+/// opens it. A resource the server holds and will not take a write for opens
+/// read-only, which is what national content does under every role.
+fn editable(id: Memo<String>, writable: Memo<bool>) -> Memo<bool> {
+    Memo::new(move |_| id.with(String::is_empty) || writable.get())
 }
 
 /// The draft on screen: the reader's edits, or the resource as it was read.
@@ -514,14 +525,14 @@ fn fixed(text: &'static str) -> Signal<String> {
 /// The notice a screen that cannot be saved carries.
 fn read_only_banner(writable: Memo<bool>, id: Memo<String>, session: Session) -> AnyView {
     let sentence = move || {
-        if session.signed_in() {
-            if id.with(String::is_empty) {
-                "This account carries no permission to create a value set, so the form is read-only."
+        if id.with(String::is_empty) {
+            if session.signed_in() {
+                "This account carries no permission to create a value set, so nothing here can be saved. Composing and previewing work anyway."
             } else {
-                "This value set has no write path on this server, or this account carries no permission to change it. The form is read-only."
+                "Sign in to save. Composing and previewing work without one."
             }
         } else {
-            "Sign in to save. Everything below composes and previews without a sign-in."
+            "This value set has no write path on this server, or this account carries no permission to change it, so it opens read-only."
         }
     };
     view! {
@@ -533,7 +544,7 @@ fn read_only_banner(writable: Memo<bool>, id: Memo<String>, session: Session) ->
 }
 
 /// The value set's own identity, and the one flag `compose` carries.
-fn identity_section(editing: Editing, writable: Memo<bool>) -> AnyView {
+fn identity_section(editing: Editing, editable: Memo<bool>) -> AnyView {
     let fields = vec![
         text_control(
             String::from("compose-url"),
@@ -572,7 +583,7 @@ fn identity_section(editing: Editing, writable: Memo<bool>) -> AnyView {
         inactive_control(editing),
     ];
     view! {
-        <fieldset class="mt-loose grid gap-default" disabled=move || !writable.get()>
+        <fieldset class="mt-loose grid gap-default" disabled=move || !editable.get()>
             <legend class=format!("{} mb-tight", styles::EYEBROW)>"The value set"</legend>
             <div class="grid gap-default sm:grid-cols-2">{fields}</div>
         </fieldset>
@@ -641,9 +652,9 @@ fn inactive_control(editing: Editing) -> AnyView {
 }
 
 /// The includes and the excludes, each as its own labelled section.
-fn clause_sections(editing: Editing, writable: Memo<bool>, offers: Offers) -> AnyView {
-    let includes = clause_section(editing, writable, offers, true);
-    let excludes = clause_section(editing, writable, offers, false);
+fn clause_sections(editing: Editing, editable: Memo<bool>, offers: Offers) -> AnyView {
+    let includes = clause_section(editing, editable, offers, true);
+    let excludes = clause_section(editing, editable, offers, false);
     view! {
         {includes}
         {excludes}
@@ -654,7 +665,7 @@ fn clause_sections(editing: Editing, writable: Memo<bool>, offers: Offers) -> An
 /// One side of the compose: every include, or every exclude.
 fn clause_section(
     editing: Editing,
-    writable: Memo<bool>,
+    editable: Memo<bool>,
     offers: Offers,
     included: bool,
 ) -> AnyView {
@@ -674,7 +685,7 @@ fn clause_section(
         <For
             each=move || keys.get()
             key=|key| *key
-            children=move |key| clause_card(editing, writable, offers, key, included)
+            children=move |key| clause_card(editing, editable, offers, key, included)
         />
     }
     .into_any();
@@ -688,7 +699,7 @@ fn clause_section(
             <button
                 type="button"
                 class=format!("mt-default {}", styles::BUTTON)
-                disabled=move || !writable.get()
+                disabled=move || !editable.get()
                 on:click=move |_| {
                     editing
                         .change(|draft| {
@@ -709,7 +720,7 @@ fn clause_section(
 /// nothing moves a clause between the includes and the excludes.
 fn clause_card(
     editing: Editing,
-    writable: Memo<bool>,
+    editable: Memo<bool>,
     offers: Offers,
     key: u32,
     included: bool,
@@ -738,7 +749,7 @@ fn clause_card(
     view! {
         <fieldset
             class=format!("grid gap-default panel-p {}", styles::PANEL)
-            disabled=move || !writable.get()
+            disabled=move || !editable.get()
         >
             <legend class=styles::EYEBROW>{if included { "Include" } else { "Exclude" }}</legend>
             <p class=styles::MUTED>{move || clause.with(Clause::rule)}</p>
