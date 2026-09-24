@@ -532,7 +532,7 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | Concept maps | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read, with a link into the translate runner |
 | About this server | `/ui/about` | three tabs: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |
 | Edit a code system | `/ui/editor/codesystem` | `GET /{v}/CodeSystem?url=` for the resource, `GET /{v}/metadata?mode=terminology` for whether an artifact backs it, `ValueSet/$expand` for the codes its coded controls offer, then `POST`/`PUT` with `If-Match` and `CodeSystem/$validate-code` on what the save retired. In the editor bundle only |
-| Compose a value set | `/ui/editor/compose` | `GET /{v}/ValueSet` for the value sets to draw in and `GET /{v}/ValueSet/{id}` for the one being edited, `GET /{v}/metadata?mode=terminology` for the systems and the filters they declare, `ValueSet/$expand` by `POST` for the code search and for the preview of the unsaved compose, then `POST`/`PUT` with `If-Match`. In the editor bundle only |
+| Compose a value set | `/ui/editor/compose` | `GET /{v}/ValueSet` for the value sets to draw in and `GET /{v}/ValueSet/{id}` for the one being edited, `GET /{v}/metadata?mode=terminology` for the systems and the filters each served version declares, `ValueSet/$expand` by `POST` for the code search and for the preview of the unsaved compose, then `POST`/`PUT` with `If-Match`. In the editor bundle only |
 | Signing in | `/ui/editor/callback` | `GET /{v}/.well-known/smart-configuration`, then the issuer's token endpoint. Not a place a reader goes: the identity provider sends them through it |
 
 `/ui/versions`, `/ui/evidence` and `/ui/settings` were screens of their own and
@@ -567,17 +567,26 @@ several `valueSet` references in one include intersect, and an exclude
 subtracts (<https://hl7.org/fhir/R4B/valueset.html#compositions>). Each clause
 says in a sentence what it draws in, and a clause that breaks `vsd-1`, `vsd-2`
 or `vsd-3` says which invariant by its number rather than waiting for the
-server to refuse the save. A value set is drawn in by picking one this root
-publishes, or by building one of the forms a code system defines for itself
-(<https://hl7.org/fhir/R4B/snomedct.html>): a form is offered only where the
-served version's `TerminologyCapabilities` declares the filter property and
-operator it is shorthand for, so the screen names no code system. Own codes are
-picked out of the clause's code system through the same search the concept
-browser runs, never typed, and each one takes the display its author gives it.
-The preview is `$expand` by `POST` with the unsaved definition in the
-`valueSet` parameter, paged in the address. The save is `POST` or `PUT` with
-`If-Match`, so a resource another reader changed meanwhile is refused with 412
-and the screen offers to reload it.
+server to refuse the save.
+
+A clause draws in a value set by canonical, picked from what the root publishes
+or typed, because which forms a code system publishes a value set under is that
+system's own business and a viewer spelling one would be assuming a code
+system. It selects from a code system with the filter properties and operators
+that system's served version declares in its `TerminologyCapabilities`, which
+is the neutral statement of what `$expand` accepts
+(<https://hl7.org/fhir/R4B/terminologycapabilities.html>): a system declaring an
+expression-constraint filter gets that offer, one declaring none gets none, and
+a clause that pins a code system version is offered that version's filters.
+
+Own codes are picked out of the clause's code system through the same search
+the concept browser runs, never typed, and each one takes the display its
+author gives it. The preview is `$expand` by `POST` with the unsaved definition
+in the `valueSet` parameter, paged in the address. The save is `POST` or `PUT`
+with `If-Match`, so a resource another reader changed meanwhile is refused with
+412 and the screen offers to reload it; the whole document the read answered
+travels back under the elements the form owns, so a save never deletes what the
+form does not draw (<https://hl7.org/fhir/R4B/http.html#update>).
 
 **The top bar and the sidebar stay put, and the screen scrolls under them.**
 The shell is one viewport tall and only the main pane scrolls, so the command

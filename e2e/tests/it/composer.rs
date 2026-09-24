@@ -349,10 +349,12 @@ async fn one_include_is_composed_with_the_keyboard_alone() {
 
             journey.tab_to("compose-url", "the canonical field").await;
             journey.type_here(KEYBOARD_CANONICAL).await?;
-            assert_eq!(
-                journey.focused().await?,
-                "compose-url",
-                "typing leaves the focus where it was"
+            // The harness reports the control the keyboard is on as its id,
+            // its name, and its own words, so the id is one part of that.
+            let on = journey.focused().await?;
+            assert!(
+                on.contains("compose-url"),
+                "typing leaves the focus where it was: `{on}`"
             );
 
             // The picker that adds a published value set is reached by tabbing
@@ -376,10 +378,10 @@ async fn one_include_is_composed_with_the_keyboard_alone() {
             );
 
             journey.tab(1).await?;
-            assert_eq!(
-                journey.focused().await?,
-                "the control that adds it",
-                "the add control is the next tab stop"
+            let next = journey.focused().await?;
+            assert!(
+                next.contains("Add"),
+                "the control that adds it is the next tab stop: `{next}`"
             );
 
             journey.no_console_errors().await;
@@ -426,14 +428,18 @@ async fn a_reader_without_the_scope_composes_nothing() {
                     deployment.base
                 ))
                 .await;
-            let disabled = journey
+            // The control is disabled through its ancestor fieldset, which the
+            // `disabled` property does not reflect
+            // (<https://html.spec.whatwg.org/multipage/input.html#dom-input-disabled>);
+            // WebDriver's Is Element Enabled is defined over the actually
+            // disabled state (<https://www.w3.org/TR/webdriver2/#is-element-enabled>).
+            let enabled = journey
                 .element(By::Css(URL_FIELD), "the canonical field")
                 .await
-                .prop("disabled")
-                .await?
-                .unwrap_or_default();
-            assert_eq!(
-                disabled, "true",
+                .is_enabled()
+                .await?;
+            assert!(
+                !enabled,
                 "content the server serves from its loaded indexes opens read-only"
             );
             assert_eq!(

@@ -9,7 +9,8 @@
 //!
 //! Nothing here names a code system. The systems come from the served root's
 //! `TerminologyCapabilities`, the value sets from `GET [base]/ValueSet`, and
-//! the implicit forms from the filters the capability statement declares.
+//! a clause selects with the filter properties and operators that capability
+//! statement declares for the version it is over.
 //!
 //! Every control on the form is drawn by one of the four shapes below, whose
 //! listeners arrive boxed. A control shape written once as a generic over its
@@ -30,9 +31,7 @@ use leptos_router::hooks::use_query_map;
 use crate::auth::Session;
 use crate::auth::scopes::Letter;
 use crate::components::failure::Failure;
-use crate::components::field::Help;
 use crate::components::field::group;
-use crate::components::field::help_toggle;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
@@ -44,11 +43,10 @@ use crate::fhir::compose::Draft;
 use crate::fhir::compose::Preview;
 use crate::fhir::compose::STATUSES;
 use crate::fhir::compose::StoredValueSet;
-use crate::fhir::compose::ValueSetRef;
+use crate::fhir::compose::mark;
 use crate::fhir::concept::ConceptQuery;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ExpandedValueSet;
-use crate::fhir::implicit;
 use crate::fhir::named::Choice;
 use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::terminology::FilterRow;
@@ -63,6 +61,7 @@ use crate::routes::COMPOSE_PATH;
 use crate::routes::VERSION_PARAM;
 use crate::routes::base_url;
 use crate::styles;
+use serde_json::Value;
 
 /// The query parameter naming the value set being composed.
 const ID_PARAM: &str = "id";
@@ -92,7 +91,23 @@ type OnEvent = Box<dyn FnMut(Event)>;
 type OnClick = Box<dyn FnMut(MouseEvent)>;
 
 /// What a choice control offers.
-type Options = Box<dyn Fn() -> Vec<AnyView> + Send + Sync>;
+type Options = Box<dyn Fn() -> Vec<Choice> + Send + Sync>;
+
+/// What one control is called, on the wire and on the screen.
+///
+/// The `id` is a `String` because a clause draws as many of these as it has
+/// rows and a label points at one control
+/// (<https://www.w3.org/TR/wai-aria-1.2/#namecalculation>).
+struct Named {
+    /// The `id` the label points at.
+    id: String,
+    /// The `name` the control carries.
+    name: &'static str,
+    /// What a reader calls it.
+    label: &'static str,
+    /// The sentence under it.
+    note: &'static str,
+}
 
 /// Composes a local `ValueSet`, previews it, and saves it.
 ///
@@ -136,11 +151,16 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
     // states is the one the server just committed. The counter is written from
     // the save handler, which is an event rather than an effect.
     let saves = RwSignal::new(0_u32);
-    let answered = reading(&client, version, id, saves);
+    let read = reading(&client, version, id, saves);
+    let document = document_of(read);
+    let answered = answered_of(document);
     let editing = Editing {
         edited: RwSignal::new(None),
         stored: Memo::new(move |_| {
-            answered.with(|held| held.as_ref().map_or_else(Draft::new, StoredValueSet::draft))
+            document.with(|held| match held {
+                Some(document) => StoredValueSet::of(document).draft(document),
+                None => Draft::new(),
+            })
         }),
     };
     let writable = writable(id, answered, session);
@@ -149,14 +169,13 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
     let refusal: RwSignal<Option<FhirError>> = RwSignal::new(None);
     let previewed: RwSignal<Option<Draft>> = RwSignal::new(None);
 
+    let declared = capabilities(&client, version);
     let offers = Offers {
         value_sets: choices(published(&client, version, VALUE_SET)),
-        capabilities: capabilities(&client, version),
+        capabilities: declarations(declared),
         picking: RwSignal::new(None),
         term: RwSignal::new(String::new()),
     };
-
-    provide_context(Help(RwSignal::new(false)));
 
     let expansion = previewing(&client, version, previewed, page);
     let announcement = announcing(expansion);
@@ -186,6 +205,8 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
     .into_any();
 
     let editable = editable(id, writable);
+    let refused_read = read_refusal(read);
+    let refused_capabilities = capability_refusal(declared);
     let banner = read_only_banner(writable, id, session);
     let identity = identity_section(editing, editable);
     let clauses = clause_sections(editing, editable, offers);
@@ -193,16 +214,28 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
         &client, version, editing, writable, session, report, refusal, saves, previewed,
     );
     let refused = refusal_section(refusal, editing);
-    let preview = preview_section(expansion, previewed, page, editing, report);
+    let preview = preview_section(expansion, previewed, page, editing, report, id);
 
     view! {
         {heading}
         <div class="mt-loose grid items-start gap-loose lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <div class="min-w-0">{banner} {identity} {clauses} {actions} {refused}</div>
+            <div class="min-w-0">
+                {refused_read} {refused_capabilities} {banner} {identity} {clauses} {actions}
+                {refused}
+            </div>
             <div class="min-w-0">{preview}</div>
         </div>
     }
 }
+
+/// What a read of the value set the address names answered.
+///
+/// It is the document the server sent, so a save writes over it rather than
+/// replacing it (<https://hl7.org/fhir/R4B/http.html#update>). The refusal is
+/// kept rather than folded into "nothing read yet", so an id this root does
+/// not hold renders the server's own `OperationOutcome` instead of an empty
+/// form.
+type Reading = LocalResource<Option<Result<Value, FhirError>>>;
 
 /// Reads the `ValueSet` the address names, again after every save.
 fn reading(
@@ -210,9 +243,9 @@ fn reading(
     version: Signal<FhirVersion>,
     id: Memo<String>,
     saves: RwSignal<u32>,
-) -> Memo<Option<StoredValueSet>> {
+) -> Reading {
     let client = client.clone();
-    let stored = LocalResource::new(move || {
+    LocalResource::new(move || {
         let client = client.clone();
         let version = version.get();
         let id = id.get();
@@ -224,15 +257,39 @@ fn reading(
                 Some(client.value_set_stored(version, &id).await)
             }
         }
-    });
+    })
+}
+
+/// The document the read answered, when it answered one.
+fn document_of(read: Reading) -> Memo<Option<Value>> {
     Memo::new(move |_| {
-        stored.with(|read| {
-            read.as_ref()
+        read.with(|answered| {
+            answered
+                .as_ref()
                 .and_then(Option::as_ref)
                 .and_then(|result| result.as_ref().ok())
                 .cloned()
         })
     })
+}
+
+/// The elements the composer reads out of that document.
+fn answered_of(document: Memo<Option<Value>>) -> Memo<Option<StoredValueSet>> {
+    Memo::new(move |_| document.with(|held| held.as_ref().map(StoredValueSet::of)))
+}
+
+/// What the server said when it refused the read, in its own words.
+fn read_refusal(read: Reading) -> AnyView {
+    let shown = move || {
+        read.with(|answered| {
+            answered
+                .as_ref()
+                .and_then(Option::as_ref)
+                .and_then(|result| result.as_ref().err())
+                .map(|error| view! { <Failure error=Signal::stored(error.clone()) /> }.into_any())
+        })
+    };
+    view! { <div class="mt-default">{shown}</div> }.into_any()
 }
 
 /// Whether the screen may offer to save what it is showing.
@@ -309,12 +366,20 @@ impl Editing {
             .unwrap_or_else(|| self.stored.get())
     }
 
+    /// The draft on screen, read without subscribing to it.
+    ///
+    /// A caller describing something that has already happened, such as a
+    /// refusal that came back, reads it this way so the view it draws does not
+    /// rebuild on every keystroke in the form.
+    fn held(self) -> Draft {
+        self.edited
+            .with_untracked(Clone::clone)
+            .unwrap_or_else(|| self.stored.get_untracked())
+    }
+
     /// Applies one change to the draft on screen.
     fn change(self, apply: impl FnOnce(&mut Draft)) {
-        let mut draft = self
-            .edited
-            .with_untracked(Clone::clone)
-            .unwrap_or_else(|| self.stored.get_untracked());
+        let mut draft = self.held();
         apply(&mut draft);
         self.edited.set(Some(draft));
     }
@@ -373,15 +438,21 @@ impl Offers {
     /// A system serving several versions declares filters per version, and the
     /// default version is the one an unversioned clause is answered against
     /// (<https://hl7.org/fhir/R5/terminology-module.html#version>).
-    fn filters(self, system: &str) -> Vec<FilterRow> {
+    fn filters(self, system: &str, pinned: &str) -> Vec<FilterRow> {
         self.capabilities.with(|declared| {
             declared
                 .card(system)
                 .and_then(|card| {
                     card.versions
                         .iter()
-                        .find(|version| version.is_default)
-                        .or_else(|| card.versions.first())
+                        .find(|version| {
+                            if pinned.is_empty() {
+                                version.is_default
+                            } else {
+                                version.code.as_deref() == Some(pinned)
+                            }
+                        })
+                        .or_else(|| pinned.is_empty().then(|| card.versions.first()).flatten())
                         .map(|version| version.filters.clone())
                 })
                 .unwrap_or_default()
@@ -390,16 +461,25 @@ impl Offers {
 }
 
 /// What the root declares about the systems it serves.
-fn capabilities(
-    client: &FhirClient,
-    version: Signal<FhirVersion>,
-) -> Memo<TerminologyCapabilities> {
+///
+/// Every picker on the form draws from it, so a read that failed leaves the
+/// systems and the filters empty. The refusal is kept beside the declarations
+/// rather than folded into them, so the screen says why rather than offering
+/// nothing without a word.
+type Declared = LocalResource<Result<TerminologyCapabilities, FhirError>>;
+
+/// Reads what the root declares about the systems it serves.
+fn capabilities(client: &FhirClient, version: Signal<FhirVersion>) -> Declared {
     let client = client.clone();
-    let read = LocalResource::new(move || {
+    LocalResource::new(move || {
         let client = client.clone();
         let version = version.get();
         async move { client.terminology_capabilities(version).await }
-    });
+    })
+}
+
+/// Those declarations, as the pickers read them.
+fn declarations(read: Declared) -> Memo<TerminologyCapabilities> {
     Memo::new(move |_| {
         read.with(|answered| {
             answered
@@ -411,21 +491,49 @@ fn capabilities(
     })
 }
 
+/// What the server said when it refused that read, in its own words.
+fn capability_refusal(read: Declared) -> AnyView {
+    let shown = move || {
+        read.with(|answered| {
+            answered
+                .as_ref()
+                .and_then(|result| result.as_ref().err())
+                .map(|error| view! { <Failure error=Signal::stored(error.clone()) /> }.into_any())
+        })
+    };
+    view! { <div class="mt-default">{shown}</div> }.into_any()
+}
+
 /// The offers `choices` makes, as a choice control's options.
 fn options_of(choices: impl Fn() -> Vec<Choice> + Send + Sync + 'static) -> Options {
-    Box::new(move || {
-        choices()
-            .into_iter()
-            .map(|choice| {
-                view! {
-                    <option value=choice.canonical.clone() title=choice.canonical>
-                        {choice.label}
-                    </option>
-                }
-                .into_any()
-            })
-            .collect()
-    })
+    Box::new(choices)
+}
+
+/// The options a choice control draws, with the value it holds among them.
+///
+/// A `<select>` drops a value it has no option for, and the offers arrive
+/// after the address does, so the held value is drawn as its own option
+/// whenever the list does not carry it. That is also what keeps a clause
+/// naming a system this root does not serve readable.
+fn drawn(options: &Options, held: &str) -> Vec<AnyView> {
+    let mut offered = options();
+    if !held.is_empty() && !offered.iter().any(|choice| choice.canonical == held) {
+        offered.push(Choice {
+            canonical: held.to_owned(),
+            label: held.to_owned(),
+        });
+    }
+    offered
+        .into_iter()
+        .map(|choice| {
+            view! {
+                <option value=choice.canonical.clone() title=choice.canonical>
+                    {choice.label}
+                </option>
+            }
+            .into_any()
+        })
+        .collect()
 }
 
 /// One labelled text control over a value the reader edits.
@@ -462,15 +570,22 @@ fn text_control(
 
 /// One labelled choice control.
 fn select_control(
-    id: String,
-    label: &'static str,
-    note: &'static str,
+    named: Named,
     chosen: Signal<String>,
     empty: &'static str,
     options: Options,
     change: OnEvent,
 ) -> AnyView {
+    let Named {
+        id,
+        name,
+        label,
+        note,
+    } = named;
     let described_by = format!("{id}-note");
+    // The value is read here as well as in `prop:value`, so the option for it
+    // is drawn again when the offers arrive and the selection is reapplied.
+    let offered = move || drawn(&options, &chosen.get());
     view! {
         <div class="grid gap-tight">
             <label for=id.clone() class=styles::LABEL>
@@ -478,13 +593,14 @@ fn select_control(
             </label>
             <select
                 id=id
+                name=name
                 class=styles::INPUT
                 aria-describedby=described_by.clone()
                 prop:value=move || chosen.get()
                 on:change=change
             >
                 <option value="">{empty}</option>
-                {options}
+                {offered}
             </select>
             <p id=described_by class=styles::HINT>
                 {note}
@@ -594,15 +710,21 @@ fn identity_section(editing: Editing, editable: Memo<bool>) -> AnyView {
 /// The publication status the resource carries.
 fn status_control(editing: Editing) -> AnyView {
     select_control(
-        String::from("compose-status"),
-        "Status",
-        "ValueSet.status, which every definitional resource carries.",
+        Named {
+            id: String::from("compose-status"),
+            name: "status",
+            label: "Status",
+            note: "ValueSet.status, which every definitional resource carries.",
+        },
         editing.text(|draft| draft.status.clone()),
         "Choose a status",
-        Box::new(|| {
+        options_of(|| {
             STATUSES
                 .into_iter()
-                .map(|code| view! { <option value=code>{code}</option> }.into_any())
+                .map(|code| Choice {
+                    canonical: code.to_owned(),
+                    label: code.to_owned(),
+                })
                 .collect()
         }),
         Box::new(move |event| {
@@ -629,15 +751,24 @@ fn inactive_control(editing: Editing) -> AnyView {
         .to_owned()
     });
     select_control(
-        String::from("compose-inactive"),
-        "Inactive codes",
-        "compose.inactive. Left to the server, the expansion parameters decide.",
+        Named {
+            id: String::from("compose-inactive"),
+            name: "inactive",
+            label: "Inactive codes",
+            note: "compose.inactive. Left to the server, the expansion parameters decide.",
+        },
         shown,
         "Leave it to the server",
-        Box::new(|| {
+        options_of(|| {
             vec![
-                view! { <option value="true">"Include them"</option> }.into_any(),
-                view! { <option value="false">"Leave them out"</option> }.into_any(),
+                Choice {
+                    canonical: String::from("true"),
+                    label: String::from("Include them"),
+                },
+                Choice {
+                    canonical: String::from("false"),
+                    label: String::from("Leave them out"),
+                },
             ]
         }),
         Box::new(move |event| {
@@ -792,45 +923,33 @@ fn value_set_rows(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
         vec![
             view! { <div class="grid gap-default">{listed}</div> }.into_any(),
             add_published_value_set(editing, offers, key),
-            add_implicit_value_set(editing, offers, key),
         ],
     )
 }
 
 /// The canonical of one value set a clause draws in.
 ///
-/// A row in an implicit form edits the value inside the form, so the
-/// expression a refusal points into is the thing the reader types; a plain one
-/// edits the canonical itself. Which it is was decided when the row was made.
+/// It is edited as the canonical it is: which forms a code system publishes a
+/// value set under is that system's own business
+/// (<https://hl7.org/fhir/R4B/valueset.html>), so the screen carries the text
+/// the server will resolve rather than a grammar of its own.
 fn value_set_row(editing: Editing, key: u32, row: u32, clause: Memo<Clause>) -> AnyView {
-    let held: Memo<ValueSetRef> = Memo::new(move |_| {
+    let canonical: Memo<String> = Memo::new(move |_| {
         clause.with(|clause| {
             clause
                 .value_sets
                 .iter()
                 .find(|held| held.key == row)
-                .cloned()
+                .map(|held| held.canonical.clone())
                 .unwrap_or_default()
         })
     });
     let control = text_control(
         format!("compose-valueset-{key}-{row}"),
         "valueSet",
-        Signal::derive(move || {
-            held.with(|held| {
-                held.form.map_or_else(
-                    || String::from("Canonical"),
-                    |form| form.value_label.to_owned(),
-                )
-            })
-        }),
-        Signal::derive(move || {
-            held.with(|held| match held.form {
-                Some(form) => format!("{} of {}", form.label, held.system),
-                None => held.canonical.clone(),
-            })
-        }),
-        Signal::derive(move || held.with(|held| held.value.clone())),
+        fixed("Canonical"),
+        fixed("compose.include.valueSet, which draws the whole of that value set in."),
+        canonical.into(),
         Box::new(move |event| {
             let typed = event_target_value(&event);
             editing.change(move |draft| draft.write_value_set(key, row, &typed));
@@ -850,9 +969,12 @@ fn value_set_row(editing: Editing, key: u32, row: u32, clause: Memo<Clause>) -> 
 fn add_published_value_set(editing: Editing, offers: Offers, key: u32) -> AnyView {
     let picked = RwSignal::new(String::new());
     let control = select_control(
-        format!("compose-add-vs-{key}"),
-        "Add a published value set",
-        "compose.include.valueSet, which draws the whole of that value set in.",
+        Named {
+            id: format!("compose-add-vs-{key}"),
+            name: "addValueSet",
+            label: "Add a published value set",
+            note: "compose.include.valueSet, which draws the whole of that value set in.",
+        },
         picked.into(),
         "Choose one this server holds",
         options_of(move || offers.value_sets.get()),
@@ -871,77 +993,6 @@ fn add_published_value_set(editing: Editing, offers: Offers, key: u32) -> AnyVie
     view! { <div class="flex items-end gap-default">{control} {add}</div> }.into_any()
 }
 
-/// The control that adds a value set a code system defines for itself.
-///
-/// A form appears only where the selected system's served version declares the
-/// filter property and operator the form is shorthand for, so this offers what
-/// the capability statement says the server can answer.
-fn add_implicit_value_set(editing: Editing, offers: Offers, key: u32) -> AnyView {
-    let system = RwSignal::new(String::new());
-    let keyword = RwSignal::new(String::new());
-    let forms = Memo::new(move |_| {
-        let named = system.get();
-        if named.is_empty() {
-            Vec::new()
-        } else {
-            implicit::offered(&offers.filters(&named))
-        }
-    });
-    let system_control = select_control(
-        format!("compose-add-implicit-system-{key}"),
-        "Add a value set a code system defines for itself",
-        "The forms offered are the ones this server declares a filter for.",
-        system.into(),
-        "Choose a code system",
-        options_of(move || offers.systems()),
-        Box::new(move |event| {
-            system.set(event_target_value(&event));
-            keyword.set(String::new());
-        }),
-    );
-    let form_control = select_control(
-        format!("compose-add-implicit-form-{key}"),
-        "The form",
-        "Each form is the URL shorthand for one declared filter.",
-        keyword.into(),
-        "Choose a form",
-        Box::new(move || {
-            forms
-                .get()
-                .into_iter()
-                .map(|form| view! { <option value=form.keyword>{form.label}</option> }.into_any())
-                .collect()
-        }),
-        Box::new(move |event| keyword.set(event_target_value(&event))),
-    );
-    let add = act(
-        "Add the form",
-        Box::new(move |_| {
-            let named = system.get_untracked();
-            let Some(form) = implicit::form(&keyword.get_untracked()) else {
-                return;
-            };
-            editing.change(move |draft| draft.add_implicit_value_set(key, &named, form));
-            keyword.set(String::new());
-        }),
-    );
-    view! {
-        <div class="grid gap-default">
-            <div class="grid gap-default sm:grid-cols-2">{system_control} {form_control}</div>
-            <Show
-                when=move || system.with(|named| !named.is_empty()) && forms.with(Vec::is_empty)
-                fallback=|| ()
-            >
-                <p class=styles::HINT>
-                    "This server declares no filter for that code system that one of these forms is shorthand for."
-                </p>
-            </Show>
-            {add}
-        </div>
-    }
-    .into_any()
-}
-
 /// The code system one clause reads codes from, and the version it is pinned
 /// to.
 ///
@@ -950,9 +1001,12 @@ fn add_implicit_value_set(editing: Editing, offers: Offers, key: u32) -> AnyView
 /// control (<https://www.w3.org/TR/wai-aria-1.2/#namecalculation>).
 fn system_picker(editing: Editing, offers: Offers, key: u32, clause: Memo<Clause>) -> AnyView {
     let system = select_control(
-        format!("compose-system-{key}"),
-        "Code system",
-        "compose.include.system, the code system the codes below are read from.",
+        Named {
+            id: format!("compose-system-{key}"),
+            name: "system",
+            label: "Code system",
+            note: "compose.include.system, the code system the codes below are read from.",
+        },
         Signal::derive(move || clause.with(|clause| clause.system.clone())),
         "Choose one this server serves",
         options_of(move || offers.systems()),
@@ -1215,7 +1269,13 @@ fn filter_rows(
     let rows: Memo<Vec<u32>> = Memo::new(move |_| {
         clause.with(|clause| clause.filters.iter().map(|row| row.key).collect())
     });
-    let declared = Memo::new(move |_| offers.filters(&system.get()));
+    // A clause pinning a code system version is answered against that version,
+    // so the offers are that version's own
+    // (<https://hl7.org/fhir/R4B/terminologycapabilities.html>).
+    let declared = Memo::new(move |_| {
+        let pinned = clause.with(|clause| clause.system_version.clone());
+        offers.filters(&system.get(), &pinned)
+    });
     let listed = view! {
         <For
             each=move || rows.get()
@@ -1226,9 +1286,12 @@ fn filter_rows(
     .into_any();
     let chosen = RwSignal::new(String::new());
     let control = select_control(
-        format!("compose-add-filter-{key}"),
-        "Add a filter this server declares",
-        "compose.include.filter, over a property this code system version declares.",
+        Named {
+            id: format!("compose-add-filter-{key}"),
+            name: "addFilter",
+            label: "Add a filter this server declares",
+            note: "compose.include.filter, over a property this code system version declares.",
+        },
         chosen.into(),
         "Choose a property and an operator",
         options_of(move || {
@@ -1430,7 +1493,6 @@ fn save_section(
             >
                 {move || if saving.get() { "Saving" } else { "Save this value set" }}
             </button>
-            {help_toggle()}
             <Show when=move || writable.get() && !savable.get() fallback=|| ()>
                 <p role="status" class=styles::HINT>
                     "A canonical and a clause that selects something are what a save needs."
@@ -1522,6 +1584,7 @@ fn preview_section(
     page: Memo<Preview>,
     editing: Editing,
     report: RwSignal<String>,
+    id: Memo<String>,
 ) -> AnyView {
     let shown = move || {
         expansion.with(|answered| {
@@ -1529,12 +1592,12 @@ fn preview_section(
                 None => crate::components::state::invitation(
                     "Run the preview to see what this definition selects. It expands the definition on screen, saved or not.",
                 ),
-                Some(Ok(value)) => preview_view(value, page, editing),
+                Some(Ok(value)) => preview_view(value, page, id),
                 Some(Err(error)) => expansion_refusal(error, editing),
             })
         })
     };
-    let controls = preview_controls(previewed, editing, page, report);
+    let controls = preview_controls(previewed, editing, page, report, id);
     view! {
         <section class="mt-loose" aria-labelledby="compose-preview-heading">
             <h2 id="compose-preview-heading" class=styles::SECTION_TITLE>
@@ -1553,10 +1616,10 @@ fn preview_controls(
     editing: Editing,
     page: Memo<Preview>,
     report: RwSignal<String>,
+    id: Memo<String>,
 ) -> AnyView {
     let navigate = StoredValue::new(use_navigate());
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
-    let id = editing.part(|draft| draft.id.clone());
     let filter: NodeRef<Input> = NodeRef::new();
     let seeded = Memo::new(move |_| page.with(|page| page.filter.clone().unwrap_or_default()));
     let run = move |event: SubmitEvent| {
@@ -1626,7 +1689,7 @@ fn address(id: &str, version: FhirVersion, page: &Preview) -> String {
 }
 
 /// The page the preview answered, with the walk through the rest of it.
-fn preview_view(value: &ExpandedValueSet, page: Memo<Preview>, editing: Editing) -> AnyView {
+fn preview_view(value: &ExpandedValueSet, page: Memo<Preview>, id: Memo<String>) -> AnyView {
     let Some(expansion) = value.expansion() else {
         return crate::components::state::empty(
             "The server answered a ValueSet carrying no expansion.",
@@ -1649,7 +1712,7 @@ fn preview_view(value: &ExpandedValueSet, page: Memo<Preview>, editing: Editing)
         .collect();
     let total = expansion.total;
     let listed = expansion.listed();
-    let walk = pager(page, total, listed, editing);
+    let walk = pager(page, expansion.offset, total, listed, id);
     view! {
         <table class=format!("mt-default {}", styles::TABLE)>
             <thead>
@@ -1670,11 +1733,21 @@ fn preview_view(value: &ExpandedValueSet, page: Memo<Preview>, editing: Editing)
 }
 
 /// The links that walk the preview's pages.
-fn pager(page: Memo<Preview>, total: Option<u32>, rows: u32, editing: Editing) -> AnyView {
+fn pager(
+    page: Memo<Preview>,
+    answered_offset: Option<u32>,
+    total: Option<u32>,
+    rows: u32,
+    id: Memo<String>,
+) -> AnyView {
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
     let current = page.get();
-    let id = editing.draft().id;
-    let at = Page::at(current.offset, current.count);
+    let id = id.get();
+    // The transition keeps the previous rows on screen while the next page
+    // loads, so the walk follows the offset the server says it applied rather
+    // than the one the address asks for
+    // (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>).
+    let at = Page::at(answered_offset.unwrap_or(current.offset), current.count);
     let previous = at.previous();
     let next = match total {
         Some(total) => at.next(total),
@@ -1733,17 +1806,17 @@ fn expansion_refusal(error: &FhirError, editing: Editing) -> AnyView {
 
 /// The expression the refusal is about, with the character it points at marked.
 ///
-/// The position is the server's own (`crate::fhir::implicit::position_in`), and
-/// the expression is the one whose canonical the outcome names, so nothing here
-/// parses anything.
+/// The position and the value are the server's own, so nothing here parses
+/// anything. The draft is read untracked: this describes a refusal that has
+/// already arrived, so it must not resubscribe the preview to the form.
 fn marked_expression(diagnostic: &str, editing: Editing) -> Option<AnyView> {
-    let (form, expression, position) = editing.draft().marked_expression(diagnostic)?;
-    let (before, at, after) = implicit::mark(&expression, position);
+    let (form, expression, position) = editing.held().marked_value(diagnostic)?;
+    let (before, at, after) = mark(&expression, position);
     Some(
         view! {
             <div class=format!("rounded-md panel-p {}", styles::NOTICE)>
                 <p class=styles::LABEL>
-                    {format!("{}, at character {}", form.label, position.saturating_add(1))}
+                    {format!("{form}, at character {}", position.saturating_add(1))}
                 </p>
                 <p class=format!(
                     "mt-tight {}",

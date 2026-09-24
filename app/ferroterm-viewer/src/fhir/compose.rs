@@ -26,8 +26,6 @@ use crate::fhir::concept::value_parameter;
 use crate::fhir::expansion::COUNT_PARAMETER;
 use crate::fhir::expansion::FILTER_PARAMETER;
 use crate::fhir::expansion::OFFSET_PARAMETER;
-use crate::fhir::implicit;
-use crate::fhir::implicit::Form;
 
 /// The `ValueSet.status` codes a draft can be in.
 ///
@@ -95,18 +93,8 @@ pub(crate) struct Broken {
 pub(crate) struct ValueSetRef {
     /// The row's own key, for a list that is added to and removed from.
     pub(crate) key: u32,
-    /// The canonical, implicit forms included.
+    /// The canonical, whatever form its code system publishes it under.
     pub(crate) canonical: String,
-    /// The implicit form the row is edited as, when it is one.
-    ///
-    /// It is decided once, when the row is made or read back, and never
-    /// derived from the text afterwards: a control whose meaning changed while
-    /// a reader typed would rewrite what they had typed so far.
-    pub(crate) form: Option<Form>,
-    /// The code system the form is over, empty for a plain canonical.
-    pub(crate) system: String,
-    /// The value inside the form, as the author reads and writes it.
-    pub(crate) value: String,
 }
 
 /// One code a clause names, with the display its author gives it.
@@ -156,7 +144,10 @@ pub(crate) struct Clause {
 }
 
 /// The value set being composed, before it is saved.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+///
+/// It is `PartialEq` and not `Eq`, because the resource it was read from is
+/// carried as the JSON document the server sent.
+#[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Draft {
     /// The logical id the server holds it under, absent until it is created.
     pub(crate) id: String,
@@ -179,6 +170,14 @@ pub(crate) struct Draft {
     /// The next key to mint. Keys are never reused, so a row a `<For>` drew
     /// cannot be confused with the row that takes its place.
     next_key: u32,
+    /// The resource this draft was read from, as the server sent it.
+    ///
+    /// An update replaces the whole resource
+    /// (<https://hl7.org/fhir/R4B/http.html#update>), so a save is this
+    /// document with the elements the form owns written over it. Everything
+    /// else, from `description` to a concept's own designations, travels back
+    /// untouched instead of being deleted by a form that never drew it.
+    base: Value,
 }
 
 impl Draft {
@@ -244,42 +243,12 @@ impl Draft {
     }
 
     /// Adds a value set reference to the clause `key` names.
-    ///
-    /// A canonical already in an implicit form opens as that form, so a value
-    /// set read back off the server is edited the way it was written.
     pub(crate) fn add_value_set(&mut self, key: u32, canonical: &str) {
-        let row = self.mint();
-        let read = implicit::read(canonical);
-        if let Some(clause) = self.clause_mut(key) {
-            clause.value_sets.push(match read {
-                Some((system, form, value)) => ValueSetRef {
-                    key: row,
-                    canonical: canonical.to_owned(),
-                    form: Some(form),
-                    system,
-                    value,
-                },
-                None => ValueSetRef {
-                    key: row,
-                    canonical: canonical.to_owned(),
-                    form: None,
-                    system: String::new(),
-                    value: canonical.to_owned(),
-                },
-            });
-        }
-    }
-
-    /// Adds a value set named by one of a code system's own implicit forms.
-    pub(crate) fn add_implicit_value_set(&mut self, key: u32, system: &str, form: Form) {
         let row = self.mint();
         if let Some(clause) = self.clause_mut(key) {
             clause.value_sets.push(ValueSetRef {
                 key: row,
-                canonical: form.canonical(system, ""),
-                form: Some(form),
-                system: system.to_owned(),
-                value: String::new(),
+                canonical: canonical.to_owned(),
             });
         }
     }
@@ -314,37 +283,33 @@ impl Draft {
     }
 
     /// Writes what the reader typed into the value set row `row` names.
-    ///
-    /// A row in an implicit form takes the value inside the form and rebuilds
-    /// the canonical around it; a plain one takes the canonical itself.
     pub(crate) fn write_value_set(&mut self, key: u32, row: u32, typed: &str) {
-        let Some(held) = self
+        if let Some(held) = self
             .clause_mut(key)
             .and_then(|clause| clause.value_sets.iter_mut().find(|held| held.key == row))
-        else {
-            return;
-        };
-        typed.clone_into(&mut held.value);
-        held.canonical = match held.form {
-            Some(form) => form.canonical(&held.system, typed),
-            None => typed.to_owned(),
-        };
+        {
+            typed.clone_into(&mut held.canonical);
+        }
     }
 
-    /// The expression a refused expansion points into, and where.
+    /// The filter value a refusal points into, and where.
     ///
-    /// The server names the canonical it refused and states the position in
-    /// its own words, so this finds the row that canonical belongs to and
-    /// answers the expression with the byte offset to mark. A diagnostic about
-    /// anything else, or about a row that is not an expression, answers
-    /// `None` and the screen marks nothing.
-    pub(crate) fn marked_expression(&self, diagnostic: &str) -> Option<(Form, String, u32)> {
-        let position = implicit::position_in(diagnostic)?;
+    /// The server names the value it refused and states the position in its
+    /// own words, so this finds the filter that value belongs to and answers
+    /// what to mark. A refusal about anything else answers `None` and the
+    /// screen marks nothing; the outcome is rendered verbatim either way.
+    pub(crate) fn marked_value(&self, diagnostic: &str) -> Option<(String, String, u32)> {
+        let position = position_in(diagnostic)?;
         self.clauses.iter().find_map(|clause| {
-            clause.value_sets.iter().find_map(|row| {
-                let form = row.form.filter(|form| form.expression)?;
-                (!row.canonical.is_empty() && diagnostic.contains(&row.canonical))
-                    .then(|| (form, row.value.clone(), position))
+            clause.filters.iter().find_map(|filter| {
+                let value = filter.value.trim();
+                (!value.is_empty() && diagnostic.contains(value)).then(|| {
+                    (
+                        format!("{} {}", filter.property, filter.op),
+                        filter.value.clone(),
+                        position,
+                    )
+                })
             })
         })
     }
@@ -364,24 +329,36 @@ impl Draft {
 
     /// Whether the draft is one the server can be asked to take.
     ///
-    /// `ValueSet.status` is 1..1 and `url` is what every other resource refers
-    /// to it by (<https://hl7.org/fhir/R4B/valueset.html>), so a draft missing
-    /// either is not offered for saving.
+    /// `ValueSet.status` is 1..1, `url` is what every other resource refers to
+    /// it by, and `compose.include` is 1..*
+    /// (<https://hl7.org/fhir/R4B/valueset.html>), so a draft missing any of
+    /// the three is not offered for saving.
     pub(crate) fn savable(&self) -> bool {
-        !self.url.trim().is_empty() && !self.status.is_empty() && self.broken().is_empty()
+        !self.url.trim().is_empty()
+            && !self.status.is_empty()
+            && !self.clause_keys(true).is_empty()
+            && self.broken().is_empty()
     }
 
     /// The `ValueSet` resource this draft is, as the server receives it.
     ///
-    /// Only the elements the composer authors are written, so a resource read
-    /// back and saved again keeps nothing the composer invented.
+    /// It starts from the resource this draft was read from, so an element the
+    /// form does not draw travels back rather than being deleted by an update
+    /// that replaces the whole resource
+    /// (<https://hl7.org/fhir/R4B/http.html#update>). The elements the form
+    /// owns are written over it.
     pub(crate) fn resource(&self) -> Value {
-        let mut resource = Map::new();
+        let mut resource = match &self.base {
+            Value::Object(held) => held.clone(),
+            _unread => Map::new(),
+        };
         resource.insert(
             String::from("resourceType"),
             Value::String(String::from("ValueSet")),
         );
-        if !self.id.is_empty() {
+        if self.id.is_empty() {
+            resource.remove("id");
+        } else {
             resource.insert(String::from("id"), Value::String(self.id.clone()));
         }
         for (element, text) in [
@@ -391,33 +368,77 @@ impl Draft {
             ("title", &self.title),
         ] {
             let trimmed = text.trim();
-            if !trimmed.is_empty() {
+            if trimmed.is_empty() {
+                resource.remove(element);
+            } else {
                 resource.insert(String::from(element), Value::String(trimmed.to_owned()));
             }
         }
         resource.insert(String::from("status"), Value::String(self.status.clone()));
-        resource.insert(String::from("compose"), self.compose());
+        match self.compose() {
+            // `ValueSet.compose` is 0..1, so a draft composing nothing sends
+            // no element rather than an empty one.
+            Some(compose) => resource.insert(String::from("compose"), compose),
+            None => resource.remove("compose"),
+        };
         Value::Object(resource)
     }
 
     /// `ValueSet.compose`, with the includes before the excludes.
-    fn compose(&self) -> Value {
-        let mut compose = Map::new();
-        if let Some(inactive) = self.inactive {
-            compose.insert(String::from("inactive"), Value::Bool(inactive));
+    ///
+    /// The elements the composer does not draw, `lockedDate` among them,
+    /// travel back from the resource this draft was read from.
+    fn compose(&self) -> Option<Value> {
+        if self.clauses.is_empty() {
+            return None;
         }
+        let mut compose = match self.base.get("compose") {
+            Some(Value::Object(held)) => held.clone(),
+            _unread => Map::new(),
+        };
+        match self.inactive {
+            Some(inactive) => compose.insert(String::from("inactive"), Value::Bool(inactive)),
+            None => compose.remove("inactive"),
+        };
         for (element, included) in [("include", true), ("exclude", false)] {
             let clauses: Vec<Value> = self
                 .clauses
                 .iter()
                 .filter(|clause| clause.included == included)
-                .map(Clause::wire)
+                .map(|clause| clause.wire(self.held(element, clause)))
                 .collect();
-            if !clauses.is_empty() {
+            if clauses.is_empty() {
+                compose.remove(element);
+            } else {
                 compose.insert(String::from(element), Value::Array(clauses));
             }
         }
-        Value::Object(compose)
+        Some(Value::Object(compose))
+    }
+
+    /// The `compose.include` or `compose.exclude` entry `clause` was read from.
+    ///
+    /// A clause is matched to the stored one by its position on its own side,
+    /// which is the order `StoredValueSet::draft` read them in and the order
+    /// this writes them back, so a clause keeps the elements the form does not
+    /// draw as long as the reader has not reordered that side.
+    fn held(&self, element: &str, clause: &Clause) -> Map<String, Value> {
+        let position = self
+            .clauses
+            .iter()
+            .filter(|other| other.included == clause.included)
+            .position(|other| other.key == clause.key);
+        position
+            .and_then(|at| {
+                self.base
+                    .get("compose")?
+                    .get(element)?
+                    .as_array()?
+                    .get(at)?
+                    .as_object()
+                    .cloned()
+            })
+            .unwrap_or_default()
     }
 
     /// The `Parameters` body a preview of this draft sends.
@@ -534,13 +555,21 @@ impl Clause {
     }
 
     /// This clause as `compose.include` or `compose.exclude`.
-    fn wire(&self) -> Value {
-        let mut set = Map::new();
+    ///
+    /// `held` is the entry it was read from, so an element the form does not
+    /// draw travels back rather than being deleted by the update.
+    fn wire(&self, held: Map<String, Value>) -> Value {
+        let mut set = held;
         let system = self.system.trim();
-        if !system.is_empty() {
+        if system.is_empty() {
+            set.remove("system");
+            set.remove("version");
+        } else {
             set.insert(String::from("system"), Value::String(system.to_owned()));
             let version = self.system_version.trim();
-            if !version.is_empty() {
+            if version.is_empty() {
+                set.remove("version");
+            } else {
                 set.insert(String::from("version"), Value::String(version.to_owned()));
             }
         }
@@ -550,7 +579,9 @@ impl Clause {
             .filter(|row| !row.canonical.trim().is_empty())
             .map(|row| Value::String(row.canonical.trim().to_owned()))
             .collect();
-        if !value_sets.is_empty() {
+        if value_sets.is_empty() {
+            set.remove("valueSet");
+        } else {
             set.insert(String::from("valueSet"), Value::Array(value_sets));
         }
         // NOTE: "Any display names specified for the codes are ignored" in an
@@ -560,22 +591,97 @@ impl Clause {
             .concepts
             .iter()
             .filter(|picked| !picked.code.trim().is_empty())
-            .map(|picked| picked.wire(self.included))
+            .map(|picked| {
+                picked.wire(
+                    self.included,
+                    held_by(&set, "concept", "code", &picked.code),
+                )
+            })
             .collect();
-        if !concepts.is_empty() {
+        if concepts.is_empty() {
+            set.remove("concept");
+        } else {
             set.insert(String::from("concept"), Value::Array(concepts));
         }
         let filters: Vec<Value> = self
             .filters
             .iter()
             .filter(|filter| !filter.property.trim().is_empty())
-            .map(ClauseFilter::wire)
+            .map(|filter| filter.wire(held_by(&set, "filter", "property", &filter.property)))
             .collect();
-        if !filters.is_empty() {
+        if filters.is_empty() {
+            set.remove("filter");
+        } else {
             set.insert(String::from("filter"), Value::Array(filters));
         }
         Value::Object(set)
     }
+}
+
+/// The byte offset the server's own diagnostic points at, when it states one.
+///
+/// No FHIR element carries a character position inside an operation input:
+/// `OperationOutcome.issue.expression` is a `FHIRPath` into the resource, not
+/// an offset into a value (<https://hl7.org/fhir/R4B/operationoutcome.html>).
+/// So this is our own design: the server states the position in its own words,
+/// and the screen reads it back to mark the character. The outcome is rendered
+/// verbatim beside the mark either way, and a diagnostic stating no position
+/// marks nothing.
+// TODO(#656): read the position from an `OperationOutcome` element instead,
+// once the server states one, and drop the scan of its prose.
+fn position_in(diagnostic: &str) -> Option<u32> {
+    let mut words = diagnostic.split_whitespace();
+    while let Some(word) = words.next() {
+        if word == "byte" {
+            let digits: String = words
+                .next()?
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect();
+            return digits.parse().ok();
+        }
+    }
+    None
+}
+
+/// `value` split around the character at `position`, for marking it.
+///
+/// The offset is a byte offset into the value, so the split lands on the
+/// character boundary at or before it and the marked run is one whole
+/// character. An offset past the end marks the end, which is where a
+/// diagnostic about a truncated value points.
+pub(crate) fn mark(value: &str, position: u32) -> (String, String, String) {
+    let offset = usize::try_from(position).unwrap_or(usize::MAX);
+    if offset >= value.len() {
+        return (value.to_owned(), String::from(" "), String::new());
+    }
+    let start = value
+        .char_indices()
+        .map(|(index, _)| index)
+        .take_while(|index| *index <= offset)
+        .last()
+        .unwrap_or_default();
+    let (before, rest) = value.split_at_checked(start).unwrap_or((value, ""));
+    let mut characters = rest.chars();
+    let at: String = characters.by_ref().take(1).collect();
+    (before.to_owned(), at, characters.collect())
+}
+
+/// The entry of `list` in `held` whose `key` element is `value`.
+///
+/// A concept is identified by its code and a filter by the property it is
+/// over (<https://hl7.org/fhir/R4B/valueset.html>), so that is what an
+/// authored row is matched to the stored one by, and what carries the
+/// elements the form does not draw back through a save.
+fn held_by(held: &Map<String, Value>, list: &str, key: &str, value: &str) -> Map<String, Value> {
+    held.get(list)
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_object)
+        .find(|entry| entry.get(key).and_then(Value::as_str) == Some(value.trim()))
+        .cloned()
+        .unwrap_or_default()
 }
 
 impl PickedConcept {
@@ -583,8 +689,8 @@ impl PickedConcept {
     ///
     /// `with_display` is whether the clause is an include, which is the only
     /// place a display the author wrote is read.
-    fn wire(&self, with_display: bool) -> Value {
-        let mut concept = Map::new();
+    fn wire(&self, with_display: bool, held: Map<String, Value>) -> Value {
+        let mut concept = held;
         concept.insert(
             String::from("code"),
             Value::String(self.code.trim().to_owned()),
@@ -592,6 +698,8 @@ impl PickedConcept {
         let display = self.display.trim();
         if with_display && !display.is_empty() {
             concept.insert(String::from("display"), Value::String(display.to_owned()));
+        } else {
+            concept.remove("display");
         }
         Value::Object(concept)
     }
@@ -599,8 +707,8 @@ impl PickedConcept {
 
 impl ClauseFilter {
     /// This filter as `compose.include.filter`.
-    fn wire(&self) -> Value {
-        let mut filter = Map::new();
+    fn wire(&self, held: Map<String, Value>) -> Value {
+        let mut filter = held;
         filter.insert(
             String::from("property"),
             Value::String(self.property.trim().to_owned()),
@@ -720,8 +828,20 @@ impl StoredValueSet {
             .is_some_and(|version| !version.is_empty())
     }
 
+    /// The elements the composer reads out of one `ValueSet` document.
+    ///
+    /// A document that does not parse into them reads as a resource stating
+    /// none of them, which is the same answer as a server that sent none.
+    pub(crate) fn of(resource: &Value) -> Self {
+        serde_json::from_value(resource.clone()).unwrap_or_default()
+    }
+
     /// This resource as a draft to edit.
-    pub(crate) fn draft(&self) -> Draft {
+    ///
+    /// `resource` is the document the server sent, which the draft carries so
+    /// a save writes over it rather than replacing it with the elements the
+    /// form draws (<https://hl7.org/fhir/R4B/http.html#update>).
+    pub(crate) fn draft(&self, resource: &Value) -> Draft {
         let mut draft = Draft {
             id: self.id.clone().unwrap_or_default(),
             version_id: self
@@ -740,6 +860,7 @@ impl StoredValueSet {
             inactive: self.compose.as_ref().and_then(|compose| compose.inactive),
             clauses: Vec::new(),
             next_key: 0,
+            base: resource.clone(),
         };
         let compose = self.compose.clone().unwrap_or_default();
         for (sets, included) in [(&compose.include, true), (&compose.exclude, false)] {
@@ -967,99 +1088,172 @@ mod tests {
         );
     }
 
-    /// The form a code system defines for an expression constraint.
-    fn expression_form() -> Form {
-        implicit::form("ecl").expect("the expression form is one the viewer knows")
+    #[test]
+    fn an_update_carries_back_every_element_the_form_does_not_draw() {
+        // An update replaces the whole resource
+        // (<https://hl7.org/fhir/R4B/http.html#update>), so what the composer
+        // does not model has to travel back out of the document it read.
+        let document: Value = serde_json::from_str(
+            r#"{"resourceType":"ValueSet","id":"local",
+                "meta":{"versionId":"3","source":"https://terminology.example/source"},
+                "language":"nl","text":{"status":"generated","div":"<p/>"},
+                "url":"https://terminology.example/vs/local","status":"active",
+                "description":"What this value set is for","publisher":"A publisher",
+                "experimental":true,"jurisdiction":[{"text":"NL"}],
+                "compose":{"lockedDate":"2026-01-01",
+                  "include":[{"system":"https://terminology.example/x",
+                    "concept":[{"code":"A","designation":[{"language":"nl","value":"Alfa"}]}]}]}}"#,
+        )
+        .expect("the server's own answer parses");
+        let stored: StoredValueSet = serde_json::from_value(document.clone())
+            .expect("the elements the composer reads parse");
+        let written = stored.draft(&document).resource();
+        for (element, kept) in [
+            ("description", "What this value set is for"),
+            ("publisher", "A publisher"),
+            ("language", "nl"),
+        ] {
+            assert_eq!(
+                written.get(element).and_then(Value::as_str),
+                Some(kept),
+                "`{element}` survives a save that never drew it"
+            );
+        }
+        assert!(written.get("text").is_some(), "the narrative survives");
+        assert!(
+            written.get("jurisdiction").is_some(),
+            "so does the jurisdiction"
+        );
+        assert_eq!(
+            written
+                .pointer("/compose/lockedDate")
+                .and_then(Value::as_str),
+            Some("2026-01-01"),
+            "and a compose element the composer does not draw"
+        );
+        assert!(
+            written
+                .pointer("/compose/include/0/concept/0/designation")
+                .is_some(),
+            "and a designation on a code the composer only names: {written}"
+        );
+        assert_eq!(
+            written.pointer("/meta/source").and_then(Value::as_str),
+            Some("https://terminology.example/source"),
+            "the meta the server sent is not replaced by the version alone"
+        );
     }
 
     #[test]
-    fn an_implicit_row_edits_the_value_inside_the_form() {
+    fn a_draft_composing_nothing_is_not_savable_and_sends_no_compose() {
+        // `compose.include` is 1..* and `compose` itself is 0..1
+        // (<https://hl7.org/fhir/R4B/valueset.html>).
         let mut draft = Draft::new();
         draft.url = String::from("https://terminology.example/vs/local");
         let key = draft.clause_keys(true)[0];
-        draft.add_implicit_value_set(key, "https://terminology.example/x", expression_form());
-        let row = draft
-            .clause(key)
-            .and_then(|clause| clause.value_sets.first().map(|row| row.key))
-            .expect("the clause carries the row just added");
-        draft.write_value_set(key, row, "<<73211009 |diabetes|");
-        let held = draft
-            .clause(key)
-            .and_then(|clause| clause.value_sets.first().cloned())
-            .expect("the row is still there");
-        assert_eq!(
-            held.value, "<<73211009 |diabetes|",
-            "the author reads what they typed"
+        draft.remove_clause(key);
+        assert!(
+            !draft.savable(),
+            "a value set with no include is not offered for saving"
         );
-        assert_eq!(
-            held.canonical,
-            "https://terminology.example/x?fhir_vs=ecl/%3C%3C73211009%20%7Cdiabetes%7C",
-            "the canonical is rebuilt around it, encoded"
+        let written = draft.resource();
+        assert!(
+            written.get("compose").is_none(),
+            "and sends no compose element at all: {written}"
         );
     }
 
     #[test]
-    fn a_plain_row_edits_the_canonical_itself() {
-        let mut draft = Draft::new();
-        let key = draft.clause_keys(true)[0];
-        draft.add_value_set(key, "https://terminology.example/vs/national");
-        let row = draft
-            .clause(key)
-            .and_then(|clause| clause.value_sets.first().map(|row| row.key))
-            .expect("the clause carries the row just added");
-        draft.write_value_set(key, row, "https://terminology.example/vs/other");
-        let held = draft
-            .clause(key)
-            .and_then(|clause| clause.value_sets.first().cloned())
-            .expect("the row is still there");
-        assert_eq!(held.form, None, "a published canonical is no form");
-        assert_eq!(held.canonical, "https://terminology.example/vs/other");
-    }
-
-    #[test]
-    fn a_refusal_points_into_the_expression_it_names() {
+    fn an_exclude_alone_is_not_savable() {
         let mut draft = Draft::new();
         draft.url = String::from("https://terminology.example/vs/local");
         let key = draft.clause_keys(true)[0];
-        draft.add_implicit_value_set(key, "https://terminology.example/x", expression_form());
-        let row = draft
-            .clause(key)
-            .and_then(|clause| clause.value_sets.first().map(|row| row.key))
-            .expect("the clause carries the row just added");
-        draft.write_value_set(key, row, "<<73211009 OR");
-        let canonical = draft
-            .clause(key)
-            .and_then(|clause| clause.value_sets.first().map(|row| row.canonical.clone()))
-            .expect("the row carries a canonical");
-        // The shape the server refuses an implicit value set in, with the
-        // parser's own byte offset in its words.
-        let said = format!(
-            "implicit value set `{canonical}` is malformed: expected a focus concept at byte 13, found the end of the expression"
+        draft.remove_clause(key);
+        let excluded = draft.add_clause(false);
+        if let Some(clause) = draft.clause_mut(excluded) {
+            clause.system = String::from("https://terminology.example/x");
+        }
+        assert!(
+            !draft.savable(),
+            "an exclude subtracts from a union that has to exist"
+        );
+    }
+
+    #[test]
+    fn a_refusal_points_into_the_filter_value_it_names() {
+        let (mut draft, key) = over("https://terminology.example/x");
+        draft.add_filter(key, "constraint", "=");
+        if let Some(row) = draft
+            .clause_mut(key)
+            .and_then(|clause| clause.filters.last_mut())
+        {
+            row.value = String::from("<<73211009 OR");
+        }
+        // The shape the server refuses a filter value in, with the parser's
+        // own byte offset in its words.
+        let said = "filter `constraint` value `<<73211009 OR` is invalid: expected a focus concept at byte 13, found the end of the expression";
+        assert_eq!(
+            draft.marked_value(said),
+            Some((
+                String::from("constraint ="),
+                String::from("<<73211009 OR"),
+                13
+            )),
+            "the filter the server named is the one the screen marks"
         );
         assert_eq!(
-            draft.marked_expression(&said),
-            Some((expression_form(), String::from("<<73211009 OR"), 13)),
-            "the row the server named is the one the screen marks"
-        );
-        assert_eq!(
-            draft.marked_expression("code `x` is not in code system `y`"),
+            draft.marked_value("code `x` is not in code system `y`"),
             None,
-            "a refusal about something else marks nothing"
+            "a refusal that states no position marks nothing"
+        );
+        assert_eq!(
+            draft.marked_value("filter `constraint` value `something else` is invalid: at byte 1"),
+            None,
+            "and one naming another value marks nothing either"
         );
     }
 
     #[test]
-    fn a_refusal_naming_another_value_set_marks_nothing() {
-        let mut draft = Draft::new();
-        let key = draft.clause_keys(true)[0];
-        draft.add_implicit_value_set(key, "https://terminology.example/x", expression_form());
+    fn the_marked_character_is_one_whole_character() {
         assert_eq!(
-            draft.marked_expression(
-                "implicit value set `https://terminology.example/other?fhir_vs=ecl/x` is malformed: expected a focus concept at byte 0, found \"x\""
+            mark("<<73211009", 2),
+            (
+                String::from("<<"),
+                String::from("7"),
+                String::from("3211009")
+            )
+        );
+        let multibyte = "<<73211009 |diabetes mellitus\u{2014}type 2|";
+        let (before, at, after) = mark(multibyte, 30);
+        assert_eq!(
+            format!("{before}{at}{after}"),
+            multibyte,
+            "the three parts are the value, whole"
+        );
+        assert_eq!(at.chars().count(), 1, "one character is marked: `{at}`");
+        let (before, at, after) = mark("<<7", 99);
+        assert_eq!(before, "<<7", "an offset past the end marks the end");
+        assert_eq!(at, " ");
+        assert!(after.is_empty());
+    }
+
+    #[test]
+    fn the_position_comes_from_the_server_s_own_diagnostic() {
+        assert_eq!(
+            position_in(
+                "filter `constraint` value `x` is invalid: expected a focus concept at byte 17, found \"OR\""
             ),
-            None,
-            "the canonical in the diagnostic is what picks the row"
+            Some(17),
+            "the parser's own offset is what the mark sits on"
         );
+        assert_eq!(
+            position_in("the expression nests 41 deep at byte 8; the limit is 40"),
+            Some(8),
+            "a trailing separator does not make the number unreadable"
+        );
+        assert_eq!(position_in("code `x` is not in code system `y`"), None);
+        assert_eq!(position_in("failed at byte"), None);
+        assert_eq!(position_in("failed at byte nowhere"), None);
     }
 
     #[test]
@@ -1109,7 +1303,7 @@ mod tests {
 
     #[test]
     fn a_resource_read_back_round_trips_through_the_draft() {
-        let stored: StoredValueSet = serde_json::from_str(
+        let document: Value = serde_json::from_str(
             r#"{"resourceType":"ValueSet","id":"local","meta":{"versionId":"3"},
                 "url":"https://terminology.example/vs/local","status":"active","name":"LocalSet",
                 "compose":{"inactive":true,
@@ -1120,11 +1314,13 @@ mod tests {
                               "filter":[{"property":"concept","op":"is-a","value":"root"}]}]}}"#,
         )
         .expect("the server's own answer parses");
+        let stored: StoredValueSet =
+            serde_json::from_value(document.clone()).expect("the composer reads it");
         assert!(
             stored.writable(),
             "the server stamped a version, so it holds the record"
         );
-        let draft = stored.draft();
+        let draft = stored.draft(&document);
         assert_eq!(draft.id, "local");
         assert_eq!(draft.version_id, "3");
         assert_eq!(draft.inactive, Some(true));
@@ -1151,32 +1347,39 @@ mod tests {
         assert!(!draft.clauses[2].included, "the exclude stays an exclude");
         assert_eq!(
             draft.resource(),
-            stored.draft().resource(),
+            stored.draft(&document).resource(),
             "reading and writing back changes nothing"
         );
     }
 
     #[test]
     fn a_resource_the_server_stamped_no_version_on_is_read_only() {
-        let stored: StoredValueSet = serde_json::from_str(
+        let document: Value = serde_json::from_str(
             r#"{"resourceType":"ValueSet","id":"national","url":"https://terminology.example/vs/n",
                 "status":"active","compose":{"include":[{"system":"https://terminology.example/x"}]}}"#,
         )
         .expect("the server's own answer parses");
+        let stored: StoredValueSet =
+            serde_json::from_value(document.clone()).expect("the composer reads it");
         assert!(
             !stored.writable(),
             "content the server serves out of its loaded indexes has no write path"
         );
-        assert!(stored.draft().saved(), "it still opens, to be read");
+        assert!(
+            stored.draft(&document).saved(),
+            "it still opens, to be read"
+        );
     }
 
     #[test]
     fn a_resource_carrying_no_compose_opens_on_an_empty_clause() {
-        let stored: StoredValueSet =
+        let document: Value =
             serde_json::from_str(r#"{"resourceType":"ValueSet","id":"x","status":"draft"}"#)
                 .expect("the server's own answer parses");
+        let stored: StoredValueSet =
+            serde_json::from_value(document.clone()).expect("the composer reads it");
         assert_eq!(
-            stored.draft().clauses.len(),
+            stored.draft(&document).clauses.len(),
             1,
             "an expansion-only value set opens on something to compose into"
         );

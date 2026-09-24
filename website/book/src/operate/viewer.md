@@ -245,13 +245,17 @@ that selects nothing, `vsd-2` for codes or filters with no code system, `vsd-3`
 for codes and filters at once.
 
 A clause draws in a value set your server already publishes, picked from the
-list, or one of the forms a code system defines for itself, such as everything
-under one concept or the members of a reference set
-(<https://hl7.org/fhir/R4B/snomedct.html>). A form appears only where the
-served version declares the filter it is shorthand for, so a system that
-declares none offers none. Own codes are picked out of the clause's code system
-through a search, so a clause cannot name a code the system does not hold, and
-each one can carry the display this value set gives it.
+list, or any canonical you type, including a form a code system defines for
+itself. It selects out of a code system with the filter properties and
+operators that system's served version declares, which the screen reads from
+`TerminologyCapabilities`: a system declaring an expression-constraint filter
+offers it here, a system declaring none offers none, and a clause pinned to a
+code system version is offered that version's filters. A filter value the
+server refuses is shown with the character its diagnostic points at marked.
+
+Own codes are picked out of the clause's code system through a search, so a
+clause cannot name a code the system does not hold, and each one can carry the
+display this value set gives it.
 
 **Run the preview** expands the definition on screen, saved or not: it posts it
 to `ValueSet/$expand` in the `valueSet` parameter and pages the answer
@@ -260,9 +264,12 @@ text filter are in the address, so a preview is a link you can send.
 
 **Save** sends the resource with `If-Match`, so a value set someone else
 changed since you opened it is refused with 412 and the screen offers to reload
-it (<https://hl7.org/fhir/R4B/http.html#concurrency>). Every refusal is shown in
-the server's own words. Content your server serves from its loaded indexes has
-no write path, so it opens here to read and offers no save under any role.
+it (<https://hl7.org/fhir/R4B/http.html#concurrency>). An update replaces the
+whole resource, so the save carries back every element the form does not draw,
+from the description to a code's own designations
+(<https://hl7.org/fhir/R4B/http.html#update>). Every refusal is shown in the
+server's own words. Content your server serves from its loaded indexes has no
+write path, so it opens here to read and offers no save under any role.
 
 ## About these screenshots
 

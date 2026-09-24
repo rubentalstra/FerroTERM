@@ -15,8 +15,6 @@ pub(crate) mod concept_map;
 pub(crate) mod error;
 pub(crate) mod expansion;
 pub(crate) mod facts;
-#[cfg(feature = "editor")]
-pub(crate) mod implicit;
 pub(crate) mod named;
 pub(crate) mod outcome;
 pub(crate) mod searchset;
@@ -46,8 +44,6 @@ use crate::fhir::code_system::CodeSystemSearch;
 use crate::fhir::compose::Draft;
 #[cfg(feature = "editor")]
 use crate::fhir::compose::Preview;
-#[cfg(feature = "editor")]
-use crate::fhir::compose::StoredValueSet;
 use crate::fhir::concept::ConceptQuery;
 use crate::fhir::concept::LookupAnswer;
 use crate::fhir::concept::LookupRequest;
@@ -639,7 +635,7 @@ impl FhirClient {
 /// carries.
 #[cfg(feature = "editor")]
 impl FhirClient {
-    /// Reads one `ValueSet` as the composer edits it.
+    /// Reads one `ValueSet` as the document the server sent.
     ///
     /// The read is the ordinary RESTful read
     /// (<https://hl7.org/fhir/R4B/http.html#read>); the composer needs the
@@ -655,7 +651,7 @@ impl FhirClient {
         &self,
         version: FhirVersion,
         id: &str,
-    ) -> Result<StoredValueSet, FhirError> {
+    ) -> Result<serde_json::Value, FhirError> {
         self.get_json(&self.resource_url(version, VALUE_SET, id))
             .await
     }

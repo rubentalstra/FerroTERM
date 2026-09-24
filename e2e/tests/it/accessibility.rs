@@ -86,10 +86,15 @@ const HEADING: &str = "h1";
 const SPINNER: &str = ".animate-spin";
 
 /// How many focusable elements the screen offers right now.
+///
+/// The selector is `:enabled` rather than `:not([disabled])`, because a
+/// control disabled through an ancestor `<fieldset disabled>` carries no
+/// attribute of its own and is still skipped by the tab order
+/// (<https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#concept-fe-disabled>).
 const COUNT_FOCUSABLE: &str = r#"
 return String(Array.from(document.querySelectorAll(
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]),'
-  + ' textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+  'a[href], button:enabled, input:enabled, select:enabled,'
+  + ' textarea:enabled, summary, [tabindex]:not([tabindex="-1"])'
 )).filter((el) => el.checkVisibility({
   contentVisibilityAuto: true, opacityProperty: true, visibilityProperty: true,
 })).length);
@@ -120,8 +125,8 @@ const TAG_FOCUSABLE: &str = r#"
 // unreachable (https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element).
 document.querySelectorAll('details:not([open])').forEach((el) => { el.open = true; });
 const focusable = Array.from(document.querySelectorAll(
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]),'
-  + ' textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+  'a[href], button:enabled, input:enabled, select:enabled,'
+  + ' textarea:enabled, summary, [tabindex]:not([tabindex="-1"])'
 )).filter((el) => {
   const box = el.getBoundingClientRect();
   if (box.width < 2 || box.height < 2) { return false; }
