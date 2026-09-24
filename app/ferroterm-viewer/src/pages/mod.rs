@@ -22,6 +22,8 @@ pub(crate) mod overview;
 pub(crate) mod settings;
 pub(crate) mod translate;
 pub(crate) mod validate;
+#[cfg(feature = "editor")]
+pub(crate) mod value_set_composer;
 pub(crate) mod value_sets;
 pub(crate) mod versions;
 

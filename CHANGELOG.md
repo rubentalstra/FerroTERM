@@ -13,6 +13,19 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- **The viewer's editor bundle composes a local `ValueSet`** (#635).
+  `/ui/editor/compose` builds a `ValueSet.compose` out of value sets the server
+  already publishes, own codes picked through the concept search, the filter
+  properties and operators the served code system version declares, and
+  excludes. The composition rules are drawn as they apply, a clause that breaks
+  `vsd-1`, `vsd-2` or `vsd-3` says so by number, and the preview is
+  `ValueSet/$expand` by `POST` with the unsaved definition inline. Saving needs
+  `user/ValueSet.cud` and goes through the REST API with `If-Match`, carrying
+  back every element the form does not draw. Content the server serves from its
+  loaded indexes opens read-only.
+
 ### Changed
 
 - **The viewer signs in at `/ui/editor`, so the redirect address registered

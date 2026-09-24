@@ -229,6 +229,48 @@ The access token stays in the browser tab's memory. It is never written to
 out drops the token and, where your issuer publishes a `revocation_endpoint`,
 revokes it there (RFC 7009).
 
+## Composing a value set
+
+Signed in with `user/ValueSet.cud`, the editor bundle's **Compose a value set**
+screen builds a local `ValueSet.compose` and saves it through the same REST API
+any client uses.
+
+A definition is a set of clauses. Every include adds to the selection and the
+value set is the union of them all; the criteria inside one include are taken
+together, so a code has to satisfy all of them; an exclude takes codes back out
+of that union (<https://hl7.org/fhir/R4B/valueset.html#compositions>). The
+screen says which of those each clause is doing, in a sentence under it, and
+names the invariant a clause breaks by its own number: `vsd-1` for a clause
+that selects nothing, `vsd-2` for codes or filters with no code system, `vsd-3`
+for codes and filters at once.
+
+A clause draws in a value set your server already publishes, picked from the
+list, or any canonical you type, including a form a code system defines for
+itself. It selects out of a code system with the filter properties and
+operators that system's served version declares, which the screen reads from
+`TerminologyCapabilities`: a system declaring an expression-constraint filter
+offers it here, a system declaring none offers none, and a clause pinned to a
+code system version is offered that version's filters. A filter value the
+server refuses is shown with the character its diagnostic points at marked.
+
+Own codes are picked out of the clause's code system through a search, so a
+clause cannot name a code the system does not hold, and each one can carry the
+display this value set gives it.
+
+**Run the preview** expands the definition on screen, saved or not: it posts it
+to `ValueSet/$expand` in the `valueSet` parameter and pages the answer
+(<https://hl7.org/fhir/R4B/valueset-operation-expand.html>). The page and the
+text filter are in the address, so a preview is a link you can send.
+
+**Save** sends the resource with `If-Match`, so a value set someone else
+changed since you opened it is refused with 412 and the screen offers to reload
+it (<https://hl7.org/fhir/R4B/http.html#concurrency>). An update replaces the
+whole resource, so the save carries back every element the form does not draw,
+from the description to a code's own designations
+(<https://hl7.org/fhir/R4B/http.html#update>). Every refusal is shown in the
+server's own words. Content your server serves from its loaded indexes has no
+write path, so it opens here to read and offers no save under any role.
+
 ## About these screenshots
 
 Each image is a capture of a running server, taken by a browser driven through

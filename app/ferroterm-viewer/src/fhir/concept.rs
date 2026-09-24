@@ -74,7 +74,7 @@ const HIERARCHY_OPERATORS: [&str; 6] = [
 ];
 
 /// The `$expand` parameter carrying the value set to expand.
-const VALUE_SET_PARAMETER: &str = "valueSet";
+pub(crate) const VALUE_SET_PARAMETER: &str = "valueSet";
 
 /// The `$expand` parameter that asks for a flat answer.
 ///
@@ -326,7 +326,7 @@ impl ChildOf {
 }
 
 /// One `Parameters.parameter` carrying a resource.
-fn resource_parameter(name: &str, resource: Value) -> Value {
+pub(crate) fn resource_parameter(name: &str, resource: Value) -> Value {
     let mut parameter = Map::new();
     parameter.insert(String::from("name"), Value::String(name.to_owned()));
     parameter.insert(String::from("resource"), resource);
@@ -334,7 +334,7 @@ fn resource_parameter(name: &str, resource: Value) -> Value {
 }
 
 /// One `Parameters.parameter` carrying a primitive value.
-fn value_parameter(name: &str, value_name: &str, value: Value) -> Value {
+pub(crate) fn value_parameter(name: &str, value_name: &str, value: Value) -> Value {
     let mut parameter = Map::new();
     parameter.insert(String::from("name"), Value::String(name.to_owned()));
     parameter.insert(value_name.to_owned(), value);

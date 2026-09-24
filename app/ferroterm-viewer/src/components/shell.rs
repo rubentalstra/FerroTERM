@@ -40,10 +40,14 @@ use crate::pages::not_found::NotFoundPage;
 use crate::pages::overview::OverviewPage;
 use crate::pages::translate::TranslatePage;
 use crate::pages::validate::ValidatePage;
+#[cfg(feature = "editor")]
+use crate::pages::value_set_composer::ValueSetComposerPage;
 use crate::pages::value_sets::ValueSetsPage;
 use crate::routes::ABOUT_PATH;
 #[cfg(feature = "editor")]
 use crate::routes::CODE_SYSTEM_EDITOR_PATH;
+#[cfg(feature = "editor")]
+use crate::routes::COMPOSE_PATH;
 use crate::routes::CONCEPT_MAPS_PATH;
 use crate::routes::EXPAND_PATH;
 use crate::routes::FIND_PATH;
@@ -100,15 +104,16 @@ const PUBLISH: [NavItem; 2] = [
     NavItem(CONCEPT_MAPS_PATH, "Concept maps", icon::CONCEPT_MAPS),
 ];
 
-/// The screens that list what this server publishes, and the one that writes.
+/// The screens that list what this server publishes, and the ones that write.
 ///
-/// Only the editor bundle carries the authoring screen, so only that bundle's
-/// sidebar leads to it.
+/// Only the editor bundle carries the authoring screens, so only that bundle's
+/// sidebar leads to them.
 #[cfg(feature = "editor")]
-const PUBLISH: [NavItem; 3] = [
+const PUBLISH: [NavItem; 4] = [
     NavItem(VALUE_SETS_PATH, "Value sets", icon::VALUE_SETS),
     NavItem(CONCEPT_MAPS_PATH, "Concept maps", icon::CONCEPT_MAPS),
     NavItem(CODE_SYSTEM_EDITOR_PATH, "Edit a code system", icon::EDIT),
+    NavItem(COMPOSE_PATH, "Compose a value set", icon::EDIT),
 ];
 
 /// The one screen about this server and this viewer, rather than about a code.
@@ -331,7 +336,7 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
     .into_any()
 }
 
-/// The authoring route, which only the editor bundle carries.
+/// The authoring routes, which only the editor bundle carries.
 ///
 /// A transparent component returns the routing value itself rather than a
 /// view, which is what a `<Routes>` child has to be
@@ -346,7 +351,13 @@ fn topbar(version: Signal<FhirVersion>, open: RwSignal<bool>) -> AnyView {
 pub(crate) fn EditorRoute() -> impl MatchNestedRoutes + Clone {
     #[cfg(feature = "editor")]
     {
-        view! { <Route path=path!("/codesystem") view=|| crate::pages::editor::EditorPage().into_any() /> }
+        view! {
+            <Route
+                path=path!("/codesystem")
+                view=|| crate::pages::editor::EditorPage().into_any()
+            />
+            <Route path=path!("/compose") view=|| ValueSetComposerPage().into_any() />
+        }
         .into_inner()
     }
     #[cfg(not(feature = "editor"))]
@@ -458,6 +469,10 @@ mod tests {
     use crate::routes::nav_section;
 
     /// The path segment of every entry, in the order the sidebar draws them.
+    ///
+    /// The editor bundle's own groups are in it, because the same test runs in
+    /// both feature sets and a screen the sidebar offers has to be reachable
+    /// in the bundle that draws it.
     fn entries() -> Vec<&'static str> {
         NAV_GROUPS
             .iter()
@@ -489,6 +504,21 @@ mod tests {
                 "two entries lead to `{segment}`: {listed:?}"
             );
         }
+    }
+
+    #[test]
+    fn the_editor_bundle_offers_the_composer_and_the_reader_bundle_does_not() {
+        let listed = entries();
+        #[cfg(feature = "editor")]
+        assert!(
+            listed.contains(&crate::routes::COMPOSE_PATH),
+            "the editor bundle reaches its own screens from the sidebar: {listed:?}"
+        );
+        #[cfg(not(feature = "editor"))]
+        assert!(
+            !listed.contains(&"compose"),
+            "the reader bundle carries no authoring screen: {listed:?}"
+        );
     }
 
     #[test]
