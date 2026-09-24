@@ -153,6 +153,24 @@ impl Server {
             .map_or_else(|| panic!("{url} is loaded"), |(id, _, _)| id.to_owned())
     }
 
+    /// The `ValueSet` instance id the server addresses `url` by.
+    pub(crate) fn value_set_id_of(&self, url: &str) -> String {
+        self.state()
+            .value_set_instances()
+            .into_iter()
+            .find(|(_, served, _)| served == url)
+            .map_or_else(|| panic!("{url} is loaded"), |(id, _, _)| id)
+    }
+
+    /// The `ConceptMap` instance id the server addresses `url` by.
+    pub(crate) fn concept_map_id_of(&self, url: &str) -> String {
+        self.state()
+            .concept_map_instances()
+            .into_iter()
+            .find(|(_, served, _)| served == url)
+            .map_or_else(|| panic!("{url} is loaded"), |(id, _, _)| id)
+    }
+
     /// The same configuration loaded again, as a restart loads it.
     ///
     /// The running server is dropped first: `redb` holds the database file for

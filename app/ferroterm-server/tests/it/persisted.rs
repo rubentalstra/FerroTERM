@@ -554,3 +554,183 @@ fn interactions(body: &Value, resource_type: &str) -> Vec<String> {
         .map(str::to_owned)
         .collect()
 }
+
+/// A resource this server holds and the reading version has no representation
+/// for: R5 declares `copyrightLabel` on every canonical resource and R4B does
+/// not (<https://hl7.org/fhir/R5/codesystem.html>).
+const R5_ONLY: (&str, &str) = ("copyrightLabel", "CC0-1.0");
+
+/// The searchset entries whose `search.mode` is `mode`.
+fn entries_of<'a>(body: &'a Value, mode: &str) -> Vec<&'a Value> {
+    body["entry"]
+        .as_array()
+        .expect("entries")
+        .iter()
+        .filter(|entry| entry["search"]["mode"] == mode)
+        .collect()
+}
+
+/// The `url`s a searchset matched.
+fn matched_urls(body: &Value) -> Vec<&str> {
+    entries_of(body, "match")
+        .into_iter()
+        .filter_map(|entry| entry["resource"]["url"].as_str())
+        .collect()
+}
+
+/// The three resource types, each written with an element only R5 defines.
+fn r5_only_resources() -> [(&'static str, &'static str, Value); 3] {
+    let (label, value) = R5_ONLY;
+    [
+        (
+            "CodeSystem",
+            "cross-cs",
+            json!({
+                "resourceType": "CodeSystem", "url": "http://ferroterm.test/CodeSystem/cross",
+                "version": "1.0", "status": "active", "content": "complete",
+                label: value,
+                "concept": [{"code": "a", "display": "A"}]
+            }),
+        ),
+        (
+            "ValueSet",
+            "cross-vs",
+            json!({
+                "resourceType": "ValueSet", "url": "http://ferroterm.test/ValueSet/cross",
+                "version": "1.0", "status": "active",
+                label: value,
+                "compose": {"include": [{"system": "http://ferroterm.test/CodeSystem/cross"}]}
+            }),
+        ),
+        (
+            "ConceptMap",
+            "cross-cm",
+            json!({
+                "resourceType": "ConceptMap", "url": "http://ferroterm.test/ConceptMap/cross",
+                "version": "1.0", "status": "active",
+                "group": [{
+                    "source": "http://ferroterm.test/CodeSystem/cross",
+                    "target": COLOURS,
+                    // R5 states a target's direction as `relationship`; R4B
+                    // spells it `equivalence`, and the two code sets are
+                    // disjoint (<https://hl7.org/fhir/R5/conceptmap.html>).
+                    "element": [{"code": "a", "target": [{"code": "red", "relationship": "equivalent"}]}]
+                }]
+            }),
+        ),
+    ]
+}
+
+#[tokio::test]
+async fn a_resource_written_on_one_version_leaves_another_version_s_search_answering() {
+    let server = Server::start_persisting();
+    for (resource_type, id, body) in r5_only_resources() {
+        let response = server.put(&format!("/r5/{resource_type}/{id}"), &body).await;
+        assert_eq!(
+            response.status(),
+            StatusCode::CREATED,
+            "{resource_type} is written as FHIR 5.0.0"
+        );
+    }
+
+    for (resource_type, id, body) in r5_only_resources() {
+        let url = body["url"].as_str().expect("a url");
+
+        let (status, found) = server.get(&format!("/r5/{resource_type}")).await;
+        assert_eq!(status, StatusCode::OK, "{resource_type}: {found}");
+        assert!(
+            matched_urls(&found).contains(&url),
+            "{resource_type}: the version it was written as serves it: {found}"
+        );
+        assert!(
+            entries_of(&found, "outcome").is_empty(),
+            "{resource_type}: nothing was left out: {found}"
+        );
+
+        // A searchset may carry an `OperationOutcome` about the search beside
+        // its matches, with no `fatal` or `error` issue and a `search.mode` of
+        // `outcome` (<https://hl7.org/fhir/R4B/http.html#search>).
+        let (status, found) = server.get(&format!("/r4b/{resource_type}")).await;
+        assert_eq!(status, StatusCode::OK, "{resource_type}: {found}");
+        assert!(
+            !matched_urls(&found).contains(&url),
+            "{resource_type}: the resource is not among the matches: {found}"
+        );
+        let outcome = entries_of(&found, "outcome");
+        assert_eq!(
+            outcome.len(),
+            1,
+            "{resource_type}: one outcome entry: {found}"
+        );
+        let issue = &outcome[0]["resource"]["issue"][0];
+        assert_eq!(outcome[0]["resource"]["resourceType"], "OperationOutcome");
+        assert_eq!(issue["severity"], "warning", "{resource_type}: {found}");
+        assert_eq!(issue["code"], "not-supported", "{resource_type}: {found}");
+        let text = issue["details"]["text"].as_str().expect("details.text");
+        assert!(
+            text.contains(id) && text.contains("5.0.0"),
+            "{resource_type}: the text names the resource and the version it was written as: {text}"
+        );
+        let matched = u64::try_from(entries_of(&found, "match").len()).expect("fits");
+        assert_eq!(
+            found["total"].as_u64(),
+            Some(matched),
+            "{resource_type}: total counts the matches alone: {found}"
+        );
+
+        // The read has one resource to answer with and no representation of it
+        // on this base: the FHIR release is a media type parameter
+        // (<https://hl7.org/fhir/R5/versioning.html>), so the refusal is a
+        // `406` (<https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.7>).
+        let (status, refusal) = server.get(&format!("/r4b/{resource_type}/{id}")).await;
+        assert_eq!(
+            status,
+            StatusCode::NOT_ACCEPTABLE,
+            "{resource_type}: {refusal}"
+        );
+        assert_eq!(refusal["resourceType"], "OperationOutcome");
+        assert_eq!(refusal["issue"][0]["code"], "not-supported");
+        assert_eq!(
+            server.get(&format!("/r5/{resource_type}/{id}")).await.0,
+            StatusCode::OK,
+            "{resource_type}: the version it was written as still reads it"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_concept_map_written_as_r4b_leaves_the_r5_search_answering() {
+    let server = Server::start_persisting();
+    let map = json!({
+        "resourceType": "ConceptMap",
+        "url": "http://ferroterm.test/ConceptMap/reverse",
+        "version": "1.0", "status": "active",
+        "group": [{
+            "source": COLOURS, "target": COLOURS,
+            "element": [{"code": "red", "target": [{"code": "blue", "equivalence": "wider"}]}]
+        }]
+    });
+    let response = server.put("/r4b/ConceptMap/reverse", &map).await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let (status, body) = server.get("/r5/ConceptMap").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(
+        !matched_urls(&body).contains(&"http://ferroterm.test/ConceptMap/reverse"),
+        "{body}"
+    );
+    let outcome = entries_of(&body, "outcome");
+    assert_eq!(outcome.len(), 1, "{body}");
+    let text = outcome[0]["resource"]["issue"][0]["details"]["text"]
+        .as_str()
+        .expect("details.text");
+    assert!(text.contains("reverse") && text.contains("4.3.0"), "{text}");
+
+    let (status, body) = server.get("/r4b/ConceptMap").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(
+        matched_urls(&body).contains(&"http://ferroterm.test/ConceptMap/reverse"),
+        "the version it was written as is unaffected: {body}"
+    );
+    assert!(entries_of(&body, "outcome").is_empty(), "{body}");
+}
