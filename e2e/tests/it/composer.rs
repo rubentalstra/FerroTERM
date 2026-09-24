@@ -54,11 +54,11 @@ const CODE: &str = "ca-leaf";
 
 /// What the search types to find it.
 ///
-/// `$expand`'s `filter` is "a text filter that is applied to restrict the codes
-/// that are returned" (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>),
-/// which this server matches against the designations it holds, so the search
-/// is for the concept's display and the code picks the row out of the answer.
-const SEARCH_TERM: &str = "First";
+/// Nothing: an empty `filter` lists the first concepts the system answers
+/// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>), which is what
+/// the concept browser's search does, and the code picks the row out of that
+/// answer without the journey guessing what text the server indexes.
+const SEARCH_TERM: &str = "";
 
 /// The canonical field of the composer.
 const URL_FIELD: &str = "#compose-url";

@@ -1143,10 +1143,14 @@ fn concept_search(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
         let system = system.get();
         let term = offers.term.get();
         let system_version = clause.with(|held| held.system_version.clone());
-        (!system.is_empty() && !term.is_empty()).then(|| ConceptQuery {
+        // An empty filter lists the first concepts the system answers, which
+        // is what the concept browser's search does and what gives a reader
+        // who knows no term something to pick from
+        // (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>).
+        (!system.is_empty()).then(|| ConceptQuery {
             system,
             system_version: Some(system_version).filter(|held| !held.is_empty()),
-            filter: Some(term),
+            filter: Some(term).filter(|term| !term.is_empty()),
             child_of: None,
             display_language: None,
             count: SEARCH_COUNT,
