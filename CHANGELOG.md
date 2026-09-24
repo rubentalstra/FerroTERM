@@ -15,6 +15,19 @@ fresh link reference.
 
 ### Added
 
+- **`metadata?mode=terminology` declares the implicit value sets each served
+  version resolves** (#657). Every form is an extension
+  `https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set` on
+  `codeSystem.version`, on R4, R4B, R5 and R6, with a `pattern` (the URL
+  template as the code system's page spells it, placeholders in square
+  brackets) and an `argument` (`none`, `code` or `expression`). SNOMED CT
+  declares its five `?fhir_vs` forms, LOINC `/vs`, `/vs/[id]` and
+  `/vs/[partcode]`, RxNorm `/vs`, UCUM `/vs` and `/vs/[expression]`, and an
+  ICD-11 linearization `[entity]/postcoordinationScale/[axis]`; the ClaML
+  classifications, BCP 13, BCP 47 and `CodeSystem` resources declare none. The
+  composer's value set picker offers each declared form for the clause's code
+  system and fills its placeholders, a code through the concept search and an
+  expression through a text field.
 - **The history interaction on the persisted resources** (#667).
   `GET {type}/{id}/_history` and `GET {type}/_history` answer a `history`
   `Bundle` on every served version, newest first, with `entry.request` naming
@@ -40,7 +53,6 @@ fresh link reference.
   the generated model carries no `isSummary` flag yet, and a value the
   search-summary code system does not define is a `400`. The
   `CapabilityStatement` declares `_summary` beside `_elements`.
-
 - **The viewer's editor bundle reads a resource's versions, compares two of
   them, and restores one** (#637). Every authoring screen links to
   `/ui/editor/history` for the resource it has open. The version list is read

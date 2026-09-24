@@ -24,6 +24,19 @@ const ARTIFACT_NAME: &str = "name";
 /// The sub-extension carrying the release identifier the build recorded.
 const ARTIFACT_RELEASE: &str = "release";
 
+/// The canonical FerroTERM declares one implicit value set form under.
+///
+/// No element of `TerminologyCapabilities` says which implicit value sets a
+/// server resolves, so the server states each form as an extension on
+/// `codeSystem.version`: a URL template and what its placeholders take.
+const IMPLICIT_EXTENSION: &str = "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set";
+
+/// The sub-extension carrying the URL template.
+const IMPLICIT_PATTERN: &str = "pattern";
+
+/// The sub-extension carrying what the template's placeholders take.
+const IMPLICIT_ARGUMENT: &str = "argument";
+
 /// What `GET [base]/metadata?mode=terminology` declares about a served root.
 ///
 /// Every field is optional so a server that omits one still renders. The
@@ -86,11 +99,12 @@ struct Filter {
     op: Vec<String>,
 }
 
-/// One `Extension`, read only for the artifact declaration.
+/// One `Extension`, read only for the artifact and implicit value set
+/// declarations.
 ///
 /// A complex extension carries its parts as child extensions
-/// (<https://hl7.org/fhir/R4B/extensibility.html>), and the artifact carries
-/// its two parts as `valueString`, which is the one value type read here.
+/// (<https://hl7.org/fhir/R4B/extensibility.html>); the parts read here carry
+/// a `valueString` or a `valueCode`.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 struct Extension {
     /// The canonical that says what the extension means.
@@ -101,6 +115,9 @@ struct Extension {
     /// `valueString`.
     #[serde(rename = "valueString")]
     value_string: Option<String>,
+    /// `valueCode`.
+    #[serde(rename = "valueCode")]
+    value_code: Option<String>,
 }
 
 /// One code system, as the overview draws it.
@@ -134,6 +151,86 @@ pub(crate) struct VersionRow {
     pub(crate) properties: Vec<String>,
     /// The artifact this version was read from, when the server read one.
     pub(crate) artifact: Option<Artifact>,
+    /// The implicit value set forms this version resolves, in the order the
+    /// server declared them.
+    pub(crate) implicit_forms: Vec<ImplicitForm>,
+}
+
+/// One implicit value set form a served version resolves.
+///
+/// The viewer reads the template and the placeholders it holds; it never
+/// knows which system a template belongs to.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ImplicitForm {
+    /// The URL template, each placeholder in square brackets.
+    pub(crate) pattern: String,
+    /// What the placeholders take.
+    pub(crate) argument: ImplicitArgument,
+}
+
+/// What the placeholders of an implicit value set template take.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ImplicitArgument {
+    /// The template has no placeholder and is the value set URL as it stands.
+    None,
+    /// The one placeholder takes a code of the system.
+    Code,
+    /// The placeholders take free text.
+    Expression,
+}
+
+impl ImplicitArgument {
+    /// The argument a declared `valueCode` names, or `None` for a code this
+    /// viewer does not know.
+    fn of(code: &str) -> Option<Self> {
+        match code {
+            "none" => Some(Self::None),
+            "code" => Some(Self::Code),
+            "expression" => Some(Self::Expression),
+            _ => None,
+        }
+    }
+}
+
+// NOTE: only the composer fills a template, and the reader bundle carries no
+// composer, so the filling is editor-only (no FHIR/SNOMED spec governs this: our own design).
+#[cfg(feature = "editor")]
+impl ImplicitForm {
+    /// The names of the bracketed placeholders, in template order.
+    pub(crate) fn placeholders(&self) -> Vec<String> {
+        let mut names = Vec::new();
+        let mut rest = self.pattern.as_str();
+        while let Some((_, after)) = rest.split_once('[') {
+            let Some((name, tail)) = after.split_once(']') else {
+                break;
+            };
+            names.push(name.to_owned());
+            rest = tail;
+        }
+        names
+    }
+
+    /// The value set URL with each placeholder replaced, in order, by one of
+    /// `arguments`, or `None` while a placeholder has no non-blank argument.
+    pub(crate) fn instantiate(&self, arguments: &[String]) -> Option<String> {
+        let mut out = String::new();
+        let mut rest = self.pattern.as_str();
+        let mut arguments = arguments.iter();
+        while let Some((before, after)) = rest.split_once('[') {
+            let Some((_, tail)) = after.split_once(']') else {
+                break;
+            };
+            let argument = arguments.next().map(|argument| argument.trim())?;
+            if argument.is_empty() {
+                return None;
+            }
+            out.push_str(before);
+            out.push_str(argument);
+            rest = tail;
+        }
+        out.push_str(rest);
+        Some(out)
+    }
 }
 
 /// The built index one served code system version was read from.
@@ -182,6 +279,14 @@ impl Extension {
     /// The declared `valueString`, when the part carried one.
     fn value(&self) -> Option<String> {
         self.value_string.clone()
+    }
+
+    /// The declared `valueCode` of the sub-extension `url` names.
+    fn code_part(&self, url: &str) -> Option<&str> {
+        self.parts
+            .iter()
+            .find(|part| part.url.as_deref() == Some(url))
+            .and_then(|part| part.value_code.as_deref())
     }
 }
 
@@ -249,6 +354,7 @@ fn add_versions(card: &mut SystemCard, system: &CodeSystem) {
                 .collect(),
             properties: version.property.clone(),
             artifact: artifact_of(&version.extension),
+            implicit_forms: implicit_forms_of(&version.extension),
         }
     }));
 }
@@ -269,6 +375,23 @@ fn artifact_of(extensions: &[Extension]) -> Option<Artifact> {
         name: declaration.part(ARTIFACT_NAME),
         release: declaration.part(ARTIFACT_RELEASE),
     })
+}
+
+/// The implicit value set forms `extensions` declares, in declaration order.
+///
+/// A declaration without a template, or with an argument code this viewer
+/// does not know, offers nothing it could fill, so it is left out.
+fn implicit_forms_of(extensions: &[Extension]) -> Vec<ImplicitForm> {
+    extensions
+        .iter()
+        .filter(|extension| extension.url.as_deref() == Some(IMPLICIT_EXTENSION))
+        .filter_map(|declaration| {
+            Some(ImplicitForm {
+                pattern: named(declaration.part(IMPLICIT_PATTERN).as_deref())?,
+                argument: ImplicitArgument::of(declaration.code_part(IMPLICIT_ARGUMENT)?)?,
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -650,5 +773,138 @@ mod tests {
                 .is_empty(),
             "the screen then says the server declared no code system"
         );
+    }
+
+    fn form(pattern: &str, argument: ImplicitArgument) -> ImplicitForm {
+        ImplicitForm {
+            pattern: pattern.to_owned(),
+            argument,
+        }
+    }
+
+    #[test]
+    fn every_declared_implicit_form_is_read_on_every_fhir_version() {
+        for (root, document) in RECORDED {
+            let cards = parse(document).cards();
+            let forms = &card_of(&cards, "http://unitsofmeasure.org")
+                .versions
+                .first()
+                .expect("one version is served")
+                .implicit_forms;
+            assert_eq!(
+                forms,
+                &[
+                    form("http://unitsofmeasure.org/vs", ImplicitArgument::None),
+                    form(
+                        "http://unitsofmeasure.org/vs/[expression]",
+                        ImplicitArgument::Expression
+                    ),
+                ],
+                "{root} declares both forms in order"
+            );
+        }
+    }
+
+    #[test]
+    fn a_system_that_resolves_no_implicit_value_set_declares_no_form() {
+        for (root, document) in RECORDED {
+            let cards = parse(document).cards();
+            let card = card_of(&cards, "urn:iso:std:iso:3166");
+            assert!(
+                card.versions
+                    .iter()
+                    .all(|version| version.implicit_forms.is_empty()),
+                "{root}: the registry declares no implicit value set"
+            );
+        }
+    }
+
+    #[test]
+    fn a_form_with_an_unknown_argument_or_no_pattern_is_left_out() {
+        let cards = parse(&format!(
+            r#"{{"codeSystem":[{{"uri":"https://terminology.example/x","version":[{{"code":"1",
+                "extension":[
+                  {{"url":"{IMPLICIT_EXTENSION}","extension":[
+                    {{"url":"{IMPLICIT_PATTERN}","valueString":"https://terminology.example/x/vs"}},
+                    {{"url":"{IMPLICIT_ARGUMENT}","valueCode":"sometimes"}}]}},
+                  {{"url":"{IMPLICIT_EXTENSION}","extension":[
+                    {{"url":"{IMPLICIT_ARGUMENT}","valueCode":"none"}}]}},
+                  {{"url":"{IMPLICIT_EXTENSION}","extension":[
+                    {{"url":"{IMPLICIT_PATTERN}","valueString":"https://terminology.example/x/vs/[c]"}},
+                    {{"url":"{IMPLICIT_ARGUMENT}","valueCode":"code"}}]}}]}}]}}]}}"#
+        ))
+        .cards();
+        let forms = &card_of(&cards, "https://terminology.example/x")
+            .versions
+            .first()
+            .expect("one version")
+            .implicit_forms;
+        assert_eq!(
+            forms,
+            &[form(
+                "https://terminology.example/x/vs/[c]",
+                ImplicitArgument::Code
+            )]
+        );
+    }
+
+    /// The filling of a template, which only the editor bundle carries.
+    #[cfg(feature = "editor")]
+    mod filling {
+        use super::*;
+
+        #[test]
+        fn a_pattern_names_its_placeholders_in_order() {
+            assert_eq!(
+                form("https://t.example/vs", ImplicitArgument::None).placeholders(),
+                Vec::<String>::new()
+            );
+            assert_eq!(
+                form("[entity]/scale/[axis]", ImplicitArgument::Expression).placeholders(),
+                ["entity", "axis"]
+            );
+        }
+
+        #[test]
+        fn a_pattern_without_a_placeholder_is_the_url_as_it_stands() {
+            assert_eq!(
+                form("https://t.example/vs", ImplicitArgument::None).instantiate(&[]),
+                Some(String::from("https://t.example/vs"))
+            );
+        }
+
+        #[test]
+        fn a_code_replaces_the_bracketed_placeholder() {
+            assert_eq!(
+                form(
+                    "https://t.example?fhir_vs=isa/[code]",
+                    ImplicitArgument::Code
+                )
+                .instantiate(&[String::from(" 123 ")]),
+                Some(String::from("https://t.example?fhir_vs=isa/123"))
+            );
+        }
+
+        #[test]
+        fn every_placeholder_takes_its_own_argument_in_order() {
+            assert_eq!(
+                form("[entity]/scale/[axis]", ImplicitArgument::Expression)
+                    .instantiate(&[String::from("https://t.example/1"), String::from("size")]),
+                Some(String::from("https://t.example/1/scale/size"))
+            );
+        }
+
+        #[test]
+        fn a_missing_or_blank_argument_instantiates_nothing() {
+            let two = form("[entity]/scale/[axis]", ImplicitArgument::Expression);
+            assert_eq!(
+                two.instantiate(&[String::from("https://t.example/1")]),
+                None
+            );
+            assert_eq!(
+                two.instantiate(&[String::from("https://t.example/1"), String::from("  ")]),
+                None
+            );
+        }
     }
 }

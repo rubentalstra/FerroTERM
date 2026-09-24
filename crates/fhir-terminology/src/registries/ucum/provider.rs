@@ -11,9 +11,9 @@ use super::grammar::{Atom, Expression, parse};
 use crate::compose::{Compose, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
-    Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
-    Designation, DesignationUse, FilterDefinition, Hierarchy, Identity, Located, Property,
-    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
+    CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration, Designation,
+    DesignationUse, FilterDefinition, Hierarchy, Identity, ImplicitArgument, ImplicitForm, Located,
+    Property, PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
 };
 use crate::registries::interned::Interned;
 
@@ -94,7 +94,16 @@ impl UcumProvider {
                         value: String::from("a property such as `mass`"),
                     },
                 ],
-                capabilities: BTreeSet::from([Capability::ImplicitValueSets]),
+                capabilities: BTreeSet::new(),
+                // NOTE: the `/vs` and `/vs/[expression]` forms of
+                // <https://terminology.hl7.org/UCUM.html>.
+                implicit_forms: vec![
+                    ImplicitForm::new("http://unitsofmeasure.org/vs", ImplicitArgument::None),
+                    ImplicitForm::new(
+                        "http://unitsofmeasure.org/vs/[expression]",
+                        ImplicitArgument::Expression,
+                    ),
+                ],
             },
             interned: Interned::new(),
             essence,

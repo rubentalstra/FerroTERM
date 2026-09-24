@@ -450,3 +450,16 @@ fn a_unit_name_in_english_does_not_satisfy_a_request_for_another_language() {
         .expect("the display as a designation");
     assert_eq!(designation.language.as_deref(), Some("en"));
 }
+
+#[test]
+fn every_declared_implicit_value_set_form_resolves() {
+    // The `/vs` and `/vs/[expression]` forms of <https://terminology.hl7.org/UCUM.html>.
+    let provider = UcumProvider::new();
+    crate::implicit_forms::every_form_resolves(
+        &provider,
+        &[
+            ("http://unitsofmeasure.org/vs", &[]),
+            ("http://unitsofmeasure.org/vs/[expression]", &["mg/dL"]),
+        ],
+    );
+}

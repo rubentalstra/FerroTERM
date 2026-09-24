@@ -128,6 +128,45 @@
                 }
               ],
               "url": "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://loinc.org/vs"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "none"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://loinc.org/vs/[id]"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "code"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://loinc.org/vs/[partcode]"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "code"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
             }
           ],
           "filter": [
@@ -505,6 +544,71 @@
                 }
               ],
               "url": "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://snomed.info/sct?fhir_vs"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "none"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://snomed.info/sct?fhir_vs=isa/[sctid]"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "code"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://snomed.info/sct?fhir_vs=refset"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "none"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://snomed.info/sct?fhir_vs=refset/[sctid]"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "code"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://snomed.info/sct?fhir_vs=ecl/[ecl]"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "expression"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
             }
           ],
           "filter": [
@@ -562,6 +666,34 @@
         {
           "code": "2.2",
           "compositional": true,
+          "extension": [
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://unitsofmeasure.org/vs"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "none"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://unitsofmeasure.org/vs/[expression]"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "expression"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
+            }
+          ],
           "filter": [
             {
               "code": "concept",
@@ -618,6 +750,19 @@
                 }
               ],
               "url": "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact"
+            },
+            {
+              "extension": [
+                {
+                  "url": "pattern",
+                  "valueString": "http://www.nlm.nih.gov/research/umls/rxnorm/vs"
+                },
+                {
+                  "url": "argument",
+                  "valueCode": "none"
+                }
+              ],
+              "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
             }
           ],
           "filter": [
@@ -904,7 +1049,7 @@
       ]
     }
   ],
-  "date": "2026-09-23T13:34:00.798713Z",
+  "date": "2026-09-24T14:25:54.853623Z",
   "expansion": {
     "hierarchical": false,
     "incomplete": false,

@@ -1034,3 +1034,23 @@ fn the_normal_form_is_answered_only_where_a_request_asks_for_it() {
         "`*` asks for everything there is"
     );
 }
+
+#[test]
+fn every_declared_implicit_value_set_form_resolves() {
+    // The five forms of <https://hl7.org/fhir/R4B/snomedct.html>, "Implicit
+    // Value Sets"; the ECL argument is URI-encoded, as the page requires.
+    let (_dir, p) = provider();
+    let animal = sctid(item(ANIMAL));
+    let pets = sctid(item(PETS));
+    let ecl = format!("%3C%3C%20{animal}");
+    crate::implicit_forms::every_form_resolves(
+        &p,
+        &[
+            ("http://snomed.info/sct?fhir_vs", &[]),
+            ("http://snomed.info/sct?fhir_vs=isa/[sctid]", &[&animal]),
+            ("http://snomed.info/sct?fhir_vs=refset", &[]),
+            ("http://snomed.info/sct?fhir_vs=refset/[sctid]", &[&pets]),
+            ("http://snomed.info/sct?fhir_vs=ecl/[ecl]", &[&ecl]),
+        ],
+    );
+}

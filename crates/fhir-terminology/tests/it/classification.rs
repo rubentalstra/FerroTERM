@@ -72,9 +72,7 @@ fn the_identity_and_declaration_follow_the_manifest_and_the_icd_page() {
     assert!(declaration.capabilities.contains(&Capability::Subsumption));
     assert!(declaration.capabilities.contains(&Capability::Enumeration));
     assert!(
-        !declaration
-            .capabilities
-            .contains(&Capability::ImplicitValueSets),
+        declaration.implicit_forms.is_empty(),
         "the ICD page defines none"
     );
     let filters: Vec<&str> = declaration
@@ -515,4 +513,10 @@ fn a_display_in_the_classifications_language_does_not_satisfy_a_request_for_anot
         "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK"
     );
     assert!(none.message.is_some(), "{none:?}");
+}
+
+#[test]
+fn a_classification_declares_no_implicit_value_set_form() {
+    let (_dir, provider) = claml();
+    crate::implicit_forms::declares_none(&provider, CLAML_SYSTEM);
 }

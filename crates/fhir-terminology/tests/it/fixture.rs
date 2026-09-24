@@ -196,6 +196,7 @@ impl Fixture {
                 ],
                 filters: Vec::new(),
                 capabilities,
+                implicit_forms: Vec::new(),
             },
             rows,
             tree,

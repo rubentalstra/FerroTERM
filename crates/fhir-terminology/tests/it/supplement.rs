@@ -11,7 +11,7 @@ use fhir_terminology::registries::bcp13::Bcp13Provider;
 use fhir_terminology::snomed::{SYSTEM, SnomedProvider};
 use fhir_terminology::supplement::{Additions, Supplement, Supplemented};
 
-use ferroterm_testkit::snomed::{ANIMAL, CAT, FISH, ICD10_MAP_SCTID, item, sctid};
+use ferroterm_testkit::snomed::{ANIMAL, CAT, FISH, ICD10_MAP_SCTID, PETS, item, sctid};
 
 use crate::fixture::Fixture;
 
@@ -255,5 +255,38 @@ fn a_supplemented_registry_still_expands_the_include_its_filters_bound() {
             .as_deref(),
         Some("Platte tekst"),
         "the supplement still adds its designation"
+    );
+}
+
+#[test]
+fn a_supplemented_system_declares_and_resolves_the_forms_of_the_system_it_supplements() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    ferroterm_testkit::snomed::write(dir.path()).expect("writes the fixture");
+    let inner: Arc<dyn CodeSystemProvider> =
+        Arc::new(SnomedProvider::open(dir.path(), "en").expect("opens"));
+    let supplemented = Supplemented::new(
+        Arc::clone(&inner),
+        vec![dutch(
+            "http://example.org/fixture-nl",
+            &sctid(item(CAT)),
+            "Kat",
+        )],
+    );
+    assert_eq!(
+        supplemented.declaration().implicit_forms,
+        inner.declaration().implicit_forms
+    );
+    let animal = sctid(item(ANIMAL));
+    let pets = sctid(item(PETS));
+    let ecl = format!("%3C%3C%20{animal}");
+    crate::implicit_forms::every_form_resolves(
+        &supplemented,
+        &[
+            ("http://snomed.info/sct?fhir_vs", &[]),
+            ("http://snomed.info/sct?fhir_vs=isa/[sctid]", &[&animal]),
+            ("http://snomed.info/sct?fhir_vs=refset", &[]),
+            ("http://snomed.info/sct?fhir_vs=refset/[sctid]", &[&pets]),
+            ("http://snomed.info/sct?fhir_vs=ecl/[ecl]", &[&ecl]),
+        ],
     );
 }

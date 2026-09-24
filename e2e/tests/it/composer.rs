@@ -87,6 +87,13 @@ const SYSTEM_PICKER: &str = "select[id^='compose-system-']";
 /// The search that finds a code in that system.
 const CODE_SEARCH: &str = "input[id^='compose-search-']";
 
+/// A code system every deployment serves that declares implicit value set
+/// templates (<https://terminology.hl7.org/UCUM.html>).
+const UCUM: &str = "http://unitsofmeasure.org";
+
+/// The implicit value set template picker of the second clause.
+const SECOND_TEMPLATE_PICKER: &str = "(//select[starts-with(@id, 'compose-implicit-')])[2]";
+
 /// The notice a screen that cannot be saved carries.
 const READ_ONLY: &str = "//p[contains(text(), 'read-only') or contains(text(), 'no permission') \
      or contains(text(), 'Sign in to save')]";
@@ -169,7 +176,26 @@ async fn compose(journey: &Journey, canonical: &str) -> WebDriverResult<()> {
     journey
         .count_becoming(By::Css(SYSTEM_PICKER), 2, "the second clause")
         .await;
+    // A system that declares implicit value set templates offers them on the
+    // clause, and the fixture's own code system declares none, so its clause
+    // hides the template picker.
+    pick(journey, SYSTEM_PICKER, 1, UCUM).await?;
+    journey
+        .element(
+            By::XPath(format!(
+                "{SECOND_TEMPLATE_PICKER}[not(ancestor::div[@hidden])]/option[@value='{UCUM}/vs']"
+            )),
+            "the template UCUM declares",
+        )
+        .await;
     pick(journey, SYSTEM_PICKER, 1, SYSTEM).await?;
+    journey
+        .count_becoming(
+            By::XPath(format!("{SECOND_TEMPLATE_PICKER}[ancestor::div[@hidden]]")),
+            1,
+            "the template picker hidden for a system that declares none",
+        )
+        .await;
     let searches = journey.all(By::Css(CODE_SEARCH)).await?;
     searches
         .get(1)

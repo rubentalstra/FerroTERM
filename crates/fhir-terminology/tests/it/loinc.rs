@@ -466,3 +466,18 @@ fn a_display_in_the_releases_language_does_not_satisfy_a_request_for_another_one
     );
     assert!(none.message.is_some(), "{none:?}");
 }
+
+#[test]
+fn every_declared_implicit_value_set_form_resolves() {
+    // The `/vs`, `/vs/[id]`, and `/vs/[partcode]` forms of
+    // <https://hl7.org/fhir/R4B/loinc.html>, "Implicit Value Sets".
+    let (_dir, provider) = provider();
+    crate::implicit_forms::every_form_resolves(
+        &provider,
+        &[
+            ("http://loinc.org/vs", &[]),
+            ("http://loinc.org/vs/[id]", &[&code(ANSWER_LIST)]),
+            ("http://loinc.org/vs/[partcode]", &[&code(GLUCOSE_PART)]),
+        ],
+    );
+}

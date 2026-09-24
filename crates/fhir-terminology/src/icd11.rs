@@ -37,8 +37,9 @@ use crate::compose::{Compose, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
     Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
-    Designation, DesignationUse, Hierarchy, HierarchyMeaning, Identity, Located, Property,
-    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status, Subproperty,
+    Designation, DesignationUse, Hierarchy, HierarchyMeaning, Identity, ImplicitArgument,
+    ImplicitForm, Located, Property, PropertyDefinition, PropertyKind, PropertyValue,
+    ProviderError, Status, Subproperty,
 };
 use crate::registries::interned::Interned;
 
@@ -1133,7 +1134,8 @@ fn declaration(linearization: Linearization, languages: Vec<String>) -> Declarat
         kind,
     })
     .collect();
-    let mut capabilities = BTreeSet::from([Capability::Subsumption, Capability::Enumeration]);
+    let capabilities = BTreeSet::from([Capability::Subsumption, Capability::Enumeration]);
+    let mut implicit_forms = Vec::new();
     if linearization != Linearization::Foundation {
         for (code, description) in [
             ("postcoordinationScale", "An axis the stem takes values on"),
@@ -1150,7 +1152,12 @@ fn declaration(linearization: Linearization, languages: Vec<String>) -> Declarat
                 kind: PropertyKind::Code,
             });
         }
-        capabilities.insert(Capability::ImplicitValueSets);
+        // NOTE: no FHIR/SNOMED spec governs this: our own design, the WHO
+        // ICD-API's scale URI (<https://icd.who.int/icdapi>) with two placeholders.
+        implicit_forms.push(ImplicitForm::new(
+            "[entity]/postcoordinationScale/[axis]",
+            ImplicitArgument::Expression,
+        ));
     }
     Declaration {
         content: ContentMode::NotPresent,
@@ -1171,5 +1178,6 @@ fn declaration(linearization: Linearization, languages: Vec<String>) -> Declarat
         properties,
         filters: Vec::new(),
         capabilities,
+        implicit_forms,
     }
 }

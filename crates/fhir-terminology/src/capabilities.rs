@@ -8,7 +8,7 @@
 
 use crate::artifact::Source;
 use crate::filter::FilterOperator;
-use crate::provider::{Capability, ContentMode, Declaration, FilterDefinition};
+use crate::provider::{Capability, ContentMode, Declaration, FilterDefinition, ImplicitForm};
 use crate::registry::Registry;
 
 /// One filter a version supports.
@@ -44,7 +44,26 @@ pub struct VersionSummary {
     /// here and not on the system: two SNOMED CT editions share one
     /// `codeSystem` entry and come from two artifacts.
     pub artifact: Option<Source>,
+    /// The implicit value set forms this version resolves.
+    pub implicit_forms: Vec<ImplicitForm>,
 }
+
+/// The URL of the extension on `TerminologyCapabilities.codeSystem.version`
+/// declaring one implicit value set form the version resolves.
+///
+/// No FHIR/SNOMED spec governs this: our own design. No element of
+/// `TerminologyCapabilities` states which implicit value sets a server
+/// resolves (<https://hl7.org/fhir/R5/terminologycapabilities.html>), so an
+/// extension carries it, one per form.
+pub const IMPLICIT_EXTENSION: &str =
+    "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set";
+
+/// The URL of the sub-extension carrying the form's URL template (`valueString`).
+pub const IMPLICIT_PATTERN: &str = "pattern";
+
+/// The URL of the sub-extension carrying what the template's placeholders take
+/// (`valueCode`: `none`, `code`, or `expression`).
+pub const IMPLICIT_ARGUMENT: &str = "argument";
 
 /// One code system.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -209,6 +228,7 @@ impl Summary {
                         .map(|property| property.code.clone())
                         .collect(),
                     artifact: provider.artifact().cloned(),
+                    implicit_forms: declaration.implicit_forms.clone(),
                 });
             }
             systems.push(SystemSummary {
@@ -268,6 +288,61 @@ artifact_extension!(r4b);
 artifact_extension!(r5);
 artifact_extension!(r6);
 
+macro_rules! implicit_extension {
+    ($module:ident) => {
+        /// The implicit value set declaration of one FHIR version.
+        pub(super) mod $module {
+            use fhir_types::$module::extension::{Extension, ExtensionValue};
+
+            use super::super::{IMPLICIT_ARGUMENT, IMPLICIT_EXTENSION, IMPLICIT_PATTERN};
+            use crate::provider::ImplicitForm;
+
+            /// One extension per form, in declaration order.
+            pub(in crate::capabilities) fn declaration(forms: &[ImplicitForm]) -> Vec<Extension> {
+                forms
+                    .iter()
+                    .map(|form| Extension {
+                        url: IMPLICIT_EXTENSION.to_owned(),
+                        extension: vec![
+                            Extension {
+                                url: IMPLICIT_PATTERN.to_owned(),
+                                value: Some(ExtensionValue::String(form.pattern.as_str().into())),
+                                ..Default::default()
+                            },
+                            Extension {
+                                url: IMPLICIT_ARGUMENT.to_owned(),
+                                value: Some(ExtensionValue::Code(form.argument.code().into())),
+                                ..Default::default()
+                            },
+                        ],
+                        ..Default::default()
+                    })
+                    .collect()
+            }
+        }
+    };
+}
+
+/// The implicit value set extensions, one module per FHIR version.
+mod implicit {
+    implicit_extension!(r4);
+    implicit_extension!(r4b);
+    implicit_extension!(r5);
+    implicit_extension!(r6);
+}
+
+/// The extensions of one `codeSystem.version` entry in the version `$module`:
+/// the artifact first, then one per implicit value set form.
+macro_rules! version_extensions {
+    ($module:ident, $version:expr) => {{
+        let mut extensions = self::$module::declaration($version.artifact.as_ref());
+        extensions.extend(self::implicit::$module::declaration(
+            &$version.implicit_forms,
+        ));
+        extensions
+    }};
+}
+
 // NOTE: <https://hl7.org/fhir/6.0.0-ballot5/terminologycapabilities.html>: R6 differs from
 // R5 only in an optional `codeSystem.content` and `version.value` for `version.code`, so
 // one macro with a flavour arm renders both.
@@ -288,7 +363,7 @@ macro_rules! r5_family_capabilities {
                 };
                 let version_entry = |version: &VersionSummary| {
                     let mut entry = TerminologyCapabilitiesCodeSystemVersion {
-                        extension: self::$module::declaration(version.artifact.as_ref()),
+                        extension: version_extensions!($module, version),
                         is_default: Some(version.is_default.into()),
                         compositional: Some(version.compositional.into()),
                         language: common_languages(&version.languages)
@@ -408,9 +483,7 @@ macro_rules! terminology_capabilities {
                                 .versions
                                 .iter()
                                 .map(|version| TerminologyCapabilitiesCodeSystemVersion {
-                                    extension: self::$module::declaration(
-                                        version.artifact.as_ref(),
-                                    ),
+                                    extension: version_extensions!($module, version),
                                     code: (!version.code.is_empty())
                                         .then(|| version.code.as_str().into()),
                                     is_default: Some(version.is_default.into()),

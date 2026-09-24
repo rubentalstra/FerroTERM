@@ -285,3 +285,13 @@ fn a_display_in_the_releases_language_does_not_satisfy_a_request_for_another_one
         issue.text
     );
 }
+
+#[test]
+fn every_declared_implicit_value_set_form_resolves() {
+    // The one form of <https://hl7.org/fhir/R4B/rxnorm.html>, "Implicit Value Sets".
+    let (_dir, provider) = provider();
+    crate::implicit_forms::every_form_resolves(
+        &provider,
+        &[("http://www.nlm.nih.gov/research/umls/rxnorm/vs", &[])],
+    );
+}
