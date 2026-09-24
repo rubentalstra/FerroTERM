@@ -14,9 +14,9 @@ use crate::fixture::Server;
 
 /// A writer into a shared buffer, for reading the lines back.
 #[derive(Clone, Default)]
-struct Capture(Arc<Mutex<Vec<u8>>>);
+pub(crate) struct Capture(Arc<Mutex<Vec<u8>>>);
 
-struct CaptureWriter(Arc<Mutex<Vec<u8>>>);
+pub(crate) struct CaptureWriter(Arc<Mutex<Vec<u8>>>);
 
 impl Write for CaptureWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
@@ -38,7 +38,7 @@ impl<'a> MakeWriter<'a> for Capture {
 }
 
 impl Capture {
-    fn lines(&self) -> Vec<Value> {
+    pub(crate) fn lines(&self) -> Vec<Value> {
         let bytes = self.0.lock().expect("lock").clone();
         String::from_utf8(bytes)
             .expect("utf-8")
@@ -58,7 +58,7 @@ impl Capture {
 /// assert on is filtered before it reaches the capture. Registering one global
 /// subscriber that admits everything pins the maximum open; the thread-local
 /// capture still decides what is recorded (#293).
-fn admit_every_level() {
+pub(crate) fn admit_every_level() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
         let permissive = tracing_subscriber::fmt()
