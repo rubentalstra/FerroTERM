@@ -24,7 +24,7 @@ use http::header::{CONTENT_TYPE, ETAG, IF_MATCH, LAST_MODIFIED, LOCATION};
 use http::{HeaderMap, HeaderValue, StatusCode};
 
 use crate::outcome::Failure;
-use crate::persistence::{Record, ResourceType};
+use crate::persistence::{HistoryEntry, Method, Record, ResourceType};
 use crate::state::{AppState, PersistError};
 use crate::wire::Wire;
 
@@ -81,7 +81,7 @@ pub(crate) fn create(request: &Request<'_>, body: &Bytes) -> Result<Response, Fa
         "id".to_owned(),
         fhir_types::codec::Value::String(id.clone()),
     );
-    let record = write(request, &id, object)?;
+    let record = write(request, &id, Method::Post, object)?;
     Ok(created(request, &record))
 }
 
@@ -109,7 +109,7 @@ pub(crate) fn update(request: &Request<'_>, id: &str, body: &Bytes) -> Result<Re
         "id".to_owned(),
         fhir_types::codec::Value::String(known.to_owned()),
     );
-    let record = write(request, known, object)?;
+    let record = write(request, known, Method::Put, object)?;
     if held.is_none() {
         return Ok(created(request, &record));
     }
@@ -208,7 +208,8 @@ fn loaded(request: &Request<'_>, id: &str) -> Result<Option<Object>, Failure> {
 ///
 /// # Errors
 ///
-/// A version that was never written is a 404.
+/// A version that was never written is a 404, and the version a delete made
+/// is a 410 (<https://hl7.org/fhir/R4B/http.html#vread>).
 pub(crate) fn version_read(
     request: &Request<'_>,
     id: &str,
@@ -227,6 +228,20 @@ pub(crate) fn version_read(
         .persisted_version(request.resource_type, known, wanted)
         .map_err(|error| persist_failure(&error))?;
     let Some(record) = held else {
+        let deleted = request
+            .state
+            .persisted_is_delete(request.resource_type, known, wanted)
+            .map_err(|error| persist_failure(&error))?;
+        if deleted {
+            return Err(Failure::new(
+                StatusCode::GONE,
+                "deleted",
+                format!(
+                    "version `{wanted}` of {}/{known} is its delete",
+                    request.resource_type.name()
+                ),
+            ));
+        }
         return Err(Failure::new(
             StatusCode::NOT_FOUND,
             "not-found",
@@ -265,6 +280,118 @@ pub(crate) fn delete(request: &Request<'_>, id: &str) -> Result<Response, Failur
         .delete_persisted(request.resource_type, known)
         .map_err(|error| persist_failure(&error))?;
     Ok(status_response(StatusCode::NO_CONTENT))
+}
+
+/// The versions a history interaction lists, newest first
+/// (<https://hl7.org/fhir/R4B/http.html#history>): those of the resource `id`
+/// names, or of every resource of the type when `id` is `None`.
+///
+/// A resource the deployment loaded has one version and no history this
+/// server counts, so it answers an empty list, as does a type this deployment
+/// persists nothing of.
+///
+/// # Errors
+///
+/// A parameter other than `_since` and `_format` is a 400 `not-supported`, a
+/// `_since` that is no FHIR instant is a 400, an id this server has never held
+/// is a 404, and a store that cannot be read is a 500.
+pub(crate) fn history_entries(
+    request: &Request<'_>,
+    id: Option<&str>,
+    query: &[(String, String)],
+) -> Result<Vec<HistoryEntry>, Failure> {
+    let since = history_since(query)?;
+    let known = id.map(check_id).transpose()?;
+    let entries = request
+        .state
+        .persisted_history(request.resource_type, known)
+        .map_err(|error| persist_failure(&error))?;
+    if let Some(known) = known
+        && entries.is_empty()
+        && request
+            .state
+            .loaded_canonical(request.resource_type, known)
+            .is_none()
+    {
+        return Err(Failure::new(
+            StatusCode::NOT_FOUND,
+            "not-found",
+            format!("no {} with id `{known}`", request.resource_type.name()),
+        ));
+    }
+    let mut timed = Vec::with_capacity(entries.len());
+    for entry in entries {
+        let at: jiff::Timestamp = entry.last_modified.parse().map_err(|_unparsed| {
+            Failure::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "exception",
+                format!(
+                    "the stored instant `{}` of {}/{} version {} does not read",
+                    entry.last_modified,
+                    request.resource_type.name(),
+                    entry.id,
+                    entry.version_id
+                ),
+            )
+        })?;
+        // NOTE: `_since` keeps the versions "created at or after the given instant"
+        // (<https://hl7.org/fhir/R4B/http.html#history>).
+        if since.is_none_or(|since| at >= since) {
+            timed.push((at, entry));
+        }
+    }
+    timed.sort_by(|(left_at, left), (right_at, right)| {
+        right_at
+            .cmp(left_at)
+            .then_with(|| right.version_id.cmp(&left.version_id))
+            .then_with(|| left.id.cmp(&right.id))
+    });
+    Ok(timed.into_iter().map(|(_, entry)| entry).collect())
+}
+
+/// The `_since` a history request names, refusing every parameter this server
+/// does not answer.
+///
+/// The history interaction defines `_count`, `_since`, `_at`, and `_list`
+/// (<https://hl7.org/fhir/R4B/http.html#history>); this server answers `_since`
+/// and refuses the others with `not-supported`, as it refuses every parameter
+/// it does not implement.
+fn history_since(query: &[(String, String)]) -> Result<Option<jiff::Timestamp>, Failure> {
+    let mut since = None;
+    for (name, value) in query {
+        match name.as_str() {
+            "_format" => {}
+            "_since" if since.is_none() => {
+                // NOTE: `_since` is an `instant`, which always carries a time zone
+                // (<https://hl7.org/fhir/R4B/datatypes.html#instant>).
+                let instant = value.parse::<jiff::Timestamp>().map_err(|error| {
+                    Failure::new(
+                        StatusCode::BAD_REQUEST,
+                        "value",
+                        format!("`_since={value}` is not a FHIR instant: {error}"),
+                    )
+                })?;
+                since = Some(instant);
+            }
+            "_since" => {
+                return Err(Failure::new(
+                    StatusCode::BAD_REQUEST,
+                    "value",
+                    "`_since` is named more than once",
+                ));
+            }
+            other => {
+                return Err(Failure::new(
+                    StatusCode::BAD_REQUEST,
+                    "not-supported",
+                    format!(
+                        "history parameter `{other}` is not supported; use `_since` or `_format`"
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(since)
 }
 
 /// The records a search over `url` and `version` matches, sorted by id.
@@ -384,7 +511,12 @@ fn created(request: &Request<'_>, record: &Record) -> Response {
 ///
 /// A write whose `url` and `version` another resource of the type carries,
 /// loaded or persisted, is a 409 `duplicate` naming that resource's id.
-fn write(request: &Request<'_>, id: &str, object: Object) -> Result<Record, Failure> {
+fn write(
+    request: &Request<'_>,
+    id: &str,
+    method: Method,
+    object: Object,
+) -> Result<Record, Failure> {
     if let Some(canonical) = request.state.loaded_canonical(request.resource_type, id) {
         return Err(Failure::new(
             StatusCode::CONFLICT,
@@ -401,6 +533,7 @@ fn write(request: &Request<'_>, id: &str, object: Object) -> Result<Record, Fail
             request.resource_type,
             id,
             request.surface.fhir_version,
+            method,
             object,
         )
         .map_err(|error| persist_failure(&error))
@@ -743,7 +876,49 @@ fn http_date(instant: &str) -> Option<HeaderValue> {
 /// definition nested inside another one cannot spell its own metavariables
 /// (<https://doc.rust-lang.org/reference/macros-by-example.html>).
 macro_rules! store_routes {
-    ($create:ident, $read:ident, $update:ident, $version_read:ident, $delete:ident, $search:ident, $kind:expr) => {
+    ($create:ident, $read:ident, $update:ident, $version_read:ident, $delete:ident, $search:ident, $history:ident, $type_history:ident, $kind:expr) => {
+        /// `GET {id}/_history`: every version of the resource, newest first.
+        pub async fn $history(
+            axum::extract::State(state): axum::extract::State<
+                std::sync::Arc<crate::state::AppState>,
+            >,
+            axum::extract::Path(id): axum::extract::Path<String>,
+            axum::extract::OriginalUri(uri): axum::extract::OriginalUri,
+            headers: http::HeaderMap,
+            axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
+        ) -> axum::response::Response {
+            let Some(wire) = negotiated(&query, &headers) else {
+                return refused(&query, &headers);
+            };
+            let asked = Asked {
+                query: &query,
+                headers: &headers,
+                uri: &uri,
+            };
+            finish(history(&state, $kind, Some(&id), &asked, wire), wire)
+        }
+
+        /// `GET _history`: every version of every resource of the type,
+        /// newest first.
+        pub async fn $type_history(
+            axum::extract::State(state): axum::extract::State<
+                std::sync::Arc<crate::state::AppState>,
+            >,
+            axum::extract::OriginalUri(uri): axum::extract::OriginalUri,
+            headers: http::HeaderMap,
+            axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
+        ) -> axum::response::Response {
+            let Some(wire) = negotiated(&query, &headers) else {
+                return refused(&query, &headers);
+            };
+            let asked = Asked {
+                query: &query,
+                headers: &headers,
+                uri: &uri,
+            };
+            finish(history(&state, $kind, None, &asked, wire), wire)
+        }
+
         /// `POST`: stores the body under a server-assigned id.
         pub async fn $create(
             axum::extract::State(state): axum::extract::State<
@@ -896,14 +1071,17 @@ macro_rules! store {
             //! implementation in `crate::version::store`.
 
             use axum::response::{IntoResponse, Response};
-            use fhir_types::$fhir::bundle::{Bundle, BundleEntry, BundleEntrySearch, BundleLink};
+            use fhir_types::$fhir::bundle::{
+                Bundle, BundleEntry, BundleEntryRequest, BundleEntryResponse, BundleEntrySearch,
+                BundleLink,
+            };
             use fhir_types::$fhir::codeable_concept::CodeableConcept;
             use fhir_types::$fhir::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
             use fhir_types::$fhir::resource::Resource;
             use http::{HeaderMap, StatusCode};
 
             use crate::outcome::Failure;
-            use crate::persistence::ResourceType;
+            use crate::persistence::{HistoryEntry, Method, ResourceType};
             use crate::state::AppState;
             use crate::version::store::{Request, Surface};
             use crate::wire::Wire;
@@ -1190,6 +1368,163 @@ macro_rules! store {
                 wire.object(StatusCode::OK, &object, &fhir_types::$fhir::schema::SCHEMAS)
             }
 
+            /// What a history request asked, beside the resource it names.
+            struct Asked<'a> {
+                /// The query parameters.
+                query: &'a [(String, String)],
+                /// The request headers, for the base the client used.
+                headers: &'a HeaderMap,
+                /// The request URI, for the base and the `self` link.
+                uri: &'a http::Uri,
+            }
+
+            /// The `history` Bundle of the resource `id` names, or of every
+            /// resource of `resource_type` when `id` is `None`.
+            ///
+            /// Each version is one entry, newest first, with `entry.request`
+            /// naming the interaction that made it and `entry.response` its
+            /// status, `ETag`, and `lastModified`; a delete carries no resource
+            /// (<https://hl7.org/fhir/R4B/http.html#history>). The entries,
+            /// the absolute `fullUrl`, and the `self` link are the same shape
+            /// on every served version.
+            ///
+            /// # Errors
+            ///
+            /// The refusals of [`crate::version::store::history_entries`], and
+            /// a 500 for a version this version decodes and cannot encode.
+            fn history(
+                state: &AppState,
+                resource_type: ResourceType,
+                id: Option<&str>,
+                asked: &Asked<'_>,
+                wire: Wire,
+            ) -> Result<Response, Failure> {
+                let surface = surface();
+                let request = Request {
+                    state,
+                    surface,
+                    resource_type,
+                    headers: asked.headers,
+                    path: "",
+                    wire,
+                };
+                let versions = crate::version::store::history_entries(&request, id, asked.query)?;
+                let base = crate::version::store::base_of(
+                    state,
+                    surface.segment,
+                    asked.headers,
+                    asked.uri,
+                );
+                let mut entry = Vec::with_capacity(versions.len());
+                for version in &versions {
+                    entry.push(history_entry(base.as_deref(), resource_type, version)?);
+                }
+                let total = u32::try_from(entry.len()).map_err(|_| {
+                    Failure::new(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "too-costly",
+                        "too many versions to count",
+                    )
+                })?;
+                let bundle = Bundle {
+                    r#type: "history".into(),
+                    link: history_link(base.as_deref(), resource_type, id, asked.uri),
+                    total: Some(total.into()),
+                    entry,
+                    ..Default::default()
+                };
+                parameters::respond_resource(&bundle, wire)
+            }
+
+            /// One version as a history entry.
+            fn history_entry(
+                base: Option<&str>,
+                resource_type: ResourceType,
+                version: &HistoryEntry,
+            ) -> Result<BundleEntry, Failure> {
+                let surface = surface();
+                let name = resource_type.name();
+                let status = match (version.method, version.created) {
+                    (Method::Delete, _) => "204 No Content",
+                    (_, true) => "201 Created",
+                    (_, false) => "200 OK",
+                };
+                let mut response = BundleEntryResponse {
+                    status: status.into(),
+                    etag: Some(version.etag().into()),
+                    last_modified: Some(version.last_modified.as_str().into()),
+                    ..Default::default()
+                };
+                let mut request = Some(BundleEntryRequest {
+                    method: version.method.name().into(),
+                    url: match version.method {
+                        Method::Post => name.to_owned(),
+                        Method::Put | Method::Delete => format!("{name}/{}", version.id),
+                    }
+                    .into(),
+                    ..Default::default()
+                });
+                let mut resource = None;
+                if let Some(record) = &version.record {
+                    match (surface.round_trip)(&record.resource) {
+                        Ok(object) => {
+                            resource =
+                                Some(super::resources::resource_of(&object).map_err(|reason| {
+                                    crate::version::store::rendering(&reason.to_string())
+                                })?);
+                        }
+                        // NOTE: a `PUT` or `POST` entry SHALL carry its resource
+                        // (<https://hl7.org/fhir/R4B/http.html#history>), so a version this release cannot read
+                        // keeps its `response`, with an `outcome` saying why, and no `request`.
+                        Err(reason) => {
+                            request = None;
+                            response.outcome =
+                                Some(Resource::OperationOutcome(Box::new(OperationOutcome {
+                                    issue: vec![left_out(&crate::version::store::unreadable(
+                                        record,
+                                        surface.fhir_version,
+                                        &reason,
+                                    ))],
+                                    ..Default::default()
+                                })));
+                        }
+                    }
+                }
+                Ok(BundleEntry {
+                    full_url: base.map(|base| format!("{base}/{name}/{}", version.id).into()),
+                    resource,
+                    request,
+                    response: Some(response),
+                    ..Default::default()
+                })
+            }
+
+            /// The `self` link of a history Bundle: the URL it was read at
+            /// (<https://hl7.org/fhir/R4B/http.html#paging>).
+            fn history_link(
+                base: Option<&str>,
+                resource_type: ResourceType,
+                id: Option<&str>,
+                uri: &http::Uri,
+            ) -> Vec<BundleLink> {
+                let Some(base) = base else {
+                    return Vec::new();
+                };
+                let path = match id {
+                    Some(id) => format!("{base}/{}/{id}/_history", resource_type.name()),
+                    None => format!("{base}/{}/_history", resource_type.name()),
+                };
+                let url = match uri.query().filter(|query| !query.is_empty()) {
+                    Some(query) => format!("{path}?{query}"),
+                    None => path,
+                };
+                vec![BundleLink {
+                    relation: "self".into(),
+                    url: url.into(),
+                    ..Default::default()
+                }]
+            }
+
             /// The stored resource of `resource_type` with `id`, when there is
             /// one; a route that also serves loaded resources tries this first.
             pub fn stored(
@@ -1218,6 +1553,8 @@ macro_rules! store {
                 code_system_version_read,
                 code_system_delete,
                 code_system_search,
+                code_system_history,
+                code_system_type_history,
                 ResourceType::CodeSystem
             );
             crate::version::store::store_routes!(
@@ -1227,6 +1564,8 @@ macro_rules! store {
                 value_set_version_read,
                 value_set_delete,
                 value_set_search,
+                value_set_history,
+                value_set_type_history,
                 ResourceType::ValueSet
             );
             crate::version::store::store_routes!(
@@ -1236,6 +1575,8 @@ macro_rules! store {
                 concept_map_version_read,
                 concept_map_delete,
                 concept_map_search,
+                concept_map_history,
+                concept_map_type_history,
                 ResourceType::ConceptMap
             );
         }

@@ -218,14 +218,27 @@ defines (<https://hl7.org/fhir/R4B/http.html>), under every version prefix:
 | `POST {type}` | `201 Created` with `Location`, `ETag`, and `Last-Modified`; the server assigns the id; `409 Conflict` when another resource carries the `url` and `version` |
 | `PUT {type}/{id}` | `200 OK` when the id existed, `201 Created` when it is new, `409 Conflict` when the id is one a loaded resource is read at or another resource carries the `url` and `version` |
 | `GET {type}/{id}` | `200 OK` with `ETag` and `Last-Modified`, `404` for an unknown id or one this version has no representation of, `410 Gone` for a deleted one |
-| `GET {type}/{id}/_history/{versionId}` | `200 OK` with that version of the resource |
+| `GET {type}/{id}/_history/{versionId}` | `200 OK` with that version of the resource, `410 Gone` for the version a delete made |
+| `GET {type}/{id}/_history` | a `history` `Bundle` of every version, newest first; empty for a loaded resource |
+| `GET {type}/_history` | a `history` `Bundle` of every version of every persisted resource of the type |
 | `GET {type}?url=…&version=…` | a `searchset` `Bundle`, `entry.fullUrl` absolute |
 | `DELETE {type}/{id}` | `204 No Content`, and deleting again has no effect and is not an error |
 
 `meta.versionId` starts at `1` and rises with every write; the `ETag` is its
 weak form (`W/"2"`). Send `If-Match` with that value on a `PUT` or a `DELETE`
 to make the write conditional; a value that names another version is a
-`412 Precondition Failed`.
+`412 Precondition Failed`. A delete counts as a version too, so a resource
+written again after a delete carries on from the version after it.
+
+A history entry carries the version in `resource`, the interaction that made
+it in `request` (`POST`, `PUT` or `DELETE` with its relative URL), and its
+status, `etag` and `lastModified` in `response`; the delete has no resource
+(<https://hl7.org/fhir/R4B/http.html#history>). `_since` keeps the versions
+written at or after an instant. `_count`, `_at` and `_list` answer `400` with
+a `not-supported` issue. A version written on a base whose release this base
+cannot read keeps its `response`, with the reason in `response.outcome`, and
+has no `request`, because an entry that names `PUT` or `POST` must carry the
+resource.
 
 A `url` and `version` identify one resource
 (<https://hl7.org/fhir/R4B/resource.html#canonical>). A write whose pair

@@ -29,6 +29,15 @@ const HISTORY: TableDefinition<'_, &str, &str> = TableDefinition::new("history")
 /// lives beside the persisted resources so it outlives a restart.
 const CLOSURES: TableDefinition<'_, &str, &str> = TableDefinition::new("closures");
 
+/// The interaction that made each version, keyed `<type>/<id>/<versionId>`
+/// like [`HISTORY`], a delete included.
+///
+/// A delete adds a version and a history entry
+/// (<https://hl7.org/fhir/R4B/http.html#history>), and it leaves no resource
+/// in [`HISTORY`], so this table is where it is recorded. A version written
+/// before this table existed has no row here.
+const EVENTS: TableDefinition<'_, &str, &str> = TableDefinition::new("events");
+
 /// A resource type the server persists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ResourceType {
@@ -86,6 +95,68 @@ pub struct Record {
 
 impl Record {
     /// The `ETag` of the record's current version, the FHIR weak form
+    /// (<https://hl7.org/fhir/R4B/http.html#concurrency>).
+    #[must_use]
+    pub fn etag(&self) -> String {
+        format!("W/\"{}\"", self.version_id)
+    }
+}
+
+/// The HTTP method of the interaction that made one version of a resource,
+/// which a history entry states in `entry.request.method`
+/// (<https://hl7.org/fhir/R4B/http.html#history>).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum Method {
+    /// A create with a server-assigned id.
+    Post,
+    /// An update, or a create at an id the client chose.
+    Put,
+    /// A delete.
+    Delete,
+}
+
+impl Method {
+    /// The method as HTTP spells it.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Post => "POST",
+            Self::Put => "PUT",
+            Self::Delete => "DELETE",
+        }
+    }
+}
+
+/// The interaction recorded for one version: its method and when it ran.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+struct Event {
+    /// The HTTP method.
+    method: Method,
+    /// When the interaction ran, an instant in the FHIR `instant` form.
+    at: String,
+}
+
+/// One version in the history of a resource.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HistoryEntry {
+    /// The logical id.
+    pub id: String,
+    /// The version the interaction made.
+    pub version_id: u32,
+    /// The HTTP method of the interaction.
+    pub method: Method,
+    /// Whether the version began the resource: the first one, or the first
+    /// after a delete.
+    pub created: bool,
+    /// When the interaction ran, an instant in the FHIR `instant` form.
+    pub last_modified: String,
+    /// The resource as the version holds it; `None` for a delete.
+    pub record: Option<Record>,
+}
+
+impl HistoryEntry {
+    /// The `ETag` of the version, the FHIR weak form
     /// (<https://hl7.org/fhir/R4B/http.html#concurrency>).
     #[must_use]
     pub fn etag(&self) -> String {
@@ -160,6 +231,12 @@ pub enum StoreError {
     /// A commit failed.
     #[error("the resource store commit failed")]
     Commit(#[from] redb::CommitError),
+    /// A recorded write has no stored version.
+    #[error("the store records a write at {key} and holds no version there")]
+    Missing {
+        /// The history key.
+        key: String,
+    },
     /// A stored record is not the JSON this build writes.
     #[error("the record at {key} does not read")]
     Record {
@@ -196,9 +273,11 @@ impl ResourceStore {
             let resources = write.open_table(RESOURCES)?;
             let history = write.open_table(HISTORY)?;
             let closures = write.open_table(CLOSURES)?;
+            let events = write.open_table(EVENTS)?;
             drop(resources);
             drop(history);
             drop(closures);
+            drop(events);
         }
         write.commit()?;
         Ok(Self {
@@ -274,13 +353,24 @@ impl ResourceStore {
         Ok(Some(record))
     }
 
-    /// Writes `record`, replacing any record of the same type and id and
-    /// keeping the written version in the history.
+    /// Writes `record` as an update, replacing any record of the same type and
+    /// id and keeping the written version in the history.
     ///
     /// # Errors
     ///
     /// Returns [`StoreError`] when the write does not commit.
     pub fn put(&self, record: &Record) -> Result<(), StoreError> {
+        self.put_by(record, Method::Put)
+    }
+
+    /// Writes `record` as the interaction `method` made it, replacing any
+    /// record of the same type and id and keeping the written version and the
+    /// interaction in the history.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when the write does not commit.
+    pub fn put_by(&self, record: &Record, method: Method) -> Result<(), StoreError> {
         let Some(resource_type) = ResourceType::parse(&record.resource_type) else {
             return Ok(());
         };
@@ -290,15 +380,128 @@ impl ResourceStore {
             source,
         })?;
         let versioned = version_key_of(resource_type, &record.id, record.version_id);
+        let event = event_json(
+            &versioned,
+            &Event {
+                method,
+                at: record.last_modified.clone(),
+            },
+        )?;
         let write = self.database.begin_write()?;
         {
             let mut table = write.open_table(RESOURCES)?;
             table.insert(key.as_str(), value.as_str())?;
             let mut history = write.open_table(HISTORY)?;
             history.insert(versioned.as_str(), value.as_str())?;
+            let mut events = write.open_table(EVENTS)?;
+            events.insert(versioned.as_str(), event.as_str())?;
         }
         write.commit()?;
         Ok(())
+    }
+
+    /// The highest version of `resource_type` with `id` the store has
+    /// counted, a delete included; `None` for a resource never written.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when the store cannot be read.
+    pub fn latest_version(
+        &self,
+        resource_type: ResourceType,
+        id: &str,
+    ) -> Result<Option<u32>, StoreError> {
+        let read = self.database.begin_read()?;
+        let prefix = format!("{}/{id}/", resource_type.name());
+        let mut latest = None;
+        for table in [HISTORY, EVENTS] {
+            let table = read.open_table(table)?;
+            for (_, version_id) in versions_under(&table, &prefix)? {
+                latest = latest.max(Some(version_id));
+            }
+        }
+        Ok(latest)
+    }
+
+    /// Every version of the resources of `resource_type`, or of the one with
+    /// `id` when one is given, ordered by id and then by version.
+    ///
+    /// A version written before interactions were recorded states `POST`
+    /// when it began the resource and `PUT` otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when the store cannot be read,
+    /// [`StoreError::Record`] when a stored version does not parse, and
+    /// [`StoreError::Missing`] when a recorded write has no stored version.
+    pub fn history(
+        &self,
+        resource_type: ResourceType,
+        id: Option<&str>,
+    ) -> Result<Vec<HistoryEntry>, StoreError> {
+        let read = self.database.begin_read()?;
+        let prefix = match id {
+            Some(id) => format!("{}/{id}/", resource_type.name()),
+            None => format!("{}/", resource_type.name()),
+        };
+        let mut records = std::collections::BTreeMap::new();
+        let history = read.open_table(HISTORY)?;
+        for (key, value) in rows_under(&history, &prefix)? {
+            let Some(at) = version_of(&key) else {
+                continue;
+            };
+            let record: Record = serde_json::from_str(&value)
+                .map_err(|source| StoreError::Record { key, source })?;
+            records.insert(at, record);
+        }
+        let mut events = std::collections::BTreeMap::new();
+        let recorded = read.open_table(EVENTS)?;
+        for (key, value) in rows_under(&recorded, &prefix)? {
+            let Some(at) = version_of(&key) else {
+                continue;
+            };
+            let event: Event = serde_json::from_str(&value)
+                .map_err(|source| StoreError::Record { key, source })?;
+            events.insert(at, event);
+        }
+        let mut keys: Vec<(String, u32)> = records.keys().chain(events.keys()).cloned().collect();
+        keys.sort();
+        keys.dedup();
+        let mut out: Vec<HistoryEntry> = Vec::with_capacity(keys.len());
+        for key in keys {
+            let begins = out
+                .last()
+                .is_none_or(|last| last.id != key.0 || last.method == Method::Delete);
+            let event = events.remove(&key);
+            let entry = match (records.remove(&key), event) {
+                (Some(record), event) => HistoryEntry {
+                    id: key.0,
+                    version_id: key.1,
+                    method: event
+                        .map_or(if begins { Method::Post } else { Method::Put }, |event| {
+                            event.method
+                        }),
+                    created: begins,
+                    last_modified: record.last_modified.clone(),
+                    record: Some(record),
+                },
+                (None, Some(event)) if event.method == Method::Delete => HistoryEntry {
+                    id: key.0,
+                    version_id: key.1,
+                    method: Method::Delete,
+                    created: false,
+                    last_modified: event.at,
+                    record: None,
+                },
+                (None, _) => {
+                    return Err(StoreError::Missing {
+                        key: version_key_of(resource_type, &key.0, key.1),
+                    });
+                }
+            };
+            out.push(entry);
+        }
+        Ok(out)
     }
 
     /// The closure table named `name`.
@@ -351,11 +554,104 @@ impl ResourceStore {
         let removed;
         {
             let mut table = write.open_table(RESOURCES)?;
-            removed = table.remove(key.as_str())?.is_some();
+            let held = table
+                .remove(key.as_str())?
+                .map(|value| value.value().to_owned());
+            removed = held.is_some();
+            if let Some(value) = held {
+                let record: Record =
+                    serde_json::from_str(&value).map_err(|source| StoreError::Record {
+                        key: key.clone(),
+                        source,
+                    })?;
+                // NOTE: a delete makes a version of its own, which the history lists
+                // (<https://hl7.org/fhir/R4B/http.html#history>).
+                let versioned =
+                    version_key_of(resource_type, id, record.version_id.saturating_add(1));
+                let event = event_json(
+                    &versioned,
+                    &Event {
+                        method: Method::Delete,
+                        at: fhir_terminology::clock::now().to_string(),
+                    },
+                )?;
+                let mut events = write.open_table(EVENTS)?;
+                events.insert(versioned.as_str(), event.as_str())?;
+            }
         }
         write.commit()?;
         Ok(removed)
     }
+
+    /// Whether version `version_id` of `resource_type` with `id` is a delete.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when the store cannot be read, and
+    /// [`StoreError::Record`] when the recorded interaction does not parse.
+    pub fn is_delete(
+        &self,
+        resource_type: ResourceType,
+        id: &str,
+        version_id: u32,
+    ) -> Result<bool, StoreError> {
+        let read = self.database.begin_read()?;
+        let table = read.open_table(EVENTS)?;
+        let key = version_key_of(resource_type, id, version_id);
+        let Some(value) = table.get(key.as_str())? else {
+            return Ok(false);
+        };
+        let event: Event = serde_json::from_str(value.value())
+            .map_err(|source| StoreError::Record { key, source })?;
+        Ok(event.method == Method::Delete)
+    }
+}
+
+/// `event` as the JSON [`EVENTS`] stores under `key`.
+fn event_json(key: &str, event: &Event) -> Result<String, StoreError> {
+    serde_json::to_string(event).map_err(|source| StoreError::Record {
+        key: key.to_owned(),
+        source,
+    })
+}
+
+/// Every row of `table` whose key starts with `prefix`, in key order.
+fn rows_under(
+    table: &impl ReadableTable<&'static str, &'static str>,
+    prefix: &str,
+) -> Result<Vec<(String, String)>, StoreError> {
+    let mut out = Vec::new();
+    for entry in table.range(prefix..)? {
+        let (key, value) = entry?;
+        if !key.value().starts_with(prefix) {
+            break;
+        }
+        out.push((key.value().to_owned(), value.value().to_owned()));
+    }
+    Ok(out)
+}
+
+/// The id and version of every row of `table` under `prefix`.
+fn versions_under(
+    table: &impl ReadableTable<&'static str, &'static str>,
+    prefix: &str,
+) -> Result<Vec<(String, u32)>, StoreError> {
+    Ok(rows_under(table, prefix)?
+        .iter()
+        .filter_map(|(key, _)| version_of(key))
+        .collect())
+}
+
+/// The id and version a `<type>/<id>/<versionId>` key names.
+///
+/// A logical id carries no `/` (<https://hl7.org/fhir/R4B/datatypes.html#id>),
+/// so the key splits into exactly three parts.
+fn version_of(key: &str) -> Option<(String, u32)> {
+    let mut parts = key.splitn(3, '/');
+    let (_, id, version) = (parts.next()?, parts.next()?, parts.next()?);
+    // NOTE: every key this store writes has the three parts, so a key without them
+    // is no version row and is passed over; no FHIR/SNOMED spec governs this: our own design.
+    Some((id.to_owned(), version.parse().ok()?))
 }
 
 /// The store key of a resource: `<type>/<id>`.
@@ -370,7 +666,7 @@ fn version_key_of(resource_type: ResourceType, id: &str, version_id: u32) -> Str
 
 #[cfg(test)]
 mod tests {
-    use super::{Record, ResourceStore, ResourceType};
+    use super::{Method, Record, ResourceStore, ResourceType};
 
     fn record(id: &str, version_id: u32) -> Record {
         Record {
@@ -457,5 +753,90 @@ mod tests {
                 .is_none(),
             "a version that was never written is absent"
         );
+    }
+
+    #[test]
+    fn a_history_lists_writes_and_deletes_and_counts_on_after_a_delete() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = ResourceStore::open(&dir.path().join("resources.redb")).expect("opens");
+        store
+            .put_by(&record("pets", 1), Method::Post)
+            .expect("writes");
+        store.put(&record("pets", 2)).expect("updates");
+        store.put(&record("pets-2", 1)).expect("writes another");
+        assert!(
+            store
+                .delete(ResourceType::ValueSet, "pets")
+                .expect("deletes")
+        );
+        assert_eq!(
+            store
+                .latest_version(ResourceType::ValueSet, "pets")
+                .expect("reads"),
+            Some(3),
+            "the delete is the third version"
+        );
+        assert!(
+            store
+                .is_delete(ResourceType::ValueSet, "pets", 3)
+                .expect("reads")
+        );
+
+        let listed: Vec<(String, u32, Method, bool, bool)> = store
+            .history(ResourceType::ValueSet, Some("pets"))
+            .expect("reads")
+            .into_iter()
+            .map(|entry| {
+                (
+                    entry.id,
+                    entry.version_id,
+                    entry.method,
+                    entry.created,
+                    entry.record.is_some(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            listed,
+            [
+                (String::from("pets"), 1, Method::Post, true, true),
+                (String::from("pets"), 2, Method::Put, false, true),
+                (String::from("pets"), 3, Method::Delete, false, false),
+            ],
+            "the prefix of one id does not take in `pets-2`"
+        );
+        assert_eq!(
+            store
+                .history(ResourceType::ValueSet, None)
+                .expect("reads")
+                .len(),
+            4,
+            "the type level lists every resource"
+        );
+    }
+
+    #[test]
+    fn a_version_written_before_interactions_were_recorded_states_its_method() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let store = ResourceStore::open(&dir.path().join("resources.redb")).expect("opens");
+        let write = store.database.begin_write().expect("begins");
+        {
+            let mut history = write.open_table(super::HISTORY).expect("opens");
+            for version_id in [1, 2] {
+                let value = serde_json::to_string(&record("old", version_id)).expect("encodes");
+                let key = format!("ValueSet/old/{version_id}");
+                history
+                    .insert(key.as_str(), value.as_str())
+                    .expect("inserts");
+            }
+        }
+        write.commit().expect("commits");
+        let methods: Vec<(Method, bool)> = store
+            .history(ResourceType::ValueSet, Some("old"))
+            .expect("reads")
+            .into_iter()
+            .map(|entry| (entry.method, entry.created))
+            .collect();
+        assert_eq!(methods, [(Method::Post, true), (Method::Put, false)]);
     }
 }

@@ -15,6 +15,20 @@ fresh link reference.
 
 ### Added
 
+- **The history interaction on the persisted resources** (#667).
+  `GET {type}/{id}/_history` and `GET {type}/_history` answer a `history`
+  `Bundle` on every served version, newest first, with `entry.request` naming
+  the `POST`, `PUT` or `DELETE` that made each version and `entry.response`
+  its status, `etag` and `lastModified`; the delete is an entry with no
+  resource (<https://hl7.org/fhir/R4B/http.html#history>). `_since` narrows
+  both levels, and `_count`, `_at` and `_list` answer `400` `not-supported`. A
+  loaded resource answers an empty history. The `CapabilityStatement` declares
+  `history-instance` and `history-type` wherever it declares `vread`. A delete
+  is now recorded as a version of its own: a version read of it answers `410`,
+  and a resource written again after a delete counts on from it, where it used
+  to start again at version 1 and overwrite the first version in the store.
+  The viewer's history screen keys a delete by the version its `etag` names.
+
 - **The viewer's editor bundle reads a resource's versions, compares two of
   them, and restores one** (#637). Every authoring screen links to
   `/ui/editor/history` for the resource it has open. The version list is read
