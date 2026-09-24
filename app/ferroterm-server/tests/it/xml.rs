@@ -202,3 +202,123 @@ async fn an_xml_parameters_body_is_accepted_and_a_malformed_one_refused() {
         .await;
     assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE, "{body}");
 }
+
+/// A read, a search, an operation and the capability statement of `version`.
+fn routes(server: &Server, version: &str) -> [String; 4] {
+    let id = server.instance_id_of(ANIMALS);
+    [
+        format!("/{version}/CodeSystem/{id}"),
+        format!("/{version}/ValueSet?url={VS_ALL}"),
+        format!("/{version}/CodeSystem/$lookup?system={ANIMALS}&code=cat"),
+        format!("/{version}/metadata"),
+    ]
+}
+
+#[tokio::test]
+async fn an_accept_naming_no_served_format_is_not_acceptable_on_every_route_and_version() {
+    // A server that cannot serve any format the client accepts answers `406`
+    // (<https://hl7.org/fhir/R4B/http.html#mime-type>), in the default format.
+    let server = Server::start_with_resources();
+    for version in ["r4", "r4b", "r5", "r6"] {
+        for route in routes(&server, version) {
+            for accept in ["text/csv", "application/pdf, text/html", "text/*"] {
+                let (status, content_type, body) = server.get_text(&route, Some(accept)).await;
+                assert_eq!(
+                    status,
+                    StatusCode::NOT_ACCEPTABLE,
+                    "{route} with `Accept: {accept}`: {body}"
+                );
+                assert_eq!(content_type, JSON, "{route} with `Accept: {accept}`");
+                let outcome: Value = serde_json::from_str(&body).expect("JSON");
+                assert_eq!(outcome["resourceType"], "OperationOutcome", "{route}");
+                assert_eq!(outcome["issue"][0]["code"], "not-supported", "{route}");
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn wildcards_an_absent_accept_and_a_mixed_list_keep_json_on_every_route_and_version() {
+    let server = Server::start_with_resources();
+    for version in ["r4", "r4b", "r5", "r6"] {
+        for route in routes(&server, version) {
+            for accept in [
+                None,
+                Some("*/*"),
+                Some("application/*"),
+                Some("text/csv, application/fhir+json"),
+                Some("text/html,application/xhtml+xml,*/*;q=0.8"),
+            ] {
+                let (status, content_type, body) = server.get_text(&route, accept).await;
+                assert_eq!(
+                    status,
+                    StatusCode::OK,
+                    "{route} with `Accept: {accept:?}`: {body}"
+                );
+                assert_eq!(content_type, JSON, "{route} with `Accept: {accept:?}`");
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn the_acceptable_range_with_the_highest_quality_wins() {
+    // The most specific matching range weighs each format, the heavier format
+    // wins, and `q=0` excludes (<https://www.rfc-editor.org/rfc/rfc9110#section-12.5.1>).
+    let server = Server::start_with_resources();
+    for version in ["r4", "r4b", "r5", "r6"] {
+        let route = format!("/{version}/CodeSystem/$lookup?system={ANIMALS}&code=cat");
+        for (accept, expected) in [
+            ("application/fhir+xml;q=0.9, application/fhir+json", JSON),
+            ("application/fhir+json;q=0.5, application/fhir+xml", XML),
+            (
+                "application/fhir+json; q=0.1, application/fhir+xml; q=0.2",
+                XML,
+            ),
+            (
+                "application/fhir+xml;q=1.0, application/fhir+json;q=0.999",
+                XML,
+            ),
+            ("application/fhir+json;q=0, */*", XML),
+            (
+                "application/fhir+json;fhirVersion=4.0;q=0.3, text/xml;q=0.4",
+                XML,
+            ),
+            ("application/fhir+xml, application/fhir+json", JSON),
+        ] {
+            let (status, content_type, body) = server.get_text(&route, Some(accept)).await;
+            assert_eq!(
+                status,
+                StatusCode::OK,
+                "{route} with `Accept: {accept}`: {body}"
+            );
+            assert_eq!(content_type, expected, "{route} with `Accept: {accept}`");
+        }
+        for accept in [
+            "application/fhir+json;q=0, application/fhir+xml;q=0",
+            "*/*;q=0",
+            "application/fhir+json;q=2",
+        ] {
+            let (status, content_type, body) = server.get_text(&route, Some(accept)).await;
+            assert_eq!(
+                status,
+                StatusCode::NOT_ACCEPTABLE,
+                "{route} with `Accept: {accept}`: {body}"
+            );
+            assert_eq!(content_type, JSON, "{route} with `Accept: {accept}`");
+        }
+    }
+}
+
+#[tokio::test]
+async fn format_still_wins_over_an_unacceptable_accept() {
+    let server = Server::start_with_resources();
+    let (status, content_type, body) = server
+        .get_text(
+            &format!("/r4b/CodeSystem/$lookup?system={ANIMALS}&code=cat&_format=xml"),
+            Some("text/csv"),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(content_type, XML);
+}

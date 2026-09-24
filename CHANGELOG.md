@@ -331,6 +331,19 @@ fresh link reference.
   write, where it used to answer from the id that sorted last, and logs a
   warning at startup naming every id that carries the canonical.
 
+- **An `Accept` header naming no format the server serves answers `406`**
+  (#668). `Accept: text/csv` used to get FHIR JSON with a `200`; it now gets
+  `406 Not Acceptable` with an `OperationOutcome` `not-supported` issue in
+  JSON, on every route of every served version, the answer an unknown
+  `_format` already gave (<https://hl7.org/fhir/R4B/http.html#mime-type>).
+  Quality values count: each format takes the weight of the most specific
+  media range that matches it, the heavier format wins with JSON on a tie, and
+  `q=0` excludes (<https://www.rfc-editor.org/rfc/rfc9110#section-12.5.1>), so
+  `application/fhir+xml;q=0.9, application/fhir+json` is JSON. `*/*`,
+  `application/*`, an absent header and a list with one acceptable entry keep
+  working, `_format` still overrides `Accept`, and the DSTU2 types
+  `application/json+fhir` and `application/xml+fhir` are accepted.
+
 - **A resource written on one served version no longer fails another version's
   search** (#659). A `ConceptMap` authored on `/r5` states a target's direction
   as `relationship`, which R4B spells `equivalence`, so

@@ -80,6 +80,7 @@ claim, not a test that merely touches the area.
 | `$cache-control` | `app/ferroterm-server/tests/it/scope.rs::a_cache_front_loads_resources_and_ends` |
 | `metadata` and `metadata?mode=terminology` | `app/ferroterm-server/tests/it/metadata.rs::the_capability_statement_names_the_operations`, `::terminology_capabilities_list_the_loaded_edition` |
 | Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept` | `app/ferroterm-server/src/wire.rs`; `app/ferroterm-server/tests/it/xml.rs::format_and_accept_select_xml_on_every_route` |
+| An `Accept` naming no served format is a `406`; quality values choose between JSON and XML | `app/ferroterm-server/tests/it/xml.rs::an_accept_naming_no_served_format_is_not_acceptable_on_every_route_and_version`, `::the_acceptable_range_with_the_highest_quality_wins` |
 | CI runs the tx-ecosystem suite on every pull request, per served version | `.github/workflows/ci.yml` job `tx-ecosystem` runs `scripts/checks/tx-ecosystem.sh` for r4b, `--fhir r4`, `--fhir r5`; the job is part of the required `conclusion` gate |
 | "505 of the 670 general cases on R5, 500 on R4, 499 on R4B" | **NO EVIDENCE for those numbers.** See [C1](#c1) |
 | "Every failure is an `OperationOutcome` with a `tx-issue-type` coding" | **OVERSTATED.** See [O1](#o1) |
