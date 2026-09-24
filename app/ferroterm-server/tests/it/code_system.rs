@@ -179,7 +179,8 @@ async fn a_loaded_supplement_reads_at_its_id_and_is_listed_by_search() {
         // system it names (<https://hl7.org/fhir/R4B/codesystem.html#supplements>).
         assert_eq!(body["content"], "supplement", "{base}");
         assert_eq!(
-            body["supplements"], ferroterm_testkit::fhir::ANIMALS,
+            body["supplements"],
+            ferroterm_testkit::fhir::ANIMALS,
             "{base}"
         );
     }
@@ -252,7 +253,6 @@ async fn an_id_the_server_serves_nothing_under_is_a_not_found() {
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     assert_eq!(body["resourceType"], "OperationOutcome");
     assert_eq!(body["issue"][0]["code"], "not-found");
-
 }
 
 #[tokio::test]

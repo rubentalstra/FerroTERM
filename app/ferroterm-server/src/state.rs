@@ -1076,7 +1076,10 @@ impl AppState {
                 .map(|(url, version)| canonical(url, Some(version)))
                 .or_else(|| {
                     self.supplements.get(id).map(|model| {
-                        canonical(&model.url, Some(model.version.as_str()).filter(|v| !v.is_empty()))
+                        canonical(
+                            &model.url,
+                            Some(model.version.as_str()).filter(|v| !v.is_empty()),
+                        )
                     })
                 }),
             ResourceType::ValueSet => self

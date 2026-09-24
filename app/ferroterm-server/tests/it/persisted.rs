@@ -562,11 +562,17 @@ const R5_ONLY: (&str, &str) = ("copyrightLabel", "CC0-1.0");
 
 /// The searchset entries whose `search.mode` is `mode`.
 fn entries_of<'a>(body: &'a Value, mode: &str) -> Vec<&'a Value> {
-    body["entry"]
-        .as_array()
+    body.get("entry")
+        .and_then(Value::as_array)
         .expect("entries")
         .iter()
-        .filter(|entry| entry["search"]["mode"] == mode)
+        .filter(|entry| {
+            entry
+                .get("search")
+                .and_then(|search| search.get("mode"))
+                .and_then(Value::as_str)
+                == Some(mode)
+        })
         .collect()
 }
 
@@ -574,7 +580,7 @@ fn entries_of<'a>(body: &'a Value, mode: &str) -> Vec<&'a Value> {
 fn matched_urls(body: &Value) -> Vec<&str> {
     entries_of(body, "match")
         .into_iter()
-        .filter_map(|entry| entry["resource"]["url"].as_str())
+        .filter_map(|entry| entry.get("resource")?.get("url")?.as_str())
         .collect()
 }
 
@@ -625,7 +631,9 @@ fn r5_only_resources() -> [(&'static str, &'static str, Value); 3] {
 async fn a_resource_written_on_one_version_leaves_another_version_s_search_answering() {
     let server = Server::start_persisting();
     for (resource_type, id, body) in r5_only_resources() {
-        let response = server.put(&format!("/r5/{resource_type}/{id}"), &body).await;
+        let response = server
+            .put(&format!("/r5/{resource_type}/{id}"), &body)
+            .await;
         assert_eq!(
             response.status(),
             StatusCode::CREATED,

@@ -444,9 +444,7 @@ async fn expand_answers_at_the_instance_level_on_every_version() {
     // (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>,
     // <https://hl7.org/fhir/R4B/operations.html#request>).
     for base in ["r4", "r4b", "r5", "r6"] {
-        let (status, body) = server
-            .get(&format!("/{base}/ValueSet/{id}/$expand"))
-            .await;
+        let (status, body) = server.get(&format!("/{base}/ValueSet/{id}/$expand")).await;
         assert_eq!(status, StatusCode::OK, "{base}: {body}");
         assert_eq!(body["resourceType"], "ValueSet", "{base}");
         assert_eq!(body["url"], VS_PETS, "{base}: {body}");
@@ -545,14 +543,10 @@ async fn a_persisted_value_set_expands_at_its_instance_id() {
         "version": "1.0", "status": "active",
         "compose": {"include": [{"system": ANIMALS, "concept": [{"code": "cat"}]}]}
     });
-    let response = server
-        .put("/r4b/ValueSet/instance-expand", &set)
-        .await;
+    let response = server.put("/r4b/ValueSet/instance-expand", &set).await;
     assert_eq!(response.status(), StatusCode::CREATED);
 
-    let (status, body) = server
-        .get("/r4b/ValueSet/instance-expand/$expand")
-        .await;
+    let (status, body) = server.get("/r4b/ValueSet/instance-expand/$expand").await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["expansion"]["contains"][0]["code"], "cat", "{body}");
 }

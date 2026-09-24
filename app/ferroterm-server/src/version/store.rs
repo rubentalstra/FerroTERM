@@ -645,11 +645,14 @@ pub(crate) fn base_of(
     if let Some(base) = state.base_url() {
         return Some(crate::version::endpoint(base, segment));
     }
-    let authority = uri.authority().map(http::uri::Authority::as_str).or_else(|| {
-        headers
-            .get(http::header::HOST)
-            .and_then(|value| value.to_str().ok())
-    })?;
+    let authority = uri
+        .authority()
+        .map(http::uri::Authority::as_str)
+        .or_else(|| {
+            headers
+                .get(http::header::HOST)
+                .and_then(|value| value.to_str().ok())
+        })?;
     Some(crate::version::endpoint(
         &format!("http://{authority}"),
         segment,
