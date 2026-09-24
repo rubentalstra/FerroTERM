@@ -299,3 +299,186 @@ fn parameter(body: &Value, name: &str) -> Value {
         .cloned()
         .unwrap_or(Value::Null)
 }
+
+/// Every served FHIR base with the `version` each resource of its core
+/// terminology carries, the version of the package that defines it.
+const CORE: [(&str, &str); 4] = [
+    ("r4", "4.0.1"),
+    ("r4b", "4.3.0"),
+    ("r5", "5.0.0"),
+    ("r6", "6.0.0-ballot5"),
+];
+
+/// A code system the core terminology of every served version defines
+/// (<https://hl7.org/fhir/R4B/codesystem-administrative-gender.html>).
+const CORE_SYSTEM: &str = "http://hl7.org/fhir/administrative-gender";
+
+/// The value set over it
+/// (<https://hl7.org/fhir/R4B/valueset-administrative-gender.html>).
+const CORE_VALUE_SET: &str = "http://hl7.org/fhir/ValueSet/administrative-gender";
+
+/// Asserts that `body` is the `duplicate` refusal naming the core terminology
+/// of `fhir_version`.
+fn assert_core_duplicate(status: StatusCode, body: &Value, fhir_version: &str) {
+    assert_duplicate(
+        status,
+        body,
+        &format!("FHIR {fhir_version} core terminology"),
+    );
+}
+
+#[tokio::test]
+async fn a_code_system_onto_a_core_canonical_is_refused_on_every_version() {
+    let server = Server::start_persisting();
+    for base in BASES {
+        // The persisted layer sits over the core layer of every version, so the
+        // canonical of any version's core is refused on each base.
+        for (_, core_version) in CORE {
+            let written = code_system(CORE_SYSTEM, core_version, "local");
+            let (status, body) = server.post(&format!("/{base}/CodeSystem"), &written).await;
+            assert_core_duplicate(status, &body, core_version);
+            let (status, body) = fixture::json(
+                server
+                    .put(&format!("/{base}/CodeSystem/mine-{base}"), &written)
+                    .await,
+            )
+            .await;
+            assert_core_duplicate(status, &body, core_version);
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_value_set_onto_a_core_canonical_is_refused_on_every_version() {
+    let server = Server::start_persisting();
+    for base in BASES {
+        for (_, core_version) in CORE {
+            let written = json!({
+                "resourceType": "ValueSet",
+                "url": CORE_VALUE_SET,
+                "version": core_version,
+                "status": "active",
+            });
+            let (status, body) = server.post(&format!("/{base}/ValueSet"), &written).await;
+            assert_core_duplicate(status, &body, core_version);
+            let (status, body) = fixture::json(
+                server
+                    .put(&format!("/{base}/ValueSet/mine-{base}"), &written)
+                    .await,
+            )
+            .await;
+            assert_core_duplicate(status, &body, core_version);
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_refused_core_canonical_leaves_the_core_answering() {
+    let server = Server::start_persisting();
+    for (base, core_version) in CORE {
+        let (status, body) = server
+            .post(
+                &format!("/{base}/CodeSystem"),
+                &code_system(CORE_SYSTEM, core_version, "local"),
+            )
+            .await;
+        assert_core_duplicate(status, &body, core_version);
+        let (status, body) = server
+            .get(&format!(
+                "/{base}/CodeSystem/$validate-code?url={CORE_SYSTEM}&code=male"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{base}: {body}");
+        assert_eq!(
+            parameter(&body, "result")["valueBoolean"],
+            true,
+            "{base}: the core code system answers: {body}"
+        );
+        assert_eq!(
+            parameter(&body, "version")["valueString"],
+            core_version,
+            "{base}: {body}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_stored_core_canonical_is_not_served_and_is_logged_at_startup() {
+    crate::telemetry::admit_every_level();
+    let dir = tempfile::tempdir().expect("tempdir");
+    let database = dir.path().join("resources.redb");
+    let store = ResourceStore::open(&database).expect("opens");
+    // One record per served version's core canonical, each defining only a
+    // local code, as a store written before the refusal may hold them.
+    for (base, core_version) in CORE {
+        let id = format!("stored-{base}");
+        let mut resource = match fixture::document(&code_system(CORE_SYSTEM, core_version, "local"))
+        {
+            fhir_types::codec::Value::Object(object) => object,
+            other => panic!("the body is a resource: {other:?}"),
+        };
+        resource.insert(
+            String::from("id"),
+            fhir_types::codec::Value::String(id.clone()),
+        );
+        store
+            .put(&Record {
+                resource_type: String::from("CodeSystem"),
+                id,
+                url: Some(CORE_SYSTEM.to_owned()),
+                version: Some(core_version.to_owned()),
+                fhir_version: String::from("4.3.0"),
+                version_id: 1,
+                last_modified: String::from("2026-01-01T00:00:00Z"),
+                resource,
+            })
+            .expect("writes");
+    }
+    // `redb` holds the database file for as long as its handle lives
+    // (<https://docs.rs/redb/latest/redb/struct.Database.html>).
+    drop(store);
+
+    let capture = crate::telemetry::Capture::default();
+    let guard = tracing::subscriber::set_default(ferroterm_server::telemetry::subscriber(
+        ferroterm_server::telemetry::ResolvedFormat::Json,
+        "warn",
+        false,
+        capture.clone(),
+    ));
+    let server = Server::start_with_config(
+        dir,
+        Config {
+            resources: Some(database),
+            ..Config::default()
+        },
+    );
+    drop(guard);
+
+    let lines = capture.lines();
+    for (base, core_version) in CORE {
+        let id = format!("stored-{base}");
+        let canonical = format!("{CORE_SYSTEM}|{core_version}");
+        let logged = lines.iter().any(|line| {
+            line["level"] == "WARN"
+                && line["id"] == id.as_str()
+                && line["canonical"] == canonical.as_str()
+        });
+        assert!(logged, "{base}: the startup log names {id}: {lines:?}");
+    }
+
+    for (base, core_version) in CORE {
+        for (code, answers) in [("male", true), ("local", false)] {
+            let (status, body) = server
+                .get(&format!(
+                    "/{base}/CodeSystem/$validate-code?url={CORE_SYSTEM}&version={core_version}&code={code}"
+                ))
+                .await;
+            assert_eq!(status, StatusCode::OK, "{base}: {body}");
+            assert_eq!(
+                parameter(&body, "result")["valueBoolean"],
+                answers,
+                "{base}: the core code system answers for its canonical, the stored record does not: {body}"
+            );
+        }
+    }
+}
