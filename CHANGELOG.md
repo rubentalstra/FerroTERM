@@ -13,6 +13,8 @@ fresh link reference.
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-09-24
+
 ### Added
 
 - **The project extensions resolve on the website** (#671). Each of
@@ -1502,7 +1504,8 @@ binary answers `GET /health` only.
 - No existing Rust terminology or FHIR crate is a dependency; the README
   records the evaluation and the reasons.
 
-[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/rubentalstra/FerroTERM/compare/v0.1.1...v0.1.2
