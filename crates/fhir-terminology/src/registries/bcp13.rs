@@ -308,11 +308,11 @@ impl Bcp13Provider {
                     "true" => true,
                     "false" => false,
                     other => {
-                        return Err(ProviderError::InvalidFilterValue {
-                            property: filter.property.clone(),
-                            value: other.to_owned(),
-                            reason: String::from("`true` or `false`"),
-                        });
+                        return Err(ProviderError::invalid_filter_value(
+                            &filter.property,
+                            other,
+                            "`true` or `false`",
+                        ));
                     }
                 };
                 Ok(Self::is_registered(media) == wanted)

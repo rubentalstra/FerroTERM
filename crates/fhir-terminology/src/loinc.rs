@@ -715,10 +715,10 @@ impl CodeSystemProvider for LoincProvider {
                     let concepts = match self.answers_of(&upper) {
                         Ok(Some(codes)) => codes,
                         Ok(None) => {
-                            return Some(Err(ProviderError::MalformedImplicitValueSet {
-                                url: url.to_owned(),
-                                reason: format!("`{code}` is not an answer list"),
-                            }));
+                            return Some(Err(ProviderError::malformed_implicit_value_set(
+                                url,
+                                format!("`{code}` is not an answer list"),
+                            )));
                         }
                         Err(error) => return Some(Err(error)),
                     };
@@ -745,10 +745,10 @@ impl CodeSystemProvider for LoincProvider {
                         ..Include::default()
                     }
                 } else {
-                    return Some(Err(ProviderError::MalformedImplicitValueSet {
-                        url: url.to_owned(),
-                        reason: format!("`{code}` is neither an answer list (LL) nor a part (LP)"),
-                    }));
+                    return Some(Err(ProviderError::malformed_implicit_value_set(
+                        url,
+                        format!("`{code}` is neither an answer list (LL) nor a part (LP)"),
+                    )));
                 }
             }
         };

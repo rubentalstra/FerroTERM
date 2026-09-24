@@ -174,7 +174,7 @@ fn the_fhir_filters_answer_from_the_indexes_and_the_typed_edges() {
     );
     assert!(matches!(
         provider.filter(&filter("has_ingredient", FilterOperator::Equal, ASPIRIN)),
-        Err(ProviderError::InvalidFilterValue { .. })
+        Err(ProviderError::InvalidFilterValue(_))
     ));
     assert!(matches!(
         provider.filter(&filter("has_ingredient", FilterOperator::Equal, "CUI:1")),

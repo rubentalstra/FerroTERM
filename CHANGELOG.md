@@ -53,6 +53,21 @@ fresh link reference.
   the generated model carries no `isSummary` flag yet, and a value the
   search-summary code system does not define is a `400`. The
   `CapabilityStatement` declares `_summary` beside `_elements`.
+- **A refused expression constraint states where the parser stopped, as
+  data** (#656). When `ValueSet/$expand` or `ValueSet/$validate-code` refuses
+  a malformed filter value or `ecl/` implicit value set, the
+  `OperationOutcome` issue names the input in `issue.expression`
+  (`Parameters.parameter[i].resource.compose.include[j].filter[k].value` for a
+  filter of an inline value set, `Parameters.parameter[i].valueUri` for a
+  `url` in a body, `http.url` for the `url` query parameter) and carries the
+  `operationoutcome-issue-line` (1) and `operationoutcome-issue-col`
+  extensions. The column is 1-based and counts characters into the value
+  `issue.expression` names; for `http.url` it counts into the query value as
+  the client sent it, percent-encoding included. The answer is the same on R4,
+  R4B, R5 and R6, and never sets the `issue.location` element R6 dropped. The
+  viewer's composer marks the character from these two, and no longer reads a
+  number out of the diagnostic's wording.
+
 - **The viewer's editor bundle reads a resource's versions, compares two of
   them, and restores one** (#637). Every authoring screen links to
   `/ui/editor/history` for the resource it has open. The version list is read

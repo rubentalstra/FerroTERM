@@ -513,7 +513,7 @@ fn expand_refuses_what_it_cannot_answer() {
     };
     assert!(matches!(
         expand::expand(&world.sources(), &request),
-        Err(OperationError::ValueSetInvalid(_))
+        Err(OperationError::ValueSetInvalid { .. })
     ));
 }
 
