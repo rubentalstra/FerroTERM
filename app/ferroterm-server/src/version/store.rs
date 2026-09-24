@@ -652,7 +652,8 @@ pub(crate) fn base_of(
             headers
                 .get(http::header::HOST)
                 .and_then(|value| value.to_str().ok())
-        })?;
+        })
+        .filter(|authority| !authority.is_empty())?;
     Some(crate::version::endpoint(
         &format!("http://{authority}"),
         segment,

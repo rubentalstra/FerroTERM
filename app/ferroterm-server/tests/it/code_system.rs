@@ -304,3 +304,21 @@ fn parents(concept: &Value) -> Vec<&str> {
         })
         .unwrap_or_default()
 }
+
+#[tokio::test]
+async fn a_declared_base_url_is_the_one_a_searchset_addresses_resources_at() {
+    // A deployment behind a proxy declares the address clients reach it at, and
+    // that is the base an absolute `fullUrl` is built from
+    // (<https://hl7.org/fhir/R4B/bundle.html#bundle-unique>).
+    let server = Server::start_with_base_url("https://tx.example.org/fhir");
+    let id = server.snomed_id();
+    let (status, body) = server
+        .get("/r4b/CodeSystem?url=http://snomed.info/sct")
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        body["entry"][0]["fullUrl"],
+        format!("https://tx.example.org/fhir/r4b/CodeSystem/{id}"),
+        "the declared base wins over the authority the request names: {body}"
+    );
+}
