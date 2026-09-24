@@ -28,10 +28,15 @@ server gave.
 
 Every operation accepts `GET` with query parameters and `POST` with a
 `Parameters` resource, at the type level (`ValueSet/$expand?url=…`) and at
-the instance level (`CodeSystem/{id}/$validate-code`). The levels a version
-offers are the ones its `OperationDefinition` declares, so
-`CodeSystem/{id}/$lookup` answers under `/r5` and `/r6` and is not a route
-under `/r4` and `/r4b`
+the instance level (`CodeSystem/{id}/$validate-code`,
+`ValueSet/{id}/$expand`, `ValueSet/{id}/$validate-code`,
+`ConceptMap/{id}/$translate`). The instance form runs the operation on the
+resource the URL names (<https://hl7.org/fhir/R4B/operations.html#request>), so
+it needs no `url`, and works for a resource that carries none of its own. A
+`url`, a version, or an inline resource that names another one is a `400`; a
+canonical carrying the instance's own version after a `|` is the instance. The levels a version offers are the ones its `OperationDefinition`
+declares, so `CodeSystem/{id}/$lookup` answers under `/r5` and `/r6` and is
+not a route under `/r4` and `/r4b`
 (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>). `$expand` returns the
 expanded `ValueSet`; the others return `Parameters`. Every failure is an
 `OperationOutcome` whose issue carries `severity`, `code`, and `details.text`,
@@ -147,7 +152,10 @@ definition and `content = not-present`: the codes come from `$lookup`,
 (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>). A system loaded as a
 `CodeSystem` resource under `FERROTERM_CODESYSTEMS` answers with the `content`
 it declared, so a `complete` one carries its concepts. A supplement is applied
-to the system it supplements and is not served as an instance of its own.
+to the system it supplements and is read and searched like any other
+`CodeSystem` this server holds, with `content = supplement` and the
+`supplements` canonical it declares
+(<https://hl7.org/fhir/R4B/codesystem.html#supplements>).
 
 ## Which artifact a code system came from
 
@@ -208,9 +216,9 @@ defines (<https://hl7.org/fhir/R4B/http.html>), under every version prefix:
 |---|---|
 | `POST {type}` | `201 Created` with `Location`, `ETag`, and `Last-Modified`; the server assigns the id |
 | `PUT {type}/{id}` | `200 OK` when the id existed, `201 Created` when it is new, `409 Conflict` when the id is one a loaded resource is read at |
-| `GET {type}/{id}` | `200 OK` with `ETag` and `Last-Modified`, `404` for an unknown id, `410 Gone` for a deleted one |
+| `GET {type}/{id}` | `200 OK` with `ETag` and `Last-Modified`, `404` for an unknown id or one this version has no representation of, `410 Gone` for a deleted one |
 | `GET {type}/{id}/_history/{versionId}` | `200 OK` with that version of the resource |
-| `GET {type}?url=…&version=…` | a `searchset` `Bundle` |
+| `GET {type}?url=…&version=…` | a `searchset` `Bundle`, `entry.fullUrl` absolute |
 | `DELETE {type}/{id}` | `204 No Content`, and deleting again has no effect and is not an error |
 
 `meta.versionId` starts at `1` and rises with every write; the `ETag` is its
@@ -218,11 +226,44 @@ weak form (`W/"2"`). Send `If-Match` with that value on a `PUT` or a `DELETE`
 to make the write conditional; a value that names another version is a
 `412 Precondition Failed`.
 
+Each `entry.fullUrl` is the absolute URL of the resource
+(<https://hl7.org/fhir/R4B/bundle.html#bundle-unique>): the base URL of
+`FERROTERM_BASE_URL` plus the version's own root, or, where a deployment
+declares no base URL, the authority the request names. Declare the base URL
+behind TLS or a path prefix, because a request carries no scheme. The bundle
+also carries its `self` link, the URL the search was made at, which R5 and the
+R6 ballot require of every searchset (`bdl-18`,
+<https://hl7.org/fhir/R5/bundle.html>).
+
 A resource is stored as the JSON it arrived as, with the FHIR version of the
 endpoint that received it, and a read renders it through the reading version's
-own codec. Reading a resource on a version that does not define an element it
-carries is a `422`. Every operation sees a persisted resource exactly as it
-sees one loaded from `FERROTERM_CODESYSTEMS`, on every served version.
+own codec. A written resource is never converted between FHIR releases. R4B states a
+target's direction with `concept-map-equivalence` and R5 with
+`concept-map-relationship`; `equal`, `subsumes`, `specializes`, `inexact` and
+`unmatched` have no code in the R5 set
+(<https://hl7.org/fhir/R4B/valueset-concept-map-equivalence.html>,
+<https://hl7.org/fhir/R5/valueset-concept-map-relationship.html>), and HL7's
+R4-to-R5 transforms live in a cross-version implementation guide that is
+informative and under development
+(<https://hl7.org/fhir/extensions/conversions-ConceptMap.html>), so no core
+specification states what a conversion should produce.
+
+A search on a version that has no representation of a stored resource leaves
+that resource out of its matches and adds one entry carrying an
+`OperationOutcome` with `search.mode` of `outcome`, `severity` of `warning`,
+`code` of `not-supported`, and text naming the resource and the version it was
+written as (<https://hl7.org/fhir/R4B/http.html#search>); `total` counts the
+matches, and the rest of the searchset answers as usual. Reading that resource
+by id on that version is a `404`: serving one release per base is the strategy
+the specification describes as one where "the same record has a different
+identity depending on the version of FHIR in use"
+(<https://hl7.org/fhir/R5/versioning.html>), and a read answers `200`, `404` or
+`410` and nothing else (<https://hl7.org/fhir/R4B/http.html#read>). The
+`OperationOutcome` names the release the resource does read as, so read it
+there.
+
+Every operation sees a persisted resource exactly as it sees one loaded from
+`FERROTERM_CODESYSTEMS`, on every served version.
 
 A deployment that names no database refuses every write with a `422` and
 declares no write interaction in its capability statement.

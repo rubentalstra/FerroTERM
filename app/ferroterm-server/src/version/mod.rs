@@ -136,7 +136,7 @@ macro_rules! surface {
         /// The routes of this version, nested under its root by the crate router.
         pub fn router() -> axum::Router<crate::reload::Serving> {
             use axum::routing::{get, post};
-            lookup_instance_route(closure_route(axum::Router::new())
+            let router = closure_route(axum::Router::new())
                 .route("/", post(batch::batch))
                 .route("/metadata", get(metadata::metadata))
                 // SMART App Launch puts the discovery document at
@@ -147,7 +147,17 @@ macro_rules! surface {
                     get(crate::smart::configuration),
                 )
                 .route("/$versions", get(system::versions))
-                .route("/$cache-control", post(system::cache_control))
+                .route("/$cache-control", post(system::cache_control));
+            lookup_instance_route(operation_routes(resource_routes(router)))
+        }
+
+        /// The RESTful interactions of the three resource types this server
+        /// serves (<https://hl7.org/fhir/R4B/http.html>).
+        fn resource_routes(
+            router: axum::Router<crate::reload::Serving>,
+        ) -> axum::Router<crate::reload::Serving> {
+            use axum::routing::get;
+            router
                 .route(
                     "/CodeSystem",
                     get(store::code_system_search).post(store::code_system_create),
@@ -190,6 +200,19 @@ macro_rules! surface {
                     "/ConceptMap/{id}/_history/{version}",
                     get(store::concept_map_version_read),
                 )
+        }
+
+        /// The terminology operations, at the levels this version declares.
+        ///
+        /// The instance form runs the operation on the resource the URL names
+        /// (<https://hl7.org/fhir/R4B/operations.html#request>), which every
+        /// served version's `OperationDefinition` declares for `$expand` and
+        /// `$translate`.
+        fn operation_routes(
+            router: axum::Router<crate::reload::Serving>,
+        ) -> axum::Router<crate::reload::Serving> {
+            use axum::routing::{get, post};
+            router
                 .route(
                     "/CodeSystem/$lookup",
                     get(operations::lookup_get).post(operations::lookup_post),
@@ -208,9 +231,18 @@ macro_rules! surface {
                     get(operations::expand_get).post(operations::expand_post),
                 )
                 .route(
+                    "/ValueSet/{id}/$expand",
+                    get(operations::expand_instance_get).post(operations::expand_instance_post),
+                )
+                .route(
                     "/ValueSet/$validate-code",
                     get(operations::value_set_validate_code_get)
                         .post(operations::value_set_validate_code_post),
+                )
+                .route(
+                    "/ValueSet/{id}/$validate-code",
+                    get(operations::value_set_validate_code_instance_get)
+                        .post(operations::value_set_validate_code_instance_post),
                 )
                 .route(
                     "/ValueSet/$batch-validate-code",
@@ -225,13 +257,18 @@ macro_rules! surface {
                     get(operations::translate_get).post(operations::translate_post),
                 )
                 .route(
+                    "/ConceptMap/{id}/$translate",
+                    get(operations::translate_instance_get)
+                        .post(operations::translate_instance_post),
+                )
+                .route(
                     "/CodeSystem/$subsumes",
                     get(operations::subsumes_get).post(operations::subsumes_post),
                 )
                 .route(
                     "/CodeSystem/{id}/$subsumes",
                     get(operations::subsumes_instance_get).post(operations::subsumes_instance_post),
-                ))
+                )
         }
 
         /// The instance-level `$lookup` route, only where the version's

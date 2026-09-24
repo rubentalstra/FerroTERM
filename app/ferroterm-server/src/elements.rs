@@ -110,11 +110,15 @@ fn is_subsetted(tag: &Value) -> bool {
         && coding.get("code") == Some(&Value::String(TAG_CODE.to_owned()))
 }
 
-/// Every `entry.resource` of a searchset `bundle`, projected onto `wanted`.
+/// Every matched `entry.resource` of a searchset `bundle`, projected onto
+/// `wanted`.
 ///
 /// The bundle itself is not a resource a client asked elements of: the
 /// parameter names elements of the resources a search matched, so the envelope
-/// keeps every field it had.
+/// keeps every field it had. An entry that is not a match keeps its resource
+/// whole: an `OperationOutcome` describing the search is not one of the
+/// matched resources, and its `issue` is mandatory
+/// (<https://hl7.org/fhir/R4B/http.html#search>).
 pub fn project_bundle(bundle: &mut Object, wanted: &[String]) {
     if wanted.is_empty() {
         return;
@@ -126,6 +130,15 @@ pub fn project_bundle(bundle: &mut Object, wanted: &[String]) {
         let Value::Object(entry) = entry else {
             continue;
         };
+        let matched = match entry.get("search") {
+            Some(Value::Object(search)) => search
+                .get("mode")
+                .is_none_or(|mode| mode.as_str() == Some("match")),
+            _ => true,
+        };
+        if !matched {
+            continue;
+        }
         if let Some(Value::Object(resource)) = entry.get("resource") {
             let projected = project(resource, wanted);
             entry.insert("resource".to_owned(), Value::Object(projected));

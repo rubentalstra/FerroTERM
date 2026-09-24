@@ -7,7 +7,7 @@ use http::{Request, StatusCode};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
-use crate::fixture::{Server, json as read_json};
+use crate::fixture::{Server, base_of, json as read_json};
 use ferroterm_testkit::fhir::{ANIMALS, VS_PETS};
 
 const INLINE_CS: &str = "http://example.org/fhir/CodeSystem/inline";
@@ -346,7 +346,7 @@ async fn value_sets_read_and_search_by_url() {
     assert_eq!(entry["search"]["mode"], "match");
     let id = entry["fullUrl"]
         .as_str()
-        .and_then(|u| u.strip_prefix("ValueSet/"))
+        .and_then(|u| u.strip_prefix(&format!("{}/ValueSet/", base_of("r4b"))))
         .expect("id")
         .to_owned();
     let (status, body) = server.get(&format!("/r4b/ValueSet/{id}")).await;

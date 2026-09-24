@@ -240,3 +240,32 @@ async fn only_the_versions_that_define_an_instance_lookup_declare_one() {
         assert_eq!(levels_of(lookup), expected, "{version}: {body}");
     }
 }
+
+// NOTE: every served version declares `$expand` and `$translate` at the instance level
+// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>,
+// <https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>).
+#[tokio::test]
+async fn expand_and_translate_declare_the_instance_level_on_every_version() {
+    let server = Server::start();
+    for version in ["r4", "r4b", "r5", "r6"] {
+        let (body_status, body) = server.get(&format!("/{version}/metadata")).await;
+        assert_eq!(body_status, StatusCode::OK, "{version}: {body}");
+        for (resource_type, name) in [("ValueSet", "expand"), ("ConceptMap", "translate")] {
+            let declared = body["rest"][0]["resource"]
+                .as_array()
+                .expect("resource is a list")
+                .iter()
+                .find(|resource| resource["type"] == resource_type)
+                .and_then(|resource| resource["operation"].as_array())
+                .expect("operation is a list")
+                .iter()
+                .find(|operation| operation["name"] == name)
+                .map(levels_of)
+                .unwrap_or_default();
+            assert!(
+                declared.contains(&"instance".to_owned()),
+                "{version} declares {resource_type}/${name} at the instance level: {declared:?}"
+            );
+        }
+    }
+}

@@ -10,7 +10,7 @@
 use http::StatusCode;
 use serde_json::Value;
 
-use crate::fixture::Server;
+use crate::fixture::{Server, base_of};
 
 /// The systems the loaders and the registries put behind an index, none of
 /// which carries its concepts in the resource.
@@ -106,7 +106,13 @@ async fn a_search_by_url_and_version_finds_a_loaded_code_system() {
     let (status, body) = server.get("/r4b/CodeSystem?url=http://loinc.org").await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["total"], 1);
-    assert_eq!(body["entry"][0]["fullUrl"], format!("CodeSystem/{id}"));
+    // `fullUrl` is the absolute URL of the resource
+    // (<https://hl7.org/fhir/R4B/bundle.html#bundle-unique>), built from the
+    // base the request reached and the version's own root.
+    assert_eq!(
+        body["entry"][0]["fullUrl"],
+        format!("{}/CodeSystem/{id}", base_of("r4b"))
+    );
     assert_eq!(body["entry"][0]["search"]["mode"], "match");
     assert_eq!(body["entry"][0]["resource"]["id"], id.as_str());
     assert_eq!(body["entry"][0]["resource"]["content"], "not-present");
@@ -135,11 +141,13 @@ async fn a_search_without_criteria_lists_every_loaded_code_system() {
     let server = Server::start_with_every_loader();
     let (status, body) = server.get("/r4b/CodeSystem").await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    let loaded = u64::try_from(server.state().instances().count()).expect("fits");
+    let state = server.state();
+    let loaded = u64::try_from(state.instances().count() + state.supplement_instances().len())
+        .expect("fits");
     assert_eq!(
         body["total"].as_u64(),
         Some(loaded),
-        "one entry per served code system version: {body}"
+        "one entry per served code system version and supplement: {body}"
     );
     let urls: Vec<&str> = body["entry"]
         .as_array()
@@ -151,8 +159,60 @@ async fn a_search_without_criteria_lists_every_loaded_code_system() {
         assert!(urls.contains(&url), "{url} in {urls:?}");
     }
     assert!(
-        !urls.contains(&ferroterm_testkit::fhir::ANIMALS_NL),
-        "a supplement is not served as an instance: {urls:?}"
+        urls.contains(&ferroterm_testkit::fhir::ANIMALS_NL),
+        "a supplement is a CodeSystem the server holds: {urls:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_loaded_supplement_reads_at_its_id_and_is_listed_by_search() {
+    let server = Server::start_with_every_loader();
+    // The supplement carries no `id`, so it is read at the id the server mints
+    // from its canonical (<https://hl7.org/fhir/R4B/resource.html#id>).
+    let id = ferroterm_server::state::instance_id(ferroterm_testkit::fhir::ANIMALS_NL, "1");
+    for base in ["r4", "r4b", "r5", "r6"] {
+        let (status, body) = server.get(&format!("/{base}/CodeSystem/{id}")).await;
+        assert_eq!(status, StatusCode::OK, "{base}: {body}");
+        assert_eq!(body["resourceType"], "CodeSystem", "{base}");
+        assert_eq!(body["id"], id.as_str(), "{base}");
+        // A supplement "defines extra properties and designations" of the
+        // system it names (<https://hl7.org/fhir/R4B/codesystem.html#supplements>).
+        assert_eq!(body["content"], "supplement", "{base}");
+        assert_eq!(
+            body["supplements"],
+            ferroterm_testkit::fhir::ANIMALS,
+            "{base}"
+        );
+    }
+
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/CodeSystem?url={}",
+            ferroterm_testkit::fhir::ANIMALS_NL
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["total"], 1, "{body}");
+    assert_eq!(
+        body["entry"][0]["fullUrl"],
+        format!("{}/CodeSystem/{id}", base_of("r4b"))
+    );
+    assert_eq!(body["entry"][0]["resource"]["content"], "supplement");
+    assert_eq!(body["entry"][0]["search"]["mode"], "match");
+
+    // Reading the supplement leaves it applying to the system it names.
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/CodeSystem/$lookup?system={}&code=cat&displayLanguage=nl&useSupplement={}",
+            ferroterm_testkit::fhir::ANIMALS,
+            ferroterm_testkit::fhir::ANIMALS_NL
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        crate::fixture::parameter(&body, "display").map(|p| &p["valueString"]),
+        Some(&serde_json::json!("Kat")),
+        "{body}"
     );
 }
 
@@ -193,12 +253,6 @@ async fn an_id_the_server_serves_nothing_under_is_a_not_found() {
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     assert_eq!(body["resourceType"], "OperationOutcome");
     assert_eq!(body["issue"][0]["code"], "not-found");
-
-    // A supplement is applied to the system it supplements and is not served
-    // as an instance of its own.
-    let supplement = ferroterm_server::state::instance_id(ferroterm_testkit::fhir::ANIMALS_NL, "1");
-    let (status, body) = server.get(&format!("/r4b/CodeSystem/{supplement}")).await;
-    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
 }
 
 #[tokio::test]
@@ -249,4 +303,22 @@ fn parents(concept: &Value) -> Vec<&str> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+#[tokio::test]
+async fn a_declared_base_url_is_the_one_a_searchset_addresses_resources_at() {
+    // A deployment behind a proxy declares the address clients reach it at, and
+    // that is the base an absolute `fullUrl` is built from
+    // (<https://hl7.org/fhir/R4B/bundle.html#bundle-unique>).
+    let server = Server::start_with_base_url("https://tx.example.org/fhir");
+    let id = server.snomed_id();
+    let (status, body) = server
+        .get("/r4b/CodeSystem?url=http://snomed.info/sct")
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        body["entry"][0]["fullUrl"],
+        format!("https://tx.example.org/fhir/r4b/CodeSystem/{id}"),
+        "the declared base wins over the authority the request names: {body}"
+    );
 }

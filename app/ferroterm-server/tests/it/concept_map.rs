@@ -9,7 +9,7 @@
 use http::StatusCode;
 use serde_json::Value;
 
-use crate::fixture::Server;
+use crate::fixture::{Server, base_of};
 use ferroterm_testkit::fhir::{ANIMALS, CM_ANIMALS_COLOURS, CM_FALLBACK, COLOURS};
 
 /// The instance id of the concept map at `url`, from the search that finds it.
@@ -18,7 +18,7 @@ fn found_id(body: &Value) -> String {
         .as_array()
         .and_then(|entries| entries.first())
         .and_then(|entry| entry["fullUrl"].as_str())
-        .and_then(|full| full.strip_prefix("ConceptMap/"))
+        .and_then(|full| full.strip_prefix(&format!("{}/ConceptMap/", base_of("r4b"))))
         .expect("the entry addresses a concept map")
         .to_owned()
 }

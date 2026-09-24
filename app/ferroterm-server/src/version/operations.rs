@@ -99,6 +99,103 @@ macro_rules! operations {
                 })
             }
 
+            /// The canonical of the value set or concept map an instance-level
+            /// invocation runs on.
+            #[derive(Debug, Clone)]
+            struct Bound {
+                /// The resource's `url`.
+                url: String,
+                /// Its `version`, when it states one.
+                version: Option<String>,
+            }
+
+            /// The value set `ValueSet/{id}/$expand` runs on.
+            fn value_set_instance(state: &AppState, id: &str) -> Result<Bound, Failure> {
+                state
+                    .value_set_instance(id)
+                    .map(|model| Bound {
+                        url: model.url.clone(),
+                        version: model.version.clone(),
+                    })
+                    .ok_or_else(|| {
+                        Failure::new(
+                            StatusCode::NOT_FOUND,
+                            "not-found",
+                            format!("no ValueSet with id `{id}`"),
+                        )
+                    })
+            }
+
+            /// The concept map `ConceptMap/{id}/$translate` runs on.
+            fn concept_map_instance(state: &AppState, id: &str) -> Result<Bound, Failure> {
+                state
+                    .concept_map_instance(id)
+                    .map(|model| Bound {
+                        url: model.url.clone(),
+                        version: model.version.clone(),
+                    })
+                    .ok_or_else(|| {
+                        Failure::new(
+                            StatusCode::NOT_FOUND,
+                            "not-found",
+                            format!("no ConceptMap with id `{id}`"),
+                        )
+                    })
+            }
+
+            /// Refuses a request that names another resource than the instance
+            /// it was invoked on.
+            ///
+            /// The instance form runs the operation on that resource
+            /// (<https://hl7.org/fhir/R4B/operations.html#request>), so an
+            /// input naming a different canonical, a different version, or an
+            /// inline resource contradicts the invocation. No operation page
+            /// states what a server does with such an input, so refusing it
+            /// rather than silently preferring one side is our own design.
+            fn binds(
+                bound: &Bound,
+                kind: &str,
+                url: Option<&str>,
+                version: Option<&str>,
+                inline: bool,
+                inline_name: &str,
+            ) -> Result<(), Failure> {
+                let invalid = |text: String| Failure::new(StatusCode::BAD_REQUEST, "invalid", text);
+                // NOTE: a canonical carries its version after a `|`
+                // (<https://hl7.org/fhir/R4B/references.html#canonical>), so the two
+                // halves are compared against the instance separately.
+                let (named, embedded) = match url {
+                    Some(url) => match url.split_once('|') {
+                        Some((url, version)) => (Some(url), Some(version)),
+                        None => (Some(url), None),
+                    },
+                    None => (None, None),
+                };
+                let version = version.or(embedded);
+                if let Some(url) = named
+                    && url != bound.url
+                {
+                    return Err(invalid(format!(
+                        "the request names {kind} `{url}`, the instance is `{}`",
+                        bound.url
+                    )));
+                }
+                if let Some(version) = version
+                    && Some(version) != bound.version.as_deref()
+                {
+                    return Err(invalid(format!(
+                        "the request names version `{version}`, the instance is `{}`",
+                        bound.version.as_deref().unwrap_or("unversioned")
+                    )));
+                }
+                if inline {
+                    return Err(invalid(format!(
+                        "an instance-level invocation runs on the {kind} it names, so `{inline_name}` is not accepted"
+                    )));
+                }
+                Ok(())
+            }
+
             /// A `GET` invocation: the query parameters, in the scope the headers name.
             fn from_query(
                 state: &AppState,
@@ -197,34 +294,67 @@ macro_rules! operations {
                 )))
             }
 
-            fn run_expand(scope: &Scope, parameters: &Parameters) -> Handled {
+            fn run_expand(
+                scope: &Scope,
+                instance: Option<&Bound>,
+                parameters: &Parameters,
+            ) -> Handled {
                 let request = ValueSetExpandRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
-                let outcome = expand::expand(&scope.sources(), &map::expand_input(&request))
-                    .map_err(|e| scope.refused(e))?;
+                let mut input = map::expand_input(&request);
+                if let Some(bound) = instance {
+                    binds(
+                        bound,
+                        "ValueSet",
+                        input.url.as_deref(),
+                        input.value_set_version.as_deref(),
+                        input.inline_value_set.is_some(),
+                        "valueSet",
+                    )?;
+                    input.url = Some(bound.url.clone());
+                    input.value_set_version.clone_from(&bound.version);
+                }
+                let outcome =
+                    expand::expand(&scope.sources(), &input).map_err(|e| scope.refused(e))?;
                 Ok(Answer::ValueSet(Box::new(render::$fhir::expansion(
                     &outcome,
                 ))))
             }
 
-            fn run_value_set_validate_code(scope: &Scope, parameters: &Parameters) -> Handled {
+            fn run_value_set_validate_code(
+                scope: &Scope,
+                instance: Option<&Bound>,
+                parameters: &Parameters,
+            ) -> Handled {
                 Ok(Answer::Parameters(Box::new(value_set_validation(
-                    scope, parameters,
+                    scope, instance, parameters,
                 )?)))
             }
 
             /// One `ValueSet/$validate-code` as this version's `Parameters`.
             fn value_set_validation(
                 scope: &Scope,
+                instance: Option<&Bound>,
                 parameters: &Parameters,
             ) -> Result<Parameters, Failure> {
                 let request = ValueSetValidateCodeRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
-                let validation = value_set_validate_code::validate_code(
-                    &scope.sources(),
-                    &map::value_set_validate_input(&request),
-                )
-                .map_err(|e| scope.refused(e))?;
+                let mut input = map::value_set_validate_input(&request);
+                if let Some(bound) = instance {
+                    binds(
+                        bound,
+                        "ValueSet",
+                        input.url.as_deref(),
+                        input.value_set_version.as_deref(),
+                        input.inline_value_set.is_some(),
+                        "valueSet",
+                    )?;
+                    input.url = Some(bound.url.clone());
+                    input.value_set_version.clone_from(&bound.version);
+                }
+                let validation =
+                    value_set_validate_code::validate_code(&scope.sources(), &input)
+                        .map_err(|e| scope.refused(e))?;
                 Ok(map::value_set_validation_parameters(&validation))
             }
 
@@ -274,7 +404,7 @@ macro_rules! operations {
                 let resource = match own(validation) {
                     Ok(own) => {
                         let merged = merge(shared, own);
-                        match value_set_validation(scope, &merged) {
+                        match value_set_validation(scope, None, &merged) {
                             Ok(answered) => Some(Resource::Parameters(Box::new(answered))),
                             Err(failure) => outcome_resource(&failure),
                         }
@@ -354,7 +484,11 @@ macro_rules! operations {
                 Ok(())
             }
 
-            fn run_translate(scope: &Scope, parameters: &Parameters) -> Handled {
+            fn run_translate(
+                scope: &Scope,
+                instance: Option<&Bound>,
+                parameters: &Parameters,
+            ) -> Handled {
                 reverse_refusal(
                     parameters
                         .parameter
@@ -363,9 +497,21 @@ macro_rules! operations {
                 )?;
                 let request = ConceptMapTranslateRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
+                let mut input = map::translate_input(&request);
+                if let Some(bound) = instance {
+                    binds(
+                        bound,
+                        "ConceptMap",
+                        input.url.as_deref(),
+                        input.concept_map_version.as_deref(),
+                        input.inline_concept_map.is_some(),
+                        "conceptMap",
+                    )?;
+                    input.url = Some(bound.url.clone());
+                    input.concept_map_version.clone_from(&bound.version);
+                }
                 let translation =
-                    translate::translate(&scope.sources(), &map::translate_input(&request))
-                        .map_err(|e| scope.refused(e))?;
+                    translate::translate(&scope.sources(), &input).map_err(|e| scope.refused(e))?;
                 Ok(Answer::Parameters(Box::new(map::translation_parameters(
                     &translation,
                 ))))
@@ -388,40 +534,75 @@ macro_rules! operations {
                 Translate,
             }
 
+            /// What an entry's path invoked the operation on: the type, or the
+            /// instance of one of the three resource types.
+            #[derive(Debug, Clone, PartialEq, Eq)]
+            enum At {
+                /// `[base]/{Type}/$op`.
+                Type,
+                /// `[base]/CodeSystem/{id}/$op`.
+                CodeSystem(String),
+                /// `[base]/ValueSet/{id}/$op`.
+                ValueSet(String),
+                /// `[base]/ConceptMap/{id}/$op`.
+                ConceptMap(String),
+            }
+
             /// The operation the path `segments` name, with the descriptor that
-            /// declares its parameters and the id an instance invocation carries.
+            /// declares its parameters and the level the path invokes it at.
             fn route(
                 segments: &[&str],
-            ) -> Option<(Which, &'static fhir_types::operation::Operation, Option<String>)> {
+            ) -> Option<(Which, &'static fhir_types::operation::Operation, At)> {
                 let (which, operation, id) = match segments {
-                    ["CodeSystem", "$lookup"] => (Which::Lookup, &CODE_SYSTEM_LOOKUP, None),
+                    ["CodeSystem", "$lookup"] => (Which::Lookup, &CODE_SYSTEM_LOOKUP, At::Type),
                     // NOTE: R5 and the R6 ballot declare `$lookup` at the instance level
                     // and R4 and R4B do not, so the batch surface follows the version's
                     // own definition (<https://hl7.org/fhir/R5/codesystem-operation-lookup.html>).
-                    ["CodeSystem", id, "$lookup"] if CODE_SYSTEM_LOOKUP.instance => {
-                        (Which::Lookup, &CODE_SYSTEM_LOOKUP, Some((*id).to_owned()))
-                    }
+                    ["CodeSystem", id, "$lookup"] if CODE_SYSTEM_LOOKUP.instance => (
+                        Which::Lookup,
+                        &CODE_SYSTEM_LOOKUP,
+                        At::CodeSystem((*id).to_owned()),
+                    ),
                     ["CodeSystem", "$validate-code"] => {
-                        (Which::ValidateCode, &CODE_SYSTEM_VALIDATE_CODE, None)
+                        (Which::ValidateCode, &CODE_SYSTEM_VALIDATE_CODE, At::Type)
                     }
                     ["CodeSystem", id, "$validate-code"] => (
                         Which::ValidateCode,
                         &CODE_SYSTEM_VALIDATE_CODE,
-                        Some((*id).to_owned()),
+                        At::CodeSystem((*id).to_owned()),
                     ),
-                    ["CodeSystem", "$subsumes"] => (Which::Subsumes, &CODE_SYSTEM_SUBSUMES, None),
+                    ["CodeSystem", "$subsumes"] => {
+                        (Which::Subsumes, &CODE_SYSTEM_SUBSUMES, At::Type)
+                    }
                     ["CodeSystem", id, "$subsumes"] => (
                         Which::Subsumes,
                         &CODE_SYSTEM_SUBSUMES,
-                        Some((*id).to_owned()),
+                        At::CodeSystem((*id).to_owned()),
                     ),
-                    ["ValueSet", "$expand"] => (Which::Expand, &VALUE_SET_EXPAND, None),
-                    ["ValueSet", "$validate-code"] => {
-                        (Which::ValueSetValidateCode, &VALUE_SET_VALIDATE_CODE, None)
-                    }
+                    ["ValueSet", "$expand"] => (Which::Expand, &VALUE_SET_EXPAND, At::Type),
+                    ["ValueSet", id, "$expand"] => (
+                        Which::Expand,
+                        &VALUE_SET_EXPAND,
+                        At::ValueSet((*id).to_owned()),
+                    ),
+                    ["ValueSet", "$validate-code"] => (
+                        Which::ValueSetValidateCode,
+                        &VALUE_SET_VALIDATE_CODE,
+                        At::Type,
+                    ),
+                    ["ValueSet", id, "$validate-code"] => (
+                        Which::ValueSetValidateCode,
+                        &VALUE_SET_VALIDATE_CODE,
+                        At::ValueSet((*id).to_owned()),
+                    ),
                     ["ConceptMap", "$translate"] => {
-                        (Which::Translate, &CONCEPT_MAP_TRANSLATE, None)
+                        (Which::Translate, &CONCEPT_MAP_TRANSLATE, At::Type)
                     }
+                    ["ConceptMap", id, "$translate"] => (
+                        Which::Translate,
+                        &CONCEPT_MAP_TRANSLATE,
+                        At::ConceptMap((*id).to_owned()),
+                    ),
                     _ => return None,
                 };
                 Some((which, operation, id))
@@ -451,10 +632,14 @@ macro_rules! operations {
                         format!("`{path}` is not an operation of this server"),
                     ));
                 };
-                let invocation = match &id {
-                    Some(id) => instance(state, id)?,
-                    None => Invocation::Type,
-                };
+                let mut invocation = Invocation::Type;
+                let mut bound = None;
+                match &id {
+                    At::Type => {}
+                    At::CodeSystem(id) => invocation = instance(state, id)?,
+                    At::ValueSet(id) => bound = Some(value_set_instance(state, id)?),
+                    At::ConceptMap(id) => bound = Some(concept_map_instance(state, id)?),
+                }
                 let (scope, parameters) = match sent {
                     Some(sent) => {
                         let (mut own, resources) = split_resources(sent)?;
@@ -472,9 +657,11 @@ macro_rules! operations {
                     Which::Lookup => run_lookup(&scope, &invocation, &parameters),
                     Which::ValidateCode => run_validate_code(&scope, &invocation, &parameters),
                     Which::Subsumes => run_subsumes(&scope, &invocation, &parameters),
-                    Which::Expand => run_expand(&scope, &parameters),
-                    Which::ValueSetValidateCode => run_value_set_validate_code(&scope, &parameters),
-                    Which::Translate => run_translate(&scope, &parameters),
+                    Which::Expand => run_expand(&scope, bound.as_ref(), &parameters),
+                    Which::ValueSetValidateCode => {
+                        run_value_set_validate_code(&scope, bound.as_ref(), &parameters)
+                    }
+                    Which::Translate => run_translate(&scope, bound.as_ref(), &parameters),
                 }
             }
 
@@ -711,7 +898,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_query(&state, &VALUE_SET_EXPAND, &headers, &query)
-                        .and_then(|(scope, p)| run_expand(&scope, &p)), wire)
+                        .and_then(|(scope, p)| run_expand(&scope, None, &p)), wire)
             }
 
             /// `POST /ValueSet/$expand`.
@@ -727,7 +914,48 @@ macro_rules! operations {
                 };
                 finish(
                     from_body(&state, &VALUE_SET_EXPAND, &headers, &body)
-                        .and_then(|(scope, p)| run_expand(&scope, &p)), wire)
+                        .and_then(|(scope, p)| run_expand(&scope, None, &p)), wire)
+            }
+
+            /// `GET /ValueSet/{id}/$expand`.
+            pub async fn expand_instance_get(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+            ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    value_set_instance(&state, &id).and_then(|bound| {
+                        from_query(&state, &VALUE_SET_EXPAND, &headers, &query)
+                            .and_then(|(scope, p)| run_expand(&scope, Some(&bound), &p))
+                    }),
+                    wire,
+                )
+            }
+
+            /// `POST /ValueSet/{id}/$expand`.
+            pub async fn expand_instance_post(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+                body: Bytes,
+            ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    value_set_instance(&state, &id).and_then(|bound| {
+                        from_body(&state, &VALUE_SET_EXPAND, &headers, &body)
+                            .and_then(|(scope, p)| run_expand(&scope, Some(&bound), &p))
+                    }),
+                    wire,
+                )
             }
 
             /// `GET /ValueSet/$validate-code`.
@@ -742,7 +970,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)), wire)
+                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, None, &p)), wire)
             }
 
             /// `POST /ValueSet/$validate-code`.
@@ -758,7 +986,50 @@ macro_rules! operations {
                 };
                 finish(
                     from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)), wire)
+                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, None, &p)), wire)
+            }
+
+            /// `GET /ValueSet/{id}/$validate-code`.
+            pub async fn value_set_validate_code_instance_get(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+            ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    value_set_instance(&state, &id).and_then(|bound| {
+                        from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query).and_then(
+                            |(scope, p)| run_value_set_validate_code(&scope, Some(&bound), &p),
+                        )
+                    }),
+                    wire,
+                )
+            }
+
+            /// `POST /ValueSet/{id}/$validate-code`.
+            pub async fn value_set_validate_code_instance_post(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+                body: Bytes,
+            ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    value_set_instance(&state, &id).and_then(|bound| {
+                        from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body).and_then(
+                            |(scope, p)| run_value_set_validate_code(&scope, Some(&bound), &p),
+                        )
+                    }),
+                    wire,
+                )
             }
 
             /// `POST /ValueSet/$batch-validate-code` and `POST /CodeSystem/$batch-validate-code`.
@@ -802,7 +1073,30 @@ macro_rules! operations {
                 finish(
                     reverse_refusal(query.iter().map(|(name, _)| name.as_str()))
                         .and_then(|()| from_query(&state, &CONCEPT_MAP_TRANSLATE, &headers, &query))
-                        .and_then(|(scope, p)| run_translate(&scope, &p)), wire)
+                        .and_then(|(scope, p)| run_translate(&scope, None, &p)), wire)
+            }
+
+            /// `GET /ConceptMap/{id}/$translate`.
+            pub async fn translate_instance_get(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+            ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    concept_map_instance(&state, &id).and_then(|bound| {
+                        reverse_refusal(query.iter().map(|(name, _)| name.as_str()))
+                            .and_then(|()| {
+                                from_query(&state, &CONCEPT_MAP_TRANSLATE, &headers, &query)
+                            })
+                            .and_then(|(scope, p)| run_translate(&scope, Some(&bound), &p))
+                    }),
+                    wire,
+                )
             }
 
             /// `POST /ConceptMap/$translate`.
@@ -827,7 +1121,34 @@ macro_rules! operations {
                         &headers,
                         &body,
                     )
-                    .and_then(|(scope, p)| run_translate(&scope, &p)), wire)
+                    .and_then(|(scope, p)| run_translate(&scope, None, &p)), wire)
+            }
+
+            /// `POST /ConceptMap/{id}/$translate`.
+            pub async fn translate_instance_post(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+                body: Bytes,
+            ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    concept_map_instance(&state, &id).and_then(|bound| {
+                        from_body_accepting(
+                            &state,
+                            &CONCEPT_MAP_TRANSLATE,
+                            &["reverse"],
+                            &headers,
+                            &body,
+                        )
+                        .and_then(|(scope, p)| run_translate(&scope, Some(&bound), &p))
+                    }),
+                    wire,
+                )
             }
         }
     };
