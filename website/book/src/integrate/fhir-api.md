@@ -189,6 +189,11 @@ The canonical is
 }
 ```
 
+The definition is the `StructureDefinition` at
+<https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact>, and the
+JSON is
+[`terminology-artifact.json`](https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact.json).
+
 A version that came from no artifact carries no extension: the registries the
 binary holds (UCUM, BCP 13, BCP 47, ISO 3166) and any `CodeSystem` resource a
 deployment loaded or persisted. Nothing about the operator's filesystem and
@@ -224,6 +229,11 @@ sub-extensions:
 }
 ```
 
+The definition is the `StructureDefinition` at
+<https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set>, and the
+JSON is
+[`implicit-value-set.json`](https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set.json).
+
 The forms declared today:
 
 | System | Patterns |
@@ -239,6 +249,32 @@ ClaML classifications, BCP 13, BCP 47, ISO 3166, and every `CodeSystem`
 resource. A supplemented system declares the forms of the system it
 supplements. A declared form can still answer an error for one argument, for
 example `?fhir_vs=refset` on an edition that defines no reference sets.
+
+## Which levels an operation answers at
+
+A `CapabilityStatement` records that a server answers an operation and never
+at which level; `OperationDefinition.system`, `.type` and `.instance` carry
+that (<https://hl7.org/fhir/R4B/operationdefinition-definitions.html#OperationDefinition.instance>).
+`metadata` states the levels the version's own definition declares as an
+extension on `CapabilityStatement.rest.resource.operation`, repeated once per
+level, on R4, R4B, R5 and R6. The canonical is
+`https://ferroterm.eu/fhir/StructureDefinition/operation-level`, with a
+`valueCode` of `system`, `type` or `instance`:
+
+```json
+{
+  "name": "validate-code",
+  "definition": "http://hl7.org/fhir/OperationDefinition/CodeSystem-validate-code",
+  "extension": [
+    { "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level", "valueCode": "type" },
+    { "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level", "valueCode": "instance" }
+  ]
+}
+```
+
+The definition is the `StructureDefinition` at
+<https://ferroterm.eu/fhir/StructureDefinition/operation-level>, and the JSON is
+[`operation-level.json`](https://ferroterm.eu/fhir/StructureDefinition/operation-level.json).
 
 ## Languages
 

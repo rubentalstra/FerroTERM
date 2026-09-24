@@ -1,0 +1,72 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "operation-level",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>One level at which the server answers an operation: system, type or instance, as the served version's own OperationDefinition declares it. The extension repeats once per level. The element has the same path on R4, R4B, R5 and R6, and the server writes the extension on every version it serves.</p></div>"
+  },
+  "url": "https://ferroterm.eu/fhir/StructureDefinition/operation-level",
+  "name": "OperationLevel",
+  "title": "Operation level",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-09-24",
+  "publisher": "FerroTERM",
+  "contact": [
+    {
+      "name": "FerroTERM",
+      "telecom": [
+        {
+          "system": "url",
+          "value": "https://ferroterm.eu"
+        }
+      ]
+    }
+  ],
+  "description": "One level at which the server answers an operation: system, type or instance, as the served version's own OperationDefinition declares it. The extension repeats once per level. The element has the same path on R4, R4B, R5 and R6, and the server writes the extension on every version it serves.",
+  "purpose": "A CapabilityStatement records that a server answers an operation and never at which level; OperationDefinition.system, .type and .instance carry that, so the levels are stated beside the operation for a client that reads only the statement.",
+  "fhirVersion": "4.3.0",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "CapabilityStatement.rest.resource.operation"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "system | type | instance",
+        "definition": "One level at which the server answers this operation, repeated once per level: system, type (the resource type) or instance (one resource by id).",
+        "min": 0,
+        "max": "3"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://ferroterm.eu/fhir/StructureDefinition/operation-level"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ]
+      }
+    ]
+  }
+}
