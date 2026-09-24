@@ -221,7 +221,7 @@ async fn the_definition_survives(
 
     journey
         .reopen(&format!(
-            "{base}/ui/editor/validate?fhir=r4b&on=valueset&url={CANONICAL_PARAM}&code={CODE}&system={SYSTEM_PARAM}"
+            "{base}/ui/editor/validate?fhir=r4b&on=valueset&valueSet={CANONICAL_PARAM}&code={CODE}&system={SYSTEM_PARAM}"
         ))
         .await;
     let validated = journey

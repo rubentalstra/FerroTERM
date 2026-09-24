@@ -1484,15 +1484,21 @@ fn save_section(
         });
     };
     view! {
+        // The control exists only where the held token opens it, because a
+        // control the server would refuse is a worse answer than no control
+        // (`app/ferroterm-viewer/src/auth/scopes.rs`). The banner above says
+        // why there is none.
         <div class="mt-section flex flex-wrap items-center gap-default">
-            <button
-                type="button"
-                class=styles::SUBMIT
-                disabled=move || !writable.get() || !savable.get() || saving.get()
-                on:click=save
-            >
-                {move || if saving.get() { "Saving" } else { "Save this value set" }}
-            </button>
+            <Show when=move || writable.get() fallback=|| ()>
+                <button
+                    type="button"
+                    class=styles::SUBMIT
+                    disabled=move || !savable.get() || saving.get()
+                    on:click=save.clone()
+                >
+                    {move || if saving.get() { "Saving" } else { "Save this value set" }}
+                </button>
+            </Show>
             <Show when=move || writable.get() && !savable.get() fallback=|| ()>
                 <p role="status" class=styles::HINT>
                     "A canonical and a clause that selects something are what a save needs."
