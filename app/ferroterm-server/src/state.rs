@@ -760,46 +760,15 @@ impl AppState {
             .persisted
             .read()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let loaded = self
-            .instances
-            .iter()
-            .map(|(id, (url, version))| {
-                (ResourceType::CodeSystem, id, canonical(url, Some(version)))
-            })
-            .chain(self.supplements.iter().map(|(id, model)| {
-                (
-                    ResourceType::CodeSystem,
-                    id,
-                    canonical(
-                        &model.url,
-                        Some(model.version.as_str()).filter(|version| !version.is_empty()),
-                    ),
-                )
-            }))
-            .chain(self.value_set_instances.iter().map(|(id, (url, version))| {
-                (
-                    ResourceType::ValueSet,
-                    id,
-                    canonical(url, version.as_deref()),
-                )
-            }))
-            .chain(
-                self.concept_map_instances
-                    .iter()
-                    .map(|(id, (url, version))| {
-                        (
-                            ResourceType::ConceptMap,
-                            id,
-                            canonical(url, version.as_deref()),
-                        )
-                    }),
-            );
-        for (resource_type, id, canonical) in loaded {
-            if persisted.records.contains_key(&(resource_type, id.clone())) {
+        for (resource_type, id, url, version) in self.loaded_canonicals() {
+            if persisted
+                .records
+                .contains_key(&(resource_type, id.to_owned()))
+            {
                 return Err(LoadError::PersistedId {
                     resource_type: resource_type.name(),
-                    id: id.clone(),
-                    canonical,
+                    id: id.to_owned(),
+                    canonical: canonical(url, version),
                 });
             }
         }
@@ -1009,8 +978,8 @@ impl AppState {
         &self.caches
     }
 
-    /// The `ValueSet` instance ids and what they serve, sorted by id, the
-    /// persisted value sets after the loaded ones.
+    /// The `ValueSet` instance ids and what they serve, the loaded and the
+    /// persisted ones together, sorted by id.
     #[must_use]
     pub fn value_set_instances(&self) -> Vec<(String, String, Option<String>)> {
         let mut out: Vec<(String, String, Option<String>)> = self
@@ -1031,6 +1000,7 @@ impl AppState {
             };
             out.push((id.clone(), url, record.version.clone()));
         }
+        out.sort_by(|(left, ..), (right, ..)| left.cmp(right));
         out
     }
 
@@ -1060,8 +1030,8 @@ impl AppState {
         persisted.layer.value_sets.resolve(url, version.as_deref())
     }
 
-    /// The `ConceptMap` instance ids and what they serve, sorted by id, the
-    /// persisted concept maps after the loaded ones.
+    /// The `ConceptMap` instance ids and what they serve, the loaded and the
+    /// persisted ones together, sorted by id.
     #[must_use]
     pub fn concept_map_instances(&self) -> Vec<(String, String, Option<String>)> {
         let mut out: Vec<(String, String, Option<String>)> = self
@@ -1082,6 +1052,7 @@ impl AppState {
             };
             out.push((id.clone(), url, record.version.clone()));
         }
+        out.sort_by(|(left, ..), (right, ..)| left.cmp(right));
         out
     }
 

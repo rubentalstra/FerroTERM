@@ -883,8 +883,9 @@ macro_rules! store_routes {
             headers: http::HeaderMap,
             axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
         ) -> axum::response::Response {
-            let Some(wire) = negotiated(&query, &headers) else {
-                return refused(&query, &headers);
+            let wire = match Wire::negotiate(&query, &headers) {
+                Ok(wire) => wire,
+                Err(failure) => return failure.into_response(),
             };
             let asked = Asked {
                 query: &query,
@@ -904,8 +905,9 @@ macro_rules! store_routes {
             headers: http::HeaderMap,
             axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
         ) -> axum::response::Response {
-            let Some(wire) = negotiated(&query, &headers) else {
-                return refused(&query, &headers);
+            let wire = match Wire::negotiate(&query, &headers) {
+                Ok(wire) => wire,
+                Err(failure) => return failure.into_response(),
             };
             let asked = Asked {
                 query: &query,
@@ -925,8 +927,9 @@ macro_rules! store_routes {
             axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
             body: axum::body::Bytes,
         ) -> axum::response::Response {
-            let Some(wire) = negotiated(&query, &headers) else {
-                return refused(&query, &headers);
+            let wire = match Wire::negotiate(&query, &headers) {
+                Ok(wire) => wire,
+                Err(failure) => return failure.into_response(),
             };
             let request = crate::version::store::Request {
                 state: &state,
@@ -948,8 +951,9 @@ macro_rules! store_routes {
             headers: http::HeaderMap,
             axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
         ) -> axum::response::Response {
-            let Some(wire) = negotiated(&query, &headers) else {
-                return refused(&query, &headers);
+            let wire = match Wire::negotiate(&query, &headers) {
+                Ok(wire) => wire,
+                Err(failure) => return failure.into_response(),
             };
             let request = crate::version::store::Request {
                 state: &state,
@@ -976,8 +980,9 @@ macro_rules! store_routes {
             axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
             body: axum::body::Bytes,
         ) -> axum::response::Response {
-            let Some(wire) = negotiated(&query, &headers) else {
-                return refused(&query, &headers);
+            let wire = match Wire::negotiate(&query, &headers) {
+                Ok(wire) => wire,
+                Err(failure) => return failure.into_response(),
             };
             let path = uri
                 .path()
@@ -1003,8 +1008,9 @@ macro_rules! store_routes {
             headers: http::HeaderMap,
             axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
         ) -> axum::response::Response {
-            let Some(wire) = negotiated(&query, &headers) else {
-                return refused(&query, &headers);
+            let wire = match Wire::negotiate(&query, &headers) {
+                Ok(wire) => wire,
+                Err(failure) => return failure.into_response(),
             };
             let request = crate::version::store::Request {
                 state: &state,
@@ -1029,8 +1035,9 @@ macro_rules! store_routes {
             headers: http::HeaderMap,
             axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
         ) -> axum::response::Response {
-            let Some(wire) = negotiated(&query, &headers) else {
-                return refused(&query, &headers);
+            let wire = match Wire::negotiate(&query, &headers) {
+                Ok(wire) => wire,
+                Err(failure) => return failure.into_response(),
             };
             let request = crate::version::store::Request {
                 state: &state,
@@ -1053,8 +1060,9 @@ macro_rules! store_routes {
             headers: http::HeaderMap,
             axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
         ) -> axum::response::Response {
-            let Some(wire) = negotiated(&query, &headers) else {
-                return refused(&query, &headers);
+            let wire = match Wire::negotiate(&query, &headers) {
+                Ok(wire) => wire,
+                Err(failure) => return failure.into_response(),
             };
             finish(search(&state, $kind, &query, &headers, &uri, wire), wire)
         }
@@ -1147,20 +1155,6 @@ macro_rules! store {
                 let mut resource = fhir_terminology::conceptmap::render::$fhir::concept_map(model);
                 resource.id = Some(id.to_owned());
                 resource
-            }
-
-            /// The response format the request asks for, `None` when the server
-            /// does not speak it.
-            fn negotiated(query: &[(String, String)], headers: &HeaderMap) -> Option<Wire> {
-                Wire::negotiate(query, headers).ok()
-            }
-
-            /// The refusal of a format the server does not speak.
-            fn refused(query: &[(String, String)], headers: &HeaderMap) -> Response {
-                match Wire::negotiate(query, headers) {
-                    Ok(_) => StatusCode::NOT_ACCEPTABLE.into_response(),
-                    Err(failure) => failure.into_response(),
-                }
             }
 
             fn finish(handled: Result<Response, Failure>, wire: Wire) -> Response {
@@ -1530,31 +1524,6 @@ macro_rules! store {
                     url: url.into(),
                     ..Default::default()
                 }]
-            }
-
-            /// The stored resource of `resource_type` with `id`, when there is
-            /// one; a route that also serves loaded resources tries this first.
-            pub fn stored(
-                state: &AppState,
-                resource_type: ResourceType,
-                id: &str,
-                headers: &HeaderMap,
-                wire: Wire,
-            ) -> Option<Result<Response, Failure>> {
-                state.persisted_record(resource_type, id)?;
-                let request = Request {
-                    state,
-                    surface: surface(),
-                    resource_type,
-                    headers,
-                    path: "",
-                    wire,
-                };
-                Some(crate::version::store::read(
-                    &request,
-                    id,
-                    &crate::elements::Projection::default(),
-                ))
             }
 
             crate::version::store::store_routes!(
