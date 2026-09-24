@@ -1,0 +1,134 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "terminology-artifact",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>The built index a served code system version was read from: the artifact directory's own name and the release identifier the offline build recorded in its manifest. The element has the same path on R4, R4B, R5 and R6, and the server writes the extension on every version it serves.</p></div>"
+  },
+  "url": "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact",
+  "name": "TerminologyArtifact",
+  "title": "Terminology artifact",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-09-24",
+  "publisher": "FerroTERM",
+  "contact": [
+    {
+      "name": "FerroTERM",
+      "telecom": [
+        {
+          "system": "url",
+          "value": "https://ferroterm.eu"
+        }
+      ]
+    }
+  ],
+  "description": "The built index a served code system version was read from: the artifact directory's own name and the release identifier the offline build recorded in its manifest. The element has the same path on R4, R4B, R5 and R6, and the server writes the extension on every version it serves.",
+  "purpose": "No element of TerminologyCapabilities records which built index a server read a code system version from, so a client cannot otherwise tell which artifact answered.",
+  "fhirVersion": "4.3.0",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "TerminologyCapabilities.codeSystem.version"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "The artifact a code system version was read from",
+        "definition": "The artifact a served code system version was read from. A version read from no artifact, such as a registry the binary holds or a CodeSystem resource, carries no such extension.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        },
+        "min": 1
+      },
+      {
+        "id": "Extension.extension:name",
+        "path": "Extension.extension",
+        "sliceName": "name",
+        "short": "The artifact directory's own name",
+        "definition": "The artifact directory's own name, without the directories above it. Absent when the path has no final component.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:name.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:name.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "name"
+      },
+      {
+        "id": "Extension.extension:name.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:release",
+        "path": "Extension.extension",
+        "sliceName": "release",
+        "short": "The release identifier",
+        "definition": "The release identifier the offline build wrote into the artifact's manifest: the release date for SNOMED CT, the release version for the other systems.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:release.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:release.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "release"
+      },
+      {
+        "id": "Extension.extension:release.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://ferroterm.eu/fhir/StructureDefinition/terminology-artifact"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

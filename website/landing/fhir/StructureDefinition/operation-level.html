@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Operation level: a FerroTERM FHIR extension</title>
+  <meta name="description" content="One level at which the server answers an operation: system, type or instance, as the served version&#x27;s own OperationDefinition declares it. The extension repeats once per level. The element has the same path on R4, R4B, R5 and R6, and the server writes the extension on every version it serves.">
+  <link rel="icon" type="image/svg+xml" href="../../assets/logo-mark.svg">
+  <link rel="canonical" href="https://ferroterm.eu/fhir/StructureDefinition/operation-level">
+  <link rel="alternate" type="application/fhir+json" href="./operation-level.json">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="../../">
+        <img src="../../assets/logo-mark.svg" alt="" aria-hidden="true">
+        <span>FerroTERM</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="../../docs/">Docs</a>
+        <a href="../../docs/integrate/fhir-api.html">FHIR API</a>
+        <a href="https://github.com/rubentalstra/FerroTERM" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero hero-compact">
+      <div class="wrap">
+        <span class="eyebrow">FHIR extension</span>
+        <h1>Operation level</h1>
+        <p class="sub">One level at which the server answers an operation: system, type or instance, as the served version&#x27;s own OperationDefinition declares it. The extension repeats once per level. The element has the same path on R4, R4B, R5 and R6, and the server writes the extension on every version it serves.</p>
+      </div>
+    </section>
+
+    <section class="surface">
+      <div class="wrap">
+        <div class="prose">
+          <p>Canonical: <code>https://ferroterm.eu/fhir/StructureDefinition/operation-level</code></p>
+          <p>Context: <code>CapabilityStatement.rest.resource.operation</code></p>
+          <p>Definition: <a href="./operation-level.json">operation-level.json</a>, a <code>StructureDefinition</code> in the FHIR R4B shape.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Element</th><th scope="col">Type</th><th scope="col">Cardinality</th><th scope="col">Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row"><code>(the extension itself)</code></th><td><code>code</code></td><td>0..3</td><td>One level at which the server answers this operation, repeated once per level: system, type (the resource type) or instance (one resource by id).</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+</body>
+</html>

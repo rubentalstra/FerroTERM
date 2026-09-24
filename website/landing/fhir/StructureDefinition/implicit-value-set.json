@@ -1,0 +1,134 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "implicit-value-set",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>One implicit value set form a served code system version resolves: the URL template and what its placeholders take. The extension repeats once per form. The element has the same path on R4, R4B, R5 and R6, and the server writes the extension on every version it serves.</p></div>"
+  },
+  "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set",
+  "name": "ImplicitValueSet",
+  "title": "Implicit value set form",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-09-24",
+  "publisher": "FerroTERM",
+  "contact": [
+    {
+      "name": "FerroTERM",
+      "telecom": [
+        {
+          "system": "url",
+          "value": "https://ferroterm.eu"
+        }
+      ]
+    }
+  ],
+  "description": "One implicit value set form a served code system version resolves: the URL template and what its placeholders take. The extension repeats once per form. The element has the same path on R4, R4B, R5 and R6, and the server writes the extension on every version it serves.",
+  "purpose": "No element of TerminologyCapabilities states which implicit value sets a server resolves.",
+  "fhirVersion": "4.3.0",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "TerminologyCapabilities.codeSystem.version"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "An implicit value set form this version resolves",
+        "definition": "One implicit value set form this code system version resolves, repeated once per form. A version that resolves none carries no such extension.",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        },
+        "min": 2
+      },
+      {
+        "id": "Extension.extension:pattern",
+        "path": "Extension.extension",
+        "sliceName": "pattern",
+        "short": "The value set URL template",
+        "definition": "The value set URL template, spelled as the code system's page spells it, with each placeholder in square brackets, for example http://snomed.info/sct?fhir_vs=isa/[sctid].",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:pattern.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:pattern.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "pattern"
+      },
+      {
+        "id": "Extension.extension:pattern.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:argument",
+        "path": "Extension.extension",
+        "sliceName": "argument",
+        "short": "none | code | expression",
+        "definition": "What the placeholders take: none when the pattern is the URL as it stands, code when the one placeholder takes a code of the system, expression when the placeholders take free text such as an ECL expression or a UCUM unit.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:argument.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:argument.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "argument"
+      },
+      {
+        "id": "Extension.extension:argument.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

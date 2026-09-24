@@ -167,8 +167,10 @@ jobs:
   # prebuilt binary onto a digest-pinned base, so the rules that matter are
   # the pinned FROM, the numeric non-root USER, and the exec-form ENTRYPOINT.
   # The tree guards: every vendor fetcher writes into the tree, every
-  # workspace member is named in the repo map and the architecture table, and
-  # every evidence citation in docs/claims.md resolves to a symbol or a test.
+  # workspace member is named in the repo map and the architecture table,
+  # every evidence citation in docs/claims.md resolves to a symbol or a test,
+  # and every project extension the server writes has its StructureDefinition
+  # on the website.
   tree-guards:
     name: tree-guards
     runs-on: ubuntu-latest
@@ -185,6 +187,8 @@ jobs:
         run: bash scripts/checks/repo-map.sh
       - name: claims
         run: bash scripts/checks/claims.sh
+      - name: extension-definitions
+        run: bash scripts/checks/extension-definitions.sh
 
   dockerfile-lint:
     name: hadolint
