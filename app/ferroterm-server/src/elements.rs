@@ -20,14 +20,199 @@
 //! The projection is over the wire representation rather than the typed model,
 //! which is what lets one implementation serve all four FHIR versions: a
 //! subset of a resource is not a resource, so it has no typed form to build.
+//!
+//! `_summary` (`http://hl7.org/fhir/SearchParameter/Resource-summary`) is the
+//! other result parameter, with fixed views of a resource
+//! (<https://hl7.org/fhir/R4B/search.html#summary>). Both apply to the read
+//! interaction as well as to search (<https://hl7.org/fhir/R4B/http.html#read>).
 
 use std::collections::BTreeMap;
 
 use fhir_types::codec::Object;
 use fhir_types::codec::Value;
+use fhir_types::schema::{Kind, Schemas};
+use http::StatusCode;
+
+use crate::outcome::Failure;
 
 /// The search parameter this module answers.
 pub const PARAMETER: &str = "_elements";
+
+/// The result parameter naming a summary view.
+pub const SUMMARY: &str = "_summary";
+
+/// A `_summary` view this server answers
+/// (<https://hl7.org/fhir/R4B/valueset-search-summary.html>).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Summary {
+    /// `text`: `text`, `id`, `meta`, and the top-level mandatory elements.
+    Text,
+    /// `data`: the resource without `text`.
+    Data,
+    /// `count`: the number of matches and no resources, on search only.
+    Count,
+    /// `false`: the whole resource.
+    False,
+}
+
+/// The interaction a projection is read for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Interaction {
+    /// The read of one resource.
+    Read,
+    /// A search.
+    Search,
+}
+
+/// What a request asked a resource in the answer to carry: a `_summary` view
+/// and an `_elements` list, both optional.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Projection {
+    /// The summary view, when one was named.
+    summary: Option<Summary>,
+    /// The elements named in `_elements`, the union of every occurrence.
+    elements: Vec<String>,
+}
+
+impl Projection {
+    /// The projection `query` asks for.
+    ///
+    /// A repeated `_elements` is one list: the union is what the client asked
+    /// for. A repeated `_summary` naming one view is that view.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `400` for a `_summary` value the search-summary code system
+    /// does not define, for two different `_summary` values, for `count` on a
+    /// read (the specification scopes it to search), and a `400`
+    /// `not-supported` for `true`.
+    pub fn of_query(query: &[(String, String)], interaction: Interaction) -> Result<Self, Failure> {
+        let mut summary = None;
+        for (_, value) in query.iter().filter(|(name, _)| name == SUMMARY) {
+            let named = match value.as_str() {
+                "text" => Summary::Text,
+                "data" => Summary::Data,
+                "count" if interaction == Interaction::Search => Summary::Count,
+                "count" => {
+                    return Err(invalid("`_summary=count` applies to a search, not a read"));
+                }
+                "false" => Summary::False,
+                // TODO(#669): answer `_summary=true` once `fhir_types::schema::FieldSchema`
+                // carries the `isSummary` flag of each element.
+                "true" => {
+                    return Err(Failure::new(
+                        StatusCode::BAD_REQUEST,
+                        "not-supported",
+                        "`_summary=true` is not supported yet; use `text`, `data`, `false` or `_elements`",
+                    ));
+                }
+                other => {
+                    return Err(invalid(format!(
+                        "`_summary={other}` is not one of `true`, `text`, `data`, `count` or `false`"
+                    )));
+                }
+            };
+            match summary {
+                Some(held) if held != named => {
+                    return Err(invalid("`_summary` names two different views"));
+                }
+                _ => summary = Some(named),
+            }
+        }
+        let elements = query
+            .iter()
+            .filter(|(name, _)| name == PARAMETER)
+            .flat_map(|(_, value)| requested(value))
+            .collect();
+        Ok(Self { summary, elements })
+    }
+
+    /// Whether the answer is the count of the matches alone.
+    #[must_use]
+    pub fn is_count(&self) -> bool {
+        self.summary == Some(Summary::Count)
+    }
+
+    /// Whether the projection leaves every resource whole.
+    #[must_use]
+    pub fn is_whole(&self) -> bool {
+        self.elements.is_empty() && matches!(self.summary, None | Some(Summary::False))
+    }
+
+    /// `resource` as this projection shows it; `schemas` is the served
+    /// version's element table, which names the mandatory elements.
+    ///
+    /// The summary view applies first and `_elements` narrows what it kept; a
+    /// resource that lost an element carries the `SUBSETTED` tag.
+    #[must_use]
+    pub fn apply(&self, resource: &Object, schemas: &Schemas) -> Object {
+        let viewed = match self.summary {
+            Some(Summary::Text) => text_view(resource, schemas),
+            Some(Summary::Data) => keep(resource, |name| name != "text"),
+            None | Some(Summary::False | Summary::Count) => resource.clone(),
+        };
+        project(&viewed, &self.elements)
+    }
+
+    /// Every matched `entry.resource` of a searchset `bundle`, projected.
+    ///
+    /// The envelope and an `outcome` entry keep every element, as
+    /// [`project_bundle`] states.
+    pub fn apply_bundle(&self, bundle: &mut Object, schemas: &Schemas) {
+        if self.is_whole() {
+            return;
+        }
+        for resource in matched_resources(bundle) {
+            let projected = self.apply(resource, schemas);
+            *resource = projected;
+        }
+    }
+}
+
+/// The `400` of a `_summary` the specification does not define.
+fn invalid(diagnostics: impl Into<String>) -> Failure {
+    Failure::new(StatusCode::BAD_REQUEST, "invalid", diagnostics)
+}
+
+/// The `_summary=text` view of `resource`: `text`, `id`, `meta`, and the
+/// top-level elements its definition makes mandatory (`min` of 1 or more).
+fn text_view(resource: &Object, schemas: &Schemas) -> Object {
+    let schema = match resource.get("resourceType") {
+        Some(Value::String(name)) => schemas.type_named(name),
+        _ => None,
+    };
+    let mandatory = |name: &str| {
+        schema.is_some_and(|schema| {
+            schema.fields.iter().any(|field| {
+                field.min > 0
+                    && match field.kind {
+                        Kind::Choice(alternatives) => name
+                            .strip_prefix(field.name)
+                            .is_some_and(|suffix| alternatives.iter().any(|(s, _)| *s == suffix)),
+                        _ => name == field.name,
+                    }
+            })
+        })
+    };
+    keep(resource, |name| {
+        ["resourceType", "id", "meta", "text"].contains(&name) || mandatory(name)
+    })
+}
+
+/// `resource` with the elements `wanted` accepts, the sibling `_name` of a
+/// primitive going with its element (<https://hl7.org/fhir/R4B/json.html#primitive>),
+/// and marked as a subset when anything was left out.
+fn keep(resource: &Object, wanted: impl Fn(&str) -> bool) -> Object {
+    let mut kept: Object = resource
+        .iter()
+        .filter(|(name, _)| wanted(name.strip_prefix('_').unwrap_or(name)))
+        .map(|(name, value)| (name.clone(), value.clone()))
+        .collect();
+    if kept.len() < resource.len() {
+        kept.insert("meta".to_owned(), subsetted(resource.get("meta")));
+    }
+    kept
+}
 
 /// The elements a resource keeps whatever a client asked for.
 ///
@@ -123,12 +308,21 @@ pub fn project_bundle(bundle: &mut Object, wanted: &[String]) {
     if wanted.is_empty() {
         return;
     }
-    let Some(Value::Array(entries)) = bundle.get_mut("entry") else {
-        return;
+    for resource in matched_resources(bundle) {
+        let projected = project(resource, wanted);
+        *resource = projected;
+    }
+}
+
+/// The resource of every `match` entry of a searchset `bundle`.
+fn matched_resources(bundle: &mut Object) -> impl Iterator<Item = &mut Object> {
+    let entries = match bundle.get_mut("entry") {
+        Some(Value::Array(entries)) => entries.as_mut_slice(),
+        _ => &mut [],
     };
-    for entry in entries {
+    entries.iter_mut().filter_map(|entry| {
         let Value::Object(entry) = entry else {
-            continue;
+            return None;
         };
         let matched = match entry.get("search") {
             Some(Value::Object(search)) => search
@@ -136,14 +330,11 @@ pub fn project_bundle(bundle: &mut Object, wanted: &[String]) {
                 .is_none_or(|mode| mode.as_str() == Some("match")),
             _ => true,
         };
-        if !matched {
-            continue;
+        match entry.get_mut("resource") {
+            Some(Value::Object(resource)) if matched => Some(resource),
+            _ => None,
         }
-        if let Some(Value::Object(resource)) = entry.get("resource") {
-            let projected = project(resource, wanted);
-            entry.insert("resource".to_owned(), Value::Object(projected));
-        }
-    }
+    })
 }
 
 #[cfg(test)]
@@ -337,5 +528,78 @@ mod tests {
             assert!(!resource.contains_key("concept"));
             assert_eq!(tags(resource), ["SUBSETTED"]);
         }
+    }
+
+    fn query(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
+        pairs
+            .iter()
+            .map(|(name, value)| ((*name).to_owned(), (*value).to_owned()))
+            .collect()
+    }
+
+    fn projection(pairs: &[(&str, &str)]) -> Projection {
+        Projection::of_query(&query(pairs), Interaction::Search).expect("a projection")
+    }
+
+    #[test]
+    fn the_summary_views_read_from_the_query() {
+        assert!(projection(&[]).is_whole());
+        assert!(projection(&[("_summary", "false")]).is_whole());
+        assert!(projection(&[("_summary", "count")]).is_count());
+        assert!(!projection(&[("_summary", "data")]).is_whole());
+        assert!(!projection(&[("_summary", "text"), ("_summary", "text")]).is_whole());
+        let read = Projection::of_query(&query(&[("_summary", "count")]), Interaction::Read);
+        assert_eq!(read.map_err(|f| f.code), Err("invalid"));
+        let unsupported = Projection::of_query(&query(&[("_summary", "true")]), Interaction::Read);
+        assert_eq!(unsupported.map_err(|f| f.code), Err("not-supported"));
+    }
+
+    #[test]
+    fn the_text_view_keeps_the_narrative_and_the_mandatory_elements() {
+        let mut whole = code_system();
+        whole.insert("content".to_owned(), Value::String("complete".to_owned()));
+        whole.insert("_status".to_owned(), Value::Object(BTreeMap::new()));
+        whole.insert("text".to_owned(), Value::Object(BTreeMap::new()));
+        let viewed =
+            projection(&[("_summary", "text")]).apply(&whole, &fhir_types::r4b::schema::SCHEMAS);
+        let mut names: Vec<&str> = viewed.keys().map(String::as_str).collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            [
+                "_status",
+                "content",
+                "id",
+                "meta",
+                "resourceType",
+                "status",
+                "text"
+            ],
+            "a primitive's extension member goes with its element"
+        );
+        assert_eq!(tags(&viewed), ["SUBSETTED"]);
+    }
+
+    #[test]
+    fn the_data_view_tags_only_when_it_dropped_the_narrative() {
+        let schemas = &fhir_types::r5::schema::SCHEMAS;
+        let data = projection(&[("_summary", "data")]);
+        assert_eq!(data.apply(&code_system(), schemas), code_system());
+        let mut whole = code_system();
+        whole.insert("text".to_owned(), Value::Object(BTreeMap::new()));
+        let viewed = data.apply(&whole, schemas);
+        assert!(!viewed.contains_key("text"));
+        assert_eq!(tags(&viewed), ["SUBSETTED"]);
+    }
+
+    #[test]
+    fn elements_narrow_what_a_summary_kept() {
+        let mut whole = code_system();
+        whole.insert("text".to_owned(), Value::Object(BTreeMap::new()));
+        let viewed = projection(&[("_summary", "data"), ("_elements", "url,text")])
+            .apply(&whole, &fhir_types::r5::schema::SCHEMAS);
+        let mut names: Vec<&str> = viewed.keys().map(String::as_str).collect();
+        names.sort_unstable();
+        assert_eq!(names, ["id", "meta", "resourceType", "url"]);
     }
 }

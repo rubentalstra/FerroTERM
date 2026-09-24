@@ -28,7 +28,31 @@ fresh link reference.
   composer's value set picker offers each declared form for the clause's code
   system and fills its placeholders, a code through the concept search and an
   expression through a text field.
-
+- **The history interaction on the persisted resources** (#667).
+  `GET {type}/{id}/_history` and `GET {type}/_history` answer a `history`
+  `Bundle` on every served version, newest first, with `entry.request` naming
+  the `POST`, `PUT` or `DELETE` that made each version and `entry.response`
+  its status, `etag` and `lastModified`; the delete is an entry with no
+  resource (<https://hl7.org/fhir/R4B/http.html#history>). `_since` narrows
+  both levels, and `_count`, `_at` and `_list` answer `400` `not-supported`. A
+  loaded resource answers an empty history. The `CapabilityStatement` declares
+  `history-instance` and `history-type` wherever it declares `vread`. A delete
+  is now recorded as a version of its own: a version read of it answers `410`,
+  and a resource written again after a delete counts on from it, where it used
+  to start again at version 1 and overwrite the first version in the store.
+  The viewer's history screen keys a delete by the version its `etag` names.
+- **`_summary` on read and search, and `_elements` on read** (#669). The read
+  of a `CodeSystem`, `ValueSet` or `ConceptMap` takes `_elements`, with the
+  projection and `SUBSETTED` tag a search already gave. Both interactions take
+  `_summary` (<https://hl7.org/fhir/R4B/search.html#summary>): `text` keeps
+  `text`, `id`, `meta` and the top-level elements the served version's
+  definition makes mandatory, read from the element table of the pinned
+  packages; `data` drops `text`; `false` is the whole resource; `count`, on a
+  search only, answers `total` with no entries. A resource that lost an element
+  carries `SUBSETTED`. `_summary=true` is refused with `not-supported`, since
+  the generated model carries no `isSummary` flag yet, and a value the
+  search-summary code system does not define is a `400`. The
+  `CapabilityStatement` declares `_summary` beside `_elements`.
 - **The viewer's editor bundle reads a resource's versions, compares two of
   them, and restores one** (#637). Every authoring screen links to
   `/ui/editor/history` for the resource it has open. The version list is read
@@ -185,6 +209,16 @@ fresh link reference.
 
 ### Changed
 
+- **A save the server refuses with 412 now offers one way back on every
+  editor screen** (#666). The code system editor, the value set composer, the
+  concept map editor, and the history screen each announce the server's own
+  `OperationOutcome` wording in their live region, keep what was typed, and
+  offer **Reload the current version**, which reads the resource again,
+  replaces the form's content and the version the next save states, and moves
+  the keyboard to the announcement. A resource created on the screen is named
+  in the address by that reload. The composer's reload used to show the
+  version it had read before the refusal, so the next save was refused again;
+  it now reads the server's current one.
 - **The viewer signs in at `/ui/editor`, so the redirect address registered
   with the identity provider becomes `{base}/ui/editor/callback`** (#634). The
   editing screens live in that bundle, and a token lives in the page that holds

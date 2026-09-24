@@ -24,6 +24,8 @@ pub(crate) mod history;
 pub(crate) mod icon;
 pub(crate) mod mark;
 pub(crate) mod reading;
+#[cfg(feature = "editor")]
+pub(crate) mod reload;
 pub(crate) mod runs;
 pub(crate) mod shell;
 pub(crate) mod sign_in;

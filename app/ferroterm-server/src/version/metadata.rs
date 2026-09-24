@@ -318,6 +318,10 @@ macro_rules! metadata {
                 let mut out = vec![interaction("read"), interaction("search-type")];
                 if state.persists() {
                     out.push(interaction("vread"));
+                    // NOTE: the history interaction at the instance and type levels
+                    // (<https://hl7.org/fhir/R4B/http.html#history>) lists what the deployment persists.
+                    out.push(interaction("history-instance"));
+                    out.push(interaction("history-type"));
                     out.push(interaction("create"));
                     out.push(interaction("update"));
                     out.push(interaction("delete"));
@@ -327,10 +331,11 @@ macro_rules! metadata {
 
             /// The search parameters every stored resource type answers.
             ///
-            /// `_elements` names what to return rather than what to match, and
-            /// every served version defines it on `Resource`, so it is declared
-            /// with its own definition
-            /// (<https://hl7.org/fhir/R5/search.html#elements>).
+            /// `_elements` and `_summary` name what to return rather than what
+            /// to match, and every served version defines them on `Resource`,
+            /// so each is declared with its own definition, the one the base
+            /// `CapabilityStatement` of the version names
+            /// (<https://hl7.org/fhir/R4B/search.html#summary>).
             fn search_params() -> Vec<CapabilityStatementRestResourceSearchParam> {
                 let search_param = |name: &str, code: &str| {
                     CapabilityStatementRestResourceSearchParam {
@@ -347,10 +352,23 @@ macro_rules! metadata {
                     r#type: "string".into(),
                     ..Default::default()
                 };
+                let summary = CapabilityStatementRestResourceSearchParam {
+                    name: crate::elements::SUMMARY.into(),
+                    definition: Some(
+                        "http://hl7.org/fhir/SearchParameter/Resource-summary".into(),
+                    ),
+                    r#type: "token".into(),
+                    documentation: Some(
+                        "`text`, `data`, `count` and `false`; `true` is refused as not supported"
+                            .into(),
+                    ),
+                    ..Default::default()
+                };
                 vec![
                     search_param("url", "uri"),
                     search_param("version", "token"),
                     elements,
+                    summary,
                 ]
             }
 

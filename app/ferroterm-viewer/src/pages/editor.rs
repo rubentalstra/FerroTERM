@@ -15,6 +15,8 @@
 //! what it meant, and retiring it is the change that says so
 //! (<https://hl7.org/fhir/R5/codesystem-concept-properties.html>).
 
+use std::sync::Arc;
+
 use leptos::ev::Event;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -39,18 +41,23 @@ use crate::components::coded::fixed;
 use crate::components::coded::gated;
 use crate::components::failure::Failure;
 use crate::components::history::history_offer;
+use crate::components::reload::Reload;
+use crate::components::reload::announced;
+use crate::components::reload::focus_report;
+use crate::components::reload::reload_offer;
+use crate::components::reload::reloaded_text;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
 use crate::fhir::CODE_SYSTEM;
 use crate::fhir::FhirClient;
 use crate::fhir::error::FhirError;
-use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::terminology::SystemCard;
 use crate::fhir::terminology::TerminologyCapabilities;
 use crate::fhir::validation::ValidateRequest;
 use crate::fhir::validation::Validation;
 use crate::fhir::version::FhirVersion;
 use crate::fhir::write::Refusal;
+use crate::routes::editing_link;
 use crate::styles;
 
 /// The value set whose codes `CodeSystem.status` is bound to.
@@ -109,16 +116,15 @@ pub(crate) fn EditorPage() -> impl IntoView {
             .unwrap_or_default()
     });
 
-    // Reading this is what a reload re-runs: the resource depends on it, so
-    // raising it refetches the resource and rebuilds the form around what came
+    // A reload reruns this read, and the form is rebuilt around what came
     // back, rather than an effect writing the form's own signals.
-    let reloads = RwSignal::new(0_u32);
+    let reload = Reload::new(system);
     let reader = client.clone();
     let stored = LocalResource::new(move || {
         let client = reader.clone();
         let version = version.get();
         let system = system.get();
-        let _reload = reloads.get();
+        reload.track();
         async move {
             if system.trim().is_empty() {
                 return Ok(None);
@@ -169,7 +175,7 @@ pub(crate) fn EditorPage() -> impl IntoView {
                                         version,
                                         draft,
                                         standing,
-                                        reloads,
+                                        reload,
                                         Options {
                                             statuses,
                                             contents,
@@ -289,13 +295,30 @@ fn form_section(
     version: Signal<FhirVersion>,
     initial: Draft,
     standing: Standing,
-    reloads: RwSignal<u32>,
+    reload: Reload,
     options: Options,
 ) -> AnyView {
     let session = expect_context::<Session>();
     let managed = initial.managed() || initial.id.is_empty();
+    // The canonical the server holds the resource under, which is what a
+    // reload reads by even when the reader has since typed another.
+    let canonical = StoredValue::new(if initial.id.is_empty() {
+        String::new()
+    } else {
+        initial.url.clone()
+    });
+    let reloaded = reload.answered();
+    let report = RwSignal::new(if reloaded {
+        reloaded_text(&initial.version_id)
+    } else {
+        String::new()
+    });
+    if reloaded {
+        // NOTE: the region is new with this form, so the keyboard is moved to
+        // it once it is in the document, which is an effect on the page alone.
+        Effect::new(move |_| focus_report(REPORT_ID));
+    }
     let draft = RwSignal::new(initial);
-    let report = RwSignal::new(String::new());
     let refusal = RwSignal::new(None::<FhirError>);
     let checked = RwSignal::new(None::<Result<Validation, FhirError>>);
     let saving = RwSignal::new(false);
@@ -328,8 +351,14 @@ fn form_section(
         refusal,
         checked,
         session,
+        canonical,
     );
-    let outcome = outcome_section(reloads, report, refusal, checked);
+    let press = Arc::new(move || {
+        let named = canonical.get_value();
+        let address = editing_link(CODE_SYSTEM, &named, "", version.get_untracked());
+        reload.press(&named, address);
+    });
+    let outcome = outcome_section(press, report, refusal, checked);
     let versions = history_offer(
         CODE_SYSTEM,
         gated(Box::new(move || draft.read().id.clone())),
@@ -396,7 +425,7 @@ fn standing_section(
 
 /// The live region, the refusal, and the check a save ran.
 fn outcome_section(
-    reloads: RwSignal<u32>,
+    press: Arc<dyn Fn() + Send + Sync>,
     report: RwSignal<String>,
     refusal: RwSignal<Option<FhirError>>,
     checked: RwSignal<Option<Result<Validation, FhirError>>>,
@@ -405,12 +434,18 @@ fn outcome_section(
     // because a region inserted along with its first message is not announced
     // (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>).
     let region = view! {
-        <p id=REPORT_ID aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
+        <p
+            id=REPORT_ID
+            tabindex="-1"
+            aria-live="polite"
+            class=format!("mt-default {}", styles::MUTED)
+        >
             {move || report.get()}
         </p>
     }
     .into_any();
 
+    let press = StoredValue::new(press);
     let refused = view! {
         <Show when=move || refusal.with(Option::is_some) fallback=|| ()>
             <div class="mt-default grid gap-default">
@@ -422,31 +457,7 @@ fn outcome_section(
                             })
                     }}
                 </p>
-                <Show
-                    when=move || {
-                        refusal
-                            .with(|held| {
-                                held.as_ref()
-                                    .is_some_and(|error| {
-                                        Refusal::of(error) == Refusal::ConcurrentEdit
-                                    })
-                            })
-                    }
-                    fallback=|| ()
-                >
-                    <p>
-                        <button
-                            type="button"
-                            class=styles::BUTTON
-                            on:click=move |_| {
-                                refusal.set(None);
-                                reloads.update(|count| *count = count.saturating_add(1));
-                            }
-                        >
-                            "Reload this code system from the server"
-                        </button>
-                    </p>
-                </Show>
+                {move || reload_offer(refusal, press.get_value())}
                 {move || {
                     refusal
                         .with(|held| {
@@ -1438,7 +1449,7 @@ fn with_concept(draft: RwSignal<Draft>, key: Key, change: impl FnOnce(&mut Conce
 /// The control that sends the whole resource, and what it reports.
 #[expect(
     clippy::too_many_arguments,
-    reason = "the control reports into five signals of the form it belongs to, and threading them through a struct would only rename the same arguments"
+    reason = "the control reports into five signals and one stored value of the form it belongs to, and threading them through a struct would only rename the same arguments"
 )]
 fn save_section(
     client: StoredValue<FhirClient>,
@@ -1450,6 +1461,7 @@ fn save_section(
     refusal: RwSignal<Option<FhirError>>,
     checked: RwSignal<Option<Result<Validation, FhirError>>>,
     session: Session,
+    canonical: StoredValue<String>,
 ) -> AnyView {
     let send = move |_| {
         if saving.get_untracked() || readonly.get_untracked() {
@@ -1481,6 +1493,7 @@ fn save_section(
                     refusal,
                     checked,
                     session,
+                    canonical,
                 },
             )
             .await;
@@ -1541,6 +1554,8 @@ struct Reports {
     checked: RwSignal<Option<Result<Validation, FhirError>>>,
     /// The session, so a spent token is dropped.
     session: Session,
+    /// The canonical the server now holds the resource under.
+    canonical: StoredValue<String>,
 }
 
 /// Sends one save and writes down what came back.
@@ -1572,12 +1587,12 @@ async fn send_it(
             if refused.drops_the_token() {
                 into.session.release();
             }
-            into.report
-                .set(format!("{} {}", refused.what_to_do(), diagnostics(&error)));
+            into.report.set(announced(&error));
             into.refusal.set(Some(error));
             return;
         }
     };
+    into.canonical.set_value(held.url.clone());
     let assigned = written
         .resource
         .as_ref()
@@ -1624,25 +1639,11 @@ fn checked_text(code: &str, answer: Result<&Validation, &FhirError>) -> String {
     }
 }
 
-/// The server's own wording for a refusal, for the live region to announce.
-///
-/// The refusal is rendered whole below, `OperationOutcome` and all; this is
-/// the sentence the server wrote, so what is announced is its wording rather
-/// than a paraphrase of it.
-fn diagnostics(error: &FhirError) -> String {
-    error
-        .outcome()
-        .map(OperationOutcome::lines)
-        .unwrap_or_default()
-        .into_iter()
-        .map(|line| line.text)
-        .collect::<Vec<String>>()
-        .join(" ")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::reload::diagnostics;
+    use crate::fhir::outcome::OperationOutcome;
 
     #[test]
     fn a_new_code_system_and_an_edited_one_title_the_page_apart() {

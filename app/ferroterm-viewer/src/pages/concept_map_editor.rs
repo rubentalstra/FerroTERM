@@ -42,6 +42,12 @@ use crate::components::coded::fixed;
 use crate::components::coded::gated;
 use crate::components::failure::Failure;
 use crate::components::history::history_offer;
+use crate::components::reload::Reload;
+use crate::components::reload::announced;
+use crate::components::reload::diagnostics;
+use crate::components::reload::focus_report;
+use crate::components::reload::reload_offer;
+use crate::components::reload::reloaded_text;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
 use crate::fhir::CONCEPT_MAP;
@@ -49,11 +55,11 @@ use crate::fhir::FhirClient;
 use crate::fhir::concept::ConceptQuery;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ConceptRow;
-use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::translate::TranslateAnswer;
 use crate::fhir::translate::TranslateRequest;
 use crate::fhir::version::FhirVersion;
 use crate::fhir::write::Refusal;
+use crate::routes::editing_link;
 use crate::styles;
 
 /// The value set whose codes `ConceptMap.status` is bound to.
@@ -109,16 +115,15 @@ pub(crate) fn ConceptMapEditorPage() -> impl IntoView {
             .unwrap_or_default()
     });
 
-    // Reading this is what a reload re-runs: the resource depends on it, so
-    // raising it refetches the map and rebuilds the form around what came
+    // A reload reruns this read, and the form is rebuilt around what came
     // back, rather than an effect writing the form's own signals.
-    let reloads = RwSignal::new(0_u32);
+    let reload = Reload::new(canonical);
     let reader = client.clone();
     let stored = LocalResource::new(move || {
         let client = reader.clone();
         let version = version.get();
         let canonical = canonical.get();
-        let _reload = reloads.get();
+        reload.track();
         async move {
             if canonical.trim().is_empty() {
                 return Ok(None);
@@ -172,7 +177,7 @@ pub(crate) fn ConceptMapEditorPage() -> impl IntoView {
                                         client,
                                         version,
                                         draft,
-                                        reloads,
+                                        reload,
                                         Options { statuses, relationships },
                                     )
                                 }
@@ -228,13 +233,30 @@ fn form_section(
     client: FhirClient,
     version: Signal<FhirVersion>,
     initial: MapDraft,
-    reloads: RwSignal<u32>,
+    reload: Reload,
     options: Options,
 ) -> AnyView {
     let session = expect_context::<Session>();
     let managed = initial.managed() || initial.id.is_empty();
+    // The canonical the server holds the map under, which is what a reload
+    // reads by even when the reader has since typed another.
+    let canonical = StoredValue::new(if initial.id.is_empty() {
+        String::new()
+    } else {
+        initial.url.clone()
+    });
+    let reloaded = reload.answered();
+    let report = RwSignal::new(if reloaded {
+        reloaded_text(&initial.version_id)
+    } else {
+        String::new()
+    });
+    if reloaded {
+        // NOTE: the region is new with this form, so the keyboard is moved to
+        // it once it is in the document, which is an effect on the page alone.
+        Effect::new(move |_| focus_report(REPORT_ID));
+    }
     let draft = RwSignal::new(initial);
-    let report = RwSignal::new(String::new());
     let refusal = RwSignal::new(None::<FhirError>);
     let preview = RwSignal::new(None::<Preview>);
     let saving = RwSignal::new(false);
@@ -254,11 +276,16 @@ fn form_section(
         gated(Box::new(move || draft.read().id.clone())),
         version,
     );
-    let outcome = outcome_section(reloads, report, refusal);
+    let press = Arc::new(move || {
+        let named = canonical.get_value();
+        let address = editing_link(CONCEPT_MAP, &named, "", version.get_untracked());
+        reload.press(&named, address);
+    });
+    let outcome = outcome_section(press, report, refusal);
     let metadata = metadata_section(draft, version, readonly, options.statuses);
     let groups = groups_section(held, version, draft, readonly, options, preview, report);
     let save = save_section(
-        held, version, draft, readonly, saving, report, refusal, session,
+        held, version, draft, readonly, saving, report, refusal, session, canonical,
     );
 
     view! {
@@ -304,7 +331,7 @@ fn standing_section(
 
 /// The live region and the refusal a save met.
 fn outcome_section(
-    reloads: RwSignal<u32>,
+    press: Arc<dyn Fn() + Send + Sync>,
     report: RwSignal<String>,
     refusal: RwSignal<Option<FhirError>>,
 ) -> AnyView {
@@ -312,12 +339,18 @@ fn outcome_section(
     // because a region inserted along with its first message is not announced
     // (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>).
     let region = view! {
-        <p id=REPORT_ID aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
+        <p
+            id=REPORT_ID
+            tabindex="-1"
+            aria-live="polite"
+            class=format!("mt-default {}", styles::MUTED)
+        >
             {move || report.get()}
         </p>
     }
     .into_any();
 
+    let press = StoredValue::new(press);
     let refused = view! {
         <Show when=move || refusal.with(Option::is_some) fallback=|| ()>
             <div class="mt-default grid gap-default">
@@ -329,31 +362,7 @@ fn outcome_section(
                             })
                     }}
                 </p>
-                <Show
-                    when=move || {
-                        refusal
-                            .with(|held| {
-                                held.as_ref()
-                                    .is_some_and(|error| {
-                                        Refusal::of(error) == Refusal::ConcurrentEdit
-                                    })
-                            })
-                    }
-                    fallback=|| ()
-                >
-                    <p>
-                        <button
-                            type="button"
-                            class=styles::BUTTON
-                            on:click=move |_| {
-                                refusal.set(None);
-                                reloads.update(|count| *count = count.saturating_add(1));
-                            }
-                        >
-                            "Reload this concept map from the server"
-                        </button>
-                    </p>
-                </Show>
+                {move || reload_offer(refusal, press.get_value())}
                 {move || {
                     refusal
                         .with(|held| {
@@ -1492,7 +1501,7 @@ fn request_for(draft: &MapDraft, group: Key, element: Key) -> Option<TranslateRe
 /// The control that sends the whole resource, and what it reports.
 #[expect(
     clippy::too_many_arguments,
-    reason = "the control reports into four signals of the form it belongs to, and threading them through a struct would only rename the same arguments"
+    reason = "the control reports into four signals and one stored value of the form it belongs to, and threading them through a struct would only rename the same arguments"
 )]
 fn save_section(
     client: StoredValue<FhirClient>,
@@ -1503,6 +1512,7 @@ fn save_section(
     report: RwSignal<String>,
     refusal: RwSignal<Option<FhirError>>,
     session: Session,
+    canonical: StoredValue<String>,
 ) -> AnyView {
     let problems = Memo::new(move |_| draft.read().problems(version.get()));
     let send = move |_| {
@@ -1531,6 +1541,7 @@ fn save_section(
                     report,
                     refusal,
                     session,
+                    canonical,
                 },
             )
             .await;
@@ -1590,6 +1601,8 @@ struct Reports {
     refusal: RwSignal<Option<FhirError>>,
     /// The session, so a spent token is dropped.
     session: Session,
+    /// The canonical the server now holds the map under.
+    canonical: StoredValue<String>,
 }
 
 /// Sends one save and writes down what came back.
@@ -1621,12 +1634,12 @@ async fn send_it(
             if refused.drops_the_token() {
                 into.session.release();
             }
-            into.report
-                .set(format!("{} {}", refused.what_to_do(), diagnostics(&error)));
+            into.report.set(announced(&error));
             into.refusal.set(Some(error));
             return;
         }
     };
+    into.canonical.set_value(held.url.clone());
     let assigned = written
         .resource
         .as_ref()
@@ -1647,22 +1660,6 @@ fn saved_text(version_id: &str) -> String {
     } else {
         format!("Saved. The server now holds version {version_id}.")
     }
-}
-
-/// The server's own wording for a refusal, for the live region to announce.
-///
-/// The refusal is rendered whole below, `OperationOutcome` and all; this is
-/// the sentence the server wrote, so what is announced is its wording rather
-/// than a paraphrase of it.
-fn diagnostics(error: &FhirError) -> String {
-    error
-        .outcome()
-        .map(OperationOutcome::lines)
-        .unwrap_or_default()
-        .into_iter()
-        .map(|line| line.text)
-        .collect::<Vec<String>>()
-        .join(" ")
 }
 
 /// Reads one group inside the guard, without cloning the rest.
@@ -1764,6 +1761,7 @@ fn with_target(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fhir::outcome::OperationOutcome;
 
     #[test]
     fn a_new_concept_map_and_an_edited_one_title_the_page_apart() {
