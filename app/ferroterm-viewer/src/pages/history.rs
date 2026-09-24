@@ -14,6 +14,8 @@
 //! overwritten. The difference between two versions is our own design; no FHIR
 //! specification governs how a client renders one.
 
+use std::sync::Arc;
+
 use leptos::ev::MouseEvent;
 use leptos::ev::SubmitEvent;
 use leptos::prelude::*;
@@ -34,6 +36,10 @@ use crate::authoring::history::Support;
 use crate::authoring::history::open;
 use crate::authoring::history::restore;
 use crate::components::failure::Failure;
+use crate::components::reload::READING_AGAIN;
+use crate::components::reload::announced;
+use crate::components::reload::focus_report;
+use crate::components::reload::reload_offer;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
 use crate::fhir::CODE_SYSTEM;
@@ -41,7 +47,6 @@ use crate::fhir::CONCEPT_MAP;
 use crate::fhir::FhirClient;
 use crate::fhir::VALUE_SET;
 use crate::fhir::error::FhirError;
-use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::sync;
 use crate::fhir::version::FhirVersion;
 use crate::fhir::write::Refusal;
@@ -373,8 +378,7 @@ impl Restoring {
                 if refused.drops_the_token() {
                     self.session.release();
                 }
-                self.report
-                    .set(format!("{} {}", refused.what_to_do(), diagnostics(&error)));
+                self.report.set(announced(&error));
                 self.refusal.set(Some(error));
             }
         }
@@ -398,12 +402,25 @@ fn outcome_section(restoring: Restoring) -> AnyView {
     // because a region inserted along with its first message is not announced
     // (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>).
     let region = view! {
-        <p id=REPORT_ID aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
+        <p
+            id=REPORT_ID
+            tabindex="-1"
+            aria-live="polite"
+            class=format!("mt-default {}", styles::MUTED)
+        >
             {move || report.get()}
         </p>
     }
     .into_any();
 
+    // The region stands outside the list a reload rebuilds, so the keyboard
+    // moves to it as soon as the reading starts.
+    let press: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
+        report.set(String::from(READING_AGAIN));
+        reloads.update(|count| *count = count.saturating_add(1));
+        focus_report(REPORT_ID);
+    });
+    let press = StoredValue::new(press);
     let refused = view! {
         <Show when=move || refusal.with(Option::is_some) fallback=|| ()>
             <div class="mt-default grid gap-default">
@@ -415,31 +432,7 @@ fn outcome_section(restoring: Restoring) -> AnyView {
                             })
                     }}
                 </p>
-                <Show
-                    when=move || {
-                        refusal
-                            .with(|held| {
-                                held.as_ref()
-                                    .is_some_and(|error| {
-                                        Refusal::of(error) == Refusal::ConcurrentEdit
-                                    })
-                            })
-                    }
-                    fallback=|| ()
-                >
-                    <p>
-                        <button
-                            type="button"
-                            class=styles::BUTTON
-                            on:click=move |_| {
-                                refusal.set(None);
-                                reloads.update(|count| *count = count.saturating_add(1));
-                            }
-                        >
-                            "Reload the versions from the server"
-                        </button>
-                    </p>
-                </Show>
+                {move || reload_offer(refusal, press.get_value())}
                 {move || {
                     refusal
                         .with(|held| {
@@ -652,22 +645,6 @@ fn restored_text(chosen: &str, now: &str) -> String {
     } else {
         format!("Restored version {chosen}. The server now holds version {now}.")
     }
-}
-
-/// The server's own wording for a refusal, for the live region to announce.
-///
-/// The refusal is rendered whole below, `OperationOutcome` and all; this is
-/// the sentence the server wrote, so what is announced is its wording rather
-/// than a paraphrase of it.
-fn diagnostics(error: &FhirError) -> String {
-    error
-        .outcome()
-        .map(OperationOutcome::lines)
-        .unwrap_or_default()
-        .into_iter()
-        .map(|line| line.text)
-        .collect::<Vec<String>>()
-        .join(" ")
 }
 
 /// The two controls that choose which versions to compare.

@@ -171,6 +171,16 @@ fresh link reference.
 
 ### Changed
 
+- **A save the server refuses with 412 now offers one way back on every
+  editor screen** (#666). The code system editor, the value set composer, the
+  concept map editor, and the history screen each announce the server's own
+  `OperationOutcome` wording in their live region, keep what was typed, and
+  offer **Reload the current version**, which reads the resource again,
+  replaces the form's content and the version the next save states, and moves
+  the keyboard to the announcement. A resource created on the screen is named
+  in the address by that reload. The composer's reload used to show the
+  version it had read before the refusal, so the next save was refused again;
+  it now reads the server's current one.
 - **The viewer signs in at `/ui/editor`, so the redirect address registered
   with the identity provider becomes `{base}/ui/editor/callback`** (#634). The
   editing screens live in that bundle, and a token lives in the page that holds
