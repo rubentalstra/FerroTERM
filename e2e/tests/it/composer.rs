@@ -52,6 +52,14 @@ const SYSTEM_PARAM: &str = "https%3A%2F%2Fferroterm.eu%2Ffhir%2FCodeSystem%2Fe2e
 /// One code of that system, which the composer names in its second include.
 const CODE: &str = "ca-leaf";
 
+/// What the search types to find it.
+///
+/// `$expand`'s `filter` is "a text filter that is applied to restrict the codes
+/// that are returned" (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>),
+/// which this server matches against the designations it holds, so the search
+/// is for the concept's display and the code picks the row out of the answer.
+const SEARCH_TERM: &str = "First";
+
 /// The canonical field of the composer.
 const URL_FIELD: &str = "#compose-url";
 
@@ -166,7 +174,7 @@ async fn compose(journey: &Journey, canonical: &str) -> WebDriverResult<()> {
     searches
         .get(1)
         .expect("the second clause carries its own search")
-        .send_keys(format!("{CODE}\n"))
+        .send_keys(format!("{SEARCH_TERM}\n"))
         .await?;
     journey
         .element(
