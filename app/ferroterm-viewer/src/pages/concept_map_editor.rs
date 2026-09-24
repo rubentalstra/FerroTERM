@@ -553,7 +553,6 @@ fn group_panel(
     preview: RwSignal<Option<Preview>>,
     report: RwSignal<String>,
 ) -> AnyView {
-    let seed = group_seed(draft, key);
     let id = key.0;
     let named = move || {
         let source = group_of(draft, key, |group| group.source.clone());
@@ -571,40 +570,40 @@ fn group_panel(
         <fieldset class=format!("p-default {}", styles::PANEL)>
             <legend class=styles::EYEBROW>{named}</legend>
             <div class="grid gap-default sm:grid-cols-2">
-                {system_control(
+                {driven_control(
                     format!("group-{id}-source"),
                     "group-source",
                     "Source system",
                     readonly,
-                    seed.source,
+                    gated(move || group_of(draft, key, |group| group.source.clone())),
                     Box::new(move |typed| with_group(draft, key, |group| group.source = typed)),
                 )}
-                {system_control(
+                {driven_control(
                     format!("group-{id}-source-version"),
                     "group-source-version",
                     "Source system version",
                     readonly,
-                    seed.source_version,
+                    gated(move || group_of(draft, key, |group| group.source_version.clone())),
                     Box::new(move |typed| with_group(
                         draft,
                         key,
                         |group| group.source_version = typed,
                     )),
                 )}
-                {system_control(
+                {driven_control(
                     format!("group-{id}-target"),
                     "group-target",
                     "Target system",
                     readonly,
-                    seed.target,
+                    gated(move || group_of(draft, key, |group| group.target.clone())),
                     Box::new(move |typed| with_group(draft, key, |group| group.target = typed)),
                 )}
-                {system_control(
+                {driven_control(
                     format!("group-{id}-target-version"),
                     "group-target-version",
                     "Target system version",
                     readonly,
-                    seed.target_version,
+                    gated(move || group_of(draft, key, |group| group.target_version.clone())),
                     Box::new(move |typed| with_group(
                         draft,
                         key,
@@ -651,40 +650,6 @@ fn group_panel(
                 </p>
             </Show>
         </fieldset>
-    }
-    .into_any()
-}
-
-/// One text control over a system canonical or its version.
-///
-/// The control is seeded rather than driven, because the row is the only
-/// writer of its own text and a DOM property set from the same signal on every
-/// keystroke moves the caret to the end of the text
-/// (<https://html.spec.whatwg.org/multipage/input.html#dom-input-value>).
-fn system_control(
-    id: String,
-    name: &'static str,
-    label: &'static str,
-    readonly: Signal<bool>,
-    seed: String,
-    mut typed: Box<dyn FnMut(String)>,
-) -> AnyView {
-    let named = StoredValue::new(id);
-    view! {
-        <div class="grid gap-tight">
-            <label for=move || named.with_value(Clone::clone) class=styles::LABEL>
-                {label}
-            </label>
-            <input
-                id=move || named.with_value(Clone::clone)
-                name=name
-                type="text"
-                class=styles::INPUT
-                disabled=move || readonly.get()
-                value=seed
-                on:input:target=move |event| typed(event.target().value())
-            />
-        </div>
     }
     .into_any()
 }
@@ -1650,18 +1615,6 @@ fn group_of<T: Default>(
             .iter()
             .find(|group| group.key == key)
             .map_or_else(T::default, project)
-    })
-}
-
-/// The group `key` names, read without subscribing to the draft.
-fn group_seed(draft: RwSignal<MapDraft>, key: Key) -> MapGroup {
-    draft.with_untracked(|draft| {
-        draft
-            .groups
-            .iter()
-            .find(|group| group.key == key)
-            .cloned()
-            .unwrap_or_default()
     })
 }
 

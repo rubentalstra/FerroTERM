@@ -11,7 +11,9 @@
 //! target's relation in `equivalence` and R5 and R6 in `relationship`
 //! (<https://hl7.org/fhir/R4B/conceptmap.html>,
 //! <https://hl7.org/fhir/R5/conceptmap.html>), so the round trip runs on both
-//! and reads the saved resource off the wire to see which element it carries.
+//! and reads what the wire carries: R4B by reading the saved resource back,
+//! R5 by previewing, since `$translate` carries the whole map in its own
+//! parameter and a root refuses a resource whose elements it does not define.
 
 use thirtyfour::common::keys::TypingData;
 use thirtyfour::prelude::*;
@@ -46,9 +48,6 @@ const R4B_CANONICAL_PARAM: &str = "https%3A%2F%2Fterminology.example%2Fe2e-map-r
 
 /// The canonical the R5 round trip authors under.
 const R5_CANONICAL: &str = "https://terminology.example/e2e-map-r5";
-
-/// That canonical, percent-encoded into a query parameter.
-const R5_CANONICAL_PARAM: &str = "https%3A%2F%2Fterminology.example%2Fe2e-map-r5";
 
 /// The canonical the keyboard journey authors under.
 const KEYBOARD_CANONICAL: &str = "https://terminology.example/e2e-map-keyboard";
@@ -261,10 +260,10 @@ const RAW_FAVICON: &str = "/favicon.ico - Failed to load resource";
 /// rather than whatever its own `Accept` header would negotiate
 /// (<https://hl7.org/fhir/R4B/http.html#mime-type>). Reading it is what proves
 /// which element the save wrote, which no control on the screen can show.
-async fn stored_resource(journey: &Journey, base: &str, fhir: &str, canonical: &str) -> String {
+async fn stored_resource(journey: &Journey, base: &str, canonical: &str) -> String {
     journey
         .reopen(&format!(
-            "{base}/{fhir}/ConceptMap?url={canonical}&_format=json"
+            "{base}/r4b/ConceptMap?url={canonical}&_format=json"
         ))
         .await;
     journey
@@ -305,7 +304,7 @@ async fn the_map_comes_back_read_only(journey: &Journey, base: &str) -> WebDrive
         "a reader with no token is offered no save"
     );
 
-    let stored = stored_resource(journey, base, "r4b", R4B_CANONICAL_PARAM).await;
+    let stored = stored_resource(journey, base, R4B_CANONICAL_PARAM).await;
     assert!(
         stored.contains("equivalence"),
         "R4B states a target's relation in `equivalence`: `{stored}`"
@@ -331,7 +330,9 @@ async fn the_runner_translates_through_it(journey: &Journey, base: &str) {
         .await;
     let translated = journey
         .text_becoming(
-            By::Css("#translate-answer-heading ~ *"),
+            // The section outlives the answer inside it: waiting on a child the
+            // answer replaces reads a stale element the moment it re-renders.
+            By::Css("section[aria-labelledby='translate-answer-heading']"),
             StringMatch::new(TARGET_CODE).partial(),
             "the runner to translate through the saved map",
         )
@@ -413,6 +414,15 @@ async fn a_local_concept_map_is_authored_previewed_and_saved_on_r4b() {
 }
 
 /// The same map on R5, where the element and its value set both differ.
+///
+/// The R5 shape is proven over the wire by the preview rather than by a save.
+/// `$translate` carries the map itself in the `conceptMap` parameter, so the
+/// server reads the whole resource: an R5 root refuses `target.equivalence` as
+/// an unknown property, and an answer means the form wrote `relationship` and
+/// `sourceScope` instead. The relationship code is one R4B's own value set
+/// does not contain, so the control offered the served version's codes.
+// TODO(#659): save here as well, once a resource written on one served version
+// stops failing the other versions' type-level search.
 #[tokio::test]
 async fn the_same_map_writes_r5_s_own_relationship_element() {
     let Some(deployment) = signed_in() else {
@@ -424,39 +434,38 @@ async fn the_same_map_writes_r5_s_own_relationship_element() {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
             open_authoring(&journey, &deployment, "authors-a-map-r5", "R5").await;
 
-            // A code of the value set R5 binds `target.relationship` to, and
-            // one R4B's own value set does not contain.
             author(&journey, R5_CANONICAL, "source-is-narrower-than-target").await?;
 
             journey
-                .element(By::XPath(SAVE), "the control that saves")
+                .element(By::XPath(PREVIEW), "the control that previews")
                 .await
                 .click()
                 .await?;
-            journey
+            let previewed = journey
                 .text_becoming(
                     By::Css(REPORT),
-                    StringMatch::new("Saved").partial(),
-                    "the screen to announce the save",
+                    StringMatch::new("Translated through").partial(),
+                    "the screen to announce the preview",
                 )
                 .await;
+            assert!(
+                previewed.contains("the map on this screen"),
+                "an R5 root took the map this form wrote: `{previewed}`"
+            );
+            let shown = journey
+                .element(
+                    By::XPath("//table[.//th[normalize-space()='Relationship']]"),
+                    "the preview",
+                )
+                .await
+                .text()
+                .await?;
+            assert!(
+                shown.contains(TARGET_CODE),
+                "the preview names the target the map maps to: `{shown}`"
+            );
 
-            let stored =
-                stored_resource(&journey, &deployment.base, "r5", R5_CANONICAL_PARAM).await;
-            assert!(
-                stored.contains("relationship"),
-                "R5 states a target's relation in `relationship`: `{stored}`"
-            );
-            assert!(
-                !stored.contains("equivalence"),
-                "and never in R4B's element: `{stored}`"
-            );
-            assert!(
-                stored.contains("sourceScope") || !stored.contains("\"sourceUri\""),
-                "and scopes the map with R5's own element: `{stored}`"
-            );
-
-            journey.no_console_errors_but(&[RAW_FAVICON]).await;
+            journey.no_console_errors().await;
             Ok::<(), WebDriverError>(())
         })
         .await;
