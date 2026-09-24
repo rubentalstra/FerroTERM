@@ -19,6 +19,8 @@ pub(crate) mod editor;
 pub(crate) mod evidence;
 pub(crate) mod expand;
 pub(crate) mod find;
+#[cfg(feature = "editor")]
+pub(crate) mod history;
 pub(crate) mod not_found;
 pub(crate) mod overview;
 pub(crate) mod settings;
@@ -51,12 +53,18 @@ mod tests {
         "urn:iso:std:iso",
     ];
 
-    /// The directories holding the screens and the chrome they render inside.
+    /// The directories holding the screens, the chrome they render inside,
+    /// and the screen logic behind the authoring screens.
+    ///
+    /// Each entry is a directory rather than a list of files, so a screen
+    /// added tomorrow is covered the day it lands. That is why the authoring
+    /// screens' own logic lives under `src/authoring` rather than at the crate
+    /// root, where three such files sat outside this guard.
     ///
     /// The reading layer under `src/fhir` is out of scope, because its tests
     /// quote real canonicals to prove the reader handles them. The mandate
     /// still covers it, and a reviewer checks it there.
-    const SCREEN_DIRECTORIES: [&str; 2] = ["src/pages", "src/components"];
+    const SCREEN_DIRECTORIES: [&str; 3] = ["src/pages", "src/components", "src/authoring"];
 
     /// Every `.rs` file under `directory`, in a stable order.
     fn sources(directory: &Path) -> Vec<PathBuf> {

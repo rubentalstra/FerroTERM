@@ -17,8 +17,8 @@ use serde_json::Map;
 use serde_json::Value;
 use serde_json::json;
 
-use crate::editor::Key;
-use crate::editor::Keys;
+use crate::authoring::code_system::Key;
+use crate::authoring::code_system::Keys;
 use crate::fhir::authoring::StoredConceptMap;
 use crate::fhir::authoring::StoredMapElement;
 use crate::fhir::authoring::StoredMapGroup;

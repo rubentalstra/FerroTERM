@@ -7,13 +7,11 @@
 
 mod app;
 mod auth;
+#[cfg(feature = "editor")]
+mod authoring;
 mod comparison;
 mod components;
-#[cfg(feature = "editor")]
-mod concept_map_editor;
 mod density;
-#[cfg(feature = "editor")]
-mod editor;
 mod evidence;
 mod fhir;
 mod find;

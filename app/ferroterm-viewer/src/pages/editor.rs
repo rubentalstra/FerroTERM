@@ -24,21 +24,23 @@ use leptos_router::params::Params;
 
 use crate::auth::Session;
 use crate::auth::scopes::Letter;
+use crate::authoring::code_system::Concept;
+use crate::authoring::code_system::Declared;
+use crate::authoring::code_system::Designation;
+use crate::authoring::code_system::Draft;
+use crate::authoring::code_system::Key;
+use crate::authoring::code_system::Lifecycle;
+use crate::authoring::code_system::Valued;
 use crate::components::coded::Codes;
 use crate::components::coded::Control;
 use crate::components::coded::coded_control;
 use crate::components::coded::codes_of;
 use crate::components::coded::fixed;
+use crate::components::coded::gated;
 use crate::components::failure::Failure;
+use crate::components::history::history_offer;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
-use crate::editor::Concept;
-use crate::editor::Declared;
-use crate::editor::Designation;
-use crate::editor::Draft;
-use crate::editor::Key;
-use crate::editor::Lifecycle;
-use crate::editor::Valued;
 use crate::fhir::CODE_SYSTEM;
 use crate::fhir::FhirClient;
 use crate::fhir::error::FhirError;
@@ -328,9 +330,15 @@ fn form_section(
         session,
     );
     let outcome = outcome_section(reloads, report, refusal, checked);
+    let versions = history_offer(
+        CODE_SYSTEM,
+        gated(Box::new(move || draft.read().id.clone())),
+        version,
+    );
 
     view! {
         {notice}
+        {versions}
         {outcome}
         {metadata}
         {properties}
@@ -595,7 +603,7 @@ fn metadata_section(draft: RwSignal<Draft>, readonly: Signal<bool>, options: Opt
                     },
                     options.statuses,
                     readonly,
-                    Signal::derive(move || draft.read().status.clone()),
+                    gated(Box::new(move || draft.read().status.clone())),
                     Box::new(move |chosen| draft.update(|draft| draft.status = chosen)),
                 )}
                 {coded_control(
@@ -607,7 +615,7 @@ fn metadata_section(draft: RwSignal<Draft>, readonly: Signal<bool>, options: Opt
                     },
                     options.contents,
                     readonly,
-                    Signal::derive(move || draft.read().content.clone()),
+                    gated(Box::new(move || draft.read().content.clone())),
                     Box::new(move |chosen| draft.update(|draft| draft.content = chosen)),
                 )}
                 <div class="flex items-center gap-default">
@@ -757,9 +765,9 @@ fn property_row(draft: RwSignal<Draft>, key: Key, readonly: Signal<bool>, kinds:
                     },
                     kinds,
                     readonly,
-                    Signal::derive(move || {
-                        property_of(draft, key, |property| property.kind.clone())
-                    }),
+                    gated(
+                        Box::new(move || property_of(draft, key, |property| property.kind.clone())),
+                    ),
                     Box::new(move |chosen| with_property(
                         draft,
                         key,
@@ -1291,7 +1299,7 @@ fn value_row(
         .find(|valued| valued.key == key)
         .unwrap_or_default();
     let id = key.0;
-    let declared = Signal::derive(move || {
+    let declared = gated(Box::new(move || {
         let code = concept_of(draft, concept, |held| {
             held.values
                 .iter()
@@ -1306,7 +1314,7 @@ fn value_row(
                 .find(|property| property.code == code)
                 .map_or_else(|| "string".to_owned(), |property| property.kind.clone())
         })
-    });
+    }));
     let kind_of = move || {
         let kind = declared.get();
         kinds.offered.with(|kinds| {

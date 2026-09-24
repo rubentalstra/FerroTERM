@@ -63,6 +63,23 @@ pub(crate) fn fixed(label: &'static str) -> Signal<String> {
     Signal::derive(move || label.to_owned())
 }
 
+/// One value of an authoring draft, as a signal that only fires when it
+/// changes.
+///
+/// The reader is boxed rather than generic, so the memo machinery compiles
+/// once for every screen that draws a control; a generic one is monomorphized
+/// per call site, and an authoring screen has one per control.
+///
+/// Every read of a draft touches the one signal the whole form is held in, so
+/// a plain derive over it re-runs on every keystroke anywhere. A `Memo`
+/// compares before it notifies, which is what keeps a control's own property
+/// write, and its option list's per-option `selected`, to the field that
+/// actually changed
+/// (<https://docs.rs/reactive_graph/0.2/reactive_graph/computed/struct.Memo.html>).
+pub(crate) fn gated(read: Box<dyn Fn() -> String + Send + Sync>) -> Signal<String> {
+    Signal::from(Memo::new(move |_| read()))
+}
+
 /// The codes one value set expands to, as the signals a control reads.
 ///
 /// `canonical` is a signal because the value set an element is bound to can
