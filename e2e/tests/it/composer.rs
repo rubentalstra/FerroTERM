@@ -19,6 +19,8 @@ use thirtyfour::stringmatch::StringMatch;
 use crate::harness::Journey;
 use crate::harness::SignedIn;
 use crate::harness::choose;
+use crate::harness::query_param;
+use crate::harness::run_canonical;
 use crate::harness::server;
 use crate::harness::session;
 use crate::harness::sign_in;
@@ -31,14 +33,16 @@ const COMPOSER_LINK: &str = "//a[normalize-space()='Compose a value set']";
 ///
 /// Synthetic: the repository distributes no terminology content, and each
 /// journey writes the resource it then reads back. One canonical per journey,
-/// because the journeys run beside each other against one server.
-const CANONICAL: &str = "https://terminology.example/e2e-composed";
-
-/// That canonical, percent-encoded into a query parameter.
-const CANONICAL_PARAM: &str = "https%3A%2F%2Fterminology.example%2Fe2e-composed";
+/// because the journeys run beside each other against one server, and one per
+/// run, because a store may persist between runs.
+fn canonical() -> String {
+    run_canonical("e2e-composed")
+}
 
 /// The canonical the keyboard journey composes under.
-const KEYBOARD_CANONICAL: &str = "https://terminology.example/e2e-composed-keyboard";
+fn keyboard_canonical() -> String {
+    run_canonical("e2e-composed-keyboard")
+}
 
 /// The value set the fixture publishes, which the composer draws in whole.
 const PUBLISHED: &str = "https://ferroterm.eu/fhir/ValueSet/e2e-taxonomy-all";
@@ -246,7 +250,7 @@ async fn the_definition_survives(
         .prop("value")
         .await?
         .unwrap_or_default();
-    assert_eq!(read, CANONICAL, "the canonical came back as it was saved");
+    assert_eq!(read, canonical(), "the canonical came back as it was saved");
     let clauses = journey.count(By::Css(CLAUSES)).await;
     assert!(
         clauses >= 2,
@@ -255,7 +259,8 @@ async fn the_definition_survives(
 
     journey
         .reopen(&format!(
-            "{base}/ui/editor/validate?fhir=r4b&on=valueset&valueSet={CANONICAL_PARAM}&code={CODE}&system={SYSTEM_PARAM}"
+            "{base}/ui/editor/validate?fhir=r4b&on=valueset&valueSet={}&code={CODE}&system={SYSTEM_PARAM}",
+            query_param(&canonical())
         ))
         .await;
     let validated = journey
@@ -283,7 +288,7 @@ async fn a_value_set_over_a_published_one_is_composed_previewed_and_saved() {
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
             open_composer(&journey, &deployment, "writer", "composes-a-value-set").await;
-            compose(&journey, CANONICAL).await?;
+            compose(&journey, &canonical()).await?;
 
             // The rules the server reads the definition by are on the screen.
             let rules = journey
@@ -382,7 +387,7 @@ async fn one_include_is_composed_with_the_keyboard_alone() {
             .await;
 
             journey.tab_to("compose-url", "the canonical field").await;
-            journey.type_here(KEYBOARD_CANONICAL).await?;
+            journey.type_here(&keyboard_canonical()).await?;
             // The harness reports the control the keyboard is on as its id,
             // its name, and its own words, so the id is one part of that.
             let on = journey.focused().await?;

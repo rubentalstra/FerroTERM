@@ -152,6 +152,28 @@ pub fn server() -> Option<String> {
     }
 }
 
+/// A path segment unique to this run: `stem`, then the process id.
+///
+/// nextest runs each journey in its own process, so the id holds for one
+/// journey and differs on the next run. A store that persists between runs
+/// then never answers with the copy an earlier run left under the same name.
+pub fn run_slug(stem: &str) -> String {
+    format!("{stem}-{}", std::process::id())
+}
+
+/// A canonical unique to this run, on a synthetic host.
+///
+/// Synthetic: the repository distributes no terminology content, and every
+/// write journey authors the resource it then reads back.
+pub fn run_canonical(stem: &str) -> String {
+    format!("https://terminology.example/{}", run_slug(stem))
+}
+
+/// `value` percent-encoded as one query parameter.
+pub fn query_param(value: &str) -> String {
+    form_urlencoded::byte_serialize(value.as_bytes()).collect()
+}
+
 /// A deployment that asks a reader to sign in, and the issuer it trusts.
 #[derive(Clone, Debug)]
 pub struct SignedIn {
