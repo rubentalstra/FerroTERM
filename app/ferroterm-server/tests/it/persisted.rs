@@ -686,6 +686,20 @@ async fn a_resource_written_on_one_version_leaves_another_version_s_search_answe
             "{resource_type}: total counts the matches alone: {found}"
         );
 
+        // `_elements` names elements of the resources a search matched, so the
+        // outcome entry keeps its mandatory `issue`
+        // (<https://hl7.org/fhir/R5/search.html#elements>).
+        let (status, projected) = server
+            .get(&format!("/r4b/{resource_type}?_elements=url"))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{resource_type}: {projected}");
+        let outcome = entries_of(&projected, "outcome");
+        assert_eq!(outcome.len(), 1, "{resource_type}: {projected}");
+        assert_eq!(
+            outcome[0]["resource"]["issue"][0]["code"], "not-supported",
+            "{resource_type}: {projected}"
+        );
+
         // The read has one resource to answer with and no representation of it
         // on this base: the FHIR release is a media type parameter
         // (<https://hl7.org/fhir/R5/versioning.html>), so the refusal is a
