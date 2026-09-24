@@ -856,3 +856,58 @@ async fn the_capability_statement_declares_summary() {
         }
     }
 }
+
+/// A `CodeSystem` whose `title` and `version` carry an extension in their
+/// `_name` member (<https://hl7.org/fhir/R4B/json.html#primitive>).
+fn with_primitive_extensions(version: &str) -> Value {
+    let extension = json!({"extension": [{
+        "url": "http://hl7.org/fhir/StructureDefinition/translation",
+        "extension": [{"url": "lang", "valueCode": "nl"}]
+    }]});
+    json!({
+        "resourceType": "CodeSystem",
+        "url": format!("http://ferroterm.test/CodeSystem/extended-{version}"),
+        "version": "1",
+        "_version": extension,
+        "title": "Extended",
+        "_title": extension,
+        "status": "active",
+        "content": "complete",
+        "concept": [{"code": "a", "display": "A"}]
+    })
+}
+
+#[tokio::test]
+async fn elements_keep_the_extension_member_of_a_named_primitive_on_every_version() {
+    let server = Server::start_persisting();
+    for (version, _) in VERSIONS {
+        let id = format!("extended-{version}");
+        let written = with_primitive_extensions(version);
+        let response = server
+            .put(&format!("/{version}/CodeSystem/{id}"), &written)
+            .await;
+        assert!(
+            response.status().is_success(),
+            "{version}: {}",
+            response.status()
+        );
+
+        let uri = format!("/{version}/CodeSystem/{id}?_elements=title");
+        let (status, body) = server.get(&uri).await;
+        assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+        assert_eq!(body["_title"], written["_title"], "{uri}: {body}");
+        assert!(
+            body.get("_version").is_none(),
+            "{uri}: the member of an element not asked for is left out: {body}"
+        );
+
+        let uri = format!(
+            "/{version}/CodeSystem?url=http://ferroterm.test/CodeSystem/extended-{version}&_elements=title"
+        );
+        let (status, body) = server.get(&uri).await;
+        assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+        let resource = &body["entry"][0]["resource"];
+        assert_eq!(resource["_title"], written["_title"], "{uri}: {body}");
+        assert!(resource.get("_version").is_none(), "{uri}: {body}");
+    }
+}

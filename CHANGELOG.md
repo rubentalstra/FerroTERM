@@ -398,6 +398,15 @@ fresh link reference.
   write, where it used to answer from the id that sorted last, and logs a
   warning at startup naming every id that carries the canonical.
 
+- **`_elements` keeps the extension member of a primitive it names** (#675).
+  `_elements=title` now returns `_title` beside `title`, the member that
+  carries a primitive's `id` and extensions in FHIR JSON
+  (<https://hl7.org/fhir/R4B/json.html#primitive>), as the `_summary` views
+  already did; it used to drop it. The `ValueSet` and `ConceptMap` instance
+  lists are sorted by id as documented, where the persisted entries used to
+  follow the loaded ones, and a persisted-resource route answers its `406` in
+  one place.
+
 - **An `Accept` header naming no format the server serves answers `406`**
   (#668). `Accept: text/csv` used to get FHIR JSON with a `200`; it now gets
   `406 Not Acceptable` with an `OperationOutcome` `not-supported` issue in

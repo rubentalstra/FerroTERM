@@ -152,8 +152,12 @@ impl Projection {
 
     /// Every matched `entry.resource` of a searchset `bundle`, projected.
     ///
-    /// The envelope and an `outcome` entry keep every element, as
-    /// [`project_bundle`] states.
+    /// The bundle itself is not a resource a client asked elements of: the
+    /// parameters name elements of the resources a search matched, so the
+    /// envelope keeps every field it had. An entry that is not a match keeps
+    /// its resource whole: an `OperationOutcome` describing the search is not
+    /// one of the matched resources, and its `issue` is mandatory
+    /// (<https://hl7.org/fhir/R4B/http.html#search>).
     pub fn apply_bundle(&self, bundle: &mut Object, schemas: &Schemas) {
         if self.is_whole() {
             return;
@@ -268,7 +272,8 @@ pub fn requested(value: &str) -> Vec<String> {
 /// `resource`, reduced to `wanted` plus the elements every resource keeps, and
 /// marked as a subset.
 ///
-/// Returns the resource untouched when `wanted` is empty, because a client
+/// The sibling `_name` of a primitive goes with its element
+/// (<https://hl7.org/fhir/R4B/json.html#primitive>). Returns the resource untouched when `wanted` is empty, because a client
 /// that named nothing asked for everything.
 #[must_use]
 pub fn project(resource: &Object, wanted: &[String]) -> Object {
@@ -278,7 +283,8 @@ pub fn project(resource: &Object, wanted: &[String]) -> Object {
     let mut kept: Object = resource
         .iter()
         .filter(|(name, _)| {
-            MANDATORY.contains(&name.as_str()) || wanted.iter().any(|asked| asked == *name)
+            let element = name.strip_prefix('_').unwrap_or(name);
+            MANDATORY.contains(&element) || wanted.iter().any(|asked| asked == element)
         })
         .map(|(name, value)| (name.clone(), value.clone()))
         .collect();
@@ -314,25 +320,6 @@ fn is_subsetted(tag: &Value) -> bool {
     };
     coding.get("system") == Some(&Value::String(TAG_SYSTEM.to_owned()))
         && coding.get("code") == Some(&Value::String(TAG_CODE.to_owned()))
-}
-
-/// Every matched `entry.resource` of a searchset `bundle`, projected onto
-/// `wanted`.
-///
-/// The bundle itself is not a resource a client asked elements of: the
-/// parameter names elements of the resources a search matched, so the envelope
-/// keeps every field it had. An entry that is not a match keeps its resource
-/// whole: an `OperationOutcome` describing the search is not one of the
-/// matched resources, and its `issue` is mandatory
-/// (<https://hl7.org/fhir/R4B/http.html#search>).
-pub fn project_bundle(bundle: &mut Object, wanted: &[String]) {
-    if wanted.is_empty() {
-        return;
-    }
-    for resource in matched_resources(bundle) {
-        let projected = project(resource, wanted);
-        *resource = projected;
-    }
 }
 
 /// The resource of every `match` entry of a searchset `bundle`.
@@ -508,6 +495,21 @@ mod tests {
     }
 
     #[test]
+    fn a_primitive_keeps_its_extension_member_and_an_unnamed_one_does_not() {
+        let mut whole = code_system();
+        whole.insert("_title".to_owned(), Value::Object(BTreeMap::new()));
+        whole.insert("_version".to_owned(), Value::Object(BTreeMap::new()));
+        let projected = project(&whole, &requested("title"));
+        let mut names: Vec<&str> = projected.keys().map(String::as_str).collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            ["_title", "id", "meta", "resourceType", "title"],
+            "a primitive's extension member goes with its element"
+        );
+    }
+
+    #[test]
     fn every_entry_of_a_searchset_is_projected_and_the_envelope_is_not() {
         let mut bundle: Object = BTreeMap::from([
             (
@@ -530,7 +532,8 @@ mod tests {
                 ]),
             ),
         ]);
-        project_bundle(&mut bundle, &requested("url"));
+        projection(&[("_elements", "url")])
+            .apply_bundle(&mut bundle, &fhir_types::r4b::schema::SCHEMAS);
         assert_eq!(
             bundle.get("total"),
             Some(&Value::String("2".to_owned())),
