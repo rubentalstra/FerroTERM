@@ -15,6 +15,15 @@ fresh link reference.
 
 ### Added
 
+- **The project extensions resolve on the website** (#671). Each of
+  `terminology-artifact`, `implicit-value-set` and `operation-level` under
+  `https://ferroterm.eu/fhir/StructureDefinition/` has a `StructureDefinition`
+  in the R4B shape (`<name>.json`, with its context, its sub-extensions and
+  their types) and a page at the canonical itself that links it, as FHIR asks
+  of an extension's URL (<https://hl7.org/fhir/R4B/extensibility.html#defining>).
+  The book's FHIR API page links each definition beside its wire example, and
+  `scripts/checks/extension-definitions.sh` fails CI when the server emits a
+  canonical the site does not define.
 - **`metadata?mode=terminology` declares the implicit value sets each served
   version resolves** (#657). Every form is an extension
   `https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set` on
