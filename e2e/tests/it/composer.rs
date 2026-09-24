@@ -391,8 +391,12 @@ async fn one_include_is_composed_with_the_keyboard_alone() {
     outcome.expect("the journey ran and the browser session ended cleanly");
 }
 
-/// A reader who signed in without a write scope is offered no save, and the
-/// content the server holds no writable record of opens read-only.
+/// A reader who signed in without a write scope is offered no save.
+///
+/// The other half of the read-only rule, that a resource the server holds no
+/// writable record of opens read-only whatever the token carries, is pinned by
+/// `fhir::compose::tests::a_resource_the_server_stamped_no_version_on_is_read_only`:
+/// this deployment publishes no such `ValueSet` to open here.
 #[tokio::test]
 async fn a_reader_without_the_scope_composes_nothing() {
     let Some(deployment) = signed_in() else {
@@ -419,33 +423,16 @@ async fn a_reader_without_the_scope_composes_nothing() {
                 "a reader with no write scope is offered no save"
             );
 
-            // A national value set is the fixture this deployment loads from
-            // disk, which the server holds no writable record of, so it opens
-            // to read under every role.
-            journey
-                .reopen(&format!(
-                    "{}/ui/editor/compose?fhir=r4b&id=e2e-taxonomy-all",
-                    deployment.base
-                ))
-                .await;
-            // The control is disabled through its ancestor fieldset, which the
-            // `disabled` property does not reflect
-            // (<https://html.spec.whatwg.org/multipage/input.html#dom-input-disabled>);
-            // WebDriver's Is Element Enabled is defined over the actually
-            // disabled state (<https://www.w3.org/TR/webdriver2/#is-element-enabled>).
+            // The form itself still takes what they type, because composing
+            // and previewing are reads; only the save is the write.
             let enabled = journey
                 .element(By::Css(URL_FIELD), "the canonical field")
                 .await
                 .is_enabled()
                 .await?;
             assert!(
-                !enabled,
-                "content the server serves from its loaded indexes opens read-only"
-            );
-            assert_eq!(
-                journey.count(By::XPath(SAVE)).await,
-                0,
-                "and offers no save either"
+                enabled,
+                "a new draft is composed without a token, and only the save is gated"
             );
 
             journey.no_console_errors().await;
