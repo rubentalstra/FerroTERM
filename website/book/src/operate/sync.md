@@ -197,6 +197,14 @@ It authenticates nobody, exactly like the server's admin listener. Keep it on
 an internal network, and never publish it. The Compose overlay leaves both
 listeners unpublished, reachable only inside the compose network.
 
+The viewer's history screen reads `GET /runs` and `GET /runs/{id}` to show what
+the last run found about the resource a terminologist has open
+([The viewer](viewer.md)). It is a browser, so it reaches only the address it
+was served from: a deployment that wants those findings on screen maps `/runs`
+on the server's own origin to this listener in the reverse proxy in front of
+it, and keeps the rest of the listener unreachable. A deployment that maps
+nothing shows no findings, which is the default.
+
 `/metrics` carries `ferroterm_sync_runs_total{outcome="ok"|"failed"}`,
 `ferroterm_sync_last_run_timestamp_seconds`,
 `ferroterm_sync_entries_taken_total`, `ferroterm_sync_bytes_staged_total`,

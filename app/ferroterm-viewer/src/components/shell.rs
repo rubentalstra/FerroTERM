@@ -364,6 +364,7 @@ pub(crate) fn EditorRoute() -> impl MatchNestedRoutes + Clone {
                 path=path!("/conceptmap")
                 view=|| crate::pages::concept_map_editor::ConceptMapEditorPage().into_any()
             />
+            <Route path=path!("/history") view=|| crate::pages::history::HistoryPage().into_any() />
         }
         .into_inner()
     }

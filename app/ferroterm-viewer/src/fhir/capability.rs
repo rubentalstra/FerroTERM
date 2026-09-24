@@ -79,9 +79,26 @@ struct ServiceCoding {
 struct RestResource {
     /// `resource.type`, the resource type it describes.
     r#type: Option<String>,
+    /// `resource.interaction`, the RESTful interactions this root answers.
+    ///
+    /// Only the editor bundle reads it, and a field serde does not know is
+    /// passed over, so the reader bundle carries neither the element nor the
+    /// decoder for it.
+    #[cfg(feature = "editor")]
+    #[serde(default)]
+    interaction: Vec<RestInteraction>,
     /// `resource.operation`, the operations this root answers on that type.
     #[serde(default)]
     operation: Vec<RestOperation>,
+}
+
+/// One `CapabilityStatement.rest.resource.interaction`.
+#[cfg(feature = "editor")]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+struct RestInteraction {
+    /// `interaction.code`, a code of the type-restful-interaction value set
+    /// (<https://hl7.org/fhir/R4B/capabilitystatement.html>).
+    code: Option<String>,
 }
 
 /// One `CapabilityStatement.rest.resource.operation`.
@@ -219,6 +236,25 @@ impl CapabilityStatement {
             .filter_map(|declared| declared.name.as_deref())
             .any(|name| name.trim_start_matches('$') == wanted)
     }
+
+    /// Whether this root declares `interaction` on `resource_type`.
+    ///
+    /// The codes are the type-restful-interaction value set's: `read`,
+    /// `vread`, `update`, `history-instance`, and the rest
+    /// (<https://hl7.org/fhir/R4B/capabilitystatement.html>). A screen offers
+    /// an affordance only where the statement declares the interaction behind
+    /// it, so a root that counts versions one way and a root that counts them
+    /// another are both read for what they say they answer.
+    #[cfg(feature = "editor")]
+    pub(crate) fn declares_interaction(&self, resource_type: &str, interaction: &str) -> bool {
+        self.rest
+            .iter()
+            .flat_map(|rest| rest.resource.iter())
+            .filter(|resource| resource.r#type.as_deref() == Some(resource_type))
+            .flat_map(|resource| resource.interaction.iter())
+            .filter_map(|declared| declared.code.as_deref())
+            .any(|code| code == interaction)
+    }
 }
 
 impl RestOperation {
@@ -254,6 +290,26 @@ mod tests {
 
     fn parse(json: &str) -> CapabilityStatement {
         serde_json::from_str(json).expect("the fixture is valid JSON")
+    }
+
+    #[cfg(feature = "editor")]
+    #[test]
+    fn an_interaction_is_declared_only_where_the_statement_declares_it() {
+        let statement = parse(
+            r#"{"resourceType":"CapabilityStatement","rest":[{"resource":[
+                 {"type":"CodeSystem","interaction":[{"code":"read"},{"code":"vread"}]},
+                 {"type":"ValueSet","interaction":[{"code":"read"}]}]}]}"#,
+        );
+        assert!(statement.declares_interaction("CodeSystem", "vread"));
+        assert!(
+            !statement.declares_interaction("CodeSystem", "history-instance"),
+            "a root that does not declare the history interaction is not asked for it"
+        );
+        assert!(
+            !statement.declares_interaction("ValueSet", "vread"),
+            "an interaction is declared per resource type"
+        );
+        assert!(!statement.declares_interaction("ConceptMap", "read"));
     }
 
     #[test]

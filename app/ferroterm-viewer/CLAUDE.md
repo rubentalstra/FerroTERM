@@ -44,11 +44,16 @@ Two consequences for anything written here:
   `dist/` and `dist-editor/`. The reader's ceiling is never raised to make room
   for the editor.
 
-The authoring screens are `src/pages/editor.rs` over the form model in
-`src/editor.rs` and the reads in `src/fhir/authoring.rs`, all three behind the
-feature. The model is plain values and plain functions, so the rules it
-encodes (what a lifecycle transition writes, what a save sends) are pinned by
-ordinary unit tests rather than by driving a browser.
+The authoring screens are `src/pages/{editor,value_set_composer,concept_map_editor,history}.rs`
+over the models in `src/authoring/` and the reads in `src/fhir/authoring.rs`,
+all behind the feature. A model is plain values and plain functions, so the
+rules it encodes (what a lifecycle transition writes, what a save sends, what
+two versions differ by) are pinned by ordinary unit tests rather than by
+driving a browser.
+
+The models live under `src/authoring/` rather than at the crate root because
+`pages::tests::no_screen_names_a_code_system` walks directories: a screen's
+logic added there is inside the neutrality guard the day it lands.
 
 ## Gates
 

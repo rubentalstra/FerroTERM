@@ -119,3 +119,5 @@ repository. Nothing in it transfers.
 - [A Memo source gates a resource refetch](memo-source-gates-a-resource-refetch.md), a Signal::derive over the form's draft refetches every per-row resource on every keystroke; a Memo does not (#636)
 - [prop:value moves the caret only on a change](prop-value-caret-only-moves-on-change.md), the HTML value setter compares first, so a pass-through driven input is caret-safe and the seeded value= form is the deviation (#636)
 - [An sr-only label under a visible p](sr-only-label-beside-a-visible-p.md), passes the e2e label check and fails SC 2.5.3 Label in Name (#636)
+- [A write control built from a URL memo and an old answer](a-write-control-built-from-a-url-memo-and-an-old-answer.md), under Transition the new address meets the previous resource, so a restore writes one resource's body to another resource's id (#637)
+- [A live region inside a Show is never announced](live-region-inside-a-show-is-never-announced.md), a region mounted with its first message is not monitored yet, and an e2e text assertion passes either way (#637)

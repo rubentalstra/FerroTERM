@@ -29,16 +29,23 @@ use crate::harness::session;
 /// module would have to name, and the sidebar does not offer it. The overview
 /// links to it, and `viewer` walks that link.
 ///
-/// The last two are the editor bundle's authoring screens, which the one
-/// server serves at its own mount. The code system and concept map ones are
+/// The last four are the editor bundle's own screens, which the one server
+/// serves at its own mount. The code system and concept map ones are
 /// opened on the fixtures this deployment holds, because an empty form has
 /// none of the rows whose markup this pass exists to read; the composer opens
 /// on a new draft, which is where its own clause carries every control it
 /// draws. This deployment publishes no issuer, so every form opens read-only,
 /// and the controls a token opens are walked by the keyboard journeys in
-/// `editor`, `composer` and `concept_map_editor` against the deployment that
-/// has one.
-const SCREENS: [&str; 12] = [
+/// `editor`, `composer`, `concept_map_editor` and `history` against the
+/// deployment that has one.
+///
+/// The version screen names no resource, because this deployment has written
+/// none: every resource it holds was loaded rather than written, and an id it
+/// does not hold would make the screen render a refusal instead of itself.
+/// What this pass reads there is the heading, the sentence that says there are
+/// no versions, and the chrome around them; the table and the restore control
+/// are walked by the keyboard journey in `history`.
+const SCREENS: [&str; 13] = [
     "/ui/",
     "/ui/browse",
     "/ui/expand",
@@ -51,7 +58,16 @@ const SCREENS: [&str; 12] = [
     "/ui/editor/codesystem?system=https%3A%2F%2Fferroterm.eu%2Ffhir%2FCodeSystem%2Fe2e-taxonomy",
     "/ui/editor/compose",
     "/ui/editor/conceptmap?map=https%3A%2F%2Fferroterm.eu%2Ffhir%2FConceptMap%2Fe2e-taxonomy-map",
+    "/ui/editor/history?type=CodeSystem",
 ];
+
+/// The refusal the version screen provokes on a deployment with no sync
+/// service behind it.
+///
+/// The screen asks the synchronisation service's admin listener for the newest
+/// run; nothing answers here, the browser logs that as a severe network entry,
+/// and the screen then draws no findings at all, which is what it is for.
+const NO_SYNC: &str = "/runs";
 
 /// The version every screen is opened on.
 ///
@@ -540,7 +556,7 @@ async fn every_control_on_every_screen_is_reached_by_the_keyboard_alone() {
                 findings.len(),
                 findings.join("\n")
             );
-            journey.no_console_errors().await;
+            journey.no_console_errors_but(&[NO_SYNC]).await;
             Ok::<(), WebDriverError>(())
         })
         .await;
@@ -578,7 +594,7 @@ async fn every_screen_meets_the_aa_contrast_bar_in_both_themes() {
                 "text below the AA contrast bar:\n{}",
                 findings.join("\n")
             );
-            journey.no_console_errors().await;
+            journey.no_console_errors_but(&[NO_SYNC]).await;
             Ok::<(), WebDriverError>(())
         })
         .await;
@@ -622,7 +638,7 @@ async fn every_screen_renders_the_markup_a_screen_reader_needs() {
                 "markup a screen reader cannot use:\n{}",
                 findings.join("\n")
             );
-            journey.no_console_errors().await;
+            journey.no_console_errors_but(&[NO_SYNC]).await;
             Ok::<(), WebDriverError>(())
         })
         .await;
@@ -676,7 +692,7 @@ async fn a_search_an_expansion_and_a_validation_are_each_announced() {
                 "the validation announced nothing, so a reader is never told it ran"
             );
 
-            journey.no_console_errors().await;
+            journey.no_console_errors_but(&[NO_SYNC]).await;
             Ok::<(), WebDriverError>(())
         })
         .await;

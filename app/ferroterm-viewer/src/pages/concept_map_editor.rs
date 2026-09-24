@@ -28,20 +28,22 @@ use leptos_router::params::Params;
 
 use crate::auth::Session;
 use crate::auth::scopes::Letter;
+use crate::authoring::code_system::Key;
+use crate::authoring::concept_map::MapDraft;
+use crate::authoring::concept_map::MapElement;
+use crate::authoring::concept_map::MapGroup;
+use crate::authoring::concept_map::MapTarget;
+use crate::authoring::concept_map::dialect;
 use crate::components::coded::Codes;
 use crate::components::coded::Control;
 use crate::components::coded::coded_control;
 use crate::components::coded::codes_of;
 use crate::components::coded::fixed;
+use crate::components::coded::gated;
 use crate::components::failure::Failure;
+use crate::components::history::history_offer;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
-use crate::concept_map_editor::MapDraft;
-use crate::concept_map_editor::MapElement;
-use crate::concept_map_editor::MapGroup;
-use crate::concept_map_editor::MapTarget;
-use crate::concept_map_editor::dialect;
-use crate::editor::Key;
 use crate::fhir::CONCEPT_MAP;
 use crate::fhir::FhirClient;
 use crate::fhir::concept::ConceptQuery;
@@ -196,21 +198,6 @@ struct Options {
     relationships: Codes,
 }
 
-/// One value of the draft, as a signal that only fires when it changes.
-///
-/// The reader is boxed rather than generic, so the memo machinery compiles
-/// once for the whole screen; a generic one is monomorphized per call site,
-/// and this screen has one per control.
-///
-/// Every read of the draft touches the one signal the whole form is held in,
-/// so a plain derive over it re-runs on every keystroke anywhere. A `Memo`
-/// compares before it notifies, which is what keeps a control's own property
-/// write and a picker's own fetch to the field that actually changed
-/// (<https://docs.rs/reactive_graph/0.2/reactive_graph/computed/struct.Memo.html>).
-fn gated(read: Box<dyn Fn() -> String + Send + Sync>) -> Signal<String> {
-    Signal::from(Memo::new(move |_| read()))
-}
-
 /// The document title for the concept map being edited.
 fn title_of(canonical: &str) -> String {
     if canonical.trim().is_empty() {
@@ -262,6 +249,11 @@ fn form_section(
     let held = StoredValue::new(client);
 
     let notice = standing_section(managed, session, letter, readonly);
+    let versions = history_offer(
+        CONCEPT_MAP,
+        gated(Box::new(move || draft.read().id.clone())),
+        version,
+    );
     let outcome = outcome_section(reloads, report, refusal);
     let metadata = metadata_section(draft, version, readonly, options.statuses);
     let groups = groups_section(held, version, draft, readonly, options, preview, report);
@@ -271,6 +263,7 @@ fn form_section(
 
     view! {
         {notice}
+        {versions}
         {outcome}
         {metadata}
         {groups}
