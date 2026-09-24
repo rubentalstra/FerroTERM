@@ -117,21 +117,31 @@ async fn values(journey: &Journey, selector: &str) -> WebDriverResult<Vec<String
     Ok(read)
 }
 
-/// Signs in under `profile` and opens the map authoring screen from the
-/// sidebar.
+/// Signs in as a terminologist and opens the map authoring screen.
 ///
-/// The screen is reached by pressing the link rather than by loading its
-/// address, because a load would drop the token the sign-in just put in the
-/// page. `fhir` is the version the whole journey then runs on, because the
-/// sidebar link carries whatever version the address it was drawn on named.
+/// Every move after the sign-in is a press rather than a load, because a load
+/// would drop the token the sign-in just put in the page. `fhir` is the label
+/// of the version the journey runs on, reached through the switcher, which is
+/// a navigation the router handles; the sidebar link then carries it.
 async fn open_authoring(journey: &Journey, deployment: &SignedIn, tag: &str, fhir: &str) {
     journey
         .element(By::Css("header a[href^='/ui']"), "the shell mark")
         .await;
     choose(journey, deployment, "writer", tag).await;
     sign_in(journey, deployment).await;
+    let switch = format!("//nav[@aria-label='FHIR version']//a[normalize-space()='{fhir}']");
     journey
-        .reopen(&format!("{}/ui/editor?fhir={fhir}", deployment.base))
+        .element(By::XPath(&switch), "the version this journey runs on")
+        .await
+        .click()
+        .await
+        .unwrap_or_else(|error| panic!("the version switcher refused the press: {error}"));
+    journey
+        .text_becoming(
+            By::Css("nav[aria-label='FHIR version'] a[aria-current='page']"),
+            fhir.to_owned(),
+            "the switcher to mark the version this journey runs on",
+        )
         .await;
     journey
         .element(By::XPath(AUTHORING_LINK), "the way to the authoring screen")
@@ -237,6 +247,14 @@ async fn author(journey: &Journey, canonical: &str, relationship: &str) -> WebDr
     Ok(())
 }
 
+/// The console entry a raw FHIR navigation provokes.
+///
+/// A JSON document carries no `<link rel="icon">`, so the browser asks for the
+/// origin's `/favicon.ico` and the server answers `404`. It belongs to
+/// [`stored_resource`] and to nothing on any screen, so the journeys that read
+/// the wire exempt exactly this one and still fail on anything else.
+const RAW_FAVICON: &str = "/favicon.ico - Failed to load resource";
+
 /// The resource as the server holds it, read straight off the FHIR API.
 ///
 /// `_format` names the representation, so a browser navigation gets FHIR JSON
@@ -331,7 +349,7 @@ async fn a_local_concept_map_is_authored_previewed_and_saved_on_r4b() {
         .await
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
-            open_authoring(&journey, &deployment, "authors-a-map-r4b", "r4b").await;
+            open_authoring(&journey, &deployment, "authors-a-map-r4b", "R4B").await;
 
             // `equivalent` is a code of the value set R4B binds
             // `target.equivalence` to, which the control offered because the
@@ -387,7 +405,7 @@ async fn a_local_concept_map_is_authored_previewed_and_saved_on_r4b() {
             the_map_comes_back_read_only(&journey, &deployment.base).await?;
             the_runner_translates_through_it(&journey, &deployment.base).await;
 
-            journey.no_console_errors().await;
+            journey.no_console_errors_but(&[RAW_FAVICON]).await;
             Ok::<(), WebDriverError>(())
         })
         .await;
@@ -403,8 +421,8 @@ async fn the_same_map_writes_r5_s_own_relationship_element() {
     let outcome = session()
         .await
         .run_and_quit(|driver| async move {
-            let journey = Journey::open(driver, &deployment.base, "/ui/editor?fhir=r5").await;
-            open_authoring(&journey, &deployment, "authors-a-map-r5", "r5").await;
+            let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
+            open_authoring(&journey, &deployment, "authors-a-map-r5", "R5").await;
 
             // A code of the value set R5 binds `target.relationship` to, and
             // one R4B's own value set does not contain.
@@ -438,7 +456,7 @@ async fn the_same_map_writes_r5_s_own_relationship_element() {
                 "and scopes the map with R5's own element: `{stored}`"
             );
 
-            journey.no_console_errors().await;
+            journey.no_console_errors_but(&[RAW_FAVICON]).await;
             Ok::<(), WebDriverError>(())
         })
         .await;
@@ -458,7 +476,7 @@ async fn one_mapping_is_authored_with_the_keyboard_alone() {
         .await
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
-            open_authoring(&journey, &deployment, "keyboard-map", "r4b").await;
+            open_authoring(&journey, &deployment, "keyboard-map", "R4B").await;
 
             journey.tab_to("map-url", "the canonical field").await;
             journey.type_here(KEYBOARD_CANONICAL).await?;
@@ -494,8 +512,10 @@ async fn one_mapping_is_authored_with_the_keyboard_alone() {
 
             // The picker is driven from the keyboard too: the phrase is typed
             // and Enter submits the search, which is what a form does.
+            // The walk matches the search field by its own id suffix: tabbing to
+            // "element-" would stop on the code control, which comes first.
             journey
-                .tab_to("element-", "the code's own search field")
+                .tab_to("-search", "the code's own search field")
                 .await;
             journey.type_here(SOURCE_PHRASE).await?;
             journey

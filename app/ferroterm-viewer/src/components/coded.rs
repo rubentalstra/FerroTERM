@@ -40,11 +40,22 @@ pub(crate) struct Control {
     pub(crate) id: String,
     /// The `name` the control carries.
     pub(crate) name: &'static str,
-    /// The label a reader reads.
-    pub(crate) label: &'static str,
+    /// The label a reader reads, which is also the control's accessible name.
+    ///
+    /// It is a signal because a label can name the element the served version
+    /// writes, and the version switcher changes that without leaving the
+    /// route. The two are one string, because the accessible name has to
+    /// contain the visible text
+    /// (<https://www.w3.org/TR/WCAG22/#label-in-name>).
+    pub(crate) label: Signal<String>,
     /// Whether the label is for a screen reader alone, because a column
     /// header already names the control for a sighted reader.
     pub(crate) sr_only: bool,
+}
+
+/// A label that is the same whatever the served version is.
+pub(crate) fn fixed(label: &'static str) -> Signal<String> {
+    Signal::derive(move || label.to_owned())
 }
 
 /// The codes one value set expands to, as the signals a control reads.
@@ -97,10 +108,18 @@ pub(crate) fn codes_of(
 
 /// One control over a code of a value set the server expanded.
 ///
-/// The select is driven by `prop:value` because its options arrive after the
-/// form is built, and the code the resource already carries is offered whether
-/// or not the expansion did: a control that dropped it would silently rewrite
-/// the resource on the next save.
+/// The code the resource already carries is offered whether or not the
+/// expansion did: a control that dropped it would silently rewrite the
+/// resource on the next save.
+///
+/// Each option states its own selectedness, and the select is driven by
+/// `prop:value` as well. Both are needed. The options arrive after the form is
+/// built, and a select whose `value` names an option it does not have yet
+/// falls back to its first one
+/// (<https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element>),
+/// which then silently rewrote the resource on the next save; the `selected`
+/// attribute is read as each option is inserted, so the expansion landing puts
+/// the selection back where the resource had it.
 ///
 /// The callback is boxed rather than generic, so every control on every screen
 /// compiles to one copy of this function. A generic one is monomorphized per
@@ -130,7 +149,14 @@ pub(crate) fn coded_control(
             } else {
                 held.clone()
             };
-            drawn.push(view! { <option value=held.clone()>{text}</option> }.into_any());
+            drawn.push(
+                view! {
+                    <option value=held.clone() selected=true>
+                        {text}
+                    </option>
+                }
+                .into_any(),
+            );
         }
         drawn.extend(codes.offered.with(|codes| {
             codes
@@ -142,7 +168,13 @@ pub(crate) fn coded_control(
                     } else {
                         format!("{} ({})", coded.display, coded.code)
                     };
-                    view! { <option value=code>{text}</option> }.into_any()
+                    let chosen = code == held;
+                    view! {
+                        <option value=code selected=chosen>
+                            {text}
+                        </option>
+                    }
+                    .into_any()
                 })
                 .collect::<Vec<AnyView>>()
         }));
@@ -153,7 +185,7 @@ pub(crate) fn coded_control(
     view! {
         <div class="grid gap-tight">
             <label for=move || named.with_value(Clone::clone) class=label_class>
-                {label}
+                {move || label.get()}
             </label>
             <select
                 id=move || named.with_value(Clone::clone)

@@ -30,6 +30,7 @@ use crate::components::coded::Codes;
 use crate::components::coded::Control;
 use crate::components::coded::coded_control;
 use crate::components::coded::codes_of;
+use crate::components::coded::fixed;
 use crate::components::failure::Failure;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
@@ -191,6 +192,17 @@ struct Options {
     statuses: Codes,
     /// The codes a target's relationship element admits on this version.
     relationships: Codes,
+}
+
+/// One value of the draft, as a signal that only fires when it changes.
+///
+/// Every read of the draft touches the one signal the whole form is held in,
+/// so a plain derive over it re-runs on every keystroke anywhere. A `Memo`
+/// compares before it notifies, which is what keeps a control's own property
+/// write and a picker's own fetch to the field that actually changed
+/// (<https://docs.rs/reactive_graph/0.2/reactive_graph/computed/struct.Memo.html>).
+fn gated(read: impl Fn() -> String + Send + Sync + 'static) -> Signal<String> {
+    Signal::from(Memo::new(move |_| read()))
 }
 
 /// The document title for the concept map being edited.
@@ -420,12 +432,12 @@ fn metadata_section(
                     Control {
                         id: String::from("map-status"),
                         name: "map-status",
-                        label: "Publication status",
+                        label: fixed("Publication status"),
                         sr_only: false,
                     },
                     statuses,
                     readonly,
-                    Signal::derive(move || draft.read().status.clone()),
+                    gated(move || draft.read().status.clone()),
                     Box::new(move |chosen| draft.update(|draft| draft.status = chosen)),
                 )}
                 <div class="grid gap-tight">
@@ -773,8 +785,13 @@ fn element_panel(
     report: RwSignal<String>,
 ) -> AnyView {
     let id = key.0;
-    let source_system = Signal::derive(move || group_of(draft, group, |held| held.source.clone()));
-    let unmapped = move || element_of(draft, group, key, |element| element.no_map);
+    let source_system = gated(move || group_of(draft, group, |held| held.source.clone()));
+    // The flag is the version's as well as the concept's: a map authored on R5
+    // and read through an R4B root still carries `noMap`, and a version that
+    // defines no such element must not hide the targets it does define.
+    let unmapped = move || {
+        dialect(version.get()).no_map && element_of(draft, group, key, |element| element.no_map)
+    };
     let targets = targets_view(
         client,
         version,
@@ -806,7 +823,7 @@ fn element_panel(
                 "element-code",
                 "Code",
                 readonly,
-                Signal::derive(move || element_of(draft, group, key, |held| held.code.clone())),
+                gated(move || element_of(draft, group, key, |held| held.code.clone())),
                 Box::new(move |code| with_element(draft, group, key, |held| held.code = code)),
             )}
             {driven_control(
@@ -814,7 +831,7 @@ fn element_panel(
                 "element-display",
                 "Display",
                 readonly,
-                Signal::derive(move || element_of(draft, group, key, |held| held.display.clone())),
+                gated(move || element_of(draft, group, key, |held| held.display.clone())),
                 Box::new(move |display| with_element(
                     draft,
                     group,
@@ -985,7 +1002,7 @@ fn target_row(
     relationships: Codes,
 ) -> AnyView {
     let id = key.0;
-    let target_system = Signal::derive(move || group_of(draft, group, |held| held.target.clone()));
+    let target_system = gated(move || group_of(draft, group, |held| held.target.clone()));
     let picked = picker(
         client,
         version,
@@ -1007,9 +1024,7 @@ fn target_row(
                 "target-code",
                 "Target code",
                 readonly,
-                Signal::derive(move || {
-                    target_of(draft, group, element, key, |held| held.code.clone())
-                }),
+                gated(move || target_of(draft, group, element, key, |held| held.code.clone())),
                 Box::new(move |code| with_target(
                     draft,
                     group,
@@ -1023,9 +1038,7 @@ fn target_row(
                 "target-display",
                 "Target display",
                 readonly,
-                Signal::derive(move || {
-                    target_of(draft, group, element, key, |held| held.display.clone())
-                }),
+                gated(move || target_of(draft, group, element, key, |held| held.display.clone())),
                 Box::new(move |display| {
                     with_target(draft, group, element, key, |held| held.display = display);
                 }),
@@ -1035,9 +1048,7 @@ fn target_row(
                 "target-comment",
                 "Comment",
                 readonly,
-                Signal::derive(move || {
-                    target_of(draft, group, element, key, |held| held.comment.clone())
-                }),
+                gated(move || target_of(draft, group, element, key, |held| held.comment.clone())),
                 Box::new(move |comment| {
                     with_target(draft, group, element, key, |held| held.comment = comment);
                 }),
@@ -1088,30 +1099,26 @@ fn relationship_control(
     relationships: Codes,
 ) -> AnyView {
     let id = key.0;
-    view! {
-        <div class="grid gap-tight">
-            <p class=styles::LABEL>
-                {move || format!("Relationship ({})", dialect(version.get()).relationship)}
-            </p>
-            {coded_control(
-                Control {
-                    id: format!("target-{id}-relationship"),
-                    name: "target-relationship",
-                    label: "Relationship to the source code",
-                    sr_only: true,
-                },
-                relationships,
-                readonly,
-                Signal::derive(move || {
-                    target_of(draft, group, element, key, |held| held.relationship.clone())
-                }),
-                Box::new(move |chosen| {
-                    with_target(draft, group, element, key, |held| held.relationship = chosen);
-                }),
-            )}
-        </div>
-    }
-    .into_any()
+    // The one label carries the element the save will write, so what a
+    // sighted reader sees is also the control's accessible name
+    // (<https://www.w3.org/TR/WCAG22/#label-in-name>).
+    let label = gated(move || format!("Relationship ({})", dialect(version.get()).relationship));
+    coded_control(
+        Control {
+            id: format!("target-{id}-relationship"),
+            name: "target-relationship",
+            label,
+            sr_only: false,
+        },
+        relationships,
+        readonly,
+        gated(move || target_of(draft, group, element, key, |held| held.relationship.clone())),
+        Box::new(move |chosen| {
+            with_target(draft, group, element, key, |held| {
+                held.relationship = chosen;
+            });
+        }),
+    )
 }
 
 /// Picks one code out of a system, through the search the browser screen runs.
@@ -1120,9 +1127,9 @@ fn relationship_control(
 /// system, with the reader's text as `filter`
 /// (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>), so a code
 /// arrives with the display the server gave it rather than typed blind.
-// NOTE: the phrase is a control of one row of this form and not the screen's
-// own filter, so it is local state; what the address carries is the map being
-// edited.
+// NOTE: no FHIR spec governs this, our own design: the phrase is a control of
+// one row of this form rather than the screen's own filter, so it is local
+// state and the address carries the map being edited.
 fn picker(
     client: StoredValue<FhirClient>,
     version: Signal<FhirVersion>,
@@ -1210,8 +1217,10 @@ fn picker(
             <p id=region aria-live="polite" class=styles::HINT>
                 {counted}
             </p>
-            <Transition fallback=|| {
-                view! { <Spinner label="Searching" /> }
+            // A picker that has not been searched has nothing to wait for, so a
+            // saved map with twenty codes does not paint twenty spinners.
+            <Transition fallback=move || {
+                (!asked.read().trim().is_empty()).then(|| view! { <Spinner label="Searching" /> })
             }>{results}</Transition>
         </div>
     }
@@ -1386,14 +1395,17 @@ fn run_preview(
         let inline = Box::pin(client.translate_inline(version, &request, &resource)).await;
         let (inline_used, answer) = match (inline, saved) {
             (Ok(answer), _) => (true, Ok(answer)),
-            // A server may refuse a map sent inline
-            // (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>),
-            // so a map the server already holds is translated by canonical
-            // instead, and the panel says which of the two answered.
-            (Err(_refused), Some(saved)) => {
+            // Only the refusal the operation anticipates falls back: a server
+            // "may choose not to accept concept maps in this fashion"
+            // (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>)
+            // and says so with `not-supported`
+            // (<https://hl7.org/fhir/R4B/valueset-issue-type.html>). Every
+            // other refusal is about the map itself, and is shown whole
+            // rather than reported as something the server cannot do.
+            (Err(error), Some(saved)) if unsupported(&error) => {
                 (false, Box::pin(client.translate(version, &saved)).await)
             }
-            (Err(error), None) => (true, Err(error)),
+            (Err(error), _elsewhere) => (true, Err(error)),
         };
         report.set(previewed_text(inline_used, answer.as_ref()));
         preview.set(Some(Preview {
@@ -1402,6 +1414,18 @@ fn run_preview(
             answer,
         }));
     });
+}
+
+/// Whether a refusal says the server does not take a map sent inline.
+///
+/// `not-supported` is the issue type for "the interaction, operation, resource
+/// or profile is not supported"
+/// (<https://hl7.org/fhir/R4B/valueset-issue-type.html>), which is what a
+/// server that declines the `conceptMap` parameter answers.
+fn unsupported(error: &FhirError) -> bool {
+    error
+        .outcome()
+        .is_some_and(|outcome| outcome.carries_code("not-supported"))
 }
 
 /// What the live region says after a preview.

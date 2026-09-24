@@ -309,7 +309,7 @@ impl Problem {
                 "The target `{code}` of `{element}` states no relationship to its source, which every served version makes mandatory."
             ),
             Self::MappedAndUnmapped { element } => format!(
-                "`{element}` is marked as mapping to nothing and carries a target as well. Clear one of the two."
+                "`{element}` is marked as mapping to nothing and carries a target as well. Untick that mark to see the target, or clear the mark."
             ),
         }
     }

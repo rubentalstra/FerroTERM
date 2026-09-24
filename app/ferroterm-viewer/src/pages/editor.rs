@@ -28,6 +28,7 @@ use crate::components::coded::Codes;
 use crate::components::coded::Control;
 use crate::components::coded::coded_control;
 use crate::components::coded::codes_of;
+use crate::components::coded::fixed;
 use crate::components::failure::Failure;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
@@ -589,7 +590,7 @@ fn metadata_section(draft: RwSignal<Draft>, readonly: Signal<bool>, options: Opt
                     Control {
                         id: String::from("editor-status"),
                         name: "status",
-                        label: "Publication status",
+                        label: fixed("Publication status"),
                         sr_only: false,
                     },
                     options.statuses,
@@ -601,7 +602,7 @@ fn metadata_section(draft: RwSignal<Draft>, readonly: Signal<bool>, options: Opt
                     Control {
                         id: String::from("editor-content"),
                         name: "content",
-                        label: "Content mode",
+                        label: fixed("Content mode"),
                         sr_only: false,
                     },
                     options.contents,
@@ -751,7 +752,7 @@ fn property_row(draft: RwSignal<Draft>, key: Key, readonly: Signal<bool>, kinds:
                     Control {
                         id: format!("property-{id}-type"),
                         name: "property-type",
-                        label: "Property type",
+                        label: fixed("Property type"),
                         sr_only: true,
                     },
                     kinds,

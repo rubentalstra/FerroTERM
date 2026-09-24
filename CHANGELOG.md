@@ -305,6 +305,16 @@ fresh link reference.
 
 ### Fixed
 
+- An editor's coded control shows the code the resource carries rather than the
+  first one the server offered (#636). The codes arrive from a
+  `ValueSet/$expand` after the form is built, and a `<select>` whose `value`
+  names an option it does not have yet falls back to its first one
+  (<https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element>),
+  so opening a saved resource showed the wrong code and the next save wrote it.
+  Each option now states its own selectedness, which the browser reads as the
+  option is inserted. The code system editor's status, content mode and
+  property type controls are fixed by the same change.
+
 - The RF2 relationship reader admits only rows whose `characteristicTypeId` is
   `900000000000011006 |Inferred relationship|` (#545). A qualifying or an
   additional row "is not part of the definition of the concept" (release file
