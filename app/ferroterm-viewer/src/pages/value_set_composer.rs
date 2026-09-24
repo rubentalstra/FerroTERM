@@ -55,6 +55,7 @@ use crate::fhir::concept::ConceptQuery;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ExpandedValueSet;
 use crate::fhir::named::Choice;
+use crate::fhir::outcome::Issue;
 use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::terminology::FilterRow;
 use crate::fhir::terminology::ImplicitArgument;
@@ -2038,13 +2039,13 @@ fn pager(
 
 /// A refused preview: the server's outcome, and the character it points at.
 fn expansion_refusal(error: &FhirError, editing: Editing) -> AnyView {
-    let outcome = error
+    let marked: Vec<AnyView> = error
         .outcome()
-        .map(OperationOutcome::lines)
-        .unwrap_or_default();
-    let marked: Vec<AnyView> = outcome
+        .map(|outcome| outcome.issue.as_slice())
+        .unwrap_or_default()
         .iter()
-        .filter_map(|line| marked_expression(&line.text, editing))
+        .filter_map(Issue::position)
+        .filter_map(|(expression, column)| marked_expression(expression, column, editing))
         .collect();
     let shown = error.clone();
     view! {
@@ -2058,18 +2059,18 @@ fn expansion_refusal(error: &FhirError, editing: Editing) -> AnyView {
 
 /// The expression the refusal is about, with the character it points at marked.
 ///
-/// The position and the value are the server's own, so nothing here parses
-/// anything. The draft is read untracked: this describes a refusal that has
-/// already arrived, so it must not resubscribe the preview to the form.
-fn marked_expression(diagnostic: &str, editing: Editing) -> Option<AnyView> {
-    let (form, expression, position) = editing.held().marked_value(diagnostic)?;
-    let (before, at, after) = mark(&expression, position);
+/// The filter and the column are the server's own, read from
+/// `issue.expression` and the `operationoutcome-issue-col` extension, so
+/// nothing here reads the diagnostic's words. The draft is read untracked:
+/// this describes a refusal that has already arrived, so it must not
+/// resubscribe the preview to the form.
+fn marked_expression(expression: &str, column: u32, editing: Editing) -> Option<AnyView> {
+    let (form, value, column) = editing.held().marked_value(expression, column)?;
+    let (before, at, after) = mark(&value, column);
     Some(
         view! {
             <div class=format!("rounded-md panel-p {}", styles::NOTICE)>
-                <p class=styles::LABEL>
-                    {format!("{form}, at character {}", position.saturating_add(1))}
-                </p>
+                <p class=styles::LABEL>{format!("{form}, at character {column}")}</p>
                 <p class=format!(
                     "mt-tight {}",
                     styles::CODE,

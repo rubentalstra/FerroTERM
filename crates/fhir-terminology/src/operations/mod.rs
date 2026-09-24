@@ -144,8 +144,14 @@ pub enum OperationError {
     #[error("concept map `{0}` is not known")]
     UnknownConceptMap(String),
     /// The value set cannot be expanded as defined.
-    #[error("{0}")]
-    ValueSetInvalid(String),
+    #[error("{message}")]
+    ValueSetInvalid {
+        /// What is wrong.
+        message: String,
+        /// The request value the refusal is about, when the operation knows
+        /// which input carries it.
+        refused: Option<Box<Refused>>,
+    },
     /// The value set reaches itself through `compose.include.valueSet` or
     /// `compose.exclude.valueSet`.
     #[error("{0}")]
@@ -161,7 +167,97 @@ pub enum OperationError {
     Provider(#[source] ProviderError),
 }
 
+/// The request value a value set refusal is about, and where a parser stopped
+/// reading it.
+///
+/// The operation names the input; the wire layer knows where the request
+/// wrote it and turns this into `issue.expression` and a column. No
+/// specification governs this shape: our own design.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Refused {
+    /// The input that carries the value.
+    pub input: RefusedInput,
+    /// The value as the operation read it.
+    pub text: String,
+    /// The byte offset into `text` where a parser stopped, when one refused it.
+    pub position: Option<usize>,
+}
+
+/// Which input of a value set operation carries a refused value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RefusedInput {
+    /// A filter value of the inline `valueSet`'s compose.
+    Filter(crate::compose::FilterAt),
+    /// The value set `url`.
+    Url,
+}
+
 impl OperationError {
+    /// A value set that cannot be expanded as defined, for `message`.
+    #[must_use]
+    pub fn value_set_invalid(message: impl Into<String>) -> Self {
+        Self::ValueSetInvalid {
+            message: message.into(),
+            refused: None,
+        }
+    }
+
+    /// The request value this failure is about, when it knows one.
+    #[must_use]
+    pub fn refused(&self) -> Option<&Refused> {
+        match self {
+            Self::ValueSetInvalid { refused, .. } => refused.as_deref(),
+            _ => None,
+        }
+    }
+
+    /// This failure pointing at `refused`, when it is a value set refusal.
+    #[must_use]
+    fn pointing(self, refused: Refused) -> Self {
+        match self {
+            Self::ValueSetInvalid { message, .. } => Self::ValueSetInvalid {
+                message,
+                refused: Some(Box::new(refused)),
+            },
+            other => other,
+        }
+    }
+
+    /// The failure of an inline value set's compose, pointing at the filter
+    /// value it refused.
+    ///
+    /// The compose an operation evaluates has been pinned and may have lost
+    /// includes to `exclude-system`, so the filter is found again in the
+    /// compose the request carried, `inline`. A refusal from a value set the
+    /// compose references names a filter `inline` does not hold, and points
+    /// nowhere.
+    pub(crate) fn of_compose(
+        error: crate::compose::ComposeError,
+        inline: Option<&crate::compose::Compose>,
+    ) -> Self {
+        let refused = match (&error, inline) {
+            (
+                crate::compose::ComposeError::Provider {
+                    source: ProviderError::InvalidFilterValue(invalid),
+                    ..
+                },
+                Some(compose),
+            ) => compose
+                .filter_at(&invalid.property, &invalid.value)
+                .map(|at| Refused {
+                    input: RefusedInput::Filter(at),
+                    text: invalid.value.clone(),
+                    position: invalid.position,
+                }),
+            _ => None,
+        };
+        let converted = Self::from(error);
+        match refused {
+            Some(refused) => converted.pointing(refused),
+            None => converted,
+        }
+    }
+
     /// The `OperationOutcome.issue.code`.
     #[must_use]
     pub const fn issue_code(&self) -> &'static str {
@@ -171,7 +267,7 @@ impl OperationError {
             // context", where `not-found` is for a reference
             // (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
             Self::InvalidCode { .. } | Self::UnknownCode { .. } => "code-invalid",
-            Self::Invalid(_) | Self::ValueSetInvalid(_) => "invalid",
+            Self::Invalid(_) | Self::ValueSetInvalid { .. } => "invalid",
             // NOTE: a cycle is a processing failure, "no point resubmitting the
             // same content unchanged" (<https://hl7.org/fhir/R4B/valueset-issue-type.html>).
             Self::ValueSetCyclic(_) | Self::InvalidLanguage(_) => "processing",
@@ -206,7 +302,7 @@ impl OperationError {
             | Self::UnknownSupplement(_)
             | Self::UnknownConceptMap(_) => "not-found",
             Self::UnknownCode { .. } | Self::InvalidCode { .. } => "invalid-code",
-            Self::ValueSetInvalid(_) | Self::ValueSetCyclic(_) => "vs-invalid",
+            Self::ValueSetInvalid { .. } | Self::ValueSetCyclic(_) => "vs-invalid",
             Self::VersionCheck(_) => "version-error",
             Self::TooCostly(_) => "too-costly",
             Self::CannotDetermine(_) => "cannot-determine",
@@ -233,7 +329,7 @@ impl OperationError {
             Self::InvalidLanguage(_) => "INVALID_DISPLAY_NAME",
             Self::Required(_)
             | Self::Invalid(_)
-            | Self::ValueSetInvalid(_)
+            | Self::ValueSetInvalid { .. }
             | Self::CannotDetermine(_)
             | Self::UnknownConceptMap(_)
             | Self::UnsupportedGrammar { .. }
@@ -266,7 +362,7 @@ impl OperationError {
             // NOTE: 422 is the status for a resource that breaks the server's
             // rules (<https://hl7.org/fhir/R4B/http.html#status-codes>); a compose
             // the layer cannot evaluate is that resource.
-            Self::ValueSetInvalid(_)
+            Self::ValueSetInvalid { .. }
             | Self::ValueSetCyclic(_)
             | Self::TooCostly(_)
             | Self::CannotDetermine(_) => StatusCode::UNPROCESSABLE_ENTITY,
@@ -310,7 +406,7 @@ impl From<ProviderError> for OperationError {
             | ProviderError::Regex(_)
             | ProviderError::UnknownCode(_)
             | ProviderError::MalformedImplicitValueSet { .. } => {
-                Self::ValueSetInvalid(error.to_string())
+                Self::value_set_invalid(error.to_string())
             }
             // NOTE: an implicit concept map URI the system does not answer is the
             // unknown-map outcome `$translate` already has for a `url` nothing serves
@@ -451,7 +547,7 @@ impl From<crate::compose::ComposeError> for OperationError {
             ComposeError::UnknownCode { .. }
             | ComposeError::NoSystemOrValueSet
             | ComposeError::CriteriaWithoutSystem
-            | ComposeError::ConceptsAndFilters => Self::ValueSetInvalid(error.to_string()),
+            | ComposeError::ConceptsAndFilters => Self::value_set_invalid(error.to_string()),
             ComposeError::Cycle(_) => Self::ValueSetCyclic(error.to_string()),
             ComposeError::NoResolver(_) => Self::NotSupported(error.to_string()),
             ComposeError::Negotiation(error) => error.into(),
@@ -525,7 +621,7 @@ impl<'a> Sources<'a> {
             ))),
             (Some(model), None) => {
                 Ok(Arc::new(model.map_err(|e| {
-                    OperationError::ValueSetInvalid(e.to_string())
+                    OperationError::value_set_invalid(e.to_string())
                 })?))
             }
             (None, Some(url)) => {
@@ -559,7 +655,14 @@ impl<'a> Sources<'a> {
                             contained: std::collections::BTreeMap::new(),
                         }))
                     }
-                    Some(Err(source)) => Err(source.into()),
+                    Some(Err(source)) => {
+                        let refused = Refused {
+                            input: RefusedInput::Url,
+                            text: url.to_owned(),
+                            position: source.position(),
+                        };
+                        Err(OperationError::from(source).pointing(refused))
+                    }
                     None => Err(OperationError::UnknownValueSet(match version {
                         Some(version) => format!("{url}|{version}"),
                         None => url.to_owned(),

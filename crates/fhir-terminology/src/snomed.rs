@@ -47,8 +47,8 @@ use crate::normal_form;
 use crate::provider::{
     Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
     Designation, DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity,
-    ImplicitArgument, ImplicitForm, Located, Property, PropertyDefinition, PropertyKind,
-    PropertyValue, ProviderError, Status,
+    ImplicitArgument, ImplicitForm, InvalidValue, Located, MalformedValueSet, Property,
+    PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
 };
 
 /// The SNOMED CT system URI.
@@ -756,10 +756,10 @@ impl SnomedProvider {
             Some(located) => Ok(located.code),
             None => Err(match ConceptId::parse(text) {
                 Ok(_) => ProviderError::UnknownCode(text.to_owned()),
-                Err(_) => ProviderError::MalformedImplicitValueSet {
-                    url: url.to_owned(),
-                    reason: format!("`{text}` is not an SCTID"),
-                },
+                Err(_) => ProviderError::malformed_implicit_value_set(
+                    url,
+                    format!("`{text}` is not an SCTID"),
+                ),
             }),
         }
     }
@@ -804,10 +804,7 @@ impl SnomedProvider {
 
     /// The filter behind an `isa/[sctid]` or `refset/[sctid]` form of `url`.
     fn implicit_filter(&self, url: &str, form: &str) -> Result<Filter, ProviderError> {
-        let malformed = |reason: String| ProviderError::MalformedImplicitValueSet {
-            url: url.to_owned(),
-            reason,
-        };
+        let malformed = |reason: String| ProviderError::malformed_implicit_value_set(url, reason);
         let (kind, argument) = form.split_once('/').unwrap_or((form, ""));
         match kind {
             "isa" => Ok(Filter {
@@ -826,13 +823,11 @@ impl SnomedProvider {
                     // "all concept ids in the specified reference set" selects none
                     // (<https://hl7.org/fhir/R4B/snomedct.html>).
                     if self.keys.refsets.iter().any(|(_, id)| *id == refset) {
-                        return Err(ProviderError::InvalidFilterValue {
-                            property: String::from("concept"),
-                            value: refset,
-                            reason: String::from(
-                                "a language reference set references descriptions, not concepts",
-                            ),
-                        });
+                        return Err(ProviderError::invalid_filter_value(
+                            "concept",
+                            refset,
+                            "a language reference set references descriptions, not concepts",
+                        ));
                     }
                     return Err(ProviderError::UnknownCode(refset));
                 }
@@ -846,8 +841,14 @@ impl SnomedProvider {
                 let text = percent_decode(argument).ok_or_else(|| {
                     malformed(String::from("the expression constraint is not URI-encoded"))
                 })?;
-                self.expression(&text)
-                    .map_err(|error| malformed(error.to_string()))?;
+                self.expression(&text).map_err(|error| {
+                    ProviderError::MalformedImplicitValueSet(Box::new(MalformedValueSet {
+                        url: url.to_owned(),
+                        reason: error.to_string(),
+                        position: url_offset(url, argument, error.offset()),
+                        source: Some(error),
+                    }))
+                })?;
                 Ok(Filter {
                     property: String::from("constraint"),
                     op: FilterOperator::Equal,
@@ -880,14 +881,15 @@ impl SnomedProvider {
     /// invalid filter value with the parser's position, an identifier the
     /// edition lacks an invalid code.
     fn constraint(&self, text: &str) -> Result<ConceptSet, ProviderError> {
-        let invalid = |reason: String| ProviderError::InvalidFilterValue {
-            property: String::from("constraint"),
-            value: text.to_owned(),
-            reason,
-        };
-        let parsed = self
-            .expression(text)
-            .map_err(|error| invalid(error.to_string()))?;
+        let parsed = self.expression(text).map_err(|error| {
+            ProviderError::InvalidFilterValue(Box::new(InvalidValue {
+                property: String::from("constraint"),
+                value: text.to_owned(),
+                reason: error.to_string(),
+                position: Some(error.offset()),
+                source: Some(error),
+            }))
+        })?;
         sct_ecl::eval::evaluate(self, &parsed).map_err(|error| match error {
             EvalError::UnknownConcept(id) => ProviderError::InvalidCode {
                 code: id.to_string(),
@@ -902,7 +904,7 @@ impl SnomedProvider {
                 operator: format!("= ({what})"),
             },
             EvalError::Storage(message) => ProviderError::Storage(message.into()),
-            other => invalid(other.to_string()),
+            other => ProviderError::invalid_filter_value("constraint", text, other.to_string()),
         })
     }
 
@@ -1393,11 +1395,11 @@ impl CodeSystemProvider for SnomedProvider {
                 EXPRESSIONS => {
                     return match filter.value.trim() {
                         "false" | "true" => self.all(),
-                        other => Err(ProviderError::InvalidFilterValue {
-                            property: filter.property.clone(),
-                            value: other.to_owned(),
-                            reason: String::from("expected `true` or `false`"),
-                        }),
+                        other => Err(ProviderError::invalid_filter_value(
+                            &filter.property,
+                            other,
+                            "expected `true` or `false`",
+                        )),
                     };
                 }
                 _ => {}
@@ -1415,11 +1417,11 @@ impl CodeSystemProvider for SnomedProvider {
         {
             // The error names the value and the reason; the id error adds nothing.
             let Ok(refset) = ConceptId::parse(value) else {
-                return Err(ProviderError::InvalidFilterValue {
-                    property: filter.property.clone(),
-                    value: value.to_owned(),
-                    reason: String::from("not an SCTID"),
-                });
+                return Err(ProviderError::invalid_filter_value(
+                    &filter.property,
+                    value,
+                    "not an SCTID",
+                ));
             };
             let members = self
                 .memberships
@@ -1534,10 +1536,7 @@ impl CodeSystemProvider for SnomedProvider {
 
     fn implicit_value_set(&self, url: &str) -> Option<Result<Compose, ProviderError>> {
         let (base, form) = implicit_parts(url, FHIR_VS)?;
-        let malformed = |reason: String| ProviderError::MalformedImplicitValueSet {
-            url: url.to_owned(),
-            reason,
-        };
+        let malformed = |reason: String| ProviderError::malformed_implicit_value_set(url, reason);
         let version = match self.implicit_version(base) {
             Ok(version) => version,
             Err(error) => return Some(Err(error)),
@@ -1695,6 +1694,13 @@ fn percent_decode(text: &str) -> Option<String> {
         }
     }
     String::from_utf8(out).ok()
+}
+
+/// The byte offset into `url` of the byte at `offset` in the decoding of
+/// `argument`, the encoded expression constraint that ends `url`.
+fn url_offset(url: &str, argument: &str, offset: usize) -> Option<usize> {
+    let start = url.len().checked_sub(argument.len())?;
+    start.checked_add(crate::position::encoded_offset(argument, offset)?)
 }
 
 /// The base (the system, edition, or version URI) and the form of an implicit

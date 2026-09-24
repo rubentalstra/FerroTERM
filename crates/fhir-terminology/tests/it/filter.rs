@@ -52,7 +52,7 @@ fn code_filters_select_by_code() {
     );
     assert!(matches!(
         run(&p, "concept", FilterOperator::Exists, "maybe"),
-        Err(ProviderError::InvalidFilterValue { .. })
+        Err(ProviderError::InvalidFilterValue(_))
     ));
     assert!(matches!(
         run(&p, "concept", FilterOperator::Regex, "("),

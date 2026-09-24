@@ -443,3 +443,211 @@ async fn a_searchset_value_set_carries_the_id_it_reads_by() {
     assert_eq!(status, StatusCode::OK, "{read}");
     assert_eq!(read["id"], id, "{read}");
 }
+
+/// The versions every refusal below is pinned on.
+const VERSIONS: [&str; 4] = ["r4", "r4b", "r5", "r6"];
+
+/// The line and the column a refusal states for its position, from the
+/// `operationoutcome-issue-line` and `-issue-col` extensions
+/// (<https://hl7.org/fhir/extensions/StructureDefinition-operationoutcome-issue-line.html>,
+/// <https://hl7.org/fhir/extensions/StructureDefinition-operationoutcome-issue-col.html>).
+fn line_and_column(issue: &serde_json::Value) -> (Option<i64>, Option<String>) {
+    let extension = |url: &str| {
+        issue
+            .get("extension")
+            .and_then(serde_json::Value::as_array)
+            .into_iter()
+            .flatten()
+            .find(|x| x.get("url").and_then(serde_json::Value::as_str) == Some(url))
+            .cloned()
+    };
+    (
+        extension("http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-line")
+            .and_then(|x| x.get("valueInteger")?.as_i64()),
+        extension("http://hl7.org/fhir/StructureDefinition/operationoutcome-issue-col")
+            .and_then(|x| x.get("valueString")?.as_str().map(str::to_owned)),
+    )
+}
+
+/// A malformed expression constraint in a filter of an inline value set names
+/// the filter value by `issue.expression` and the character the parser stopped
+/// at by the issue-line and issue-col extensions, on every served version.
+///
+/// `issue.expression` is the restricted `FHIRPath` into the `Parameters` the
+/// client sent (<https://hl7.org/fhir/R4B/operationoutcome.html#expression>,
+/// <https://hl7.org/fhir/R4B/fhirpath.html#simple>); the column is 1-based and
+/// counts characters, so the multi-byte term before the fault moves it by
+/// characters, not bytes. `issue.location` is never written.
+#[tokio::test]
+async fn a_malformed_filter_expression_states_the_filter_and_the_column() {
+    use ferroterm_testkit::snomed::{ANIMAL, CAT, item, sctid};
+    let server = Server::start();
+    let animals = sctid(item(ANIMAL));
+    let before = format!("<< {animals} |é—| OR ");
+    let value = format!("{before}OR");
+    let expected = before.chars().count() + 1;
+    assert_ne!(
+        expected,
+        before.len() + 1,
+        "the value carries multi-byte characters before the fault"
+    );
+    for version in VERSIONS {
+        let (status, body) = server
+            .post(
+                &format!("/{version}/ValueSet/$expand"),
+                &json!({"resourceType": "Parameters", "parameter": [
+                    {"name": "count", "valueInteger": 10},
+                    {"name": "valueSet", "resource": {"resourceType": "ValueSet", "status": "active",
+                        "compose": {"include": [
+                            {"system": "http://snomed.info/sct", "concept": [{"code": sctid(item(CAT))}]},
+                            {"system": "http://snomed.info/sct", "filter": [
+                                {"property": "concept", "op": "is-a", "value": animals},
+                                {"property": "constraint", "op": "=", "value": value}
+                            ]}
+                        ]}}}
+                ]}),
+            )
+            .await;
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{version}: {body}"
+        );
+        let issue = &body["issue"][0];
+        assert_eq!(issue["code"], "invalid", "{version}: {body}");
+        assert_eq!(
+            issue["expression"],
+            json!(["Parameters.parameter[1].resource.compose.include[1].filter[1].value"]),
+            "{version}: the second filter of the second include of the second parameter"
+        );
+        assert_eq!(
+            line_and_column(issue),
+            (Some(1), Some(expected.to_string())),
+            "{version}: {body}"
+        );
+        assert!(issue.get("location").is_none(), "{version}: {body}");
+    }
+}
+
+/// A malformed expression constraint in an `ecl/` implicit value set sent as
+/// the `url` query parameter names `http.url`, and its column counts into the
+/// query value as the client sent it, percent-encoding and all
+/// (<https://hl7.org/fhir/R4B/operationoutcome.html#expression>,
+/// <https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets").
+#[tokio::test]
+async fn a_malformed_implicit_expression_in_the_query_states_the_column_as_sent() {
+    use ferroterm_testkit::snomed::{ANIMAL, item, sctid};
+    let server = Server::start();
+    let animals = sctid(item(ANIMAL));
+    // The expression is `<< {animals} |é| OR OR`, URI-encoded inside the value
+    // set URL, and that URL encoded again as the query value.
+    let sent = format!(
+        "http://snomed.info/sct?fhir_vs=ecl/%253C%253C%2520{animals}%2520%257C%25C3%25A9%257C%2520OR%2520OR"
+    );
+    let expected = sent.rfind("OR").expect("the fault") + 1;
+    for version in VERSIONS {
+        let (status, body) = server
+            .get(&format!("/{version}/ValueSet/$expand?count=10&url={sent}"))
+            .await;
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{version}: {body}"
+        );
+        let issue = &body["issue"][0];
+        assert_eq!(
+            issue["expression"],
+            json!(["http.url"]),
+            "{version}: {body}"
+        );
+        assert_eq!(
+            line_and_column(issue),
+            (Some(1), Some(expected.to_string())),
+            "{version}: the second `OR` of the value as sent: {body}"
+        );
+        assert!(issue.get("location").is_none(), "{version}: {body}");
+    }
+}
+
+/// The same `url` in a `Parameters` body names the parameter by its index in
+/// the body, and the column counts into its `valueUri`.
+#[tokio::test]
+async fn a_malformed_implicit_expression_in_a_body_names_the_parameter() {
+    let server = Server::start();
+    let url = "http://snomed.info/sct?fhir_vs=ecl/%3C%3C%20OR";
+    let expected = url.find("OR").expect("the fault") + 1;
+    for version in VERSIONS {
+        let (status, body) = server
+            .post(
+                &format!("/{version}/ValueSet/$expand"),
+                &json!({"resourceType": "Parameters", "parameter": [
+                    {"name": "count", "valueInteger": 10},
+                    {"name": "url", "valueUri": url}
+                ]}),
+            )
+            .await;
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{version}: {body}"
+        );
+        let issue = &body["issue"][0];
+        assert_eq!(
+            issue["expression"],
+            json!(["Parameters.parameter[1].valueUri"]),
+            "{version}: {body}"
+        );
+        assert_eq!(
+            line_and_column(issue),
+            (Some(1), Some(expected.to_string())),
+            "{version}: {body}"
+        );
+    }
+}
+
+/// `ValueSet/$validate-code` against an inline value set points at a
+/// malformed filter value the same way `$expand` does, here in an exclude
+/// (<https://hl7.org/fhir/R4B/valueset-operation-validate-code.html>,
+/// <https://hl7.org/fhir/R4B/operationoutcome.html#expression>).
+#[tokio::test]
+async fn validate_code_against_an_inline_value_set_states_the_filter_and_the_column() {
+    use ferroterm_testkit::snomed::{ANIMAL, CAT, item, sctid};
+    let server = Server::start();
+    let animals = sctid(item(ANIMAL));
+    for version in VERSIONS {
+        let (status, body) = server
+            .post(
+                &format!("/{version}/ValueSet/$validate-code"),
+                &json!({"resourceType": "Parameters", "parameter": [
+                    {"name": "valueSet", "resource": {"resourceType": "ValueSet", "status": "active",
+                        "compose": {
+                            "include": [{"system": "http://snomed.info/sct", "filter": [
+                                {"property": "concept", "op": "is-a", "value": animals}
+                            ]}],
+                            "exclude": [{"system": "http://snomed.info/sct", "filter": [
+                                {"property": "constraint", "op": "=", "value": "<< OR"}
+                            ]}]
+                        }}},
+                    {"name": "system", "valueUri": "http://snomed.info/sct"},
+                    {"name": "code", "valueCode": sctid(item(CAT))}
+                ]}),
+            )
+            .await;
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{version}: {body}"
+        );
+        let issue = &body["issue"][0];
+        assert_eq!(
+            issue["expression"],
+            json!(["Parameters.parameter[0].resource.compose.exclude[0].filter[0].value"]),
+            "{version}: {body}"
+        );
+        assert_eq!(
+            line_and_column(issue),
+            (Some(1), Some(String::from("4"))),
+            "{version}: `OR` is the fourth character of `<< OR`: {body}"
+        );
+    }
+}

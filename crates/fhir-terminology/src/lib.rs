@@ -24,6 +24,7 @@ pub mod language;
 pub mod loinc;
 pub mod normal_form;
 pub mod operations;
+pub mod position;
 pub mod provider;
 pub mod registries;
 pub mod registry;

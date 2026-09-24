@@ -225,11 +225,11 @@ impl UcumProvider {
                 for wanted in filter.value.split(',') {
                     let wanted = wanted.trim();
                     let Some(other) = self.canonical_of(wanted) else {
-                        return Err(ProviderError::InvalidFilterValue {
-                            property: filter.property.clone(),
-                            value: wanted.to_owned(),
-                            reason: String::from("not a UCUM expression"),
-                        });
+                        return Err(ProviderError::invalid_filter_value(
+                            &filter.property,
+                            wanted,
+                            "not a UCUM expression",
+                        ));
                     };
                     if canonical.commensurable(&other) {
                         return Ok(true);
@@ -353,10 +353,10 @@ impl CodeSystemProvider for UcumProvider {
             other => {
                 let expression = other.strip_prefix('/')?;
                 if self.canonical_of(expression).is_none() {
-                    return Some(Err(ProviderError::MalformedImplicitValueSet {
-                        url: url.to_owned(),
-                        reason: format!("`{expression}` is not a UCUM expression"),
-                    }));
+                    return Some(Err(ProviderError::malformed_implicit_value_set(
+                        url,
+                        format!("`{expression}` is not a UCUM expression"),
+                    )));
                 }
                 vec![Filter {
                     property: String::from("canonical"),

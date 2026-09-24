@@ -332,10 +332,10 @@ impl CodeSystemProvider for Fixture {
                 }],
                 ..Compose::default()
             }),
-            None => Err(ProviderError::MalformedImplicitValueSet {
-                url: url.to_owned(),
-                reason: String::from("expected `isa/{code}`"),
-            }),
+            None => Err(ProviderError::malformed_implicit_value_set(
+                url,
+                "expected `isa/{code}`",
+            )),
         })
     }
 

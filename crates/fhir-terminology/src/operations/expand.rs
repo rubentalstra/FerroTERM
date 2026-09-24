@@ -226,7 +226,10 @@ pub fn expand(
         .with_contained(&model.contained)
         .with_language(options.language.as_deref());
     resolver.note_open_systems(&model.compose);
-    let expansion = resolver.expand_compose(&model.canonical(), &compose, &options)?;
+    let inline = input.inline_value_set.is_some().then_some(&model.compose);
+    let expansion = resolver
+        .expand_compose(&model.canonical(), &compose, &options)
+        .map_err(|error| OperationError::of_compose(error, inline))?;
     // The check runs on the version the include resolved to, never on the one
     // the value set wrote. A value set may name a pattern (`1.x.x`), and a
     // version that resolves to nothing is unknown rather than checked, so the

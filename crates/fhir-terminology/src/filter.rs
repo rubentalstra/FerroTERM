@@ -189,11 +189,11 @@ pub(crate) fn boolean(filter: &Filter) -> Result<bool, ProviderError> {
     match filter.value.trim() {
         "true" => Ok(true),
         "false" => Ok(false),
-        other => Err(ProviderError::InvalidFilterValue {
-            property: filter.property.clone(),
-            value: other.to_owned(),
-            reason: String::from("expected `true` or `false`"),
-        }),
+        other => Err(ProviderError::invalid_filter_value(
+            &filter.property,
+            other,
+            "expected `true` or `false`",
+        )),
     }
 }
 

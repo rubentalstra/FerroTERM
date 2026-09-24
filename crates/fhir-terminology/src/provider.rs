@@ -594,15 +594,8 @@ pub enum ProviderError {
         operator: String,
     },
     /// The filter value is not what the operator expects.
-    #[error("filter `{property}` value `{value}` is invalid: {reason}")]
-    InvalidFilterValue {
-        /// The filter property.
-        property: String,
-        /// The offending value.
-        value: String,
-        /// Why.
-        reason: String,
-    },
+    #[error(transparent)]
+    InvalidFilterValue(Box<InvalidValue>),
     /// A regular expression does not compile.
     #[error("invalid regular expression")]
     Regex(#[from] regex::Error),
@@ -631,13 +624,8 @@ pub enum ProviderError {
         content: &'static str,
     },
     /// An implicit value set URI of this system is malformed.
-    #[error("implicit value set `{url}` is malformed: {reason}")]
-    MalformedImplicitValueSet {
-        /// The URI.
-        url: String,
-        /// Why.
-        reason: String,
-    },
+    #[error(transparent)]
+    MalformedImplicitValueSet(Box<MalformedValueSet>),
     /// An implicit concept map URI of this system is malformed.
     #[error("implicit concept map `{url}` is malformed: {reason}")]
     MalformedImplicitConceptMap {
@@ -670,6 +658,85 @@ pub enum ProviderError {
         /// Which target the server has no code system URI for.
         reason: String,
     },
+}
+
+impl ProviderError {
+    /// The refusal of `value` for the filter on `property`, for `reason`.
+    #[must_use]
+    pub fn invalid_filter_value(
+        property: impl Into<String>,
+        value: impl Into<String>,
+        reason: impl Into<String>,
+    ) -> Self {
+        Self::InvalidFilterValue(Box::new(InvalidValue {
+            property: property.into(),
+            value: value.into(),
+            reason: reason.into(),
+            position: None,
+            source: None,
+        }))
+    }
+
+    /// The refusal of the implicit value set `url`, for `reason`.
+    #[must_use]
+    pub fn malformed_implicit_value_set(url: impl Into<String>, reason: impl Into<String>) -> Self {
+        Self::MalformedImplicitValueSet(Box::new(MalformedValueSet {
+            url: url.into(),
+            reason: reason.into(),
+            position: None,
+            source: None,
+        }))
+    }
+
+    /// The byte offset into the refused text where a parser stopped reading
+    /// it, when a parser refused it: into the filter value of
+    /// [`ProviderError::InvalidFilterValue`], into the URI of
+    /// [`ProviderError::MalformedImplicitValueSet`].
+    #[must_use]
+    pub fn position(&self) -> Option<usize> {
+        match self {
+            Self::InvalidFilterValue(invalid) => invalid.position,
+            Self::MalformedImplicitValueSet(malformed) => malformed.position,
+            _ => None,
+        }
+    }
+}
+
+/// A filter value the operator refuses, and where a parser stopped reading it.
+///
+/// It sits boxed inside [`ProviderError`], so the parse error costs the other
+/// variants no width (no specification governs this: our own design).
+#[derive(Debug, thiserror::Error)]
+#[error("filter `{property}` value `{value}` is invalid: {reason}")]
+pub struct InvalidValue {
+    /// The filter property.
+    pub property: String,
+    /// The offending value.
+    pub value: String,
+    /// Why.
+    pub reason: String,
+    /// The byte offset into `value` where a parser stopped, when one refused it.
+    pub position: Option<usize>,
+    /// The parser's error, when a parser refused the value.
+    #[source]
+    pub source: Option<sct_ecl::ParseError>,
+}
+
+/// An implicit value set URI a system refuses, and where a parser stopped
+/// reading it.
+#[derive(Debug, thiserror::Error)]
+#[error("implicit value set `{url}` is malformed: {reason}")]
+pub struct MalformedValueSet {
+    /// The URI.
+    pub url: String,
+    /// Why.
+    pub reason: String,
+    /// The byte offset into `url` where a parser stopped reading the part the
+    /// system parses, when one refused it.
+    pub position: Option<usize>,
+    /// The parser's error, when a parser refused the URI.
+    #[source]
+    pub source: Option<sct_ecl::ParseError>,
 }
 
 /// The hierarchy of a system whose `hierarchyMeaning` is `is-a`.

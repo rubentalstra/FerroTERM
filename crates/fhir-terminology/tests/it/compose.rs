@@ -424,7 +424,7 @@ fn implicit_value_sets_are_parsed_by_the_system_that_owns_the_uri() {
     );
     assert!(matches!(
         registry.implicit_value_set("http://example.org/fixture?vs=refset/1"),
-        Some(Err(ProviderError::MalformedImplicitValueSet { .. }))
+        Some(Err(ProviderError::MalformedImplicitValueSet(_)))
     ));
 }
 
