@@ -194,6 +194,52 @@ binary holds (UCUM, BCP 13, BCP 47, ISO 3166) and any `CodeSystem` resource a
 deployment loaded or persisted. Nothing about the operator's filesystem and
 nothing from the code system's content reaches the wire here.
 
+## Which implicit value sets a code system resolves
+
+`metadata?mode=terminology` also lists, per served version, the implicit value
+set forms that version resolves. No element of `TerminologyCapabilities` says
+which implicit value sets a server answers
+(<https://hl7.org/fhir/R5/terminologycapabilities.html>), so FerroTERM defines a
+second extension on `TerminologyCapabilities.codeSystem.version`, repeated once
+per form, on R4, R4B, R5, and R6.
+
+The canonical is
+`https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set`, with two
+sub-extensions:
+
+- `pattern` (`valueString`): the value set URL template, spelled as the code
+  system's page spells it, with each placeholder in square brackets.
+- `argument` (`valueCode`): what the placeholders take. `none` means the
+  pattern is the URL as it stands, `code` means the one placeholder takes a code
+  of the system, and `expression` means the placeholders take free text such as
+  an ECL expression or a UCUM unit.
+
+```json
+{
+  "url": "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set",
+  "extension": [
+    { "url": "pattern", "valueString": "http://snomed.info/sct?fhir_vs=isa/[sctid]" },
+    { "url": "argument", "valueCode": "code" }
+  ]
+}
+```
+
+The forms declared today:
+
+| System | Patterns |
+|---|---|
+| SNOMED CT | `?fhir_vs`, `?fhir_vs=isa/[sctid]`, `?fhir_vs=refset`, `?fhir_vs=refset/[sctid]`, `?fhir_vs=ecl/[ecl]` on `http://snomed.info/sct` |
+| LOINC | `http://loinc.org/vs`, `/vs/[id]` (an answer list), `/vs/[partcode]` |
+| RxNorm | `http://www.nlm.nih.gov/research/umls/rxnorm/vs` |
+| UCUM | `http://unitsofmeasure.org/vs`, `/vs/[expression]` |
+| ICD-11 | `[entity]/postcoordinationScale/[axis]`, on a linearization |
+
+A version that resolves no implicit value set carries no such extension: the
+ClaML classifications, BCP 13, BCP 47, ISO 3166, and every `CodeSystem`
+resource. A supplemented system declares the forms of the system it
+supplements. A declared form can still answer an error for one argument, for
+example `?fhir_vs=refset` on an edition that defines no reference sets.
+
 ## Languages
 
 `displayLanguage` and the `Accept-Language` header both select the display

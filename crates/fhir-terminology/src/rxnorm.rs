@@ -31,8 +31,8 @@ use crate::compose::{Compose, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
     Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
-    Designation, DesignationUse, FilterDefinition, Identity, Located, Property, PropertyDefinition,
-    PropertyKind, PropertyValue, ProviderError, Status,
+    Designation, DesignationUse, FilterDefinition, Identity, ImplicitArgument, ImplicitForm,
+    Located, Property, PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
 };
 
 /// The system URI.
@@ -638,6 +638,12 @@ fn declaration(
         languages,
         properties,
         filters,
-        capabilities: BTreeSet::from([Capability::Enumeration, Capability::ImplicitValueSets]),
+        capabilities: BTreeSet::from([Capability::Enumeration]),
+        // NOTE: the one `/vs` form of <https://hl7.org/fhir/R4B/rxnorm.html>,
+        // "Implicit Value Sets".
+        implicit_forms: vec![ImplicitForm::new(
+            "http://www.nlm.nih.gov/research/umls/rxnorm/vs",
+            ImplicitArgument::None,
+        )],
     }
 }

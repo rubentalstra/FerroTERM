@@ -582,5 +582,6 @@ fn declaration(keys: &BTreeMap<u32, String>, languages: Vec<String>, tree: bool)
         } else {
             BTreeSet::from([Capability::Enumeration])
         },
+        implicit_forms: Vec::new(),
     }
 }

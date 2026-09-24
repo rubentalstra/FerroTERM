@@ -763,3 +763,11 @@ fn a_fragment_expansion_states_its_reason_and_names_its_used_fragment() {
         ]
     );
 }
+
+#[test]
+fn a_code_system_resource_declares_no_implicit_value_set_form() {
+    let (_dir, providers) = load_all();
+    for provider in &providers {
+        crate::implicit_forms::declares_none(provider, &provider.identity().url);
+    }
+}

@@ -169,10 +169,94 @@ async fn every_version_declares_the_artifact_each_index_backed_system_came_from(
                         );
                     }
                     None => assert!(
-                        served.get("extension").is_none(),
+                        served["extension"]
+                            .as_array()
+                            .map(Vec::as_slice)
+                            .unwrap_or_default()
+                            .iter()
+                            .all(|extension| extension["url"] != ARTIFACT),
                         "{version} {uri} came from no artifact and declares none: {body}"
                     ),
                 }
+            }
+        }
+    }
+}
+
+/// The canonical of the implicit value set declaration.
+const IMPLICIT: &str = "https://ferroterm.eu/fhir/StructureDefinition/implicit-value-set";
+
+/// The implicit value set forms each served system declares, as `pattern` and
+/// `argument`, in the order the server writes them.
+const IMPLICIT_FORMS: [(&str, &[(&str, &str)]); 4] = [
+    (
+        "http://snomed.info/sct",
+        &[
+            ("http://snomed.info/sct?fhir_vs", "none"),
+            ("http://snomed.info/sct?fhir_vs=isa/[sctid]", "code"),
+            ("http://snomed.info/sct?fhir_vs=refset", "none"),
+            ("http://snomed.info/sct?fhir_vs=refset/[sctid]", "code"),
+            ("http://snomed.info/sct?fhir_vs=ecl/[ecl]", "expression"),
+        ],
+    ),
+    (
+        "http://loinc.org",
+        &[
+            ("http://loinc.org/vs", "none"),
+            ("http://loinc.org/vs/[id]", "code"),
+            ("http://loinc.org/vs/[partcode]", "code"),
+        ],
+    ),
+    (
+        "http://www.nlm.nih.gov/research/umls/rxnorm",
+        &[("http://www.nlm.nih.gov/research/umls/rxnorm/vs", "none")],
+    ),
+    (
+        "http://unitsofmeasure.org",
+        &[
+            ("http://unitsofmeasure.org/vs", "none"),
+            ("http://unitsofmeasure.org/vs/[expression]", "expression"),
+        ],
+    ),
+];
+
+// NOTE: no FHIR/SNOMED spec governs this: our own design, since no element of
+// `TerminologyCapabilities` states which implicit value sets a server resolves
+// (<https://hl7.org/fhir/R5/terminologycapabilities.html>).
+#[tokio::test]
+async fn every_version_declares_the_implicit_value_set_forms_each_system_resolves() {
+    let server = Server::start_with_every_loader();
+    for version in ["r4", "r4b", "r5", "r6"] {
+        let (status, body) = server
+            .get(&format!("/{version}/metadata?mode=terminology"))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        for entry in body["codeSystem"].as_array().expect("codeSystem is a list") {
+            let uri = entry["uri"].as_str().unwrap_or_default();
+            let expected: Vec<(&str, &str)> = IMPLICIT_FORMS
+                .iter()
+                .find(|(system, _)| *system == uri)
+                .map(|(_, forms)| forms.to_vec())
+                .unwrap_or_default();
+            for served in entry["version"].as_array().expect("version is a list") {
+                let declared: Vec<(&str, &str)> = served["extension"]
+                    .as_array()
+                    .map(Vec::as_slice)
+                    .unwrap_or_default()
+                    .iter()
+                    .filter(|extension| extension["url"] == IMPLICIT)
+                    .map(|extension| {
+                        let sub = |url: &str, key: &str| {
+                            extension["extension"]
+                                .as_array()
+                                .and_then(|subs| subs.iter().find(|s| s["url"] == url))
+                                .and_then(|s| s[key].as_str())
+                                .unwrap_or_default()
+                        };
+                        (sub("pattern", "valueString"), sub("argument", "valueCode"))
+                    })
+                    .collect();
+                assert_eq!(declared, expected, "{version} {uri}: {body}");
             }
         }
     }

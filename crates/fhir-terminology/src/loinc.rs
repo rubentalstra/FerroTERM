@@ -27,8 +27,9 @@ use crate::compose::{Compose, ConceptRef, Include, SystemRef};
 use crate::filter::{Filter, FilterOperator};
 use crate::provider::{
     Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
-    Designation, DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located,
-    Property, PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
+    Designation, DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity,
+    ImplicitArgument, ImplicitForm, Located, Property, PropertyDefinition, PropertyKind,
+    PropertyValue, ProviderError, Status,
 };
 
 /// The system URI.
@@ -707,6 +708,9 @@ impl CodeSystemProvider for LoincProvider {
             other => {
                 let code = other.strip_prefix('/')?;
                 let upper = code.to_ascii_uppercase();
+                // NOTE: <https://hl7.org/fhir/R4B/loinc.html> defines `/vs/[id]` and
+                // `/vs/[partcode]` without saying how to tell them apart; splitting on the
+                // `LL` and `LP` prefixes is a heuristic no page states.
                 if upper.starts_with("LL") {
                     let concepts = match self.answers_of(&upper) {
                         Ok(Some(codes)) => codes,
@@ -1010,10 +1014,13 @@ fn declaration(keys: &BTreeMap<u32, String>, languages: Vec<String>) -> Declarat
         languages,
         properties,
         filters,
-        capabilities: BTreeSet::from([
-            Capability::Subsumption,
-            Capability::Enumeration,
-            Capability::ImplicitValueSets,
-        ]),
+        capabilities: BTreeSet::from([Capability::Subsumption, Capability::Enumeration]),
+        // NOTE: the `/vs`, `/vs/[id]`, and `/vs/[partcode]` forms of
+        // <https://hl7.org/fhir/R4B/loinc.html>, "Implicit Value Sets".
+        implicit_forms: vec![
+            ImplicitForm::new("http://loinc.org/vs", ImplicitArgument::None),
+            ImplicitForm::new("http://loinc.org/vs/[id]", ImplicitArgument::Code),
+            ImplicitForm::new("http://loinc.org/vs/[partcode]", ImplicitArgument::Code),
+        ],
     }
 }

@@ -46,8 +46,9 @@ use crate::filter::{Filter, FilterOperator};
 use crate::normal_form;
 use crate::provider::{
     Capability, CodeSystemProvider, Compositional, Concept, ConceptSet, ContentMode, Declaration,
-    Designation, DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity, Located,
-    Property, PropertyDefinition, PropertyKind, PropertyValue, ProviderError, Status,
+    Designation, DesignationUse, FilterDefinition, Hierarchy, HierarchyMeaning, Identity,
+    ImplicitArgument, ImplicitForm, Located, Property, PropertyDefinition, PropertyKind,
+    PropertyValue, ProviderError, Status,
 };
 
 /// The SNOMED CT system URI.
@@ -457,9 +458,9 @@ impl SnomedProvider {
                 capabilities: BTreeSet::from([
                     Capability::Subsumption,
                     Capability::Enumeration,
-                    Capability::ImplicitValueSets,
                     Capability::ImplicitConceptMaps,
                 ]),
+                implicit_forms: implicit_forms(),
             },
             keys,
             edition: manifest.edition,
@@ -1706,6 +1707,30 @@ fn implicit_parts<'a>(url: &'a str, key: &str) -> Option<(&'a str, &'a str)> {
         rest => rest.strip_prefix('=')?,
     };
     (base == SYSTEM || base.starts_with("http://snomed.info/sct/")).then_some((base, form))
+}
+
+/// The implicit value set forms the provider resolves: the five `?fhir_vs`
+/// forms of <https://hl7.org/fhir/R4B/snomedct.html>, "Implicit Value Sets".
+fn implicit_forms() -> Vec<ImplicitForm> {
+    vec![
+        ImplicitForm::new("http://snomed.info/sct?fhir_vs", ImplicitArgument::None),
+        ImplicitForm::new(
+            "http://snomed.info/sct?fhir_vs=isa/[sctid]",
+            ImplicitArgument::Code,
+        ),
+        ImplicitForm::new(
+            "http://snomed.info/sct?fhir_vs=refset",
+            ImplicitArgument::None,
+        ),
+        ImplicitForm::new(
+            "http://snomed.info/sct?fhir_vs=refset/[sctid]",
+            ImplicitArgument::Code,
+        ),
+        ImplicitForm::new(
+            "http://snomed.info/sct?fhir_vs=ecl/[ecl]",
+            ImplicitArgument::Expression,
+        ),
+    ]
 }
 
 #[cfg(test)]

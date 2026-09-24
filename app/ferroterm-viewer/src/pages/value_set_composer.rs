@@ -51,7 +51,10 @@ use crate::fhir::expansion::ExpandedValueSet;
 use crate::fhir::named::Choice;
 use crate::fhir::outcome::OperationOutcome;
 use crate::fhir::terminology::FilterRow;
+use crate::fhir::terminology::ImplicitArgument;
+use crate::fhir::terminology::ImplicitForm;
 use crate::fhir::terminology::TerminologyCapabilities;
+use crate::fhir::terminology::VersionRow;
 use crate::fhir::version::FhirVersion;
 use crate::fhir::write::Refusal;
 use crate::offers::choices;
@@ -439,11 +442,22 @@ impl Offers {
     }
 
     /// The filters the served version declares for `system`.
+    fn filters(self, system: &str, pinned: &str) -> Vec<FilterRow> {
+        self.declared(system, pinned, |version| version.filters.clone())
+    }
+
+    /// The implicit value set forms the served version declares for `system`.
+    fn implicit_forms(self, system: &str, pinned: &str) -> Vec<ImplicitForm> {
+        self.declared(system, pinned, |version| version.implicit_forms.clone())
+    }
+
+    /// What `read` takes from the served version of `system` a clause pinned
+    /// to `pinned` is answered against, or the empty value when none is served.
     ///
-    /// A system serving several versions declares filters per version, and the
+    /// A system serving several versions declares per version, and the
     /// default version is the one an unversioned clause is answered against
     /// (<https://hl7.org/fhir/R5/terminology-module.html#version>).
-    fn filters(self, system: &str, pinned: &str) -> Vec<FilterRow> {
+    fn declared<T: Default>(self, system: &str, pinned: &str, read: fn(&VersionRow) -> T) -> T {
         self.capabilities.with(|declared| {
             declared
                 .card(system)
@@ -458,7 +472,7 @@ impl Offers {
                             }
                         })
                         .or_else(|| pinned.is_empty().then(|| card.versions.first()).flatten())
-                        .map(|version| version.filters.clone())
+                        .map(read)
                 })
                 .unwrap_or_default()
         })
@@ -928,6 +942,7 @@ fn value_set_rows(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
         vec![
             view! { <div class="grid gap-default">{listed}</div> }.into_any(),
             add_published_value_set(editing, offers, key),
+            add_implicit_value_set(editing, offers, key, clause),
         ],
     )
 }
@@ -996,6 +1011,161 @@ fn add_published_value_set(editing: Editing, offers: Offers, key: u32) -> AnyVie
         }),
     );
     view! { <div class="flex items-end gap-default">{control} {add}</div> }.into_any()
+}
+
+/// The control that adds an implicit value set of the clause's code system.
+///
+/// The forms are the templates the served version declares; the screen fills
+/// their bracketed placeholders and never knows which system a template
+/// belongs to. A version that declares none draws nothing here.
+fn add_implicit_value_set(
+    editing: Editing,
+    offers: Offers,
+    key: u32,
+    clause: Memo<Clause>,
+) -> AnyView {
+    let forms: Memo<Vec<ImplicitForm>> = Memo::new(move |_| {
+        clause.with(|clause| offers.implicit_forms(&clause.system, &clause.system_version))
+    });
+    let chosen = RwSignal::new(String::new());
+    let arguments: RwSignal<Vec<String>> = RwSignal::new(Vec::new());
+    let form = Memo::new(move |_| {
+        chosen.with(|pattern| {
+            forms.with(|forms| forms.iter().find(|form| &form.pattern == pattern).cloned())
+        })
+    });
+    let url = Memo::new(move |_| {
+        form.with(|form| {
+            form.as_ref()
+                .and_then(|form| arguments.with(|held| form.instantiate(held)))
+        })
+    });
+    let control = select_control(
+        Named {
+            id: format!("compose-implicit-{key}"),
+            name: "implicitValueSet",
+            label: "Add a value set the code system defines",
+            note: "An implicit value set, named by a URL template the code system publishes.",
+        },
+        chosen.into(),
+        "Choose a template",
+        options_of(move || {
+            forms
+                .get()
+                .into_iter()
+                .map(|form| Choice {
+                    canonical: form.pattern.clone(),
+                    label: form.pattern,
+                })
+                .collect()
+        }),
+        Box::new(move |event| {
+            arguments.set(Vec::new());
+            chosen.set(event_target_value(&event));
+        }),
+    );
+    let fields = move || {
+        form.get()
+            .map(|form| implicit_arguments(editing, key, clause, &form, arguments))
+    };
+    let add = move |_: MouseEvent| {
+        if let Some(url) = url.get_untracked() {
+            editing.change(move |draft| draft.add_value_set(key, &url));
+            chosen.set(String::new());
+            arguments.set(Vec::new());
+        }
+    };
+    // The control stays in the document and is hidden while the version
+    // declares no form, so the reader's choice survives a re-read of the
+    // capabilities.
+    view! {
+        <div class="grid gap-default" hidden=move || forms.with(Vec::is_empty)>
+            {control}
+            {fields}
+            <div>
+                <button
+                    type="button"
+                    class=styles::BUTTON
+                    disabled=move || url.with(Option::is_none)
+                    on:click=add
+                >
+                    "Add"
+                </button>
+            </div>
+        </div>
+    }
+    .into_any()
+}
+
+/// The controls that fill the placeholders of `form`.
+///
+/// A `code` placeholder takes a code picked from the clause's code system by
+/// the same search that picks the clause's own codes; an `expression`
+/// placeholder takes text, one field per placeholder.
+fn implicit_arguments(
+    editing: Editing,
+    key: u32,
+    clause: Memo<Clause>,
+    form: &ImplicitForm,
+    arguments: RwSignal<Vec<String>>,
+) -> AnyView {
+    let placeholders = form.placeholders();
+    match form.argument {
+        ImplicitArgument::None => ().into_any(),
+        ImplicitArgument::Code => {
+            let placeholder = placeholders.into_iter().next().unwrap_or_default();
+            let picked = argument_control(key, 0, &placeholder, arguments);
+            let search = code_search(
+                editing,
+                Search {
+                    picking: RwSignal::new(None),
+                    term: RwSignal::new(String::new()),
+                },
+                key,
+                clause,
+                PickInto::Argument(arguments),
+            );
+            view! { <div class="grid gap-default">{picked} {search}</div> }.into_any()
+        }
+        ImplicitArgument::Expression => {
+            let fields: Vec<AnyView> = placeholders
+                .into_iter()
+                .enumerate()
+                .map(|(index, placeholder)| argument_control(key, index, &placeholder, arguments))
+                .collect();
+            view! { <div class="grid gap-default">{fields}</div> }.into_any()
+        }
+    }
+}
+
+/// The text control holding the argument of one placeholder.
+fn argument_control(
+    key: u32,
+    index: usize,
+    placeholder: &str,
+    arguments: RwSignal<Vec<String>>,
+) -> AnyView {
+    text_control(
+        format!("compose-implicit-{key}-{index}"),
+        "implicitArgument",
+        Signal::stored(format!("[{placeholder}]")),
+        fixed("What replaces that placeholder in the template."),
+        Signal::derive(move || arguments.with(|held| held.get(index).cloned().unwrap_or_default())),
+        Box::new(move |event| {
+            let typed = event_target_value(&event);
+            arguments.update(|held| fill(held, index, typed));
+        }),
+    )
+}
+
+/// Sets the argument at `index`, growing the list to reach it.
+fn fill(held: &mut Vec<String>, index: usize, value: String) {
+    if held.len() <= index {
+        held.resize(index + 1, String::new());
+    }
+    if let Some(slot) = held.get_mut(index) {
+        *slot = value;
+    }
 }
 
 /// The code system one clause reads codes from, and the version it is pinned
@@ -1138,6 +1308,55 @@ fn concept_row(
 /// clause cannot name a code the system does not hold. The search is the same
 /// `$expand` over an inline value set the concept browser uses.
 fn concept_search(editing: Editing, offers: Offers, key: u32, clause: Memo<Clause>) -> AnyView {
+    code_search(
+        editing,
+        Search {
+            picking: offers.picking,
+            term: offers.term,
+        },
+        key,
+        clause,
+        PickInto::Concepts,
+    )
+}
+
+/// Which clause one code search is open for, and what it is looking for.
+#[derive(Clone, Copy)]
+struct Search {
+    /// The clause whose search is open, when one is.
+    picking: RwSignal<Option<u32>>,
+    /// What that search is looking for.
+    term: RwSignal<String>,
+}
+
+/// Where a code picked in a search goes.
+#[derive(Clone, Copy)]
+enum PickInto {
+    /// Into the clause's own codes, `compose.include.concept`.
+    Concepts,
+    /// Into the first placeholder of an implicit value set template.
+    Argument(RwSignal<Vec<String>>),
+}
+
+/// A code search over the clause's code system, handing the picked code to
+/// `into`.
+fn code_search(
+    editing: Editing,
+    offers: Search,
+    key: u32,
+    clause: Memo<Clause>,
+    into: PickInto,
+) -> AnyView {
+    let (search_id, label) = match into {
+        PickInto::Concepts => (
+            format!("compose-search-{key}"),
+            "Find a code in that code system",
+        ),
+        PickInto::Argument(_) => (
+            format!("compose-implicit-search-{key}"),
+            "Find the code for that template",
+        ),
+    };
     let client = expect_context::<FhirClient>();
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
     let system = Memo::new(move |_| clause.with(|held| held.system.clone()));
@@ -1185,7 +1404,7 @@ fn concept_search(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
                 .as_ref()
                 .and_then(Option::as_ref)
                 .map(|result| match result {
-                    Ok(value) => found_view(editing, key, value),
+                    Ok(value) => found_view(editing, key, value, into),
                     Err(error) => {
                         view! { <Failure error=Signal::stored(error.clone()) /> }.into_any()
                     }
@@ -1196,11 +1415,11 @@ fn concept_search(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
         <div class="grid gap-tight">
             <form class="flex items-end gap-default" on:submit=submit>
                 <div class="grid min-w-0 flex-1 gap-tight">
-                    <label for=format!("compose-search-{key}") class=styles::LABEL>
-                        "Find a code in that code system"
+                    <label for=search_id.clone() class=styles::LABEL>
+                        {label}
                     </label>
                     <input
-                        id=format!("compose-search-{key}")
+                        id=search_id
                         name="q"
                         type="search"
                         class=styles::INPUT
@@ -1225,8 +1444,8 @@ fn concept_search(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
     .into_any()
 }
 
-/// The concepts a search answered, each with the control that adds it.
-fn found_view(editing: Editing, key: u32, value: &ExpandedValueSet) -> AnyView {
+/// The concepts a search answered, each with the control that picks it.
+fn found_view(editing: Editing, key: u32, value: &ExpandedValueSet, into: PickInto) -> AnyView {
     let Some(expansion) = value.expansion() else {
         return crate::components::state::empty(
             "The server answered no expansion for that search.",
@@ -1245,14 +1464,23 @@ fn found_view(editing: Editing, key: u32, value: &ExpandedValueSet) -> AnyView {
             let display = concept.display.clone().unwrap_or_default();
             let shown_code = code.clone();
             let shown_display = display.clone();
-            let add = act(
-                "Add",
-                Box::new(move |_| {
-                    let code = code.clone();
-                    let display = display.clone();
-                    editing.change(move |draft| draft.add_concept(key, &code, &display));
-                }),
-            );
+            let add = match into {
+                PickInto::Concepts => act(
+                    "Add",
+                    Box::new(move |_| {
+                        let code = code.clone();
+                        let display = display.clone();
+                        editing.change(move |draft| draft.add_concept(key, &code, &display));
+                    }),
+                ),
+                PickInto::Argument(arguments) => act(
+                    "Use",
+                    Box::new(move |_| {
+                        let code = code.clone();
+                        arguments.update(|held| fill(held, 0, code));
+                    }),
+                ),
+            };
             view! {
                 <li class="flex items-center justify-between gap-default">
                     <span class=styles::CODE>
@@ -1896,6 +2124,15 @@ mod tests {
             ),
             "every value is percent-encoded into the query it belongs to"
         );
+    }
+
+    #[test]
+    fn a_placeholder_argument_is_filled_in_place_and_the_list_grows_to_reach_it() {
+        let mut held = Vec::new();
+        fill(&mut held, 1, String::from("size"));
+        assert_eq!(held, ["", "size"]);
+        fill(&mut held, 0, String::from("https://t.example/1"));
+        assert_eq!(held, ["https://t.example/1", "size"]);
     }
 
     #[test]

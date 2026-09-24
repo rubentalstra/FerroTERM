@@ -1027,3 +1027,11 @@ fn a_registry_with_no_language_of_its_own_answers_every_display_language() {
     assert!(language.result, "{language:?}");
     assert!(language.issues.is_empty(), "{language:?}");
 }
+
+#[test]
+fn the_language_registries_declare_no_implicit_value_set_form() {
+    let bcp47 = Bcp47Provider::new();
+    crate::implicit_forms::declares_none(&bcp47, &bcp47.identity().url);
+    let bcp13 = bcp13::Bcp13Provider::new();
+    crate::implicit_forms::declares_none(&bcp13, &bcp13.identity().url);
+}

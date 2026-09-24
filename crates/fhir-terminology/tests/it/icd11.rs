@@ -5,8 +5,7 @@ use ferroterm_testkit::icd11::{BLOCK, CHOLERA, RELEASE, SEPSIS, VIBRIO, write_ar
 use fhir_terminology::filter::{Filter, FilterOperator};
 use fhir_terminology::icd11::{Icd11Provider, OpenError};
 use fhir_terminology::provider::{
-    Capability, CodeSystemProvider, Compositional, Concept, HierarchyMeaning, PropertyValue,
-    ProviderError,
+    CodeSystemProvider, Compositional, Concept, HierarchyMeaning, PropertyValue, ProviderError,
 };
 
 const MMS: &str = "http://id.who.int/icd/release/11/mms";
@@ -155,10 +154,8 @@ fn codes_and_entity_uris_in_both_forms_name_the_same_concept() {
         "the Foundation has no residuals"
     );
     assert!(
-        !foundation
-            .declaration()
-            .capabilities
-            .contains(&Capability::ImplicitValueSets)
+        foundation.declaration().implicit_forms.is_empty(),
+        "the Foundation defines no postcoordination scale"
     );
 }
 
@@ -720,4 +717,20 @@ fn a_display_in_the_base_language_does_not_satisfy_a_request_for_another_one() {
         "NO_VALID_DISPLAY_FOUND_NONE_FOR_LANG_OK"
     );
     assert!(none.message.is_some(), "{none:?}");
+}
+
+#[test]
+fn every_declared_implicit_value_set_form_resolves() {
+    // No FHIR spec defines the scale form: the WHO ICD-API's URI
+    // (<https://icd.who.int/icdapi>), with the entity and the axis as arguments.
+    let (_dir, mms, _icf, foundation) = providers();
+    let entity = format!("{MMS}/{CHOLERA}");
+    crate::implicit_forms::every_form_resolves(
+        &mms,
+        &[(
+            "[entity]/postcoordinationScale/[axis]",
+            &[&entity, "infectiousAgent"],
+        )],
+    );
+    crate::implicit_forms::declares_none(&foundation, &foundation.identity().url);
 }

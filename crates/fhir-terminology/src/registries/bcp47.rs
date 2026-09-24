@@ -439,6 +439,7 @@ impl Bcp47Provider {
                     filter("variant", "Tags with this variant"),
                 ],
                 capabilities: BTreeSet::new(),
+                implicit_forms: Vec::new(),
             },
             interned: Interned::new(),
             registry,

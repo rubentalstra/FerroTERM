@@ -21,6 +21,7 @@ mod fhir_core;
 mod filter;
 mod fixture;
 mod icd11;
+mod implicit_forms;
 mod labcodeset;
 mod loinc;
 mod operations;

@@ -159,6 +159,7 @@ impl FhirCodeSystem {
             properties,
             filters: model.filters.clone(),
             capabilities,
+            implicit_forms: Vec::new(),
         };
         let mut all = RoaringBitmap::new();
         all.insert_range(0..count);

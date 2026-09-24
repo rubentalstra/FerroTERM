@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use fhir_terminology::artifact::{SOURCE_EXTENSION, SOURCE_NAME, SOURCE_RELEASE};
-use fhir_terminology::capabilities::Summary;
+use fhir_terminology::capabilities::{
+    IMPLICIT_ARGUMENT, IMPLICIT_EXTENSION, IMPLICIT_PATTERN, Summary,
+};
 use fhir_terminology::fhir_codesystem::load::{FhirVersion, load_file};
 use fhir_terminology::fhir_codesystem::provider::FhirCodeSystem;
 use fhir_terminology::provider::{CodeSystemProvider, Compositional};
@@ -221,7 +223,7 @@ fn every_version_declares_the_artifact_an_index_backed_system_was_read_from() {
     for (version, object) in statements {
         let statement = document(&object);
         assert_eq!(
-            code_system(&statement, SNOMED)["version"][0]["extension"],
+            artifact_extensions(code_system(&statement, SNOMED)),
             serde_json::json!([{
                 "url": SOURCE_EXTENSION,
                 "extension": [
@@ -231,12 +233,94 @@ fn every_version_declares_the_artifact_an_index_backed_system_was_read_from() {
             }]),
             "{version} declares the artifact of the served edition"
         );
-        assert!(
-            code_system(&statement, UCUM)["version"][0]
-                .get("extension")
-                .is_none(),
+        assert_eq!(
+            artifact_extensions(code_system(&statement, UCUM)),
+            serde_json::json!([]),
             "{version} declares no artifact for the UCUM registry"
         );
+    }
+}
+
+/// The artifact extensions of the first version entry of `system`.
+fn artifact_extensions(system: &Value) -> Value {
+    Value::Array(
+        system
+            .pointer("/version/0/extension")
+            .and_then(Value::as_array)
+            .map(|extensions| {
+                extensions
+                    .iter()
+                    .filter(|extension| extension["url"] == SOURCE_EXTENSION)
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default(),
+    )
+}
+
+#[test]
+fn every_version_declares_the_implicit_value_set_forms_it_resolves() {
+    // No element of `TerminologyCapabilities` states which implicit value sets
+    // a server resolves (<https://hl7.org/fhir/R5/terminologycapabilities.html>),
+    // so each form is an extension on `codeSystem.version`, the patterns spelled
+    // as <https://hl7.org/fhir/R4B/snomedct.html> and
+    // <https://terminology.hl7.org/UCUM.html> spell them.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let summary = Summary::of(&served(dir.path()));
+    let form = |pattern: &str, argument: &str| {
+        serde_json::json!({
+            "url": IMPLICIT_EXTENSION,
+            "extension": [
+                {"url": IMPLICIT_PATTERN, "valueString": pattern},
+                {"url": IMPLICIT_ARGUMENT, "valueCode": argument},
+            ],
+        })
+    };
+    for (version, statement) in rendered(&summary) {
+        let implicit = |system: &str| -> Vec<Value> {
+            code_system(&statement, system)["version"][0]["extension"]
+                .as_array()
+                .expect("extensions")
+                .iter()
+                .filter(|extension| extension["url"] == IMPLICIT_EXTENSION)
+                .cloned()
+                .collect()
+        };
+        assert_eq!(
+            implicit(SNOMED),
+            [
+                form("http://snomed.info/sct?fhir_vs", "none"),
+                form("http://snomed.info/sct?fhir_vs=isa/[sctid]", "code"),
+                form("http://snomed.info/sct?fhir_vs=refset", "none"),
+                form("http://snomed.info/sct?fhir_vs=refset/[sctid]", "code"),
+                form("http://snomed.info/sct?fhir_vs=ecl/[ecl]", "expression"),
+            ],
+            "{version} declares the SNOMED CT forms"
+        );
+        assert_eq!(
+            implicit(UCUM),
+            [
+                form("http://unitsofmeasure.org/vs", "none"),
+                form("http://unitsofmeasure.org/vs/[expression]", "expression"),
+            ],
+            "{version} declares the UCUM forms"
+        );
+    }
+}
+
+#[test]
+fn a_system_declaring_no_implicit_form_carries_no_implicit_extension() {
+    let summary = Summary::of(&registry());
+    for (version, statement) in rendered(&summary) {
+        for system in statement["codeSystem"].as_array().expect("codeSystem") {
+            for entry in system["version"].as_array().expect("version") {
+                assert!(
+                    entry.get("extension").is_none(),
+                    "{version} declares an extension for {}",
+                    system["uri"]
+                );
+            }
+        }
     }
 }
 

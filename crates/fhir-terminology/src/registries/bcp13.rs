@@ -274,6 +274,7 @@ impl Bcp13Provider {
                     ),
                 ],
                 capabilities: BTreeSet::new(),
+                implicit_forms: Vec::new(),
             },
             interned,
             registered,

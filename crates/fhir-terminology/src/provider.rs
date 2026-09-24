@@ -187,8 +187,6 @@ pub enum Capability {
     Subsumption,
     /// Enumeration of every concept, for expansion without a filter.
     Enumeration,
-    /// Implicit value sets parsed from the system URI.
-    ImplicitValueSets,
     /// Implicit concept maps parsed from the system URI.
     ImplicitConceptMaps,
     /// Alternate or normalized codes resolve through `locate`.
@@ -259,6 +257,59 @@ pub struct Declaration {
     pub filters: Vec<FilterDefinition>,
     /// The optional capabilities.
     pub capabilities: BTreeSet<Capability>,
+    /// The implicit value set forms
+    /// [`CodeSystemProvider::implicit_value_set`] resolves, one per URL
+    /// template the system's page defines; empty when it resolves none.
+    pub implicit_forms: Vec<ImplicitForm>,
+}
+
+/// One implicit value set form a provider resolves: a URL template and what
+/// its placeholders take.
+///
+/// No FHIR/SNOMED spec governs this declaration: our own design. The pattern
+/// is spelled as the system's page spells it, with each placeholder in square
+/// brackets (`http://snomed.info/sct?fhir_vs=isa/[sctid]`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImplicitForm {
+    /// The URL template.
+    pub pattern: String,
+    /// What the bracketed placeholders take.
+    pub argument: ImplicitArgument,
+}
+
+impl ImplicitForm {
+    /// Creates a form from its template and argument kind.
+    #[must_use]
+    pub fn new(pattern: &str, argument: ImplicitArgument) -> Self {
+        Self {
+            pattern: pattern.to_owned(),
+            argument,
+        }
+    }
+}
+
+/// What the placeholders of an implicit value set template take.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ImplicitArgument {
+    /// The template has no placeholder and is the value set URL as is.
+    None,
+    /// The one placeholder takes a code of the system.
+    Code,
+    /// The placeholders take free text: an expression, an identifier, or a
+    /// URI the system defines.
+    Expression,
+}
+
+impl ImplicitArgument {
+    /// The code the capability statement carries (`none`, `code`, `expression`).
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Code => "code",
+            Self::Expression => "expression",
+        }
+    }
 }
 
 /// A located code.
