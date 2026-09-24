@@ -30,7 +30,7 @@ use std::collections::BTreeMap;
 
 use fhir_types::codec::Object;
 use fhir_types::codec::Value;
-use fhir_types::schema::{Kind, Schemas};
+use fhir_types::schema::{FieldSchema, Kind, Schemas, TypeSchema};
 use http::StatusCode;
 
 use crate::outcome::Failure;
@@ -45,6 +45,9 @@ pub const SUMMARY: &str = "_summary";
 /// (<https://hl7.org/fhir/R4B/valueset-search-summary.html>).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Summary {
+    /// `true`: `id`, `meta`, and the top-level elements the resource's
+    /// definition marks `isSummary`.
+    True,
     /// `text`: `text`, `id`, `meta`, and the top-level mandatory elements.
     Text,
     /// `data`: the resource without `text`.
@@ -84,8 +87,7 @@ impl Projection {
     ///
     /// Returns a `400` for a `_summary` value the search-summary code system
     /// does not define, for two different `_summary` values, for `count` on a
-    /// read (the specification scopes it to search), and a `400`
-    /// `not-supported` for `true`.
+    /// read (the specification scopes it to search).
     pub fn of_query(query: &[(String, String)], interaction: Interaction) -> Result<Self, Failure> {
         let mut summary = None;
         for (_, value) in query.iter().filter(|(name, _)| name == SUMMARY) {
@@ -97,15 +99,7 @@ impl Projection {
                     return Err(invalid("`_summary=count` applies to a search, not a read"));
                 }
                 "false" => Summary::False,
-                // TODO(#669): answer `_summary=true` once `fhir_types::schema::FieldSchema`
-                // carries the `isSummary` flag of each element.
-                "true" => {
-                    return Err(Failure::new(
-                        StatusCode::BAD_REQUEST,
-                        "not-supported",
-                        "`_summary=true` is not supported yet; use `text`, `data`, `false` or `_elements`",
-                    ));
-                }
+                "true" => Summary::True,
                 other => {
                     return Err(invalid(format!(
                         "`_summary={other}` is not one of `true`, `text`, `data`, `count` or `false`"
@@ -140,13 +134,15 @@ impl Projection {
     }
 
     /// `resource` as this projection shows it; `schemas` is the served
-    /// version's element table, which names the mandatory elements.
+    /// version's element table, which names the mandatory and the summary
+    /// elements.
     ///
     /// The summary view applies first and `_elements` narrows what it kept; a
     /// resource that lost an element carries the `SUBSETTED` tag.
     #[must_use]
     pub fn apply(&self, resource: &Object, schemas: &Schemas) -> Object {
         let viewed = match self.summary {
+            Some(Summary::True) => summary_view(resource, schemas),
             Some(Summary::Text) => text_view(resource, schemas),
             Some(Summary::Data) => keep(resource, |name| name != "text"),
             None | Some(Summary::False | Summary::Count) => resource.clone(),
@@ -178,28 +174,53 @@ fn invalid(diagnostics: impl Into<String>) -> Failure {
     Failure::new(StatusCode::BAD_REQUEST, "invalid", diagnostics)
 }
 
+/// The `_summary=true` view of `resource`: `id`, `meta`, and the top-level
+/// elements its definition marks `isSummary`
+/// (<https://hl7.org/fhir/R4B/search.html#summary>).
+fn summary_view(resource: &Object, schemas: &Schemas) -> Object {
+    let schema = resource_schema(resource, schemas);
+    keep(resource, |name| {
+        MANDATORY.contains(&name) || defined_with(schema, name, |field| field.is_summary)
+    })
+}
+
 /// The `_summary=text` view of `resource`: `text`, `id`, `meta`, and the
 /// top-level elements its definition makes mandatory (`min` of 1 or more).
 fn text_view(resource: &Object, schemas: &Schemas) -> Object {
-    let schema = match resource.get("resourceType") {
+    let schema = resource_schema(resource, schemas);
+    keep(resource, |name| {
+        MANDATORY.contains(&name)
+            || name == "text"
+            || defined_with(schema, name, |field| field.min > 0)
+    })
+}
+
+/// The element table of the type `resource` names in `resourceType`.
+fn resource_schema(resource: &Object, schemas: &Schemas) -> Option<&'static TypeSchema> {
+    match resource.get("resourceType") {
         Some(Value::String(name)) => schemas.type_named(name),
         _ => None,
-    };
-    let mandatory = |name: &str| {
-        schema.is_some_and(|schema| {
-            schema.fields.iter().any(|field| {
-                field.min > 0
-                    && match field.kind {
-                        Kind::Choice(alternatives) => name
-                            .strip_prefix(field.name)
-                            .is_some_and(|suffix| alternatives.iter().any(|(s, _)| *s == suffix)),
-                        _ => name == field.name,
-                    }
-            })
+    }
+}
+
+/// Whether the JSON member `name` is a top-level element of `schema` that
+/// `flagged` accepts; a choice element answers for each of its typed names
+/// (<https://hl7.org/fhir/R4B/formats.html#choice>).
+fn defined_with(
+    schema: Option<&TypeSchema>,
+    name: &str,
+    flagged: impl Fn(&FieldSchema) -> bool,
+) -> bool {
+    schema.is_some_and(|schema| {
+        schema.fields.iter().any(|field| {
+            flagged(field)
+                && match field.kind {
+                    Kind::Choice(alternatives) => name
+                        .strip_prefix(field.name)
+                        .is_some_and(|suffix| alternatives.iter().any(|(s, _)| *s == suffix)),
+                    _ => name == field.name,
+                }
         })
-    };
-    keep(resource, |name| {
-        ["resourceType", "id", "meta", "text"].contains(&name) || mandatory(name)
     })
 }
 
@@ -553,8 +574,11 @@ mod tests {
         assert!(!projection(&[("_summary", "text"), ("_summary", "text")]).is_whole());
         let read = Projection::of_query(&query(&[("_summary", "count")]), Interaction::Read);
         assert_eq!(read.map_err(|f| f.code), Err("invalid"));
-        let unsupported = Projection::of_query(&query(&[("_summary", "true")]), Interaction::Read);
-        assert_eq!(unsupported.map_err(|f| f.code), Err("not-supported"));
+        let summary = Projection::of_query(&query(&[("_summary", "true")]), Interaction::Read);
+        assert!(
+            summary.is_ok_and(|projection| !projection.is_whole()),
+            "`true` is a view the search-summary code system defines, answered on a read"
+        );
     }
 
     #[test]
@@ -579,6 +603,38 @@ mod tests {
                 "text"
             ],
             "a primitive's extension member goes with its element"
+        );
+        assert_eq!(tags(&viewed), ["SUBSETTED"]);
+    }
+
+    #[test]
+    fn the_summary_view_keeps_the_elements_the_definition_flags() {
+        let mut whole = code_system();
+        whole.insert("name".to_owned(), Value::String("LOINC".to_owned()));
+        whole.insert("_version".to_owned(), Value::Object(BTreeMap::new()));
+        whole.insert("text".to_owned(), Value::Object(BTreeMap::new()));
+        whole.insert(
+            "copyright".to_owned(),
+            Value::String("Regenstrief".to_owned()),
+        );
+        let viewed =
+            projection(&[("_summary", "true")]).apply(&whole, &fhir_types::r4b::schema::SCHEMAS);
+        let mut names: Vec<&str> = viewed.keys().map(String::as_str).collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            [
+                "_version",
+                "id",
+                "meta",
+                "name",
+                "resourceType",
+                "status",
+                "title",
+                "url",
+                "version"
+            ],
+            "`concept`, `text` and `copyright` are not summary elements of an R4B CodeSystem"
         );
         assert_eq!(tags(&viewed), ["SUBSETTED"]);
     }
