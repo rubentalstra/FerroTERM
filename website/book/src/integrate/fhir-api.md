@@ -296,12 +296,15 @@ or write the same `url` under a new `version`.
 A read and a search both take `_elements` and `_summary`
 (<https://hl7.org/fhir/R4B/search.html#summary>, <https://hl7.org/fhir/R4B/http.html#read>).
 `_elements=url,title` returns those elements plus `resourceType`, `id` and
-`meta`. `_summary=text` returns `text`, `id`, `meta` and the top-level
+`meta`. `_summary=true` returns `id`, `meta` and the top-level elements the
+version's definition marks as summary elements (for a `CodeSystem`, `url`,
+`version`, `name`, `status` and the rest of its metadata, without `concept`).
+`_summary=text` returns `text`, `id`, `meta` and the top-level
 elements the version's definition makes mandatory, `_summary=data` drops
 `text`, `_summary=false` is the whole resource, and on a search
 `_summary=count` returns `total` and no entries. A resource that lost an
-element carries the `SUBSETTED` tag, so do not write it back. `_summary=true`
-is refused with `not-supported`, and a value outside those five is a `400`.
+element carries the `SUBSETTED` tag, so do not write it back. A value outside
+those five is a `400`.
 
 Each `entry.fullUrl` is the absolute URL of the resource
 (<https://hl7.org/fhir/R4B/bundle.html#bundle-unique>): the base URL of

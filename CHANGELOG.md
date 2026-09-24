@@ -44,14 +44,15 @@ fresh link reference.
 - **`_summary` on read and search, and `_elements` on read** (#669). The read
   of a `CodeSystem`, `ValueSet` or `ConceptMap` takes `_elements`, with the
   projection and `SUBSETTED` tag a search already gave. Both interactions take
-  `_summary` (<https://hl7.org/fhir/R4B/search.html#summary>): `text` keeps
+  `_summary` (<https://hl7.org/fhir/R4B/search.html#summary>): `true` keeps
+  `id`, `meta` and the top-level elements the served version's definition
+  marks `isSummary`; `text` keeps
   `text`, `id`, `meta` and the top-level elements the served version's
   definition makes mandatory, read from the element table of the pinned
   packages; `data` drops `text`; `false` is the whole resource; `count`, on a
   search only, answers `total` with no entries. A resource that lost an element
-  carries `SUBSETTED`. `_summary=true` is refused with `not-supported`, since
-  the generated model carries no `isSummary` flag yet, and a value the
-  search-summary code system does not define is a `400`. The
+  carries `SUBSETTED`. A value the search-summary code system does not define
+  is a `400`. The
   `CapabilityStatement` declares `_summary` beside `_elements`.
 - **A refused expression constraint states where the parser stopped, as
   data** (#656). When `ValueSet/$expand` or `ValueSet/$validate-code` refuses
@@ -224,6 +225,9 @@ fresh link reference.
 
 ### Changed
 
+- **`fhir-types` 0.1.106** (#669). The FHIR model release whose element table
+  carries the `isSummary` and `isModifier` flag of every element, which
+  `_summary=true` reads.
 - **A save the server refuses with 412 now offers one way back on every
   editor screen** (#666). The code system editor, the value set composer, the
   concept map editor, and the history screen each announce the server's own
