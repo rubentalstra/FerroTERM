@@ -17,6 +17,8 @@
 //! listener is compiled once per call site, and this screen has forty of them
 //! (`docs/viewer.md` §13, the bundle bar).
 
+use std::sync::Arc;
+
 use leptos::ev::Event;
 use leptos::ev::MouseEvent;
 use leptos::ev::SubmitEvent;
@@ -36,6 +38,10 @@ use crate::components::history::history_offer;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
+use crate::components::reload::READING_AGAIN;
+use crate::components::reload::announced;
+use crate::components::reload::focus_report;
+use crate::components::reload::reload_offer;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
 use crate::fhir::VALUE_SET;
@@ -182,31 +188,7 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
     };
 
     let expansion = previewing(&client, version, previewed, page);
-    let announcement = announcing(expansion);
-    // One live region carries every message the screen has, so a screen reader
-    // hears the count, the refusal, and the save in one place
-    // (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>). What an event wrote
-    // wins until the next preview is asked for, which clears it.
-    let said = move || {
-        let written = report.get();
-        if written.is_empty() {
-            announcement.get()
-        } else {
-            written
-        }
-    };
-
-    let heading = view! {
-        <Title text="Compose a value set" />
-        <h1 class=styles::PAGE_TITLE>"Compose a value set"</h1>
-        <p class=styles::LEAD>
-            "Draw in a published value set, add your own codes, and see what the selection holds."
-        </p>
-        <p id=REPORT_ID aria-live="polite" class=format!("mt-default {}", styles::MUTED)>
-            {said}
-        </p>
-    }
-    .into_any();
+    let heading = heading(report, announcing(expansion));
 
     let editable = editable(id, writable);
     let versions = history_offer(VALUE_SET, id.into(), version);
@@ -218,7 +200,7 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
     let actions = save_section(
         &client, version, editing, writable, session, report, refusal, saves, previewed,
     );
-    let refused = refusal_section(refusal, editing);
+    let refused = refusal_section(refusal, editing, saves, report);
     let preview = preview_section(expansion, previewed, page, editing, report, id);
 
     view! {
@@ -241,6 +223,39 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
 /// not hold renders the server's own `OperationOutcome` instead of an empty
 /// form.
 type Reading = LocalResource<Option<Result<Value, FhirError>>>;
+
+/// The title, the lead, and the one live region every message lands in.
+///
+/// One live region carries every message the screen has, so a screen reader
+/// hears the count, the refusal, and the save in one place
+/// (<https://www.w3.org/TR/wai-aria-1.2/#aria-live>). What an event wrote
+/// wins until the next preview is asked for, which clears it.
+fn heading(report: RwSignal<String>, announcement: Memo<String>) -> AnyView {
+    let said = move || {
+        let written = report.get();
+        if written.is_empty() {
+            announcement.get()
+        } else {
+            written
+        }
+    };
+    view! {
+        <Title text="Compose a value set" />
+        <h1 class=styles::PAGE_TITLE>"Compose a value set"</h1>
+        <p class=styles::LEAD>
+            "Draw in a published value set, add your own codes, and see what the selection holds."
+        </p>
+        <p
+            id=REPORT_ID
+            tabindex="-1"
+            aria-live="polite"
+            class=format!("mt-default {}", styles::MUTED)
+        >
+            {said}
+        </p>
+    }
+    .into_any()
+}
 
 /// Reads the `ValueSet` the address names, again after every save.
 fn reading(
@@ -1486,7 +1501,7 @@ fn save_section(
                     if refused.drops_the_token() {
                         session.release();
                     }
-                    report.set(refused.what_to_do().to_owned());
+                    report.set(announced(&error));
                     refusal.set(Some(error));
                 }
             }
@@ -1519,36 +1534,30 @@ fn save_section(
 }
 
 /// What the server said when it refused a write, in its own words.
-fn refusal_section(refusal: RwSignal<Option<FhirError>>, editing: Editing) -> AnyView {
-    let concurrent = Memo::new(move |_| {
-        refusal.with(|held| {
-            held.as_ref()
-                .is_some_and(|error| Refusal::of(error) == Refusal::ConcurrentEdit)
-        })
-    });
+///
+/// After a `412` the reload drops the edits and reads the value set again, so
+/// the form and the version the next save states are the server's current
+/// ones.
+fn refusal_section(
+    refusal: RwSignal<Option<FhirError>>,
+    editing: Editing,
+    saves: RwSignal<u32>,
+    report: RwSignal<String>,
+) -> AnyView {
     let shown = move || {
         refusal.with(|held| {
             held.clone()
                 .map(|error| view! { <Failure error=error /> }.into_any())
         })
     };
-    view! {
-        <div class="mt-default grid gap-default">
-            {shown} <Show when=move || concurrent.get() fallback=|| ()>
-                <button
-                    type="button"
-                    class=styles::BUTTON
-                    on:click=move |_| {
-                        editing.reopen();
-                        refusal.set(None);
-                    }
-                >
-                    "Reload the value set as the server holds it"
-                </button>
-            </Show>
-        </div>
-    }
-    .into_any()
+    let press: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
+        editing.reopen();
+        report.set(String::from(READING_AGAIN));
+        saves.update(|counted| *counted = counted.saturating_add(1));
+        focus_report(REPORT_ID);
+    });
+    let offer = reload_offer(refusal, press);
+    view! { <div class="mt-default grid gap-default">{shown} {offer}</div> }.into_any()
 }
 
 /// The preview read: the answer to `$expand` over the compose on screen.
