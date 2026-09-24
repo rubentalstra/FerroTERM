@@ -110,12 +110,12 @@ in. No ordinary `cargo build`, `cargo clippy`, or `cargo nextest` run may
 require a bundle that is not present.
 
 The mechanism is the server's build script. With the `ui` feature on it walks
-the bundle directory and writes a table of `Asset { path, bytes }` with one
+each bundle directory and writes a table of `Asset { path, bytes }` with one
 `include_bytes!` per file, which `src/ui.rs` includes; the table is a static
 in the binary and a request is a lookup in it, so no request path reaches the
-filesystem. `FERROTERM_UI_BUNDLE` names the directory when a build stages it
-elsewhere, and a directory it names that does not read is a `compile_error!`
-telling you to run Trunk. The default directory may be absent, because
+filesystem. `FERROTERM_UI_BUNDLE` and `FERROTERM_UI_EDITOR_BUNDLE` name the two
+directories when a build stages them elsewhere, and a directory either one
+names that does not read is a `compile_error!` telling you to run Trunk. The default directory may be absent, because
 `cargo build --all-features` on a fresh clone must pass: the table is then
 empty, the build warns, and the server mounts no `/ui` route. The workspace
 denies `clippy::large_include_file`, so the build script writes a scoped
@@ -124,12 +124,56 @@ when a file is large enough to fire the lint. Staging `dist/` beside the
 binary and serving it with `tower-http`'s `ServeDir` stays the contingency if
 the embed ever becomes the wrong trade.
 
+### Two bundles from one crate
+
+The crate builds twice. The **reader bundle** is the default feature set,
+served at `/ui`: every screen of the inventory below, and no authoring code.
+The **editor bundle** is the same crate with the cargo feature `editor` on,
+served at `/ui/editor`: every reader screen plus the authoring screens, with
+the router based at `/ui/editor` so each bundle's links stay inside its own
+tree. A reader who never signs in downloads no editor byte, because `/ui` is
+the reader bundle. A person who edits opens `/ui/editor`, signs in there once,
+and reads there too, so nothing crosses between the two pages and the token
+the sign-in holds in memory survives the whole session.
+
+The sign-in control on the reader bundle is a link to `/ui/editor`, drawn only
+where the served root's capability statement declares `SMART-on-FHIR`. Inside
+the editor bundle the screens are the reader's screens until a token with the
+scope is held, so "the same screen, read-only" is one screen with one code
+path rather than two.
+
+**Trunk builds the crate twice, from the same `index.html`.** The reader build
+is `trunk build --release --locked`; the editor build is the same command with
+`--features editor --dist dist-editor --public-url /ui/editor/`. Those three
+are build-level flags of `trunk build` itself, verified against `trunk
+0.21.14 --help` and the guide
+(<https://github.com/trunk-rs/trunk/blob/main/guide/src/configuration/index.md>),
+so there is no second `index.html` and no second `Trunk.toml` to keep in step
+with the first.
+
+**Why not one bundle with a lazily loaded editor.** Leptos 0.8 carries
+`#[lazy]` and `#[lazy_route]`, but the `wasm-split` pass that turns them into a
+second downloadable module lives in `cargo-leptos`, which builds server-side
+rendered and hydrated applications and cannot build a client-side-rendered one
+(<https://github.com/leptos-rs/cargo-leptos>). Trunk 0.21.14 has no stage that
+runs the pass. A spike confirmed the consequence: the build emits
+`__wasm_split_placeholder__` imports that no browser resolves. Two bundles from
+one crate is the arrangement that holds the same property with the toolchain
+that is pinned. No specification governs any of this: our own design.
+
 ### The routes the server gains
 
 | Route | Answers |
 |---|---|
-| `GET /ui/` and `GET /ui/*` | the bundle, its assets, and the SPA fallback to `index.html` inside `/ui` only |
+| `GET /ui/` and `GET /ui/*` | the reader bundle, its assets, and the SPA fallback to its `index.html` inside `/ui` only |
+| `GET /ui/editor/` and `GET /ui/editor/*` | the editor bundle and its assets, with its own SPA fallback |
 | `GET /` | a redirect to `/ui/` when the viewer is on; today's `OperationOutcome` `not-found` when it is off |
+
+The editor routes are registered after the reader's, and a static `/ui/editor`
+segment outranks the reader's catch-all in the router, so an address under the
+editor mount reaches the editor tree and every other address still reaches the
+reader's. A binary carrying no editor bundle mounts none, and `/ui/editor` is
+then an unknown client-side route of the reader.
 
 Everything outside `/ui` is untouched: `/health`, `/metrics`, `/r4`, `/r4b`,
 `/r5`, `/r6`, and the catch-all `OperationOutcome` `not-found` that
@@ -147,7 +191,7 @@ and the root path is free. Trunk is told the same prefix with
 
 `FERROTERM_UI` joins the existing `FERROTERM_*` configuration in
 `app/ferroterm-server/src/config.rs`. It defaults to on; `FERROTERM_UI=off`
-drops the `/ui` routes and restores today's `/` behaviour, for a deployment
+drops both mounts and restores today's `/` behaviour, for a deployment
 that wants an API-only surface. The switch drops routes rather than serving a
 403, so a locked-down deployment presents no viewer at all.
 
@@ -487,7 +531,8 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | Value sets | `/ui/valuesets` | `GET /{v}/ValueSet` search and read, with a link into the expansion runner |
 | Concept maps | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read, with a link into the translate runner |
 | About this server | `/ui/about` | three tabs: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |
-| Signing in | `/ui/callback` | `GET /{v}/.well-known/smart-configuration`, then the issuer's token endpoint. Not a place a reader goes: the identity provider sends them through it |
+| Edit a code system | `/ui/editor/codesystem` | `GET /{v}/CodeSystem?url=` for the resource, `GET /{v}/metadata?mode=terminology` for whether an artifact backs it, `ValueSet/$expand` for the codes its coded controls offer, then `POST`/`PUT` with `If-Match` and `CodeSystem/$validate-code` on what the save retired. In the editor bundle only |
+| Signing in | `/ui/editor/callback` | `GET /{v}/.well-known/smart-configuration`, then the issuer's token endpoint. Not a place a reader goes: the identity provider sends them through it |
 
 `/ui/versions`, `/ui/evidence` and `/ui/settings` were screens of their own and
 now redirect to the About tab they named, so a link written before the merge
@@ -510,8 +555,10 @@ code. The concept browser is not in it: it browses one code system, so it is
 reached from that system's row on the overview rather than from an address
 that names none. Each group is a `const` table read in render order, so the order is data
 and one function draws every entry, and each group's label is its list's
-accessible name through `aria-labelledby`. Below the `md` breakpoint the
-sidebar is hidden until the top bar's toggle opens it.
+accessible name through `aria-labelledby`. The editor bundle's Publish group
+carries one entry more, the authoring screen, which is the only place either
+sidebar differs. Below the `md` breakpoint the sidebar is hidden until the top
+bar's toggle opens it.
 
 **The top bar and the sidebar stay put, and the screen scrolls under them.**
 The shell is one viewport tall and only the main pane scrolls, so the command
@@ -535,7 +582,58 @@ the address, so a run is already a URL and the list holds links and nothing
 else: a remembered run is re-run when a reader returns to it and can never show
 a stale answer beside a live one. Twelve are kept, in `localStorage` alone.
 
+### The code system editor
+
+**One screen, whether the code system is local or built.** A `CodeSystem` a
+person wrote through the REST API and one this deployment built from a release
+open the same form; what differs is whether it is editable, and that is three
+facts off the wire rather than anything the bundle assumes:
+
+- the served root's `TerminologyCapabilities` declares no
+  `terminology-artifact` extension behind it, because an artifact is read at
+  startup and has no write path;
+- the server states a `meta.versionId` for the resource, which is what an
+  update states in `If-Match`
+  (<https://hl7.org/fhir/R4B/http.html#concurrency>);
+- the token in hand carries `CodeSystem` with the letter the change needs.
+
+A form that is read-only says which of the three is missing, so a reader is
+never left guessing whether the screen is broken.
+
+**The form is the resource.** The metadata (`url`, `version`, `status`,
+`content`, `caseSensitive`), the properties the system declares, and the
+concepts with their designations and property values
+(<https://hl7.org/fhir/R4B/codesystem.html>). Every coded control offers what
+the served root expands the element's own value set to, so a version that
+admits another code offers it without a new build; nothing is compiled in.
+
+**A concept is retired, never deleted.** A published code keeps meaning what
+it meant, so the lifecycle control moves a concept between the four states the
+standard `status` property names and writes exactly the properties that state
+implies: `status` always, `inactive` where the state means it, and the one
+date the state carries
+(<https://hl7.org/fhir/R5/codesystem-concept-properties.html>). A deprecated
+concept is dated and stays usable; a retired one is flagged inactive. The
+editor declares those four properties on every save, because a property value
+means nothing until the system declares it. After a save that retired
+something, the screen runs `CodeSystem/$validate-code` on it and shows what
+came back, which is the server agreeing rather than the form claiming.
+
+**Every write is the whole resource, with `If-Match`.** A `412` is shown as
+what it is, a change someone else made since the form was opened, with a
+control that reloads it. Every refusal renders the server's own
+`OperationOutcome` whole and announces its text in the screen's one live
+region.
+
 ### Signing in
+
+**The sign-in is in the editor bundle.** A token lives in the page that holds
+it, and a page load ends it, so signing in on `/ui` and then opening
+`/ui/editor` would sign the person out on the way. The reader bundle's control
+is a link into the editor bundle, drawn where the served root's capability
+statement declares `SMART-on-FHIR`; the sign-in itself, the callback, and
+every edit control are the editor bundle's. The redirect address a deployment
+registers with its identity provider is therefore `{base}/ui/editor/callback`.
 
 **The viewer signs a person in only where the server publishes an issuer.**
 The server's own `[base]/.well-known/smart-configuration` names the
@@ -580,7 +678,7 @@ control the server would refuse.
 | Role | Scopes the identity provider grants | What the viewer draws |
 |---|---|---|
 | Reader | none of the write scopes | every screen, no edit control, no sign-in needed |
-| Terminologist | `user/CodeSystem.cud`, `user/ValueSet.cud`, `user/ConceptMap.cud`, or the subset granted | the edit controls, once the editor screens land, for the types the granted subset covers |
+| Terminologist | `user/CodeSystem.cud`, `user/ValueSet.cud`, `user/ConceptMap.cud`, or the subset granted | in the editor bundle, the edit controls for the types the granted subset covers |
 | Operator | the admin scope (`FERROTERM_OIDC_ADMIN_SCOPE`) | nothing extra: the admin listener is its own surface, not a screen |
 
 National content carries no edit control under any role: the built indexes open
@@ -697,10 +795,11 @@ The additions, recorded in `docs/ci-cd.md` as they land. Everything below is
 built except the `ui-e2e` job:
 
 - **`ci.yml`, a `viewer` job.** `cargo fmt` and `leptosfmt --check` over the
-  crate, `cargo clippy --target wasm32-unknown-unknown --all-features -D
-  warnings`, `cargo nextest run -p ferroterm-viewer` for the component-free
-  logic, and `trunk build --release --locked`. The wasm target is the gate
-  that matters: it is the only place a dependency that cannot compile for the
+  crate, `cargo clippy --target wasm32-unknown-unknown -D warnings` with and
+  without `--features editor`, `cargo nextest run -p ferroterm-viewer` for the
+  component-free logic in both feature sets, and `trunk build --release
+  --locked` for each of the two bundles. The wasm target is the gate that
+  matters: it is the only place a dependency that cannot compile for the
   browser shows up.
 - **A recorded bundle size.** The compressed `.wasm` size is written to a
   committed file and compared on every build, the same shape
@@ -753,6 +852,12 @@ one artifact is what the claim is about, and a dependency the viewer chose is
 the viewer's weight. `app/ferroterm-viewer/bundle-size.json` holds the bars for
 the three assets (wasm, JS bootstrap, CSS) and `scripts/checks/bundle-size.sh`
 checks the build in `dist/`, in the `viewer` CI job.
+
+**Each bundle has its own bars file**, because they are two downloads. The
+editor bundle's are `app/ferroterm-viewer/bundle-size-editor.json`, checked
+over `dist-editor/` by the same guard in the same job. The reader's ceiling is
+not raised to make room for the editor: the whole point of building twice is
+that the editor's bytes never reach a reader who does not edit.
 
 **Two numbers, because one cannot do both jobs.** A single absolute total on an
 artifact that legitimately grows has to be raised every time it grows, and a
@@ -826,6 +931,25 @@ today is breached by honest work next week. The two jobs are split:
   stubbed out the screen still cost 49,533, because it is a search, a concept
   detail, a hierarchy, capability gating and a language picker over four
   requests.
+
+**The editor bundle's ceiling: 750,000 bytes.** It is the reader ceiling plus
+one authoring screen for each resource type the server writes. The arithmetic
+is §13's own, on the figures already recorded here:
+
+| | gzipped |
+|---|---|
+| the reader ceiling, which the editor bundle carries whole | 540,000 |
+| three authoring screens, at the largest screen this project has measured (68,519) | 205,557 |
+| the sum, rounded up | 750,000 |
+
+The three are `CodeSystem`, `ValueSet`, and `ConceptMap`, which is exactly the
+set the roles table in §9 names and the set the server exposes the write
+interactions on. The largest measured screen is the unit rather than the mean,
+because an authoring screen is a form, a list, a lifecycle and a refusal
+surface over one resource, which is the shape the concept browser had when it
+set that figure. The per-change budget is the reader's, 70,000 bytes, for the
+reason §13 already gives: it admits the largest screen measured and still
+refuses an increment nobody intended.
 
 **A change cannot make its own build green by editing a number.** The guard
 reads `measured_gzip_bytes` **out of git at the merge base**, not out of the

@@ -58,8 +58,8 @@ use crate::paging::MAX_COUNT;
 use crate::routes::BROWSE_PATH;
 use crate::routes::SYSTEM_PARAM;
 use crate::routes::SYSTEM_VERSION_PARAM;
-use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
+use crate::routes::base_url;
 use crate::routes::system_link;
 use crate::settings::Settings;
 use crate::styles;
@@ -70,7 +70,6 @@ use crate::tree::action;
 use crate::tree::decode_open;
 use crate::tree::encode_open;
 use crate::tree::rows;
-use crate::url::RequestUrl;
 
 /// The address parameter carrying the concept the tree hangs from.
 const ROOT_PARAM: &str = "root";
@@ -233,8 +232,7 @@ impl BrowseParams {
     // through untouched while it unescapes the path a second time
     // (`leptos_router` 0.8.15 `src/location/mod.rs`).
     fn address(&self, version: FhirVersion) -> String {
-        let mut url = RequestUrl::new()
-            .segment(UI_BASE.trim_start_matches('/'))
+        let mut url = base_url()
             .segment(BROWSE_PATH)
             .query(VERSION_PARAM, version.segment());
         if self.system.is_empty() {
@@ -1534,6 +1532,7 @@ fn failure_view(error: &FhirError) -> AnyView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::routes::UI_BASE;
 
     fn read(pairs: &[(&str, &str)]) -> BrowseParams {
         let owned: Vec<(String, String)> = pairs
@@ -1582,8 +1581,11 @@ mod tests {
         ]);
         assert_eq!(
             params.address(FhirVersion::R4B),
-            "/ui/browse?fhir=r4b&system=https%3A%2F%2Fterminology.example%2Fx%3Fedition%3D2031\
-             &version=2.0&filter=fever&displayLanguage=nl-NL&code=a&root=b&open=b%2Cc",
+            format!(
+                "{UI_BASE}/browse\
+                 ?fhir=r4b&system=https%3A%2F%2Fterminology.example%2Fx%3Fedition%3D2031\
+                 &version=2.0&filter=fever&displayLanguage=nl-NL&code=a&root=b&open=b%2Cc"
+            ),
             "a reader who copies the address gets what they were reading"
         );
         assert_eq!(

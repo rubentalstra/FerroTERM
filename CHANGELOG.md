@@ -15,6 +15,14 @@ fresh link reference.
 
 ### Changed
 
+- **The viewer signs in at `/ui/editor`, so the redirect address registered
+  with the identity provider becomes `{base}/ui/editor/callback`** (#634). The
+  editing screens live in that bundle, and a token lives in the page that holds
+  it, so a sign-in that ended on `/ui` would be spent by the load that opened
+  the editor. On `/ui` the control is now a link into the editor bundle. A
+  deployment that configured `FERROTERM_VIEWER_CLIENT_ID` registers the new
+  address; nothing else about the launch changes.
+
 - **The artifact layout moves to 7, so every index must be rebuilt with the
   `ferroterm-build` of this version** (#641). A server refuses an artifact of
   another layout with the error naming both versions, and an older server
@@ -154,6 +162,33 @@ fresh link reference.
   which is what the server has accepted since the overlay landed (#537).
 
 ### Added
+
+- A code system is authored in the browser, at `/ui/editor/codesystem` (#634).
+  The screen carries the metadata (`url`, `version`, `status`, `content`,
+  `caseSensitive`), the properties the system declares, and the concepts with
+  their designations and property values, with every coded control offering
+  what the served root expands that element's own value set to. A concept is
+  retired rather than deleted: the lifecycle control writes exactly the
+  standard concept properties the state implies (`status` always, `inactive`
+  where the state means it, and `deprecationDate` or `retirementDate`,
+  <https://hl7.org/fhir/R5/codesystem-concept-properties.html>), and after a
+  save the screen runs `CodeSystem/$validate-code` on what it retired and shows
+  the answer. Every write sends the whole resource with `If-Match`, so a change
+  made elsewhere is refused with `412` and offered a reload rather than
+  overwritten, and every refusal renders the server's own `OperationOutcome`
+  and announces its text in the screen's live region. A code system this
+  deployment built from a release opens the same screen read-only, because the
+  capability statement marks it as served from an artifact.
+
+- The viewer ships as two bundles, and the server serves both (#634). The
+  reader bundle is what `/ui` has always served, unchanged in size and in
+  content. The editor bundle is the same crate built with `--features editor`,
+  served at `/ui/editor`, carrying every reading screen plus the authoring
+  screens. A reader who never edits downloads no authoring byte, and a person
+  who edits opens `/ui/editor`, signs in there, and reads there too. Each
+  bundle has its own recorded size (`app/ferroterm-viewer/bundle-size.json` and
+  `bundle-size-editor.json`), and the release lane embeds both trees in the one
+  binary.
 
 - The viewer signs a person in with SMART App Launch and gains a write client
   (#633). Where the deployment sets `FERROTERM_OIDC_ISSUER` and

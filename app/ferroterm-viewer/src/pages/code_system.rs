@@ -374,6 +374,17 @@ fn tools_view(
         .into_any()
     };
     let browse = walkable.then(|| link(BROWSE_PATH, icon::BROWSE, "Browse the concepts"));
+    // Only the editor bundle carries the authoring screen, so only its copy of
+    // this screen leads to it. What that screen then offers is its own
+    // decision: a code system an artifact backs opens read-only there.
+    #[cfg(feature = "editor")]
+    let edit = Some(link(
+        crate::routes::CODE_SYSTEM_EDITOR_PATH,
+        icon::EDIT,
+        "Edit this code system",
+    ));
+    #[cfg(not(feature = "editor"))]
+    let edit: Option<AnyView> = None;
     Some(
         view! {
             <nav
@@ -383,6 +394,7 @@ fn tools_view(
                 {browse}
                 {link(EXPAND_PATH, icon::EXPAND, "Run an expansion")}
                 {link(VALIDATE_PATH, icon::VALIDATE, "Validate a code")}
+                {edit}
             </nav>
         }
         .into_any(),

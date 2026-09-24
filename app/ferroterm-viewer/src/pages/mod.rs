@@ -12,6 +12,8 @@ pub(crate) mod browse;
 pub(crate) mod callback;
 pub(crate) mod code_system;
 pub(crate) mod concept_maps;
+#[cfg(feature = "editor")]
+pub(crate) mod editor;
 pub(crate) mod evidence;
 pub(crate) mod expand;
 pub(crate) mod find;

@@ -25,13 +25,12 @@ use crate::fhir::terminology::VersionRow;
 use crate::fhir::version::FhirVersion;
 use crate::routes::BROWSE_PATH;
 use crate::routes::OVERVIEW_PATH;
-use crate::routes::UI_BASE;
 use crate::routes::VALIDATE_PATH;
 use crate::routes::VERSION_PARAM;
+use crate::routes::base_url;
 use crate::routes::system_link;
 use crate::routes::system_tool_link;
 use crate::styles;
-use crate::url::RequestUrl;
 
 /// The address parameter naming the column the table is sorted on.
 const SORT_PARAM: &str = "sort";
@@ -159,7 +158,7 @@ impl Order {
 
     /// The address this order is, on the overview of `version`.
     fn address(self, version: FhirVersion) -> String {
-        let mut url = RequestUrl::new().segment(UI_BASE.trim_start_matches('/'));
+        let mut url = base_url();
         for part in OVERVIEW_PATH.split('/').filter(|part| !part.is_empty()) {
             url = url.segment(part);
         }

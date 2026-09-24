@@ -28,7 +28,14 @@ use crate::harness::session;
 /// The code system screen is absent: its address carries a canonical this
 /// module would have to name, and the sidebar does not offer it. The overview
 /// links to it, and `viewer` walks that link.
-const SCREENS: [&str; 9] = [
+///
+/// The last is the editor bundle's authoring screen, which the one server
+/// serves at its own mount. It is opened on the fixture this deployment
+/// holds, because an empty form has none of the rows whose markup this pass
+/// exists to read; this deployment publishes no issuer, so the form opens
+/// read-only, and the controls a token opens are walked by the keyboard
+/// journey in `editor` against the deployment that has one.
+const SCREENS: [&str; 10] = [
     "/ui/",
     "/ui/browse",
     "/ui/expand",
@@ -38,6 +45,7 @@ const SCREENS: [&str; 9] = [
     "/ui/translate",
     "/ui/find",
     "/ui/about",
+    "/ui/editor/codesystem?system=https%3A%2F%2Fferroterm.eu%2Ffhir%2FCodeSystem%2Fe2e-taxonomy",
 ];
 
 /// The version every screen is opened on.
@@ -350,7 +358,8 @@ const ANNOUNCEMENT: &str = "p[aria-live='polite']";
 
 /// The address of one screen on the version the pass runs.
 fn address(base: &str, path: &str) -> String {
-    format!("{base}{path}?fhir={VERSION}")
+    let opener = if path.contains('?') { '&' } else { '?' };
+    format!("{base}{path}{opener}fhir={VERSION}")
 }
 
 /// The first live region on the screen, once it says something.

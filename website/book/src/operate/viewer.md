@@ -4,7 +4,8 @@ A deployment answers the FHIR terminology API, and until you write a request by
 hand it tells you nothing about what it loaded. The viewer closes that gap. It
 is a browser interface the server hands out at `/ui`, built from the same
 binary and the same image, and it reads the deployment through the public API
-like any other client.
+like any other client. Editing is a second bundle at `/ui/editor`, so a reader
+who never edits downloads none of it.
 
 <!-- toc -->
 
@@ -207,11 +208,17 @@ The viewer is read-only until you configure an identity provider. Set
 control. Without both, the control does not exist and neither does any edit
 control.
 
+Signing in happens at `/ui/editor`, which is where the editing screens are. On
+`/ui` the control is a link there: a token lives in the page that holds it, and
+a page load ends it, so signing in on one page and editing on another would
+sign you out on the way.
+
 The viewer is a public client: it holds no secret and signs in with the
 authorization code flow with PKCE against the issuer your server publishes in
 `[base]/.well-known/smart-configuration`
 (<https://hl7.org/fhir/smart-app-launch/app-launch.html>). Register the
-redirect address `https://your-server/ui/callback` with the identity provider,
+redirect address `https://your-server/ui/editor/callback` with the identity
+provider,
 under the client id you set in `FERROTERM_VIEWER_CLIENT_ID`, and allow the
 scopes `openid`, `fhirUser`, `user/CodeSystem.cud`, `user/ValueSet.cud`, and
 `user/ConceptMap.cud`. A role that gets none of the three `user/` scopes reads

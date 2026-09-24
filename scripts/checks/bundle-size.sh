@@ -63,8 +63,11 @@ fi
 baseline=""
 if [[ -n "$base" ]]; then
   if ! baseline="$(git show "$base:$bars" 2>/dev/null)"; then
-    echo "bundle-size: cannot read $bars at $base" >&2
-    exit 2
+    # A bars file the merge base does not carry is a bundle this change adds,
+    # so there is no figure to measure growth against and only the ceilings
+    # are checked. A file that USED to exist cannot reach this branch: it
+    # would still be readable at the base.
+    echo "bundle-size: $bars is new at $base, so only the ceilings are checked"
   fi
 fi
 
@@ -144,7 +147,7 @@ fi
 
 echo "bundle-size: $((checks - breached)) of $checks checks hold"
 if [[ "$grown" -eq 0 ]]; then
-  echo "bundle-size: no --base given, so only the ceilings were checked"
+  echo "bundle-size: no baseline to measure growth against, so only the ceilings were checked"
 fi
 if [[ "$breached" -gt 0 ]]; then
   {

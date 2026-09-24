@@ -34,9 +34,11 @@ der2_*
 *.redb
 *.fst
 
-# The viewer bundle Trunk writes. It is built by the release lane and rides
-# inside the server binary; a checkout never carries it.
+# The two viewer bundles Trunk writes, the reader's and the editor's. They are
+# built by the release lane and ride inside the server binary; a checkout never
+# carries them.
 /app/ferroterm-viewer/dist/
+/app/ferroterm-viewer/dist-editor/
 /app/ferroterm-viewer/.trunk/
 
 # RustRover

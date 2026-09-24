@@ -54,6 +54,13 @@ pub(crate) const CONCEPT_MAPS: Glyph = Glyph(concat!(
     r#"<path d="M20 16H7"/><path d="m10 13-3 3 3 3"/>"#,
 ));
 
+/// A pencil over the line it is writing on: the mark of the editor.
+#[cfg(feature = "editor")]
+pub(crate) const EDIT: Glyph = Glyph(concat!(
+    r#"<path d="M12 20h9"/>"#,
+    r#"<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>"#,
+));
+
 /// Sliders: what this reader has set for themselves.
 pub(crate) const SETTINGS: Glyph = Glyph(concat!(
     r#"<path d="M4 6h10"/><path d="M18 6h2"/>"#,

@@ -44,11 +44,10 @@ use crate::offers::choices;
 use crate::offers::published;
 use crate::offers::versions;
 use crate::routes::TRANSLATE_PATH;
-use crate::routes::UI_BASE;
 use crate::routes::VERSION_PARAM;
+use crate::routes::base_url;
 use crate::runs::Run;
 use crate::styles;
-use crate::url::RequestUrl;
 
 /// The operation this screen runs.
 const TRANSLATE: &str = "translate";
@@ -156,8 +155,7 @@ fn run_pairs(run: &TranslateRequest) -> Vec<(&'static str, String)> {
 /// A parameter the reader left empty is left out, so the address says what the
 /// run sent and nothing more.
 pub(crate) fn address(run: &TranslateRequest, version: FhirVersion) -> String {
-    let mut url = RequestUrl::new()
-        .segment(UI_BASE.trim_start_matches('/'))
+    let mut url = base_url()
         .segment(TRANSLATE_PATH)
         .query(VERSION_PARAM, version.segment());
     for (name, value) in run_pairs(run) {
@@ -705,6 +703,7 @@ fn match_sentence(answer: &TranslateAnswer) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::routes::UI_BASE;
 
     /// A stand-in for the address, which reads the same way a `ParamsMap` does.
     fn query<'a>(pairs: &'a [(&'a str, &'a str)]) -> impl Fn(&str) -> Option<String> + use<'a> {
@@ -726,8 +725,11 @@ mod tests {
         assert!(run.runnable());
         assert_eq!(
             address(&run, FhirVersion::R4B),
-            "/ui/translate?fhir=r4b&map=https%3A%2F%2Fterminology.example%2FConceptMap%2Fm\
-             &system=https%3A%2F%2Fterminology.example%2Fa&code=x",
+            format!(
+                "{UI_BASE}/translate\
+                 ?fhir=r4b&map=https%3A%2F%2Fterminology.example%2FConceptMap%2Fm\
+                 &system=https%3A%2F%2Fterminology.example%2Fa&code=x"
+            ),
             "a parameter the reader left empty is left out of the address"
         );
     }

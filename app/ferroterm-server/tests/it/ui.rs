@@ -232,3 +232,57 @@ async fn an_asset_is_neither_logged_nor_measured() {
         "the latency histograms describe the terminology operations only: {exposition}"
     );
 }
+
+/// The editor bundle, whose document names itself so a test can tell the two
+/// trees apart.
+static EDITOR_BUNDLE: &[Asset] = &[
+    Asset {
+        path: "index.html",
+        bytes: b"<!doctype html><title>FerroTERM editor</title>",
+    },
+    Asset {
+        path: "ferroterm-viewer-fedcba9876543210_bg.wasm",
+        bytes: b"\0asm",
+    },
+];
+
+#[tokio::test]
+async fn each_bundle_answers_under_its_own_mount() {
+    let app = ferroterm_server::router_with_bundles(serving(true), BUNDLE, EDITOR_BUNDLE);
+
+    let reader = String::from_utf8(body_of(get(&app, "/ui/").await).await).expect("utf-8");
+    assert!(reader.contains("FerroTERM viewer"), "{reader}");
+    let editor = String::from_utf8(body_of(get(&app, "/ui/editor/").await).await).expect("utf-8");
+    assert!(
+        editor.contains("FerroTERM editor"),
+        "the static editor segment outranks the reader's catch-all: {editor}"
+    );
+
+    let asset = get(&app, "/ui/editor/ferroterm-viewer-fedcba9876543210_bg.wasm").await;
+    assert_eq!(asset.status(), StatusCode::OK);
+    assert_eq!(header_of(&asset, header::CONTENT_TYPE), "application/wasm");
+
+    // A client-side route under either mount deep-links to that tree's own
+    // document rather than to the other tree's.
+    let deep =
+        String::from_utf8(body_of(get(&app, "/ui/editor/codesystem").await).await).expect("utf-8");
+    assert!(deep.contains("FerroTERM editor"), "{deep}");
+    let below = String::from_utf8(body_of(get(&app, "/ui/valuesets").await).await).expect("utf-8");
+    assert!(below.contains("FerroTERM viewer"), "{below}");
+
+    assert_eq!(
+        get(&app, "/ui/editor").await.status(),
+        StatusCode::TEMPORARY_REDIRECT,
+        "the mount without its trailing slash redirects onto it"
+    );
+}
+
+#[tokio::test]
+async fn a_binary_carrying_no_editor_bundle_mounts_none() {
+    let app = ferroterm_server::router_with_bundles(serving(true), BUNDLE, &[]);
+    let answered = String::from_utf8(body_of(get(&app, "/ui/editor/").await).await).expect("utf-8");
+    assert!(
+        answered.contains("FerroTERM viewer"),
+        "with no editor tree the address is an unknown client-side route of the reader: {answered}"
+    );
+}

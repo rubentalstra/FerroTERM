@@ -15,6 +15,15 @@ publish = false
 name = "ferroterm-viewer"
 path = "src/main.rs"
 
+# The crate builds twice, into two bundles the server serves side by side.
+# The reader bundle is the default feature set, served at /ui; the editor
+# bundle is the same crate with `editor` on, served at /ui/editor, and it
+# carries every reader screen plus the authoring screens. A reader who never
+# signs in downloads no editor byte.
+[features]
+# The authoring screens, and the router base they are served under.
+editor = []
+
 # The evidence screen states figures the repository already commits, so the
 # build script reads those files and emits the document the bundle carries.
 # A build dependency runs on the host and never reaches the browser, so the

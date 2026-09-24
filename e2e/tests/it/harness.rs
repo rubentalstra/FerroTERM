@@ -10,6 +10,7 @@ use thirtyfour::LoggingPrefsLogLevel;
 use thirtyfour::common::keys::TypingData;
 use thirtyfour::prelude::*;
 use thirtyfour::stringmatch::Needle;
+use thirtyfour::stringmatch::StringMatch;
 
 /// Names the server under test, as a URL without a trailing slash.
 pub const BASE_URL_ENV: &str = "FERROTERM_UI_E2E_BASE_URL";
@@ -48,6 +49,20 @@ const MARKUP_IN_A_FAILURE: usize = 20_000;
 /// How long a wait keeps trying before the journey fails.
 const WAIT: Duration = Duration::from_secs(30);
 
+/// How many tab presses a walk to one control allows itself.
+///
+/// More than a screen has controls, so a control that is reachable is reached
+/// whichever stop the walk starts from, and a walk that never arrives ends.
+const TAB_LIMIT: usize = 200;
+
+/// The control the keyboard is on, as its id, its name, and its own words.
+const FOCUSED: &str = r"
+const on = document.activeElement;
+if (!on) { return ''; }
+return [on.id || '', on.getAttribute('name') || '', (on.textContent || '').trim()]
+  .filter((part) => part !== '').join(' ');
+";
+
 /// How often a wait re-reads the page while it waits.
 const POLL: Duration = Duration::from_millis(100);
 
@@ -67,6 +82,61 @@ const CHROME_ARGS: [&str; 4] = [
     "--disable-dev-shm-usage",
     "--window-size=1280,900",
 ];
+
+/// The `fhirUser` the stub issuer signs everyone in as.
+const SIGNED_IN_AS: &str = "Practitioner/e2e-terminologist";
+
+/// The control that starts a sign-in, wherever the chrome puts it.
+const SIGN_IN_CONTROL: &str = "//button[normalize-space()='Sign in']";
+
+/// The shell's own mark, which proves a bundle booted.
+const SHELL_MARK: &str = "header a[href^='/ui']";
+
+/// Opens the issuer's profile address, which decides what the sign-in grants.
+///
+/// `profile` is the issuer's own vocabulary: `writer` for the full grant,
+/// `reader` for the identity scopes alone, `response-only` for a grant the
+/// answer states and the token does not carry. `tag` is the journey's name,
+/// which keeps the revocations it reads back its own while the others run
+/// beside it.
+pub async fn choose(journey: &Journey, deployment: &SignedIn, profile: &str, tag: &str) {
+    let address = format!("{}/profile?name={profile}&tag={tag}", deployment.issuer);
+    journey.reopen(&address).await;
+    journey
+        .text_becoming(
+            By::Css("#profile"),
+            StringMatch::new(profile).partial(),
+            "the issuer to take the grant this journey signs in for",
+        )
+        .await;
+}
+
+/// Presses the sign-in control and waits for the shell to name the reader.
+///
+/// The sign-in happens in the editor bundle, because that is where the viewer
+/// offers one: a token lives in the page that holds it, and the reader bundle
+/// links here rather than signing in on a page that would then be left.
+pub async fn sign_in(journey: &Journey, deployment: &SignedIn) -> String {
+    journey
+        .reopen(&format!("{}/ui/editor", deployment.base))
+        .await;
+    journey
+        .element(By::Css(SHELL_MARK), "the shell mark on the overview")
+        .await;
+    let control = journey
+        .element(By::XPath(SIGN_IN_CONTROL), "the sign-in control")
+        .await;
+    control.click().await.unwrap_or_else(|error| {
+        panic!("the sign-in control refused the press: {error}");
+    });
+    journey
+        .text_becoming(
+            By::XPath("//*[contains(text(), 'Practitioner/')]"),
+            StringMatch::new(SIGNED_IN_AS).partial(),
+            "the shell to name whoever signed in",
+        )
+        .await
+}
 
 /// The server under test, or `None` when nothing names one.
 pub fn server() -> Option<String> {
@@ -298,6 +368,47 @@ impl Journey {
         self.driver.active_element().await?.send_keys(presses).await
     }
 
+    /// What the keyboard is on right now, as the control's own name.
+    ///
+    /// WebDriver has no primitive for the element focus landed on, which is
+    /// why this is one of the readings taken through a script.
+    ///
+    /// # Errors
+    ///
+    /// Returns the WebDriver error when the browser does not answer.
+    pub async fn focused(&self) -> WebDriverResult<String> {
+        self.evaluate(FOCUSED).await
+    }
+
+    /// Types `text` wherever the keyboard is, with no pointer involved.
+    ///
+    /// # Errors
+    ///
+    /// Returns the WebDriver error when the browser refused the keys.
+    pub async fn type_here(&self, text: &str) -> WebDriverResult<()> {
+        self.driver.active_element().await?.send_keys(text).await
+    }
+
+    /// Presses tab until the keyboard is on the control `wanted` names.
+    ///
+    /// The walk is bounded, so a control the keyboard never reaches fails the
+    /// journey with what it did reach rather than looping.
+    pub async fn tab_to(&self, wanted: &str, what: &str) {
+        let mut walked = Vec::new();
+        for _ in 0..TAB_LIMIT {
+            let on = self.focused().await.unwrap_or_default();
+            if on.contains(wanted) {
+                return;
+            }
+            walked.push(on);
+            if self.tab(1).await.is_err() {
+                break;
+            }
+        }
+        let reason = format!("the keyboard walked over {walked:?} and never reached it");
+        panic!("{}", self.failure(what, &reason).await);
+    }
+
     /// How tall the viewport is, in CSS pixels.
     ///
     /// # Errors
@@ -435,7 +546,23 @@ impl Journey {
 
     /// Fails the journey when the browser logged anything severe.
     pub async fn no_console_errors(&self) {
-        let console = self.console_errors().await;
+        self.no_console_errors_but(&[]).await;
+    }
+
+    /// The same, for a journey that provoked a refusal on purpose.
+    ///
+    /// A journey that asks the server for something it refuses makes the
+    /// browser log the answer as a severe network entry, and that entry is the
+    /// journey working rather than a defect. `expected` names the entries the
+    /// journey provoked, as text they contain; every other severe entry still
+    /// fails it.
+    pub async fn no_console_errors_but(&self, expected: &[&str]) {
+        let console: Vec<String> = self
+            .console_errors()
+            .await
+            .into_iter()
+            .filter(|entry| !expected.iter().any(|wanted| entry.contains(wanted)))
+            .collect();
         assert!(
             console.is_empty(),
             "the browser logged {} severe entries, and a rendered page that logs one is a defect:\n  {}",

@@ -19,8 +19,9 @@ use thirtyfour::prelude::*;
 use thirtyfour::stringmatch::StringMatch;
 
 use crate::harness::Journey;
-use crate::harness::SignedIn;
+use crate::harness::choose;
 use crate::harness::session;
+use crate::harness::sign_in;
 use crate::harness::signed_in;
 
 /// The control that starts a sign-in.
@@ -31,47 +32,6 @@ const SIGN_OUT: &str = "//button[normalize-space()='Sign out']";
 
 /// The `fhirUser` the stub issuer signs everyone in as.
 const WHO: &str = "Practitioner/e2e-terminologist";
-
-/// The shell's own mark, which proves the bundle booted.
-const LOCKUP: &str = "header a[href^='/ui']";
-
-/// Opens the issuer's profile address, which decides what the sign-in grants.
-///
-/// `profile` is the issuer's own vocabulary: `writer` for the full grant,
-/// `reader` for the identity scopes alone. `tag` is this journey's name, which
-/// keeps the revocations it reads back its own while the others run beside it.
-async fn choose(journey: &Journey, deployment: &SignedIn, profile: &str, tag: &str) {
-    let address = format!("{}/profile?name={profile}&tag={tag}", deployment.issuer);
-    journey.reopen(&address).await;
-    journey
-        .text_becoming(
-            By::Css("#profile"),
-            StringMatch::new(profile).partial(),
-            "the issuer to take the grant this journey signs in for",
-        )
-        .await;
-}
-
-/// Presses the sign-in control and waits for the shell to name the reader.
-async fn sign_in(journey: &Journey, deployment: &SignedIn) -> String {
-    journey.reopen(&format!("{}/ui", deployment.base)).await;
-    journey
-        .element(By::Css(LOCKUP), "the shell mark on the overview")
-        .await;
-    let control = journey
-        .element(By::XPath(SIGN_IN), "the sign-in control")
-        .await;
-    control.click().await.unwrap_or_else(|error| {
-        panic!("the sign-in control refused the press: {error}");
-    });
-    journey
-        .text_becoming(
-            By::XPath("//*[contains(text(), 'Practitioner/')]"),
-            StringMatch::new(WHO).partial(),
-            "the shell to name whoever signed in",
-        )
-        .await
-}
 
 /// A sign-in completes without anything being typed, and the shell says who
 /// is signed in and what they may change.
@@ -230,7 +190,40 @@ async fn signing_out_revokes_the_token_and_drops_it() {
     outcome.expect("the journey ran and the browser session ended cleanly");
 }
 
-// TODO(#649): the write journeys, once a screen writes through the client:
-// a write refused for want of the scope, with its outcome text announced, and
-// one that succeeds with `user/ValueSet.cud`. The stub issuer already serves
-// the `response-only` profile the first of them needs.
+/// The reader bundle offers no sign-in of its own, and says where to go.
+///
+/// Signing in is what an editing session begins with and the editing screens
+/// live in the other bundle, so the reader bundle's control is a link into it
+/// rather than a sign-in that would end on the wrong page.
+#[tokio::test]
+async fn the_reader_bundle_sends_a_sign_in_to_the_editor_bundle() {
+    let Some(deployment) = signed_in() else {
+        return;
+    };
+    let outcome = session()
+        .await
+        .run_and_quit(|driver| async move {
+            let journey = Journey::open(driver, &deployment.base, "/ui").await;
+            let offered = journey
+                .element(
+                    By::XPath("//a[normalize-space()='Sign in to edit']"),
+                    "the way into the bundle that signs in",
+                )
+                .await;
+            let href = offered.attr("href").await?.unwrap_or_default();
+            assert!(
+                href.starts_with("/ui/editor"),
+                "the link opens the editor bundle: `{href}`"
+            );
+            assert_eq!(
+                journey.count(By::XPath(SIGN_IN)).await,
+                0,
+                "the reader bundle starts no sign-in of its own"
+            );
+
+            journey.no_console_errors().await;
+            Ok::<(), WebDriverError>(())
+        })
+        .await;
+    outcome.expect("the journey ran and the browser session ended cleanly");
+}

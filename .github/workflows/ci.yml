@@ -509,26 +509,44 @@ jobs:
           set -euo pipefail
           cargo fmt -p ferroterm-viewer --check
           leptosfmt --check app/ferroterm-viewer/src
+      # Both feature sets, because the crate ships as two bundles and the
+      # reader's build is the one a feature-gated screen could break without
+      # anyone noticing.
       - name: Clippy on the target the crate ships to
-        run: cargo clippy -p ferroterm-viewer --locked --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
+        run: |
+          set -euo pipefail
+          cargo clippy -p ferroterm-viewer --locked --target wasm32-unknown-unknown --all-targets -- -D warnings
+          cargo clippy -p ferroterm-viewer --locked --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings
       - name: Tests
-        run: cargo nextest run -p ferroterm-viewer --locked --no-tests=pass
+        run: |
+          set -euo pipefail
+          cargo nextest run -p ferroterm-viewer --locked --no-tests=pass
+          cargo nextest run -p ferroterm-viewer --locked --features editor --no-tests=pass
       # `locked = true` in Trunk.toml already refuses a stale lock file; the
-      # flag says so at the call site too.
-      - name: Build the release bundle
+      # flag says so at the call site too. The editor build is the same crate
+      # with the feature on, into its own directory and under its own mount
+      # (trunk 0.21.14 `build --features/--dist/--public-url`).
+      - name: Build both release bundles
         working-directory: app/ferroterm-viewer
-        run: trunk build --release --locked
+        run: |
+          set -euo pipefail
+          trunk build --release --locked
+          trunk build --release --locked --features editor --dist dist-editor --public-url /ui/editor/
       # BASE is empty outside a pull request, and the guard then checks only
       # the ceilings and says so. Only a pull request reaches `main`.
-      - name: The bundle is inside its ceiling and its per-change budget
+      - name: Each bundle is inside its ceiling and its per-change budget
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
+          reader=(--bars app/ferroterm-viewer/bundle-size.json --dist app/ferroterm-viewer/dist)
+          editor=(--bars app/ferroterm-viewer/bundle-size-editor.json --dist app/ferroterm-viewer/dist-editor)
           if [[ -n "${BASE:-}" ]]; then
-            bash scripts/checks/bundle-size.sh --base "$BASE"
+            bash scripts/checks/bundle-size.sh "${reader[@]}" --base "$BASE"
+            bash scripts/checks/bundle-size.sh "${editor[@]}" --base "$BASE"
           else
-            bash scripts/checks/bundle-size.sh
+            bash scripts/checks/bundle-size.sh "${reader[@]}"
+            bash scripts/checks/bundle-size.sh "${editor[@]}"
           fi
 
   # The viewer is client-side rendered, so a unit test sees none of what a

@@ -6,15 +6,26 @@
 //! operator registered (<https://hl7.org/fhir/smart-app-launch/app-launch.html>).
 //! A deployment that configured no issuer publishes no document, so the
 //! viewer stays the read-only tool it is and draws nothing here.
+//!
+//! The reader bundle signs nobody in. Signing in is what an editing session
+//! begins with, the editing screens live in the other bundle, and a token held
+//! on one page does not survive the load of another, so the reader bundle's
+//! control is a link into the editor bundle and the sign-in happens there.
+//! The link is drawn on the same evidence: the served root's capability
+//! statement declaring `SMART-on-FHIR`
+//! (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
 
 use leptos::prelude::*;
+#[cfg(feature = "editor")]
 use leptos::task::spawn_local;
 
 use crate::auth::Session;
+#[cfg(feature = "editor")]
 use crate::auth::begin;
 use crate::auth::scopes::Letter;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
+#[cfg(feature = "editor")]
 use crate::fhir::smart::SignIn;
 use crate::fhir::version::FhirVersion;
 use crate::styles;
@@ -24,9 +35,26 @@ use crate::styles;
 /// The three are the definitional resources the FHIR RESTful API exposes here,
 /// named as resource types and never as a code system, so a deployment serving
 /// a system this viewer has never met draws the same controls.
+// The tests beside these items exercise them, so the expectation holds in the
+// reader bundle and not in its test build, which is what the `not(test)` is
+// for.
+#[cfg_attr(
+    all(not(feature = "editor"), not(test)),
+    expect(
+        dead_code,
+        reason = "only the editor bundle starts a sign-in and reads the token one holds"
+    )
+)]
 const WRITABLE: [&str; 3] = ["CodeSystem", "ValueSet", "ConceptMap"];
 
 /// The permissions a control can rest on, which is what a `cud` scope opens.
+#[cfg_attr(
+    not(feature = "editor"),
+    expect(
+        dead_code,
+        reason = "only the editor bundle starts a sign-in and reads the token one holds"
+    )
+)]
 const LETTERS: [Letter; 3] = [Letter::Create, Letter::Update, Letter::Delete];
 
 /// The live region the sign-in reports into.
@@ -56,7 +84,30 @@ pub(crate) fn SignInControl() -> impl IntoView {
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
     let session = expect_context::<Session>();
     let report = RwSignal::new(String::new());
+    let control = control(client, version, session, report);
 
+    view! {
+        <div class="flex items-center gap-default">
+            {control} <span id=REPORT_ID aria-live="polite" class=styles::HINT>
+                {move || report.get()}
+            </span>
+        </div>
+    }
+}
+
+/// The editor bundle's control: the sign-in itself, and who is signed in.
+///
+/// The offer is read without a suspense boundary, because there is no fallback
+/// to flash: an unread root draws no control, and a refetch keeps the last
+/// value until the next one resolves
+/// (<https://docs.rs/reactive_graph/0.2/reactive_graph/computed/struct.AsyncDerived.html>).
+#[cfg(feature = "editor")]
+fn control(
+    client: FhirClient,
+    version: Signal<FhirVersion>,
+    session: Session,
+    report: RwSignal<String>,
+) -> impl IntoView {
     let reader = client.clone();
     let offer = LocalResource::new(move || {
         let reader = reader.clone();
@@ -75,7 +126,7 @@ pub(crate) fn SignInControl() -> impl IntoView {
         })
     };
 
-    let control = move || match offered() {
+    move || match offered() {
         None => ().into_any(),
         Some(sign_in) => {
             if session.signed_in() {
@@ -84,17 +135,55 @@ pub(crate) fn SignInControl() -> impl IntoView {
                 signed_out(client.clone(), version, sign_in, report)
             }
         }
-    };
-
-    view! {
-        <div class="flex items-center gap-default">
-            {control} <span id=REPORT_ID aria-live="polite" class=styles::HINT>
-                {move || report.get()}
-            </span>
-        </div>
     }
 }
 
+/// The reader bundle's control: the way into the bundle that can sign in.
+///
+/// The capability statement alone decides whether it is drawn, so this bundle
+/// never asks for the discovery document a deployment with no issuer does not
+/// serve. The anchor is `rel="external"`, because the address is under this
+/// bundle's own router base and the router would otherwise intercept it and
+/// answer its own 404.
+#[cfg(not(feature = "editor"))]
+fn control(
+    client: FhirClient,
+    version: Signal<FhirVersion>,
+    _session: Session,
+    _report: RwSignal<String>,
+) -> impl IntoView {
+    let statement = LocalResource::new(move || {
+        let client = client.clone();
+        let version = version.get();
+        async move { client.capability_statement(version).await }
+    });
+    let declares = move || {
+        statement.with(|answered| {
+            answered
+                .as_ref()
+                .and_then(|read| read.as_ref().ok())
+                .is_some_and(crate::fhir::capability::CapabilityStatement::declares_smart)
+        })
+    };
+    move || {
+        if declares() {
+            view! {
+                <a
+                    href=move || crate::routes::editor_link(version.get())
+                    rel="external"
+                    class=styles::BUTTON
+                >
+                    "Sign in to edit"
+                </a>
+            }
+            .into_any()
+        } else {
+            ().into_any()
+        }
+    }
+}
+
+#[cfg(feature = "editor")]
 /// The control a reader who is not signed in sees.
 ///
 /// The control disables itself the moment it is pressed, because a second
@@ -136,6 +225,7 @@ fn signed_out(
     .into_any()
 }
 
+#[cfg(feature = "editor")]
 /// What a signed-in reader sees: who they are, and what they may change.
 fn signed_in(session: Session, sign_in: SignIn, report: RwSignal<String>) -> AnyView {
     let who = move || session.who().unwrap_or_else(|| String::from("Signed in"));
@@ -180,6 +270,7 @@ fn signed_in(session: Session, sign_in: SignIn, report: RwSignal<String>) -> Any
     .into_any()
 }
 
+#[cfg(feature = "editor")]
 /// Sends the browser to the identity provider.
 ///
 /// The router owns same-origin navigation; this leaves the application for the

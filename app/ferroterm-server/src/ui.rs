@@ -1,14 +1,15 @@
-//! The viewer bundle this binary carries, served under `/ui`.
+//! The viewer bundles this binary carries: the reader's under `/ui`, the
+//! editor's under `/ui/editor`.
 //!
 //! No FHIR specification governs a terminology server's user interface: our
-//! own design. The bundle is a table of files compiled into the binary, so a
+//! own design. Each bundle is a table of files compiled into the binary, so a
 //! request path never reaches the filesystem and there is nothing to traverse
-//! out of; a path the table does not hold answers the single-page document,
-//! which is how a client-side route deep-links.
+//! out of; a path a table does not hold answers that bundle's own single-page
+//! document, which is how a client-side route deep-links.
 //!
-//! The table is empty unless the `ui` feature was on and the viewer's `dist/`
-//! existed when this crate was built, and the server mounts no route over an
-//! empty table.
+//! A table is empty unless the `ui` feature was on and the bundle's build
+//! directory existed when this crate was built, and the server mounts no route
+//! over an empty table.
 
 use axum::Router;
 use axum::response::{IntoResponse, Redirect, Response};
@@ -29,8 +30,16 @@ pub struct Asset {
 /// The document every path the bundle does not hold falls back to.
 pub const INDEX: &str = "index.html";
 
-/// The path the viewer is mounted at, with its trailing slash.
+/// The path the reader bundle is mounted at, with its trailing slash.
 pub const MOUNT: &str = "/ui/";
+
+/// The path the editor bundle is mounted at, with its trailing slash.
+///
+/// The viewer crate builds twice from one source: the reader bundle, which
+/// every reader downloads, and the editor bundle, which carries the authoring
+/// screens as well. They are two trees rather than two routes over one tree,
+/// so a reader who never edits never downloads the authoring code.
+pub const EDITOR_MOUNT: &str = "/ui/editor/";
 
 /// The media type served for an extension [`MEDIA_TYPES`] does not name.
 const OCTET_STREAM: &str = "application/octet-stream";
@@ -66,39 +75,62 @@ const IMMUTABLE: &str = "public, max-age=31536000, immutable";
 /// No reuse without revalidation, for a file whose name is stable.
 const REVALIDATE: &str = "no-cache";
 
-/// The routes the viewer adds: the document at [`MOUNT`], every asset under
-/// it, and `/ui` itself redirecting onto the mount.
+/// The routes the viewer adds: the document at each mount, every asset under
+/// it, and the mount without its trailing slash redirecting onto it.
+///
+/// `editor` is the second bundle. It is mounted only when this binary carries
+/// one, and its routes are added after the reader's: a static `/ui/editor`
+/// segment outranks the reader's catch-all, so an address under the editor
+/// mount reaches the editor tree and every other address still reaches the
+/// reader's.
 ///
 /// The caller merges these after the request-log middleware, so an asset is
 /// neither logged nor timed and the `/metrics` histograms keep describing the
 /// terminology operations.
-pub fn router<S>(bundle: &'static [Asset]) -> Router<S>
+pub fn router<S>(bundle: &'static [Asset], editor: &'static [Asset]) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
-    Router::new()
-        .route(
-            "/ui",
-            // The query travels with the redirect. `Redirect` takes a whole
-            // location, so a bare path silently drops it, and `/ui?fhir=r5`
-            // then lands on the stored default instead of the version the
-            // link named (RFC 9110 section 15.4).
-            get(|uri: Uri| async move {
-                match uri.query() {
-                    Some(query) => Redirect::temporary(&format!("{MOUNT}?{query}")),
-                    None => Redirect::temporary(MOUNT),
-                }
-            }),
-        )
-        .route("/ui/", get(move || async move { document(bundle) }))
-        .route(
-            "/ui/{*path}",
-            get(
-                move |axum::extract::Path(path): axum::extract::Path<String>| async move {
-                    asset(bundle, &path)
-                },
-            ),
-        )
+    let app = mounted(Router::new(), "/ui", MOUNT, bundle);
+    if editor.is_empty() {
+        app
+    } else {
+        mounted(app, "/ui/editor", EDITOR_MOUNT, editor)
+    }
+}
+
+/// The three routes one bundle answers, added to `app`.
+fn mounted<S>(
+    app: Router<S>,
+    path: &str,
+    mount: &'static str,
+    bundle: &'static [Asset],
+) -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    app.route(
+        path,
+        // The query travels with the redirect. `Redirect` takes a whole
+        // location, so a bare path silently drops it, and `/ui?fhir=r5`
+        // then lands on the stored default instead of the version the
+        // link named (RFC 9110 section 15.4).
+        get(move |uri: Uri| async move {
+            match uri.query() {
+                Some(query) => Redirect::temporary(&format!("{mount}?{query}")),
+                None => Redirect::temporary(mount),
+            }
+        }),
+    )
+    .route(mount, get(move || async move { document(bundle) }))
+    .route(
+        &format!("{mount}{{*path}}"),
+        get(
+            move |axum::extract::Path(path): axum::extract::Path<String>| async move {
+                asset(bundle, &path)
+            },
+        ),
+    )
 }
 
 /// `GET /`: the redirect onto the viewer, for a reader who typed the host.
@@ -175,10 +207,15 @@ fn hashed(path: &str) -> bool {
 #[cfg(feature = "ui")]
 include!(concat!(env!("OUT_DIR"), "/ui_bundle.rs"));
 
-/// The bundle compiled into this binary, empty because the `ui` feature is
-/// off.
+/// The reader bundle compiled into this binary, empty because the `ui`
+/// feature is off.
 #[cfg(not(feature = "ui"))]
 pub const BUNDLE: &[Asset] = &[];
+
+/// The editor bundle compiled into this binary, empty because the `ui`
+/// feature is off.
+#[cfg(not(feature = "ui"))]
+pub const EDITOR_BUNDLE: &[Asset] = &[];
 
 #[cfg(test)]
 mod tests {
