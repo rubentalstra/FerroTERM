@@ -23,6 +23,127 @@ const VERSIONS: [(&str, &Schemas); 4] = [
 /// The three resource types the server serves.
 const TYPES: [&str; 3] = ["CodeSystem", "ValueSet", "ConceptMap"];
 
+/// The metadata elements every terminology resource of R4 and R4B marks
+/// `isSummary`, in definition order.
+const R4_METADATA: [&str; 15] = [
+    "id",
+    "meta",
+    "implicitRules",
+    "url",
+    "identifier",
+    "version",
+    "name",
+    "title",
+    "status",
+    "experimental",
+    "date",
+    "publisher",
+    "contact",
+    "useContext",
+    "jurisdiction",
+];
+
+/// The same for R5 and the R6 ballot, which add `modifierExtension` and
+/// `versionAlgorithm`.
+const R5_METADATA: [&str; 17] = [
+    "id",
+    "meta",
+    "implicitRules",
+    "modifierExtension",
+    "url",
+    "identifier",
+    "version",
+    "versionAlgorithm",
+    "name",
+    "title",
+    "status",
+    "experimental",
+    "date",
+    "publisher",
+    "contact",
+    "useContext",
+    "jurisdiction",
+];
+
+/// The `CodeSystem` summary elements after the metadata, R4 and R4B.
+const R4_CODE_SYSTEM: [&str; 10] = [
+    "caseSensitive",
+    "valueSet",
+    "hierarchyMeaning",
+    "compositional",
+    "versionNeeded",
+    "content",
+    "supplements",
+    "count",
+    "filter",
+    "property",
+];
+
+/// The `CodeSystem` summary elements after the metadata, R5 and R6.
+const R5_CODE_SYSTEM: [&str; 11] = [
+    "effectivePeriod",
+    "caseSensitive",
+    "valueSet",
+    "hierarchyMeaning",
+    "compositional",
+    "versionNeeded",
+    "content",
+    "supplements",
+    "count",
+    "filter",
+    "property",
+];
+
+/// The summary elements of each type after its metadata, as the pinned
+/// `StructureDefinition` resources of each served version flag them.
+const SUMMARY_SETS: [(&str, &str, &[&str], &[&str]); 12] = [
+    ("r4", "CodeSystem", &R4_METADATA, &R4_CODE_SYSTEM),
+    ("r4", "ValueSet", &R4_METADATA, &["immutable"]),
+    ("r4", "ConceptMap", &R4_METADATA, &["source", "target"]),
+    ("r4b", "CodeSystem", &R4_METADATA, &R4_CODE_SYSTEM),
+    ("r4b", "ValueSet", &R4_METADATA, &["immutable"]),
+    ("r4b", "ConceptMap", &R4_METADATA, &["source", "target"]),
+    ("r5", "CodeSystem", &R5_METADATA, &R5_CODE_SYSTEM),
+    (
+        "r5",
+        "ValueSet",
+        &R5_METADATA,
+        &["immutable", "effectivePeriod"],
+    ),
+    (
+        "r5",
+        "ConceptMap",
+        &R5_METADATA,
+        &[
+            "effectivePeriod",
+            "property",
+            "additionalAttribute",
+            "sourceScope",
+            "targetScope",
+        ],
+    ),
+    ("r6", "CodeSystem", &R5_METADATA, &R5_CODE_SYSTEM),
+    (
+        "r6",
+        "ValueSet",
+        &R5_METADATA,
+        &["immutable", "effectivePeriod"],
+    ),
+    (
+        "r6",
+        "ConceptMap",
+        &R5_METADATA,
+        &[
+            "effectivePeriod",
+            "property",
+            "additionalAttribute",
+            "allowedRelationship",
+            "sourceScope",
+            "targetScope",
+        ],
+    ),
+];
+
 /// The system of the tag a subsetted resource carries.
 const TAG_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/v3-ObservationValue";
 
@@ -252,6 +373,58 @@ fn mandatory(schemas: &Schemas, resource_type: &str) -> Vec<&'static str> {
         .collect()
 }
 
+/// The top-level elements of `resource_type` its definition marks
+/// `isSummary`, in definition order.
+fn summary(schemas: &Schemas, resource_type: &str) -> Vec<&'static str> {
+    schemas
+        .type_named(resource_type)
+        .expect("the version defines the type")
+        .fields
+        .iter()
+        .filter(|field| field.is_summary)
+        .map(|field| field.name)
+        .collect()
+}
+
+/// The sorted member names of `resource` that `_summary=true` keeps: those
+/// the definition marks `isSummary`, plus `resourceType`, `id` and `meta`.
+fn summary_members(resource: &Value, schemas: &Schemas, resource_type: &str) -> Vec<String> {
+    let flagged = summary(schemas, resource_type);
+    let mut names: Vec<String> = resource
+        .as_object()
+        .expect("a resource")
+        .keys()
+        .filter(|name| flagged.contains(&name.as_str()))
+        .cloned()
+        .chain(["id", "meta", "resourceType"].map(str::to_owned))
+        .collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// The sorted member names of `resource`.
+fn members(resource: &Value) -> Vec<String> {
+    let mut names: Vec<String> = resource
+        .as_object()
+        .expect("a resource")
+        .keys()
+        .cloned()
+        .collect();
+    names.sort();
+    names
+}
+
+/// The element each type carries that is not a summary element and that the
+/// fixture fills.
+fn content_element(resource_type: &str) -> &'static str {
+    match resource_type {
+        "CodeSystem" => "concept",
+        "ValueSet" => "compose",
+        _ => "group",
+    }
+}
+
 /// A persisted resource of `resource_type` carrying a narrative and content
 /// that `_summary=text` leaves out.
 fn with_narrative(resource_type: &str, version: &str) -> Value {
@@ -262,23 +435,23 @@ fn with_narrative(resource_type: &str, version: &str) -> Value {
     });
     match resource_type {
         "CodeSystem" => json!({
-            "resourceType": "CodeSystem", "url": url, "version": "1", "text": text,
+            "resourceType": "CodeSystem", "url": url, "version": "1", "name": "Summary", "text": text,
             "status": "active", "content": "complete", "title": "Summary",
             "concept": [{"code": "a", "display": "A"}]
         }),
         "ValueSet" => json!({
-            "resourceType": "ValueSet", "url": url, "version": "1", "text": text,
+            "resourceType": "ValueSet", "url": url, "version": "1", "name": "Summary", "text": text,
             "status": "active", "title": "Summary",
             "compose": {"include": [{"system": "http://ferroterm.test/CodeSystem/summary"}]}
         }),
         _ if version == "r4" || version == "r4b" => json!({
-            "resourceType": "ConceptMap", "url": url, "version": "1", "text": text,
+            "resourceType": "ConceptMap", "url": url, "version": "1", "name": "Summary", "text": text,
             "status": "active", "title": "Summary",
             "group": [{"source": "http://a.test", "target": "http://b.test",
                 "element": [{"code": "a", "target": [{"code": "b", "equivalence": "equivalent"}]}]}]
         }),
         _ => json!({
-            "resourceType": "ConceptMap", "url": url, "version": "1", "text": text,
+            "resourceType": "ConceptMap", "url": url, "version": "1", "name": "Summary", "text": text,
             "status": "active", "title": "Summary",
             "group": [{"source": "http://a.test", "target": "http://b.test",
                 "element": [{"code": "a", "target": [{"code": "b", "relationship": "equivalent"}]}]}]
@@ -514,20 +687,135 @@ async fn summary_count_on_a_read_and_a_value_the_specification_does_not_define_a
     }
 }
 
-#[tokio::test]
-async fn summary_true_is_refused_as_not_supported() {
-    // TODO(#669): `_summary=true` needs the `isSummary` flag per element in
-    // `fhir_types::schema::FieldSchema`; until then it is refused, not ignored.
-    let server = persisting_with_narratives().await;
-    for (version, _) in VERSIONS {
-        for uri in [
-            format!("/{version}/CodeSystem/summary-{version}?_summary=true"),
-            format!("/{version}/ValueSet?_summary=true"),
-        ] {
-            let (status, body) = server.get(&uri).await;
-            assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
-            assert_eq!(body["issue"][0]["code"], "not-supported", "{uri}");
+#[test]
+fn the_summary_elements_are_the_ones_the_pinned_definitions_flag() {
+    // `_summary=true` keeps the elements marked "summary" in the base
+    // definition (<https://hl7.org/fhir/R4B/search.html#summary>): the
+    // `isSummary` flag of the pinned StructureDefinitions, carried by the
+    // generated element table.
+    for (version, schemas) in VERSIONS {
+        for resource_type in TYPES {
+            let flagged = summary(schemas, resource_type);
+            for kept in ["id", "meta", "url", "version", "name", "status"] {
+                assert!(
+                    flagged.contains(&kept),
+                    "{version} {resource_type} has no summary `{kept}`: {flagged:?}"
+                );
+            }
+            for dropped in [
+                "text",
+                "contained",
+                "extension",
+                content_element(resource_type),
+            ] {
+                assert!(
+                    !flagged.contains(&dropped),
+                    "{version} {resource_type} marks `{dropped}` as summary: {flagged:?}"
+                );
+            }
         }
+    }
+    for (version, resource_type, metadata, rest) in SUMMARY_SETS {
+        let schemas = VERSIONS
+            .iter()
+            .find(|(served, _)| *served == version)
+            .map(|(_, schemas)| *schemas)
+            .expect("a served version");
+        let expected: Vec<&str> = metadata.iter().chain(rest).copied().collect();
+        assert_eq!(
+            summary(schemas, resource_type),
+            expected,
+            "{version} {resource_type}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn summary_true_on_read_keeps_the_summary_elements() {
+    let server = persisting_with_narratives().await;
+    for (version, schemas) in VERSIONS {
+        for resource_type in TYPES {
+            let (_, whole) = server
+                .get(&format!("/{version}/{resource_type}/summary-{version}"))
+                .await;
+            let uri = format!("/{version}/{resource_type}/summary-{version}?_summary=true");
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            assert_eq!(
+                members(&body),
+                summary_members(&whole, schemas, resource_type),
+                "{uri}"
+            );
+            for kept in ["url", "version", "name", "status"] {
+                assert_eq!(
+                    body[kept], whole[kept],
+                    "{uri}: `{kept}` is a summary element"
+                );
+            }
+            for dropped in ["text", content_element(resource_type)] {
+                assert!(
+                    body.get(dropped).is_none(),
+                    "{uri} kept `{dropped}`: {body}"
+                );
+            }
+            assert!(is_subsetted(&body), "{uri}: {body}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn summary_true_on_search_keeps_the_summary_elements_of_every_match() {
+    let server = persisting_with_narratives().await;
+    for (version, schemas) in VERSIONS {
+        for resource_type in TYPES {
+            let url = format!("http://ferroterm.test/{resource_type}/summary-{version}");
+            let (_, whole) = server
+                .get(&format!("/{version}/{resource_type}?url={url}"))
+                .await;
+            let uri = format!("/{version}/{resource_type}?url={url}&_summary=true");
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            assert_eq!(body["total"], 1, "{uri}: {body}");
+            let resource = &body["entry"][0]["resource"];
+            assert_eq!(
+                members(resource),
+                summary_members(&whole["entry"][0]["resource"], schemas, resource_type),
+                "{uri}"
+            );
+            assert!(
+                resource.get(content_element(resource_type)).is_none(),
+                "{uri}: {body}"
+            );
+            assert_eq!(resource["status"], "active", "{uri}: {body}");
+            assert!(is_subsetted(resource), "{uri}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_loaded_code_system_reads_as_a_summary_of_its_summary_elements() {
+    let server = Server::start_with_every_loader();
+    let id = server.instance_id_of("http://loinc.org");
+    for (version, schemas) in VERSIONS {
+        let (_, whole) = server.get(&format!("/{version}/CodeSystem/{id}")).await;
+        let (status, body) = server
+            .get(&format!("/{version}/CodeSystem/{id}?_summary=true"))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(
+            members(&body),
+            summary_members(&whole, schemas, "CodeSystem"),
+            "{version}"
+        );
+        assert_eq!(body["url"], "http://loinc.org", "{version}");
+        assert!(body.get("concept").is_none(), "{version}: {body}");
+        let kept = summary_members(&whole, schemas, "CodeSystem");
+        let lost = members(&whole).iter().any(|name| !kept.contains(name));
+        assert_eq!(
+            is_subsetted(&body),
+            lost,
+            "{version}: the tag marks exactly a resource that lost an element"
+        );
     }
 }
 
