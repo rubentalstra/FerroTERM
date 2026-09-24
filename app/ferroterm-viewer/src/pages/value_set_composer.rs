@@ -10,8 +10,14 @@
 //! Nothing here names a code system. The systems come from the served root's
 //! `TerminologyCapabilities`, the value sets from `GET [base]/ValueSet`, and
 //! the implicit forms from the filters the capability statement declares.
+//!
+//! Every control on the form is drawn by one of the four shapes below, whose
+//! listeners arrive boxed. A control shape written once as a generic over its
+//! listener is compiled once per call site, and this screen has forty of them
+//! (`docs/viewer.md` §13, the bundle bar).
 
 use leptos::ev::Event;
+use leptos::ev::MouseEvent;
 use leptos::ev::SubmitEvent;
 use leptos::html::Input;
 use leptos::prelude::*;
@@ -24,7 +30,6 @@ use leptos_router::hooks::use_query_map;
 use crate::auth::Session;
 use crate::auth::scopes::Letter;
 use crate::components::failure::Failure;
-use crate::components::field::Field;
 use crate::components::field::Help;
 use crate::components::field::group;
 use crate::components::field::help_toggle;
@@ -34,7 +39,6 @@ use crate::components::reading::Reading;
 use crate::components::shell::SelectedVersion;
 use crate::fhir::FhirClient;
 use crate::fhir::VALUE_SET;
-use crate::fhir::compose::Broken;
 use crate::fhir::compose::Clause;
 use crate::fhir::compose::Draft;
 use crate::fhir::compose::Preview;
@@ -42,7 +46,6 @@ use crate::fhir::compose::STATUSES;
 use crate::fhir::compose::StoredValueSet;
 use crate::fhir::concept::ConceptQuery;
 use crate::fhir::error::FhirError;
-use crate::fhir::expansion::ConceptRow;
 use crate::fhir::expansion::ExpandedValueSet;
 use crate::fhir::implicit;
 use crate::fhir::named::Choice;
@@ -80,6 +83,15 @@ const SEARCH_COUNT: u32 = 20;
 
 /// The live region every refusal and every count is announced in.
 const REPORT_ID: &str = "composer-report";
+
+/// What a control does when the reader changes it.
+type OnEvent = Box<dyn FnMut(Event)>;
+
+/// What a control does when the reader presses it.
+type OnClick = Box<dyn FnMut(MouseEvent)>;
+
+/// What a choice control offers.
+type Options = Box<dyn Fn() -> Vec<AnyView> + Send + Sync>;
 
 /// Composes a local `ValueSet`, previews it, and saves it.
 ///
@@ -135,14 +147,12 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
     let report = RwSignal::new(String::new());
     let refusal: RwSignal<Option<FhirError>> = RwSignal::new(None);
     let previewed: RwSignal<Option<Draft>> = RwSignal::new(None);
-    let picking: RwSignal<Option<u32>> = RwSignal::new(None);
-    let term = RwSignal::new(String::new());
 
     let offers = Offers {
         value_sets: choices(published(&client, version, VALUE_SET)),
         capabilities: capabilities(&client, version),
-        picking,
-        term,
+        picking: RwSignal::new(None),
+        term: RwSignal::new(String::new()),
     };
 
     provide_context(Help(RwSignal::new(false)));
@@ -274,6 +284,12 @@ impl Editing {
         })
     }
 
+    /// One string of the draft on screen, as the signal a control is seeded
+    /// from.
+    fn text(self, read: impl Fn(&Draft) -> String + Send + Sync + 'static) -> Signal<String> {
+        self.part(read).into()
+    }
+
     /// The draft on screen, cloned, for a request that carries the whole of it.
     fn draft(self) -> Draft {
         self.edited
@@ -294,6 +310,20 @@ impl Editing {
     /// Drops the edits, so the screen shows the resource as the server holds it.
     fn reopen(self) {
         self.edited.set(None);
+    }
+
+    /// One clause of the draft on screen, as its own memo.
+    fn clause(self, key: u32) -> Memo<Clause> {
+        self.part(move |draft| draft.clause(key).cloned().unwrap_or_default())
+    }
+
+    /// Changes one clause of the draft on screen.
+    fn change_clause(self, key: u32, apply: impl FnOnce(&mut Clause)) {
+        self.change(move |draft| {
+            if let Some(clause) = draft.clause_mut(key) {
+                apply(clause);
+            }
+        });
     }
 }
 
@@ -335,15 +365,12 @@ impl Offers {
         self.capabilities.with(|declared| {
             declared
                 .card(system)
-                .map(|card| {
-                    let default = card
-                        .versions
+                .and_then(|card| {
+                    card.versions
                         .iter()
                         .find(|version| version.is_default)
-                        .or_else(|| card.versions.first());
-                    default
+                        .or_else(|| card.versions.first())
                         .map(|version| version.filters.clone())
-                        .unwrap_or_default()
                 })
                 .unwrap_or_default()
         })
@@ -372,6 +399,117 @@ fn capabilities(
     })
 }
 
+/// The offers `choices` makes, as a choice control's options.
+fn options_of(choices: impl Fn() -> Vec<Choice> + Send + Sync + 'static) -> Options {
+    Box::new(move || {
+        choices()
+            .into_iter()
+            .map(|choice| {
+                view! {
+                    <option value=choice.canonical.clone() title=choice.canonical>
+                        {choice.label}
+                    </option>
+                }
+                .into_any()
+            })
+            .collect()
+    })
+}
+
+/// One labelled text control over a value the reader edits.
+fn text_control(
+    id: String,
+    name: &'static str,
+    label: Signal<String>,
+    note: Signal<String>,
+    value: Signal<String>,
+    change: OnEvent,
+) -> AnyView {
+    let described_by = format!("{id}-note");
+    view! {
+        <div class="grid gap-tight">
+            <label for=id.clone() class=styles::LABEL>
+                {move || label.get()}
+            </label>
+            <input
+                id=id
+                name=name
+                type="text"
+                class=styles::INPUT
+                aria-describedby=described_by.clone()
+                prop:value=move || value.get()
+                on:input=change
+            />
+            <p id=described_by class=format!("{} wrap-break-word", styles::HINT)>
+                {move || note.get()}
+            </p>
+        </div>
+    }
+    .into_any()
+}
+
+/// One labelled choice control.
+fn select_control(
+    id: String,
+    label: &'static str,
+    note: &'static str,
+    chosen: Signal<String>,
+    empty: &'static str,
+    options: Options,
+    change: OnEvent,
+) -> AnyView {
+    let described_by = format!("{id}-note");
+    view! {
+        <div class="grid gap-tight">
+            <label for=id.clone() class=styles::LABEL>
+                {label}
+            </label>
+            <select
+                id=id
+                class=styles::INPUT
+                aria-describedby=described_by.clone()
+                prop:value=move || chosen.get()
+                on:change=change
+            >
+                <option value="">{empty}</option>
+                {options}
+            </select>
+            <p id=described_by class=styles::HINT>
+                {note}
+            </p>
+        </div>
+    }
+    .into_any()
+}
+
+/// A control that changes the draft without leaving the page.
+fn act(label: &'static str, click: OnClick) -> AnyView {
+    view! {
+        <button type="button" class=styles::BUTTON on:click=click>
+            {label}
+        </button>
+    }
+    .into_any()
+}
+
+/// A control beside the control that drops what it edits.
+fn removable(control: AnyView, remove: OnClick) -> AnyView {
+    view! {
+        <div class="flex items-end gap-default">
+            <div class="min-w-0 flex-1">{control}</div>
+            <button type="button" class=styles::BUTTON_QUIET on:click=remove>
+                "Remove"
+            </button>
+        </div>
+    }
+    .into_any()
+}
+
+/// A fixed sentence, as the signal a control takes for its label or its note.
+fn fixed(text: &'static str) -> Signal<String> {
+    Signal::stored(String::from(text))
+}
+
 /// The notice a screen that cannot be saved carries.
 fn read_only_banner(writable: Memo<bool>, id: Memo<String>, session: Session) -> AnyView {
     let sentence = move || {
@@ -393,80 +531,45 @@ fn read_only_banner(writable: Memo<bool>, id: Memo<String>, session: Session) ->
     .into_any()
 }
 
-/// One labelled control over a value of the draft.
-fn edit_field(field: Field, value: Memo<String>, change: impl FnMut(Event) + 'static) -> AnyView {
-    let described_by = format!("{}-note", field.id);
-    view! {
-        <div class="grid gap-tight">
-            <label for=field.id class=styles::LABEL>
-                {field.label}
-            </label>
-            <input
-                id=field.id
-                name=field.name
-                type="text"
-                class=styles::INPUT
-                aria-describedby=described_by.clone()
-                prop:value=move || value.get()
-                on:input=change
-            />
-            <p id=described_by class=styles::HINT>
-                {field.hint}
-            </p>
-        </div>
-    }
-    .into_any()
-}
-
 /// The value set's own identity, and the one flag `compose` carries.
 fn identity_section(editing: Editing, writable: Memo<bool>) -> AnyView {
-    let url = editing.part(|draft| draft.url.clone());
-    let name = editing.part(|draft| draft.name.clone());
-    let title = editing.part(|draft| draft.title.clone());
     let fields = vec![
-        edit_field(
-            Field {
-                id: "compose-url",
-                name: "url",
-                label: "Canonical",
-                hint: "ValueSet.url, what everything else refers to this value set by.",
-            },
-            url,
-            move |event| {
+        text_control(
+            String::from("compose-url"),
+            "url",
+            fixed("Canonical"),
+            fixed("ValueSet.url, what everything else refers to this value set by."),
+            editing.text(|draft| draft.url.clone()),
+            Box::new(move |event| {
                 let typed = event_target_value(&event);
                 editing.change(move |draft| draft.url = typed);
-            },
+            }),
         ),
-        edit_field(
-            Field {
-                id: "compose-name",
-                name: "name",
-                label: "Name",
-                hint: "ValueSet.name, the computer-friendly name.",
-            },
-            name,
-            move |event| {
+        text_control(
+            String::from("compose-name"),
+            "name",
+            fixed("Name"),
+            fixed("ValueSet.name, the computer-friendly name."),
+            editing.text(|draft| draft.name.clone()),
+            Box::new(move |event| {
                 let typed = event_target_value(&event);
                 editing.change(move |draft| draft.name = typed);
-            },
+            }),
         ),
-        edit_field(
-            Field {
-                id: "compose-title",
-                name: "title",
-                label: "Title",
-                hint: "ValueSet.title, the name written for a person.",
-            },
-            title,
-            move |event| {
+        text_control(
+            String::from("compose-title"),
+            "title",
+            fixed("Title"),
+            fixed("ValueSet.title, the name written for a person."),
+            editing.text(|draft| draft.title.clone()),
+            Box::new(move |event| {
                 let typed = event_target_value(&event);
                 editing.change(move |draft| draft.title = typed);
-            },
+            }),
         ),
         status_control(editing),
         inactive_control(editing),
     ];
-
     view! {
         <fieldset class="mt-loose grid gap-default" disabled=move || !writable.get()>
             <legend class=format!("{} mb-tight", styles::EYEBROW)>"The value set"</legend>
@@ -478,35 +581,23 @@ fn identity_section(editing: Editing, writable: Memo<bool>) -> AnyView {
 
 /// The publication status the resource carries.
 fn status_control(editing: Editing) -> AnyView {
-    let status = editing.part(|draft| draft.status.clone());
-    let statuses: Vec<AnyView> = STATUSES
-        .into_iter()
-        .map(|code| view! { <option value=code>{code}</option> }.into_any())
-        .collect();
-    view! {
-        <div class="grid gap-tight">
-            <label for="compose-status" class=styles::LABEL>
-                "Status"
-            </label>
-            <select
-                id="compose-status"
-                name="status"
-                class=styles::INPUT
-                aria-describedby="compose-status-note"
-                prop:value=move || status.get()
-                on:change=move |event| {
-                    let chosen = event_target_value(&event);
-                    editing.change(move |draft| draft.status = chosen);
-                }
-            >
-                {statuses}
-            </select>
-            <p id="compose-status-note" class=styles::HINT>
-                "ValueSet.status, which every definitional resource carries."
-            </p>
-        </div>
-    }
-    .into_any()
+    select_control(
+        String::from("compose-status"),
+        "Status",
+        "ValueSet.status, which every definitional resource carries.",
+        editing.text(|draft| draft.status.clone()),
+        "Choose a status",
+        Box::new(|| {
+            STATUSES
+                .into_iter()
+                .map(|code| view! { <option value=code>{code}</option> }.into_any())
+                .collect()
+        }),
+        Box::new(move |event| {
+            let chosen = event_target_value(&event);
+            editing.change(move |draft| draft.status = chosen);
+        }),
+    )
 }
 
 /// Whether inactive codes are in the selection.
@@ -516,41 +607,36 @@ fn status_control(editing: Editing) -> AnyView {
 /// included … If absent, the behavior is determined by the implementation"
 /// (<https://hl7.org/fhir/R4B/valueset.html>).
 fn inactive_control(editing: Editing) -> AnyView {
-    let inactive = editing.part(|draft| draft.inactive);
-    view! {
-        <div class="grid gap-tight">
-            <label for="compose-inactive" class=styles::LABEL>
-                "Inactive codes"
-            </label>
-            <select
-                id="compose-inactive"
-                name="inactive"
-                class=styles::INPUT
-                aria-describedby="compose-inactive-note"
-                prop:value=move || match inactive.get() {
-                    Some(true) => "true",
-                    Some(false) => "false",
-                    None => "",
-                }
-                on:change=move |event| {
-                    let chosen = match event_target_value(&event).as_str() {
-                        "true" => Some(true),
-                        "false" => Some(false),
-                        _unset => None,
-                    };
-                    editing.change(move |draft| draft.inactive = chosen);
-                }
-            >
-                <option value="">"Leave it to the server"</option>
-                <option value="true">"Include them"</option>
-                <option value="false">"Leave them out"</option>
-            </select>
-            <p id="compose-inactive-note" class=styles::HINT>
-                "compose.inactive. Left to the server, the expansion parameters decide."
-            </p>
-        </div>
-    }
-    .into_any()
+    let held = editing.part(|draft| draft.inactive);
+    let shown = Signal::derive(move || {
+        match held.get() {
+            Some(true) => "true",
+            Some(false) => "false",
+            None => "",
+        }
+        .to_owned()
+    });
+    select_control(
+        String::from("compose-inactive"),
+        "Inactive codes",
+        "compose.inactive. Left to the server, the expansion parameters decide.",
+        shown,
+        "Leave it to the server",
+        Box::new(|| {
+            vec![
+                view! { <option value="true">"Include them"</option> }.into_any(),
+                view! { <option value="false">"Leave them out"</option> }.into_any(),
+            ]
+        }),
+        Box::new(move |event| {
+            let chosen = match event_target_value(&event).as_str() {
+                "true" => Some(true),
+                "false" => Some(false),
+                _unset => None,
+            };
+            editing.change(move |draft| draft.inactive = chosen);
+        }),
+    )
 }
 
 /// The includes and the excludes, each as its own labelled section.
@@ -587,7 +673,7 @@ fn clause_section(
         <For
             each=move || keys.get()
             key=|key| *key
-            children=move |key| clause_card(editing, writable, offers, key)
+            children=move |key| clause_card(editing, writable, offers, key, included)
         />
     }
     .into_any();
@@ -617,44 +703,47 @@ fn clause_section(
 }
 
 /// One clause: what it selects, and the rule that says how.
-fn clause_card(editing: Editing, writable: Memo<bool>, offers: Offers, key: u32) -> AnyView {
-    let clause: Memo<Clause> =
-        editing.part(move |draft| draft.clause(key).cloned().unwrap_or_default());
-    let rule = Memo::new(move |_| clause.with(Clause::rule));
-    let defect: Memo<Option<Broken>> =
-        editing.part(move |draft| draft.broken().into_iter().find(|broken| broken.key == key));
+///
+/// `included` is the side the clause is on, which is fixed when it is made:
+/// nothing moves a clause between the includes and the excludes.
+fn clause_card(
+    editing: Editing,
+    writable: Memo<bool>,
+    offers: Offers,
+    key: u32,
+    included: bool,
+) -> AnyView {
+    let clause = editing.clause(key);
+    let defect = editing.part(move |draft| {
+        draft
+            .broken()
+            .into_iter()
+            .find(|broken| broken.key == key)
+            .map(|broken| {
+                format!(
+                    "{}: {}",
+                    broken.defect.constraint(),
+                    broken.defect.sentence()
+                )
+            })
+    });
     let system = Memo::new(move |_| clause.with(|clause| clause.system.clone()));
 
     let value_sets = value_set_rows(editing, offers, key, clause);
-    let codes = concept_rows(editing, offers, key, clause);
+    let system_control = system_picker(editing, offers, key, clause);
+    let codes = concept_rows(editing, offers, key, clause, included);
     let filters = filter_rows(editing, offers, key, clause, system);
-    let system_control = system_picker(editing, offers, key, system, clause);
 
     view! {
         <fieldset
             class=format!("grid gap-default panel-p {}", styles::PANEL)
             disabled=move || !writable.get()
         >
-            <legend class=styles::EYEBROW>
-                {move || {
-                    if clause.with(|clause| clause.included) { "Include" } else { "Exclude" }
-                }}
-            </legend>
-            <p class=styles::MUTED>{move || rule.get()}</p>
-            <Show when=move || defect.get().is_some() fallback=|| ()>
+            <legend class=styles::EYEBROW>{if included { "Include" } else { "Exclude" }}</legend>
+            <p class=styles::MUTED>{move || clause.with(Clause::rule)}</p>
+            <Show when=move || defect.with(Option::is_some) fallback=|| ()>
                 <p role="status" class=format!("rounded-md panel-p {}", styles::NOTICE)>
-                    {move || {
-                        defect
-                            .get()
-                            .map(|broken| {
-                                format!(
-                                    "{}: {}",
-                                    broken.defect.constraint(),
-                                    broken.defect.sentence(),
-                                )
-                            })
-                            .unwrap_or_default()
-                    }}
+                    {move || defect.get().unwrap_or_default()}
                 </p>
             </Show>
             {value_sets}
@@ -686,17 +775,20 @@ fn value_set_rows(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
         />
     }
     .into_any();
-    let adders = add_value_set(editing, offers, key);
     group(
         "Value sets",
         vec![
-            view! { <div class="grid gap-tight">{listed}</div> }.into_any(),
-            adders,
+            view! { <div class="grid gap-default">{listed}</div> }.into_any(),
+            add_published_value_set(editing, offers, key),
+            add_implicit_value_set(editing, offers, key),
         ],
     )
 }
 
-/// One value set reference, with its implicit form opened where it is in one.
+/// The canonical of one value set a clause draws in.
+///
+/// A canonical in an implicit form opens on the value inside it, so the
+/// expression a refusal points into is the thing the reader edits.
 fn value_set_row(editing: Editing, key: u32, row: u32, clause: Memo<Clause>) -> AnyView {
     let canonical = Memo::new(move |_| {
         clause.with(|clause| {
@@ -708,141 +800,73 @@ fn value_set_row(editing: Editing, key: u32, row: u32, clause: Memo<Clause>) -> 
                 .unwrap_or_default()
         })
     });
-    let implicit = Memo::new(move |_| canonical.with(|canonical| implicit::read(canonical)));
-    let control_id = format!("compose-valueset-{key}-{row}");
-    let described_by = format!("{control_id}-note");
-    let label = move || {
-        implicit.get().map_or_else(
-            || String::from("Canonical"),
-            |(_, form, _)| form.value_label.to_owned(),
-        )
-    };
-    let shown = move || {
-        implicit
-            .get()
-            .map_or_else(|| canonical.get(), |(_, _, value)| value)
-    };
-    let note = move || {
-        implicit.get().map_or_else(
-            || canonical.get(),
-            |(system, form, _)| format!("{} of {system}", form.label),
-        )
-    };
-    view! {
-        <div class="grid gap-tight">
-            <label for=control_id.clone() class=styles::LABEL>
-                {label}
-            </label>
-            <div class="flex items-center gap-default">
-                <input
-                    id=control_id
-                    name="valueSet"
-                    type="text"
-                    class=styles::INPUT
-                    aria-describedby=described_by.clone()
-                    prop:value=shown
-                    on:input=move |event| {
-                        let typed = event_target_value(&event);
-                        let rewritten = implicit
-                            .get_untracked()
-                            .map_or_else(
-                                || typed.clone(),
-                                |(system, form, _)| form.canonical(&system, &typed),
-                            );
-                        editing
-                            .change(move |draft| {
-                                if let Some(clause) = draft.clause_mut(key)
-                                    && let Some(held) = clause
-                                        .value_sets
-                                        .iter_mut()
-                                        .find(|held| held.key == row)
-                                {
-                                    held.canonical = rewritten;
-                                }
-                            });
-                    }
-                />
-                <button
-                    type="button"
-                    class=styles::BUTTON_QUIET
-                    on:click=move |_| {
-                        editing
-                            .change(move |draft| {
-                                if let Some(clause) = draft.clause_mut(key) {
-                                    clause.value_sets.retain(|held| held.key != row);
-                                }
-                            });
-                    }
-                >
-                    "Remove"
-                </button>
-            </div>
-            <p id=described_by class=format!("{} wrap-break-word", styles::HINT)>
-                {note}
-            </p>
-        </div>
-    }
-    .into_any()
-}
-
-/// The control that adds a value set: one this root publishes, or an implicit
-/// form of a system it serves.
-fn add_value_set(editing: Editing, offers: Offers, key: u32) -> AnyView {
-    let published = add_published_value_set(editing, offers, key);
-    let implicit_form = add_implicit_value_set(editing, offers, key);
-    view! { <div class="grid gap-default">{published} {implicit_form}</div> }.into_any()
+    let implicit_form = Memo::new(move |_| canonical.with(|canonical| implicit::read(canonical)));
+    let control = text_control(
+        format!("compose-valueset-{key}-{row}"),
+        "valueSet",
+        Signal::derive(move || {
+            implicit_form.get().map_or_else(
+                || String::from("Canonical"),
+                |(_, form, _)| form.value_label.to_owned(),
+            )
+        }),
+        Signal::derive(move || {
+            implicit_form.get().map_or_else(
+                || canonical.get(),
+                |(system, form, _)| format!("{} of {system}", form.label),
+            )
+        }),
+        Signal::derive(move || {
+            implicit_form
+                .get()
+                .map_or_else(|| canonical.get(), |(_, _, value)| value)
+        }),
+        Box::new(move |event| {
+            let typed = event_target_value(&event);
+            let rewritten = implicit_form.get_untracked().map_or_else(
+                || typed.clone(),
+                |(system, form, _)| form.canonical(&system, &typed),
+            );
+            editing.change_clause(key, move |clause| {
+                if let Some(held) = clause.value_sets.iter_mut().find(|held| held.key == row) {
+                    held.canonical = rewritten;
+                }
+            });
+        }),
+    );
+    removable(
+        control,
+        Box::new(move |_| {
+            editing.change_clause(key, move |clause| {
+                clause.value_sets.retain(|held| held.key != row);
+            });
+        }),
+    )
 }
 
 /// The control that adds one of the value sets this root publishes.
 fn add_published_value_set(editing: Editing, offers: Offers, key: u32) -> AnyView {
     let picked = RwSignal::new(String::new());
-    let published_options = move || {
-        offers.value_sets.with(|choices| {
-            choices
-                .iter()
-                .map(|choice| {
-                    view! {
-                        <option value=choice.canonical.clone() title=choice.canonical.clone()>
-                            {choice.label.clone()}
-                        </option>
-                    }
-                    .into_any()
-                })
-                .collect::<Vec<AnyView>>()
-        })
-    };
-    view! {
-        <div class="grid gap-tight">
-            <label for=format!("compose-add-vs-{key}") class=styles::LABEL>
-                "Add a published value set"
-            </label>
-            <div class="flex items-center gap-default">
-                <select
-                    id=format!("compose-add-vs-{key}")
-                    class=styles::INPUT
-                    prop:value=move || picked.get()
-                    on:change=move |event| picked.set(event_target_value(&event))
-                >
-                    <option value="">"Choose one this server holds"</option>
-                    {published_options}
-                </select>
-                <button
-                    type="button"
-                    class=styles::BUTTON
-                    on:click=move |_| {
-                        let canonical = picked.get_untracked();
-                        if !canonical.is_empty() {
-                            editing.change(move |draft| draft.add_value_set(key, &canonical));
-                            picked.set(String::new());
-                        }
-                    }
-                >
-                    "Add"
-                </button>
-            </div>
-        </div>
-    }
-    .into_any()
+    let control = select_control(
+        format!("compose-add-vs-{key}"),
+        "Add a published value set",
+        "compose.include.valueSet, which draws the whole of that value set in.",
+        picked.into(),
+        "Choose one this server holds",
+        options_of(move || offers.value_sets.get()),
+        Box::new(move |event| picked.set(event_target_value(&event))),
+    );
+    let add = act(
+        "Add",
+        Box::new(move |_| {
+            let canonical = picked.get_untracked();
+            if !canonical.is_empty() {
+                editing.change(move |draft| draft.add_value_set(key, &canonical));
+                picked.set(String::new());
+            }
+        }),
+    );
+    view! { <div class="flex items-end gap-default">{control} {add}</div> }.into_any()
 }
 
 /// The control that adds a value set a code system defines for itself.
@@ -853,15 +877,6 @@ fn add_published_value_set(editing: Editing, offers: Offers, key: u32) -> AnyVie
 fn add_implicit_value_set(editing: Editing, offers: Offers, key: u32) -> AnyView {
     let system = RwSignal::new(String::new());
     let keyword = RwSignal::new(String::new());
-    let system_options = move || {
-        offers
-            .systems()
-            .into_iter()
-            .map(|choice| {
-                view! { <option value=choice.canonical.clone()>{choice.label}</option> }.into_any()
-            })
-            .collect::<Vec<AnyView>>()
-    };
     let forms = Memo::new(move |_| {
         let named = system.get();
         if named.is_empty() {
@@ -870,167 +885,103 @@ fn add_implicit_value_set(editing: Editing, offers: Offers, key: u32) -> AnyView
             implicit::offered(&offers.filters(&named))
         }
     });
-    let form_options = move || {
-        forms
-            .get()
-            .into_iter()
-            .map(|form| view! { <option value=form.keyword>{form.label}</option> }.into_any())
-            .collect::<Vec<AnyView>>()
-    };
+    let system_control = select_control(
+        format!("compose-add-implicit-system-{key}"),
+        "Add a value set a code system defines for itself",
+        "The forms offered are the ones this server declares a filter for.",
+        system.into(),
+        "Choose a code system",
+        options_of(move || offers.systems()),
+        Box::new(move |event| {
+            system.set(event_target_value(&event));
+            keyword.set(String::new());
+        }),
+    );
+    let form_control = select_control(
+        format!("compose-add-implicit-form-{key}"),
+        "The form",
+        "Each form is the URL shorthand for one declared filter.",
+        keyword.into(),
+        "Choose a form",
+        Box::new(move || {
+            forms
+                .get()
+                .into_iter()
+                .map(|form| view! { <option value=form.keyword>{form.label}</option> }.into_any())
+                .collect()
+        }),
+        Box::new(move |event| keyword.set(event_target_value(&event))),
+    );
+    let add = act(
+        "Add the form",
+        Box::new(move |_| {
+            let named = system.get_untracked();
+            let Some(form) = implicit::form(&keyword.get_untracked()) else {
+                return;
+            };
+            let canonical = form.canonical(&named, "");
+            editing.change(move |draft| draft.add_value_set(key, &canonical));
+            keyword.set(String::new());
+        }),
+    );
     view! {
-        <div class="grid gap-tight">
-            <label for=format!("compose-add-implicit-system-{key}") class=styles::LABEL>
-                "Add a value set a code system defines for itself"
-            </label>
-            <div class="grid gap-default sm:grid-cols-2">
-                <select
-                    id=format!("compose-add-implicit-system-{key}")
-                    class=styles::INPUT
-                    prop:value=move || system.get()
-                    on:change=move |event| {
-                        system.set(event_target_value(&event));
-                        keyword.set(String::new());
-                    }
-                >
-                    <option value="">"Choose a code system"</option>
-                    {system_options}
-                </select>
-                <select
-                    id=format!("compose-add-implicit-form-{key}")
-                    class=styles::INPUT
-                    aria-label="The form the code system defines"
-                    prop:value=move || keyword.get()
-                    on:change=move |event| keyword.set(event_target_value(&event))
-                >
-                    <option value="">"Choose a form"</option>
-                    {form_options}
-                </select>
-            </div>
+        <div class="grid gap-default">
+            <div class="grid gap-default sm:grid-cols-2">{system_control} {form_control}</div>
             <Show
                 when=move || system.with(|named| !named.is_empty()) && forms.with(Vec::is_empty)
                 fallback=|| ()
             >
                 <p class=styles::HINT>
-                    "This server declares no filter for that system that one of these forms is shorthand for."
+                    "This server declares no filter for that code system that one of these forms is shorthand for."
                 </p>
             </Show>
-            <button
-                type="button"
-                class=styles::BUTTON
-                on:click=move |_| {
-                    let named = system.get_untracked();
-                    let Some(form) = implicit::form(&keyword.get_untracked()) else {
-                        return;
-                    };
-                    let canonical = form.canonical(&named, "");
-                    editing.change(move |draft| draft.add_value_set(key, &canonical));
-                    keyword.set(String::new());
-                }
-            >
-                "Add the form"
-            </button>
+            {add}
         </div>
     }
     .into_any()
 }
 
-/// The code system one clause reads codes from.
+/// The code system one clause reads codes from, and the version it is pinned
+/// to.
 ///
 /// Every control carries the clause's key in its `id`, because a screen draws
 /// as many of these as the compose has clauses and a label points at one
 /// control (<https://www.w3.org/TR/wai-aria-1.2/#namecalculation>).
-fn system_picker(
-    editing: Editing,
-    offers: Offers,
-    key: u32,
-    system: Memo<String>,
-    clause: Memo<Clause>,
-) -> AnyView {
-    let system_version = Memo::new(move |_| clause.with(|clause| clause.system_version.clone()));
-    let served = move || {
-        offers
-            .systems()
-            .into_iter()
-            .map(|choice| {
-                view! { <option value=choice.canonical.clone()>{choice.label}</option> }.into_any()
-            })
-            .collect::<Vec<AnyView>>()
-    };
-    let select_id = format!("compose-system-{key}");
-    let typed_id = format!("compose-system-typed-{key}");
-    let version_id = format!("compose-system-version-{key}");
-    let write_system = move |value: String| {
-        editing.change(move |draft| {
-            if let Some(clause) = draft.clause_mut(key) {
-                clause.system = value;
-            }
-        });
-    };
-    view! {
-        <div class="grid gap-default sm:grid-cols-2">
-            <div class="grid gap-tight">
-                <label for=select_id.clone() class=styles::LABEL>
-                    "Code system"
-                </label>
-                <select
-                    id=select_id
-                    class=styles::INPUT
-                    aria-describedby=format!("compose-system-note-{key}")
-                    prop:value=move || system.get()
-                    on:change=move |event| write_system(event_target_value(&event))
-                >
-                    <option value="">"Choose one this server serves"</option>
-                    {served}
-                </select>
-                <p id=format!("compose-system-note-{key}") class=styles::HINT>
-                    "compose.include.system, the code system the codes below are read from."
-                </p>
-            </div>
-            <div class="grid gap-tight">
-                <label for=typed_id.clone() class=styles::LABEL>
-                    "Or a canonical this server does not serve"
-                </label>
-                <input
-                    id=typed_id
-                    name="system"
-                    type="text"
-                    class=styles::INPUT
-                    prop:value=move || system.get()
-                    on:input=move |event| write_system(event_target_value(&event))
-                />
-            </div>
-            <div class="grid gap-tight">
-                <label for=version_id.clone() class=styles::LABEL>
-                    "Code system version"
-                </label>
-                <input
-                    id=version_id
-                    name="systemVersion"
-                    type="text"
-                    class=styles::INPUT
-                    aria-describedby=format!("compose-system-version-note-{key}")
-                    prop:value=move || system_version.get()
-                    on:input=move |event| {
-                        let value = event_target_value(&event);
-                        editing
-                            .change(move |draft| {
-                                if let Some(clause) = draft.clause_mut(key) {
-                                    clause.system_version = value;
-                                }
-                            });
-                    }
-                />
-                <p id=format!("compose-system-version-note-{key}") class=styles::HINT>
-                    "compose.include.version. Left empty, the server resolves the version itself."
-                </p>
-            </div>
-        </div>
-    }
-    .into_any()
+fn system_picker(editing: Editing, offers: Offers, key: u32, clause: Memo<Clause>) -> AnyView {
+    let system = select_control(
+        format!("compose-system-{key}"),
+        "Code system",
+        "compose.include.system, the code system the codes below are read from.",
+        Signal::derive(move || clause.with(|clause| clause.system.clone())),
+        "Choose one this server serves",
+        options_of(move || offers.systems()),
+        Box::new(move |event| {
+            let chosen = event_target_value(&event);
+            editing.change_clause(key, move |clause| clause.system = chosen);
+        }),
+    );
+    let version = text_control(
+        format!("compose-system-version-{key}"),
+        "systemVersion",
+        fixed("Code system version"),
+        fixed("compose.include.version. Left empty, the server resolves the version itself."),
+        Signal::derive(move || clause.with(|clause| clause.system_version.clone())),
+        Box::new(move |event| {
+            let typed = event_target_value(&event);
+            editing.change_clause(key, move |clause| clause.system_version = typed);
+        }),
+    );
+    view! { <div class="grid gap-default sm:grid-cols-2">{system} {version}</div> }.into_any()
 }
 
 /// The codes one clause names, and the search that picks them.
-fn concept_rows(editing: Editing, offers: Offers, key: u32, clause: Memo<Clause>) -> AnyView {
+fn concept_rows(
+    editing: Editing,
+    offers: Offers,
+    key: u32,
+    clause: Memo<Clause>,
+    included: bool,
+) -> AnyView {
     let rows: Memo<Vec<u32>> = Memo::new(move |_| {
         clause.with(|clause| clause.concepts.iter().map(|row| row.key).collect())
     });
@@ -1038,89 +989,87 @@ fn concept_rows(editing: Editing, offers: Offers, key: u32, clause: Memo<Clause>
         <For
             each=move || rows.get()
             key=|row| *row
-            children=move |row| concept_row(editing, key, row, clause)
+            children=move |row| concept_row(editing, key, row, clause, included)
         />
     }
     .into_any();
-    let search = concept_search(editing, offers, key, clause);
     group(
         "Codes",
         vec![
-            view! { <div class="grid gap-tight">{listed}</div> }.into_any(),
-            search,
+            view! { <div class="grid gap-default">{listed}</div> }.into_any(),
+            concept_search(editing, offers, key, clause),
         ],
     )
 }
 
 /// One named code, with the display its author gives it.
-fn concept_row(editing: Editing, key: u32, row: u32, clause: Memo<Clause>) -> AnyView {
+///
+/// An exclude carries no display control: "Any display names specified for the
+/// codes are ignored" there (<https://hl7.org/fhir/R4B/valueset.html>,
+/// `ValueSet.compose.exclude`).
+fn concept_row(
+    editing: Editing,
+    key: u32,
+    row: u32,
+    clause: Memo<Clause>,
+    included: bool,
+) -> AnyView {
     let picked = Memo::new(move |_| {
         clause.with(|clause| {
             clause
                 .concepts
                 .iter()
                 .find(|held| held.key == row)
-                .cloned()
+                .map(|held| (held.code.clone(), held.served_display.clone()))
                 .unwrap_or_default()
         })
     });
-    let included = Memo::new(move |_| clause.with(|clause| clause.included));
-    let display = Memo::new(move |_| picked.with(|picked| picked.display.clone()));
-    let control_id = format!("compose-display-{key}-{row}");
-    view! {
+    let display = included.then(|| {
+        text_control(
+            format!("compose-display-{key}-{row}"),
+            "display",
+            fixed("The display this value set gives that code"),
+            fixed("compose.include.concept.display, which overrides the code system's own."),
+            Signal::derive(move || {
+                clause.with(|clause| {
+                    clause
+                        .concepts
+                        .iter()
+                        .find(|held| held.key == row)
+                        .map(|held| held.display.clone())
+                        .unwrap_or_default()
+                })
+            }),
+            Box::new(move |event| {
+                let typed = event_target_value(&event);
+                editing.change_clause(key, move |clause| {
+                    if let Some(held) = clause.concepts.iter_mut().find(|held| held.key == row) {
+                        held.display = typed;
+                    }
+                });
+            }),
+        )
+    });
+    let control = view! {
         <div class="grid gap-tight">
             <p class=styles::CODE>
-                {move || picked.with(|picked| picked.code.clone())} " "
+                {move || picked.with(|(code, _)| code.clone())} " "
                 <span class=styles::CODE_MUTED>
-                    {move || picked.with(|picked| picked.served_display.clone())}
+                    {move || picked.with(|(_, served)| served.clone())}
                 </span>
             </p>
-            <div class="flex items-center gap-default">
-                <Show when=move || included.get() fallback=|| ()>
-                    <label for=control_id.clone() class="sr-only">
-                        "The display this value set gives that code"
-                    </label>
-                    <input
-                        id=control_id.clone()
-                        name="display"
-                        type="text"
-                        placeholder="The display this value set gives it"
-                        class=styles::INPUT
-                        prop:value=move || display.get()
-                        on:input=move |event| {
-                            let typed = event_target_value(&event);
-                            editing
-                                .change(move |draft| {
-                                    if let Some(row) = draft
-                                        .clause_mut(key)
-                                        .and_then(|clause| {
-                                            clause.concepts.iter_mut().find(|held| held.key == row)
-                                        })
-                                    {
-                                        row.display = typed;
-                                    }
-                                });
-                        }
-                    />
-                </Show>
-                <button
-                    type="button"
-                    class=styles::BUTTON_QUIET
-                    on:click=move |_| {
-                        editing
-                            .change(move |draft| {
-                                if let Some(clause) = draft.clause_mut(key) {
-                                    clause.concepts.retain(|held| held.key != row);
-                                }
-                            });
-                    }
-                >
-                    "Remove"
-                </button>
-            </div>
+            {display}
         </div>
     }
-    .into_any()
+    .into_any();
+    removable(
+        control,
+        Box::new(move |_| {
+            editing.change_clause(key, move |clause| {
+                clause.concepts.retain(|held| held.key != row);
+            });
+        }),
+    )
 }
 
 /// The search that picks a code out of the clause's own code system.
@@ -1131,18 +1080,17 @@ fn concept_row(editing: Editing, key: u32, row: u32, clause: Memo<Clause>) -> An
 fn concept_search(editing: Editing, offers: Offers, key: u32, clause: Memo<Clause>) -> AnyView {
     let client = expect_context::<FhirClient>();
     let SelectedVersion(version) = expect_context::<SelectedVersion>();
-    let open = move || offers.picking.get() == Some(key);
     let system = Memo::new(move |_| clause.with(|held| held.system.clone()));
-    let system_version = Memo::new(move |_| clause.with(|held| held.system_version.clone()));
     let query: Memo<Option<ConceptQuery>> = Memo::new(move |_| {
         if offers.picking.get() != Some(key) {
             return None;
         }
         let system = system.get();
         let term = offers.term.get();
+        let system_version = clause.with(|held| held.system_version.clone());
         (!system.is_empty() && !term.is_empty()).then(|| ConceptQuery {
             system,
-            system_version: Some(system_version.get()).filter(|held| !held.is_empty()),
+            system_version: Some(system_version).filter(|held| !held.is_empty()),
             filter: Some(term),
             child_of: None,
             display_language: None,
@@ -1174,7 +1122,9 @@ fn concept_search(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
                 .and_then(Option::as_ref)
                 .map(|result| match result {
                     Ok(value) => found_view(editing, key, value),
-                    Err(error) => view! { <Failure error=error.clone() /> }.into_any(),
+                    Err(error) => {
+                        view! { <Failure error=Signal::stored(error.clone()) /> }.into_any()
+                    }
                 })
         })
     };
@@ -1203,7 +1153,7 @@ fn concept_search(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
                     "Search"
                 </button>
             </form>
-            <Show when=open fallback=|| ()>
+            <Show when=move || offers.picking.get() == Some(key) fallback=|| ()>
                 <Reading label="Searching that code system">{results}</Reading>
             </Show>
         </div>
@@ -1226,36 +1176,31 @@ fn found_view(editing: Editing, key: u32, value: &ExpandedValueSet) -> AnyView {
     let rows: Vec<AnyView> = expansion
         .concepts
         .iter()
-        .map(|concept| found_row(editing, key, concept))
-        .collect();
-    view! { <ul class="grid gap-tight">{rows}</ul> }.into_any()
-}
-
-/// One search result, and the control that adds it to the clause.
-fn found_row(editing: Editing, key: u32, concept: &ConceptRow) -> AnyView {
-    let code = concept.code.clone();
-    let display = concept.display.clone().unwrap_or_default();
-    let shown_code = code.clone();
-    let shown_display = display.clone();
-    view! {
-        <li class="flex items-center justify-between gap-default">
-            <span class=styles::CODE>
-                {shown_code} " " <span class=styles::CODE_MUTED>{shown_display}</span>
-            </span>
-            <button
-                type="button"
-                class=styles::BUTTON
-                on:click=move |_| {
+        .map(|concept| {
+            let code = concept.code.clone();
+            let display = concept.display.clone().unwrap_or_default();
+            let shown_code = code.clone();
+            let shown_display = display.clone();
+            let add = act(
+                "Add",
+                Box::new(move |_| {
                     let code = code.clone();
                     let display = display.clone();
                     editing.change(move |draft| draft.add_concept(key, &code, &display));
-                }
-            >
-                "Add"
-            </button>
-        </li>
-    }
-    .into_any()
+                }),
+            );
+            view! {
+                <li class="flex items-center justify-between gap-default">
+                    <span class=styles::CODE>
+                        {shown_code} " " <span class=styles::CODE_MUTED>{shown_display}</span>
+                    </span>
+                    {add}
+                </li>
+            }
+            .into_any()
+        })
+        .collect();
+    view! { <ul class="grid gap-tight">{rows}</ul> }.into_any()
 }
 
 /// The filters one clause selects with, drawn from what the version declares.
@@ -1279,54 +1224,46 @@ fn filter_rows(
     }
     .into_any();
     let chosen = RwSignal::new(String::new());
-    let options = move || {
-        declared
-            .get()
-            .into_iter()
-            .flat_map(|filter| {
-                filter.operators.into_iter().map({
-                    let code = filter.code.clone();
-                    move |operator| {
-                        let value = format!("{code} {operator}");
-                        let shown = value.clone();
-                        view! { <option value=value>{shown}</option> }.into_any()
-                    }
+    let control = select_control(
+        format!("compose-add-filter-{key}"),
+        "Add a filter this server declares",
+        "compose.include.filter, over a property this code system version declares.",
+        chosen.into(),
+        "Choose a property and an operator",
+        options_of(move || {
+            declared
+                .get()
+                .into_iter()
+                .flat_map(|filter| {
+                    let code = filter.code;
+                    filter.operators.into_iter().map(move |operator| {
+                        let named = format!("{code} {operator}");
+                        Choice {
+                            canonical: named.clone(),
+                            label: named,
+                        }
+                    })
                 })
-            })
-            .collect::<Vec<AnyView>>()
-    };
+                .collect()
+        }),
+        Box::new(move |event| chosen.set(event_target_value(&event))),
+    );
+    let add = act(
+        "Add",
+        Box::new(move |_| {
+            let picked = chosen.get_untracked();
+            let Some((property, operator)) = picked.split_once(' ') else {
+                return;
+            };
+            let property = property.to_owned();
+            let operator = operator.to_owned();
+            editing.change(move |draft| draft.add_filter(key, &property, &operator));
+            chosen.set(String::new());
+        }),
+    );
     let adder = view! {
         <div class="grid gap-tight">
-            <label for=format!("compose-add-filter-{key}") class=styles::LABEL>
-                "Add a filter this server declares"
-            </label>
-            <div class="flex items-center gap-default">
-                <select
-                    id=format!("compose-add-filter-{key}")
-                    class=styles::INPUT
-                    prop:value=move || chosen.get()
-                    on:change=move |event| chosen.set(event_target_value(&event))
-                >
-                    <option value="">"Choose a property and an operator"</option>
-                    {options}
-                </select>
-                <button
-                    type="button"
-                    class=styles::BUTTON
-                    on:click=move |_| {
-                        let picked = chosen.get_untracked();
-                        let Some((property, operator)) = picked.split_once(' ') else {
-                            return;
-                        };
-                        let property = property.to_owned();
-                        let operator = operator.to_owned();
-                        editing.change(move |draft| draft.add_filter(key, &property, &operator));
-                        chosen.set(String::new());
-                    }
-                >
-                    "Add"
-                </button>
-            </div>
+            <div class="flex items-end gap-default">{control} {add}</div>
             <Show
                 when=move || !system.with(String::is_empty) && declared.with(Vec::is_empty)
                 fallback=|| ()
@@ -1341,7 +1278,7 @@ fn filter_rows(
     group(
         "Filters",
         vec![
-            view! { <div class="grid gap-tight">{listed}</div> }.into_any(),
+            view! { <div class="grid gap-default">{listed}</div> }.into_any(),
             adder,
         ],
     )
@@ -1355,57 +1292,41 @@ fn filter_row(editing: Editing, key: u32, row: u32, clause: Memo<Clause>) -> Any
                 .filters
                 .iter()
                 .find(|filter| filter.key == row)
-                .cloned()
+                .map(|filter| {
+                    (
+                        filter.property.clone(),
+                        filter.op.clone(),
+                        filter.value.clone(),
+                    )
+                })
                 .unwrap_or_default()
         })
     });
-    let value = Memo::new(move |_| held.with(|held| held.value.clone()));
-    let control_id = format!("compose-filter-{key}-{row}");
-    view! {
-        <div class="grid gap-tight">
-            <label for=control_id.clone() class=styles::LABEL>
-                {move || held.with(|held| format!("{} {}", held.property, held.op))}
-            </label>
-            <div class="flex items-center gap-default">
-                <input
-                    id=control_id
-                    name="filterValue"
-                    type="text"
-                    class=styles::INPUT
-                    prop:value=move || value.get()
-                    on:input=move |event| {
-                        let typed = event_target_value(&event);
-                        editing
-                            .change(move |draft| {
-                                if let Some(filter) = draft
-                                    .clause_mut(key)
-                                    .and_then(|clause| {
-                                        clause.filters.iter_mut().find(|held| held.key == row)
-                                    })
-                                {
-                                    filter.value = typed;
-                                }
-                            });
-                    }
-                />
-                <button
-                    type="button"
-                    class=styles::BUTTON_QUIET
-                    on:click=move |_| {
-                        editing
-                            .change(move |draft| {
-                                if let Some(clause) = draft.clause_mut(key) {
-                                    clause.filters.retain(|held| held.key != row);
-                                }
-                            });
-                    }
-                >
-                    "Remove"
-                </button>
-            </div>
-        </div>
-    }
-    .into_any()
+    let control = text_control(
+        format!("compose-filter-{key}-{row}"),
+        "filterValue",
+        Signal::derive(move || {
+            held.with(|(property, operator, _)| format!("{property} {operator}"))
+        }),
+        fixed("The value the operator is applied with."),
+        Signal::derive(move || held.with(|(_, _, value)| value.clone())),
+        Box::new(move |event| {
+            let typed = event_target_value(&event);
+            editing.change_clause(key, move |clause| {
+                if let Some(filter) = clause.filters.iter_mut().find(|held| held.key == row) {
+                    filter.value = typed;
+                }
+            });
+        }),
+    );
+    removable(
+        control,
+        Box::new(move |_| {
+            editing.change_clause(key, move |clause| {
+                clause.filters.retain(|held| held.key != row);
+            });
+        }),
+    )
 }
 
 /// The save control, and what a refusal does to the screen.
