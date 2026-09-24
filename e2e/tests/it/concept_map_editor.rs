@@ -22,6 +22,8 @@ use thirtyfour::stringmatch::StringMatch;
 use crate::harness::Journey;
 use crate::harness::SignedIn;
 use crate::harness::choose;
+use crate::harness::query_param;
+use crate::harness::run_canonical;
 use crate::harness::server;
 use crate::harness::session;
 use crate::harness::sign_in;
@@ -40,17 +42,26 @@ const TAXONOMY: &str = "https://ferroterm.eu/fhir/CodeSystem/e2e-taxonomy";
 ///
 /// Synthetic: the repository distributes no terminology content, and each
 /// journey writes the map it then reads back. One canonical per journey,
-/// because the journeys run beside each other against one server.
-const R4B_CANONICAL: &str = "https://terminology.example/e2e-map-r4b";
+/// because the journeys run beside each other against one server, and one per
+/// run, because a store may persist between runs.
+fn r4b_canonical() -> String {
+    run_canonical("e2e-map-r4b")
+}
 
 /// That canonical, percent-encoded into a query parameter.
-const R4B_CANONICAL_PARAM: &str = "https%3A%2F%2Fterminology.example%2Fe2e-map-r4b";
+fn r4b_canonical_param() -> String {
+    query_param(&r4b_canonical())
+}
 
 /// The canonical the R5 round trip authors under.
-const R5_CANONICAL: &str = "https://terminology.example/e2e-map-r5";
+fn r5_canonical() -> String {
+    run_canonical("e2e-map-r5")
+}
 
 /// The canonical the keyboard journey authors under.
-const KEYBOARD_CANONICAL: &str = "https://terminology.example/e2e-map-keyboard";
+fn keyboard_canonical() -> String {
+    run_canonical("e2e-map-keyboard")
+}
 
 /// The canonical field of the metadata form.
 const URL_FIELD: &str = "#map-url";
@@ -282,7 +293,8 @@ async fn stored_resource(journey: &Journey, base: &str, canonical: &str) -> Stri
 async fn the_map_comes_back_read_only(journey: &Journey, base: &str) -> WebDriverResult<()> {
     journey
         .reopen(&format!(
-            "{base}/ui/editor/conceptmap?fhir=r4b&map={R4B_CANONICAL_PARAM}"
+            "{base}/ui/editor/conceptmap?fhir=r4b&map={}",
+            r4b_canonical_param()
         ))
         .await;
     journey
@@ -304,7 +316,7 @@ async fn the_map_comes_back_read_only(journey: &Journey, base: &str) -> WebDrive
         "a reader with no token is offered no save"
     );
 
-    let stored = stored_resource(journey, base, R4B_CANONICAL_PARAM).await;
+    let stored = stored_resource(journey, base, &r4b_canonical_param()).await;
     assert!(
         stored.contains("equivalence"),
         "R4B states a target's relation in `equivalence`: `{stored}`"
@@ -323,9 +335,10 @@ async fn the_map_comes_back_read_only(journey: &Journey, base: &str) -> WebDrive
 async fn the_runner_translates_through_it(journey: &Journey, base: &str) {
     journey
         .reopen(&format!(
-            "{base}/ui/editor/translate?fhir=r4b&map={R4B_CANONICAL_PARAM}\
+            "{base}/ui/editor/translate?fhir=r4b&map={}\
              &system=https%3A%2F%2Fferroterm.eu%2Ffhir%2FCodeSystem%2Fe2e-taxonomy\
-             &code={SOURCE_CODE}"
+             &code={SOURCE_CODE}",
+            r4b_canonical_param()
         ))
         .await;
     let translated = journey
@@ -355,7 +368,7 @@ async fn a_local_concept_map_is_authored_previewed_and_saved_on_r4b() {
             // `equivalent` is a code of the value set R4B binds
             // `target.equivalence` to, which the control offered because the
             // server expanded it.
-            author(&journey, R4B_CANONICAL, "equivalent").await?;
+            author(&journey, &r4b_canonical(), "equivalent").await?;
 
             journey
                 .element(By::XPath(PREVIEW), "the control that previews")
@@ -434,7 +447,7 @@ async fn the_same_map_writes_r5_s_own_relationship_element() {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
             open_authoring(&journey, &deployment, "authors-a-map-r5", "R5").await;
 
-            author(&journey, R5_CANONICAL, "source-is-narrower-than-target").await?;
+            author(&journey, &r5_canonical(), "source-is-narrower-than-target").await?;
 
             journey
                 .element(By::XPath(PREVIEW), "the control that previews")
@@ -488,7 +501,7 @@ async fn one_mapping_is_authored_with_the_keyboard_alone() {
             open_authoring(&journey, &deployment, "keyboard-map", "R4B").await;
 
             journey.tab_to("map-url", "the canonical field").await;
-            journey.type_here(KEYBOARD_CANONICAL).await?;
+            journey.type_here(&keyboard_canonical()).await?;
 
             journey
                 .tab_to("Add a group", "the control that adds a group")

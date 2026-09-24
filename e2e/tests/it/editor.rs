@@ -19,6 +19,8 @@ use thirtyfour::stringmatch::StringMatch;
 use crate::harness::Journey;
 use crate::harness::SignedIn;
 use crate::harness::choose;
+use crate::harness::query_param;
+use crate::harness::run_canonical;
 use crate::harness::server;
 use crate::harness::session;
 use crate::harness::sign_in;
@@ -31,17 +33,21 @@ const AUTHORING_LINK: &str = "//a[normalize-space()='Edit a code system']";
 ///
 /// Synthetic: the repository distributes no code system content, and each
 /// journey writes the resource it then reads back. One canonical per journey,
-/// because the journeys run beside each other against one server.
-const CANONICAL: &str = "https://terminology.example/e2e-colours";
-
-/// That canonical, percent-encoded into a query parameter.
-const CANONICAL_PARAM: &str = "https%3A%2F%2Fterminology.example%2Fe2e-colours";
+/// because the journeys run beside each other against one server, and one per
+/// run, because a store may persist between runs.
+fn canonical() -> String {
+    run_canonical("e2e-colours")
+}
 
 /// The canonical the refused-write journey authors under.
-const REFUSED_CANONICAL: &str = "https://terminology.example/e2e-refused";
+fn refused_canonical() -> String {
+    run_canonical("e2e-refused")
+}
 
 /// The canonical the keyboard journey authors under.
-const KEYBOARD_CANONICAL: &str = "https://terminology.example/e2e-keyboard";
+fn keyboard_canonical() -> String {
+    run_canonical("e2e-keyboard")
+}
 
 /// The canonical field of the metadata form.
 const URL_FIELD: &str = "#editor-url";
@@ -203,7 +209,8 @@ async fn add_and_retire(journey: &Journey) -> WebDriverResult<()> {
 async fn the_retirement_survives(journey: &Journey, base: &str) -> WebDriverResult<()> {
     journey
         .reopen(&format!(
-            "{base}/ui/editor/codesystem?fhir=r4b&system={CANONICAL_PARAM}"
+            "{base}/ui/editor/codesystem?fhir=r4b&system={}",
+            query_param(&canonical())
         ))
         .await;
     journey
@@ -250,7 +257,7 @@ async fn a_local_code_system_is_authored_retired_and_read_back() {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
             open_authoring(&journey, &deployment, "writer", "authors-a-code-system").await;
 
-            author(&journey, CANONICAL, FIRST, "Red").await?;
+            author(&journey, &canonical(), FIRST, "Red").await?;
             add_and_retire(&journey).await?;
 
             journey
@@ -317,7 +324,7 @@ async fn a_write_without_the_scope_is_refused_in_the_server_s_own_words() {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
             open_authoring(&journey, &deployment, "response-only", "refused-write").await;
 
-            author(&journey, REFUSED_CANONICAL, "refused", "Refused").await?;
+            author(&journey, &refused_canonical(), "refused", "Refused").await?;
             journey
                 .element(By::XPath(SAVE), "the control that saves")
                 .await
@@ -385,7 +392,7 @@ async fn one_concept_is_authored_with_the_keyboard_alone() {
             open_authoring(&journey, &deployment, "writer", "keyboard-authoring").await;
 
             journey.tab_to("editor-url", "the canonical field").await;
-            journey.type_here(KEYBOARD_CANONICAL).await?;
+            journey.type_here(&keyboard_canonical()).await?;
 
             journey
                 .tab_to("Add a concept", "the control that adds a concept")
