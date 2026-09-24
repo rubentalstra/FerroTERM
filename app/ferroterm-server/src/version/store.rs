@@ -33,6 +33,9 @@ use crate::wire::Wire;
 pub(crate) struct Surface {
     /// The FHIR version this endpoint serves.
     pub fhir_version: &'static str,
+    /// The path segment this version answers under, for the absolute
+    /// `Bundle.entry.fullUrl` of a searchset.
+    pub segment: &'static str,
     /// The version's XML schema, for an XML request or response.
     pub schemas: &'static Schemas,
     /// Reads a stored object as a resource of this version and writes it back.
@@ -165,10 +168,19 @@ pub(crate) fn read(request: &Request<'_>, id: &str) -> Result<Response, Failure>
 fn loaded(request: &Request<'_>, id: &str) -> Result<Option<Object>, Failure> {
     match request.resource_type {
         ResourceType::CodeSystem => {
-            let Some(resolved) = request.state.instance(id) else {
+            if let Some(resolved) = request.state.instance(id) {
+                let model =
+                    fhir_terminology::fhir_codesystem::model::described(&*resolved.provider);
+                return (request.surface.render_code_system)(&model, id)
+                    .map(Some)
+                    .map_err(|reason| rendering(&reason));
+            }
+            // NOTE: a supplement "defines extra properties and designations" of
+            // another code system (<https://hl7.org/fhir/R4B/codesystem.html#supplements>)
+            // and is a `CodeSystem` this server holds, so it reads at its own id.
+            let Some(model) = request.state.supplement_instance(id) else {
                 return Ok(None);
             };
-            let model = fhir_terminology::fhir_codesystem::model::described(&*resolved.provider);
             (request.surface.render_code_system)(&model, id)
                 .map(Some)
                 .map_err(|reason| rendering(&reason))
@@ -276,21 +288,43 @@ pub(crate) fn matches(
         .collect())
 }
 
+/// Why `record` has no representation in the FHIR version `reading` names.
+///
+/// One wording serves the refusal of an instance read and the issue a search
+/// carries for the same resource, so a client reads the same sentence either
+/// way.
+pub(crate) fn unreadable(record: &Record, reading: &str, reason: &str) -> String {
+    format!(
+        "{}/{} was written as FHIR {} and does not read as FHIR {reading}: {reason}",
+        record.resource_type, record.id, record.fhir_version
+    )
+}
+
 /// `record` as a resource of the reading version, with its `meta`.
+///
+/// A written resource is never converted between FHIR releases: the R4B
+/// `concept-map-equivalence` and R5 `concept-map-relationship` code sets are
+/// disjoint and no core specification ships a map between them, so a
+/// conversion would invent the semantics
+/// (<https://hl7.org/fhir/R4B/valueset-concept-map-equivalence.html>,
+/// <https://hl7.org/fhir/R5/valueset-concept-map-relationship.html>).
 ///
 /// # Errors
 ///
 /// A resource stored in another FHIR version that carries an element this one
-/// does not define is a 422.
+/// does not define is a 406: the FHIR release is a media type parameter
+/// (`fhirVersion`, <https://hl7.org/fhir/R5/versioning.html>), so the resource
+/// has no representation acceptable on this base, which is what
+/// `406 Not Acceptable` reports
+/// (<https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.7>). The read
+/// interaction itself names only `200`, `404`, and `410`
+/// (<https://hl7.org/fhir/R4B/http.html#read>).
 pub(crate) fn rendered(request: &Request<'_>, record: &Record) -> Result<Object, Failure> {
     (request.surface.round_trip)(&record.resource).map_err(|reason| {
         Failure::new(
-            StatusCode::UNPROCESSABLE_ENTITY,
+            StatusCode::NOT_ACCEPTABLE,
             "not-supported",
-            format!(
-                "{}/{} was written as FHIR {} and does not read as FHIR {}: {reason}",
-                record.resource_type, record.id, record.fhir_version, request.surface.fhir_version
-            ),
+            unreadable(record, request.surface.fhir_version, &reason),
         )
     })
 }
@@ -569,6 +603,59 @@ pub(crate) fn loaded_code_systems(
     Ok(out)
 }
 
+/// The supplements the deployment loaded that `query` matches, each with the
+/// resource that describes it.
+///
+/// # Errors
+///
+/// A search parameter this server does not answer is a 400.
+pub(crate) fn loaded_supplements(
+    state: &AppState,
+    query: &[(String, String)],
+) -> Result<Vec<(String, Arc<CodeSystemModel>)>, Failure> {
+    let (url, version) = criteria(query)?;
+    Ok(state
+        .supplement_instances()
+        .into_iter()
+        .filter(|(id, model)| {
+            state
+                .persisted_record(ResourceType::CodeSystem, id)
+                .is_none()
+                && url.is_none_or(|wanted| model.url == wanted)
+                && version.is_none_or(|wanted| model.version == wanted)
+        })
+        .collect())
+}
+
+/// The FHIR base the request that `headers` and `uri` belong to reached this
+/// version at.
+///
+/// `Bundle.entry.fullUrl` is the absolute URL of the resource
+/// (<https://hl7.org/fhir/R4B/bundle-definitions.html#Bundle.entry.fullUrl>),
+/// so a searchset needs the base the client used: the one the deployment
+/// declares, else the authority the request itself names. A deployment behind
+/// TLS or a path prefix declares `FERROTERM_BASE_URL`, because the request
+/// carries no scheme.
+pub(crate) fn base_of(
+    state: &AppState,
+    segment: &str,
+    headers: &HeaderMap,
+    uri: &http::Uri,
+) -> Option<String> {
+    if let Some(base) = state.base_url() {
+        return Some(crate::version::endpoint(base, segment));
+    }
+    let authority = uri.authority().map(http::uri::Authority::as_str).or_else(|| {
+        headers
+            .get(http::header::HOST)
+            .and_then(|value| value.to_str().ok())
+    })?;
+    Some(crate::version::endpoint(
+        &format!("http://{authority}"),
+        segment,
+    ))
+}
+
 /// The `url` and `version` a search names.
 ///
 /// `_elements` names what to return rather than what to match, so it passes
@@ -772,13 +859,14 @@ macro_rules! store_routes {
             axum::extract::State(state): axum::extract::State<
                 std::sync::Arc<crate::state::AppState>,
             >,
+            axum::extract::OriginalUri(uri): axum::extract::OriginalUri,
             headers: http::HeaderMap,
             axum::extract::Query(query): axum::extract::Query<Vec<(String, String)>>,
         ) -> axum::response::Response {
             let Some(wire) = negotiated(&query, &headers) else {
                 return refused(&query, &headers);
             };
-            finish(search(&state, $kind, &query, wire), wire)
+            finish(search(&state, $kind, &query, &headers, &uri, wire), wire)
         }
     };
 }
@@ -793,6 +881,8 @@ macro_rules! store {
 
             use axum::response::{IntoResponse, Response};
             use fhir_types::$fhir::bundle::{Bundle, BundleEntry, BundleEntrySearch};
+            use fhir_types::$fhir::codeable_concept::CodeableConcept;
+            use fhir_types::$fhir::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
             use fhir_types::$fhir::resource::Resource;
             use http::{HeaderMap, StatusCode};
 
@@ -809,6 +899,7 @@ macro_rules! store {
             fn surface() -> Surface {
                 Surface {
                     fhir_version: FHIR_VERSION,
+                    segment: stringify!($fhir),
                     schemas: &fhir_types::$fhir::schema::SCHEMAS,
                     round_trip: super::resources::round_trip,
                     render_value_set: |model, id| {
@@ -886,10 +977,12 @@ macro_rules! store {
                 }
             }
 
-            /// One `match` entry of a `searchset`.
-            fn found(full_url: &str, resource: Resource) -> BundleEntry {
+            /// One `match` entry of a `searchset`, at the absolute URL of the
+            /// resource when the base this server is reached at is known
+            /// (<https://hl7.org/fhir/R4B/bundle.html#bundle-unique>).
+            fn found(full_url: Option<String>, resource: Resource) -> BundleEntry {
                 BundleEntry {
-                    full_url: Some(full_url.into()),
+                    full_url: full_url.map(Into::into),
                     resource: Some(resource),
                     search: Some(BundleEntrySearch {
                         mode: Some("match".into()),
@@ -899,27 +992,67 @@ macro_rules! store {
                 }
             }
 
+            /// The `outcome` entry naming the resources this server holds and
+            /// this version has no representation for.
+            ///
+            /// A searchset may carry an `OperationOutcome` about the search
+            /// beside its matches, with no issue of `fatal` or `error`
+            /// severity and `search.mode` of `outcome`
+            /// (<https://hl7.org/fhir/R4B/http.html#search>).
+            fn outcome(issue: Vec<OperationOutcomeIssue>) -> BundleEntry {
+                BundleEntry {
+                    resource: Some(Resource::OperationOutcome(Box::new(OperationOutcome {
+                        issue,
+                        ..Default::default()
+                    }))),
+                    search: Some(BundleEntrySearch {
+                        mode: Some("outcome".into()),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }
+            }
+
+            /// One issue of that entry: the resource left out, and why.
+            fn left_out(text: &str) -> OperationOutcomeIssue {
+                OperationOutcomeIssue {
+                    severity: "warning".into(),
+                    code: "not-supported".into(),
+                    details: Some(CodeableConcept {
+                        text: Some(text.into()),
+                        ..Default::default()
+                    }),
+                    diagnostics: Some(text.into()),
+                    ..Default::default()
+                }
+            }
+
             /// The `searchset` of the resources of `resource_type` that
             /// `query` matches, the loaded ones before the persisted ones.
+            ///
+            /// A persisted resource this version has no representation for is
+            /// left out of the matches and named in one `outcome` entry, so a
+            /// resource written on another base never fails the whole search
+            /// (<https://hl7.org/fhir/R4B/http.html#search>); `total` counts
+            /// the matches (<https://hl7.org/fhir/R4B/bundle.html#searchset>).
             ///
             /// # Errors
             ///
             /// A search parameter this server does not answer is a 400, and a
-            /// resource this version cannot render is a 422.
+            /// loaded resource this version cannot render is a 500.
             pub fn search(
                 state: &AppState,
                 resource_type: ResourceType,
                 query: &[(String, String)],
+                headers: &HeaderMap,
+                uri: &http::Uri,
                 wire: Wire,
             ) -> Result<Response, Failure> {
-                let headers = HeaderMap::new();
-                let request = Request {
-                    state,
-                    surface: surface(),
-                    resource_type,
-                    headers: &headers,
-                    path: "",
-                    wire,
+                let surface = surface();
+                let base = crate::version::store::base_of(state, surface.segment, headers, uri);
+                let at = |id: &str| {
+                    base.as_ref()
+                        .map(|base| format!("{base}/{}/{id}", resource_type.name()))
                 };
                 let mut entry = Vec::new();
                 if resource_type == ResourceType::CodeSystem {
@@ -927,7 +1060,13 @@ macro_rules! store {
                     {
                         let model = fhir_terminology::fhir_codesystem::model::described(&*provider);
                         entry.push(found(
-                            &format!("CodeSystem/{id}"),
+                            at(&id),
+                            Resource::CodeSystem(Box::new(code_system(&model, &id))),
+                        ));
+                    }
+                    for (id, model) in crate::version::store::loaded_supplements(state, query)? {
+                        entry.push(found(
+                            at(&id),
                             Resource::CodeSystem(Box::new(code_system(&model, &id))),
                         ));
                     }
@@ -938,7 +1077,7 @@ macro_rules! store {
                             continue;
                         };
                         entry.push(found(
-                            &format!("ValueSet/{id}"),
+                            at(&id),
                             Resource::ValueSet(Box::new(value_set(&model, &id))),
                         ));
                     }
@@ -949,19 +1088,27 @@ macro_rules! store {
                             continue;
                         };
                         entry.push(found(
-                            &format!("ConceptMap/{id}"),
+                            at(&id),
                             Resource::ConceptMap(Box::new(concept_map(&model, &id))),
                         ));
                     }
                 }
+                let mut unreadable = Vec::new();
                 for record in crate::version::store::matches(state, resource_type, query)? {
-                    let object = crate::version::store::rendered(&request, &record)?;
+                    let object = match (surface.round_trip)(&record.resource) {
+                        Ok(object) => object,
+                        Err(reason) => {
+                            unreadable.push(left_out(&crate::version::store::unreadable(
+                                &record,
+                                surface.fhir_version,
+                                &reason,
+                            )));
+                            continue;
+                        }
+                    };
                     let resource = super::resources::resource_of(&object)
                         .map_err(|reason| crate::version::store::rendering(&reason.to_string()))?;
-                    entry.push(found(
-                        &format!("{}/{}", resource_type.name(), record.id),
-                        resource,
-                    ));
+                    entry.push(found(at(&record.id), resource));
                 }
                 let total = u32::try_from(entry.len()).map_err(|_| {
                     Failure::new(
@@ -970,6 +1117,9 @@ macro_rules! store {
                         "too many resources to count",
                     )
                 })?;
+                if !unreadable.is_empty() {
+                    entry.push(outcome(unreadable));
+                }
                 let bundle = Bundle {
                     r#type: "searchset".into(),
                     total: Some(total.into()),

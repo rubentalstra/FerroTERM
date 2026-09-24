@@ -415,6 +415,10 @@ pub struct AppState {
     caches: Arc<Caches>,
     /// `CodeSystem` instance id to (system, version).
     instances: BTreeMap<String, (String, String)>,
+    /// The `CodeSystem` supplements the deployment loaded, by the id each is
+    /// read at. A supplement is layered onto the system it supplements and is
+    /// no instance of the registry, so it is held here beside them.
+    supplements: BTreeMap<String, Arc<CodeSystemModel>>,
     /// The directory each version was loaded from.
     paths: BTreeMap<(String, String), PathBuf>,
     /// The software version reported in the capability statements.
@@ -603,8 +607,8 @@ impl AppState {
         }
         // NOTE: a loaded supplement stays dormant until a request names it
         // (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>).
-        for (target, supplement) in supplements {
-            registry.register_supplement(target, supplement);
+        for (target, model) in &supplements {
+            registry.register_supplement(target.clone(), supplement_of(model));
         }
         let mut state = Self::from_registry(registry);
         if let Some(metrics) = carried.metrics {
@@ -619,6 +623,7 @@ impl AppState {
             .clone_from(&config.security_services);
         state.base_url.clone_from(&config.base_url);
         state.viewer = config.viewer;
+        state.register_supplements(supplements)?;
         state.register_instances(&value_sets, &concept_maps)?;
         state.base.value_sets = value_sets;
         state.base.concept_maps = concept_maps;
@@ -639,6 +644,42 @@ impl AppState {
         state.check_persisted_ids()?;
         state.seed_metrics();
         Ok(state)
+    }
+
+    /// Names every loaded supplement by the `id` its resource carries, else by
+    /// the id minted from its canonical.
+    ///
+    /// A supplement is a `CodeSystem` resource this server holds
+    /// (<https://hl7.org/fhir/R4B/codesystem.html#supplements>), so it is read
+    /// and searched like any other; it shares the `CodeSystem` id space with
+    /// the systems the registry serves.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LoadError::DuplicateId`] when the authored id is one another
+    /// loaded `CodeSystem` already answers on.
+    fn register_supplements(
+        &mut self,
+        models: Vec<(String, CodeSystemModel)>,
+    ) -> Result<(), LoadError> {
+        let mut taken: BTreeMap<String, (String, Option<String>)> = self
+            .instances
+            .iter()
+            .map(|(id, (url, version))| (id.clone(), (url.clone(), Some(version.clone()))))
+            .collect();
+        for (_, model) in models {
+            let version = Some(model.version.clone()).filter(|version| !version.is_empty());
+            let id = registered_id(
+                ResourceType::CodeSystem,
+                model.id.as_deref(),
+                &model.url,
+                version.as_deref(),
+                &taken,
+            )?;
+            taken.insert(id.clone(), (model.url.clone(), version));
+            self.supplements.insert(id, Arc::new(model));
+        }
+        Ok(())
     }
 
     /// Names every loaded value set and concept map: each by the `id` its
@@ -699,6 +740,16 @@ impl AppState {
             .map(|(id, (url, version))| {
                 (ResourceType::CodeSystem, id, canonical(url, Some(version)))
             })
+            .chain(self.supplements.iter().map(|(id, model)| {
+                (
+                    ResourceType::CodeSystem,
+                    id,
+                    canonical(
+                        &model.url,
+                        Some(model.version.as_str()).filter(|version| !version.is_empty()),
+                    ),
+                )
+            }))
             .chain(self.value_set_instances.iter().map(|(id, (url, version))| {
                 (
                     ResourceType::ValueSet,
@@ -797,6 +848,7 @@ impl AppState {
             concept_map_instances: BTreeMap::new(),
             caches: Arc::new(Caches::default()),
             instances,
+            supplements: BTreeMap::new(),
             paths: BTreeMap::new(),
             software_version: env!("CARGO_PKG_VERSION"),
             security_services: Vec::new(),
@@ -1021,7 +1073,12 @@ impl AppState {
             ResourceType::CodeSystem => self
                 .instances
                 .get(id)
-                .map(|(url, version)| canonical(url, Some(version))),
+                .map(|(url, version)| canonical(url, Some(version)))
+                .or_else(|| {
+                    self.supplements.get(id).map(|model| {
+                        canonical(&model.url, Some(model.version.as_str()).filter(|v| !v.is_empty()))
+                    })
+                }),
             ResourceType::ValueSet => self
                 .value_set_instances
                 .get(id)
@@ -1060,6 +1117,22 @@ impl AppState {
         }
         let (url, version) = self.instances.get(id)?;
         persisted.layer.registry.resolve(url, Some(version)).ok()
+    }
+
+    /// The loaded supplements and the resource each is read at its id, sorted
+    /// by id.
+    #[must_use]
+    pub fn supplement_instances(&self) -> Vec<(String, Arc<CodeSystemModel>)> {
+        self.supplements
+            .iter()
+            .map(|(id, model)| (id.clone(), Arc::clone(model)))
+            .collect()
+    }
+
+    /// Resolves a loaded supplement's instance id.
+    #[must_use]
+    pub fn supplement_instance(&self, id: &str) -> Option<Arc<CodeSystemModel>> {
+        self.supplements.get(id).map(Arc::clone)
     }
 
     /// The software version.
@@ -1351,7 +1424,7 @@ fn text_of(object: &fhir_types::codec::Object, field: &str) -> Option<String> {
 fn load_code_systems(
     path: &Path,
     loaded: &mut Vec<Loaded>,
-    supplements: &mut Vec<(String, Supplement)>,
+    supplements: &mut Vec<(String, CodeSystemModel)>,
     value_sets: &mut ValueSetStore,
     concept_maps: &mut ConceptMapStore,
 ) -> Result<(), LoadError> {
@@ -1371,7 +1444,7 @@ fn load_code_systems(
                     .ok_or_else(|| LoadError::SupplementWithoutTarget {
                         url: model.url.clone(),
                     })?;
-            supplements.push((target, supplement_of(&model)));
+            supplements.push((target, model));
             continue;
         }
         let url = model.url.clone();
@@ -1404,7 +1477,7 @@ pub(crate) fn supplement_of(model: &CodeSystemModel) -> Supplement {
 /// <https://hl7.org/fhir/R4B/codesystem-definitions.html#CodeSystem.supplements>).
 fn check_supplement_targets(
     loaded: &[Loaded],
-    supplements: &[(String, Supplement)],
+    supplements: &[(String, CodeSystemModel)],
 ) -> Result<(), LoadError> {
     for (target, supplement) in supplements {
         let (url, version) = split_canonical(target);

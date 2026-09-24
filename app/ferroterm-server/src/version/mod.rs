@@ -207,6 +207,20 @@ macro_rules! surface {
                     "/ValueSet/$expand",
                     get(operations::expand_get).post(operations::expand_post),
                 )
+                // NOTE: every served version's `OperationDefinition` declares
+                // `$expand` and `$translate` at the instance level, where the
+                // operation runs on that resource
+                // (<https://hl7.org/fhir/R4B/operations.html#request>).
+                .route(
+                    "/ValueSet/{id}/$expand",
+                    get(operations::expand_instance_get)
+                        .post(operations::expand_instance_post),
+                )
+                .route(
+                    "/ConceptMap/{id}/$translate",
+                    get(operations::translate_instance_get)
+                        .post(operations::translate_instance_post),
+                )
                 .route(
                     "/ValueSet/$validate-code",
                     get(operations::value_set_validate_code_get)

@@ -44,6 +44,15 @@ impl SmartSetup {
     }
 }
 
+/// The authority every test request names, which the server answers under
+/// when the deployment declares no base URL of its own.
+pub(crate) const AUTHORITY: &str = "ferroterm.test";
+
+/// The FHIR base of `segment` on that authority.
+pub(crate) fn base_of(segment: &str) -> String {
+    format!("http://{AUTHORITY}/{segment}")
+}
+
 /// The edition in a temporary directory, loaded the way the binary loads it.
 pub(crate) struct Server {
     _dir: Arc<tempfile::TempDir>,
@@ -270,7 +279,14 @@ impl Server {
     }
 
     /// Any request, answered as the raw response so a test can read its headers.
-    pub(crate) async fn send(&self, request: Request<Body>) -> Response<Body> {
+    pub(crate) async fn send(&self, mut request: Request<Body>) -> Response<Body> {
+        // An HTTP/1.1 request always names the authority it was sent to, and
+        // the server builds a searchset's absolute `fullUrl` from it
+        // (<https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2>).
+        request
+            .headers_mut()
+            .entry(http::header::HOST)
+            .or_insert(http::HeaderValue::from_static(AUTHORITY));
         self.router().oneshot(request).await.expect("response")
     }
 
@@ -298,7 +314,7 @@ impl Server {
 
     pub(crate) async fn get(&self, uri: &str) -> (StatusCode, Value) {
         let request = Request::get(uri).body(Body::empty()).expect("request");
-        json(self.router().oneshot(request).await.expect("response")).await
+        json(self.send(request).await).await
     }
 
     pub(crate) async fn get_with_header(
@@ -311,7 +327,7 @@ impl Server {
             .header(name, value)
             .body(Body::empty())
             .expect("request");
-        json(self.router().oneshot(request).await.expect("response")).await
+        json(self.send(request).await).await
     }
 
     pub(crate) async fn post_with_header(
@@ -326,7 +342,7 @@ impl Server {
             .header(name, value)
             .body(Body::from(body.to_string()))
             .expect("request");
-        json(self.router().oneshot(request).await.expect("response")).await
+        json(self.send(request).await).await
     }
 
     pub(crate) async fn post(&self, uri: &str, body: &Value) -> (StatusCode, Value) {
@@ -334,7 +350,7 @@ impl Server {
             .header(http::header::CONTENT_TYPE, "application/fhir+json")
             .body(Body::from(body.to_string()))
             .expect("request");
-        json(self.router().oneshot(request).await.expect("response")).await
+        json(self.send(request).await).await
     }
 
     /// A `GET` with an optional `Accept`, answered as the status, the
@@ -349,7 +365,7 @@ impl Server {
             request = request.header(http::header::ACCEPT, accept);
         }
         let request = request.body(Body::empty()).expect("request");
-        text(self.router().oneshot(request).await.expect("response")).await
+        text(self.send(request).await).await
     }
 
     /// A `POST` of `body` with `content_type` and an optional `Accept`, answered
@@ -366,7 +382,7 @@ impl Server {
             request = request.header(http::header::ACCEPT, accept);
         }
         let request = request.body(Body::from(body.to_owned())).expect("request");
-        text(self.router().oneshot(request).await.expect("response")).await
+        text(self.send(request).await).await
     }
 
     pub(crate) async fn post_raw(
@@ -379,7 +395,7 @@ impl Server {
             .header(http::header::CONTENT_TYPE, content_type)
             .body(Body::from(body.to_owned()))
             .expect("request");
-        json(self.router().oneshot(request).await.expect("response")).await
+        json(self.send(request).await).await
     }
 }
 

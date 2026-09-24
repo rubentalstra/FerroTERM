@@ -5,7 +5,7 @@
 use http::StatusCode;
 use serde_json::json;
 
-use crate::fixture::Server;
+use crate::fixture::{Server, base_of};
 use ferroterm_testkit::fhir::{ANIMALS, VS_ALL, VS_PETS};
 
 fn param<'a>(body: &'a serde_json::Value, name: &str) -> Option<&'a serde_json::Value> {
@@ -433,7 +433,7 @@ async fn a_searchset_value_set_carries_the_id_it_reads_by() {
     let entry = &body["entry"][0];
     let id = entry["fullUrl"]
         .as_str()
-        .and_then(|url| url.strip_prefix("ValueSet/"))
+        .and_then(|url| url.strip_prefix(&format!("{}/ValueSet/", base_of("r4b"))))
         .expect("the entry addresses a value set");
     // `Resource.id` is "the logical id of the resource, as used in the URL for
     // the resource" (<https://hl7.org/fhir/R4B/resource.html#id>), so a client
