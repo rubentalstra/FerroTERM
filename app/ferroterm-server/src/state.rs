@@ -489,6 +489,19 @@ pub enum PersistError {
         /// The logical id of the resource that holds it.
         holder: String,
     },
+    /// The FHIR core terminology of a served version already carries the
+    /// written resource's `url` and `version`.
+    #[error(
+        "the {resource_type} `{canonical}` is already held by the FHIR {fhir_version} core terminology"
+    )]
+    CoreDuplicate {
+        /// The resource type.
+        resource_type: &'static str,
+        /// The `url|version` both resources carry.
+        canonical: String,
+        /// The FHIR version whose core terminology holds it.
+        fhir_version: &'static str,
+    },
     /// A stored resource does not convert into a model this server serves.
     #[error("the persisted {resource_type}/{id} does not convert: {reason}")]
     Convert {
@@ -781,6 +794,20 @@ impl AppState {
                 answering = %duplicate.answering,
                 "several resources carry one canonical; the most recent write answers for it"
             );
+        }
+        for (fhir_version, core) in &self.core {
+            for record in records.values().filter(|record| shadows_core(core, record)) {
+                tracing::warn!(
+                    resource_type = %record.resource_type,
+                    id = %record.id,
+                    canonical = %canonical(
+                        record.url.as_deref().unwrap_or_default(),
+                        record.version.as_deref(),
+                    ),
+                    fhir_version,
+                    "a persisted resource carries the canonical of a FHIR core resource; it is not served, and the core terminology answers for its url"
+                );
+            }
         }
         let Layers { layer, served } = persisted_layers(&self.base, &self.core, &records)?;
         *self
@@ -1353,6 +1380,8 @@ impl AppState {
     /// Returns [`PersistError::NotConfigured`] when the deployment persists no
     /// resources, [`PersistError::Duplicate`] when another resource of the type,
     /// loaded or persisted, carries its `url` and `version`,
+    /// [`PersistError::CoreDuplicate`] when the FHIR core terminology of a
+    /// served version does,
     /// [`PersistError::Convert`] when the resource does not convert
     /// into a model this server serves, [`PersistError::Layer`] when it cannot
     /// be layered over the loaded state, and [`PersistError::Store`] when the
@@ -1385,6 +1414,17 @@ impl AppState {
                     resource_type: resource_type.name(),
                     canonical: canonical(&url, version.as_deref()),
                     holder,
+                });
+            }
+            if let Some((fhir_version, _)) = self
+                .core
+                .iter()
+                .find(|(_, core)| core_holds(core, resource_type, &url, version.as_deref()))
+            {
+                return Err(PersistError::CoreDuplicate {
+                    resource_type: resource_type.name(),
+                    canonical: canonical(&url, version.as_deref()),
+                    fhir_version,
                 });
             }
         }
@@ -1459,12 +1499,20 @@ struct Layers {
 
 /// The loaded state with every persisted record applied over it, and the same
 /// layer per served version over the terminology that version defines.
+///
+/// A record that carries the canonical of a core resource of any served
+/// version is left out of both ([`shadows_core`]).
 fn persisted_layers(
     base: &Layer,
     core: &BTreeMap<&'static str, CoreTerminology>,
     records: &BTreeMap<(ResourceType, String), Record>,
 ) -> Result<Layers, PersistError> {
-    let layer = layered(base, records)?;
+    let over_core: BTreeMap<(ResourceType, String), Record> = records
+        .iter()
+        .filter(|(_, record)| !core.values().any(|core| shadows_core(core, record)))
+        .map(|(key, record)| (key.clone(), record.clone()))
+        .collect();
+    let layer = layered(base, &over_core)?;
     let served = core
         .iter()
         .map(|(fhir_version, core)| {
@@ -1479,6 +1527,47 @@ fn persisted_layers(
         })
         .collect();
     Ok(Layers { layer, served })
+}
+
+/// Whether `record` carries the `url` and `version` of a resource in `core`.
+///
+/// Such a record is kept out of every served layer, so the core resource of
+/// each version keeps answering for its `url`: the pair identifies the core
+/// resource (<https://hl7.org/fhir/R4B/resource.html#canonical>), and a store
+/// written before the server refused such a write may hold one.
+fn shadows_core(core: &CoreTerminology, record: &Record) -> bool {
+    let (Some(resource_type), Some(url)) = (
+        ResourceType::parse(&record.resource_type),
+        record.url.as_deref(),
+    ) else {
+        return false;
+    };
+    core_holds(core, resource_type, url, record.version.as_deref())
+}
+
+/// Whether the terminology `core` carries a resource of `resource_type` with
+/// `url` and `version`.
+fn core_holds(
+    core: &CoreTerminology,
+    resource_type: ResourceType,
+    url: &str,
+    version: Option<&str>,
+) -> bool {
+    match resource_type {
+        ResourceType::CodeSystem => core.code_systems().versions(url).any(|provider| {
+            same_canonical(
+                (url, Some(provider.identity().version.as_str())),
+                (url, version),
+            )
+        }),
+        ResourceType::ValueSet => core
+            .value_sets()
+            .iter()
+            .any(|model| same_canonical((&model.url, model.version.as_deref()), (url, version))),
+        // NOTE: the core terminology beneath a served version holds code systems and
+        // value sets alone; no FHIR/SNOMED spec governs this: our own design.
+        ResourceType::ConceptMap => false,
+    }
 }
 
 /// The id of the persisted record of `resource_type` with `url` and

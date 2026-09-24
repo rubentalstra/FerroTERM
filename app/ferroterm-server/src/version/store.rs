@@ -655,7 +655,9 @@ pub(crate) fn persist_failure(error: &PersistError) -> Failure {
         PersistError::Store(_) => (StatusCode::INTERNAL_SERVER_ERROR, "exception"),
         // NOTE: `url` and `version` identify one canonical resource
         // (<https://hl7.org/fhir/R4B/resource.html#canonical>), and a write that breaks it is refused.
-        PersistError::Duplicate { .. } => (StatusCode::CONFLICT, "duplicate"),
+        PersistError::Duplicate { .. } | PersistError::CoreDuplicate { .. } => {
+            (StatusCode::CONFLICT, "duplicate")
+        }
     };
     let failure = Failure::new(status, code, error.to_string());
     match error {
