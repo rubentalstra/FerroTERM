@@ -26,6 +26,7 @@
 )]
 
 mod accessibility;
+mod composer;
 mod docs_shots;
 mod editor;
 mod harness;

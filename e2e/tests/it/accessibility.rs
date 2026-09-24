@@ -29,13 +29,15 @@ use crate::harness::session;
 /// module would have to name, and the sidebar does not offer it. The overview
 /// links to it, and `viewer` walks that link.
 ///
-/// The last is the editor bundle's authoring screen, which the one server
-/// serves at its own mount. It is opened on the fixture this deployment
-/// holds, because an empty form has none of the rows whose markup this pass
-/// exists to read; this deployment publishes no issuer, so the form opens
-/// read-only, and the controls a token opens are walked by the keyboard
-/// journey in `editor` against the deployment that has one.
-const SCREENS: [&str; 10] = [
+/// The last two are the editor bundle's authoring screens, which the one
+/// server serves at its own mount. The code system one is opened on the
+/// fixture this deployment holds, because an empty form has none of the rows
+/// whose markup this pass exists to read; the composer opens on a new draft,
+/// which is where its own clause carries every control it draws. This
+/// deployment publishes no issuer, so both forms open read-only, and the
+/// controls a token opens are walked by the keyboard journeys in `editor` and
+/// `composer` against the deployment that has one.
+const SCREENS: [&str; 11] = [
     "/ui/",
     "/ui/browse",
     "/ui/expand",
@@ -46,6 +48,7 @@ const SCREENS: [&str; 10] = [
     "/ui/find",
     "/ui/about",
     "/ui/editor/codesystem?system=https%3A%2F%2Fferroterm.eu%2Ffhir%2FCodeSystem%2Fe2e-taxonomy",
+    "/ui/editor/compose",
 ];
 
 /// The version every screen is opened on.

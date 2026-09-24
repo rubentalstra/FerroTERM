@@ -7,7 +7,7 @@
       "pattern": "*_bg.wasm",
       "max_gzip_bytes": 750000,
       "max_growth_gzip_bytes": 70000,
-      "measured_gzip_bytes": 625447,
+      "measured_gzip_bytes": 694613,
       "claim": "the finished editor bundle is the reader bundle plus one authoring screen for each resource type the server writes"
     },
     {

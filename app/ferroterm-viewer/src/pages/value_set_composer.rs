@@ -44,6 +44,7 @@ use crate::fhir::compose::Draft;
 use crate::fhir::compose::Preview;
 use crate::fhir::compose::STATUSES;
 use crate::fhir::compose::StoredValueSet;
+use crate::fhir::compose::ValueSetRef;
 use crate::fhir::concept::ConceptQuery;
 use crate::fhir::error::FhirError;
 use crate::fhir::expansion::ExpandedValueSet;
@@ -787,51 +788,41 @@ fn value_set_rows(editing: Editing, offers: Offers, key: u32, clause: Memo<Claus
 
 /// The canonical of one value set a clause draws in.
 ///
-/// A canonical in an implicit form opens on the value inside it, so the
-/// expression a refusal points into is the thing the reader edits.
+/// A row in an implicit form edits the value inside the form, so the
+/// expression a refusal points into is the thing the reader types; a plain one
+/// edits the canonical itself. Which it is was decided when the row was made.
 fn value_set_row(editing: Editing, key: u32, row: u32, clause: Memo<Clause>) -> AnyView {
-    let canonical = Memo::new(move |_| {
+    let held: Memo<ValueSetRef> = Memo::new(move |_| {
         clause.with(|clause| {
             clause
                 .value_sets
                 .iter()
                 .find(|held| held.key == row)
-                .map(|held| held.canonical.clone())
+                .cloned()
                 .unwrap_or_default()
         })
     });
-    let implicit_form = Memo::new(move |_| canonical.with(|canonical| implicit::read(canonical)));
     let control = text_control(
         format!("compose-valueset-{key}-{row}"),
         "valueSet",
         Signal::derive(move || {
-            implicit_form.get().map_or_else(
-                || String::from("Canonical"),
-                |(_, form, _)| form.value_label.to_owned(),
-            )
+            held.with(|held| {
+                held.form.map_or_else(
+                    || String::from("Canonical"),
+                    |form| form.value_label.to_owned(),
+                )
+            })
         }),
         Signal::derive(move || {
-            implicit_form.get().map_or_else(
-                || canonical.get(),
-                |(system, form, _)| format!("{} of {system}", form.label),
-            )
+            held.with(|held| match held.form {
+                Some(form) => format!("{} of {}", form.label, held.system),
+                None => held.canonical.clone(),
+            })
         }),
-        Signal::derive(move || {
-            implicit_form
-                .get()
-                .map_or_else(|| canonical.get(), |(_, _, value)| value)
-        }),
+        Signal::derive(move || held.with(|held| held.value.clone())),
         Box::new(move |event| {
             let typed = event_target_value(&event);
-            let rewritten = implicit_form.get_untracked().map_or_else(
-                || typed.clone(),
-                |(system, form, _)| form.canonical(&system, &typed),
-            );
-            editing.change_clause(key, move |clause| {
-                if let Some(held) = clause.value_sets.iter_mut().find(|held| held.key == row) {
-                    held.canonical = rewritten;
-                }
-            });
+            editing.change(move |draft| draft.write_value_set(key, row, &typed));
         }),
     );
     removable(
@@ -919,8 +910,7 @@ fn add_implicit_value_set(editing: Editing, offers: Offers, key: u32) -> AnyView
             let Some(form) = implicit::form(&keyword.get_untracked()) else {
                 return;
             };
-            let canonical = form.canonical(&named, "");
-            editing.change(move |draft| draft.add_value_set(key, &canonical));
+            editing.change(move |draft| draft.add_implicit_value_set(key, &named, form));
             keyword.set(String::new());
         }),
     );
@@ -1736,18 +1726,7 @@ fn expansion_refusal(error: &FhirError, editing: Editing) -> AnyView {
 /// the expression is the one whose canonical the outcome names, so nothing here
 /// parses anything.
 fn marked_expression(diagnostic: &str, editing: Editing) -> Option<AnyView> {
-    let position = implicit::position_in(diagnostic)?;
-    let draft = editing.draft();
-    let (expression, form) = draft.clauses.iter().find_map(|clause| {
-        clause.value_sets.iter().find_map(|row| {
-            diagnostic
-                .contains(&row.canonical)
-                .then(|| implicit::read(&row.canonical))
-                .flatten()
-                .filter(|(_, form, _)| form.expression)
-                .map(|(_, form, value)| (value, form))
-        })
-    })?;
+    let (form, expression, position) = editing.draft().marked_expression(diagnostic)?;
     let (before, at, after) = implicit::mark(&expression, position);
     Some(
         view! {

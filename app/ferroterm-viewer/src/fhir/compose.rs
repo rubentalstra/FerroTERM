@@ -26,6 +26,8 @@ use crate::fhir::concept::value_parameter;
 use crate::fhir::expansion::COUNT_PARAMETER;
 use crate::fhir::expansion::FILTER_PARAMETER;
 use crate::fhir::expansion::OFFSET_PARAMETER;
+use crate::fhir::implicit;
+use crate::fhir::implicit::Form;
 
 /// The `ValueSet.status` codes a draft can be in.
 ///
@@ -95,6 +97,16 @@ pub(crate) struct ValueSetRef {
     pub(crate) key: u32,
     /// The canonical, implicit forms included.
     pub(crate) canonical: String,
+    /// The implicit form the row is edited as, when it is one.
+    ///
+    /// It is decided once, when the row is made or read back, and never
+    /// derived from the text afterwards: a control whose meaning changed while
+    /// a reader typed would rewrite what they had typed so far.
+    pub(crate) form: Option<Form>,
+    /// The code system the form is over, empty for a plain canonical.
+    pub(crate) system: String,
+    /// The value inside the form, as the author reads and writes it.
+    pub(crate) value: String,
 }
 
 /// One code a clause names, with the display its author gives it.
@@ -232,12 +244,42 @@ impl Draft {
     }
 
     /// Adds a value set reference to the clause `key` names.
+    ///
+    /// A canonical already in an implicit form opens as that form, so a value
+    /// set read back off the server is edited the way it was written.
     pub(crate) fn add_value_set(&mut self, key: u32, canonical: &str) {
+        let row = self.mint();
+        let read = implicit::read(canonical);
+        if let Some(clause) = self.clause_mut(key) {
+            clause.value_sets.push(match read {
+                Some((system, form, value)) => ValueSetRef {
+                    key: row,
+                    canonical: canonical.to_owned(),
+                    form: Some(form),
+                    system,
+                    value,
+                },
+                None => ValueSetRef {
+                    key: row,
+                    canonical: canonical.to_owned(),
+                    form: None,
+                    system: String::new(),
+                    value: canonical.to_owned(),
+                },
+            });
+        }
+    }
+
+    /// Adds a value set named by one of a code system's own implicit forms.
+    pub(crate) fn add_implicit_value_set(&mut self, key: u32, system: &str, form: Form) {
         let row = self.mint();
         if let Some(clause) = self.clause_mut(key) {
             clause.value_sets.push(ValueSetRef {
                 key: row,
-                canonical: canonical.to_owned(),
+                canonical: form.canonical(system, ""),
+                form: Some(form),
+                system: system.to_owned(),
+                value: String::new(),
             });
         }
     }
@@ -269,6 +311,42 @@ impl Draft {
                 value: String::new(),
             });
         }
+    }
+
+    /// Writes what the reader typed into the value set row `row` names.
+    ///
+    /// A row in an implicit form takes the value inside the form and rebuilds
+    /// the canonical around it; a plain one takes the canonical itself.
+    pub(crate) fn write_value_set(&mut self, key: u32, row: u32, typed: &str) {
+        let Some(held) = self
+            .clause_mut(key)
+            .and_then(|clause| clause.value_sets.iter_mut().find(|held| held.key == row))
+        else {
+            return;
+        };
+        typed.clone_into(&mut held.value);
+        held.canonical = match held.form {
+            Some(form) => form.canonical(&held.system, typed),
+            None => typed.to_owned(),
+        };
+    }
+
+    /// The expression a refused expansion points into, and where.
+    ///
+    /// The server names the canonical it refused and states the position in
+    /// its own words, so this finds the row that canonical belongs to and
+    /// answers the expression with the byte offset to mark. A diagnostic about
+    /// anything else, or about a row that is not an expression, answers
+    /// `None` and the screen marks nothing.
+    pub(crate) fn marked_expression(&self, diagnostic: &str) -> Option<(Form, String, u32)> {
+        let position = implicit::position_in(diagnostic)?;
+        self.clauses.iter().find_map(|clause| {
+            clause.value_sets.iter().find_map(|row| {
+                let form = row.form.filter(|form| form.expression)?;
+                (!row.canonical.is_empty() && diagnostic.contains(&row.canonical))
+                    .then(|| (form, row.value.clone(), position))
+            })
+        })
     }
 
     /// Every invariant any clause breaks, in the order the clauses are drawn.
@@ -886,6 +964,101 @@ mod tests {
         assert!(
             written.contains(r#""exclude":[{"concept":[{"code":"A"}]"#),
             "`Any display names specified for the codes are ignored` in an exclude: {written}"
+        );
+    }
+
+    /// The form a code system defines for an expression constraint.
+    fn expression_form() -> Form {
+        implicit::form("ecl").expect("the expression form is one the viewer knows")
+    }
+
+    #[test]
+    fn an_implicit_row_edits_the_value_inside_the_form() {
+        let mut draft = Draft::new();
+        draft.url = String::from("https://terminology.example/vs/local");
+        let key = draft.clause_keys(true)[0];
+        draft.add_implicit_value_set(key, "https://terminology.example/x", expression_form());
+        let row = draft
+            .clause(key)
+            .and_then(|clause| clause.value_sets.first().map(|row| row.key))
+            .expect("the clause carries the row just added");
+        draft.write_value_set(key, row, "<<73211009 |diabetes|");
+        let held = draft
+            .clause(key)
+            .and_then(|clause| clause.value_sets.first().cloned())
+            .expect("the row is still there");
+        assert_eq!(
+            held.value, "<<73211009 |diabetes|",
+            "the author reads what they typed"
+        );
+        assert_eq!(
+            held.canonical,
+            "https://terminology.example/x?fhir_vs=ecl/%3C%3C73211009%20%7Cdiabetes%7C",
+            "the canonical is rebuilt around it, encoded"
+        );
+    }
+
+    #[test]
+    fn a_plain_row_edits_the_canonical_itself() {
+        let mut draft = Draft::new();
+        let key = draft.clause_keys(true)[0];
+        draft.add_value_set(key, "https://terminology.example/vs/national");
+        let row = draft
+            .clause(key)
+            .and_then(|clause| clause.value_sets.first().map(|row| row.key))
+            .expect("the clause carries the row just added");
+        draft.write_value_set(key, row, "https://terminology.example/vs/other");
+        let held = draft
+            .clause(key)
+            .and_then(|clause| clause.value_sets.first().cloned())
+            .expect("the row is still there");
+        assert_eq!(held.form, None, "a published canonical is no form");
+        assert_eq!(held.canonical, "https://terminology.example/vs/other");
+    }
+
+    #[test]
+    fn a_refusal_points_into_the_expression_it_names() {
+        let mut draft = Draft::new();
+        draft.url = String::from("https://terminology.example/vs/local");
+        let key = draft.clause_keys(true)[0];
+        draft.add_implicit_value_set(key, "https://terminology.example/x", expression_form());
+        let row = draft
+            .clause(key)
+            .and_then(|clause| clause.value_sets.first().map(|row| row.key))
+            .expect("the clause carries the row just added");
+        draft.write_value_set(key, row, "<<73211009 OR");
+        let canonical = draft
+            .clause(key)
+            .and_then(|clause| clause.value_sets.first().map(|row| row.canonical.clone()))
+            .expect("the row carries a canonical");
+        // The shape the server refuses an implicit value set in, with the
+        // parser's own byte offset in its words.
+        let said = format!(
+            "implicit value set `{canonical}` is malformed: expected a focus concept at byte 13, found the end of the expression"
+        );
+        assert_eq!(
+            draft.marked_expression(&said),
+            Some((expression_form(), String::from("<<73211009 OR"), 13)),
+            "the row the server named is the one the screen marks"
+        );
+        assert_eq!(
+            draft.marked_expression("code `x` is not in code system `y`"),
+            None,
+            "a refusal about something else marks nothing"
+        );
+    }
+
+    #[test]
+    fn a_refusal_naming_another_value_set_marks_nothing() {
+        let mut draft = Draft::new();
+        let key = draft.clause_keys(true)[0];
+        draft.add_implicit_value_set(key, "https://terminology.example/x", expression_form());
+        assert_eq!(
+            draft.marked_expression(
+                "implicit value set `https://terminology.example/other?fhir_vs=ecl/x` is malformed: expected a focus concept at byte 0, found \"x\""
+            ),
+            None,
+            "the canonical in the diagnostic is what picks the row"
         );
     }
 
