@@ -22,6 +22,7 @@ mod elements;
 mod fixture;
 mod health;
 mod healthcheck;
+mod logical_id;
 mod metadata;
 mod metrics;
 mod openehr;

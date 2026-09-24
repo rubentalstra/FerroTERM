@@ -6,6 +6,10 @@ use crate::compose::Compose;
 /// What the compose layer and the operations need of a `ValueSet`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueSetModel {
+    /// `id`: the logical id the resource was authored with, when it carries
+    /// one (<https://hl7.org/fhir/R4B/resource.html#id>). The server reads the
+    /// resource at it.
+    pub id: Option<String>,
     /// `url`.
     pub url: String,
     /// `version`.

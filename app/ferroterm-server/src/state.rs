@@ -176,6 +176,30 @@ pub enum LoadError {
     /// A persisted resource does not layer over the loaded state.
     #[error("cannot serve the persisted resources")]
     Persisted(#[source] PersistError),
+    /// Two loaded resources of one type carry the same logical id.
+    #[error("the {resource_type} resources `{first}` and `{second}` both carry the id `{id}`")]
+    DuplicateId {
+        /// The resource type both are of.
+        resource_type: &'static str,
+        /// The id they share.
+        id: String,
+        /// The canonical of the resource that holds the id.
+        first: String,
+        /// The canonical of the resource that also asks for it.
+        second: String,
+    },
+    /// A loaded resource carries the logical id of a persisted record.
+    #[error(
+        "the loaded {resource_type} `{canonical}` carries the id `{id}`, which a persisted {resource_type} holds"
+    )]
+    PersistedId {
+        /// The resource type.
+        resource_type: &'static str,
+        /// The id both carry.
+        id: String,
+        /// The canonical of the loaded resource.
+        canonical: String,
+    },
     /// Two sources serve the same system version.
     #[error(transparent)]
     Register(#[from] RegisterError),
@@ -558,6 +582,16 @@ impl AppState {
             )?;
         }
         check_supplement_targets(&loaded, &supplements)?;
+        check_distinct_ids(
+            "CodeSystem",
+            loaded.iter().filter_map(|l| {
+                let model = l.provider.code_system()?;
+                Some((
+                    model.id.clone()?,
+                    canonical(&model.url, Some(&model.version)),
+                ))
+            }),
+        )?;
         let mut registry = Registry::new();
         let mut paths = BTreeMap::new();
         for Loaded { path, provider } in loaded {
@@ -585,24 +619,7 @@ impl AppState {
             .clone_from(&config.security_services);
         state.base_url.clone_from(&config.base_url);
         state.viewer = config.viewer;
-        for model in value_sets.iter() {
-            let id = unique_id_of(
-                &state.value_set_instances,
-                instance_id(&model.url, model.version.as_deref().unwrap_or_default()),
-            );
-            state
-                .value_set_instances
-                .insert(id, (model.url.clone(), model.version.clone()));
-        }
-        for model in concept_maps.iter() {
-            let id = unique_id_of(
-                &state.concept_map_instances,
-                instance_id(&model.url, model.version.as_deref().unwrap_or_default()),
-            );
-            state
-                .concept_map_instances
-                .insert(id, (model.url.clone(), model.version.clone()));
-        }
+        state.register_instances(&value_sets, &concept_maps)?;
         state.base.value_sets = value_sets;
         state.base.concept_maps = concept_maps;
         state.core = core_terminology()?;
@@ -619,8 +636,97 @@ impl AppState {
             },
         };
         state.reload_persisted().map_err(LoadError::Persisted)?;
+        state.check_persisted_ids()?;
         state.seed_metrics();
         Ok(state)
+    }
+
+    /// Names every loaded value set and concept map: each by the `id` its
+    /// resource carries, else by the id minted from its canonical.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LoadError::DuplicateId`] when two resources of one type carry
+    /// the same id.
+    fn register_instances(
+        &mut self,
+        value_sets: &ValueSetStore,
+        concept_maps: &ConceptMapStore,
+    ) -> Result<(), LoadError> {
+        for model in value_sets.iter() {
+            let id = registered_id(
+                "ValueSet",
+                model.id.as_deref(),
+                &model.url,
+                model.version.as_deref(),
+                &self.value_set_instances,
+            )?;
+            self.value_set_instances
+                .insert(id, (model.url.clone(), model.version.clone()));
+        }
+        for model in concept_maps.iter() {
+            let id = registered_id(
+                "ConceptMap",
+                model.id.as_deref(),
+                &model.url,
+                model.version.as_deref(),
+                &self.concept_map_instances,
+            )?;
+            self.concept_map_instances
+                .insert(id, (model.url.clone(), model.version.clone()));
+        }
+        Ok(())
+    }
+
+    /// No loaded resource is addressed by an id a persisted record already
+    /// answers on.
+    ///
+    /// A persisted record is resolved before a loaded resource of the same id,
+    /// so the loaded one would be unreachable; the load says so instead.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LoadError::PersistedId`] naming the loaded canonical and the
+    /// id it shares with the record.
+    fn check_persisted_ids(&self) -> Result<(), LoadError> {
+        let persisted = self
+            .persisted
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let loaded = self
+            .instances
+            .iter()
+            .map(|(id, (url, version))| {
+                (ResourceType::CodeSystem, id, canonical(url, Some(version)))
+            })
+            .chain(self.value_set_instances.iter().map(|(id, (url, version))| {
+                (
+                    ResourceType::ValueSet,
+                    id,
+                    canonical(url, version.as_deref()),
+                )
+            }))
+            .chain(
+                self.concept_map_instances
+                    .iter()
+                    .map(|(id, (url, version))| {
+                        (
+                            ResourceType::ConceptMap,
+                            id,
+                            canonical(url, version.as_deref()),
+                        )
+                    }),
+            );
+        for (resource_type, id, canonical) in loaded {
+            if persisted.records.contains_key(&(resource_type, id.clone())) {
+                return Err(LoadError::PersistedId {
+                    resource_type: resource_type.name(),
+                    id: id.clone(),
+                    canonical,
+                });
+            }
+        }
+        Ok(())
     }
 
     /// Reads every persisted record and rebuilds the served layer from them.
@@ -656,7 +762,13 @@ impl AppState {
         for url in registry.systems() {
             for provider in registry.versions(url) {
                 let identity = provider.identity();
-                let id = unique_id(&instances, instance_id(&identity.url, &identity.version));
+                // NOTE: `AppState::build` refuses a collision between authored ids before
+                // it reaches here, so the suffix only ever renames a minted id.
+                let authored = provider
+                    .code_system()
+                    .and_then(|model| model.id.clone())
+                    .unwrap_or_else(|| instance_id(&identity.url, &identity.version));
+                let id = unique_id(&instances, authored);
                 instances.insert(id, (identity.url.clone(), identity.version.clone()));
             }
         }
@@ -1290,6 +1402,75 @@ fn split_canonical(canonical: &str) -> (&str, Option<&str>) {
 /// `wanted`, or `wanted` with a numeric suffix when the reduced id is taken.
 fn unique_id(taken: &BTreeMap<String, (String, String)>, wanted: String) -> String {
     unique_id_of(taken, wanted)
+}
+
+/// The `url|version` canonical of a resource, for a diagnostic.
+fn canonical(url: &str, version: Option<&str>) -> String {
+    match version.filter(|version| !version.is_empty()) {
+        Some(version) => format!("{url}|{version}"),
+        None => url.to_owned(),
+    }
+}
+
+/// Every loaded resource of one type carries a distinct authored id.
+///
+/// # Errors
+///
+/// Returns [`LoadError::DuplicateId`] naming both canonicals. A server does not
+/// rename a resource it loads (<https://hl7.org/fhir/R4B/resource.html#id>), so
+/// the load fails instead of picking one.
+fn check_distinct_ids(
+    resource_type: &'static str,
+    authored: impl Iterator<Item = (String, String)>,
+) -> Result<(), LoadError> {
+    let mut seen: BTreeMap<String, String> = BTreeMap::new();
+    for (id, canonical) in authored {
+        if let Some(first) = seen.get(&id) {
+            return Err(LoadError::DuplicateId {
+                resource_type,
+                id,
+                first: first.clone(),
+                second: canonical,
+            });
+        }
+        seen.insert(id, canonical);
+    }
+    Ok(())
+}
+
+/// The id a loaded value set or concept map is registered under.
+///
+/// The id the resource was authored with, so a client reads it at the id it
+/// knows (<https://hl7.org/fhir/R4B/resource.html#id>); a resource without one
+/// keeps the id the server mints from its canonical, which no specification
+/// governs: our own design.
+///
+/// # Errors
+///
+/// Returns [`LoadError::DuplicateId`] when another loaded resource of the type
+/// already answers on the authored id.
+fn registered_id(
+    resource_type: &'static str,
+    authored: Option<&str>,
+    url: &str,
+    version: Option<&str>,
+    taken: &BTreeMap<String, (String, Option<String>)>,
+) -> Result<String, LoadError> {
+    let Some(authored) = authored else {
+        return Ok(unique_id_of(
+            taken,
+            instance_id(url, version.unwrap_or_default()),
+        ));
+    };
+    if let Some((held_url, held_version)) = taken.get(authored) {
+        return Err(LoadError::DuplicateId {
+            resource_type,
+            id: authored.to_owned(),
+            first: canonical(held_url, held_version.as_deref()),
+            second: canonical(url, version),
+        });
+    }
+    Ok(authored.to_owned())
 }
 
 /// `wanted`, or `wanted` with a numeric suffix when the reduced id is a key

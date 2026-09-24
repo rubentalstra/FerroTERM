@@ -209,6 +209,7 @@ macro_rules! convert_value_set {
                         _ => None,
                     });
                 Ok(ValueSetModel {
+                    id: resource.id.clone(),
                     url,
                     version: string(&resource.version),
                     language: text(resource.language.as_ref().and_then(|l| l.value.as_deref())),

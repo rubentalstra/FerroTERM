@@ -220,6 +220,10 @@ pub struct Group {
 /// What `$translate` needs of a `ConceptMap`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConceptMapModel {
+    /// `id`: the logical id the resource was authored with, when it carries
+    /// one (<https://hl7.org/fhir/R4B/resource.html#id>). The server reads the
+    /// resource at it.
+    pub id: Option<String>,
     /// `url`.
     pub url: String,
     /// `version`.

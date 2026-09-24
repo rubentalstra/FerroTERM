@@ -536,6 +536,10 @@ impl<'a> Sources<'a> {
                     Some(Ok(compose)) => {
                         let metadata = self.registry.implicit_metadata(url);
                         Ok(Arc::new(crate::valueset::model::ValueSetModel {
+                            // NOTE: an implicit value set is answered from the
+                            // provider rather than read from a resource, so it
+                            // carries no authored id.
+                            id: None,
                             expansion_parameters: Vec::new(),
                             language: None,
                             url: url.to_owned(),

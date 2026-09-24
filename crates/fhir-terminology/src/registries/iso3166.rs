@@ -124,6 +124,9 @@ pub fn code_system() -> Result<CodeSystemModel, DataError> {
         }
     }
     Ok(CodeSystemModel {
+        // NOTE: the table ships in the binary rather than as a resource, so the
+        // server names this instance itself.
+        id: None,
         url: URL.to_owned(),
         version,
         name: None,
