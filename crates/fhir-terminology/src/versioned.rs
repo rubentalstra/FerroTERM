@@ -1,6 +1,7 @@
 //! A store of canonical resources by `url` and `version`, with the
 //! default-version rule the value sets and concept maps share.
 
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -33,8 +34,8 @@ pub struct Duplicate {
 #[derive(Debug)]
 pub struct VersionedStore<T> {
     by_url: BTreeMap<String, BTreeMap<String, Arc<T>>>,
-    /// The store under this one: a `url` this store does not hold at all
-    /// resolves there. The FHIR core terminology of the served version is what
+    /// The store under this one: a `url` and `version` this store does not
+    /// hold resolves there. The FHIR core terminology of the served version is what
     /// a server puts there, so cloning this store for one request costs the
     /// deployment's own resources alone.
     beneath: Option<Arc<Self>>,
@@ -67,24 +68,45 @@ impl<T: Versioned> VersionedStore<T> {
 
     /// This store with `beneath` under it.
     ///
-    /// A `url` this store holds shadows the one beneath entirely, so a
-    /// deployment's own resource replaces the specification's rather than
-    /// merging versions with it; a `url` this store does not hold resolves
-    /// beneath. No FHIR version governs how a server layers its content: our
-    /// own design.
+    /// The layers resolve per `url` and `version`: a version this store holds
+    /// answers from it, every other version of the same `url` still answers
+    /// from beneath, and the default is the greatest version of both, as if
+    /// they were one store ([`Self::resolve`]). A version-specific canonical
+    /// names one resource and a version-less one the latest
+    /// (<https://hl7.org/fhir/R4B/references.html#canonical>); how a server
+    /// layers its content is our own design, no FHIR version governs it.
     #[must_use]
     pub fn with_beneath(mut self, beneath: Arc<Self>) -> Self {
         self.beneath = Some(beneath);
         self
     }
 
-    /// The store `url` resolves in: this one when it holds the `url`, the one
-    /// beneath when only it does.
-    fn holder(&self, url: &str) -> Option<&Self> {
-        if self.by_url.contains_key(url) {
-            return Some(self);
+    /// The versions of `url` across every layer, an upper layer's version
+    /// replacing the same version beneath.
+    fn versions_of(&self, url: &str) -> Option<Cow<'_, BTreeMap<String, Arc<T>>>> {
+        let mut layers = Vec::new();
+        let mut layer = Some(self);
+        while let Some(current) = layer {
+            if let Some(versions) = current.by_url.get(url) {
+                layers.push(versions);
+            }
+            layer = current.beneath.as_deref();
         }
-        self.beneath.as_deref().and_then(|below| below.holder(url))
+        match layers.as_slice() {
+            [] => None,
+            [only] => Some(Cow::Borrowed(*only)),
+            _ => {
+                let mut merged = BTreeMap::new();
+                for versions in layers.iter().rev() {
+                    merged.extend(
+                        versions
+                            .iter()
+                            .map(|(version, resource)| (version.clone(), Arc::clone(resource))),
+                    );
+                }
+                Some(Cow::Owned(merged))
+            }
+        }
     }
 
     /// Stores `resource`.
@@ -124,11 +146,13 @@ impl<T: Versioned> VersionedStore<T> {
             Some((url, version)) => (url, Some(version)),
             None => (url, None),
         };
-        let versions = self.holder(url)?.by_url.get(url)?;
+        let versions = self.versions_of(url)?;
         match version.or(embedded) {
             Some(wanted) => select_version(versions.keys().map(String::as_str), wanted)
                 .and_then(|v| versions.get(v))
                 .cloned(),
+            // NOTE: a version-less canonical names the latest (<https://hl7.org/fhir/R4B/references.html#canonical>);
+            // no spec governs the default among layers, our own design: the greatest of all of them.
             None => versions
                 .iter()
                 .max_by(|(a, _), (b, _)| version_order(a, b))

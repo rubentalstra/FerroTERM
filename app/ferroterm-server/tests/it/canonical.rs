@@ -482,3 +482,193 @@ async fn a_stored_core_canonical_is_not_served_and_is_logged_at_startup() {
         }
     }
 }
+
+/// The `result` and `version` a `CodeSystem/$validate-code` on `base`
+/// answers for `code`, at `version` when one is given.
+async fn validate_code(
+    server: &Server,
+    base: &str,
+    version: Option<&str>,
+    code: &str,
+) -> (bool, String) {
+    let version = version.map(|v| format!("&version={v}")).unwrap_or_default();
+    let (status, body) = server
+        .get(&format!(
+            "/{base}/CodeSystem/$validate-code?url={CORE_SYSTEM}{version}&code={code}"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{base}: {body}");
+    (
+        parameter(&body, "result")
+            .get("valueBoolean")
+            .and_then(Value::as_bool)
+            == Some(true),
+        parameter(&body, "version")
+            .get("valueString")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned(),
+    )
+}
+
+/// A persisted `CodeSystem` under a core `url` with its own `version` is
+/// another resource (<https://hl7.org/fhir/R4B/references.html#canonical>):
+/// it answers at its version and leaves the core version answering on every
+/// base. A version-less request takes the greatest version of either layer,
+/// the default one registry holding both would pick: `1.0.0` sorts below
+/// every core version and leaves the core answering, `local-1` sorts above.
+#[tokio::test]
+async fn a_persisted_version_of_a_core_url_leaves_the_core_version_answering() {
+    let server = Server::start_persisting();
+    let response = server
+        .put(
+            "/r4/CodeSystem/gender-lower",
+            &code_system(CORE_SYSTEM, "1.0.0", "lower-only"),
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    for (base, core) in CORE {
+        assert_eq!(
+            validate_code(&server, base, None, "male").await,
+            (true, core.to_owned()),
+            "{base}: a lower persisted version leaves the core default"
+        );
+        assert_eq!(
+            validate_code(&server, base, Some("1.0.0"), "lower-only").await,
+            (true, String::from("1.0.0")),
+            "{base}"
+        );
+    }
+
+    let response = server
+        .put(
+            "/r4/CodeSystem/gender-local",
+            &code_system(CORE_SYSTEM, "local-1", "local-only"),
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    for (base, core) in CORE {
+        assert_eq!(
+            validate_code(&server, base, Some("local-1"), "local-only").await,
+            (true, String::from("local-1")),
+            "{base}: the persisted version answers at its version"
+        );
+        assert!(
+            !validate_code(&server, base, Some("local-1"), "male")
+                .await
+                .0,
+            "{base}"
+        );
+        assert_eq!(
+            validate_code(&server, base, Some(core), "male").await,
+            (true, core.to_owned()),
+            "{base}: the core version still answers from the core"
+        );
+        assert!(
+            !validate_code(&server, base, Some(core), "local-only")
+                .await
+                .0,
+            "{base}"
+        );
+        assert_eq!(
+            validate_code(&server, base, None, "local-only").await,
+            (true, String::from("local-1")),
+            "{base}: `local-1` is the greatest version of either layer"
+        );
+    }
+}
+
+/// The `result` a `ValueSet/$validate-code` on `base` answers for the
+/// animals `code` in the value set `url`, at `version` when one is given.
+async fn in_value_set(
+    server: &Server,
+    base: &str,
+    url: &str,
+    version: Option<&str>,
+    code: &str,
+) -> bool {
+    let version = version
+        .map(|v| format!("&valueSetVersion={v}"))
+        .unwrap_or_default();
+    let system = ferroterm_testkit::fhir::ANIMALS;
+    let (status, body) = server
+        .get(&format!(
+            "/{base}/ValueSet/$validate-code?url={url}{version}&system={system}&code={code}"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{base}: {body}");
+    parameter(&body, "result")
+        .get("valueBoolean")
+        .and_then(Value::as_bool)
+        == Some(true)
+}
+
+/// A `ValueSet` enumerating one animals `code`, at `url` and `version`.
+fn enumerated(url: &str, version: &str, code: &str) -> Value {
+    json!({
+        "resourceType": "ValueSet",
+        "url": url,
+        "version": version,
+        "status": "active",
+        "compose": {"include": [{
+            "system": ferroterm_testkit::fhir::ANIMALS,
+            "concept": [{"code": code}]
+        }]}
+    })
+}
+
+/// The same per-version layering over a value set the deployment loaded: the
+/// testkit's pets value set is `1.0`, the pets by `is-a`.
+#[tokio::test]
+async fn a_persisted_version_of_a_loaded_url_leaves_the_loaded_version_answering() {
+    let pets = ferroterm_testkit::fhir::VS_PETS;
+    let server = Server::start_persisting();
+    let response = server
+        .put("/r4/ValueSet/pets-lower", &enumerated(pets, "0.1", "dog"))
+        .await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    for base in BASES {
+        assert!(
+            in_value_set(&server, base, pets, None, "kitten").await,
+            "{base}: `0.1` sorts below the loaded `1.0`, which stays the default"
+        );
+        assert!(
+            !in_value_set(&server, base, pets, None, "dog").await,
+            "{base}"
+        );
+        assert!(
+            in_value_set(&server, base, pets, Some("0.1"), "dog").await,
+            "{base}"
+        );
+    }
+
+    let response = server
+        .put(
+            "/r4/ValueSet/pets-local",
+            &enumerated(pets, "local-1", "fish"),
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    for base in BASES {
+        assert!(
+            in_value_set(&server, base, pets, Some("local-1"), "fish").await,
+            "{base}: the persisted version answers at its version"
+        );
+        assert!(
+            !in_value_set(&server, base, pets, Some("local-1"), "kitten").await,
+            "{base}"
+        );
+        assert!(
+            in_value_set(&server, base, pets, Some("1.0"), "kitten").await,
+            "{base}: the loaded version still answers"
+        );
+        assert!(
+            !in_value_set(&server, base, pets, Some("1.0"), "fish").await,
+            "{base}"
+        );
+        assert!(
+            in_value_set(&server, base, pets, None, "fish").await,
+            "{base}: `local-1` is the greatest version of either"
+        );
+    }
+}

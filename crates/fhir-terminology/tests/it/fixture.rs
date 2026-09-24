@@ -152,6 +152,11 @@ impl Fixture {
         Self::build(FLAT_URL, "1", false)
     }
 
+    /// The flat system's concepts under another `url` and `version`.
+    pub(crate) fn flat_at(url: &str, version: &str) -> Self {
+        Self::build(url, version, false)
+    }
+
     fn build(url: &str, version: &str, hierarchical: bool) -> Self {
         let rows = ROWS.to_vec();
         let index = |code: &str| rows.iter().position(|row| row.code == code).map(ord);
