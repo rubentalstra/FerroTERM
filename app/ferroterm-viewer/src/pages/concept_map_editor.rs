@@ -61,6 +61,13 @@ const PUBLICATION_STATUS: &str = "http://hl7.org/fhir/ValueSet/publication-statu
 /// The live region every outcome of this screen is announced in.
 const REPORT_ID: &str = "map-editor-report";
 
+/// Where a picked code and its display go.
+///
+/// It is a shared function rather than a type parameter, so one picker
+/// compiles once for every row that draws one: a generic one is monomorphized
+/// per call site, and this screen draws a picker per code and per target.
+type Chosen = std::sync::Arc<dyn Fn(String, String) + Send + Sync>;
+
 /// How many codes one search of a system asks for.
 ///
 /// A picker is a list a person reads, so it asks for a page rather than an
@@ -419,7 +426,7 @@ fn metadata_section(
                     statuses,
                     readonly,
                     Signal::derive(move || draft.read().status.clone()),
-                    move |chosen| draft.update(|draft| draft.status = chosen),
+                    Box::new(move |chosen| draft.update(|draft| draft.status = chosen)),
                 )}
                 <div class="grid gap-tight">
                     <label for="map-source-scope" class=styles::LABEL>
@@ -558,7 +565,7 @@ fn group_panel(
                     "Source system",
                     readonly,
                     seed.source,
-                    move |typed| with_group(draft, key, |group| group.source = typed),
+                    Box::new(move |typed| with_group(draft, key, |group| group.source = typed)),
                 )}
                 {system_control(
                     format!("group-{id}-source-version"),
@@ -566,7 +573,11 @@ fn group_panel(
                     "Source system version",
                     readonly,
                     seed.source_version,
-                    move |typed| with_group(draft, key, |group| group.source_version = typed),
+                    Box::new(move |typed| with_group(
+                        draft,
+                        key,
+                        |group| group.source_version = typed,
+                    )),
                 )}
                 {system_control(
                     format!("group-{id}-target"),
@@ -574,7 +585,7 @@ fn group_panel(
                     "Target system",
                     readonly,
                     seed.target,
-                    move |typed| with_group(draft, key, |group| group.target = typed),
+                    Box::new(move |typed| with_group(draft, key, |group| group.target = typed)),
                 )}
                 {system_control(
                     format!("group-{id}-target-version"),
@@ -582,7 +593,11 @@ fn group_panel(
                     "Target system version",
                     readonly,
                     seed.target_version,
-                    move |typed| with_group(draft, key, |group| group.target_version = typed),
+                    Box::new(move |typed| with_group(
+                        draft,
+                        key,
+                        |group| group.target_version = typed,
+                    )),
                 )}
             </div>
             {elements}
@@ -640,7 +655,7 @@ fn system_control(
     label: &'static str,
     readonly: Signal<bool>,
     seed: String,
-    mut typed: impl FnMut(String) + 'static,
+    mut typed: Box<dyn FnMut(String)>,
 ) -> AnyView {
     let named = StoredValue::new(id);
     view! {
@@ -719,7 +734,7 @@ fn driven_control(
     label: &'static str,
     readonly: Signal<bool>,
     held: Signal<String>,
-    mut typed: impl FnMut(String) + 'static,
+    mut typed: Box<dyn FnMut(String)>,
 ) -> AnyView {
     let named = StoredValue::new(id);
     view! {
@@ -776,12 +791,12 @@ fn element_panel(
         "source code",
         source_system,
         readonly,
-        move |code, display| {
+        std::sync::Arc::new(move |code, display| {
             with_element(draft, group, key, |element| {
                 element.code = code;
                 element.display = display;
             });
-        },
+        }),
     );
     let no_map = no_map_control(draft, version, group, key, readonly);
     let fields = view! {
@@ -792,7 +807,7 @@ fn element_panel(
                 "Code",
                 readonly,
                 Signal::derive(move || element_of(draft, group, key, |held| held.code.clone())),
-                move |code| with_element(draft, group, key, |held| held.code = code),
+                Box::new(move |code| with_element(draft, group, key, |held| held.code = code)),
             )}
             {driven_control(
                 format!("element-{id}-display"),
@@ -800,7 +815,12 @@ fn element_panel(
                 "Display",
                 readonly,
                 Signal::derive(move || element_of(draft, group, key, |held| held.display.clone())),
-                move |display| with_element(draft, group, key, |held| held.display = display),
+                Box::new(move |display| with_element(
+                    draft,
+                    group,
+                    key,
+                    |held| held.display = display,
+                )),
             )}
         </div>
     }
@@ -973,12 +993,12 @@ fn target_row(
         "target code",
         target_system,
         readonly,
-        move |code, display| {
+        std::sync::Arc::new(move |code, display| {
             with_target(draft, group, element, key, |target| {
                 target.code = code;
                 target.display = display;
             });
-        },
+        }),
     );
     let fields = view! {
         <div class="grid gap-default sm:grid-cols-2">
@@ -990,7 +1010,13 @@ fn target_row(
                 Signal::derive(move || {
                     target_of(draft, group, element, key, |held| held.code.clone())
                 }),
-                move |code| with_target(draft, group, element, key, |held| held.code = code),
+                Box::new(move |code| with_target(
+                    draft,
+                    group,
+                    element,
+                    key,
+                    |held| held.code = code,
+                )),
             )}
             {driven_control(
                 format!("target-{id}-display"),
@@ -1000,9 +1026,9 @@ fn target_row(
                 Signal::derive(move || {
                     target_of(draft, group, element, key, |held| held.display.clone())
                 }),
-                move |display| {
+                Box::new(move |display| {
                     with_target(draft, group, element, key, |held| held.display = display);
-                },
+                }),
             )} {relationship_control(draft, version, group, element, key, readonly, relationships)}
             {driven_control(
                 format!("target-{id}-comment"),
@@ -1012,9 +1038,9 @@ fn target_row(
                 Signal::derive(move || {
                     target_of(draft, group, element, key, |held| held.comment.clone())
                 }),
-                move |comment| {
+                Box::new(move |comment| {
                     with_target(draft, group, element, key, |held| held.comment = comment);
-                },
+                }),
             )}
         </div>
     }
@@ -1079,9 +1105,9 @@ fn relationship_control(
                 Signal::derive(move || {
                     target_of(draft, group, element, key, |held| held.relationship.clone())
                 }),
-                move |chosen| {
+                Box::new(move |chosen| {
                     with_target(draft, group, element, key, |held| held.relationship = chosen);
-                },
+                }),
             )}
         </div>
     }
@@ -1104,7 +1130,7 @@ fn picker(
     what: &'static str,
     system: Signal<String>,
     readonly: Signal<bool>,
-    chose: impl Fn(String, String) + Clone + Send + 'static,
+    chose: Chosen,
 ) -> AnyView {
     let typed = RwSignal::new(String::new());
     let asked = RwSignal::new(String::new());
@@ -1139,7 +1165,7 @@ fn picker(
         asked.set(typed.get_untracked());
     };
     let results = move || {
-        let chose = chose.clone();
+        let chose = Chosen::clone(&chose);
         found
             .with(|answered| {
                 answered.as_ref().map(|read| match read.as_ref() {
@@ -1193,11 +1219,7 @@ fn picker(
 }
 
 /// The codes one search found, each a control that fills the row.
-fn offers(
-    rows: &[ConceptRow],
-    readonly: Signal<bool>,
-    chose: &(impl Fn(String, String) + Clone + 'static),
-) -> AnyView {
+fn offers(rows: &[ConceptRow], readonly: Signal<bool>, chose: &Chosen) -> AnyView {
     let drawn: Vec<AnyView> = rows
         .iter()
         .map(|row| {
@@ -1208,7 +1230,7 @@ fn offers(
             } else {
                 format!("{display} ({code})")
             };
-            let chose = chose.clone();
+            let chose = Chosen::clone(chose);
             view! {
                 <li>
                     <button

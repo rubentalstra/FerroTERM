@@ -176,6 +176,33 @@ fresh link reference.
 
 ### Added
 
+- A concept map is authored in the browser, at `/ui/editor/conceptmap` (#636).
+  The screen carries the metadata, the value sets that scope the map, the
+  groups of systems it maps between, and every code with the targets it maps
+  to. The element a save writes is the served version's own: R4 and R4B take
+  `source[x]`/`target[x]` and `group.element.target.equivalence`, R5 and R6
+  take `sourceScope[x]`/`targetScope[x]` and `target.relationship`, R5 made a
+  group's system a canonical carrying its own version, and R5 added
+  `element.noMap` (<https://hl7.org/fhir/R4B/conceptmap.html>,
+  <https://hl7.org/fhir/R5/conceptmap.html>). The relationship control offers
+  what the served root expands that version's own value set to, and the form
+  refuses what the version refuses: a target with no relationship, a code that
+  both maps to nothing and carries a target (`cmd-4`), and an uncommented
+  target on the relationship codes `cmd-1` names, which differ per version and
+  are a warning rather than an error on the R6 ballot. Every code on both sides
+  is picked out of the system its group names, through the same
+  `ValueSet/$expand` search the concept browser runs, so a target arrives with
+  the display the server gave it. A preview runs `ConceptMap/$translate` by
+  `POST` with the map itself in the `conceptMap` parameter, which is how a map
+  that has never been saved is translated through; a server may refuse a map
+  sent that way
+  (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>), so the
+  screen then runs against the saved map and says which it used. Saving sends
+  the whole resource with `If-Match`, a `412` is shown as a concurrent edit
+  with a reload, and every refusal renders the server's own `OperationOutcome`
+  and announces its text. A map this deployment loaded opens the same screen
+  read-only, because the server states no `meta.versionId` for it.
+
 - A code system is authored in the browser, at `/ui/editor/codesystem` (#634).
   The screen carries the metadata (`url`, `version`, `status`, `content`,
   `caseSensitive`), the properties the system declares, and the concepts with

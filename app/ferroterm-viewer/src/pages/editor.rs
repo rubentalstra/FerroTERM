@@ -595,7 +595,7 @@ fn metadata_section(draft: RwSignal<Draft>, readonly: Signal<bool>, options: Opt
                     options.statuses,
                     readonly,
                     Signal::derive(move || draft.read().status.clone()),
-                    move |chosen| draft.update(|draft| draft.status = chosen),
+                    Box::new(move |chosen| draft.update(|draft| draft.status = chosen)),
                 )}
                 {coded_control(
                     Control {
@@ -607,7 +607,7 @@ fn metadata_section(draft: RwSignal<Draft>, readonly: Signal<bool>, options: Opt
                     options.contents,
                     readonly,
                     Signal::derive(move || draft.read().content.clone()),
-                    move |chosen| draft.update(|draft| draft.content = chosen),
+                    Box::new(move |chosen| draft.update(|draft| draft.content = chosen)),
                 )}
                 <div class="flex items-center gap-default">
                     <input
@@ -759,7 +759,11 @@ fn property_row(draft: RwSignal<Draft>, key: Key, readonly: Signal<bool>, kinds:
                     Signal::derive(move || {
                         property_of(draft, key, |property| property.kind.clone())
                     }),
-                    move |chosen| with_property(draft, key, |property| property.kind = chosen),
+                    Box::new(move |chosen| with_property(
+                        draft,
+                        key,
+                        |property| property.kind = chosen,
+                    )),
                 )}
             </td>
             <td class=styles::TD>

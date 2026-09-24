@@ -101,12 +101,16 @@ pub(crate) fn codes_of(
 /// form is built, and the code the resource already carries is offered whether
 /// or not the expansion did: a control that dropped it would silently rewrite
 /// the resource on the next save.
+///
+/// The callback is boxed rather than generic, so every control on every screen
+/// compiles to one copy of this function. A generic one is monomorphized per
+/// call site, and the editor bundle draws dozens of them.
 pub(crate) fn coded_control(
     control: Control,
     codes: Codes,
     readonly: Signal<bool>,
     held: Signal<String>,
-    mut chose: impl FnMut(String) + 'static,
+    mut chose: Box<dyn FnMut(String)>,
 ) -> AnyView {
     let Control {
         id,

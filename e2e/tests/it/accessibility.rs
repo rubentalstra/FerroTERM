@@ -30,14 +30,15 @@ use crate::harness::session;
 /// links to it, and `viewer` walks that link.
 ///
 /// The last two are the editor bundle's authoring screens, which the one
-/// server serves at its own mount. The code system one is opened on the
-/// fixture this deployment holds, because an empty form has none of the rows
-/// whose markup this pass exists to read; the composer opens on a new draft,
-/// which is where its own clause carries every control it draws. This
-/// deployment publishes no issuer, so both forms open read-only, and the
-/// controls a token opens are walked by the keyboard journeys in `editor` and
-/// `composer` against the deployment that has one.
-const SCREENS: [&str; 11] = [
+/// server serves at its own mount. The code system and concept map ones are
+/// opened on the fixtures this deployment holds, because an empty form has
+/// none of the rows whose markup this pass exists to read; the composer opens
+/// on a new draft, which is where its own clause carries every control it
+/// draws. This deployment publishes no issuer, so every form opens read-only,
+/// and the controls a token opens are walked by the keyboard journeys in
+/// `editor`, `composer` and `concept_map_editor` against the deployment that
+/// has one.
+const SCREENS: [&str; 12] = [
     "/ui/",
     "/ui/browse",
     "/ui/expand",
@@ -49,6 +50,7 @@ const SCREENS: [&str; 11] = [
     "/ui/about",
     "/ui/editor/codesystem?system=https%3A%2F%2Fferroterm.eu%2Ffhir%2FCodeSystem%2Fe2e-taxonomy",
     "/ui/editor/compose",
+    "/ui/editor/conceptmap?map=https%3A%2F%2Fferroterm.eu%2Ffhir%2FConceptMap%2Fe2e-taxonomy-map",
 ];
 
 /// The version every screen is opened on.

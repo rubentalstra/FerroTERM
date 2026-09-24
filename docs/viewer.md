@@ -533,6 +533,7 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | About this server | `/ui/about` | three tabs: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |
 | Edit a code system | `/ui/editor/codesystem` | `GET /{v}/CodeSystem?url=` for the resource, `GET /{v}/metadata?mode=terminology` for whether an artifact backs it, `ValueSet/$expand` for the codes its coded controls offer, then `POST`/`PUT` with `If-Match` and `CodeSystem/$validate-code` on what the save retired. In the editor bundle only |
 | Compose a value set | `/ui/editor/compose` | `GET /{v}/ValueSet` for the value sets to draw in and `GET /{v}/ValueSet/{id}` for the one being edited, `GET /{v}/metadata?mode=terminology` for the systems and the filters each served version declares, `ValueSet/$expand` by `POST` for the code search and for the preview of the unsaved compose, then `POST`/`PUT` with `If-Match`. In the editor bundle only |
+| Edit a concept map | `/ui/editor/conceptmap` | `GET /{v}/ConceptMap?url=` for the resource, `ValueSet/$expand` for the relationship codes the version admits and for every code picker, `ConceptMap/$translate` by `POST` with the map inline for the preview, then `POST`/`PUT` with `If-Match`. In the editor bundle only |
 | Signing in | `/ui/editor/callback` | `GET /{v}/.well-known/smart-configuration`, then the issuer's token endpoint. Not a place a reader goes: the identity provider sends them through it |
 
 `/ui/versions`, `/ui/evidence` and `/ui/settings` were screens of their own and
@@ -652,6 +653,51 @@ what it is, a change someone else made since the form was opened, with a
 control that reloads it. Every refusal renders the server's own
 `OperationOutcome` whole and announces its text in the screen's one live
 region.
+
+### The concept map editor
+
+**Two facts off the wire decide whether a map is editable**, and neither is
+anything the bundle assumes: the server states a `meta.versionId` for it, which
+only the REST API stamps, and the token in hand carries `ConceptMap` with the
+letter the change needs. A map this deployment loaded carries no version, so it
+opens read-only and says why. There is no artifact check here, because
+`TerminologyCapabilities` describes code systems and says nothing about a
+concept map.
+
+**The form is the resource, in the version's own spelling.** R4 and R4B scope a
+map with `source[x]` and `target[x]`, state a group's system as a `uri` with
+`sourceVersion` beside it, and put a target's relation in `equivalence`. R5
+renamed the scopes to `sourceScope[x]` and `targetScope[x]`, made a group's
+system a `canonical` that carries its own version, replaced `equivalence` with
+`relationship` over a different value set, and added `element.noMap`; the R6
+ballot carries the same four
+(<https://hl7.org/fhir/R4B/conceptmap.html>,
+<https://hl7.org/fhir/R5/conceptmap.html>). One form draws all of it: the
+served version hands over the element names, and a save writes exactly those,
+removing every other release's spelling of the same fact so a map read on one
+root and saved on another does not reach the server carrying both.
+
+**The form refuses what the version refuses, and nothing more.** A target with
+no relationship is refused on every version, because the element is 1..1
+everywhere. A code marked `noMap` that also carries a target is refused on R5
+and R6, which is `cmd-4`. An uncommented target is refused on the relationship
+codes `cmd-1` names, which are `narrower` and `inexact` on R4 and R4B and
+`source-is-broader-than-target` and `not-related-to` on R5, where a draft map
+is excused; the R6 ballot demoted that rule to a warning, so the form does not
+refuse there.
+
+**Every code is picked, not typed blind.** Each side of a mapping carries the
+concept browser's own search over the system its group names, one
+`ValueSet/$expand` with the reader's text as `filter`, and pressing a result
+fills the code and the display the server sent. The field stays editable, so a
+system this server does not hold can still be mapped from.
+
+**The preview is `$translate` on the map in front of you.** The operation
+defines a `conceptMap` parameter carrying the map itself, so a map that has
+never been saved is translated through by `POST`. A server "may choose not to
+accept concept maps in this fashion"
+(<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>), so a refusal
+falls back to the saved map, and the panel says which of the two answered.
 
 ### Signing in
 
