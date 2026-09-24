@@ -72,6 +72,8 @@ claim, not a test that merely touches the area.
 | `ConceptMap/$translate` | `app/ferroterm-server/tests/it/translate.rs::translate_by_get_and_post_answers_matches` |
 | `GET ValueSet/{id}` and `GET ValueSet?url=` | `app/ferroterm-server/tests/it/scope.rs::value_sets_read_and_search_by_url` |
 | `GET CodeSystem/{id}` and `GET CodeSystem?url=` over the loaded systems, with `content = not-present` | `app/ferroterm-server/tests/it/code_system.rs::every_loaded_code_system_reads_at_the_id_the_server_names_it_by`, `::a_search_by_url_and_version_finds_a_loaded_code_system` |
+| A loaded `CodeSystem`, `ValueSet`, or `ConceptMap` is read at the `id` it carries, and a colliding or malformed id refuses the load | `app/ferroterm-server/tests/it/logical_id.rs::a_loaded_code_system_answers_at_the_id_it_was_authored_with`, `::a_loaded_value_set_answers_at_the_id_it_was_authored_with`, `::a_loaded_concept_map_answers_at_the_id_it_was_authored_with`, `::two_loaded_resources_with_one_id_refuse_the_load`, `::an_id_outside_the_fhir_id_alphabet_refuses_the_load` |
+| A resource loaded without an `id` keeps the id the server mints | `app/ferroterm-server/tests/it/logical_id.rs::a_resource_without_an_id_keeps_the_one_the_server_mints` |
 | `$versions` | `app/ferroterm-server/tests/it/r4.rs::versions_names_r4` |
 | `$cache-control` | `app/ferroterm-server/tests/it/scope.rs::a_cache_front_loads_resources_and_ends` |
 | `metadata` and `metadata?mode=terminology` | `app/ferroterm-server/tests/it/metadata.rs::the_capability_statement_names_the_operations`, `::terminology_capabilities_list_the_loaded_edition` |

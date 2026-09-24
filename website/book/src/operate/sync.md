@@ -26,7 +26,11 @@ content in one direction only.
 
 A run that fails leaves the served set exactly as it was. A build that fails
 never reaches the index root, and a reload the server refuses is rolled back,
-including a resource file the run had replaced. Nothing is deleted except by
+including a resource file the run had replaced. A delivered resource is served
+at the `id` it carries, so a delivery whose `id` another loaded or persisted
+resource of the same type already answers on is one of the reloads the server
+refuses (see
+[What a code system version is served as](configuration.md#what-a-code-system-version-is-served-as)). Nothing is deleted except by
 retention, and the server's own write store (`FERROTERM_RESOURCES`) is never
 touched.
 
