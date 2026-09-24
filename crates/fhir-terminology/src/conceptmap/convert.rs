@@ -157,6 +157,7 @@ macro_rules! convert_concept_map {
                 }
                 let scope_uri = |s: Option<&str>| text(s);
                 Ok(ConceptMapModel {
+                    id: resource.id.clone(),
                     url: text(resource.url.as_ref().and_then(|u| u.value.as_deref()))
                         .ok_or(ModelError::NoUrl)?,
                     version: text(resource.version.as_ref().and_then(|v| v.value.as_deref())),
@@ -316,6 +317,7 @@ macro_rules! convert_concept_map {
                     groups.push(group(g)?);
                 }
                 Ok(ConceptMapModel {
+                    id: resource.id.clone(),
                     url: text(resource.url.as_ref().and_then(|u| u.value.as_deref()))
                         .ok_or(ModelError::NoUrl)?,
                     version: text(resource.version.as_ref().and_then(|v| v.value.as_deref())),

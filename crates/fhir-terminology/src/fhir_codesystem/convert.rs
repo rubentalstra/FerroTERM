@@ -257,6 +257,7 @@ macro_rules! convert_code_system {
                     value.as_ref().and_then(|b| b.value).unwrap_or(default)
                 };
                 let model = CodeSystemModel {
+                    id: resource.id.clone(),
                     url,
                     version: text(resource.version.as_ref().and_then(|v| v.value.as_deref()))
                         .unwrap_or_default(),

@@ -161,8 +161,13 @@ is vendored in the binary.
 
 ## What a code system version is served as
 
-Each loaded code system version becomes one `CodeSystem` instance. The id is
-the version URI when that URI carries the system (a SNOMED CT edition is
+Each loaded code system version becomes one `CodeSystem` instance. **A resource
+that carries an `id` keeps it:** the id is the logical id the resource is read
+by, so a client that knows it reads the resource there
+([id](https://hl7.org/fhir/R4B/resource.html#id)). The server mints an id only
+for a version that arrives without a resource, an index built from an RF2
+release or a LOINC delivery, for example: the version URI when that URI carries
+the system (a SNOMED CT edition is
 `snomed.info-sct-<module>-version-<YYYYMMDD>`), otherwise the system URL and
 the version (`terminology.hl7.org-CodeSystem-v2-0001-2.0.0`), reduced to the
 FHIR id alphabet. The instance reads at `[base]/r4b/CodeSystem/<id>`, is found
@@ -172,11 +177,22 @@ a given version and is listed at startup and in
 `GET /r4b/metadata?mode=terminology`.
 
 A `ValueSet` or `ConceptMap` in a `FERROTERM_CODESYSTEMS` directory becomes an
-instance the same way, keyed by its `url` and `version`. It reads at
-`[base]/r4b/ValueSet/<id>` or `[base]/r4b/ConceptMap/<id>`, is found by
-`[base]/r4b/ValueSet?url=…&version=…` or the matching `ConceptMap` search, and
-carries that id as its `Resource.id` in both answers, so a client can read what
-a search returned. Every served version answers both.
+instance the same way: its own `id` when it has one, else one minted from its
+`url` and `version`. It reads at `[base]/r4b/ValueSet/<id>` or
+`[base]/r4b/ConceptMap/<id>`, is found by `[base]/r4b/ValueSet?url=…&version=…`
+or the matching `ConceptMap` search, and carries that id as its `Resource.id` in
+both answers, so a client can read what a search returned. Every served version
+answers both.
+
+Two ids never compete. An `id` outside the FHIR id alphabet (at most 64 of
+`A-Z`, `a-z`, `0-9`, `-`, and `.`,
+[id](https://hl7.org/fhir/R4B/datatypes.html#id)) refuses the load, and so does
+a second loaded resource of the same type carrying an id the first one holds, or
+a loaded id a resource written through the REST API already answers on. The
+diagnostic names the canonicals involved; the server never renames a resource to
+make room. From the other side, a `PUT` or `POST` onto an id a loaded resource
+is read at is refused with `409 Conflict`, so a client cannot shadow what the
+deployment serves.
 
 ## What you do not configure
 

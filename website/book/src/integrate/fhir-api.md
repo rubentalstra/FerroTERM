@@ -63,7 +63,10 @@ A value set reaches `$expand` and `ValueSet/$validate-code` in five ways:
 
 - **Loaded**: a `ValueSet` JSON under `FERROTERM_CODESYSTEMS`, named by `url`
   (and `version`; without one the greatest version answers). Loaded value sets
-  are readable at `GET ValueSet/{id}` and `GET ValueSet?url=…&version=…`.
+  are readable at `GET ValueSet/{id}` and `GET ValueSet?url=…&version=…`, where
+  `{id}` is the `id` the resource carries, or one the server mints when it
+  carries none (see
+  [Configuration](../operate/configuration.md#what-a-code-system-version-is-served-as)).
 - **Persisted**: a `ValueSet` written through the REST API (see below).
 - **Inline**: the `valueSet` parameter of a `POST`.
 - **Request-scoped**: `tx-resource` parameters, see below.
@@ -135,9 +138,10 @@ the version is the edition and version URI of the SNOMED CT URI standard
 
 Each instance is readable at `GET CodeSystem/{id}` and findable with
 `GET CodeSystem?url=…&version=…`, on every version prefix, alongside the
-resources a client persisted. The id is the one
-[Configuration](../operate/configuration.md) describes and the server prints
-at startup. A system the server holds behind an index answers with its
+resources a client persisted. A system loaded as a `CodeSystem` resource is read
+at the `id` that resource carries; a system behind an index is read at the id
+[Configuration](../operate/configuration.md#what-a-code-system-version-is-served-as)
+describes and the server prints at startup. A system the server holds behind an index answers with its
 definition and `content = not-present`: the codes come from `$lookup`,
 `$validate-code`, and `$expand`, never from the resource
 (<https://hl7.org/fhir/R4B/codesystem-content-mode.html>). A system loaded as a
@@ -203,7 +207,7 @@ defines (<https://hl7.org/fhir/R4B/http.html>), under every version prefix:
 | Request | Answer |
 |---|---|
 | `POST {type}` | `201 Created` with `Location`, `ETag`, and `Last-Modified`; the server assigns the id |
-| `PUT {type}/{id}` | `200 OK` when the id existed, `201 Created` when it is new |
+| `PUT {type}/{id}` | `200 OK` when the id existed, `201 Created` when it is new, `409 Conflict` when the id is one a loaded resource is read at |
 | `GET {type}/{id}` | `200 OK` with `ETag` and `Last-Modified`, `404` for an unknown id, `410 Gone` for a deleted one |
 | `GET {type}/{id}/_history/{versionId}` | `200 OK` with that version of the resource |
 | `GET {type}?url=…&version=…` | a `searchset` `Bundle` |

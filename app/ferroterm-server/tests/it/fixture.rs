@@ -104,6 +104,23 @@ impl Server {
         Self::assembled(Arc::new(dir), config)
     }
 
+    /// A server over the resources the browser journeys are driven against,
+    /// each of which carries the `id` it was authored with.
+    pub(crate) fn start_with_authored_ids() -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let config = Config {
+            code_systems: vec![authored_resources()],
+            ..Config::default()
+        };
+        Self::assembled(Arc::new(dir), config)
+    }
+
+    /// The state `config` names over the resources a test wrote into `dir`,
+    /// which stays alive for as long as the server does.
+    pub(crate) fn start_with_config(dir: tempfile::TempDir, config: Config) -> Self {
+        Self::assembled(Arc::new(dir), config)
+    }
+
     /// The state `config` names, held the way the binary holds it.
     fn assembled(dir: Arc<tempfile::TempDir>, config: Config) -> Self {
         let state = Arc::new(AppState::load(&config).expect("loads"));
@@ -440,6 +457,15 @@ pub(crate) fn header(response: &Response<Body>, name: http::HeaderName) -> Optio
 /// A response body in the codec document model, ready to decode.
 pub(crate) fn document(body: &Value) -> fhir_types::codec::Value {
     serde_json::from_str(&body.to_string()).expect("the body parses")
+}
+
+/// The directory of `CodeSystem`, `ValueSet`, and `ConceptMap` resources the
+/// browser journeys load, each carrying the `id` it was authored with.
+fn authored_resources() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../e2e/fixtures/codesystems")
+        .canonicalize()
+        .expect("the browser journeys' resources are in the repository")
 }
 
 /// A resource the codec wrote, as a `serde_json` document.

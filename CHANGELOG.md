@@ -317,6 +317,24 @@ fresh link reference.
   root will not run now renders the server's own `OperationOutcome` beside the
   control rather than the status number it came with.
 
+- **A `CodeSystem`, `ValueSet`, or `ConceptMap` the deployment loads is read at
+  the `id` it carries** (#660). The server used to mint an id from the
+  resource's canonical and version and drop the authored one, so
+  `GET /r4b/ValueSet/e2e-taxonomy-all` answered `not-found` for a resource whose
+  own `id` was `e2e-taxonomy-all`, and every resource a syndication feed
+  delivers has an id its clients address it by. `Resource.id` is the logical id
+  a read addresses (<https://hl7.org/fhir/R4B/http.html#read>,
+  <https://hl7.org/fhir/R4B/resource.html#id>), and the read, the search
+  `fullUrl`, the rendered `id`, and the instance-level operations now all use
+  it. A resource that carries no `id`, an index built from an RF2 release for
+  example, keeps the minted one. Two loaded resources of one type carrying the
+  same id refuse the load, as does a loaded id a persisted record already
+  answers on, with a diagnostic naming the canonicals; the server never renames
+  a resource it loads. A `PUT` or `POST` onto an id a loaded resource is read at
+  is refused with `409 Conflict` for the same reason. A client that addressed
+  one of these resources by the minted id moves to the authored one, which a
+  search now returns.
+
 - The RF2 relationship reader admits only rows whose `characteristicTypeId` is
   `900000000000011006 |Inferred relationship|` (#545). A qualifying or an
   additional row "is not part of the definition of the concept" (release file

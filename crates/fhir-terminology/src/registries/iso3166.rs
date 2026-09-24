@@ -124,6 +124,9 @@ pub fn code_system() -> Result<CodeSystemModel, DataError> {
         }
     }
     Ok(CodeSystemModel {
+        // NOTE: the vendored table is no resource, and a logical id belongs to
+        // one (<https://hl7.org/fhir/R4B/resource.html#id>).
+        id: None,
         url: URL.to_owned(),
         version,
         name: None,

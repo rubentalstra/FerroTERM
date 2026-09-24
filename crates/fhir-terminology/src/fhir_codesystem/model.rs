@@ -30,6 +30,10 @@ pub struct ConceptEntry {
 /// A `CodeSystem` resource reduced to what the provider serves.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodeSystemModel {
+    /// `CodeSystem.id`: the logical id the resource was authored with, when it
+    /// carries one (<https://hl7.org/fhir/R4B/resource.html#id>). The server
+    /// reads the resource at it.
+    pub id: Option<String>,
     /// `CodeSystem.url`.
     pub url: String,
     /// `CodeSystem.version`, or an empty string when the resource has none.
@@ -180,6 +184,10 @@ impl CodeSystemModel {
         let declaration = provider.declaration();
         let standing = provider.standing();
         Self {
+            // NOTE: a logical id belongs to a resource
+            // (<https://hl7.org/fhir/R4B/resource.html#id>), and this picture is
+            // built from a provider, so the server names the instance itself.
+            id: None,
             url: identity.url.clone(),
             version: identity.version.clone(),
             name: identity.name.clone(),
