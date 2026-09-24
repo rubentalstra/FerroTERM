@@ -30,7 +30,7 @@ The image serves UCUM, BCP 47, BCP 13, and ISO 3166-1 with no configuration,
 so the first call needs nothing beyond Docker:
 
 ```console
-$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.1.4
+$ docker run --rm -p 8080:8080 ghcr.io/rubentalstra/ferroterm:0.1.5
 $ curl 'http://localhost:8080/r4b/CodeSystem/$lookup?system=http://unitsofmeasure.org&code=mg/dL'
 ```
 
@@ -167,7 +167,7 @@ Every route answers FHIR JSON or FHIR XML, by `_format` or `Accept`.
 
 ## What is next
 
-v0.1.4 is the current release. The tracker's milestones are the roadmap, and
+v0.1.5 is the current release. The tracker's milestones are the roadmap, and
 the open issues under each are the worklist:
 
 - **[v0.1.5](https://github.com/rubentalstra/FerroTERM/milestone/19)**: the
