@@ -532,6 +532,7 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | Concept maps | `/ui/conceptmaps` | `GET /{v}/ConceptMap` search and read, with a link into the translate runner |
 | About this server | `/ui/about` | three tabs: the four `CapabilityStatement`s side by side, the committed conformance and benchmark figures, and the per-viewer preferences |
 | Edit a code system | `/ui/editor/codesystem` | `GET /{v}/CodeSystem?url=` for the resource, `GET /{v}/metadata?mode=terminology` for whether an artifact backs it, `ValueSet/$expand` for the codes its coded controls offer, then `POST`/`PUT` with `If-Match` and `CodeSystem/$validate-code` on what the save retired. In the editor bundle only |
+| Compose a value set | `/ui/editor/compose` | `GET /{v}/ValueSet` for the value sets to draw in and `GET /{v}/ValueSet/{id}` for the one being edited, `GET /{v}/metadata?mode=terminology` for the systems and the filters they declare, `ValueSet/$expand` by `POST` for the code search and for the preview of the unsaved compose, then `POST`/`PUT` with `If-Match`. In the editor bundle only |
 | Signing in | `/ui/editor/callback` | `GET /{v}/.well-known/smart-configuration`, then the issuer's token endpoint. Not a place a reader goes: the identity provider sends them through it |
 
 `/ui/versions`, `/ui/evidence` and `/ui/settings` were screens of their own and
@@ -556,9 +557,27 @@ reached from that system's row on the overview rather than from an address
 that names none. Each group is a `const` table read in render order, so the order is data
 and one function draws every entry, and each group's label is its list's
 accessible name through `aria-labelledby`. The editor bundle's Publish group
-carries one entry more, the authoring screen, which is the only place either
-sidebar differs. Below the `md` breakpoint the sidebar is hidden until the top
-bar's toggle opens it.
+carries the authoring screens as well, which is the only place either sidebar
+differs. Below the `md` breakpoint the sidebar is hidden until the top bar's
+toggle opens it.
+
+**The composer draws the composition rules as they apply.** `ValueSet.compose`
+is a definition: the includes union, the criteria inside one include intersect,
+several `valueSet` references in one include intersect, and an exclude
+subtracts (<https://hl7.org/fhir/R4B/valueset.html#compositions>). Each clause
+says in a sentence what it draws in, and a clause that breaks `vsd-1`, `vsd-2`
+or `vsd-3` says which invariant by its number rather than waiting for the
+server to refuse the save. A value set is drawn in by picking one this root
+publishes, or by building one of the forms a code system defines for itself
+(<https://hl7.org/fhir/R4B/snomedct.html>): a form is offered only where the
+served version's `TerminologyCapabilities` declares the filter property and
+operator it is shorthand for, so the screen names no code system. Own codes are
+picked out of the clause's code system through the same search the concept
+browser runs, never typed, and each one takes the display its author gives it.
+The preview is `$expand` by `POST` with the unsaved definition in the
+`valueSet` parameter, paged in the address. The save is `POST` or `PUT` with
+`If-Match`, so a resource another reader changed meanwhile is refused with 412
+and the screen offers to reload it.
 
 **The top bar and the sidebar stay put, and the screen scrolls under them.**
 The shell is one viewport tall and only the main pane scrolls, so the command

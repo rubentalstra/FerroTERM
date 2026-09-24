@@ -34,6 +34,9 @@ const COMPOSER_LINK: &str = "//a[normalize-space()='Compose a value set']";
 /// because the journeys run beside each other against one server.
 const CANONICAL: &str = "https://terminology.example/e2e-composed";
 
+/// That canonical, percent-encoded into a query parameter.
+const CANONICAL_PARAM: &str = "https%3A%2F%2Fterminology.example%2Fe2e-composed";
+
 /// The canonical the keyboard journey composes under.
 const KEYBOARD_CANONICAL: &str = "https://terminology.example/e2e-composed-keyboard";
 
@@ -42,6 +45,9 @@ const PUBLISHED: &str = "https://ferroterm.eu/fhir/ValueSet/e2e-taxonomy-all";
 
 /// The code system the fixture publishes, which the own codes come from.
 const SYSTEM: &str = "https://ferroterm.eu/fhir/CodeSystem/e2e-taxonomy";
+
+/// That system, percent-encoded into a query parameter.
+const SYSTEM_PARAM: &str = "https%3A%2F%2Fferroterm.eu%2Ffhir%2FCodeSystem%2Fe2e-taxonomy";
 
 /// One code of that system, which the composer names in its second include.
 const CODE: &str = "ca-leaf";
@@ -78,18 +84,19 @@ const READ_ONLY: &str = "//*[contains(text(), 'read-only') or contains(text(), '
 
 /// Picks `value` in the `index`-th control matching `selector`.
 ///
-/// A `<select>` is driven by choosing an option, which is what a reader does,
-/// so the journey drives the real widget rather than writing a property.
+/// The option itself is pressed, which is what a reader does and what fires
+/// the control's own `change`, so the journey drives the real widget rather
+/// than writing a property on it.
 async fn pick(journey: &Journey, selector: &str, index: usize, value: &str) -> WebDriverResult<()> {
     let controls = journey.all(By::Css(selector)).await?;
     let control = controls
         .get(index)
         .unwrap_or_else(|| panic!("the form draws a `{selector}` at position {index}"));
-    control
-        .clone()
-        .select_by_value(value)
+    let option = control
+        .find(By::Css(format!("option[value='{value}']")))
         .await
         .unwrap_or_else(|error| panic!("`{selector}` has no option `{value}`: {error}"));
+    option.click().await?;
     Ok(())
 }
 
@@ -110,7 +117,9 @@ async fn open_composer(journey: &Journey, deployment: &SignedIn, profile: &str, 
         .click()
         .await
         .unwrap_or_else(|error| panic!("the composer link refused the press: {error}"));
-    journey.element(By::Css(URL_FIELD), "the composer form").await;
+    journey
+        .element(By::Css(URL_FIELD), "the composer form")
+        .await;
 }
 
 /// Composes the L-03 shape: a published value set, and one own code.
@@ -122,7 +131,9 @@ async fn compose(journey: &Journey, canonical: &str) -> WebDriverResult<()> {
         .await?;
 
     // The first include draws the published value set in whole.
-    journey.count_becoming(By::Css(PUBLISHED_PICKER), 1, "the first clause").await;
+    journey
+        .count_becoming(By::Css(PUBLISHED_PICKER), 1, "the first clause")
+        .await;
     pick(journey, PUBLISHED_PICKER, 0, PUBLISHED).await?;
     journey
         .element(
@@ -158,7 +169,9 @@ async fn compose(journey: &Journey, canonical: &str) -> WebDriverResult<()> {
         .await?;
     journey
         .element(
-            By::XPath(&format!("//li[contains(., '{CODE}')]//button[normalize-space()='Add']")),
+            By::XPath(format!(
+                "//li[contains(., '{CODE}')]//button[normalize-space()='Add']"
+            )),
             "the search result for that code",
         )
         .await
@@ -174,10 +187,57 @@ async fn compose(journey: &Journey, canonical: &str) -> WebDriverResult<()> {
     Ok(())
 }
 
-/// A whole local value set is composed, previewed, saved, and read back.
+/// Reads the value set back off the server and validates a code through it.
 ///
-/// The read-back is a fresh page load, so the page holds no token and the form
-/// opens read-only: what it shows is the server's own answer.
+/// This is a fresh page load, so the page holds no token and the form opens
+/// read-only: what it shows is the server's own answer, seen the way a reader
+/// who never signed in sees it.
+async fn the_definition_survives(
+    journey: &Journey,
+    base: &str,
+    address: &str,
+) -> WebDriverResult<()> {
+    journey.reopen(address).await;
+    journey
+        .count_becoming(
+            By::Css("input[id^='compose-valueset-']"),
+            1,
+            "the saved value set to be read back",
+        )
+        .await;
+    let read = journey
+        .element(By::Css(URL_FIELD), "the canonical field")
+        .await
+        .prop("value")
+        .await?
+        .unwrap_or_default();
+    assert_eq!(read, CANONICAL, "the canonical came back as it was saved");
+    let clauses = journey.count(By::Css(CLAUSES)).await;
+    assert!(
+        clauses >= 2,
+        "both includes came back: {clauses} clause legends"
+    );
+
+    journey
+        .reopen(&format!(
+            "{base}/ui/editor/validate?fhir=r4b&on=valueset&url={CANONICAL_PARAM}&code={CODE}&system={SYSTEM_PARAM}"
+        ))
+        .await;
+    let validated = journey
+        .text_becoming(
+            By::Css("main"),
+            StringMatch::new("result").partial(),
+            "$validate-code to answer through the saved value set",
+        )
+        .await;
+    assert!(
+        validated.contains("true"),
+        "the code is in the value set the composer saved: `{validated}`"
+    );
+    Ok(())
+}
+
+/// A whole local value set is composed, previewed, saved, and read back.
 #[tokio::test]
 async fn a_value_set_over_a_published_one_is_composed_previewed_and_saved() {
     let Some(deployment) = signed_in() else {
@@ -192,7 +252,10 @@ async fn a_value_set_over_a_published_one_is_composed_previewed_and_saved() {
 
             // The rules the server reads the definition by are on the screen.
             let rules = journey
-                .element(By::Css("section[aria-labelledby='compose-includes-heading']"), "the includes")
+                .element(
+                    By::Css("section[aria-labelledby='compose-includes-heading']"),
+                    "the includes",
+                )
                 .await
                 .text()
                 .await?;
@@ -222,7 +285,10 @@ async fn a_value_set_over_a_published_one_is_composed_previewed_and_saved() {
                 "the count is announced in the live region: `{counted}`"
             );
             let previewed = journey
-                .element(By::Css("section[aria-labelledby='compose-preview-heading']"), "the preview")
+                .element(
+                    By::Css("section[aria-labelledby='compose-preview-heading']"),
+                    "the preview",
+                )
                 .await
                 .text()
                 .await?;
@@ -244,51 +310,13 @@ async fn a_value_set_over_a_published_one_is_composed_previewed_and_saved() {
                 )
                 .await;
             let address = journey
-                .address_carrying("id=", "the address to name the value set the server created")
-                .await;
-
-            // A fresh load of that address reads the saved definition back.
-            journey.reopen(&address).await;
-            journey
-                .count_becoming(
-                    By::Css("input[id^='compose-valueset-']"),
-                    1,
-                    "the saved value set to be read back",
+                .address_carrying(
+                    "id=",
+                    "the address to name the value set the server created",
                 )
                 .await;
-            let read = journey
-                .element(By::Css(URL_FIELD), "the canonical field")
-                .await
-                .prop("value")
-                .await?
-                .unwrap_or_default();
-            assert_eq!(read, CANONICAL, "the canonical came back as it was saved");
-            let clauses = journey.count(By::Css(CLAUSES)).await;
-            assert!(
-                clauses >= 2,
-                "both includes came back: {clauses} clause legends"
-            );
 
-            // $validate-code answers through the value set that was just saved.
-            journey
-                .reopen(&format!(
-                    "{}/ui/editor/validate?fhir=r4b&on=valueset&url={}&code={CODE}&system={}",
-                    deployment.base,
-                    "https%3A%2F%2Fterminology.example%2Fe2e-composed",
-                    "https%3A%2F%2Fferroterm.eu%2Ffhir%2FCodeSystem%2Fe2e-taxonomy",
-                ))
-                .await;
-            let validated = journey
-                .text_becoming(
-                    By::Css("main"),
-                    StringMatch::new("result").partial(),
-                    "$validate-code to answer through the saved value set",
-                )
-                .await;
-            assert!(
-                validated.contains("true"),
-                "the code is in the value set the composer saved: `{validated}`"
-            );
+            the_definition_survives(&journey, &deployment.base, &address).await?;
 
             journey.no_console_errors().await;
             Ok::<(), WebDriverError>(())
@@ -310,7 +338,13 @@ async fn one_include_is_composed_with_the_keyboard_alone() {
         .await
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
-            open_composer(&journey, &deployment, "writer", "composes-with-the-keyboard").await;
+            open_composer(
+                &journey,
+                &deployment,
+                "writer",
+                "composes-with-the-keyboard",
+            )
+            .await;
 
             journey.tab_to("compose-url", "the canonical field").await;
             journey.type_here(KEYBOARD_CANONICAL).await?;
@@ -323,7 +357,10 @@ async fn one_include_is_composed_with_the_keyboard_alone() {
             // The picker that adds a published value set is reached by tabbing
             // on from the canonical, and chosen by typing its name.
             journey
-                .tab_to("compose-add-vs-0", "the picker that adds a published value set")
+                .tab_to(
+                    "compose-add-vs-0",
+                    "the picker that adds a published value set",
+                )
                 .await;
             journey.type_here("Every concept").await?;
             let picked = journey
@@ -364,7 +401,10 @@ async fn a_reader_without_the_scope_composes_nothing() {
             open_composer(&journey, &deployment, "reader", "composes-nothing").await;
 
             journey
-                .element(By::XPath(READ_ONLY), "the notice that the form is read-only")
+                .element(
+                    By::XPath(READ_ONLY),
+                    "the notice that the form is read-only",
+                )
                 .await;
             let disabled = journey
                 .element(By::Css(URL_FIELD), "the canonical field")
