@@ -318,6 +318,10 @@ macro_rules! metadata {
                 let mut out = vec![interaction("read"), interaction("search-type")];
                 if state.persists() {
                     out.push(interaction("vread"));
+                    // NOTE: the history interaction at the instance and type levels
+                    // (<https://hl7.org/fhir/R4B/http.html#history>) lists what the deployment persists.
+                    out.push(interaction("history-instance"));
+                    out.push(interaction("history-type"));
                     out.push(interaction("create"));
                     out.push(interaction("update"));
                     out.push(interaction("delete"));
