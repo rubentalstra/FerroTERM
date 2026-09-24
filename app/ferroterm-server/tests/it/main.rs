@@ -13,6 +13,7 @@
 
 mod batch;
 mod batch_validate;
+mod canonical;
 mod closure;
 mod code_system;
 mod concept_map;

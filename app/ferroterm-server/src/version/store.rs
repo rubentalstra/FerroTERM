@@ -381,6 +381,9 @@ fn created(request: &Request<'_>, record: &Record) -> Response {
 /// resource answers a read at the id and is not the client's to replace. No
 /// FHIR specification governs a write onto such an id: our own design, and it
 /// is the refusal the server would otherwise meet at its next start.
+///
+/// A write whose `url` and `version` another resource of the type carries,
+/// loaded or persisted, is a 409 `duplicate` naming that resource's id.
 fn write(request: &Request<'_>, id: &str, object: Object) -> Result<Record, Failure> {
     if let Some(canonical) = request.state.loaded_canonical(request.resource_type, id) {
         return Err(Failure::new(
@@ -510,6 +513,9 @@ pub(crate) fn persist_failure(error: &PersistError) -> Failure {
             (StatusCode::BAD_REQUEST, "invalid")
         }
         PersistError::Store(_) => (StatusCode::INTERNAL_SERVER_ERROR, "exception"),
+        // NOTE: `url` and `version` identify one canonical resource
+        // (<https://hl7.org/fhir/R4B/resource.html#canonical>), and a write that breaks it is refused.
+        PersistError::Duplicate { .. } => (StatusCode::CONFLICT, "duplicate"),
     };
     let failure = Failure::new(status, code, error.to_string());
     match error {

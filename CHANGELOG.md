@@ -42,6 +42,133 @@ fresh link reference.
   back every element the form does not draw. Content the server serves from its
   loaded indexes opens read-only.
 
+- A concept map is authored in the browser, at `/ui/editor/conceptmap` (#636).
+  The screen carries the metadata, the value sets that scope the map, the
+  groups of systems it maps between, and every code with the targets it maps
+  to. The element a save writes is the served version's own: R4 and R4B take
+  `source[x]`/`target[x]` and `group.element.target.equivalence`, R5 and R6
+  take `sourceScope[x]`/`targetScope[x]` and `target.relationship`, R5 made a
+  group's system a canonical carrying its own version, and R5 added
+  `element.noMap` (<https://hl7.org/fhir/R4B/conceptmap.html>,
+  <https://hl7.org/fhir/R5/conceptmap.html>). The relationship control offers
+  what the served root expands that version's own value set to, and the form
+  refuses what the version refuses: a target with no relationship, a code that
+  both maps to nothing and carries a target (`cmd-4`), and an uncommented
+  target on the relationship codes `cmd-1` names, which differ per version and
+  are a warning rather than an error on the R6 ballot. Every code on both sides
+  is picked out of the system its group names, through the same
+  `ValueSet/$expand` search the concept browser runs, so a target arrives with
+  the display the server gave it. A preview runs `ConceptMap/$translate` by
+  `POST` with the map itself in the `conceptMap` parameter, which is how a map
+  that has never been saved is translated through; a server may refuse a map
+  sent that way
+  (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>), so the
+  screen then runs against the saved map and says which it used. Saving sends
+  the whole resource with `If-Match`, a `412` is shown as a concurrent edit
+  with a reload, and every refusal renders the server's own `OperationOutcome`
+  and announces its text. A map this deployment loaded opens the same screen
+  read-only, because the server states no `meta.versionId` for it.
+
+- A code system is authored in the browser, at `/ui/editor/codesystem` (#634).
+  The screen carries the metadata (`url`, `version`, `status`, `content`,
+  `caseSensitive`), the properties the system declares, and the concepts with
+  their designations and property values, with every coded control offering
+  what the served root expands that element's own value set to. A concept is
+  retired rather than deleted: the lifecycle control writes exactly the
+  standard concept properties the state implies (`status` always, `inactive`
+  where the state means it, and `deprecationDate` or `retirementDate`,
+  <https://hl7.org/fhir/R5/codesystem-concept-properties.html>), and after a
+  save the screen runs `CodeSystem/$validate-code` on what it retired and shows
+  the answer. Every write sends the whole resource with `If-Match`, so a change
+  made elsewhere is refused with `412` and offered a reload rather than
+  overwritten, and every refusal renders the server's own `OperationOutcome`
+  and announces its text in the screen's live region. A code system this
+  deployment built from a release opens the same screen read-only, because the
+  capability statement marks it as served from an artifact.
+
+- The viewer ships as two bundles, and the server serves both (#634). The
+  reader bundle is what `/ui` has always served, unchanged in size and in
+  content. The editor bundle is the same crate built with `--features editor`,
+  served at `/ui/editor`, carrying every reading screen plus the authoring
+  screens. A reader who never edits downloads no authoring byte, and a person
+  who edits opens `/ui/editor`, signs in there, and reads there too. Each
+  bundle has its own recorded size (`app/ferroterm-viewer/bundle-size.json` and
+  `bundle-size-editor.json`), and the release lane embeds both trees in the one
+  binary.
+
+- The viewer signs a person in with SMART App Launch and gains a write client
+  (#633). Where the deployment sets `FERROTERM_OIDC_ISSUER` and
+  `FERROTERM_VIEWER_CLIENT_ID`, the server publishes the client as
+  `ferroterm_viewer_client_id` in its `.well-known/smart-configuration`
+  (RFC 8414 §2 admits the extra member), and the top bar gains a **Sign in**
+  control. The viewer is a public client performing a standalone launch
+  (<https://hl7.org/fhir/smart-app-launch/app-launch.html>): a PKCE verifier
+  from the browser's own crypto with an `S256` challenge (RFC 7636), a `state`
+  checked on return (RFC 6749 §10.12), the code exchanged at the token endpoint
+  with the verifier and no client secret, and `/ui/callback` as the redirect
+  address to register. The access token is held in memory for the life of the
+  tab: never `localStorage`, never a cookie, so closing the tab signs out.
+  Signing out drops the token and revokes it where the issuer publishes a
+  `revocation_endpoint` (RFC 7009). The viewer reads the granted scopes the way
+  the server's gate reads them, so it offers only what the server would allow,
+  and a deployment that publishes no issuer shows no sign-in and no edit
+  control anywhere.
+- The FHIR client gains create, update with `If-Match` from the resource's
+  version, delete, and `_history`, each presenting the bearer when one is held
+  and each reading the server's own `OperationOutcome` into a typed refusal the
+  editor screens render: `401` as sign-in required, `403` as no permission,
+  `412` as a concurrent edit
+  (<https://hl7.org/fhir/R4B/http.html#concurrency>). Nothing writes yet; the
+  screens that call this seam are #631.
+
+- The SMART write gate accepts `user/` scopes beside the `system/` ones, so a
+  person signed in to an interactive client can write (#632). `user/` is "data
+  that a user can access" and `system/` is a client authorized in its own
+  right, and both address the same resource types
+  (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>), so
+  the route-to-letter mapping is unchanged: `user/ValueSet.u` opens a `PUT`,
+  `user/CodeSystem.c` a `POST`, `user/ConceptMap.d` a `DELETE`, with the
+  combined `cud` and `cruds` forms and the version 1 `.write` and `.*` mapped
+  as the specification maps them. `patient/` is refused with a 403 and an
+  `OperationOutcome`, because a terminology server holds no patient record and
+  a patient-compartment scope selects nothing on it. A refusal names every
+  scope that opens the route in its outcome text; the challenge's optional
+  `scope` attribute is sent only where one scope does, since RFC 6750 §3 reads
+  it as the scope a token must carry, a space-delimited set (RFC 6749 §3.3)
+  rather than a choice.
+- `.well-known/smart-configuration` publishes what a browser client needs for
+  a standalone launch (#632): `launch-standalone` and `client-public` beside
+  the confidential-client capabilities, `permission-user` for the scopes above,
+  and `sso-openid-connect` with the required `issuer` member where the
+  configured issuer lists `openid` in its `scopes_supported`
+  (<https://hl7.org/fhir/smart-app-launch/conformance.html>). Every
+  issuer-derived capability is still claimed only where the issuer's own
+  document backs it.
+- Post-coordinated SNOMED CT expressions are served (#638). An expression in
+  Compositional Grammar is a valid `code` and is "subject to the same rules as
+  precoordinated concepts" (<https://hl7.org/fhir/R4B/snomedct.html>), so
+  `CodeSystem/$validate-code` checks its syntax and every concept it names,
+  `$lookup` answers the expression in one canonical order with a display that
+  carries the edition's terms, `$subsumes` takes an expression on either side,
+  and `$closure` relates one to the concepts a table holds.
+  `TerminologyCapabilities.codeSystem.version.compositional` is now `true` for
+  SNOMED CT on every served version. The `expressions` filter decides whether a
+  filtered include admits an expression: `true` admits one whose focus concepts
+  it contains, and `false` or no filter refuses it. An include that enumerates
+  an expression contains it whichever way either side spells it, and
+  `excludePostCoordinated` drops those from an expansion. `$lookup` answers the
+  expression's own refinement as the concept-model properties, and an
+  expression over an inactive concept validates with `inactive = true`, the way
+  an inactive concept does. Three boundaries are recorded in the code and in
+  the book: no concept model (MRCM) check, no close-to-user transformation, and
+  subsumption decided over the edition's inferred view without a description
+  logic classifier.
+- `crates/sct-scg`, a `logos` lexer and `winnow` parser for the SNOMED CT
+  Compositional Grammar, faithful to the normative ABNF rule for rule, with a
+  printer whose output parses back to the same tree. The ABNF and the official
+  example corpus are vendored from the `IHTSDO/SNOMEDCT-Languages` repository
+  by `scripts/vendor/scg-grammar.sh` and pinned in `docs/VERSIONS.md`.
+
 ### Changed
 
 - **The viewer signs in at `/ui/editor`, so the redirect address registered
@@ -190,136 +317,19 @@ fresh link reference.
   every server (<https://hl7.org/fhir/uv/tx-ecosystem/requirements.html>),
   which is what the server has accepted since the overlay landed (#537).
 
-### Added
-
-- A concept map is authored in the browser, at `/ui/editor/conceptmap` (#636).
-  The screen carries the metadata, the value sets that scope the map, the
-  groups of systems it maps between, and every code with the targets it maps
-  to. The element a save writes is the served version's own: R4 and R4B take
-  `source[x]`/`target[x]` and `group.element.target.equivalence`, R5 and R6
-  take `sourceScope[x]`/`targetScope[x]` and `target.relationship`, R5 made a
-  group's system a canonical carrying its own version, and R5 added
-  `element.noMap` (<https://hl7.org/fhir/R4B/conceptmap.html>,
-  <https://hl7.org/fhir/R5/conceptmap.html>). The relationship control offers
-  what the served root expands that version's own value set to, and the form
-  refuses what the version refuses: a target with no relationship, a code that
-  both maps to nothing and carries a target (`cmd-4`), and an uncommented
-  target on the relationship codes `cmd-1` names, which differ per version and
-  are a warning rather than an error on the R6 ballot. Every code on both sides
-  is picked out of the system its group names, through the same
-  `ValueSet/$expand` search the concept browser runs, so a target arrives with
-  the display the server gave it. A preview runs `ConceptMap/$translate` by
-  `POST` with the map itself in the `conceptMap` parameter, which is how a map
-  that has never been saved is translated through; a server may refuse a map
-  sent that way
-  (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>), so the
-  screen then runs against the saved map and says which it used. Saving sends
-  the whole resource with `If-Match`, a `412` is shown as a concurrent edit
-  with a reload, and every refusal renders the server's own `OperationOutcome`
-  and announces its text. A map this deployment loaded opens the same screen
-  read-only, because the server states no `meta.versionId` for it.
-
-- A code system is authored in the browser, at `/ui/editor/codesystem` (#634).
-  The screen carries the metadata (`url`, `version`, `status`, `content`,
-  `caseSensitive`), the properties the system declares, and the concepts with
-  their designations and property values, with every coded control offering
-  what the served root expands that element's own value set to. A concept is
-  retired rather than deleted: the lifecycle control writes exactly the
-  standard concept properties the state implies (`status` always, `inactive`
-  where the state means it, and `deprecationDate` or `retirementDate`,
-  <https://hl7.org/fhir/R5/codesystem-concept-properties.html>), and after a
-  save the screen runs `CodeSystem/$validate-code` on what it retired and shows
-  the answer. Every write sends the whole resource with `If-Match`, so a change
-  made elsewhere is refused with `412` and offered a reload rather than
-  overwritten, and every refusal renders the server's own `OperationOutcome`
-  and announces its text in the screen's live region. A code system this
-  deployment built from a release opens the same screen read-only, because the
-  capability statement marks it as served from an artifact.
-
-- The viewer ships as two bundles, and the server serves both (#634). The
-  reader bundle is what `/ui` has always served, unchanged in size and in
-  content. The editor bundle is the same crate built with `--features editor`,
-  served at `/ui/editor`, carrying every reading screen plus the authoring
-  screens. A reader who never edits downloads no authoring byte, and a person
-  who edits opens `/ui/editor`, signs in there, and reads there too. Each
-  bundle has its own recorded size (`app/ferroterm-viewer/bundle-size.json` and
-  `bundle-size-editor.json`), and the release lane embeds both trees in the one
-  binary.
-
-- The viewer signs a person in with SMART App Launch and gains a write client
-  (#633). Where the deployment sets `FERROTERM_OIDC_ISSUER` and
-  `FERROTERM_VIEWER_CLIENT_ID`, the server publishes the client as
-  `ferroterm_viewer_client_id` in its `.well-known/smart-configuration`
-  (RFC 8414 §2 admits the extra member), and the top bar gains a **Sign in**
-  control. The viewer is a public client performing a standalone launch
-  (<https://hl7.org/fhir/smart-app-launch/app-launch.html>): a PKCE verifier
-  from the browser's own crypto with an `S256` challenge (RFC 7636), a `state`
-  checked on return (RFC 6749 §10.12), the code exchanged at the token endpoint
-  with the verifier and no client secret, and `/ui/callback` as the redirect
-  address to register. The access token is held in memory for the life of the
-  tab: never `localStorage`, never a cookie, so closing the tab signs out.
-  Signing out drops the token and revokes it where the issuer publishes a
-  `revocation_endpoint` (RFC 7009). The viewer reads the granted scopes the way
-  the server's gate reads them, so it offers only what the server would allow,
-  and a deployment that publishes no issuer shows no sign-in and no edit
-  control anywhere.
-- The FHIR client gains create, update with `If-Match` from the resource's
-  version, delete, and `_history`, each presenting the bearer when one is held
-  and each reading the server's own `OperationOutcome` into a typed refusal the
-  editor screens render: `401` as sign-in required, `403` as no permission,
-  `412` as a concurrent edit
-  (<https://hl7.org/fhir/R4B/http.html#concurrency>). Nothing writes yet; the
-  screens that call this seam are #631.
-
-- The SMART write gate accepts `user/` scopes beside the `system/` ones, so a
-  person signed in to an interactive client can write (#632). `user/` is "data
-  that a user can access" and `system/` is a client authorized in its own
-  right, and both address the same resource types
-  (<https://hl7.org/fhir/smart-app-launch/scopes-and-launch-context.html>), so
-  the route-to-letter mapping is unchanged: `user/ValueSet.u` opens a `PUT`,
-  `user/CodeSystem.c` a `POST`, `user/ConceptMap.d` a `DELETE`, with the
-  combined `cud` and `cruds` forms and the version 1 `.write` and `.*` mapped
-  as the specification maps them. `patient/` is refused with a 403 and an
-  `OperationOutcome`, because a terminology server holds no patient record and
-  a patient-compartment scope selects nothing on it. A refusal names every
-  scope that opens the route in its outcome text; the challenge's optional
-  `scope` attribute is sent only where one scope does, since RFC 6750 §3 reads
-  it as the scope a token must carry, a space-delimited set (RFC 6749 §3.3)
-  rather than a choice.
-- `.well-known/smart-configuration` publishes what a browser client needs for
-  a standalone launch (#632): `launch-standalone` and `client-public` beside
-  the confidential-client capabilities, `permission-user` for the scopes above,
-  and `sso-openid-connect` with the required `issuer` member where the
-  configured issuer lists `openid` in its `scopes_supported`
-  (<https://hl7.org/fhir/smart-app-launch/conformance.html>). Every
-  issuer-derived capability is still claimed only where the issuer's own
-  document backs it.
-- Post-coordinated SNOMED CT expressions are served (#638). An expression in
-  Compositional Grammar is a valid `code` and is "subject to the same rules as
-  precoordinated concepts" (<https://hl7.org/fhir/R4B/snomedct.html>), so
-  `CodeSystem/$validate-code` checks its syntax and every concept it names,
-  `$lookup` answers the expression in one canonical order with a display that
-  carries the edition's terms, `$subsumes` takes an expression on either side,
-  and `$closure` relates one to the concepts a table holds.
-  `TerminologyCapabilities.codeSystem.version.compositional` is now `true` for
-  SNOMED CT on every served version. The `expressions` filter decides whether a
-  filtered include admits an expression: `true` admits one whose focus concepts
-  it contains, and `false` or no filter refuses it. An include that enumerates
-  an expression contains it whichever way either side spells it, and
-  `excludePostCoordinated` drops those from an expansion. `$lookup` answers the
-  expression's own refinement as the concept-model properties, and an
-  expression over an inactive concept validates with `inactive = true`, the way
-  an inactive concept does. Three boundaries are recorded in the code and in
-  the book: no concept model (MRCM) check, no close-to-user transformation, and
-  subsumption decided over the edition's inferred view without a description
-  logic classifier.
-- `crates/sct-scg`, a `logos` lexer and `winnow` parser for the SNOMED CT
-  Compositional Grammar, faithful to the normative ABNF rule for rule, with a
-  printer whose output parses back to the same tree. The ABNF and the official
-  example corpus are vendored from the `IHTSDO/SNOMEDCT-Languages` repository
-  by `scripts/vendor/scg-grammar.sh` and pinned in `docs/VERSIONS.md`.
-
 ### Fixed
+
+- **Two resources of one type can no longer carry one canonical** (#670). A
+  create or update whose `url` and `version` another `CodeSystem`, `ValueSet`
+  or `ConceptMap` of the same type already carries, persisted or loaded from
+  disk, is refused with `409` and an `OperationOutcome` issue of code
+  `duplicate` naming the other resource's id, because the pair identifies one
+  resource (<https://hl7.org/fhir/R4B/resource.html#canonical>). An update of
+  the resource that holds the canonical, and the same `url` under another
+  `version`, are written as before. A store written before this change may
+  already hold a duplicate: the server now answers for it from the most recent
+  write, where it used to answer from the id that sorted last, and logs a
+  warning at startup naming every id that carries the canonical.
 
 - **An `Accept` header naming no format the server serves answers `406`**
   (#668). `Accept: text/csv` used to get FHIR JSON with a `200`; it now gets
