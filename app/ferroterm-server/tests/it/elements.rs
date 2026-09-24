@@ -1,14 +1,27 @@
-//! `_elements` on the wire: the subset a client asked for, on every version.
+//! `_elements` and `_summary` on the wire: the subset a client asked for, on
+//! every version, on search and on read.
 //!
 //! The unit tests in `ferroterm_server::elements` pin the projection itself.
 //! These pin what a client sees: that the parameter is answered rather than
 //! refused, that the answer says it is a subset, and that a search still
 //! matches the same resources when it narrows what they carry.
 
+use fhir_types::schema::Schemas;
 use http::StatusCode;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::fixture::Server;
+
+/// The served versions and the element table of each.
+const VERSIONS: [(&str, &Schemas); 4] = [
+    ("r4", &fhir_types::r4::schema::SCHEMAS),
+    ("r4b", &fhir_types::r4b::schema::SCHEMAS),
+    ("r5", &fhir_types::r5::schema::SCHEMAS),
+    ("r6", &fhir_types::r6::schema::SCHEMAS),
+];
+
+/// The three resource types the server serves.
+const TYPES: [&str; 3] = ["CodeSystem", "ValueSet", "ConceptMap"];
 
 /// The system of the tag a subsetted resource carries.
 const TAG_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/v3-ObservationValue";
@@ -214,4 +227,344 @@ async fn a_parameter_no_version_defines_is_still_refused() {
         "accepting _elements does not loosen the rest: {body}"
     );
     assert_eq!(body["issue"][0]["code"], "not-supported");
+}
+
+/// Whether `resource` carries the `SUBSETTED` tag.
+fn is_subsetted(resource: &Value) -> bool {
+    resource
+        .pointer("/meta/tag")
+        .and_then(Value::as_array)
+        .is_some_and(|tags| {
+            tags.iter()
+                .any(|tag| tag["system"] == TAG_SYSTEM && tag["code"] == "SUBSETTED")
+        })
+}
+
+/// The top-level elements of `resource_type` its definition makes mandatory.
+fn mandatory(schemas: &Schemas, resource_type: &str) -> Vec<&'static str> {
+    schemas
+        .type_named(resource_type)
+        .expect("the version defines the type")
+        .fields
+        .iter()
+        .filter(|field| field.min > 0)
+        .map(|field| field.name)
+        .collect()
+}
+
+/// A persisted resource of `resource_type` carrying a narrative and content
+/// that `_summary=text` leaves out.
+fn with_narrative(resource_type: &str, version: &str) -> Value {
+    let url = format!("http://ferroterm.test/{resource_type}/summary-{version}");
+    let text = json!({
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">A narrative</div>"
+    });
+    match resource_type {
+        "CodeSystem" => json!({
+            "resourceType": "CodeSystem", "url": url, "version": "1", "text": text,
+            "status": "active", "content": "complete", "title": "Summary",
+            "concept": [{"code": "a", "display": "A"}]
+        }),
+        "ValueSet" => json!({
+            "resourceType": "ValueSet", "url": url, "version": "1", "text": text,
+            "status": "active", "title": "Summary",
+            "compose": {"include": [{"system": "http://ferroterm.test/CodeSystem/summary"}]}
+        }),
+        _ if version == "r4" || version == "r4b" => json!({
+            "resourceType": "ConceptMap", "url": url, "version": "1", "text": text,
+            "status": "active", "title": "Summary",
+            "group": [{"source": "http://a.test", "target": "http://b.test",
+                "element": [{"code": "a", "target": [{"code": "b", "equivalence": "equivalent"}]}]}]
+        }),
+        _ => json!({
+            "resourceType": "ConceptMap", "url": url, "version": "1", "text": text,
+            "status": "active", "title": "Summary",
+            "group": [{"source": "http://a.test", "target": "http://b.test",
+                "element": [{"code": "a", "target": [{"code": "b", "relationship": "equivalent"}]}]}]
+        }),
+    }
+}
+
+/// A server holding one persisted resource of every type on every version,
+/// each at the id `summary-{version}`.
+async fn persisting_with_narratives() -> Server {
+    let server = Server::start_persisting();
+    for (version, _) in VERSIONS {
+        for resource_type in TYPES {
+            let response = server
+                .put(
+                    &format!("/{version}/{resource_type}/summary-{version}"),
+                    &with_narrative(resource_type, version),
+                )
+                .await;
+            assert!(
+                response.status().is_success(),
+                "{version} {resource_type}: {}",
+                response.status()
+            );
+        }
+    }
+    server
+}
+
+#[test]
+fn the_mandatory_elements_are_the_ones_the_pinned_definitions_name() {
+    // `_summary=text` keeps the top-level mandatory elements
+    // (<https://hl7.org/fhir/R4B/search.html#summary>): `min` of 1 in the
+    // pinned StructureDefinitions, which the generated element table carries.
+    for (version, schemas) in VERSIONS {
+        assert_eq!(
+            mandatory(schemas, "CodeSystem"),
+            ["status", "content"],
+            "{version}"
+        );
+        assert_eq!(mandatory(schemas, "ValueSet"), ["status"], "{version}");
+        assert_eq!(mandatory(schemas, "ConceptMap"), ["status"], "{version}");
+    }
+}
+
+#[tokio::test]
+async fn summary_text_on_read_keeps_the_narrative_and_the_mandatory_elements() {
+    let server = persisting_with_narratives().await;
+    for (version, schemas) in VERSIONS {
+        for resource_type in TYPES {
+            let uri = format!("/{version}/{resource_type}/summary-{version}?_summary=text");
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            let mut names: Vec<&str> = body
+                .as_object()
+                .expect("a resource")
+                .keys()
+                .map(String::as_str)
+                .collect();
+            names.sort_unstable();
+            let mut expected = vec!["id", "meta", "resourceType", "text"];
+            expected.extend(mandatory(schemas, resource_type));
+            expected.sort_unstable();
+            assert_eq!(names, expected, "{uri}");
+            assert!(is_subsetted(&body), "{uri}: {body}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn summary_data_on_read_drops_the_narrative_alone() {
+    let server = persisting_with_narratives().await;
+    for (version, _) in VERSIONS {
+        for resource_type in TYPES {
+            let (_, whole) = server
+                .get(&format!("/{version}/{resource_type}/summary-{version}"))
+                .await;
+            let uri = format!("/{version}/{resource_type}/summary-{version}?_summary=data");
+            let (status, mut body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            assert!(body.get("text").is_none(), "{uri}: {body}");
+            assert!(is_subsetted(&body), "{uri}: {body}");
+            let data = body.as_object_mut().expect("a resource");
+            data.remove("meta");
+            let mut whole = whole.as_object().expect("a resource").clone();
+            whole.remove("meta");
+            whole.remove("text");
+            assert_eq!(*data, whole, "{uri}: only `text` is removed");
+        }
+    }
+}
+
+#[tokio::test]
+async fn summary_false_on_read_is_the_whole_resource() {
+    let server = persisting_with_narratives().await;
+    for (version, _) in VERSIONS {
+        for resource_type in TYPES {
+            let (_, whole) = server
+                .get(&format!("/{version}/{resource_type}/summary-{version}"))
+                .await;
+            let uri = format!("/{version}/{resource_type}/summary-{version}?_summary=false");
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            assert_eq!(body, whole, "{uri}");
+            assert!(!is_subsetted(&body), "{uri}: nothing was left out");
+        }
+    }
+}
+
+#[tokio::test]
+async fn elements_on_read_projects_like_a_search_does() {
+    let server = persisting_with_narratives().await;
+    for (version, _) in VERSIONS {
+        for resource_type in TYPES {
+            let uri = format!("/{version}/{resource_type}/summary-{version}?_elements=url,title");
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            let mut names: Vec<&str> = body
+                .as_object()
+                .expect("a resource")
+                .keys()
+                .map(String::as_str)
+                .collect();
+            names.sort_unstable();
+            assert_eq!(
+                names,
+                ["id", "meta", "resourceType", "title", "url"],
+                "{uri}"
+            );
+            assert!(is_subsetted(&body), "{uri}: {body}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_loaded_code_system_reads_as_a_summary_and_as_a_subset() {
+    let server = Server::start_with_every_loader();
+    let id = server.instance_id_of("http://loinc.org");
+    for (version, schemas) in VERSIONS {
+        let (status, body) = server
+            .get(&format!("/{version}/CodeSystem/{id}?_summary=text"))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        for name in body.as_object().expect("a resource").keys() {
+            assert!(
+                ["id", "meta", "resourceType", "text"].contains(&name.as_str())
+                    || mandatory(schemas, "CodeSystem").contains(&name.as_str()),
+                "{version} returned `{name}` in the text summary"
+            );
+        }
+        assert!(is_subsetted(&body), "{version}: {body}");
+        let (status, body) = server
+            .get(&format!("/{version}/CodeSystem/{id}?_elements=url"))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{version}: {body}");
+        assert_eq!(body["url"], "http://loinc.org", "{version}");
+        assert!(body.get("version").is_none(), "{version}: {body}");
+        assert!(is_subsetted(&body), "{version}: {body}");
+    }
+}
+
+#[tokio::test]
+async fn summary_text_and_data_on_search_project_every_match() {
+    let server = persisting_with_narratives().await;
+    for (version, schemas) in VERSIONS {
+        for resource_type in TYPES {
+            let uri = format!(
+                "/{version}/{resource_type}?url=http://ferroterm.test/{resource_type}/summary-{version}&_summary=text"
+            );
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            assert_eq!(body["total"], 1, "{uri}: {body}");
+            let resource = &body["entry"][0]["resource"];
+            let mut names: Vec<&str> = resource
+                .as_object()
+                .expect("a resource")
+                .keys()
+                .map(String::as_str)
+                .collect();
+            names.sort_unstable();
+            let mut expected = vec!["id", "meta", "resourceType", "text"];
+            expected.extend(mandatory(schemas, resource_type));
+            expected.sort_unstable();
+            assert_eq!(names, expected, "{uri}");
+            assert!(is_subsetted(resource), "{uri}");
+
+            let uri = format!(
+                "/{version}/{resource_type}?url=http://ferroterm.test/{resource_type}/summary-{version}&_summary=data"
+            );
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            let resource = &body["entry"][0]["resource"];
+            assert!(resource.get("text").is_none(), "{uri}: {body}");
+            assert!(resource.get("status").is_some(), "{uri}: {body}");
+            assert!(is_subsetted(resource), "{uri}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn summary_count_on_search_answers_the_total_and_no_entries() {
+    let server = Server::start_with_every_loader();
+    for (version, _) in VERSIONS {
+        for resource_type in TYPES {
+            let (_, whole) = server.get(&format!("/{version}/{resource_type}")).await;
+            let uri = format!("/{version}/{resource_type}?_summary=count");
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+            assert_eq!(body["type"], "searchset", "{uri}");
+            assert_eq!(body["total"], whole["total"], "{uri}: {body}");
+            assert!(
+                body.get("entry").is_none(),
+                "{uri} returned matches with the count: {body}"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn summary_count_on_a_read_and_a_value_the_specification_does_not_define_are_refused() {
+    let server = persisting_with_narratives().await;
+    for (version, _) in VERSIONS {
+        for uri in [
+            format!("/{version}/CodeSystem/summary-{version}?_summary=count"),
+            format!("/{version}/CodeSystem/summary-{version}?_summary=everything"),
+            format!("/{version}/CodeSystem?_summary=TEXT"),
+            format!("/{version}/CodeSystem?_summary=text&_summary=data"),
+        ] {
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
+            assert_eq!(body["issue"][0]["code"], "invalid", "{uri}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn summary_true_is_refused_as_not_supported() {
+    // TODO(#669): `_summary=true` needs the `isSummary` flag per element in
+    // `fhir_types::schema::FieldSchema`; until then it is refused, not ignored.
+    let server = persisting_with_narratives().await;
+    for (version, _) in VERSIONS {
+        for uri in [
+            format!("/{version}/CodeSystem/summary-{version}?_summary=true"),
+            format!("/{version}/ValueSet?_summary=true"),
+        ] {
+            let (status, body) = server.get(&uri).await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
+            assert_eq!(body["issue"][0]["code"], "not-supported", "{uri}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_summary_reads_in_xml_too() {
+    let server = persisting_with_narratives().await;
+    let (status, content_type, body) = server
+        .get_text(
+            "/r4b/CodeSystem/summary-r4b?_summary=text&_format=xml",
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(content_type, "application/fhir+xml; charset=utf-8");
+    assert!(body.contains("SUBSETTED"), "{body}");
+    assert!(!body.contains("<concept>"), "{body}");
+}
+
+#[tokio::test]
+async fn the_capability_statement_declares_summary() {
+    let server = Server::start_with_every_loader();
+    for (version, _) in VERSIONS {
+        let (status, body) = server.get(&format!("/{version}/metadata")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        for resource in body["rest"][0]["resource"]
+            .as_array()
+            .expect("a rest entry lists its resource types")
+        {
+            let declared = resource["searchParam"].as_array().is_some_and(|params| {
+                params.iter().any(|param| {
+                    param["name"] == "_summary"
+                        && param["definition"]
+                            == "http://hl7.org/fhir/SearchParameter/Resource-summary"
+                        && param["type"] == "token"
+                })
+            });
+            assert!(declared, "{version} {}: {resource}", resource["type"]);
+        }
+    }
 }

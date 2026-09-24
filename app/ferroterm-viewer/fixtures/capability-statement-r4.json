@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-23T13:34:00.791153Z",
+  "date": "2026-09-24T14:35:58.611094Z",
   "extension": [
     {
       "extension": [
@@ -131,6 +131,12 @@
               "definition": "http://hl7.org/fhir/SearchParameter/Resource-elements",
               "name": "_elements",
               "type": "string"
+            },
+            {
+              "definition": "http://hl7.org/fhir/SearchParameter/Resource-summary",
+              "documentation": "`text`, `data`, `count` and `false`; `true` is refused as not supported",
+              "name": "_summary",
+              "type": "token"
             }
           ],
           "type": "CodeSystem"
@@ -189,6 +195,12 @@
               "definition": "http://hl7.org/fhir/SearchParameter/Resource-elements",
               "name": "_elements",
               "type": "string"
+            },
+            {
+              "definition": "http://hl7.org/fhir/SearchParameter/Resource-summary",
+              "documentation": "`text`, `data`, `count` and `false`; `true` is refused as not supported",
+              "name": "_summary",
+              "type": "token"
             }
           ],
           "type": "ValueSet"
@@ -232,6 +244,12 @@
               "definition": "http://hl7.org/fhir/SearchParameter/Resource-elements",
               "name": "_elements",
               "type": "string"
+            },
+            {
+              "definition": "http://hl7.org/fhir/SearchParameter/Resource-summary",
+              "documentation": "`text`, `data`, `count` and `false`; `true` is refused as not supported",
+              "name": "_summary",
+              "type": "token"
             }
           ],
           "type": "ConceptMap"

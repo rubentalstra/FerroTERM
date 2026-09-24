@@ -23,6 +23,7 @@ use fhir_types::schema::Schemas;
 use http::header::{CONTENT_TYPE, ETAG, IF_MATCH, LAST_MODIFIED, LOCATION};
 use http::{HeaderMap, HeaderValue, StatusCode};
 
+use crate::elements::Projection;
 use crate::outcome::Failure;
 use crate::persistence::{HistoryEntry, Method, Record, ResourceType};
 use crate::state::{AppState, PersistError};
@@ -127,23 +128,29 @@ pub(crate) fn update(request: &Request<'_>, id: &str, body: &Bytes) -> Result<Re
 ///
 /// A `CodeSystem`, `ValueSet`, or `ConceptMap` id the deployment loaded reads
 /// here too, rendered from the model the engine holds; it carries no `ETag`,
-/// because a loaded resource has no version this server counts.
+/// because a loaded resource has no version this server counts. `projection`
+/// is the `_summary` and `_elements` of the read
+/// (<https://hl7.org/fhir/R4B/http.html#read>).
 ///
 /// # Errors
 ///
 /// An id that was never stored is a 404, one whose current version was
 /// deleted is a 410.
-pub(crate) fn read(request: &Request<'_>, id: &str) -> Result<Response, Failure> {
+pub(crate) fn read(
+    request: &Request<'_>,
+    id: &str,
+    projection: &Projection,
+) -> Result<Response, Failure> {
     let known = check_id(id)?;
+    let schemas = request.surface.schemas;
     let Some(record) = request.state.persisted_record(request.resource_type, known) else {
         if let Some(object) = loaded(request, known)? {
-            return Ok(request
-                .wire
-                .response(StatusCode::OK, &object, request.surface.schemas));
+            let object = projection.apply(&object, schemas);
+            return Ok(request.wire.response(StatusCode::OK, &object, schemas));
         }
         return Err(gone_or_missing(request, known));
     };
-    let object = rendered(request, &record)?;
+    let object = projection.apply(&rendered(request, &record)?, schemas);
     Ok(with_headers(
         request
             .wire
@@ -807,9 +814,9 @@ pub(crate) fn base_of(
 
 /// The `url` and `version` a search names.
 ///
-/// `_elements` names what to return rather than what to match, so it passes
-/// through here and is applied to the answer
-/// (<https://hl7.org/fhir/R5/search.html#elements>).
+/// `_elements` and `_summary` name what to return rather than what to match,
+/// so they pass through here and are applied to the answer
+/// (<https://hl7.org/fhir/R4B/search.html#summary>).
 fn criteria(query: &[(String, String)]) -> Result<(Option<&str>, Option<&str>), Failure> {
     let mut url = None;
     let mut version = None;
@@ -817,32 +824,19 @@ fn criteria(query: &[(String, String)]) -> Result<(Option<&str>, Option<&str>), 
         match name.as_str() {
             "url" => url = Some(value.as_str()),
             "version" => version = Some(value.as_str()),
-            "_format" | crate::elements::PARAMETER => {}
+            "_format" | crate::elements::PARAMETER | crate::elements::SUMMARY => {}
             other => {
                 return Err(Failure::new(
                     StatusCode::BAD_REQUEST,
                     "not-supported",
                     format!(
-                        "search parameter `{other}` is not supported; use `url`, `version` or `_elements`"
+                        "search parameter `{other}` is not supported; use `url`, `version`, `_elements` or `_summary`"
                     ),
                 ));
             }
         }
     }
     Ok((url, version))
-}
-
-/// The elements a search asked to be returned, or none when it named no
-/// `_elements`.
-///
-/// A repeated parameter is one list: the specification lets a client send
-/// `_elements` more than once, and the union is what it asked for.
-pub(crate) fn wanted_elements(query: &[(String, String)]) -> Vec<String> {
-    query
-        .iter()
-        .filter(|(name, _)| name == crate::elements::PARAMETER)
-        .flat_map(|(_, value)| crate::elements::requested(value))
-        .collect()
 }
 
 /// The `500` of a resource the server holds but cannot encode.
@@ -963,7 +957,10 @@ macro_rules! store_routes {
                 path: "",
                 wire,
             };
-            finish(crate::version::store::read(&request, &id), wire)
+            let read =
+                crate::elements::Projection::of_query(&query, crate::elements::Interaction::Read)
+                    .and_then(|projection| crate::version::store::read(&request, &id, &projection));
+            finish(read, wire)
         }
 
         /// `PUT {id}`: stores the body as `id`.
@@ -1277,6 +1274,10 @@ macro_rules! store {
                 wire: Wire,
             ) -> Result<Response, Failure> {
                 let surface = surface();
+                let projection = crate::elements::Projection::of_query(
+                    query,
+                    crate::elements::Interaction::Search,
+                )?;
                 let base = crate::version::store::base_of(state, surface.segment, headers, uri);
                 let at = |id: &str| {
                     base.as_ref()
@@ -1345,6 +1346,11 @@ macro_rules! store {
                         "too many resources to count",
                     )
                 })?;
+                // NOTE: `_summary=count` returns the count of the matches without the
+                // matches (<https://hl7.org/fhir/R4B/search.html#summary>).
+                if projection.is_count() {
+                    entry.clear();
+                }
                 if !unreadable.is_empty() {
                     entry.push(outcome(unreadable));
                 }
@@ -1355,8 +1361,7 @@ macro_rules! store {
                     entry,
                     ..Default::default()
                 };
-                let wanted = crate::version::store::wanted_elements(query);
-                if wanted.is_empty() {
+                if projection.is_whole() || projection.is_count() {
                     return parameters::respond_resource(&bundle, wire);
                 }
                 // A subset of a resource is not a resource, so it has no typed
@@ -1364,8 +1369,8 @@ macro_rules! store {
                 // is also what lets one implementation serve all four versions.
                 let mut object = fhir_types::codec::Json::to_json(&bundle)
                     .map_err(|reason| crate::version::store::rendering(&reason.to_string()))?;
-                crate::elements::project_bundle(&mut object, &wanted);
-                wire.object(StatusCode::OK, &object, &fhir_types::$fhir::schema::SCHEMAS)
+                projection.apply_bundle(&mut object, surface.schemas);
+                wire.object(StatusCode::OK, &object, surface.schemas)
             }
 
             /// What a history request asked, beside the resource it names.
@@ -1543,7 +1548,11 @@ macro_rules! store {
                     path: "",
                     wire,
                 };
-                Some(crate::version::store::read(&request, id))
+                Some(crate::version::store::read(
+                    &request,
+                    id,
+                    &crate::elements::Projection::default(),
+                ))
             }
 
             crate::version::store::store_routes!(
