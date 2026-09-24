@@ -9,7 +9,9 @@
 use leptos::ev::Event;
 use leptos::prelude::*;
 
+use crate::components::failure::Failure;
 use crate::fhir::FhirClient;
+use crate::fhir::error::FhirError;
 use crate::fhir::version::FhirVersion;
 use crate::styles;
 
@@ -27,8 +29,11 @@ pub(crate) struct Coded {
 pub(crate) struct Codes {
     /// The codes the value set expanded to.
     pub(crate) offered: Signal<Vec<Coded>>,
-    /// What the server said instead, when the expansion did not answer.
-    pub(crate) refused: Signal<Option<String>>,
+    /// Why the expansion did not answer, when it did not.
+    ///
+    /// The refusal itself, so the control renders the server's own
+    /// `OperationOutcome` rather than the status number it came with.
+    pub(crate) refused: Signal<Option<FhirError>>,
 }
 
 /// What one coded control is called, and how its label is drawn.
@@ -100,7 +105,7 @@ pub(crate) fn codes_of(
             expanded.with(|answered| {
                 answered
                     .as_ref()
-                    .and_then(|read| read.as_ref().err().map(ToString::to_string))
+                    .and_then(|read| read.as_ref().err().cloned())
             })
         }),
     }
@@ -199,9 +204,18 @@ pub(crate) fn coded_control(
             </select>
             <Show when=move || codes.refused.with(Option::is_some) fallback=|| ()>
                 <p role="status" class=styles::HINT>
-                    "This server did not expand the value set this control's codes come from, so it offers only what the resource already carries: "
-                    {move || codes.refused.get()}
+                    "This server did not expand the value set this control's codes come from, so it offers only what the resource already carries."
                 </p>
+                {move || {
+                    codes
+                        .refused
+                        .with(|held| {
+                            held.as_ref()
+                                .map(|error| {
+                                    view! { <Failure error=error.clone() /> }.into_any()
+                                })
+                        })
+                }}
             </Show>
         </div>
     }

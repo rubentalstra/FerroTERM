@@ -26,6 +26,6 @@ an async round trip after more characters were typed.
 `view/05_forms`): `prop:value` is the rule's own idiom and needs no caret
 excuse. A control seeded with the `value` attribute instead is the deviation,
 and it costs the field every write that does not come from the field itself (a
-picker, a fill, a reset). Two doc comments in the viewer argue the opposite
-(`src/pages/concept_map_editor.rs`, `system_control`, #636); the argument is
+picker, a fill, a reset). The seeded controls in
+`src/pages/editor.rs` argue the opposite; the argument is
 wrong, and the seeded controls are the ones to question.

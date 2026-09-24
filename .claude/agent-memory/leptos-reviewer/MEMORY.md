@@ -14,6 +14,9 @@ because what it records is true and the method is reusable.
 
 ## Confirmed here
 
+- [A select needs `selected` on every option](select-needs-selected-on-every-option.md):
+  `prop:value` alone shows the first option when the codes arrive after the
+  form is built; both are needed, and they cover different cases
 - [Unused dependency weight is already gone](unused-dep-weight-is-already-gone.md):
   LTO plus `--gc-sections` drops a crate the viewer never calls, so `chrono`
   and `icondata_ai` were 0 bytes of the bundle; refuse an unmeasured claim

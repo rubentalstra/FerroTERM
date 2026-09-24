@@ -686,7 +686,7 @@ codes `cmd-1` names, which are `narrower` and `inexact` on R4 and R4B and
 is excused; the R6 ballot demoted that rule to a warning, so the form does not
 refuse there.
 
-**Every code is picked, not typed blind.** Each side of a mapping carries the
+**Every code comes out of the system its group names.** Each side of a mapping carries the
 concept browser's own search over the system its group names, one
 `ValueSet/$expand` with the reader's text as `filter`, and pressing a result
 fills the code and the display the server sent. The field stays editable, so a

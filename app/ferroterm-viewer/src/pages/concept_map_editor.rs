@@ -17,6 +17,8 @@
 //! (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>), and the
 //! screen then falls back to the saved map and says which it used.
 
+use std::sync::Arc;
+
 use leptos::ev::SubmitEvent;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -67,7 +69,7 @@ const REPORT_ID: &str = "map-editor-report";
 /// It is a shared function rather than a type parameter, so one picker
 /// compiles once for every row that draws one: a generic one is monomorphized
 /// per call site, and this screen draws a picker per code and per target.
-type Chosen = std::sync::Arc<dyn Fn(String, String) + Send + Sync>;
+type Chosen = Arc<dyn Fn(String, String) + Send + Sync>;
 
 /// How many codes one search of a system asks for.
 ///
@@ -196,12 +198,16 @@ struct Options {
 
 /// One value of the draft, as a signal that only fires when it changes.
 ///
+/// The reader is boxed rather than generic, so the memo machinery compiles
+/// once for the whole screen; a generic one is monomorphized per call site,
+/// and this screen has one per control.
+///
 /// Every read of the draft touches the one signal the whole form is held in,
 /// so a plain derive over it re-runs on every keystroke anywhere. A `Memo`
 /// compares before it notifies, which is what keeps a control's own property
 /// write and a picker's own fetch to the field that actually changed
 /// (<https://docs.rs/reactive_graph/0.2/reactive_graph/computed/struct.Memo.html>).
-fn gated(read: impl Fn() -> String + Send + Sync + 'static) -> Signal<String> {
+fn gated(read: Box<dyn Fn() -> String + Send + Sync>) -> Signal<String> {
     Signal::from(Memo::new(move |_| read()))
 }
 
@@ -437,7 +443,7 @@ fn metadata_section(
                     },
                     statuses,
                     readonly,
-                    gated(move || draft.read().status.clone()),
+                    gated(Box::new(move || draft.read().status.clone())),
                     Box::new(move |chosen| draft.update(|draft| draft.status = chosen)),
                 )}
                 <div class="grid gap-tight">
@@ -553,7 +559,6 @@ fn group_panel(
     preview: RwSignal<Option<Preview>>,
     report: RwSignal<String>,
 ) -> AnyView {
-    let id = key.0;
     let named = move || {
         let source = group_of(draft, key, |group| group.source.clone());
         let target = group_of(draft, key, |group| group.target.clone());
@@ -566,51 +571,11 @@ fn group_panel(
     let elements = elements_view(
         client, version, draft, key, readonly, options, preview, report,
     );
+    let systems = systems_view(draft, key, readonly);
     view! {
         <fieldset class=format!("p-default {}", styles::PANEL)>
             <legend class=styles::EYEBROW>{named}</legend>
-            <div class="grid gap-default sm:grid-cols-2">
-                {driven_control(
-                    format!("group-{id}-source"),
-                    "group-source",
-                    "Source system",
-                    readonly,
-                    gated(move || group_of(draft, key, |group| group.source.clone())),
-                    Box::new(move |typed| with_group(draft, key, |group| group.source = typed)),
-                )}
-                {driven_control(
-                    format!("group-{id}-source-version"),
-                    "group-source-version",
-                    "Source system version",
-                    readonly,
-                    gated(move || group_of(draft, key, |group| group.source_version.clone())),
-                    Box::new(move |typed| with_group(
-                        draft,
-                        key,
-                        |group| group.source_version = typed,
-                    )),
-                )}
-                {driven_control(
-                    format!("group-{id}-target"),
-                    "group-target",
-                    "Target system",
-                    readonly,
-                    gated(move || group_of(draft, key, |group| group.target.clone())),
-                    Box::new(move |typed| with_group(draft, key, |group| group.target = typed)),
-                )}
-                {driven_control(
-                    format!("group-{id}-target-version"),
-                    "group-target-version",
-                    "Target system version",
-                    readonly,
-                    gated(move || group_of(draft, key, |group| group.target_version.clone())),
-                    Box::new(move |typed| with_group(
-                        draft,
-                        key,
-                        |group| group.target_version = typed,
-                    )),
-                )}
-            </div>
+            {systems}
             {elements}
             <Show when=move || !readonly.get() fallback=|| ()>
                 <p class="mt-default flex flex-wrap gap-default">
@@ -650,6 +615,53 @@ fn group_panel(
                 </p>
             </Show>
         </fieldset>
+    }
+    .into_any()
+}
+
+/// The two systems one group maps between, and the version of each.
+///
+/// A group states its systems as a `uri` with a version beside it on R4 and
+/// R4B, and as a `canonical` carrying its own version on R5 and R6
+/// (<https://hl7.org/fhir/R5/conceptmap.html>), so the form keeps the two
+/// apart and the save joins them the way the served version writes them.
+fn systems_view(draft: RwSignal<MapDraft>, key: Key, readonly: Signal<bool>) -> AnyView {
+    let id = key.0;
+    view! {
+        <div class="grid gap-default sm:grid-cols-2">
+            {driven_control(
+                format!("group-{id}-source"),
+                "group-source",
+                "Source system",
+                readonly,
+                gated(Box::new(move || group_of(draft, key, |group| group.source.clone()))),
+                Box::new(move |typed| with_group(draft, key, |group| group.source = typed)),
+            )}
+            {driven_control(
+                format!("group-{id}-source-version"),
+                "group-source-version",
+                "Source system version",
+                readonly,
+                gated(Box::new(move || group_of(draft, key, |group| group.source_version.clone()))),
+                Box::new(move |typed| with_group(draft, key, |group| group.source_version = typed)),
+            )}
+            {driven_control(
+                format!("group-{id}-target"),
+                "group-target",
+                "Target system",
+                readonly,
+                gated(Box::new(move || group_of(draft, key, |group| group.target.clone()))),
+                Box::new(move |typed| with_group(draft, key, |group| group.target = typed)),
+            )}
+            {driven_control(
+                format!("group-{id}-target-version"),
+                "group-target-version",
+                "Target system version",
+                readonly,
+                gated(Box::new(move || group_of(draft, key, |group| group.target_version.clone()))),
+                Box::new(move |typed| with_group(draft, key, |group| group.target_version = typed)),
+            )}
+        </div>
     }
     .into_any()
 }
@@ -701,10 +713,10 @@ fn elements_view(
 /// One text control whose value the model owns.
 ///
 /// It is driven rather than seeded, because two things write it: the reader,
-/// and the picker beside it. A driven control puts the caret at the end of the
-/// text when the value is replaced
-/// (<https://html.spec.whatwg.org/multipage/input.html#dom-input-value>),
-/// which is the cost of letting a search result fill the field.
+/// and the picker beside it. The value setter moves the caret to the end only
+/// when the new value differs from the old
+/// (<https://html.spec.whatwg.org/multipage/input.html#dom-input-value>), so
+/// typing is unaffected and only a search result filling the field moves it.
 fn driven_control(
     id: String,
     name: &'static str,
@@ -750,7 +762,9 @@ fn element_panel(
     report: RwSignal<String>,
 ) -> AnyView {
     let id = key.0;
-    let source_system = gated(move || group_of(draft, group, |held| held.source.clone()));
+    let source_system = gated(Box::new(move || {
+        group_of(draft, group, |held| held.source.clone())
+    }));
     // The flag is the version's as well as the concept's: a map authored on R5
     // and read through an R4B root still carries `noMap`, and a version that
     // defines no such element must not hide the targets it does define.
@@ -773,7 +787,7 @@ fn element_panel(
         "source code",
         source_system,
         readonly,
-        std::sync::Arc::new(move |code, display| {
+        Arc::new(move |code, display| {
             with_element(draft, group, key, |element| {
                 element.code = code;
                 element.display = display;
@@ -781,32 +795,7 @@ fn element_panel(
         }),
     );
     let no_map = no_map_control(draft, version, group, key, readonly);
-    let fields = view! {
-        <div class="grid gap-default sm:grid-cols-2">
-            {driven_control(
-                format!("element-{id}-code"),
-                "element-code",
-                "Code",
-                readonly,
-                gated(move || element_of(draft, group, key, |held| held.code.clone())),
-                Box::new(move |code| with_element(draft, group, key, |held| held.code = code)),
-            )}
-            {driven_control(
-                format!("element-{id}-display"),
-                "element-display",
-                "Display",
-                readonly,
-                gated(move || element_of(draft, group, key, |held| held.display.clone())),
-                Box::new(move |display| with_element(
-                    draft,
-                    group,
-                    key,
-                    |held| held.display = display,
-                )),
-            )}
-        </div>
-    }
-    .into_any();
+    let fields = element_fields(draft, group, key, readonly);
     view! {
         <fieldset class=format!("p-default {}", styles::PANEL)>
             <legend class=styles::EYEBROW>
@@ -850,6 +839,42 @@ fn element_panel(
                 </p>
             </Show>
         </fieldset>
+    }
+    .into_any()
+}
+
+/// One code's own two fields.
+fn element_fields(
+    draft: RwSignal<MapDraft>,
+    group: Key,
+    key: Key,
+    readonly: Signal<bool>,
+) -> AnyView {
+    let id = key.0;
+    view! {
+        <div class="grid gap-default sm:grid-cols-2">
+            {driven_control(
+                format!("element-{id}-code"),
+                "element-code",
+                "Code",
+                readonly,
+                gated(Box::new(move || element_of(draft, group, key, |held| held.code.clone()))),
+                Box::new(move |code| with_element(draft, group, key, |held| held.code = code)),
+            )}
+            {driven_control(
+                format!("element-{id}-display"),
+                "element-display",
+                "Display",
+                readonly,
+                gated(Box::new(move || element_of(draft, group, key, |held| held.display.clone()))),
+                Box::new(move |display| with_element(
+                    draft,
+                    group,
+                    key,
+                    |held| held.display = display,
+                )),
+            )}
+        </div>
     }
     .into_any()
 }
@@ -967,7 +992,9 @@ fn target_row(
     relationships: Codes,
 ) -> AnyView {
     let id = key.0;
-    let target_system = gated(move || group_of(draft, group, |held| held.target.clone()));
+    let target_system = gated(Box::new(move || {
+        group_of(draft, group, |held| held.target.clone())
+    }));
     let picked = picker(
         client,
         version,
@@ -975,52 +1002,14 @@ fn target_row(
         "target code",
         target_system,
         readonly,
-        std::sync::Arc::new(move |code, display| {
+        Arc::new(move |code, display| {
             with_target(draft, group, element, key, |target| {
                 target.code = code;
                 target.display = display;
             });
         }),
     );
-    let fields = view! {
-        <div class="grid gap-default sm:grid-cols-2">
-            {driven_control(
-                format!("target-{id}-code"),
-                "target-code",
-                "Target code",
-                readonly,
-                gated(move || target_of(draft, group, element, key, |held| held.code.clone())),
-                Box::new(move |code| with_target(
-                    draft,
-                    group,
-                    element,
-                    key,
-                    |held| held.code = code,
-                )),
-            )}
-            {driven_control(
-                format!("target-{id}-display"),
-                "target-display",
-                "Target display",
-                readonly,
-                gated(move || target_of(draft, group, element, key, |held| held.display.clone())),
-                Box::new(move |display| {
-                    with_target(draft, group, element, key, |held| held.display = display);
-                }),
-            )} {relationship_control(draft, version, group, element, key, readonly, relationships)}
-            {driven_control(
-                format!("target-{id}-comment"),
-                "target-comment",
-                "Comment",
-                readonly,
-                gated(move || target_of(draft, group, element, key, |held| held.comment.clone())),
-                Box::new(move |comment| {
-                    with_target(draft, group, element, key, |held| held.comment = comment);
-                }),
-            )}
-        </div>
-    }
-    .into_any();
+    let fields = target_fields(draft, group, element, key, readonly, relationships, version);
     view! {
         <div class=format!(
             "p-default {}",
@@ -1049,6 +1038,82 @@ fn target_row(
     .into_any()
 }
 
+/// One target's own fields: the code it maps to, how it relates, and why.
+fn target_fields(
+    draft: RwSignal<MapDraft>,
+    group: Key,
+    element: Key,
+    key: Key,
+    readonly: Signal<bool>,
+    relationships: Codes,
+    version: Signal<FhirVersion>,
+) -> AnyView {
+    let id = key.0;
+    view! {
+        <div class="grid gap-default sm:grid-cols-2">
+            {driven_control(
+                format!("target-{id}-code"),
+                "target-code",
+                "Target code",
+                readonly,
+                gated(
+                    Box::new(move || target_of(
+                        draft,
+                        group,
+                        element,
+                        key,
+                        |held| held.code.clone(),
+                    )),
+                ),
+                Box::new(move |code| with_target(
+                    draft,
+                    group,
+                    element,
+                    key,
+                    |held| held.code = code,
+                )),
+            )}
+            {driven_control(
+                format!("target-{id}-display"),
+                "target-display",
+                "Target display",
+                readonly,
+                gated(
+                    Box::new(move || target_of(
+                        draft,
+                        group,
+                        element,
+                        key,
+                        |held| held.display.clone(),
+                    )),
+                ),
+                Box::new(move |display| {
+                    with_target(draft, group, element, key, |held| held.display = display);
+                }),
+            )} {relationship_control(draft, version, group, element, key, readonly, relationships)}
+            {driven_control(
+                format!("target-{id}-comment"),
+                "target-comment",
+                "Comment",
+                readonly,
+                gated(
+                    Box::new(move || target_of(
+                        draft,
+                        group,
+                        element,
+                        key,
+                        |held| held.comment.clone(),
+                    )),
+                ),
+                Box::new(move |comment| {
+                    with_target(draft, group, element, key, |held| held.comment = comment);
+                }),
+            )}
+        </div>
+    }
+    .into_any()
+}
+
 /// The control that says how one target relates to its source code.
 ///
 /// The element it fills and the value set it offers are both the served
@@ -1067,7 +1132,9 @@ fn relationship_control(
     // The one label carries the element the save will write, so what a
     // sighted reader sees is also the control's accessible name
     // (<https://www.w3.org/TR/WCAG22/#label-in-name>).
-    let label = gated(move || format!("Relationship ({})", dialect(version.get()).relationship));
+    let label = gated(Box::new(move || {
+        format!("Relationship ({})", dialect(version.get()).relationship)
+    }));
     coded_control(
         Control {
             id: format!("target-{id}-relationship"),
@@ -1077,7 +1144,9 @@ fn relationship_control(
         },
         relationships,
         readonly,
-        gated(move || target_of(draft, group, element, key, |held| held.relationship.clone())),
+        gated(Box::new(move || {
+            target_of(draft, group, element, key, |held| held.relationship.clone())
+        })),
         Box::new(move |chosen| {
             with_target(draft, group, element, key, |held| {
                 held.relationship = chosen;
@@ -1604,11 +1673,7 @@ fn diagnostics(error: &FhirError) -> String {
 }
 
 /// Reads one group inside the guard, without cloning the rest.
-fn group_of<T: Default>(
-    draft: RwSignal<MapDraft>,
-    key: Key,
-    project: impl Fn(&MapGroup) -> T,
-) -> T {
+fn group_of<T: Default>(draft: RwSignal<MapDraft>, key: Key, project: fn(&MapGroup) -> T) -> T {
     draft.with(|draft| {
         draft
             .groups
@@ -1632,13 +1697,15 @@ fn element_of<T: Default>(
     draft: RwSignal<MapDraft>,
     group: Key,
     key: Key,
-    project: impl Fn(&MapElement) -> T,
+    project: fn(&MapElement) -> T,
 ) -> T {
-    group_of(draft, group, |held| {
-        held.elements
+    draft.with(|draft| {
+        draft
+            .groups
             .iter()
-            .find(|element| element.key == key)
-            .map_or_else(T::default, &project)
+            .find(|held| held.key == group)
+            .and_then(|held| held.elements.iter().find(|element| element.key == key))
+            .map_or_else(T::default, project)
     })
 }
 
@@ -1649,8 +1716,13 @@ fn with_element(
     key: Key,
     change: impl FnOnce(&mut MapElement),
 ) {
-    with_group(draft, group, |held| {
-        if let Some(element) = held.elements.iter_mut().find(|element| element.key == key) {
+    draft.update(|draft| {
+        if let Some(element) = draft
+            .groups
+            .iter_mut()
+            .find(|held| held.key == group)
+            .and_then(|held| held.elements.iter_mut().find(|element| element.key == key))
+        {
             change(element);
         }
     });
@@ -1662,13 +1734,16 @@ fn target_of<T: Default>(
     group: Key,
     element: Key,
     key: Key,
-    project: impl Fn(&MapTarget) -> T,
+    project: fn(&MapTarget) -> T,
 ) -> T {
-    element_of(draft, group, element, |held| {
-        held.targets
+    draft.with(|draft| {
+        draft
+            .groups
             .iter()
-            .find(|target| target.key == key)
-            .map_or_else(T::default, &project)
+            .find(|held| held.key == group)
+            .and_then(|held| held.elements.iter().find(|held| held.key == element))
+            .and_then(|held| held.targets.iter().find(|target| target.key == key))
+            .map_or_else(T::default, project)
     })
 }
 
@@ -1680,8 +1755,14 @@ fn with_target(
     key: Key,
     change: impl FnOnce(&mut MapTarget),
 ) {
-    with_element(draft, group, element, |held| {
-        if let Some(target) = held.targets.iter_mut().find(|target| target.key == key) {
+    draft.update(|draft| {
+        if let Some(target) = draft
+            .groups
+            .iter_mut()
+            .find(|held| held.key == group)
+            .and_then(|held| held.elements.iter_mut().find(|held| held.key == element))
+            .and_then(|held| held.targets.iter_mut().find(|target| target.key == key))
+        {
             change(target);
         }
     });

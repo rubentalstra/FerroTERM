@@ -313,7 +313,9 @@ fresh link reference.
   so opening a saved resource showed the wrong code and the next save wrote it.
   Each option now states its own selectedness, which the browser reads as the
   option is inserted. The code system editor's status, content mode and
-  property type controls are fixed by the same change.
+  property type controls are fixed by the same change, and an expansion the
+  root will not run now renders the server's own `OperationOutcome` beside the
+  control rather than the status number it came with.
 
 - The RF2 relationship reader admits only rows whose `characteristicTypeId` is
   `900000000000011006 |Inferred relationship|` (#545). A qualifying or an
