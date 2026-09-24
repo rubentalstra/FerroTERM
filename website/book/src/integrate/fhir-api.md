@@ -4,7 +4,8 @@ FerroTERM speaks the HL7 FHIR terminology API. If your client already talks to
 a FHIR terminology server, it talks to FerroTERM. It speaks FHIR JSON and
 FHIR XML: `_format=xml` in the query or `Accept: application/fhir+xml`
 selects XML for a response, `Content-Type` names the format of a request
-body, and JSON is the default. The base is `/r4b` for R4B,
+body, and JSON is the default. `Accept` quality values count, and an `Accept`
+that names neither format gets `406 Not Acceptable`. The base is `/r4b` for R4B,
 `/r4` for R4, `/r5` for R5, and `/r6` for the R6 ballot (see
 [FHIR versions](fhir-versions.md)); the
 [Worked examples](examples.md) page shows requests and the responses a running
